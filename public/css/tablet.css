@@ -1,0 +1,77 @@
+/* General Tablet Styles (Applies to Both Orientations) */
+@media screen and (min-width: 769px) and (max-width: 1366px) {
+  body {
+    font-size: 16px;
+  }
+
+  .simple-control {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #controls button {
+    width: 40px;
+    height: 40px;
+    font-size: 40px;
+    border-radius: 10%; /* Circular buttons */
+    margin: 5px;
+    flex: 1 1 auto; /* Responsive button scaling */
+  }
+
+  #controls {
+    position: fixed;
+    bottom: 0px;
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 3px;
+    box-sizing: border-box;
+    margin: 0;
+  }
+}
+
+/* Landscape-Specific Styles */
+@media screen and (min-width: 769px) and (max-width: 1366px) and (orientation: landscape) {
+  #controls {
+    flex-direction: row; /* Row layout for landscape */
+    gap: 10px; /* Increased spacing */
+    padding: 5px;
+  }
+
+  #controls button {
+    width: 40px;
+    height: 60px;
+    font-size: 35px;
+  }
+
+  /* Enable Simple Controls Only */
+  .advanced-control {
+    display: none; /* Hide advanced controls */
+  }
+}
+
+/* Portrait-Specific Styles */
+@media screen and (min-width: 769px) and (max-width: 1366px) and (orientation: portrait) {
+  #controls {
+    flex-direction: row; /* Column layout for portrait */
+    gap: 15px; /* Reduced spacing */
+    padding: 20px;
+  }
+
+  #controls button {
+    width: 80px;
+    height: 80px;
+    font-size: 45px;
+  }
+
+  /* Enable Simple Controls Only */
+  .advanced-control {
+    display: none; /* Hide advanced controls */
+  }
+}

@@ -1,0 +1,391 @@
+<h1>Rotula Score System Architecture</h1>
+
+<h2>Overview</h2>
+
+<p>Rotula is an interactive, network-synchronized SVG score player that supports real-time control, animations, OSC integration, and client coordination for multimedia music performance and composition. The system comprises a Node.js/Express server, a WebSocket server, and a dynamic frontend rendered in HTML/JavaScript, with playback synchronized across clients.</p>
+
+<hr />
+
+<h2>1. Components</h2>
+
+<h3>🔧 Server-Side (Node.js)</h3>
+
+<ul>
+<li><code>server.js</code>: Express + WebSocket + OSC</li>
+<li>Serves static files and config endpoint (<code>/config</code>)</li>
+<li>Manages WebSocket connections</li>
+<li>Tracks global playback state and sends OSC messages</li>
+</ul>
+
+<h3>🧠 Client-Side (app.js + index.html)</h3>
+
+<ul>
+<li>Loads SVG scores</li>
+<li>Animates playback (<code>playheadX</code>, scrolling)</li>
+<li>Handles cue events: pause, stop, repeat, animations, etc.</li>
+<li>Parses special cue IDs (e.g., <code>cue_pause</code>, <code>cue_repeat</code>)</li>
+<li>Responds to real-time WebSocket messages from server</li>
+</ul>
+
+<h3>📡 Communication</h3>
+
+<ul>
+<li>WebSocket (via <code>ws</code>)</li>
+<li>OSC output (<code>/stopwatch</code>, <code>/cue/trigger</code>)</li>
+</ul>
+
+<h3>🧰 Tools</h3>
+
+<ul>
+<li><code>pm2</code>: Process manager (used for multiple instances)</li>
+<li>Bash deployment scripts (<code>deploy_*.sh</code>)</li>
+</ul>
+
+<hr />
+
+<hr />
+
+<h2>2. Deployment &amp; PM2 (Detailed)</h2>
+
+<p>The system is deployed on a remote server using SSH and custom shell scripts. Here's how deployment and process management are handled:</p>
+
+<h3>🌍 Remote Server Info</h3>
+
+<ul>
+<li><strong>Server IP</strong>: <code>167.172.165.26</code></li>
+<li><strong>Deployment Path</strong>: <code>/var/www/html/rotula</code></li>
+<li><strong>User</strong>: (usually default or configured in the SSH key setup)</li>
+</ul>
+
+<hr />
+
+<h3>🗂️ Project Directory Structure (Remote)</h3>
+
+<p><code>
+/var/www/html/rotula/
+├── app.js
+├── index.html
+├── server.js
+├── public/
+├── svg/
+├── config/
+│   ├── ponysays.live.config.js
+│   └── ponysays.development.config.js
+├── deploy_ponysays_live.sh
+├── deploy_ponysays_dev.sh
+└── ...
+</code></p>
+
+<hr />
+
+<h3>🚀 Deployment Scripts</h3>
+
+<p>There are separate shell scripts to deploy development and live versions:</p>
+
+<h4><code>deploy_ponysays_live.sh</code></h4>
+
+<p>```bash</p>
+
+<h1>!/bin/bash</h1>
+
+<p>ssh root@167.172.165.26 &lt;&lt; EOF
+  cd /var/www/html/rotula
+  git fetch --all
+  git reset --hard origin/main
+  npm install
+  pm2 restart ponysays.live.config.js || pm2 start ponysays.live.config.js --name ponysays_live
+EOF
+```</p>
+
+<h4><code>deploy_ponysays_dev.sh</code></h4>
+
+<p>Same as above but for dev:
+<code>bash
+pm2 restart ponysays.development.config.js || pm2 start ponysays.development.config.js --name ponysays_dev
+</code></p>
+
+<hr />
+
+<h3>🧠 PM2 Config Files</h3>
+
+<p>Each instance is managed using PM2 config files. Example for live:</p>
+
+<h4><code>ponysays.live.config.js</code></h4>
+
+<p><code>js
+{
+  name: 'ponysays-live',
+  script: './server.js',
+  env: {
+    NODE_ENV: 'production',
+    PORT: 8001,
+    OSC_LOCAL_ADDRESS: '0.0.0.0',
+    OSC_LOCAL_PORT: 57221,
+    OSC_REMOTE_ADDRESS: '127.0.0.1',
+    OSC_REMOTE_PORT: 57220,
+    WS_HOST: 'localhost',
+    WS_PORT: 8001
+  }
+}
+</code></p>
+
+<hr />
+
+<h3>🧩 Starting/Restarting Instances</h3>
+
+<p>You can use PM2 CLI directly:</p>
+
+<p><code>bash
+pm2 start ponysays.live.config.js --name ponysays_live
+pm2 restart ponysays.live.config.js
+pm2 list           # View all running apps
+pm2 logs &lt;name&gt;    # Tail logs for a process
+</code></p>
+
+<p>Each config defines its own WebSocket port, OSC ports, and HTTP serving port, enabling multiple instances to coexist on the same server.</p>
+
+<hr />
+
+<h3>🗝️ SSH and Git Integration</h3>
+
+<ul>
+<li>The scripts assume SSH key access is set up for <code>root@167.172.165.26</code></li>
+<li>Code is fetched using <code>git fetch --all &amp;&amp; git reset --hard origin/main</code></li>
+<li>Ensures clean sync with latest GitHub/remote repo state</li>
+</ul>
+
+<hr />
+
+<p>Three deployment environments, each defined by its <code>.config.js</code> file:</p>
+
+<p>| Environment    | HTTP Port | WS Port | OSC Local | OSC Remote | PM2 Name        | Config File                     |
+|----------------|-----------|---------|-----------|------------|------------------|----------------------------------|
+| Live           | 8001      | 8001    | 57221     | 57220      | ponysays-live    | ponysays.live.config.js         |
+| Development    | 8002      | 8002    | 57123     | 57122      | ponysays-dev     | ponysays.development.config.js  |
+| <em>(Optional)</em>   | 8003+     | ...     | ...       | ...        | custom           | custom.config.js                |</p>
+
+<p>Commands:
+<code>bash
+pm2 restart ponysays.live.config.js
+pm2 start ponysays.live.config.js --name ponysays_live
+</code></p>
+
+<hr />
+
+<h2>3. Server Logic (<code>server.js</code>)</h2>
+
+<ul>
+<li>Static file server (e.g. <code>/public</code>)</li>
+<li><code>/config</code> route: Returns <code>{ websocketHost, websocketPort }</code></li>
+<li>WebSocket server:
+<ul>
+<li>Broadcasts sync state to all clients</li>
+<li>Handles pause/play/jump/cue/repeat</li>
+<li>Sends OSC messages</li>
+</ul></li>
+<li>Shared server state:
+<code>js
+{
+elapsedTime,
+isPlaying,
+playheadX,
+duration,
+speedMultiplier,
+scoreWidth
+}
+</code></li>
+</ul>
+
+<hr />
+
+<h2>4. Client Logic (<code>app.js</code> + <code>index.html</code>)</h2>
+
+<h3>Playback</h3>
+
+<ul>
+<li>Driven by <code>requestAnimationFrame()</code></li>
+<li>Playback rate based on <code>speedMultiplier</code></li>
+<li>Local state synced with server</li>
+</ul>
+
+<h3>Score Rendering</h3>
+
+<ul>
+<li>Loads SVGs dynamically</li>
+<li>Applies:
+<ul>
+<li>Object-to-path animation</li>
+<li>Rotation/scale animations</li>
+<li>Interactive cue detection</li>
+</ul></li>
+</ul>
+
+<h3>Cues</h3>
+
+<ul>
+<li><code>cue_pause</code>, <code>cue_stop</code>, <code>cue_triggered</code></li>
+<li><code>cue_repeat_*</code>: Triggers loop logic (jump back, repeat counts)</li>
+<li><code>cue_traverse</code>: Animates objects between point anchors</li>
+<li><code>cue_speed_*</code>: Changes speed multiplier</li>
+</ul>
+
+<h3>UI &amp; Controls</h3>
+
+<ul>
+<li>Play/pause, rewind, jump to rehearsal marks</li>
+<li>Seek bar with sync logic</li>
+<li>Countdown overlays</li>
+<li>Popup panels for score notes, animations, programme note</li>
+</ul>
+
+<hr />
+
+<h2>5. Animation Engine</h2>
+
+<h3>Supported SVG Namespaces</h3>
+
+<ul>
+<li><code>obj_rotate_*</code>, <code>r_*</code>, <code>deg[...]</code></li>
+<li><code>scale_*</code>, <code>s[...]</code>, <code>sXY[...]</code></li>
+<li><code>obj2path-*</code>, <code>o2p-*</code></li>
+</ul>
+
+<h3>Features</h3>
+
+<ul>
+<li>Compact sequence encoding (<code>s[1,2,1.5]</code>, <code>deg[90,180]</code>)</li>
+<li>Easing, pivot, rpm/deg mode support</li>
+<li>Delayed trigger mode via <code>_t(1)</code></li>
+<li>Ghost-following animation mode (Case 5)</li>
+<li>IntersectionObserver integration to pause/resume animation</li>
+</ul>
+
+<hr />
+
+<h2>6. WebSocket Messages</h2>
+
+<ul>
+<li>From server → client:
+<ul>
+<li><code>sync</code>, <code>pause</code>, <code>resume_after_pause</code>, <code>cue_triggered</code>, <code>repeat_update</code></li>
+</ul></li>
+<li>From client → server:
+<ul>
+<li><code>cue_pause_ack</code>, <code>set_speed_multiplier</code>, <code>jump</code>, <code>update_client_name</code></li>
+</ul></li>
+<li>OSC is triggered when cues are activated (<code>/cue/trigger</code>, <code>/stopwatch</code>)</li>
+</ul>
+
+<hr />
+
+<h2>7. OSC Integration</h2>
+
+<ul>
+<li>Outbound OSC messages only</li>
+<li>Configured via environment variables</li>
+<li>Used to control external environments like Pure Data or Max/MSP
+<code>json
+{
+"address": "/cue/trigger",
+"args": [{ "type": "i", "value": cueNumber }]
+}
+</code></li>
+</ul>
+
+<hr />
+
+<h2>8. Deployment Scripts</h2>
+
+<ul>
+<li><code>deploy_ponysays_live.sh</code>, <code>deploy_ponysays_dev.sh</code></li>
+<li>Pull latest code, <code>npm install</code>, restart PM2 process</li>
+<li>SSH to remote host (<code>167.172.165.26</code>)</li>
+<li>Deploys to <code>/var/www/html/rotula</code></li>
+</ul>
+
+<hr />
+
+<h2>9. Splash &amp; GUI</h2>
+
+<ul>
+<li><code>index.html</code> has splash screen, score upload, controls</li>
+<li>Splash options: start, keybindings, programme note</li>
+<li>Mobile styling via <code>css/phone.css</code></li>
+</ul>
+
+<hr />
+
+<h2>10. Summary Diagram</h2>
+
+<p><code>
+Client Browser
+   ├── Fetch frontend via HTTP
+   ├── Fetch `/config` JSON
+   └── Connect to ws://host:port
+         │
+         ▼
+     ┌───────────────┐
+     │ server.js     │
+     │ Express + ws  │
+     │ + OSC client  │
+     └───────────────┘
+         │
+         └── OSC out: /cue/trigger, /stopwatch
+</code></p>
+
+<hr />
+
+<h2>11. System Strengths</h2>
+
+<ul>
+<li>Real-time sync via WebSocket</li>
+<li>Flexible cueing system</li>
+<li>Rich SVG animation control</li>
+<li>OSC support for AV integration</li>
+<li>Multi-instance architecture</li>
+<li>PM2-based process control</li>
+</ul>
+
+<hr />
+
+<h2>12. Future Enhancements (Suggested)</h2>
+
+<ul>
+<li>OSC input for bidirectional sync</li>
+<li>Multi-user role distinction (performer vs. controller)</li>
+<li>Auth or room-based session system</li>
+<li>MIDI cue support</li>
+</ul>
+
+<h2>Multiple Workshop Instances</h2>
+
+<p>To support multiple participants in a workshop, the architecture can be extended by running multiple isolated instances of the app — one per participant — each on its own set of ports. This approach is straightforward and aligns well with the current design.</p>
+
+<h3>🛠 Recommended Approach: Multi-Port Instances</h3>
+
+<ul>
+<li><strong>Create 12 PM2 config files</strong>, one per participant (e.g., <code>ponysays.instance1.config.js</code>, <code>ponysays.instance2.config.js</code>, …).</li>
+<li>Assign <strong>unique HTTP/WS ports and OSC ports</strong> to each instance (e.g., 8001–8012 for HTTP/WS, 57221–57243 for OSC).</li>
+<li>Use <code>pm2 start</code> or <code>pm2 restart</code> to run each instance.</li>
+<li>Share instance URLs with participants (e.g., <code>http://yourserver:8001</code>, <code>:8002</code>, etc.).</li>
+<li>Idle instances consume very little RAM and CPU, so 12 instances are feasible on modest server hardware.</li>
+<li>Optional: use a reverse proxy (like NGINX) to map ports to subdomains or clean URLs.</li>
+</ul>
+
+<h3>🧠 Alternative (More Complex): Room-Based Routing</h3>
+
+<ul>
+<li>Instead of running multiple processes, a single instance could handle multiple users by assigning them to virtual “rooms.”</li>
+<li>Each room would isolate score state, WebSocket groups, and OSC routing.</li>
+<li>Requires deeper changes to client/server logic:
+<ul>
+<li>Add session handling and room-aware playback state.</li>
+<li>Prevent state leakage between rooms.</li>
+</ul></li>
+<li>Not recommended for short-term or workshop scenarios due to added complexity.</li>
+</ul>
+
+<h3>✅ Summary</h3>
+
+<p>For a workshop, running multiple PM2-managed instances on separate ports is the most efficient and reliable solution. It keeps client states isolated, is easy to monitor and restart, and requires no fundamental changes to the app architecture.</p>
+<p><link href="style.css" rel="stylesheet"/></p>

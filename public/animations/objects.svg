@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="800"
+   height="600"
+   viewBox="0 0 800 600"
+   version="1.1"
+   id="svg7114"
+   sodipodi:docname="objects.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs7118" />
+  <sodipodi:namedview
+     id="namedview7116"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.93166667"
+     inkscape:cx="441.1449"
+     inkscape:cy="312.34347"
+     inkscape:window-width="1440"
+     inkscape:window-height="810"
+     inkscape:window-x="2215"
+     inkscape:window-y="241"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg7114" />
+  <path
+     id="path_2"
+     d="m 659.51174,253.72888 c -33.09277,-3.68558 -70.73173,-25.51613 -98.03989,-33.12893 -27.30816,-7.61279 -44.2783,-1.00596 -59.58951,-3.46921 -15.31121,-2.46325 -28.96025,-13.99647 -44.95298,-11.15365 -15.99273,2.84283 -34.32515,20.06131 -55.11518,14.03838 -20.79003,-6.02292 -44.03435,-35.28677 -70.11691,-41.64801 -26.08255,-6.36124 -54.99854,10.18151 -78.11421,7.7368 -23.11566,-2.44471 -40.42722,-23.8767 -69.96663,-17.64715 C 154.07702,174.68666 82.685089,185.85515 79.628297,245.24338 79.444345,248.81725 43.76924,436.62854 89.771111,481.19544 218.98157,606.37535 530.11619,613.88429 417.87222,193.89422 371.33875,19.777111 714.81559,163.00105 711.7674,182.93023 c -17.29695,32.88523 -19.16289,74.48422 -52.25566,70.79865 z"
+     stroke="#000000"
+     fill="none"
+     stroke-width="2"
+     sodipodi:nodetypes="ssssssssssscs" />
+  <path
+     id="path_1"
+     d="m 168.19198,277.05804 c 15.76031,1.5392 37.20119,-9.70896 57.10836,-7.93549 19.90717,1.77346 38.27892,16.56907 57.1095,35.35612 18.83059,18.78705 38.11878,41.56438 56.71414,36.90251 C 347.7398,339.22119 656.34075,300.71282 717.27476,239.664 787.85342,168.95236 741.86514,111.92279 740.03782,100.83039 734.88788,69.568676 695.36796,18.615194 685.90262,40.531797 669.11187,79.410113 289.07792,26.468374 171.94135,98.887429 76.278327,127.61759 84.095263,266.26969 168.19198,277.05804 Z"
+     stroke="#000000"
+     fill="none"
+     stroke-width="2"
+     sodipodi:nodetypes="csssssscc" />
+  <path
+     id="path_3"
+     d="m 199.89258,518.18635 c 113.96112,63.226 132.42733,-143.4813 216.25181,-163.00842 83.82448,-19.52712 164.89618,225.5006 225.16539,203.02315 C 701.579,535.72364 688.68027,260.72982 390.38633,285.21331 136.68803,267.37561 121.10934,474.47715 199.89258,518.18635 Z"
+     stroke="#000000"
+     fill="none"
+     stroke-width="2"
+     sodipodi:nodetypes="ssscs" />
+  <ellipse
+     id="obj2path_0"
+     fill="#000000"
+     stroke="#000000"
+     rx="4.7149839"
+     ry="5.1634307">
+    <animateMotion
+       dur="5s"
+       repeatCount="indefinite">
+      <mpath
+         href="#path_1" />
+    </animateMotion>
+  </ellipse>
+  <ellipse
+     id="obj2path_2"
+     fill="#000000"
+     stroke="#000000"
+     rx="5.6414886"
+     ry="5.3709183">
+    <animateMotion
+       dur="5s"
+       repeatCount="indefinite">
+      <mpath
+         href="#path_3" />
+    </animateMotion>
+  </ellipse>
+  <rect
+     id="obj2path_1"
+     fill="#000000"
+     stroke="#000000"
+     width="5.1944971"
+     height="38.69474"
+     x="3.0062053"
+     y="3.2066386">
+    <animateMotion
+       dur="5s"
+       repeatCount="indefinite">
+      <mpath
+         href="#path_2" />
+    </animateMotion>
+  </rect>
+</svg>

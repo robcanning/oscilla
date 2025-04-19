@@ -1,0 +1,155 @@
+<h1>🎯 Rotula.Score Cue System</h1>
+
+<p>This document explains all supported cue types in Rotula.Score, including their purpose, syntax, and example usage within SVG scores.</p>
+
+<hr />
+
+<h2>⏸️ <code>cue_pause</code></h2>
+
+<p><strong>Purpose:</strong> Temporarily pauses playback when the playhead crosses this cue.</p>
+
+<p><strong>Example:</strong>
+<code>xml
+&lt;rect id="cue_pause_intro" x="3000" width="10" height="100" /&gt;
+</code></p>
+
+<hr />
+
+<h2>⏹️ <code>cue_stop</code></h2>
+
+<p><strong>Purpose:</strong> Permanently stops playback when the cue is hit. Useful for score endings.</p>
+
+<p><strong>Example:</strong>
+<code>xml
+&lt;rect id="cue_stop_final" x="10000" width="10" height="100" /&gt;
+</code></p>
+
+<hr />
+
+<h2>🔊 <code>cue_audio</code></h2>
+
+<p><strong>Purpose:</strong> Triggers playback of a linked audio file.</p>
+
+<p><strong>Format:</strong> <code>cue_audio_&lt;filename&gt;</code> — file must exist in <code>media/</code> folder.</p>
+
+<p><strong>Example:</strong>
+<code>xml
+&lt;rect id="cue_audio_themeA" /&gt;
+</code></p>
+
+<hr />
+
+<h2>🌐 <code>cue_osc</code></h2>
+
+<p><strong>Purpose:</strong> Sends a custom OSC message when the cue is triggered.</p>
+
+<p><strong>Format:</strong> <code>cue_osc_&lt;address&gt;</code> — emitted as <code>/osc/&lt;address&gt;</code></p>
+
+<p><strong>Example:</strong>
+<code>xml
+&lt;circle id="cue_osc_startSynth" /&gt;
+</code></p>
+
+<hr />
+
+<h2>🎛️ <code>cue_speed</code></h2>
+
+<p><strong>Purpose:</strong> Changes scroll/playback speed when the cue is hit.</p>
+
+<p><strong>Format:</strong> <code>cue_speed_&lt;multiplier&gt;</code> — where <code>1</code> = normal speed, <code>2</code> = double speed, etc.</p>
+
+<p><strong>Example:</strong>
+<code>xml
+&lt;rect id="cue_speed_0.5" /&gt;
+</code></p>
+
+<hr />
+
+<h2>🔁 <code>cue_repeat</code></h2>
+
+<p><strong>Purpose:</strong> Repeats a section of the score a fixed number of times.</p>
+
+<p><strong>Format:</strong> <code>cue_repeat_s_&lt;startId&gt;_e_&lt;endId&gt;_x_&lt;count&gt;[_r_&lt;resumeId&gt;]</code></p>
+
+<ul>
+<li><code>s</code> = start cue ID</li>
+<li><code>e</code> = end cue ID</li>
+<li><code>x</code> = number of times to repeat</li>
+<li><code>r</code> = resume after (optional)</li>
+</ul>
+
+<p><strong>Example:</strong>
+<code>xml
+&lt;rect id="cue_repeat_s_startA_e_endA_x_3_r_resumeA" /&gt;
+</code></p>
+
+<hr />
+
+<h2>🎯 <code>cue_choice</code></h2>
+
+<p><strong>Purpose:</strong> Displays a grid of selectable animations; plays the selected one.</p>
+
+<p><strong>Format:</strong> <code>cue_choice_&lt;file1&gt;dur&lt;d1&gt;_&lt;file2&gt;dur&lt;d2&gt;_...</code></p>
+
+<p><strong>Example:</strong>
+<code>xml
+&lt;rect id="cue_choice_orbit7_dur_60_radar_dur_45" /&gt;
+</code></p>
+
+<hr />
+
+<h2>🌀 <code>cue_anime</code></h2>
+
+<p><strong>Purpose:</strong> Triggers a custom animation file (like <code>obj2path</code>).</p>
+
+<p><strong>Format:</strong> <code>cue_anime_&lt;fileID&gt;[_order_&lt;type&gt;]</code></p>
+
+<p><strong>Example:</strong>
+<code>xml
+&lt;rect id="cue_anime_map1_order_2" /&gt;
+</code></p>
+
+<hr />
+
+<h2>🧭 <code>cue_traverse</code> or <code>c-t</code></h2>
+
+<p><strong>Purpose:</strong> Animates an object between point elements (e.g. <code>p1</code>, <code>p2</code>).</p>
+
+<p><strong>Format:</strong>
+<code>
+c-t_p(p1,p2,p3)_o(dot1)_s(2)_d(0)_x(5)_e(1)_h(500)
+</code></p>
+
+<hr />
+
+<h2>🔗 Triggerable Cues with <code>_t(1)</code></h2>
+
+<p>Any cue can be made triggerable (not automatic) by including <code>_t(1)</code>.</p>
+
+<p><strong>Example:</strong>
+<code>xml
+&lt;circle id="cue_osc_triggerLaunch_t(1)" /&gt;
+</code></p>
+
+<p>This will wait until triggered manually or via another cue with <code>_next()</code>.</p>
+
+<hr />
+
+<h2>🚦 Summary Table</h2>
+
+<p>| Cue Type     | Prefix         | Purpose                            |
+|--------------|----------------|------------------------------------|
+| Pause        | <code>cue_pause</code>    | Pause playback                     |
+| Stop         | <code>cue_stop</code>     | Stop playback                      |
+| Audio        | <code>cue_audio</code>    | Play an audio file                 |
+| OSC          | <code>cue_osc</code>      | Send OSC message                   |
+| Speed Change | <code>cue_speed</code>    | Change scroll/playback speed       |
+| Repeat       | <code>cue_repeat</code>   | Loop between cues N times          |
+| Anime File   | <code>cue_anime</code>    | Trigger custom animation file      |
+| Traverse     | <code>cue_traverse</code> | Move object between SVG points     |
+| Choice Grid  | <code>cue_choice</code>   | Display selectable animations      |</p>
+
+<hr />
+
+<p>Rotula.Score Cue System — Updated 2025</p>
+<p><link href="style.css" rel="stylesheet"/></p>

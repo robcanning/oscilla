@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>OSC Output (o2p)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h1>🎛️ OSC Output for o2p Path Animations in Rotula.Score</h1>
+
+<p>This document explains how OSC messages are emitted by animated objects in Rotula.Score using the new compact <code>o2p(...)</code> namespace. It is written for two types of users:</p>
+
+<ul>
+<li><strong>Score Creators</strong> (composers, visual designers)</li>
+<li><strong>Electronic Musicians / Interpreters</strong> (connecting to synths, SuperCollider, Pd, Max, etc.)</li>
+</ul>
+
+<hr />
+
+<h2>👩‍🎨 For Score Creators</h2>
+
+<p>To emit OSC from an animated object following an SVG path, use the following ID syntax:</p>
+
+<p><code>xml
+&lt;circle id="o2p(path-42)_dir(1)_speed(2)_osc(1)" r="10" fill="orange" /&gt;
+</code></p>
+
+<h3>📐 ID Breakdown</h3>
+
+<ul>
+<li><code>o2p(path-42)</code>: Follow the SVG path with ID <code>path-42</code></li>
+<li><code>_dir(1)</code>: Direction mode (0 = ping-pong, 1 = forward, 2 = reverse, 3 = random)</li>
+<li><code>_speed(2)</code>: Motion speed multiplier</li>
+<li><code>_osc(1)</code>: Enable OSC output (0 = disabled, 1 = enabled)</li>
+</ul>
+
+<h3>🎚️ OSC Output Format</h3>
+
+<p>OSC messages are sent during animation like this:</p>
+
+<p><code>
+/obj2path/path-42 0.435 0.001 2.35
+</code></p>
+
+<ul>
+<li><strong>OSC address</strong>: <code>/obj2path/&lt;pathId&gt;</code></li>
+<li><strong>Arguments</strong>:
+<ul>
+<li><code>x</code> position (normalized 0–1)</li>
+<li><code>y</code> position (normalized 0–1)</li>
+<li><code>angle</code> (in degrees, orientation along path)</li>
+</ul></li>
+</ul>
+
+<h3>🧪 Example Use Cases</h3>
+
+<ul>
+<li>Map X to filter cutoff in SuperCollider</li>
+<li>Map Y to synth amplitude in Pure Data</li>
+<li>Use angle to control panning in Ableton</li>
+</ul>
+
+<hr />
+
+<h2>🎧 For Electronic Musicians</h2>
+
+<p>When a score includes objects with <code>_osc(1)</code>, you can receive OSC messages over UDP from Rotula.Score.</p>
+
+<h3>🔌 Default OSC Setup</h3>
+
+<ul>
+<li>Send address: <code>/obj2path/&lt;pathId&gt;</code></li>
+<li>Arguments: <code>[x, y, angle]</code> as floats</li>
+<li>Port: 57120 (customizable in <code>server.js</code>)</li>
+</ul>
+
+<h3>🧱 Pd Example</h3>
+
+<p><code>
+[udpreceive 57121]
+|
+[oscparse]
+|
+[route /obj2path/path-42]
+|
+[unpack f f f]
+</code></p>
+
+<h3>🎧 SuperCollider Example</h3>
+
+<p><code>supercollider
+OSCdef.new(\o2p, {
+  |msg| [\x, \y, \angle].postln;
+}, "/obj2path/path-42");
+</code></p>
+
+<hr />
+
+<h3>🧭 Conceptual Lineage: From UPIC to Rotula</h3>
+
+<p>Rotula.Score with OSC output can be seen as a modern continuation of ideas pioneered by Iannis Xenakis’s <strong>UPIC</strong> system. Like UPIC, which allowed composers to draw gestures directly as musical structures, Rotula enables users to design time-based behaviors and send them to synthesis engines using visual metaphors.</p>
+
+<ul>
+<li>UPIC: waveform and pitch drawn as graphics, rendered directly into sound.</li>
+<li>Rotula: SVG shapes and paths control time, position, and movement — and communicate over OSC to external synthesis environments.</li>
+</ul>
+
+<p>This lineage highlights Rotula's role not only as a notation tool but also as a <strong>graphic interface for dynamic sound control</strong>.</p>
+
+<h2>🛠️ Technical Breakdown</h2>
+
+<h3>🧩 How It Works</h3>
+
+<ul>
+<li><code>animateObjToPath()</code> receives an <code>osc</code> flag (true/false)</li>
+<li>On each animation frame, <code>emitOSCFromPathProgress()</code> calculates normalized <code>x</code>, <code>y</code>, and <code>angle</code></li>
+<li>If <code>osc === true</code>, it calls <code>sendObj2PathOsc()</code></li>
+<li>OSC messages are forwarded via WebSocket → server → <code>osc.UDPPort.send()</code></li>
+</ul>
+
+<h3>🔒 Global Disable (During Testing)</h3>
+
+<p>A global kill-switch can disable all OSC traffic from path-following objects:</p>
+
+<p><code>js
+window.ENABLE_OBJ2PATH_OSC = false; // set true to enable
+</code></p>
+
+<p>This is useful to prevent flooding live systems with OSC during development.</p>
+
+<hr />
+
+<h2>🔮 Future TODOs</h2>
+
+<ul>
+<li>[ ] Add <code>osc(...)</code> support to all animation types:
+<ul>
+<li>[ ] <code>r_deg[...]</code> for rotation</li>
+<li>[ ] <code>s[...]</code> for scaling</li>
+<li>[ ] <code>cue_traverse</code> path-based triggers</li>
+</ul></li>
+<li>[ ] Support <code>ease(...)</code>, <code>rotate(...)</code>, and <code>repeat(...)</code> in <code>parseO2PCompact()</code></li>
+<li>[ ] Allow per-object <code>osc_prefix(...)</code> override (e.g. <code>/mysynth/path-42</code>)</li>
+<li>[ ] Emit additional data like <code>velocity</code>, <code>acceleration</code>, or proximity</li>
+<li>[ ] Add a GUI or hotkey toggle to enable/disable OSC live</li>
+<li>[ ] Batch OSC messages from multiple objects to optimize performance</li>
+<li>[ ] Support alternate transports (WebSocket OSC, MIDI, etc.)</li>
+</ul>
+
+<h3>🛡️ Preventing OSC Floods: Server-Side Filtering</h3>
+
+<p>In multi-client setups (e.g. rehearsals or installations), each Rotula.Score instance may attempt to emit OSC messages independently. This leads to multiple clients sending <strong>duplicate OSC messages</strong>, causing:</p>
+
+<ul>
+<li>Network flooding</li>
+<li>Redundant control data</li>
+<li>Synth instability due to overlapping triggers</li>
+</ul>
+
+<p>To avoid this, the Rotula server should implement <strong>centralized OSC control</strong> using a single designated sender.</p>
+
+<h4>✅ Strategy</h4>
+
+<ul>
+<li>The server tracks all connected WebSocket clients.</li>
+<li>Only <strong>one client</strong> is authorized to send OSC (<code>primaryOscClient</code>).</li>
+<li>Other clients still animate visually but do <strong>not</strong> emit OSC, even if their objects have <code>_osc(1)</code>.</li>
+</ul>
+
+<h4>🔁 Assignment Logic</h4>
+
+<ul>
+<li>The <strong>first client to connect</strong> becomes the default OSC sender.</li>
+<li>If that client disconnects, the server reassigns the role to another connected client.</li>
+<li>The active OSC sender ID is <strong>broadcast to all clients</strong>, allowing each one to locally suppress OSC if they’re not the primary.</li>
+</ul>
+
+<h4>🧩 Server-Side Code Example</h4>
+
+<p>In <code>server.js</code>:</p>
+
+<p>```js
+let primaryOscClient = null;</p>
+
+<p>wss.on('connection', (ws) =&gt; {
+  if (!primaryOscClient) {
+    primaryOscClient = ws;
+    console.log('[SERVER] 🎯 Assigned new primary OSC client');
+  }</p>
+
+<p>ws.on('close', () =&gt; {
+    if (ws === primaryOscClient) {
+      primaryOscClient = null;
+      console.log('[SERVER] ⚠️ Primary OSC client disconnected');
+    }
+  });
+});</p>
+
+<p>...</p>
+
+<p>case "osc_obj2path":
+  if (ws !== primaryOscClient) return; // 💡 Filter OSC if not primary
+  oscPort.send({ ... });
+  break;
+```</p>
+
+<hr />
+
+<p>This ensures that <strong>only one copy</strong> of each OSC message reaches external software, no matter how many clients are connected.</p>
+
+<hr />
+
+<p>Built into Rotula.Score · CC-BY 2025</p>
+
+</body>
+</html>

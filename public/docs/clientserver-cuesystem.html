@@ -1,0 +1,84 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rotula.Score Client–Server Cue System</title>
+  <p><link href="style.css" rel="stylesheet"/></p>
+
+</head>
+<body>
+
+<h1>🎯 Rotula.Score Client–Server Cue System</h1>
+
+<div class="section">
+  <h2>🔄 Core Mechanism</h2>
+  <p>Rotula.Score uses a WebSocket-based architecture to synchronize cue triggers across all connected clients. Cues embedded in the SVG score are detected locally by each client and sent to the server to be rebroadcast to others.</p>
+</div>
+
+<div class="section">
+  <h2>🧠 Client Workflow Overview</h2>
+  <ol>
+    <li>Client playhead intersects a cue object in the SVG.</li>
+    <li><code>handleCueTrigger(cueId)</code> is called with <code>isRemote = false</code>.</li>
+    <li>Cue is parsed and executed via <code>cueHandlers[type](...)</code>.</li>
+    <li>If not already triggered locally, cue is added to <code>triggeredCues</code> and client sends <code>cue_triggered</code> to server.</li>
+    <li>All other clients receive <code>cue_triggered</code> from the server and call <code>handleCueTrigger(cueId, true)</code>.</li>
+  </ol>
+</div>
+
+<div class="section">
+  <h2>🌐 Server-Side Flow</h2>
+  <ol>
+    <li>Receives <code>cue_triggered</code> from a client.</li>
+    <li><strong>Broadcasts <code>cue_triggered</code> to all connected clients <em>except</em> the one who sent it.</strong></li>
+    <li>If the cue is a <code>cue_pause</code>, additional logic applies:
+      <ul>
+        <li>Server sets <code>isPlaying = false</code> and sends a <code>cue_pause</code> message including <code>duration</code> and <code>elapsedTime</code>.</li>
+        <li>All clients pause playback, show the countdown, and send <code>cue_pause_ack</code>.</li>
+        <li>After all clients acknowledge, the server sends a confirmation <code>pause</code> and later a <code>resume_after_pause</code> message.</li>
+      </ul>
+    </li>
+  </ol>
+</div>
+
+<div class="section">
+  <h2>🔐 Loop Prevention</h2>
+  <ul>
+    <li>Each client uses a <code>triggeredCues</code> set to avoid rebroadcasting a cue more than once.</li>
+    <li><code>handleCueTrigger()</code> only sends <code>cue_triggered</code> if <code>isRemote === false</code> and the cue hasn’t already been triggered locally.</li>
+    <li>Cues received via the server always execute but do not rebroadcast — even if already triggered.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>🧹 Cue Reset Logic</h2>
+  <p>The client function <code>resetTriggeredCues()</code> clears <code>triggeredCues</code>, preserving <code>cue_repeat_*</code> entries that are still active. This is called when the playhead is manually reset or jumped backward.</p>
+</div>
+
+<div class="section">
+  <h2>📌 Related Functions and Logic</h2>
+  <ul>
+    <li><strong>Client:</strong>
+      <ul>
+        <li><code>handleCueTrigger(cueId, isRemote)</code> — dispatches cue logic and conditionally rebroadcasts</li>
+        <li><code>cueHandlers[type]</code> — dictionary of cue type callbacks</li>
+        <li><code>handlePauseCue()</code> — handles countdown and playhead logic for pause cues</li>
+        <li><code>dismissPauseCountdown()</code> — hides countdown and resumes playback</li>
+        <li><code>resetTriggeredCues()</code> — clears previous cues for reactivation</li>
+      </ul>
+    </li>
+    <li><strong>Server:</strong>
+      <ul>
+        <li><code>case 'cue_triggered'</code> — rebroadcasts cue to all <strong>other</strong> clients</li>
+        <li><code>case 'cue_pause'</code> — initiates pause, countdown, and coordinated playback halt</li>
+        <li><code>case 'cue_pause_ack'</code> — tracks acknowledgment for coordinated resume</li>
+        <li><code>case 'dismiss_pause_countdown'</code> — triggers resume playback after countdown</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+</body>
+</html>

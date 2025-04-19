@@ -1,0 +1,94 @@
+<h1>Wi-Fi Router Setup for Rotula Concert Box (TP-Link Archer C6)</h1>
+
+<p>This guide is specifically for configuring the <strong>TP-Link Archer C6</strong> router for use with the Rotula "Concert Box" — a local server setup for concerts or workshops, accessed by multiple iPads or other devices without internet.</p>
+
+<hr />
+
+<h2>✅ Why the Archer C6?</h2>
+
+<ul>
+<li>Dual-band Wi-Fi (2.4GHz + 5GHz) for better performance with iPads</li>
+<li>Reliable for offline local networking</li>
+<li>Gigabit Ethernet for fast connection to the Concert Box</li>
+<li>Simple interface for setup and DHCP/static IP management</li>
+<li>Works well without internet — no captive portal issues by default</li>
+</ul>
+
+<hr />
+
+<h2>⚙️ Configuration Checklist (Router Admin Panel)</h2>
+
+<ol>
+<li><strong>Connect a laptop via Ethernet</strong></li>
+<li>Open a browser and go to the router admin page:
+<ul>
+<li>Usually <code>http://192.168.0.1</code> or <code>http://tplinkwifi.net</code></li>
+</ul></li>
+<li>Login with the default credentials (printed on the router)</li>
+<li>Follow these setup steps:</li>
+</ol>
+
+<h3>Wi-Fi Setup</h3>
+
+<ul>
+<li>Set SSID to something recognizable, e.g., <code>Rotula-Stage</code></li>
+<li>Enable both <strong>2.4GHz</strong> and <strong>5GHz</strong> bands</li>
+<li>Set a <strong>strong Wi-Fi password</strong></li>
+<li><strong>Disable guest network</strong> (unless intentionally used)</li>
+</ul>
+
+<h3>Internet Settings</h3>
+
+<ul>
+<li>You can <strong>leave WAN disconnected</strong> (offline use)</li>
+<li>Do not enable captive portals or parental controls</li>
+</ul>
+
+<h3>DHCP Settings</h3>
+
+<ul>
+<li>Go to DHCP → Address Reservation</li>
+<li>Reserve a <strong>static IP</strong> for your Concert Box (e.g., <code>192.168.0.10</code>)</li>
+<li>Alternatively, manually set a static IP on the box itself</li>
+</ul>
+
+<h3>Other Recommendations</h3>
+
+<ul>
+<li>Set <strong>DHCP lease time</strong> to a long duration (24h or more)</li>
+<li>Write down the SSID and password and tape it to the router</li>
+<li>Test the IP address in a browser (e.g., <code>http://192.168.0.10:8001</code>)</li>
+</ul>
+
+<hr />
+
+<h2>🌐 mDNS / .local Notes</h2>
+
+<ul>
+<li>The TP-Link Archer C6 <strong>does not support mDNS</strong> (<code>.local</code>) out of the box.</li>
+<li>Access the Concert Box using its static IP instead of <code>rotula.local</code>.</li>
+<li>Example: <code>http://192.168.0.10:8001</code></li>
+</ul>
+
+<hr />
+
+<h2>🧠 iPad Tips</h2>
+
+<ul>
+<li>iPads may show a <strong>"No Internet Connection"</strong> warning — this is fine.</li>
+<li>Be sure to tap <strong>“Keep Using Wi-Fi”</strong> when prompted.</li>
+<li>Disable Wi-Fi Assist or Private Address if it interferes.</li>
+</ul>
+
+<hr />
+
+<h2>🎯 Summary</h2>
+
+<p>The TP-Link Archer C6 is a solid, affordable choice for Rotula performance setups. Once configured:</p>
+
+<ul>
+<li>Clients can reliably access the concert server over Wi-Fi</li>
+<li>The network functions fully offline</li>
+<li>No captive portal or internet interference will block access</li>
+</ul>
+<p><link href="style.css" rel="stylesheet"/></p>

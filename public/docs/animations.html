@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SVG Animation Guide</title>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; line-height: 1.6; }
+    pre, code { background-color: #f4f4f4; padding: 0.2em 0.4em; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #eee; }
+  </style>
+</head>
+<body>
+<h1>SVG Animation Guide: Rotate + Scale</h1>
+
+<p>This guide documents how to animate SVG objects using compact ID-based namespaces.</p>
+
+<hr />
+
+<h2>🔁 Rotation (<code>startRotate</code>)</h2>
+
+<h3>Modes</h3>
+
+<p><strong>1. Alternate (Ping-pong / Metronome)</strong>
+<code>
+&lt;g id="r_alt(30)_speed(1)_ease(3)"&gt;
+</code>
+- Oscillates between +30° and -30°
+- <code>dir(1)</code> or <code>dir(-1)</code> sets initial direction</p>
+
+<p><strong>2. Step-based Rotation (Compass-like)</strong>
+<code>
+&lt;g id="r_deg[0,90,180,270]_dur[1,1,1]_speed(0.6)_ease[2]"&gt;
+</code>
+- Moves to each angle in sequence with pause durations</p>
+
+<p><strong>3. Random Rotations (Scanner / Radar Sweep)</strong>
+<code>
+&lt;g id="r_deg[rnd(6x90-270x)]_dur[rnd(6x0.5-1.5x)]_speed(0.4)_ease[3,5,6]"&gt;
+</code></p>
+
+<p><strong>4. Continuous Rotation (Clock Hands)</strong>
+<code>
+&lt;g id="r_rpm(2)_dir(1)_ease(1)"&gt;
+</code></p>
+
+<hr />
+
+<h2>🔍 Scale (<code>startScale</code>)</h2>
+
+<p><strong>Jittering Scale (Alert Signal)</strong>
+<code>
+&lt;circle id="s[rnd(8x0.2-1.2x)]_ease(0)_seqdur(2)"&gt;
+</code></p>
+
+<p><strong>Pulsing Heartbeat</strong>
+<code>
+&lt;circle id="s[1.0,1.5,1.0]_ease(3)_seqdur(4)_pulse"&gt;
+</code></p>
+
+<p><strong>Organic Swell</strong>
+<code>
+&lt;circle id="s[rnd(6x0.5-2x)]_ease(2)_seqdur(6)_alt"&gt;
+</code></p>
+
+<hr />
+
+<h2>🧩 Nesting Rotate + Scale</h2>
+
+<p>To combine effects, nest animated groups:</p>
+
+<p><code>
+&lt;g id="r_rpm(1)_ease(1)"&gt;
+  &lt;circle id="s[1,1.5,1]_seqdur(4)_ease(3)_pulse" /&gt;
+&lt;/g&gt;
+</code></p>
+
+<hr />
+
+<h2>📐 Pivot Explained</h2>
+
+<p>Pivot determines the point around which an element rotates.</p>
+
+<p>| Format              | Description                               |
+|---------------------|-------------------------------------------|
+| <code>pivot_x(100)</code>      | X pivot in user space pixels              |
+| <code>pivot_y(250)</code>      | Y pivot in user space pixels              |
+| <code>pivot(50%,100%)</code>   | Shorthand with percentage of bounding box |
+| Default             | Center of bounding box                    |</p>
+
+<hr />
+
+<h2>🎲 Mini-Notation &amp; Random Syntax</h2>
+
+<p>Use mini-notation for random sequences and regeneration:</p>
+
+<p>| Syntax                   | Meaning                                    |
+|--------------------------|--------------------------------------------|
+| <code>deg[6x0-360]</code>           | 6 random angles from 0–360, one-time       |
+| <code>deg[6x0-360x]</code>          | Regenerate on each loop                    |
+| <code>deg[rnd(6x0-360x)]</code>     | Modern preferred format                    |
+| <code>s[rnd(1.2,1.5,1.8)]</code>    | Randomly shuffled values from list         |</p>
+
+<p>Works for <code>deg[...]</code>, <code>dur[...]</code>, <code>s[...]</code>, etc.</p>
+
+<hr />
+
+<h2>🎛️ Easing Codes</h2>
+
+<p>Use these numeric shortcuts for animation easing:</p>
+
+<p>| Code | Easing Function     |
+|------|----------------------|
+| 0    | linear               |
+| 1    | easeInSine           |
+| 2    | easeOutSine          |
+| 3    | easeInOutSine        |
+| 4    | easeInBack           |
+| 5    | easeOutBack          |
+| 6    | easeInOutBack        |
+| 7    | easeInElastic        |
+| 8    | easeOutElastic       |
+| 9    | easeInOutElastic     |</p>
+
+<h3>Syntax Options</h3>
+
+<ul>
+<li>Single: <code>ease(3)</code> or <code>_ease_3</code></li>
+<li>Stepwise: <code>ease[2,3,5]</code></li>
+<li>Random per loop: <code>ease[rnd(1,3,5)]</code></li>
+</ul>
+
+<hr />
+
+<h2>🧩 Feature Tables</h2>
+
+<h3>Rotation Features</h3>
+
+<p>| Feature          | Syntax Example                          |
+|------------------|------------------------------------------|
+| Alternate        | <code>alt(45)</code>                                |
+| Continuous       | <code>rpm(1.2)_dir(-1)</code>                       |
+| Step-based       | <code>deg[0,90,180]</code>                          |
+| Mini-random      | <code>deg[5x0-360]</code>                           |
+| Modern random    | <code>deg[rnd(6x0-360x)]</code>                     |
+| Speed per step   | <code>speed(0.5)</code>                             |
+| Per-step pauses  | <code>dur[1,2,1]</code>                             |
+| Per-step easing  | <code>ease[1,2,3]</code>                            |
+| Random easing    | <code>ease[rnd(2,3,4)]</code>                       |
+| Custom pivot     | <code>pivot(50%,100%)</code>, <code>pivot_x(100)</code>       |</p>
+
+<h3>Scale Features</h3>
+
+<p>| Feature          | Syntax Example                            |
+|------------------|--------------------------------------------|
+| Static steps     | <code>s[1,1.5,1]</code>                                |
+| Random pulse     | <code>s[rnd(6x0.5-1.5x)]</code>                        |
+| Organic bounce   | <code>s[1.0,1.3,1.0]_ease(3)_pulse</code>              |
+| Full duration    | <code>seqdur(4)</code>                                 |
+| Relative timing  | <code>dur[1,2,1]</code>                                |
+| Loop modes       | <code>_alt</code>, <code>_pulse</code>, <code>_once</code>, <code>_bounce</code>, etc. |</p>
+
+<hr />
+
+<h2>✅ Syntax Cheatsheet</h2>
+
+<p>| Type        | Format                       | Notes                             |
+|-------------|------------------------------|-----------------------------------|
+| Angle Seq   | <code>deg[...]</code>                   | Rotation steps                    |
+| Durations   | <code>dur[...]</code>                   | Pause between steps               |
+| Scaling     | <code>s[...]</code>                     | Scale steps                       |
+| Time        | <code>seqdur(4)</code>                  | Total sequence duration in sec    |
+| Ease        | <code>ease(3)</code>, <code>ease[...]</code>       | Movement easing                   |
+| Speed       | <code>speed(0.4)</code>                 | Duration to reach each step       |</p>
+
+<h2>| Pivot       | <code>pivot(x,y)</code> or <code>_x/_y</code>      | Point of rotation                 |</h2>
+
+<h2>🎯 Real-World Pivot + Flip Examples</h2>
+
+<h3>Rotation Behaviors with Pivot</h3>
+
+<p>| Scenario                  | Pivot                       | Description                                 |
+|---------------------------|-----------------------------|---------------------------------------------|
+| Clock hand                | <code>pivot(0%, 50%)</code>            | Rotates from base of the hand               |
+| Compass needle            | <code>pivot(50%, 50%)</code>           | Spins around center pin                     |
+| Fan blade or turntable    | <code>pivot(50%, 50%)</code>           | Rotates smoothly from center                |
+| Door on hinge             | <code>pivot(0%, 50%)</code>            | Swings from one side                        |
+| Merry-go-round rider      | <code>pivot(200, 200)</code>           | Object rotates in a large circle offset     |
+| Hanging mobile shape      | <code>pivot(50%, 0%)</code>            | Swings from top center                      |
+| Radar tower               | <code>pivot(0%, 100%)</code>           | Spins from bottom corner of base            |</p>
+
+<hr />
+
+<h2>🔄 Flip, Mirror, and Inversion Examples</h2>
+
+<p>| Effect                | Method                                        | Example                                  |
+|-----------------------|-----------------------------------------------|------------------------------------------|
+| Flip upside down      | <code>rotate: 180deg</code> from center                  | <code>r_deg[180]_pivot(50%, 50%)</code>             |
+| Horizontal mirror     | <code>scaleX: -1</code> with center pivot                | <code>s[1,-1,1]_pivot(50%,50%)</code>               |
+| Vertical mirror       | <code>scaleY: -1</code>                                  | <code>s[1,-1,1]_pivot(50%,50%)</code> (Y direction) |
+| Flip from top         | <code>rotate: 180deg</code> from top edge                | <code>r_deg[180]_pivot(50%, 0%)</code>              |
+| Flip from corner      | <code>rotate: 180deg</code> from top-left                | <code>r_deg[180]_pivot(0%, 0%)</code>               |
+| Card flip             | <code>deg[0,180,360]</code> from edge or center          | <code>r_deg[0,180,360]_pivot(0%,50%)</code>         |</p>
+
+<hr />
+
+<h3>Example: Person on Merry-Go-Round</h3>
+
+<p><code>html
+&lt;g id="r_deg[0,90,180,270]_pivot(200,200)_speed(1)_ease(3)"&gt;
+  &lt;circle r="20" fill="orange" /&gt;
+&lt;/g&gt;
+</code>
+- The circle orbits a fixed external point, not its own center.
+- Like a person on the outer edge of a carousel.</p>
+
+<hr />
+
+<h3>Example: Flipping Door from Left Edge</h3>
+
+<p><code>html
+&lt;rect id="r_deg[0,90]_pivot(0%, 50%)_ease(3)_speed(1)" width="80" height="200" /&gt;
+</code>
+- Hinges on the left and opens outward.</p>
+
+</body>
+</html>

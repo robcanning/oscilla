@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>README - Interactive Scrolling Score</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 20px;
+      padding: 0;
+      color: #333;
+      background-color: #f9f9f9;
+    }
+    h1, h2, h3 {
+      color: #0056b3;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    code {
+      background-color: #eee;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    pre {
+      background-color: #f4f4f4;
+      padding: 10px;
+      border-left: 3px solid #ccc;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Interactive Scrolling Score</h1>
+  <h2>Overview</h2>
+  <p>
+    The <strong>Interactive Scrolling Score</strong> is a tool for live musical performances, workshops, and rehearsals. It provides real-time synchronized playback of SVG-based scores with customizable options and OSC (OpenSoundControl) integration.
+  </p>
+
+  <h2>Features</h2>
+  <h3>Core Functionality</h3>
+  <ul>
+    <li><strong>SVG Integration:</strong> Upload custom SVG scores for seamless playback.</li>
+    <li><strong>Custom Duration:</strong> Set playback duration to match your composition.</li>
+    <li><strong>Responsive Design:</strong> Works across various screen sizes and devices.</li>
+  </ul>
+
+  <h3>Playback Controls</h3>
+  <ul>
+    <li><strong>Play/Pause:</strong> Start and stop the playback.</li>
+    <li><strong>Rewind/Forward:</strong> Skip through the score in both directions.</li>
+    <li><strong>Rewind to Start:</strong> Reset playback to the beginning of the score.</li>
+    <li><strong>Adjust Playback Speed:</strong> Modify speed with buttons or keybindings.</li>
+  </ul>
+
+  <h3>User Interface Enhancements</h3>
+  <ul>
+    <li><strong>Fullscreen Mode:</strong> Immerse yourself in the score using fullscreen.</li>
+    <li><strong>Color Inversion:</strong> Toggle inverted colors for darker performance environments.</li>
+    <li><strong>Dynamic Splash Screen:</strong> Includes score details, keybindings, and upload options.</li>
+  </ul>
+
+  <h3>OpenSoundControl (OSC)</h3>
+  <ul>
+    <li><strong>OSC Broadcasting:</strong> Share playback data (e.g., elapsed time, cues) with connected clients.</li>
+    <li><strong>Cue Triggers:</strong> Send OSC messages when the playhead reaches tagged elements in the SVG.</li>
+  </ul>
+
+  <h3>Keybindings</h3>
+  <table border="1" cellpadding="5">
+    <thead>
+      <tr>
+        <th>Key</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Space</td>
+        <td>Play/Pause</td>
+      </tr>
+      <tr>
+        <td>Arrow Left</td>
+        <td>Rewind</td>
+      </tr>
+      <tr>
+        <td>Arrow Right</td>
+        <td>Forward</td>
+      </tr>
+      <tr>
+        <td>R</td>
+        <td>Rewind to Start</td>
+      </tr>
+      <tr>
+        <td>+</td>
+        <td>Increase Speed</td>
+      </tr>
+      <tr>
+        <td>-</td>
+        <td>Decrease Speed</td>
+      </tr>
+      <tr>
+        <td>H</td>
+        <td>Show/Hide Splash Screen</td>
+      </tr>
+      <tr>
+        <td>I</td>
+        <td>Invert Colors</td>
+      </tr>
+      <tr>
+        <td>W</td>
+        <td>Toggle WebSocket</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Installation</h2>
+  <h3>Prerequisites</h3>
+  <ul>
+    <li><a href="https://nodejs.org/">Node.js</a></li>
+    <li>Python and the <code>pyliblo</code> library for OSC testing.</li>
+  </ul>
+
+  <h3>Instructions</h3>
+  <ol>
+    <li>Clone the repository:
+      <pre>git clone https://git.kompot.si/rob/ponysays.git
+cd ponysays</pre>
+    </li>
+    <li>Install dependencies:
+      <pre>npm install</pre>
+    </li>
+    <li>Start the development server:
+      <pre>npm start</pre>
+    </li>
+    <li>Open the application in your browser:
+      <pre>http://localhost:8000</pre>
+    </li>
+  </ol>
+
+  <h2>Usage</h2>
+  <h3>Setting Up a Score</h3>
+  <ol>
+    <li>Open the application in your browser.</li>
+    <li>On the splash screen:
+      <ul>
+        <li>Upload your SVG score using the <strong>Upload SVG</strong> option.</li>
+        <li>Enter the playback duration in minutes.</li>
+      </ul>
+    </li>
+    <li>Press <strong>Enter</strong> to begin playback.</li>
+  </ol>
+
+  <h3>Controls</h3>
+  <p>See the <strong>Keybindings</strong> section for details on keyboard shortcuts and button actions.</p>
+
+  <h2>Testing OSC Functionality</h2>
+  <h3>Listening to OSC Messages</h3>
+  <ol>
+    <li>Open a terminal and start the OSC listener:
+      <pre>oscdump 57120</pre>
+    </li>
+    <li>Watch for incoming messages such as:
+      <pre>/stopwatch "5:43 / 30:00"</pre>
+    </li>
+    <li>OSC cues, such as crossing elements tagged as <code>cue1</code> or <code>cue2</code> in the SVG, are also transmitted.</li>
+  </ol>
+
+  <h2>Contributing</h2>
+  <p>We welcome contributions to this project! Please fork the repository, make your changes, and submit a pull request. For any issues or feature requests, feel free to open a GitHub issue.</p>
+
+  <h2>Development Notes</h2>
+  <h3>Recent Updates</h3>
+  <ul>
+    <li><strong>SVG Cue Detection:</strong> OSC messages are sent when the playhead intersects specific SVG elements tagged with IDs like <code>cue1</code>.</li>
+    <li><strong>Dynamic Playback Duration:</strong> Duration can be set in minutes via the splash screen's input box.</li>
+    <li><strong>Rewind to Start:</strong> Added both a button and keybinding (<code>R</code>) to rewind to the beginning.</li>
+    <li><strong>OSC Enhancements:</strong> Real-time stopwatch updates and cue events are broadcasted via OSC.</li>
+    <li><strong>Error Handling:</strong> Improved error messaging when invalid SVG files are uploaded.</li>
+  </ul>
+
+  <h3>Known Issues</h3>
+  <ul>
+    <li><strong>Playhead Resets on Reload:</strong> After refreshing the browser, playback resumes from the last position instead of starting at zero.</li>
+    <li><strong>Rewind Button:</strong> Ensure the "Rewind to Start" button mirrors <code>R</code> keybinding behavior.</li>
+  </ul>
+
+  <h2>License</h2>
+  <p>This project is licensed under the MIT License.</p>
+
+  <h2>Contact</h2>
+  <p>For inquiries or collaborations, contact <a href="mailto:rob@example.com">Rob Canning</a>.</p>
+</body>
+</html>

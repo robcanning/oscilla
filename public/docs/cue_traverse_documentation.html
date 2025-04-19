@@ -1,0 +1,102 @@
+<h1><code>cue_traverse</code> (Alias: <code>c-t</code>) — Animated Object Traversal Between Points</h1>
+
+<p>The <code>cue_traverse</code> (or <code>c-t</code>) cue allows an SVG object to animate between multiple reference points when triggered. This is useful for moving circles, ellipses, or rects between positions, with support for speed, direction, repetitions, easing, and more.</p>
+
+<hr />
+
+<h2>✅ Format</h2>
+
+<p><code>
+c-t_p(pointA,pointB,...)
+   _o(objectID)
+   _s(speed)
+   _d(direction)
+   _x(repeatCount)
+   _e(easeType)
+   _h(holdDuration)
+   [_next(#cueid)]
+</code></p>
+
+<ul>
+<li><code>p(...)</code> – List of point IDs to traverse between. Must be <code>circle</code>, <code>ellipse</code>, or <code>rect</code>.</li>
+<li><code>o(...)</code> – Object ID to animate.</li>
+<li><code>s(...)</code> – Speed (pixels per frame). Default: 1</li>
+<li><code>d(...)</code> – Direction mode:
+<ul>
+<li><code>0</code>: Forward</li>
+<li><code>1</code>: Reverse</li>
+<li><code>2</code>: Pingpong</li>
+<li><code>3</code>: Random</li>
+</ul></li>
+<li><code>x(...)</code> – Repeat count. Use <code>0</code> for infinite. Default: 0</li>
+<li><code>e(...)</code> – Easing type. Follows same logic as scale/rotation easing.</li>
+<li><code>h(...)</code> – Hold in milliseconds between each point (default: 0)</li>
+<li><code>_next(#cueid)</code> – (Planned) Trigger another cue when done.</li>
+<li><code>_t(1)</code> – (Planned) Mark cue as triggerable (used when chaining)</li>
+</ul>
+
+<hr />
+
+<h2>🔁 Aliases</h2>
+
+<ul>
+<li><code>cue_traverse</code> and <code>c-t</code> both invoke the same handler.</li>
+<li>Cue is detected by prefix: <code>cue_traverse_</code> or <code>c-t_</code></li>
+</ul>
+
+<hr />
+
+<h2>🌀 Example</h2>
+
+<p>To animate a circle with ID <code>dot1</code> between three points when the cue is triggered:</p>
+
+<p><code>
+c-t_p(p1,p2,p3)_o(dot1)_s(2)_d(0)_x(5)_e(1)_h(500)
+</code></p>
+
+<hr />
+
+<h2>🔗 Triggering Animations by Proxy</h2>
+
+<p>If your animated object uses a long auto-generated ID like:</p>
+
+<p><code>
+s[1,2,1.5]_seqdur_3_ease_5_t(1)
+</code></p>
+
+<p>You can simplify your cue like this:</p>
+
+<h3>SVG</h3>
+
+<p><code>xml
+&lt;circle id="myDot" data-id="s[1,2,1.5]_seqdur_3_ease_5_t(1)" r="20" /&gt;
+&lt;circle id="s[1,2,1.5]_seqdur_3_ease_5_t(1)" r="20" style="display:none;" /&gt;
+</code></p>
+
+<h3>Cue</h3>
+
+<p><code>
+c-t_o(myDot)
+</code></p>
+
+<p>This will look up <code>data-id</code> and trigger the real animation.</p>
+
+<hr />
+
+<h2>🔒 Future Notes</h2>
+
+<ul>
+<li>We plan to support <code>_next(#cue)</code> chaining after <code>x(N)</code> repetitions.</li>
+<li><code>_t(1)</code> can be used to make an animation triggerable.</li>
+<li>This system works alongside all other cue types, including <code>cue_repeat</code>, <code>cue_audio</code>, etc.</li>
+</ul>
+
+<hr />
+
+<h2>🧠 Requirements</h2>
+
+<ul>
+<li><code>initializeSVG()</code> must have scanned all animation elements.</li>
+<li>Animated objects must be included in the DOM before trigger.</li>
+</ul>
+<p><link href="style.css" rel="stylesheet"/></p>

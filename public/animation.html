@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Animation Namespace Cheat Sheet</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2em;
+      max-width: 960px;
+      margin: auto;
+      line-height: 1.6;
+    }
+    h1, h2, h3 {
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.25em;
+      margin-top: 2em;
+    }
+    code {
+      background: #f2f2f2;
+      padding: 2px 5px;
+      font-size: 0.95em;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      overflow-x: auto;
+    }
+    .section {
+      margin-bottom: 2em;
+    }
+    ul {
+      margin-top: 0.5em;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Animation Namespace Cheat Sheet</h1>
+
+  <div class="section">
+    <h2>1. Path Following (<code>obj2path-*</code>)</h2>
+    <p><strong>ID Format:</strong><br>
+      <code>obj2path-&lt;pathID&gt;[_speed_&lt;seconds&gt;][_direction_&lt;mode&gt;][_rotate_0][-uid_&lt;unique&gt;]</code>
+    </p>
+    <ul>
+      <li><code>pathID</code>: Matches an SVG path with ID <code>path-&lt;pathID&gt;</code></li>
+      <li><code>_speed_</code>: Seconds per full path loop</li>
+      <li><code>_direction_</code>: Path motion mode</li>
+      <li><code>_rotate_0</code>: Disable rotation-to-path direction</li>
+      <li><code>-uid_###</code>: Optional unless duplicating config</li>
+    </ul>
+    <h3>Direction Modes</h3>
+    <ul>
+      <li>0: Pingpong (forward & back)</li>
+      <li>1: Forward loop</li>
+      <li>2: Reverse loop</li>
+      <li>3: Random jump</li>
+      <li>4: Fixed segment hops</li>
+      <li>5: Ghost morph between path sets</li>
+    </ul>
+    <pre><code>obj2path-spiral_speed_6_direction_0
+obj2path-601427_speed_4_direction_1-uid_002</code></pre>
+  </div>
+
+  <div class="section">
+    <h2>2. In-Place Rotation (<code>obj_rotate_*</code>)</h2>
+    <p><strong>ID Format:</strong><br>
+      <code>obj_rotate_rpm_&lt;value&gt;[_dir_0|1][_pivot_x_px][_pivot_y_px][_dur_sec][_ease_type][_alternate_deg_deg]-uid_###</code>
+    </p>
+    <ul>
+      <li><code>_rpm_</code>: Revolutions per minute</li>
+      <li><code>_dir_</code>: 0 = counterclockwise, 1 = clockwise</li>
+      <li><code>_pivot_x_ / _pivot_y_</code>: Custom pivot (px)</li>
+      <li><code>_dur_</code>: Optional duration to stop animation</li>
+      <li><code>_ease_</code>: Anime.js easing (see below)</li>
+      <li><code>_alternate_deg_</code>: Enables ping-pong rotation between + and – angle</li>
+      <li><code>-uid_###</code>: Required (DOM ID uniqueness)</li>
+    </ul>
+    <h3>Examples</h3>
+    <pre><code>obj_rotate_rpm_1.2-uid_001
+obj_rotate_rpm_2_dir_0_ease_easeInOutSine-uid_002
+obj_rotate_rpm_30_alternate_deg_45_ease_easeInOutCirc_dir_1-uid_003</code></pre>
+
+    <h3>Alternate (Ping-Pong) Rotation</h3>
+    <p>
+      Use <code>_alternate_deg_45</code> to swing back and forth ±45°. Direction <code>_dir_0</code> or <code>_dir_1</code> sets initial direction (CCW or CW).
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>3. Anime.js Cue Triggers (<code>cue_animejs_*</code>)</h2>
+    <p><strong>ID Format:</strong><br>
+      <code>cue_animejs_&lt;filename&gt;[_order_0|1|2]</code>
+    </p>
+    <ul>
+      <li><code>_order_0</code>: Random (default)</li>
+      <li><code>_order_1</code>: Sequential</li>
+      <li><code>_order_2</code>: All at once</li>
+    </ul>
+    <pre><code>cue_animejs_intro
+cue_animejs_panelzoom_order_1</code></pre>
+  </div>
+
+  <div class="section">
+    <h2>4. Scale Animations (<code>s_*</code>)</h2>
+    <p><strong>ID Format:</strong><br>
+      <code>s_seq_&lt;values&gt;[_mode][_seqdur_N][_dur_1_2_1][_ease_X][_pivot_x_px][_pivot_y_px]</code>
+    </p>
+    <ul>
+      <li><code>s_seq_1_1.5</code>: scale from 1 to 1.5</li>
+      <li><code>mode</code>: <code>once</code>, <code>alt</code>, <code>bounce</code>, <code>pulse</code>, <code>pde</code></li>
+      <li><code>seqdur_N</code>: total sequence duration in seconds (e.g. <code>seqdur_3</code>)</li>
+      <li><code>dur_1_2_1</code>: relative durations per step (cycled if fewer than values)</li>
+      <li><code>ease_X</code>: easing ID (0–9, see below)</li>
+      <li><code>pivot_x_</code>, <code>pivot_y_</code>: override transform origin in px</li>
+    </ul>
+
+    <h3>Random Sequences</h3>
+    <ul>
+      <li><code>s_seq_r5_2-7</code>: 5 random steps between 2–7 (fixed)</li>
+      <li><code>s_seq_r5x2-7</code>: 5 values between 2–7, re-randomized on each loop</li>
+      <li><code>s_seq_2-7_rnd5x</code>: verbose equivalent</li>
+    </ul>
+
+    <h3>Examples</h3>
+    <pre><code>
+s_seq_1_1.5_alt_seqdur_4_ease_3
+s_seq_1.0_1.5_1.0_alt_dur_1_2_1_seqdur_3
+s_seq_r5x2-6_alt_seqdur_5_ease_7
+s_seq_1_3_5_once_ease_2
+    </code></pre>
+  </div>
+
+  <div class="section">
+    <h2>Easing Options (<code>_ease_*</code>)</h2>
+    <p>Underscores in easing names are converted to dashes automatically.</p>
+    <p>You can also use compact numeric aliases (0–9):</p>
+    <pre><code>
+0: linear, 1: easeInSine, 2: easeOutSine, 3: easeInOutSine,
+4: easeInBack, 5: easeOutBack, 6: easeInOutBack,
+7: easeInElastic, 8: easeOutElastic, 9: easeInOutElastic
+</code></pre>
+  </div>
+
+  <div class="section">
+    <h2>Nesting Rotations (Only)</h2>
+    <p>
+      You can nest rotating groups within each other. This allows for:
+      <ul>
+        <li>Clock faces with rotating hands</li>
+        <li>Radial widgets with animated arms</li>
+        <li>Metronome-like motion inside a rotating frame</li>
+      </ul>
+    </p>
+    <p><strong>Example:</strong></p>
+    <pre><code>&lt;g id="obj_rotate_rpm_0.25-uid_outer"&gt;
+  &lt;g id="obj_rotate_rpm_30_alternate_deg_45_ease_ease

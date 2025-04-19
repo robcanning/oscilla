@@ -1,0 +1,53 @@
+/* 🎯 Portrait Mode on Phones (Completely Different Layout) */
+@media screen and (max-width: 768px) and (orientation: portrait) {
+    #controls {
+        flex-direction: column; /* Stack elements vertically */
+        height: auto; /* Allow it to expand dynamically */
+        padding: 15px;
+    }
+
+    #button-container {
+        display: flex;
+        flex-direction: column;
+        gap:4px;
+        width: 100%;
+    }
+
+
+    /* 🎯 Bigger Buttons for Touch */
+    #button-container button {
+        font-size: 1.5rem;
+        width: 98%;
+        padding: 5px;
+        border-radius: 4px;
+    }
+
+
+    /* 🎯 Hide Certain Elements in Portrait Mode */
+#rehearsal-marks-button, #stop-audio-button, #toggle-notes-button,
+#invert-button, #seek-bar,
+#speedControls, #stopwatch, /* Hide the stopwatch */
+    #ws-toggle-button, /* Hide the WebSocket toggle */
+    #help-button, /* Hide the help button */
+    #fullscreen-button { /* Hide fullscreen button */
+        display: none !important;
+    }
+
+    /* 🎯 Repositioned Play/Pause Button */
+    #toggle-button {
+        font-size: 2.5rem;
+        background-color: #ff0;
+        color: #000;
+    }
+}
+
+/* 🎯 Portrait Mode on Phones (Completely Different Layout) */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+
+    /* 🎯 Hide Certain Elements in Portrait Mode */
+ #seek-bar,#rewind-to-zero-button, #invert-button, #ws-toggle-button,
+#speedControls{
+          display: none !important;
+    }
+
+}

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SVG Clone Generator</title>
+  <style>
+    body { font-family: sans-serif; padding: 1em; }
+    label { display: block; margin-top: 1em; }
+    code { display: block; white-space: pre; overflow-x: auto; background: #f4f4f4; padding: 1em; margin-top: 1em; }
+    #preview { border: 1px solid #ccc; margin-top: 1em; }
+  </style>
+</head>
+<body>
+  <h1>Rotula Graphic Score Clone Tool</h1>
+<p>
+  A utility for creating SVG-based animated clone structures for use in the <strong>Rotula Graphic Score System</strong>.
+  Designed for flexibility and organic variation in score elements using custom s_seq and obj_rotate animation namespaces. © 2025 Rob Canning — developed for the <a href="http://rizom.si:8001" target="_blank">Rotula system hosted by rizom.si:8001</a>.
+</p>
+
+  <h2>SVG Clone Generator</h2>
+
+  <label>Original ID: <input type="text" id="originalId" value="s_seq_1.0_1.2_once_seqdur_4_ease_3_original"></label>
+  <label>Grid size (N x N): <input type="number" id="gridSize" value="4" min="2" max="10"></label>
+
+  <fieldset>
+    <legend>Scale (s_seq_*)</legend>
+    <label>Enable scaling: <input type="checkbox" id="enableScale" checked></label>
+    <label>Min scale: <input type="number" id="scaleMin" value="0.6" step="0.1"></label>
+    <label>Max scale: <input type="number" id="scaleMax" value="1.5" step="0.1"></label>
+    <label>seqdur mode:
+      <select id="seqdurMode">
+        <option value="range">Range</option>
+        <option value="list">List</option>
+      </select>
+    </label>
+    <label id="seqdurRangeLabel">seqdur (min-max): <input type="text" id="seqdurRange" value="2-6"></label>
+    <label id="seqdurListLabel" style="display:none;">seqdur list (e.g. 2,4,6): <input type="text" id="seqdurList" value="2,4,6"></label>
+    <label>Ease mode:
+      <select id="scaleEaseMode">
+        <option value="fixed">Fixed</option>
+        <option value="list">List</option>
+      </select>
+    </label>
+    <label>Ease value(s): <input type="text" id="scaleEase" value="3"></label>
+    <label>Mode:
+      <select id="scaleMode">
+        <option value="once">once</option>
+        <option value="alt">alt</option>
+        <option value="bounce">bounce</option>
+        <option value="pulse">pulse</option>
+        <option value="pde">pde</option>
+      </select>
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Rotation (obj_rotate_*)</legend>
+    <label>Enable rotation: <input type="checkbox" id="enableRotate" checked></label>
+    <label>Min RPM: <input type="number" id="rpmMin" value="0.5" step="0.1"></label>
+    <label>Max RPM: <input type="number" id="rpmMax" value="2.0" step="0.1"></label>
+    <label>Alternate rotation: <input type="checkbox" id="enableAlt"></label>
+    <label>Alternate mode:
+      <select id="altDegMode">
+        <option value="fixed">Fixed</option>
+        <option value="list">List</option>
+      </select>
+    </label>
+    <label id="altDegLabel">Alternate Degrees: <input type="text" id="altDeg" value="180"></label>
+    <label>Ease mode:
+      <select id="rotateEaseMode">
+        <option value="fixed">Fixed</option>
+        <option value="list">List</option>
+      </select>
+    </label>
+    <label>Ease value(s): <input type="text" id="rotateEase" value="3"></label>
+  </fieldset>
+
+  <button onclick="generateSVG()">Generate</button>
+  <button onclick="copyToClipboard()">📋 Copy Code</button>
+
+  <h4>Ease Key:</h4>
+  <ul>
+    <li>0: linear</li>
+    <li>1: easeInSine</li>
+    <li>2: easeOutSine</li>
+    <li>3: easeInOutSine</li>
+    <li>4: easeInBack</li>
+    <li>5: easeOutBack</li>
+    <li>6: easeInOutBack</li>
+    <li>7: easeInElastic</li>
+    <li>8: easeOutElastic</li>
+    <li>9: easeInOutElastic</li>
+  </ul>
+
+  <code id="output"></code>
+  <div id="preview"></div>
+
+  <script>
+    const EASING_MAP = {
+      0: "linear", 1: "easeInSine", 2: "easeOutSine", 3: "easeInOutSine",
+      4: "easeInBack", 5: "easeOutBack", 6: "easeInOutBack",
+      7: "easeInElastic", 8: "easeOutElastic", 9: "easeInOutElastic"
+    };
+
+    document.getElementById('seqdurMode').addEventListener('change', () => {
+      document.getElementById('seqdurRangeLabel').style.display = event.target.value === 'range' ? 'block' : 'none';
+      document.getElementById('seqdurListLabel').style.display = event.target.value === 'list' ? 'block' : 'none';
+    });
+
+    function generateSVG() {
+      const origId = document.getElementById('originalId').value;
+      const gridSize = parseInt(document.getElementById('gridSize').value);
+      const enableScale = document.getElementById('enableScale').checked;
+      const scaleMin = parseFloat(document.getElementById('scaleMin').value);
+      const scaleMax = parseFloat(document.getElementById('scaleMax').value);
+      const scaleEaseMode = document.getElementById('scaleEaseMode').value;
+      const scaleEaseVals = parseList(document.getElementById('scaleEase').value);
+      const scaleMode = document.getElementById('scaleMode').value;
+
+      const seqdurMode = document.getElementById('seqdurMode').value;
+      const seqdurVals = seqdurMode === 'range'
+        ? rangeList(document.getElementById('seqdurRange').value)
+        : parseList(document.getElementById('seqdurList').value);
+
+      const enableRotate = document.getElementById('enableRotate').checked;
+      const rpmMin = parseFloat(document.getElementById('rpmMin').value);
+      const rpmMax = parseFloat(document.getElementById('rpmMax').value);
+      const rotateEaseMode = document.getElementById('rotateEaseMode').value;
+      const rotateEaseVals = parseList(document.getElementById('rotateEase').value);
+      const enableAlt = document.getElementById('enableAlt').checked;
+      const altDegVals = parseList(document.getElementById('altDeg').value);
+
+      const spacing = 200;
+      const width = gridSize * spacing;
+      const height = gridSize * spacing;
+
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns:xlink="http://www.w3.org/1999/xlink">\n`;
+
+      svg += `  <g id="${origId}" transform="translate(0,0)">\n    <circle cx="0" cy="0" r="20" fill="black" />\n  </g>\n`;
+
+      let uid = 1;
+
+      for (let row = 1; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
+          const x = col * spacing;
+          const y = row * spacing;
+
+          const scaleA = rand(scaleMin, scaleMax);
+          const scaleB = rand(scaleMin, scaleMax);
+          const seqdur = randFrom(seqdurVals);
+          const easeS = scaleEaseMode === 'list' ? randFrom(scaleEaseVals) : scaleEaseVals[0];
+
+          const sid = enableScale
+            ? `s_seq_${scaleA}_${scaleB}_${scaleMode}_seqdur_${seqdur}_ease_${easeS}_uid${String(uid).padStart(3, '0')}`
+            : `s_static_uid${String(uid).padStart(3, '0')}`;
+
+          let rid = '';
+          if (enableRotate) {
+            const rpm = rand(rpmMin, rpmMax);
+            const dir = Math.random() > 0.5 ? 1 : 0;
+            const easeR = rotateEaseMode === 'list' ? randFrom(rotateEaseVals) : rotateEaseVals[0];
+            rid = `obj_rotate_rpm_${rpm}_dir_${dir}_ease_${EASING_MAP[easeR]}`;
+            if (enableAlt) {
+              const alt = randFrom(altDegVals);
+              rid += `_alternate_deg_${alt}`;
+            }
+            rid += `-uid_${String(uid).padStart(3, '0')}`;
+          }
+
+          svg += `  <g id="${sid}" transform="translate(${x},${y})">\n`;
+          if (enableRotate) {
+            svg += `    <g id="${rid}">\n      <use xlink:href="#${origId}" />\n    </g>\n`;
+          } else {
+            svg += `    <use xlink:href="#${origId}" />\n`;
+          }
+          svg += `  </g>\n`;
+
+          console.log(`Clone ${uid} using href="#${origId}"`);
+          uid++;
+        }
+      }
+
+      svg += `</svg>`;
+      document.getElementById('output').textContent = svg;
+      document.getElementById('preview').innerHTML = svg;
+    }
+
+    function rand(min, max) {
+      return (Math.random() * (max - min) + min).toFixed(2);
+    }
+
+    function parseList(str) {
+      return str.split(',').map(s => parseInt(s.trim())).filter(x => !isNaN(x));
+    }
+
+    function rangeList(str) {
+      const [min, max] = str.split('-').map(Number);
+      return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+    }
+
+    function randFrom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function copyToClipboard() {
+      const text = document.getElementById('output').textContent;
+      navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
+    }
+    </script>
+
+
+</body>
+</html>

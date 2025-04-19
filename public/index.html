@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PonySays</title>
+
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- <link rel="stylesheet" href="css/tablet.css" media="screen and (min-width: 769px) and (max-width: 1366px) and (min-height: 600px)"> -->
+  <link rel="stylesheet" href="css/phone.css" media="screen and (max-width: 768px)">
+  <!-- <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet"> -->
+  <!-- <script src="https://cdn.jsdelivr.net/npm/svg-path-commander"></script> -->
+  <script src="js/svg-path-commander"></script>
+
+</head>
+<body>
+
+  <div id="rotula-splash-screen" class="rotula-splash hidden">
+      <h1>Welcome to Rotula Score</h1>
+      <p>Select an existing score or upload a new one.</p>
+
+      <!-- List of Available Scores -->
+      <h2>Available Scores:</h2>
+      <ul id="score-list">
+          <li>
+              <button onclick="loadScore('svg/default.svg')">🎼 Load Default Score</button>
+          </li>
+      </ul>
+
+      <!-- Upload New Score -->
+      <h2>Upload a New Score:</h2>
+      <input type="file" id="upload-score" accept=".svg" />
+      <button onclick="handleFileUpload()">Upload</button>
+  </div>
+
+
+
+  <!-- Splash Screen -->
+  <div id="splash">
+    <div class="splash-container">
+      <div class="title-section">
+        <h1>1:10,560</h1>
+        <p class="subtitle">(6 inches to the Mile)</p>
+        <p class="forces">An intermedia score for<br>electric guitar, synthesiser and  e-drums.<p>
+
+          <div class="instructions">
+               <p class="instruction">press [ENTER] to continue or [h] help, [f] fullscreen </div>
+
+        <p class="author">Rob Canning (2025)</p>
+        <p class="commission">Commissioned by Pony Says<br>Funded by the Arts Council of Ireland</p>
+
+           <div id="action-buttons">
+             <!-- Visible on mobile -->
+             <button onclick="toggleSplashScreen()">Start Score</button>
+             <button onclick="toggleKeybindingsPopup()">Keybindings</button>
+             <button onclick="toggleProgrammeNotePopup()">Programme Note</button>
+             <button onclick="toggleScoreNotesPopup()">Score Notes</button>
+           </div>
+      </div>
+
+
+
+    </div>
+  </div>
+
+
+  <!-- 🔹 Top Bar Container -->
+  <div id="top-bar">
+      <div id="client-list">Clients: 0</div>
+      <div id="stopwatch">00:00</div>
+      <div id="waveform-container"></div>
+      <div id="cue-info">OSC:</div>
+      <button id="hamburger-menu">☰</button> <!-- 🔹 Hamburger Button -->
+  </div>
+
+
+  <!-- Controls -->
+  <div id="controls">
+      <!-- ✅ Seek Bar is Above Buttons -->
+      <input id="seek-bar" type="range" min="0" max="100" value="0">
+
+      <div id="button-container">
+
+        <div id="left-controls">
+        <button id="rewind-to-zero-button">&#x21B6;</button>
+        <button id="rehearsal-marks-button">A</button>
+        <button id="toggle-notes-button" title="Toggle Score Notes">📝</button>
+      </div>
+
+        <!-- Group of 4 Seek Buttons -->
+        <div id="seek-controls">
+          <button id="fast-rewind-button" title="Fast Rewind (Jump to previous mark)"><</button>
+          <button id="rewind-button" title="Slow Rewind">&#x23EE;</button>
+          <button id="toggle-button">&#x25B6;</button>
+
+          <button id="forward-button" title="Slow Forward">&#x23ED;</button>
+          <button id="fast-forward-button" title="Fast Forward (Jump to next mark)">></button>
+          <button id="fullscreen-button">⛶</button>
+
+
+                  <div id="speedControls">
+                      <button id="decreaseSpeed">−</button>
+                      <span id="speedDisplay">1.0×</span>
+                      <button id="increaseSpeed">+</button>
+                      <button id="resetSpeed">↻</button>
+                  </div>
+      </div>
+
+        <div id="right-controls">
+            <!-- Other control buttons -->
+            <button id="stop-audio-button">🔇</button>
+            <button id="invert-button">&#x1F317;</button>
+            <button id="help-button">[i]</button>
+            <button id="ws-toggle-button">🌐</button>
+      </div>
+
+      </div>
+    </div>
+
+
+
+  <!-- ✅ Waveform Display Container (Pre-Defined in HTML) -->
+  <div id="waveform-container"></div>
+
+
+  <!-- Score Viewport -->
+  <div id="scoreContainer">
+    <img id="score" src="svg/draft.svg" alt="Score">
+  </div>
+
+  <div id="playzone"></div>
+  <div id="playhead">
+    <div id="repeat-count-box" class="hidden">1</div>
+  </div>
+
+  <!-- Stopwatch -->
+  <!-- <div id="stopwatch"></div> -->
+
+
+
+  <div id="keybindings-popup" class="popup hidden">
+    <h2>Keybindings</h2>
+<p><strong>Space:</strong> PLAY/PAUSE</p>
+<p><strong>Arrow Left:</strong> SEEK << </p>
+<p><strong>Arrow Right:</strong> SEEK >> </p>
+<p><strong>Arrow Up:</strong> Jump to Previous Rehearsal Mark</p>
+<p><strong>Arrow Down:</strong> Jump to Next Rehearsal Mark</p>
+<p><strong>+</strong> Increase Speed</p>
+<p><strong>-</strong> Decrease Speed</p>
+<p><strong>R</strong> Rehearsal Marks</p>
+<p><strong>0</strong> Rewind to Start</p>
+<p><strong>N</strong> Toggle Score Annotations</p>
+<p><strong>S:</strong> Show/Hide SCORE LOADER Options</p>
+<p><strong>H:</strong> Show/Hide HELP</p>
+<p><strong>T:</strong> Show/Hide TITLE PAGE</p>
+<p><strong>Esc:</strong> Enable/Disable Network Sync</p>
+    <hr> <!-- Divider between keybindings and touch gestures -->
+
+    <h3>Touch Gestures</h3>
+    <p><strong>Double Tap:</strong> Play/Pause</p>
+    <p><strong>Swipe Left:</strong> Move score left</p>
+    <p><strong>Swipe Right:</strong> Move score right</p>
+    <p><strong>Swipe and Hold:</strong> Continuously seek </p>
+
+
+    <button id="close-keybindings">Close</button>
+  </div>
+
+
+  <div id="animation-popup" class="popup interaction-popup hidden">
+      <object id="animation-content" type="image/svg+xml"></object>
+  </div>
+
+  <div id="animejs-container" class="popup hidden">
+      <!-- <button id="animejs-close-button" class="animejs-close-button">X</button> -->
+      <div id="animejs-content"> <!-- Directly load the SVG here -->
+          <!-- SVG will be inserted dynamically -->
+      </div>
+      <div id="animejs-countdown"></div>
+  </div>
+
+  <div id="cue-choice-container" class="hidden">
+      <div id="cue-choice-header">Choose an Option </div>
+  </div>
+
+
+
+  <div id="pause-countdown" class="hidden">
+      <p class="pause-header">Pause for:</p>
+      <span id="pause-time">0</span>
+  </div>
+
+
+  <div id="rehearsal-popup" class="hidden">
+      <div id="rehearsal-header">Select Rehearsal Mark to Jump to Location in Score <br> or jump with arrow UP and DOWN keys</div>
+
+      <div id="rehearsal-grid">
+          <div id="rehearsal-mark-container"></div>
+      </div>
+
+      <button id="rehearsal-close-button" onclick="closeRehearsalPopup()">Close</button>
+  </div>
+
+  <div id="video-popup" class="popup interaction-popup hidden">
+      <video id="video-content" controls></video>
+  </div>
+
+  <div id="p5-popup" class="popup interaction-popup hidden">
+      <div id="p5-container"></div>
+  </div>
+
+  <div id="black-overlay"></div>
+
+
+
+  <!-- Score Options Popup -->
+  <div id="score-options-popup" class="popup hidden">
+    <h2>Score Options</h2>
+    <label for="svg-file">Upload SVG:</label>
+    <input type="file" id="svg-file" accept=".svg">
+    <label for="duration-input">Set Duration (minutes):</label>
+    <input type="number" id="duration-input" value="20" min="1">
+    <button id="close-score-options">Close</button>
+  </div>
+
+  <!-- Programme Note Popup -->
+<div id="programme-popup" class="popup hidden">
+<h2>Programme Note</h2>
+<p>
+  1:10,560 (6 inches to the Mile) unfolds as a meditation on journeys—both personal and collective. Inspired by the evocative language of maps, the piece reflects on how we chart, explore, and interpret the world around us. Maps have long been tools of discovery, capturing landscapes and sparking imagination, yet they also serve as instruments of power, imposing boundaries and reshaping perceptions. This duality—a source of wonder and a reminder of historical and ongoing traumas—informs the piece's emotional and conceptual landscape.
+
+  The score itself acts as a metaphorical map, with dynamic elements inviting performers to chart their own paths. Symbols in the graphic score directly reference the visual language of Irish Ordnance Survey maps, their contours echoing themes of exploration and control. The music resists easy categorization, offering moments of spontaneity, reflection, and raw intensity.
+
+  While rooted in historical cartography, the piece also turns its gaze to the present. Digital cartographies extend beyond GPS systems, reflecting how our interactions are continuously mapped—from browsing habits to personality profiling. These processes shape our perceptions, often targeting us with precision while keeping us within curated echo chambers. In this way, mapping becomes yet another instrument of control, reinforcing the dominance of global tech corporations as the new colonial powers of a digital age. Against this backdrop, 1:10,560 encourages us to pause and reflect on the act of mapping itself—both as a metaphor and as a means of understanding the landscapes within and around us.
+
+  The composition's score is a networked digital artefact, blending traditional and graphic notation with media elements such as animation and audio-visual cues. It creates a dynamic, ever-shifting terrain for performers to navigate. Performers are guided but not constrained, navigating a rich and interpretive environment that mirrors the complexities of exploration and choice.
+</p>
+<button onclick="toggleProgrammeNotePopup()">Close</button>
+</div>
+
+<!-- Score Notes Popup -->
+<div id="score-notes-popup" class="popup hidden">
+<h2>Score Notes</h2>
+<p>
+Details about the notation system and performance instructions will appear here.
+</p>
+<button onclick="toggleScoreNotesPopup()">Close</button>
+</div>
+
+<script>
+  fetch('/config')
+    .then(response => response.json())
+    .then(config => {
+      window.websocketConfig = config; // Store config for later use
+    })
+    .catch(error => {
+      console.error('Error fetching configuration:', error);
+    });
+</script>
+
+
+  <script src="js/wavesurfer.min.js"></script>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js" crossorigin="anonymous"></script> -->
+  <script src="js/anime.min.js"></script>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script> -->
+  <script src="js/p5.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

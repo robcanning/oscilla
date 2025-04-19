@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>cue_pause Documentation</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <h1>cue_pause</h1>
+
+  <h2>Usage Overview</h2>
+  <p>
+    The <code>cue_pause</code> namespace allows you to insert time-based pauses within your Rotula.Score composition.
+    When triggered, playback pauses for the specified duration and optionally displays a countdown popup.
+    Users may dismiss the pause manually by clicking, or wait until the duration elapses.
+  </p>
+
+  <h3>Basic Example</h3>
+  <pre><code>&lt;div id="cue_pause_dur_5"&gt;&lt;/div&gt;</code></pre>
+  <p>This will pause playback for 5 seconds when triggered.</p>
+
+  <h3>Alias Format (planned)</h3>
+  <pre><code>&lt;div id="c-p_dur(5)"&gt;&lt;/div&gt;</code></pre>
+  <p>This is a proposed shorthand for the same functionality.</p>
+
+  <h2>Technical Behavior</h2>
+
+  <h3>WebSocket Trigger</h3>
+  <p>
+    The <code>cue_pause</code> behavior is initiated client-side when the cue system detects an SVG element
+    with a matching ID (e.g., <code>cue_pause_dur_5</code>). Logic involves both client-side and server-side
+    coordination to pause playback and optionally resume it automatically.
+  </p>
+
+  <h3>Client-side Logic (app.js)</h3>
+  <ul>
+    <li><code>handleCueTrigger()</code> — calls <code>handlePauseCue()</code> when detecting a <code>cue_pause_*</code> trigger.</li>
+    <li><code>handlePauseCue(params)</code> — parses <code>dur</code> from the cue ID, sends <code>pause_for_duration</code> to the server, and calls <code>togglePlay()</code>.</li>
+    <li><code>resume_after_pause</code> listener — resumes playback from the server once pause duration completes.</li>
+    <li><code>dismiss_pause_countdown</code> — client click handler to manually resume playback early.</li>
+    <li><code>updateCueCountdownUI()</code> — handles the popup countdown display if duration &gt; 2.</li>
+    <li><code>#pause-countdown</code> — div container styled with <code>styles.css</code>.</li>
+  </ul>
+
+  <h3>Server-side Logic (server.js)</h3>
+  <ul>
+    <li>WebSocket <code>cue_pause_*</code> handler — receives <code>pause_for_duration</code> message from client.</li>
+    <li><code>broadcastToClients()</code> — sends <code>resume_after_pause</code> to all clients after X seconds.</li>
+    <li>Click-to-dismiss — clients send <code>dismiss_pause_countdown</code> to skip waiting.</li>
+  </ul>
+
+  <h2>CSS Dependencies</h2>
+  <ul>
+    <li><code>#pause-countdown</code> — styled in <code>styles.css</code> with fixed position, z-index, padding.</li>
+    <li><code>.paused</code> — used on <code>#play-button</code> and affects animation state.</li>
+  </ul>
+
+  <h2>Additional Features (Planned)</h2>
+  <ul>
+    <li>Support for <code>cue_pause_dur(5)</code> using parentheses.</li>
+    <li>Support for alias form: <code>c-p_dur(5)</code>.</li>
+    <li>Countdown popup only appears when duration &gt; 2 seconds.</li>
+    <li>Future support for pause + resume + jump logic.</li>
+  </ul>
+
+  <p><a href="index.html">Back to index.html</a></p>
+</body>
+</html>
