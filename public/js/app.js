@@ -5,6 +5,8 @@ const LogLevel = {
   ERROR: 3,
 };
 
+console.log("[DEBUG] sessionStorage keys:", Object.keys(sessionStorage));
+
 let currentLogLevel = LogLevel.WARN; // Set default log level to reduce verbosity
 
 const log = (level, ...messages) => {
@@ -97,39 +99,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const stopwatch = document.getElementById('stopwatch');
   const rehearsalMarksButton = document.getElementById('rehearsal-marks-button');
   const fullscreenButton = document.getElementById('fullscreen-button');
-  const durationInput = document.getElementById('duration-input');
+  // const durationInput = document.getElementById('duration-input');
 
   const svgFileInput = document.getElementById('svg-file');
   let svgElement = null; // Declare globally
 
   const keybindingsPopup = document.getElementById('keybindings-popup');
+  
 
-  const scoreOptionsPopup = document.getElementById('score-options-popup');
+    const scoreOptionsPopup = document.getElementById("score-options-popup");
 
-  if (scoreOptionsPopup) {
-    scoreOptionsPopup.addEventListener('click', (event) => {
-      console.log('[DEBUG] Click inside score-options-popup, stopping propagation.');
-      event.stopPropagation();
-    });
-  } else {
-    console.error('[DEBUG] score-options-popup not found.');
-  }
+  document.addEventListener("DOMContentLoaded", () => {
+  
 
-  document.getElementById("duration-input").addEventListener("change", (event) => {
-    const newDuration = event.target.value * 60 * 1000; // Convert minutes to ms
-    console.log(`[DEBUG] New duration set: ${newDuration}ms`);
-
-    if (wsEnabled) {
-      socket.send(JSON.stringify({
-        type: "set_duration",
-        duration: newDuration
-      }));
-    }
   });
-
-
-
-
+  
 
   const closeKeybindingsButton = document.getElementById('close-keybindings');
   const closeScoreOptionsButton = document.getElementById('close-score-options');
@@ -149,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let totalPauseDuration = 0; // Tracks cumulative pause time for musical pauses
   let pauseStartTime = null; // Start time of the current musical pause
   let isManualPause = false; // Flag to differentiate manual vs. musical pause
-  let duration = parseInt(durationInput.value, 10) * 60 * 1000; // Default: 30 minutes
   let resumeTimeOffset = null; // Tracks the time offset when resuming playback
   let pauseOffset = 0; // Tracks elapsed pause duration
 
@@ -269,36 +252,14 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
-
-
-  /**
-  * ✅ Function: Hide Splash Screen and Load Selected Score
-  */
+  // /**
+  // * ✅ Function: Hide Splash Screen and Load Selected Score
+  // */
   function loadScore(scoreFile) {
     console.log(`[DEBUG] Loading score: ${scoreFile}`);
     document.getElementById("main-splash-screen").style.display = "none"; // Hide splash
     initializeScore(scoreFile); // Existing function to load a score
   }
-
-  /**
-  * ✅ Function: Handle Score Upload
-  */
-  function handleFileUpload() {
-    const fileInput = document.getElementById("upload-score");
-    const file = fileInput.files[0];
-
-    if (!file) {
-      alert("Please select a file.");
-      return;
-    }
-
-    const fileURL = URL.createObjectURL(file);
-    console.log(`[DEBUG] Uploaded new score: ${file.name}`);
-
-    loadScore(fileURL); // Load the new score
-  }
-
-
 
 
   const clearPopupsOnInteraction = (event) => {
@@ -1289,7 +1250,7 @@ document.addEventListener('DOMContentLoaded', () => {
    * Supports deferred triggering via `_t(1)` in ID.
    */
    const initializeScalingObjects = (svgElement) => {
-     console.log('[DEBUG][scale] Initializing scaling objects.');
+// console.log('[DEBUG][scale] Initializing scaling objects.');
 
      const scalingObjects = Array.from(svgElement.querySelectorAll(
        '[id^="scale"], [id^="s_"], [id^="sXY_"], [id^="sX_"], [id^="sY_"],' +
@@ -1299,17 +1260,17 @@ document.addEventListener('DOMContentLoaded', () => {
      ));
 
      if (scalingObjects.length === 0) {
-       console.log('[DEBUG][scale] No scaling objects found.');
+      //  console.log('[DEBUG][scale] No scaling objects found.');
        return;
      }
 
-     console.log(`[DEBUG][scale] Found ${scalingObjects.length} scaling objects.`);
+    //  console.log(`[DEBUG][scale] Found ${scalingObjects.length} scaling objects.`);
 
      scalingObjects.forEach((object) => {
        const rawId = object.id;
        const dataId = object.getAttribute('data-id');
        const id = dataId || rawId;
-       console.log(`[scale:init] Found scale object: ${object.id}, data-id: ${object.getAttribute("data-id")}`);
+      //  console.log(`[scale:init] Found scale object: ${object.id}, data-id: ${object.getAttribute("data-id")}`);
 
        // Always call startScale — it decides whether to play or defer
        startScale(object);
@@ -1781,7 +1742,7 @@ function startRotate(object) {
     const rawId = object.id;
     const dataId = object.getAttribute('data-id');
     const id = dataId || rawId;
-    console.log(`[scale] 🟡 Starting scale animation for ${object.id} (parsed id: ${id})`);
+    // console.log(`[scale] 🟡 Starting scale animation for ${object.id} (parsed id: ${id})`);
 
     const easeMap = {
       '0': 'linear', '1': 'easeInSine', '2': 'easeOutSine', '3': 'easeInOutSine',
@@ -1884,7 +1845,7 @@ function startRotate(object) {
     if (object.__regenerateScaleSeq) {
       timeline.finished.then(() => {
         const newValues = object.__regenerateScaleSeq();
-        console.log(`[scale] 🔁 Regenerated scale sequence:`, newValues);
+        // console.log(`[scale] 🔁 Regenerated scale sequence:`, newValues);
         requestAnimationFrame(() => startScale(object)); // full restart
       });
     }
@@ -1993,66 +1954,139 @@ function triggerDeferredAnimations(objectId) {
   // Loads an external SVG file and adds it to the scoreContainer, replacing any existing SVG.
   // Aligns the playhead correctly at the start of the score
   // Runs `rewindToStart()` with a slight delay to finalize alignment after loading.
+/**
+ * ✅ Enhanced SVG loader with session persistence
+ *
+ * - Uploads work using blob URLs.
+ * - Keeps track of current score using sessionStorage.
+ * - Falls back to draft.svg if nothing is set or session is new.
+ */
 
-  let pathVariantsMap = {}; // Global storage for path variants
+/**
+ * ✅ SVG Loading & Session Persistence Logic
+ * - Supports uploading custom SVG scores
+ * - Automatically restores the last uploaded score using sessionStorage
+ * - Falls back to "svg/draft.svg" if session or blob is unavailable
+ */
+/**
+ * svgpersist: SVG Loading & Session Persistence Logic
+ * - Lets users upload custom SVG scores during a session.
+ * - Remembers the last uploaded score using sessionStorage.
+ * - Falls back to "svg/draft.svg" if session data or blob is invalid.
+ */
 
-  const loadExternalSVG = (svgUrl) => {
-    console.log('Loading external SVG from URL:', svgUrl);
-    fetch(svgUrl)
+// [svgpersist] 🧠 Rationale: store uploaded SVG as base64 string so it survives page reloads.
+// - Avoids relying on Blob URLs, which expire after tab close.
+// - sessionStorage keeps it for the session; use localStorage if you want cross-session persistence.
+
+// [svgpersist] 🧠 Using base64 to persist SVG across page reloads during the same session.
+// - Avoids expired Blob URLs
+// - sessionStorage holds a data URL encoded from the user's uploaded SVG
+
+// [svgpersist] Full SVG persistence and upload logic
+let pathVariantsMap = {};
+
+window.loadExternalSVG = (svgSource) => {
+  console.log('[svgpersist] Loading external SVG...');
+
+  // 🟨 Base64 inline SVG
+  if (svgSource.startsWith("data:image/svg+xml;base64,")) {
+    console.log(`[svgpersist] Loaded base64 SVG (length: ${svgSource.length})`);
+    const parser = new DOMParser();
+    const svgElement = parser.parseFromString(atob(svgSource.split(",")[1]), 'image/svg+xml').documentElement;
+    svgElement.id = "score";
+
+    scoreContainer.innerHTML = '';
+    scoreContainer.appendChild(svgElement);
+
+    initializeSVG(svgElement);
+    storePathVariants(svgElement);
+    return;
+  }
+
+  // 🟦 External fetch (e.g., svg/draft.svg or blob:)
+  fetch(svgSource)
     .then(response => response.text())
     .then(svgText => {
       const parser = new DOMParser();
-      svgElement = parser.parseFromString(svgText, 'image/svg+xml').documentElement;
-      scoreSVG = svgElement;
+      const svgElement = parser.parseFromString(svgText, 'image/svg+xml').documentElement;
       svgElement.id = "score";
 
       scoreContainer.innerHTML = '';
       scoreContainer.appendChild(svgElement);
 
-      scoreSVG = svgElement;
-
-      // console.log('SVG loaded and added to scoreContainer:', svgElement);
-      // window.playheadX = 11700;
-
       initializeSVG(svgElement);
-      storePathVariants(svgElement); // Extract path variants upon loading
+      storePathVariants(svgElement);
     })
-    .catch(err => console.error('Error loading external SVG:', err));
-  };
-
-  const storePathVariants = (svgElement) => {
-    pathVariantsMap = {}; // Reset stored data
-
-    const allPaths = svgElement.querySelectorAll("path"); // Get all paths in SVG
-    allPaths.forEach(path => {
-      const id = path.id;
-      if (id && id.match(/^path-\d+-\d+$/)) { // Match pattern path-<base>-<variant>
-        const baseID = id.replace(/-\d+$/, ''); // Extract base ID (without variant)
-        if (!pathVariantsMap[baseID]) {
-          pathVariantsMap[baseID] = []; // Initialize array if not exists
-        }
-        pathVariantsMap[baseID].push(path); // Store the variant
+    .catch(err => {
+      console.error('[svgpersist] ERROR loading SVG:', err);
+      if (svgSource.startsWith("blob:")) {
+        console.warn('[svgpersist] Fallback to draft.svg after blob failure.');
+        loadExternalSVG("svg/draft.svg");
       }
     });
+};
 
-    // console.log("[DEBUG] Path variants stored:", pathVariantsMap);
+const storePathVariants = (svgElement) => {
+  pathVariantsMap = {};
+  const allPaths = svgElement.querySelectorAll("path");
+  allPaths.forEach(path => {
+    const id = path.id;
+    if (id && id.match(/^path-\d+-\d+$/)) {
+      const baseID = id.replace(/-\d+$/, '');
+      if (!pathVariantsMap[baseID]) pathVariantsMap[baseID] = [];
+      pathVariantsMap[baseID].push(path);
+    }
+  });
+};
+
+// [svgpersist] Initialize score from sessionStorage on load
+const initializeScore = () => {
+  const savedBase64 = sessionStorage.getItem("scoreBase64");
+
+  if (savedBase64) {
+    console.log('[svgpersist] Restoring previous base64 SVG.');
+    loadExternalSVG(savedBase64);
+  } else {
+    console.log('[svgpersist] No saved SVG found. Loading default draft.svg.');
+    loadExternalSVG("svg/draft.svg");
+  }
+};
+
+initializeScore(); // ⬅️ Make sure this runs outside any event listener
+
+// [svgpersist] Upload and persist new SVG to sessionStorage
+document.getElementById("upload-score").addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  if (!file) return alert("Please select a file.");
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const base64 = e.target.result;
+    sessionStorage.setItem("scoreBase64", base64);
+    console.log(`[svgpersist] New SVG uploaded. Persisted length: ${base64.length}`);
+    loadExternalSVG(base64);
   };
+  reader.readAsDataURL(file);
+});
 
 
-  // Ensures a default SVG (`svg/draft.svg`) is loaded if no external file is specified.
 
-  const ensureDefaultSVG = () => {
-    const defaultSVGPath = 'svg/draft.svg'; // Update to your actual path
-    loadExternalSVG(defaultSVGPath);
-  };
 
-  ensureDefaultSVG(); // Start loading the SVG
+
+
 
   const initializeSVG = (svgElement) => {
     if (!svgElement) {
       console.error("[ERROR] No SVG element provided to initializeSVG.");
       return;
     }
+
+
+
+
+
+
 
 
     scoreSVG = svgElement;
@@ -3465,16 +3499,7 @@ function triggerDeferredAnimations(objectId) {
       }
     };
 
-    /**
-    * ✅ Closes the "Score Options" popup when the Close button is clicked.
-    */
-
-    document.getElementById("close-score-options").addEventListener("click", (event) => {
-      console.log("[DEBUG] Close button clicked."); // ✅ Debugging log
-      event.stopPropagation(); // ✅ Prevents interference from other click handlers
-      document.getElementById("score-options-popup").classList.add("hidden");
-    });
-
+   
 
 
     const toggleScoreNotesPopup = () => {
@@ -4910,6 +4935,32 @@ function triggerDeferredAnimations(objectId) {
         case '0': document.getElementById('animation-popup').click(); break; // Close popup
       }
     });
+
+
+
+
+// // 🟡 Make loadAndClose globally accessible to HTML
+window.loadAndClose = function(svgPath) {
+  loadExternalSVG(svgPath);
+  document.getElementById("score-options-popup").classList.add("hidden");
+};
+
+// 🟡 Make handleFileUploadAndClose globally accessible to HTML
+window.handleFileUploadAndClose = function() {
+  const fileInput = document.getElementById("svg-file");
+  const file = fileInput.files[0];
+
+  if (!file) return;
+
+  const blobURL = URL.createObjectURL(file);
+  sessionStorage.setItem("scoreURL", blobURL);
+  loadExternalSVG(blobURL);
+  document.getElementById("score-options-popup").classList.add("hidden");
+};
+
+
+
+
 
     ////////////////////////////////////////////////////
 
@@ -6857,13 +6908,56 @@ function triggerDeferredAnimations(objectId) {
 
 
       // Event Listeners
-      durationInput.addEventListener('input', () => {
-        duration = parseInt(durationInput.value, 10) * 60 * 1000;
-        //console.log(Duration updated to ${durationInput.value} minutes (${duration} milliseconds).);
-        calculateMaxScrollDistance();
-        updatePosition();
-        updateStopwatch(); // Ensure the stopwatch reflects the updated total duration
+
+
+
+       const durationInput = document.getElementById("duration-input");
+  
+      // ✅ Set default duration after durationInput is defined
+      let duration = durationInput ? parseInt(durationInput.value, 10) * 60 * 1000 : 30 * 60 * 1000;
+    
+      if (scoreOptionsPopup) {
+        scoreOptionsPopup.addEventListener("click", (event) => {
+          console.log("[DEBUG] Click inside score-options-popup, stopping propagation.");
+          event.stopPropagation();
+        });
+      } else {
+        console.error("[DEBUG] score-options-popup not found.");
+      }
+    
+      if (durationInput) {
+        durationInput.addEventListener("change", (event) => {
+          const newDuration = parseFloat(event.target.value);
+          if (!isNaN(newDuration)) {
+            duration = newDuration * 60 * 1000; // ✅ store in ms
+            console.log(`[DEBUG] Updated duration to ${newDuration} minutes.`);
+          }
+        });
+      } else {
+        console.warn("[DEBUG] #duration-input not found in DOM.");
+      }
+  
+    // ✅ Safely attach the close button listener now that DOM is ready
+    const closeBtn = document.getElementById("close-score-options");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", (event) => {
+        console.log("[DEBUG] Close button clicked.");
+        event.stopPropagation();
+        document.getElementById("score-options-popup").classList.add("hidden");
       });
+    } else {
+      console.warn("[DEBUG] Close button not found in DOM.");
+    }
+  
+// TODO uncomment and fix fixme
+
+      // durationInput.addEventListener('input', () => {
+      //   duration = parseInt(durationInput.value, 10) * 60 * 1000;
+      //   //console.log(Duration updated to ${durationInput.value} minutes (${duration} milliseconds).);
+      //   calculateMaxScrollDistance();
+      //   updatePosition();
+      //   updateStopwatch(); // Ensure the stopwatch reflects the updated total duration
+      // });
 
       toggleButton.addEventListener('click', togglePlay);
 

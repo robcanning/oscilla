@@ -135,6 +135,24 @@ body {
 
 }
 
+
+/* Hide native file input */
+.custom-file-upload input[type="file"] {
+  display: none;
+}
+
+/* Style the label like a button */
+.custom-file-upload label {
+  display: inline-block;
+  padding: 6px 12px;
+  background-color: #38bdf8; /* sky-400 */
+  color: #fff;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+
 #splash .svg-loader h3 {
   font-size: 1.5em;
   margin-bottom: 10px;
@@ -665,7 +683,7 @@ button:active {
 #score-options-popup {
   background: rgba(0, 0, 0, 0.9) !important;
   color: white !important;
-  line-height: 0.4; /* ✅ Adjusts vertical spacing for better readability */
+  line-height: 1s.4; /* ✅ Adjusts vertical spacing for better readability */
 
 
   z-index: 20000; /* Ensure it is above the score and playhead */
@@ -674,6 +692,36 @@ button:active {
 .hidden {
     display: none;
 }
+
+
+/* Remove bullet points from the popup list */
+#score-options-popup ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5em 0;
+}
+
+/* Style the score option links */
+#score-options-popup ul li a {
+  text-decoration: none;
+  color: #7dd3fc; /* sky-300 */
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  display: inline-block;
+  padding: 4px 0;
+}
+
+/* Optional: hover effect for better UX */
+#score-options-popup ul li a:hover {
+  color: #38bdf8; /* sky-400 */
+  text-decoration: underline;
+}
+
+
+
+
+
+
 
 
 svg, svg * {

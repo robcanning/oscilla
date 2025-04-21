@@ -30,7 +30,6 @@
       <!-- Upload New Score -->
       <h2>Upload a New Score:</h2>
       <input type="file" id="upload-score" accept=".svg" />
-      <button onclick="handleFileUpload()">Upload</button>
   </div>
 
 
@@ -212,16 +211,35 @@
   <div id="black-overlay"></div>
 
 
+<!-- Score Options Popup -->
+<div id="score-options-popup" class="popup hidden">
+  <h2>Score Options</h2>
 
-  <!-- Score Options Popup -->
-  <div id="score-options-popup" class="popup hidden">
-    <h2>Score Options</h2>
-    <label for="svg-file">Upload SVG:</label>
-    <input type="file" id="svg-file" accept=".svg">
-    <label for="duration-input">Set Duration (minutes):</label>
-    <input type="number" id="duration-input" value="20" min="1">
-    <button id="close-score-options">Close</button>
+  <h3>🎼 Load a Predefined Score from the Server:</h3>
+  <ul>
+    <li><a href="#" onclick="loadAndClose('svg/draft.svg')">"Six Inches to the Mile" for PonySays by Rob Canning 2025</a></li>
+    <li><a href="#" onclick="loadAndClose('svg/help.svg')"> Basic Help File in Score Format help.svg</a></li>
+    <li><a href="#" onclick="loadAndClose('svg/help.svg')">TODO calibrate.svg placeholder link</a></li>
+    <li><a href="#" onclick="loadAndClose('svg/help.svg')">TODO template.svg placeholder link</a></li>
+  </ul>
+
+  <h3>📁 Upload Your Own SVG:</h3>
+
+  <div class="custom-file-upload">
+    <label for="svg-file">📁 Choose an SVG File</label>
+    <input type="file" id="svg-file" accept=".svg" onchange="handleFileUploadAndClose()">
   </div>
+
+  <label for="duration-input">Set Duration (minutes):</label>
+  <input type="number" id="duration-input" value="20" min="1">
+  
+</div>
+
+
+
+
+
+
 
   <!-- Programme Note Popup -->
 <div id="programme-popup" class="popup hidden">
