@@ -718,6 +718,20 @@ button:active {
 }
 
 
+#score-options-popup button {
+  margin-top: 10px;
+  padding: 6px 12px;
+  font-size: 14px;
+  background-color: #222;
+  color: #facc15;
+  border: 1px solid #666;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#score-options-popup button:hover {
+  background-color: #444;
+}
 
 
 

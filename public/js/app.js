@@ -6905,7 +6905,12 @@ window.handleFileUploadAndClose = function() {
       }
       //////////////////////////
 
-
+      window.downloadTemplate = function () {
+        const link = document.createElement("a");
+        link.href = "svg/template.svg"; // Adjust path if needed
+        link.download = "template.svg"; // Suggested filename
+        link.click();
+      };
 
       // Event Listeners
 
