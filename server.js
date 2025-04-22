@@ -1,26 +1,74 @@
 #!/bin/node
 
+// ---------------------------------------------
+// Command-Line & Environment Configuration Layer
+// ---------------------------------------------
+
+// Load yargs to parse command-line arguments
+const yargs = require('yargs/yargs');
+const { hideBin } = require('yargs/helpers');
+
+// Parse CLI arguments (e.g. --port=8010 --osc-in=57123)
+const argv = yargs(hideBin(process.argv)).argv;
+
+// ---------------------------------------------
+// Module Imports
+// ---------------------------------------------
+
 const WebSocket = require('ws');
 const express = require('express');
 const osc = require('osc');
 
-const app = express();
-const port = process.env.PORT || 8001;
+// ---------------------------------------------
+// Express App Setup
+// ---------------------------------------------
 
+const app = express();
+
+// ---------------------------------------------
+// Runtime Configuration: Port & OSC Settings
+// ---------------------------------------------
+
+// WebSocket / HTTP port
+// Priority: CLI arg → env var → fallback default
+const port = argv.port || process.env.PORT || 8001;
+
+// OSC settings object
 const oscConfig = {
-  localAddress: process.env.OSC_LOCAL_ADDRESS || "0.0.0.0",
-  localPort: process.env.OSC_LOCAL_PORT || 57121,
-  remoteAddress: process.env.OSC_REMOTE_ADDRESS || "127.0.0.1",
-  remotePort: process.env.OSC_REMOTE_PORT || 57120,
+  localAddress: process.env.OSC_LOCAL_ADDRESS || "0.0.0.0",               // Listening address for OSC
+  localPort: argv['osc-in'] || process.env.OSC_LOCAL_PORT || 57121,       // OSC input port
+  remoteAddress: process.env.OSC_REMOTE_ADDRESS || "127.0.0.1",           // Destination address for outgoing OSC
+  remotePort: argv['osc-out'] || process.env.OSC_REMOTE_PORT || 57120     // OSC output port
 };
 
+// Host and port for WebSocket clients to connect to
+const websocketHost = argv['ws-host'] || process.env.WS_HOST || 'localhost';
+const websocketPort = argv['ws-port'] || process.env.WS_PORT || port;     // Defaults to HTTP port if not specified
+
+// ---------------------------------------------
+// Log the Active Configuration (for debugging)
+// ---------------------------------------------
+
+console.log(`[CONFIG] HTTP/WebSocket Port: ${port}`);
+console.log(`[CONFIG] OSC In: ${oscConfig.localAddress}:${oscConfig.localPort}`);
+console.log(`[CONFIG] OSC Out: ${oscConfig.remoteAddress}:${oscConfig.remotePort}`);
+
+// ---------------------------------------------
+// API Endpoint for Client-Side Config Retrieval
+// ---------------------------------------------
+
+// Returns current WebSocket host/port config to client
 app.get('/config', (req, res) => {
-  //res.setHeader('Cache-Control', 'no-store'); // TODO Remove
   res.json({
-    websocketHost: process.env.WS_HOST || 'localhost',
-    websocketPort: process.env.WS_PORT || 8001,
+    websocketHost,
+    websocketPort,
   });
 });
+
+// ---------------------------------------------
+// Server Launch 
+// ---------------------------------------------
+
 
 app.use(express.static('public'));
 
