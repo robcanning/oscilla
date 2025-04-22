@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <title>oscillaScore</title>
   <style>
-    html, body {
+    html,
+    body {
       margin: 0;
       padding: 0;
       overflow: hidden;
@@ -13,14 +15,41 @@
       color: #eee;
       padding: 1rem;
     }
-    h2 { margin-top: 0; }
-    .status { margin-bottom: 1rem; }
-    .status span { display: block; margin-bottom: 0.25rem; }
-    .log { background: #1e1e1e; padding: 1rem; height: 200px; overflow-y: scroll; font-family: monospace; }
-    .clients { background: #1e1e1e; padding: 0.5rem; margin-top: 1rem; }
-    button { padding: 0.5rem 1rem; margin-top: 1rem; }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    .status {
+      margin-bottom: 1rem;
+    }
+
+    .status span {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .log {
+      background: #1e1e1e;
+      padding: 1rem;
+      height: 200px;
+      overflow-y: scroll;
+      font-family: monospace;
+    }
+
+    .clients {
+      background: #1e1e1e;
+      padding: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      margin-top: 1rem;
+    }
   </style>
 </head>
+
 <body>
   <h2>🎼 oscillaScore Server</h2>
   <div class="status">
@@ -77,7 +106,7 @@
         delete currentClients[data.name];
       }
       clients.innerHTML = Object.entries(currentClients)
-        .map(function(pair) {
+        .map(function (pair) {
           return '<div>' + pair[0] + ' (' + pair[1] + ')</div>';
         })
         .join('') || 'None';
@@ -90,4 +119,5 @@
     }
   </script>
 </body>
+
 </html>
