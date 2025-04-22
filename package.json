@@ -1,4 +1,11 @@
 {
+  "name": "oscillascore",
+  "version": "1.0.0",
+  "description": "oscillaScore GUI",
+  "main": "server.js",
+  "scripts": {
+    "start": "electron server-gui.js"
+  },
   "dependencies": {
     "express": "^4.21.2",
     "fs": "^0.0.1-security",
@@ -9,5 +16,8 @@
     "ws": "^8.18.0",
     "xml-js": "^1.6.11",
     "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "electron": "^35.2.0"
   }
 }

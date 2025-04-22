@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>oscillaScore</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: #121212;
+      color: #eee;
+      padding: 1rem;
+    }
+    h2 { margin-top: 0; }
+    .status { margin-bottom: 1rem; }
+    .status span { display: block; margin-bottom: 0.25rem; }
+    .log { background: #1e1e1e; padding: 1rem; height: 200px; overflow-y: scroll; font-family: monospace; }
+    .clients { background: #1e1e1e; padding: 0.5rem; margin-top: 1rem; }
+    button { padding: 0.5rem 1rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h2>🎼 oscillaScore Server</h2>
+  <div class="status">
+    <span id="status">Status: 🟢 Running</span>
+    <span id="ws">WS Port: loading...</span>
+    <span id="osc-in">OSC In Port: loading...</span>
+    <span id="osc-out">OSC Out Port: loading...</span>
+  </div>
+  <button onclick="restartServer()">🔁 Restart Server</button>
+  <h3>Connected Clients</h3>
+  <div class="clients" id="clients">None</div>
+  <h3>Log Output</h3>
+  <pre class="log" id="log"></pre>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+    const log = document.getElementById('log');
+    const ws = document.getElementById('ws');
+    const oscIn = document.getElementById('osc-in');
+    const oscOut = document.getElementById('osc-out');
+    const clients = document.getElementById('clients');
+    const status = document.getElementById('status');
+
+    ipcRenderer.on('log', (_, msg) => {
+      if (!log) return;
+      log.textContent += msg + '\n';
+      log.scrollTop = log.scrollHeight;
+
+      try {
+        const data = JSON.parse(msg);
+        if (data.gui) {
+          if (data.type === 'http' && data.port) {
+            ws.textContent = 'WS Port: ' + data.port;
+          }
+          if (data.type === 'osc') {
+            if (data.localPort) oscIn.textContent = 'OSC In Port: ' + data.localPort;
+            if (data.remotePort) oscOut.textContent = 'OSC Out Port: ' + data.remotePort;
+          }
+          if (data.type === 'client_connected' || data.type === 'client_disconnected') {
+            updateClientList(data);
+          }
+        }
+      } catch (e) {
+        console.warn('[Non-JSON]', msg);
+      }
+    });
+
+    let currentClients = {};
+
+    function updateClientList(data) {
+      if (data.type === 'client_connected') {
+        currentClients[data.name] = data.ip;
+      } else if (data.type === 'client_disconnected') {
+        delete currentClients[data.name];
+      }
+      clients.innerHTML = Object.entries(currentClients)
+        .map(function(pair) {
+          return '<div>' + pair[0] + ' (' + pair[1] + ')</div>';
+        })
+        .join('') || 'None';
+    }
+
+    function restartServer() {
+      ipcRenderer.send('restart-server');
+      status.textContent = 'Status: 🟡 Restarting...';
+      setTimeout(() => { status.textContent = 'Status: 🟢 Running'; }, 2000);
+    }
+  </script>
+</body>
+</html>

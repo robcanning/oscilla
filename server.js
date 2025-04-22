@@ -30,7 +30,12 @@ app.use('/docs', express.static(path.join(__dirname, 'docs')));
 
 const server = app.listen(port, () => {
   console.log(`HTTP server is running on http://localhost:${port}`);
-  });
+  console.log(JSON.stringify({
+    gui: true,
+    type: "http",
+    port
+  }));  
+});
 
   const wss = new WebSocket.Server({ server });
 
@@ -63,6 +68,12 @@ const server = app.listen(port, () => {
 
   oscPort.on("ready", () => {
     console.log("OSC port is ready and listening for connections.");
+    console.log(JSON.stringify({
+      gui: true,
+      type: "osc",
+      localPort: oscPort.options.localPort,
+      remotePort: oscPort.options.remotePort
+    }));
   });
 
   const sendOscMessage = () => {
@@ -212,11 +223,22 @@ const server = app.listen(port, () => {
     // ✅ Declare a set to track triggered cues
     let triggeredCues = new Set();
 
-    wss.on('connection', (ws) => {
+    wss.on('connection', (ws, req) => {
       const clientName = generateRandomName();
       clientNames.set(ws, clientName);
       activeClients.add(ws);
       console.log(`[DEBUG] New WebSocket connection: ${clientName}`);
+
+
+      const ip = req.socket.remoteAddress;
+
+      console.log(JSON.stringify({
+        gui: true,
+        type: "client_connected",
+        name: clientName,
+        ip
+      }));
+
       broadcastClientList();
 
       // ✅ Instead of resetting, send the current state to the new client
@@ -671,7 +693,13 @@ const server = app.listen(port, () => {
 
       ws.on('close', (code, reason) => {
         console.log(`[DEBUG] Client disconnected: ${clientNames.get(ws)} (Code: ${code}, Reason: ${reason || "No reason"})`);
-
+        console.log(JSON.stringify({
+          gui: true,
+          type: "client_disconnected",
+          name: clientNames.get(ws),
+          ip: ws._socket?.remoteAddress
+        }));
+        
         activeClients.delete(ws);
         clientNames.delete(ws);
         broadcastClientList();

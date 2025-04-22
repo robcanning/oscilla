@@ -5633,12 +5633,15 @@ window.handleFileUploadAndClose = function() {
       }
     };
 
+//////////////////////////////////////////////////////////////
+// OPEN SOUND CONTROL OSC ////////////////////////////////////
+//////////////////////////////////////////////////////////////
 
+window.ENABLE_OBJ2PATH_OSC = false; // 🚫 globally disable OSC for now
 
     // Store last sent timestamps per path
     const oscLastSent = new Map();
 
-    window.ENABLE_OBJ2PATH_OSC = false; // 🚫 globally disable OSC for now
 
     // Helper: Send OSC message to server via WebSocket
     function sendObj2PathOsc(pathId, normX, normY, angle = 0) {
