@@ -1187,6 +1187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return; // skip legacy logic
       }
 
+      
       // 🧱 Legacy obj2path/o2p- fallback
       const pathId = rawId
         .replace(/_(speed|spd|s)_\d+(\.\d+)?/, '')
