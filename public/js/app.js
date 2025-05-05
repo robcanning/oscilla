@@ -7071,7 +7071,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (event.key === 'n' || event.key === 'N') {
       toggleScoreNotesPopup(); // Show/hide score notes popup
     } else if (event.key === 'Escape') {
-      toggleCommunication(); // Enable/disable WebSocket/OSC communication
+      // toggleCommunication(); // Enable/disable WebSocket/OSC communication
     }
   });
 
