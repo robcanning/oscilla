@@ -147,7 +147,7 @@ The system listens for incoming OSC messages, SVG uploads, and client sync event
 
 ## Workflow Overview
 
-1. **Start with a template** by pressing \`\` to open the score/template loader interface and download an example. Then edit it in Inkscape or another vector graphics editor using horizontal or page-based SVG layouts. It is recommended to keep the original Inkscape file as your master version, and use **Save a Copy** to create a **Plain SVG** version for use in the score player. This avoids compatibility issues related to Inkscape-specific metadata.
+1. **Start with a template** by pressing  "s"  to open the score/template loader interface and download an example. Then edit it in Inkscape or another vector graphics editor using horizontal or page-based SVG layouts. The default starting point is the horizontally scrolling template. To enter a page-based paradigm, initiate a collision with a page-based cue such as `cue_anime`, `cue_choice`, or `cue_video` and continue score logic from there. It is recommended to keep the original Inkscape file as your master version, and use **Save a Copy** to create a **Plain SVG** version for use in the score player. This avoids compatibility issues related to Inkscape-specific metadata.
 2. **Tag elements** using `id` attributes with cue or animation syntax. In Inkscape, select an object and press **Ctrl+Shift+X** to open the XML Editor and assign or edit its `id`.
 3. **Upload your SVG** through the interface or place it in the `/scores/` folder. Press \`\` to open the score/template loader interface, which allows you to browse and select from available files.
 4. **Perform the score** using time-based scroll, page navigation, or cue-triggered logic.
