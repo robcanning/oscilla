@@ -1,62 +1,75 @@
-# 🔁 Repeat Cue Logic in Rotula.Score
 
-Rotula.Score now supports flexible repeat cycles using cue markers embedded in the SVG score with a specific namespace structure.
+# `cue_repeat` — Structured Playback Loops and Jumps
+
+The `cue_repeat(...)` cue type enables controlled repetition of score sections using cue-based jump logic. It is designed for da capo, dal segno, and custom repeat behaviors.
 
 ---
 
-## ✨ Cue Format
-
-To define a repeat section in your score, use the following namespace pattern for your cue ID:
+## 🔤 Syntax
 
 ```
-cue_repeat_s_[startId]_e_[endId]_x_[count]_r_[resumeId]_d_[direction]_a_[action]
+cue_repeat_s(startId)_e(endId)_x(count)_r(resumeId)_d(direction)_a(action)
 ```
 
-### Only `s_` and `x_` are required. Others are optional.
-
-### Parameters
-
-| Tag | Meaning | Example | Notes |
-|-----|---------|---------|-------|
-| `s_` | Start cue ID to jump back to | `s_intro` | **Required** |
-| `e_` | End cue ID (where to detect end of loop) | `e_theme` | Defaults to `self` (cue's own ID) |
-| `x_` | Number of repeats or `inf` for infinite | `x_3` or `x_inf` | **Required** |
-| `r_` | Resume cue after all repeats finish | `r_outro` | Optional (defaults to current cue) |
-| `d_` | Direction (`f` for forward, `r` for reverse, `p` for pingpong) | `d_p` | Optional |
-| `a_` | Action after repeat ends (`stop`) | `a_stop` | Optional |
+- `s(startId)` → ID of the cue where the repeat loop starts (**required**)
+- `e(endId)` → ID where the repeat loop ends (optional, defaults to current cue)
+- `x(count)` → Number of times to repeat the loop (**required**)
+- `r(resumeId)` → Cue to jump to after repeats complete (optional, defaults to cue location)
+- `d(direction)` → Direction of traversal (`forward` or `reverse`) (optional)
+- `a(action)` → What to do at loop end: `jump`, `pause`, or `none` (optional)
 
 ---
 
-## 📌 Example IDs
+## ✅ Examples
 
-- `cue_repeat_s_intro_x_2` → repeat from `intro` to this cue, 2 times total.
-- `cue_repeat_s_A_e_B_x_4_r_C_d_f` → repeat section A→B 4 times, then resume at C.
+### Repeat a single section 3 times
+```
+cue_repeat_s(intro)_x(3)
+```
 
----
-
-## 🎬 What You’ll See
-
-When a repeat cue is triggered:
-
-- The playhead will **change color** to indicate repeat mode.
-- A **floating red box** with a number will appear near the playhead, showing the **current repeat count**.
-- After the final repeat, the playhead:
-  - Resumes at `resumeId`, or
-  - Stops (if `a_stop` is set), or
-  - Continues from current position.
+### Repeat section from `A` to `B` 2 times, then jump to `C`
+```
+cue_repeat_s(A)_e(B)_x(2)_r(C)
+```
 
 ---
 
-## 🚪 Escaping a Repeat Early
+## 🛠️ Server-Side Logic (⚠️ Under Repair)
 
-Clicking the red repeat-count box will **immediately exit** the current repeat cycle, skipping to the end as if all repeats had been played.
+The server currently **tracks active repeats** and **broadcasts loop state** to clients. However:
 
-Use this during live performance to shorten long loops dynamically.
+> ⚠️ **BUG**: Repeat coordination is currently broken in multi-client setups.
+> - Only one client handles jumps correctly
+> - Others may desync or re-trigger independently
+
+### ❗TODO [HIGH PRIORITY]:
+
+- Fix server broadcast/resync logic so that all connected clients:
+  - Share repeat state
+  - Jump together in sync
+  - Recover gracefully on reconnect
 
 ---
 
-## 🧪 Known Limitations: No Nested Repeats (Yet)
+## 🔁 TODO: Support Nested Repeats
 
-Currently, **nested or overlapping repeat sections are not supported**. If two repeats overlap or start before the previous ends, results may be unpredictable.
+Nested or overlapping repeat blocks (e.g., a repeat inside a larger form) are not currently supported.
 
-We plan to implement **scoped repeat stacks** in the future to allow nested logic and cleaner control.
+> 🧩 **Planned**: Stack-based repeat state with entry/exit markers for nested structures.
+
+---
+
+## 🧠 Notes
+
+- A repeat is considered "active" once it is triggered
+- After each loop, the playhead jumps back to `startId`
+- On final repeat, it jumps to `resumeId` or stays in place
+- Use `cue_repeat(...)` cues at or near the end of the section being looped
+
+---
+
+## 🧩 Related Cues
+
+- [`cue_pause(...)`](cue_pause.md) — pause playback with optional countdown
+- [`cue_audio(...)`](cue_audio.md) — play local or OSC-triggered audio
+- [`cue_traverse(...)`](cue_traverse.md) — animate objects through points or steps

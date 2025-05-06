@@ -1081,28 +1081,28 @@ document.addEventListener('DOMContentLoaded', () => {
    *   }
    */
 
-  window.parseO2PCompact = function(id) {
+  window.parseO2PCompact = function (id) {
     console.log(`[DEBUG] parseO2PCompact CALLED for id: ${id}`);
-  
+
     const match = id.match(/o2p\(([^)]+)\)/);
     if (!match) {
       console.warn(`[WARN] No o2p() match in id: ${id}`);
       return null;
     }
-  
+
     const pathId = match[1];
     const direction = parseInt((id.match(/_dir\((\d)\)/) || [])[1] || "0", 10);
     const speed = parseFloat((id.match(/_speed\(([^)]+)\)/) || [])[1] || "1");
     const osc = parseInt((id.match(/_osc\((\d)\)/) || [])[1] || "0", 10) === 1;
     const trigger = /_t\(1\)/.test(id);
-  
+
     let ease = null;
     const easeMatch = id.match(/_ease\(([^)]+)\)/);
     if (easeMatch) {
       const val = easeMatch[1];
       ease = isNaN(val) ? val : parseInt(val, 10);
     }
-  
+
     const parsed = {
       pathId,
       direction,
@@ -1111,11 +1111,11 @@ document.addEventListener('DOMContentLoaded', () => {
       ease,
       trigger
     };
-  
+
     console.log(`[DEBUG] parseO2PCompact → id: ${id}`, parsed);
     return parsed;
   };
-  
+
 
   /**
    * initializeObjectPathPairs(svgElement, speed)
@@ -1146,36 +1146,36 @@ document.addEventListener('DOMContentLoaded', () => {
     objects.forEach((object) => {
       const rawId = object.id;
       const id = object.getAttribute('data-id') || rawId;
-    
+
       console.log(`[SCAN] Checking ${id}`); // 🔍 add this
-    
+
       if (id.startsWith("o2p(")) {
         console.log(`[MATCH] ID starts with o2p: ${id}`); // 🔍 add this
-    
+
         const config = window.parseO2PCompact(id);
         if (!config) {
           console.warn(`[o2p] ⚠️ Could not parse compact ID: ${id}`);
           return;
         }
-        
+
         const path = svgElement.getElementById(config.pathId);
         if (!path) {
           console.warn(`[o2p] ⚠️ No path found with ID: ${config.pathId}`);
           return;
         }
-        
+
         const easing = typeof config.ease === "string"
           ? config.ease
           : {
-              0: 'linear', 1: 'easeInSine', 2: 'easeOutSine', 3: 'easeInOutSine',
-              4: 'easeInBack', 5: 'easeOutBack', 6: 'easeInOutBack',
-              7: 'easeInElastic', 8: 'easeOutElastic', 9: 'easeInOutElastic'
-            }[config.ease] || 'easeInOutSine';
-        
+            0: 'linear', 1: 'easeInSine', 2: 'easeOutSine', 3: 'easeInOutSine',
+            4: 'easeInBack', 5: 'easeOutBack', 6: 'easeInOutBack',
+            7: 'easeInElastic', 8: 'easeOutElastic', 9: 'easeInOutElastic'
+          }[config.ease] || 'easeInOutSine';
+
         const playAnimation = () => {
           animateObjToPath(object, path, config.speed, [], true, easing, config.osc);
         };
-        
+
         if (id.includes('_t(1)')) {
           if (!window.pendingPathAnimations) window.pendingPathAnimations = new Map();
           pendingPathAnimations.set(object.id, playAnimation);
@@ -1183,11 +1183,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           playAnimation();
         }
-        
+
         return; // skip legacy logic
       }
 
-      
+
       // 🧱 Legacy obj2path/o2p- fallback
       const pathId = rawId
         .replace(/_(speed|spd|s)_\d+(\.\d+)?/, '')
@@ -3701,7 +3701,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isSeeking) {
       scoreContainer.scrollLeft += (playheadX - scoreContainer.scrollLeft) * 0.3;
 
-   //   ✅ Throttled animation update during active seeking
+      //   ✅ Throttled animation update during active seeking
       // if (now - lastTriggerTime > 250) {
       //   window.startAllVisibleAnimations();
       //   lastTriggerTime = now;
@@ -3714,7 +3714,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (Math.abs(scoreContainer.scrollLeft - playheadX) > 1) {
       scoreContainer.scrollLeft = playheadX;
 
-    // ✅ Throttled animation update during jump or resume
+      // ✅ Throttled animation update during jump or resume
       // if (now - lastTriggerTime > 250) {
       //   window.startAllVisibleAnimations();
       //   lastTriggerTime = now;
@@ -4275,8 +4275,11 @@ document.addEventListener('DOMContentLoaded', () => {
   * Ensures WebSocket events are correctly managed to prevent unintended behavior.
   */
 
-  // HANDLE CUE_PAUSE_DUR_6 Namespace markers in the score svg
-  const handlePauseCue = (cueId, duration) => {
+  // TODO: Add support for next(...) to automatically trigger another cue after pause ends.
+// This allows daisy-chaining actions like cue_pause(...) → cue_audio(...) or cue_animation(...).
+
+
+  const handlePauseCue = (cueId, duration, showCountdownOverride = null, resumeTarget = cueId) => {
     console.log(`[DEBUG] Handling pause cue: ${cueId}, duration: ${duration}ms.`);
 
     if (isSeeking) {
@@ -4354,7 +4357,13 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log("[DEBUG] Auto-resuming after pause duration.");
       ignoreSyncDuringPause = false;
       dismissPauseCountdown();
+    
+      if (resumeTarget && resumeTarget !== cueId) {
+        console.log(`[DEBUG] Jumping to resume target: ${resumeTarget}`);
+        jumpToCueId(targetId); //TODO TEST THIS FUNCTIONALITY
+      }
     }, duration);
+    
   };
 
 
@@ -6159,6 +6168,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
+
+
+  /**
+ * sendAudioOscTrigger({ cueId, filename, volume, loop })
+ *
+ * Sends a WebSocket message to trigger audio playback via OSC-compatible backend.
+ * - Used for all cue_audio-style events that play sound files.
+ * - Ensures the WebSocket is open before sending.
+ * - Includes filename, volume, loop count, and timestamp in the payload.
+ *
+ * @param {Object} params
+ * @param {string} params.cueId        - The original cue ID (used for error context/logging).
+ * @param {string} params.filename     - The audio file path (including extension, e.g. "kick.wav").
+ * @param {number} [params.volume=1]   - The gain level for playback (0.0 to 1.0).
+ * @param {number} [params.loop=1]     - Number of times to loop (0 = infinite).
+ */
+
+  const sendAudioOscTrigger = ({ cueId, filename, volume = 1, loop = 1 }) => {
+    if (!wsEnabled || !socket || socket.readyState !== WebSocket.OPEN) {
+      console.error(`[ERROR] WebSocket not connected. Could not send OSC audio cue: ${cueId}`);
+      return;
+    }
+  
+    const message = {
+      type: "osc_audio_trigger",
+      filename,
+      volume,
+      loop,
+      timestamp: Date.now(),
+    };
+  
+    console.log(`[OSC] 🎧 Sending audio cue:`, message);
+    socket.send(JSON.stringify(message));
+  };
+  
   /**
   * Handles audio cues by parsing cue IDs and playing audio with Wavesurfer.js.
   * Supports volume control, looping, fade-in, and fade-out effects.
@@ -6166,59 +6211,74 @@ document.addEventListener('DOMContentLoaded', () => {
   * Stops existing instances of the same audio before playing a new one.
   * Broadcasts audio cue events over WebSocket if enabled.
   */
-
-  const handleAudioCue = (cueId) => {
+  
+  const handleAudioCue = (cueId, cueParams) => {
     console.log(`[DEBUG] Handling audio cue: ${cueId}`);
-    const parts = cueId.split('_');
-    if (parts.length < 4) {
-      console.error(`[ERROR] Invalid cue ID format: ${cueId}`);
+
+
+// TODO [Audio Routing]:
+// This client-side audio cue is currently played locally by any client that triggers the cue.
+// This bypasses intended routing logic where only a designated "playback master" client should handle browser-based audio (e.g. via WaveSurfer.js).
+// Temporary fix: block playback unless `window.isPlaybackMaster` is true.
+// Proper fix: implement a server-side playback role assignment system and broadcast role states to clients.
+// → Also consider a fallback for cases where no playback master is defined (e.g. solo mode).
+
+    if (!window.isPlaybackMaster) {
+      console.log(`[INFO] Skipping local audio playback: this client is not the designated playback master.`);
       return;
     }
 
     const supportedFormats = ['wav', 'flac', 'mp3', 'ogg', 'aac', 'm4a', 'webm'];
 
-    const detectFileExtension = (cueId) => {
-      for (const format of supportedFormats) {
-        if (cueId.includes(`_${format}`)) return `.${format}`;
+    // 🧱 Determine filename (required)
+    const filenameBase = cueParams.file || cueParams.choice;
+    if (!filenameBase) {
+      console.error(`[ERROR] cue_audio requires a 'file' or 'choice' param: ${cueId}`);
+      return;
+    }
+
+    // 🎧 Choose file extension
+    let ext = cueParams.ext || 'wav';
+    if (!supportedFormats.includes(ext)) {
+      console.warn(`[WARNING] Unsupported extension '${ext}', falling back to 'wav'.`);
+      ext = 'wav';
+    }
+
+    let filename;
+    if (filenameBase.includes('.')) {
+      // ✅ Trust filename if it already has an extension
+      filename = filenameBase;
+      ext = filename.split('.').pop(); // update `ext` just for info/logging
+      if (!supportedFormats.includes(ext)) {
+        console.warn(`[WARNING] Unsupported or unknown extension in filename: '${filename}'`);
       }
-      return '.wav'; // Default to WAV if no format is specified
-    };
-
-    const fileExt = detectFileExtension(cueId);
-    const filename = parts[2] + fileExt;
-    const volume = parseFloat(parts[4]);
-
-    // Detect looping behavior
-    let loopCount = 1; // Default: play once
-    const loopMatch = cueId.match(/_loop_(\d+)/);
-    if (loopMatch) {
-      loopCount = parseInt(loopMatch[1], 10);
-    }
-    const shouldLoop = loopCount === 0 ? true : loopCount;
-
-    // Detect fade-in and fade-out times
-    let fadeIn = 0;
-    let fadeOut = 0;
-    const fadeInMatch = cueId.match(/_fadein_(\d+)/);
-    if (fadeInMatch) {
-      fadeIn = parseInt(fadeInMatch[1], 10);
-    }
-    const fadeOutMatch = cueId.match(/_fadeout_(\d+)/);
-    if (fadeOutMatch) {
-      fadeOut = parseInt(fadeOutMatch[1], 10);
+    } else {
+      filename = `${filenameBase}.${ext}`;
     }
 
     const audioPath = `audio/${filename}`;
 
-    // Stop existing audio of the same file before starting a new one
+    // 🔊 Get volume (amp) or default to 1
+    const volume = typeof cueParams.amp === 'number' ? cueParams.amp : 1;
+
+    // 🔁 Get loop count (0 = infinite)
+    const loopCount = typeof cueParams.loop === 'number' ? cueParams.loop : 1;
+    const shouldLoop = loopCount === 0 ? true : loopCount;
+
+    // 🌫 Fade values
+    const fadeIn = typeof cueParams.fadein === 'number' ? cueParams.fadein : 0;
+    const fadeOut = typeof cueParams.fadeout === 'number' ? cueParams.fadeout : 0;
+
+    // 💥 Stop existing audio of same file
     if (activeAudioCues.has(filename)) {
       console.log(`[INFO] Stopping existing instance of ${filename}`);
       activeAudioCues.get(filename).wavesurfer.destroy();
       activeAudioCues.delete(filename);
     }
 
+    // 🧱 Limit concurrent audio
     if (activeAudioCues.size >= maxAudioInstances) {
-      console.warn(`[WARNING] Maximum audio instances reached. Skipping cue: ${filename}`);
+      console.warn(`[WARNING] Max audio instances reached. Skipping cue: ${filename}`);
       return;
     }
 
@@ -6233,115 +6293,51 @@ document.addEventListener('DOMContentLoaded', () => {
     wavesurfer.load(audioPath);
 
     wavesurfer.on('ready', () => {
-      console.log(`[INFO] Playing ${filename} at volume ${volume}, loop: ${loopCount}, fade-in: ${fadeIn}s, fade-out: ${fadeOut}s`);
+      console.log(`[INFO] Playing ${filename} @ volume ${volume}, loop: ${loopCount}, fade-in: ${fadeIn}s, fade-out: ${fadeOut}s`);
       wavesurfer.setVolume(0);
       wavesurfer.play();
 
-      // Apply fade-in effect
-      let fadeStep = volume / (fadeIn * 10);
-      let fadeInterval = setInterval(() => {
-        let currentVolume = wavesurfer.getVolume();
-        if (currentVolume + fadeStep >= volume) {
-          wavesurfer.setVolume(volume);
-          clearInterval(fadeInterval);
-        } else {
-          wavesurfer.setVolume(currentVolume + fadeStep);
-        }
-      }, 100);
+      // 🔼 Apply fade-in
+      if (fadeIn > 0) {
+        let fadeStep = volume / (fadeIn * 10);
+        let fadeInterval = setInterval(() => {
+          let current = wavesurfer.getVolume();
+          if (current + fadeStep >= volume) {
+            wavesurfer.setVolume(volume);
+            clearInterval(fadeInterval);
+          } else {
+            wavesurfer.setVolume(current + fadeStep);
+          }
+        }, 100);
+      } else {
+        wavesurfer.setVolume(volume);
+      }
     });
 
-    let playCount = 1; // Start at 1 since first play is already triggered
+    // 🔁 Handle looping
+    let playCount = 1;
     wavesurfer.on('finish', () => {
       if (shouldLoop === true || playCount < shouldLoop) {
-        console.log(`[INFO] Looping audio (${playCount}/${shouldLoop === true ? '∞' : shouldLoop})`);
+        console.log(`[INFO] Looping (${playCount}/${shouldLoop === true ? '∞' : shouldLoop})`);
 
         if (playCount === shouldLoop - 1 && fadeOut > 0) {
-          console.log(`[INFO] Initiating fade-out over ${fadeOut}s in final loop.`);
+          console.log(`[INFO] Preparing fade-out on final loop: ${fadeOut}s`);
           startFadeOutBeforeEnd(wavesurfer, fadeOut, filename);
         }
 
-        playCount++; // Increment after log so it correctly reflects loop count
+        playCount++;
         wavesurfer.play();
       } else {
-        console.log(`[INFO] Finished looping ${playCount} times.`);
+        console.log(`[INFO] Done looping ${filename}.`);
         activeAudioCues.delete(filename);
         wavesurfer.destroy();
-        // document.getElementById('waveform-container').style.display = 'none';
       }
     });
 
     activeAudioCues.set(filename, { wavesurfer, volume });
-    broadcastAudioCue(cueId, filename, volume, loopCount, fadeIn, fadeOut);
+
+    sendAudioOscTrigger({ cueId, filename, volume, loop: loopCount });
   };
-
-  const startFadeOutBeforeEnd = (wavesurfer, fadeOut, filename) => {
-    if (fadeOut > 0) {
-      let fadeStep = wavesurfer.getVolume() / (fadeOut * 10);
-      console.log(`[INFO] Initiating fade-out over ${fadeOut}s before final playback ends.`);
-      let fadeInterval = setInterval(() => {
-        let currentVolume = wavesurfer.getVolume();
-        if (currentVolume - fadeStep <= 0) {
-          wavesurfer.setVolume(0);
-          clearInterval(fadeInterval);
-          console.log(`[INFO] Fade-out complete, stopping audio: ${filename}`);
-          activeAudioCues.delete(filename);
-          wavesurfer.destroy();
-          // document.getElementById('waveform-container').style.display = 'none';
-        } else {
-          wavesurfer.setVolume(currentVolume - fadeStep);
-        }
-      }, 100);
-    } else {
-      console.log(`[INFO] No fade-out applied. Stopping audio: ${filename}`);
-      activeAudioCues.delete(filename);
-      wavesurfer.destroy();
-      // document.getElementById('waveform-container').style.display = 'none';
-    }
-  };
-
-
-  const positionWaveformContainer = () => {
-    const waveformContainer = document.getElementById('waveform-container');
-    if (waveformContainer) {
-      waveformContainer.style.display = 'block'; // ✅ Simply show it, no positioning
-    }
-  };
-
-  seekBar.addEventListener('mousedown', stopAllAudio);
-  toggleButton.addEventListener('click', stopAllAudio);
-  document.getElementById('stop-audio-button').addEventListener('click', stopAllAudio);
-
-  const broadcastAudioCue = (cueId, filename, volume, loopCount) => {
-    if (wsEnabled && socket) {
-      const message = JSON.stringify({
-        type: "osc_audio_trigger",
-        filename: filename,
-        volume: volume,
-        loop: loopCount,
-        timestamp: Date.now(),
-      });
-      console.log(`[CLIENT] Broadcasting audio cue:`, message);
-      socket.send(message);
-    }
-  };
-
-  const sendOscAudioCue = (filename, volume) => {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      console.error("[ERROR] WebSocket is not connected. Cannot send OSC message.");
-      return;
-    }
-
-    const oscMessage = {
-      type: "osc_audio_trigger",
-      filename: filename,
-      volume: volume,
-      timestamp: Date.now(),
-    };
-
-    console.log(`[CLIENT] Sending OSC trigger request to server:`, oscMessage);
-    socket.send(JSON.stringify(oscMessage));
-  };
-
 
 
 
@@ -6762,6 +6758,73 @@ document.addEventListener('DOMContentLoaded', () => {
   window.parseTraverseCueId = parseTraverseCueId;
 
 
+
+  function parseCueParams(cueId) {
+    console.log(`[parseCueParams] Raw cueId: ${cueId}`);
+
+    // 🧹 Clean suffixes like -123, -use, -clone
+    const cleaned = cueId.replace(/-\d+$|-use$|-clone$/, '');
+    console.log(`[parseCueParams] Cleaned cueId: ${cleaned}`);
+
+    // 🎯 Extract cue type (e.g. cue_audio)
+    const typeMatch = cleaned.match(/^([a-z]+_[a-z]+)/);
+    const type = typeMatch ? typeMatch[1] : null;
+
+    if (!type) {
+      console.warn(`[parseCueParams] ❌ Could not extract cue type from: ${cueId}`);
+      return { type: cueId, cueParams: {}, cleanedId: cleaned };
+    }
+
+    console.log(`[parseCueParams] Parsed cue type: ${type}`);
+
+    const cueParams = {};
+    const paramString = cleaned.slice(type.length);
+    console.log(`[parseCueParams] Remaining param string: ${paramString}`);
+
+    // ✅ Step 1: check if we have a leading anonymous `(value)` before any `_`
+    if (paramString.startsWith('(')) {
+      const leadingValueMatch = paramString.match(/^\(([^)]+)\)/);
+      if (leadingValueMatch) {
+        const raw = leadingValueMatch[1];
+        const parsed = isNaN(raw) ? raw : parseFloat(raw);
+        cueParams["choice"] = parsed;
+        console.log(`[parseCueParams] Leading anonymous param → choice: ${parsed}`);
+
+        // Remove this segment from the string
+        const rest = paramString.slice(leadingValueMatch[0].length);
+        parseKeyValueParams(rest, cueParams);
+      } else {
+        console.warn(`[parseCueParams] ⚠️ Invalid leading value format: ${paramString}`);
+      }
+    } else {
+      // No anonymous param → parse whole string as key(value) pairs
+      parseKeyValueParams(paramString, cueParams);
+    }
+
+    console.log(`[parseCueParams] Final cueParams:`, cueParams);
+    return { type, cueParams, cleanedId: cleaned };
+  }
+
+  // 🧩 Helper: parse _key(value)_key(value)... string into cueParams
+  function parseKeyValueParams(str, cueParams) {
+    const regex = /_([a-zA-Z0-9]+)\(([^)]+)\)/g;
+    let match;
+    while ((match = regex.exec(str)) !== null) {
+      const [, key, value] = match;
+      const parsed = isNaN(value) ? value : parseFloat(value);
+      cueParams[key] = parsed;
+      console.log(`[parseCueParams] Keyed param: ${key} = ${parsed}`);
+    }
+  }
+
+
+
+
+
+
+
+
+
   /**
   * handleCueTrigger(cueId) → Main dispatcher for all cue types.
   *
@@ -6783,133 +6846,131 @@ document.addEventListener('DOMContentLoaded', () => {
   const handleCueTrigger = (cueId, isRemote = false) => {
     console.log(`[DEBUG] Attempting to trigger cue: ${cueId}`);
 
-    const cleaned = cueId.split('-')[0]; // ✅ Strip Inkscape suffixes
-    const parts = cleaned.split('_');
-    const type = `${parts[0]}_${parts[1]}`;
+    if (triggeredCues.has(cueId)) {
+      console.log(`[DEBUG] Skipping already-triggered cue: ${cueId}`);
+      return;
+    }
+    triggeredCues.add(cueId);
 
-    console.log(`[DEBUG] Cue Type: ${type}`);
-
-    let cueParams = {};
-    for (let i = 2; i < parts.length; i++) {
-      if (parts[i] === "dur" && i + 1 < parts.length && !isNaN(parts[i + 1])) {
-        cueParams["dur"] = parseInt(parts[i + 1], 10);
-        i++;
-      } else if (type === "cue_speed" && !isNaN(parts[i])) {
-        cueParams["speed"] = parseFloat(parts[i]);
-      } else if (!parts[i].startsWith("dur") && !parts[i].startsWith("speed")) {
-        cueParams["choice"] = parts[i];
-      }
+    // 🚫 Warn if cueId appears to use deprecated underscore-based param format
+    if (!cueId.includes('(') && cueId.match(/_[\w\-]+$/)) {
+      const warning = `[DEPRECATED] Cue '${cueId}' uses an outdated underscore format. Use param(value) instead.`;
+      console.warn(warning);
+      if (window?.alert) alert(warning); // Optional: show popup for user feedback
+      return;
     }
 
+    // ✅ Parse cueId using param(value) format only
+    const { type, cueParams } = parseCueParams(cueId);
+
+    console.log(`[DEBUG] Cue Type: ${type}`);
     console.log(`[DEBUG] Parsed cueParams:`, cueParams);
 
-    if (!cueParams["speed"] && type === "cue_speed") {
+    // ❗ Validate required param for cue_speed
+    if (type === "cue_speed" && (cueParams["speed"] === undefined || cueParams["speed"] === "")) {
       console.warn(`[WARNING] ❌ Missing speed multiplier in cue: ${cueId}`);
       return;
     }
 
-    if (cueHandlers.hasOwnProperty(type)) {
-      console.log(`[DEBUG] Executing cue handler for ${type} with params`, cueParams);
-
-      switch (type) {
-        case "cue_speed":
-          cueHandlers[type](cueId, cueParams["speed"]);
-          break;
-
-        case "cue_stop":
-          cueHandlers[type](cueId, cueParams["stop"]);
-          break;
-
-        case "cue_traverse":
-        case "c-t":
-          cueHandlers[type](cueId, cueParams[type]);
-          break;
-
-        case "cue_pause":
-          const duration = cueParams["dur"] * 1000;
-          if (!duration || isNaN(duration)) {
-            console.error(`[CLIENT] Invalid duration for cue_pause: ${cueId}`);
-            return;
-          }
-          cueHandlers[type](cueId, duration);
-          break;
-
-        case "cue_repeat":
-          if (repeatStateMap[cueId] && repeatStateMap[cueId].active) {
-            console.log(`[repeat] ⚠️ Repeat ${cueId} already active — skipping re-trigger`);
-            return;
-          }
-          cueHandlers[type](cueId);
-          break;
-
-        case "cue_animation":
-        case "cue_animejs":
-          const animDuration = cueParams["dur"];
-          const animationPath = `animations/${cueParams["choice"]}.svg`;
-
-          if (!animDuration || isNaN(animDuration)) {
-            console.error(`[CLIENT] Invalid duration for ${type}: ${cueId}`);
-            return;
-          }
-
-          cueHandlers[type](cueId, animationPath, animDuration);
-          break;
-
-        case "cue_audio":
-          const audioPath = `audio/${cueParams["choice"]}.mp3`;
-          cueHandlers[type](cueId, audioPath);
-          break;
-
-        case "cue_osc":
-          const oscMessage = parts.slice(2).join('/');
-          cueHandlers[type](cueId, oscMessage);
-          break;
-
-        case "cue_choice":
-          let cueChoiceParams = {};
-          for (let i = 2; i < parts.length; i++) {
-            if (parts[i] === "dur" && i + 1 < parts.length && !isNaN(parts[i + 1])) {
-              cueChoiceParams["dur"] = parseInt(parts[i + 1], 10);
-              i++;
-            } else if (!parts[i].startsWith("dur")) {
-              cueChoiceParams["choice"] = parts[i];
-            }
-          }
-
-          if (cueChoiceParams.choice && cueChoiceParams.dur) {
-            cueHandlers[type](cueId, cueChoiceParams);
-          } else {
-            console.error(`[ERROR] Invalid cue_choice format: Missing choice or duration.`);
-            return;
-          }
-          break;
-
-        default:
-          console.warn(`[CLIENT] No handler found for cue type: ${type}`);
-          return;
-      }
-
-      // ✅ Only add to triggeredCues and broadcast after successful handling
-      const alreadyTriggered = triggeredCues.has(cueId);
-
-      if (!alreadyTriggered) {
-        triggeredCues.add(cueId);
-        if (wsEnabled && socket && !isRemote) {
-          socket.send(JSON.stringify({ type: 'cue_triggered', cueId }));
-          console.log(`[CLIENT] Sent cue trigger to server: ${cueId}`);
-        }
-      } else {
-        if (isRemote) {
-          console.log(`[DEBUG] Cue '${cueId}' already triggered locally, but handled from server.`);
-        } else {
-          console.log(`[DEBUG] Cue '${cueId}' already triggered locally. No re-broadcast.`);
-        }
-      }
-
-    } else {
+    // ❗ Validate cue type exists
+    if (!cueHandlers.hasOwnProperty(type)) {
       console.warn(`[CLIENT] No handler found for cue type: ${type}`);
+      return;
+    }
+
+    console.log(`[DEBUG] Executing cue handler for ${type} with params`, cueParams);
+
+    switch (type) {
+      case "cue_speed":
+        cueHandlers[type](cueId, cueParams["speed"]);
+        break;
+
+      case "cue_stop":
+        cueHandlers[type](cueId, cueParams["stop"]);
+        break;
+
+      case "cue_traverse":
+      case "c-t":
+        cueHandlers[type](cueId, cueParams[type]);
+        break;
+
+      case "cue_pause":
+        const duration = cueParams["dur"] * 1000;
+        if (!duration || isNaN(duration)) {
+          console.error(`[CLIENT] Invalid duration for cue_pause: ${cueId}`);
+          return;
+        }
+        cueHandlers[type](cueId, duration);
+        break;
+
+      case "cue_repeat":
+        if (repeatStateMap[cueId] && repeatStateMap[cueId].active) {
+          console.log(`[repeat] ⚠️ Repeat ${cueId} already active — skipping re-trigger`);
+          return;
+        }
+        cueHandlers[type](cueId);
+        break;
+
+      case "cue_animation":
+      case "cue_animejs":
+        const animDuration = cueParams["dur"];
+        const animationPath = `animations/${cueParams["choice"]}.svg`;
+
+        if (!animDuration || isNaN(animDuration)) {
+          console.error(`[CLIENT] Invalid duration for ${type}: ${cueId}`);
+          return;
+        }
+
+        cueHandlers[type](cueId, animationPath, animDuration);
+        break;
+
+      case "cue_audio":
+        if (!cueParams || (!cueParams.choice && !cueParams.file)) {
+          console.error(`[ERROR] cue_audio is missing required 'choice' or 'file' param: ${cueId}`);
+          return;
+        }
+        cueHandlers[type](cueId, cueParams); // ✅ passes full param object
+        break;
+
+
+      case "cue_osc":
+        // This assumes that cue_osc(foo/bar) was used
+        const oscMessage = cueParams["message"] || "";
+        cueHandlers[type](cueId, oscMessage);
+        break;
+
+      case "cue_choice":
+        if (cueParams.choice && cueParams.dur) {
+          cueHandlers[type](cueId, cueParams);
+        } else {
+          console.error(`[ERROR] Invalid cue_choice format: Missing choice or duration.`);
+          return;
+        }
+        break;
+
+      default:
+        console.warn(`[CLIENT] No handler found for cue type: ${type}`);
+        return;
+    }
+
+    // ✅ Only add to triggeredCues and broadcast after successful handling
+    const alreadyTriggered = triggeredCues.has(cueId);
+
+    if (!alreadyTriggered) {
+      triggeredCues.add(cueId);
+      if (wsEnabled && socket && !isRemote) {
+        socket.send(JSON.stringify({ type: 'cue_triggered', cueId }));
+        console.log(`[CLIENT] Sent cue trigger to server: ${cueId}`);
+      }
+    } else {
+      if (isRemote) {
+        console.log(`[DEBUG] Cue '${cueId}' already triggered locally, but handled from server.`);
+      } else {
+        console.log(`[DEBUG] Cue '${cueId}' already triggered locally. No re-broadcast.`);
+      }
     }
   };
+
 
 
 
@@ -7307,7 +7368,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.observer) window.observer.disconnect();
 
     window.observer = new IntersectionObserver((entries) => {
-        if (window.disableObserver) return; // 🔥 Skip all observer logic
+      if (window.disableObserver) return; // 🔥 Skip all observer logic
 
       for (const entry of entries) {
         const el = entry.target;
@@ -7339,7 +7400,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Narrow values like "-45%" were previously used to simulate a 
       // central "playhead zone", but caused false negatives on pause, 
       // reload, or cue jumps. Defaulting to full view is more robust.    
-      });
+    });
 
 
     // Global OBSERVER DISABLE for dubugging

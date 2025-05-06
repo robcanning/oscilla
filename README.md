@@ -343,3 +343,9 @@ The system is currently optimized for iPad Pro resolution and layout. If using l
 ---
 
 ---
+Cue ID Format:
+- Must begin with `cue_` followed by cue type, e.g. `cue_audio`, `cue_pause`, `cue_speed`
+- First parameter may be `key(value)` or just `(value)` (interpreted as `choice`)
+- Additional parameters must be `key(value)`
+- Example: cue_audio(file(moog-bass)_loop(3)_amp(0.8))
+- All cue types and expected keys are documented in [cue_handlers.md]
