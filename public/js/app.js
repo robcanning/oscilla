@@ -2481,41 +2481,47 @@ function assignCues(svgRoot) {
 
   const handleSvgPopupClick = (event) => {
     console.log(`[DEBUG] SVG Click Detected on: ${event.target.tagName}, ID: ${event.target.id}`);
-
+  
+    // ✅ Skip handling if click is inside Shoelace menu or dropdown
+    if (
+      event.target.closest('sl-dropdown') ||
+      event.target.closest('sl-menu') ||
+      event.target.tagName === 'SL-MENU-ITEM'
+    ) {
+      console.log('[DEBUG] Click inside Shoelace dropdown, ignoring popup dismissal.');
+      return;  // Don't dismiss popups
+    }
+  
     // Identify the popup to dismiss
     const popups = document.querySelectorAll('.popup');
     let popupDismissed = false;
-
+  
     popups.forEach((popup) => {
-      if (popup.classList.contains('active')) {  // Check if popup is active
+      if (popup.classList.contains('active')) {
         console.log(`[DEBUG] Popup dismissed: ${popup.id}`);
         popup.classList.add('hidden');
-        popup.classList.remove('active'); // Ensure it also removes active state
+        popup.classList.remove('active');
         popupDismissed = true;
       }
     });
-
+  
     if (popupDismissed) {
       console.log('[CLIENT] Resuming playback or animation after popup dismissal.');
-
-      // Resume playback or animation
       isPlaying = true;
       animationPaused = false;
-
-      // Remove blur effect from all elements
+  
       document.body.querySelectorAll('.blur-background').forEach((element) => {
         element.classList.remove('blur-background');
       });
-
-      startAnimation(); // Restart the animation loop
-
+  
+      startAnimation();
     } else {
       console.log('[DEBUG] No active popups found to dismiss.');
     }
-
-    // Prevent event propagation to avoid unwanted triggers
+  
     event.stopPropagation();
   };
+  
 
 
 

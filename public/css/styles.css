@@ -1374,6 +1374,12 @@ padding: 20px;
 
 }
 
+#hamburger-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 #top-bar.dismissed {
   transform: translateY(-100%);
   opacity: 0;
