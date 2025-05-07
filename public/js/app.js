@@ -616,18 +616,18 @@ document.addEventListener('DOMContentLoaded', () => {
               break;
 
             /** ✅ Handle Cue Pause */
-            case "cue_pause":
-              console.log(`[CLIENT] Received cue_pause. Duration: ${data.duration}ms`);
+            case "cuePause":
+              console.log(`[CLIENT] Received cuePause. Duration: ${data.duration}ms`);
 
               // ✅ Apply server-provided values BEFORE sending ack or triggering pause
               if (!isNaN(data.playheadX)) {
                 playheadX = data.playheadX;
-                console.log(`[CLIENT] Synced playheadX from cue_pause: ${playheadX}`);
+                console.log(`[CLIENT] Synced playheadX from cuePause: ${playheadX}`);
               }
 
               if (!isNaN(data.elapsedTime)) {
                 elapsedTime = data.elapsedTime;
-                console.log(`[CLIENT] Synced elapsedTime from cue_pause: ${elapsedTime}`);
+                console.log(`[CLIENT] Synced elapsedTime from cuePause: ${elapsedTime}`);
               }
 
               stopAnimation();
@@ -637,11 +637,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
               if (wsEnabled && socket) {
                 socket.send(JSON.stringify({
-                  type: "cue_pause_ack",
+                  type: "cuePause_ack",
                   playheadX: playheadX ?? -1,
                   elapsedTime: elapsedTime ?? -1
                 }));
-                console.log(`[CLIENT] Sent cue_pause_ack to server. playheadX=${playheadX}, elapsedTime=${elapsedTime}`);
+                console.log(`[CLIENT] Sent cuePause_ack to server. playheadX=${playheadX}, elapsedTime=${elapsedTime}`);
               }
 
               handlePauseCue(data.id, data.duration);
@@ -651,15 +651,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
             /** ✅ Handle Cue Stop */
-            case "cue_stop":
-              console.log(`[CLIENT] Received cue_stop. Elapsed Time: ${data.elapsedTime}`);
-              handleStopCue(data.id || "cue_stop");
+            case "cueStop":
+              console.log(`[CLIENT] Received cueStop. Elapsed Time: ${data.elapsedTime}`);
+              handleStopCue(data.id || "cueStop");
               break;
 
             /** ✅ Handle Traverse Cue */
-            case "cue_traverse":
-              console.log(`[CLIENT] Received cue_traverse: ${data}`);
-              handleTraverseCue(data.id || "cue_traverse");
+            case "cueTraverse":
+              console.log(`[CLIENT] Received cueTraverse: ${data}`);
+              handleTraverseCue(data.id || "cueTraverse");
               break;
 
             /**
@@ -670,14 +670,14 @@ document.addEventListener('DOMContentLoaded', () => {
              * as if they had locally intersected the cue themselves.
              */
 
-            case "cue_triggered":
+            case "cueTriggered":
               console.log(`[CLIENT] Cue was triggered: ${data.cueId}`);
               handleCueTrigger(data.cueId, true); // ✅ mark as remote trigger
               break;
 
             /** ✅ Acknowledge Cue Pause */
-            case "cue_pause_ack":
-              console.log("[CLIENT] Received cue_pause_ack from another client.");
+            case "cuePause_ack":
+              console.log("[CLIENT] Received cuePause_ack from another client.");
               break;
 
             /** ✅ Audio Cue Received */
@@ -1132,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
    *
    * ✅ Deferred trigger:
    *   - Any ID or data-id containing `_t(1)` will not animate
-   *     immediately, but register as a cue for `cue_traverse`.
+   *     immediately, but register as a cue for `cueTraverse`.
    */
   const initializeObjectPathPairs = (svgElement, speed = 10.0) => {
     const objects = Array.from(svgElement.querySelectorAll(
@@ -1967,6 +1967,118 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log(`[playheadX] 📍 Initialized from screen center: ${window.playheadX.toFixed(2)} (SVG space)`);
   };
 
+/**
+ * assignCues(svgRoot)
+ * ---------------------
+ * Finds all <g> elements with ID format:
+ *   <g id="assignCues(cueOscTrigger(rnd[1,9]))">
+ *   <g id="assignCues(cueOscSet(speed, ypos[0.5,1.5]))">
+ *
+ * Assigns cue IDs to each child based on:
+ *   - rnd[min,max]     → random float value
+ *   - ypos[min,max]    → scaled vertical position
+ */
+function assignCues(svgRoot) {
+  const cueGroups = svgRoot.querySelectorAll('g[id^="assignCues("]');
+  if (!cueGroups.length) {
+    console.log("[assignCues] No assignCues(...) groups found in SVG.");
+    return;
+  }
+
+  console.log(`[assignCues] Found ${cueGroups.length} cue group(s).`);
+
+  cueGroups.forEach(group => {
+    console.log(`[assignCues] Raw group ID: '${group.id}'`);
+
+    const match = group.id.match(/^assignCues\((.+)\)$/);
+    if (!match) {
+      console.warn(`[assignCues] Skipping malformed group ID: ${group.id}`);
+      return;
+    }
+
+    const instruction = match[1].trim();
+    console.log(`[assignCues] Processing group: ${group.id} with ${group.children.length} child(ren)`);
+
+    // ------------------------------------------
+    // 1. Special case: cueOscSet(param, rnd[...] / ypos[...])
+    // ------------------------------------------
+    const setMatch = instruction.match(/^cueOscSet\(([^,]+),\s*(rnd|ypos)\[([\d.]+),([\d.]+)\]\)$/);
+    if (setMatch) {
+      const param = setMatch[1].trim();
+      const mode = setMatch[2];
+      const min = parseFloat(setMatch[3]);
+      const max = parseFloat(setMatch[4]);
+
+      console.log(`[assignCues] → cueOscSet(${param}, ${mode}[${min}, ${max}])`);
+
+      const bbox = group.getBBox();
+
+      Array.from(group.children).forEach((child, index) => {
+        let value = mode === "rnd"
+          ? Math.random() * (max - min) + min
+          : (() => {
+              const cy = child.getBBox().y + child.getBBox().height / 2;
+              const normY = (cy - bbox.y) / bbox.height;
+              return min + normY * (max - min);
+            })();
+
+        const formattedValue = Math.round(value);
+        const cueId = `cueOscSet(${param},${formattedValue})`;
+        child.id = cueId;
+
+        if (typeof cues !== "undefined" && Array.isArray(cues)) {
+          cues.push({ id: cueId, element: child, triggered: false });
+        }
+
+        console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
+      });
+      return;
+    }
+
+    // ------------------------------------------
+    // 2. General case: cueOscTrigger, cueOscValue, cueOscRandom, etc.
+    // ------------------------------------------
+    console.log(`[assignCues] Evaluating instruction: '${instruction}'`);
+
+    const cueMatch = instruction.match(/^([a-zA-Z][a-zA-Z0-9]*)\((rnd|ypos)\[([\d.]+),([\d.]+)\]\)$/);
+    console.log(`[assignCues] cueMatch result:`, cueMatch);
+
+    if (!cueMatch) {
+      console.warn(`[assignCues] ❌ Invalid syntax: ${group.id}`);
+      return;
+    }
+
+    const cueType = cueMatch[1];
+    const mode = cueMatch[2];
+    const min = parseFloat(cueMatch[3]);
+    const max = parseFloat(cueMatch[4]);
+
+    console.log(`[assignCues] → ${cueType}(${mode}[${min}, ${max}])`);
+
+    const bbox = group.getBBox();
+
+    Array.from(group.children).forEach((child, index) => {
+      let value = mode === "rnd"
+        ? Math.random() * (max - min) + min
+        : (() => {
+            const cy = child.getBBox().y + child.getBBox().height / 2;
+            const normY = (cy - bbox.y) / bbox.height;
+            return min + normY * (max - min);
+          })();
+
+      const formattedValue = Number.isInteger(value) ? value : value.toFixed(3);
+      const cueId = `${cueType}(${formattedValue})`;
+      child.id = cueId;
+
+      if (typeof cues !== "undefined" && Array.isArray(cues)) {
+        cues.push({ id: cueId, element: child, triggered: false });
+      }
+
+      console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
+    });
+  });
+}
+
 
 
   ////// SVG LOADING LOGIC ///////////////////////////////////////////////
@@ -2020,6 +2132,7 @@ document.addEventListener('DOMContentLoaded', () => {
       scoreContainer.appendChild(svgElement);
 
       initializeSVG(svgElement);
+
       storePathVariants(svgElement);
       return;
     }
@@ -2097,19 +2210,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   const initializeSVG = (svgElement) => {
+
     if (!svgElement) {
       console.error("[ERROR] No SVG element provided to initializeSVG.");
       return;
     }
 
-
-
-
-
-
-
-
     scoreSVG = svgElement;
+
+    console.log("calling assignCues...");
+    assignCues(scoreSVG);    
+
+
 
     document.querySelectorAll("use").forEach(u => {
       // console.log("[DEBUG <use>]", u.id, "→", u.getAttribute("xlink:href") || u.getAttribute("href"));
@@ -2556,7 +2668,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const handleSpeedCue = (cueId, newMultiplier) => {
     /**
-    * ✅ Processes `cue_speed` messages from clients.
+    * ✅ Processes `cueSpeed` messages from clients.
     * - Extracts and validates the speed multiplier before applying.
     * - Prevents redundant updates by checking the current speed.
     * - Sends a WebSocket message only if speed changes.
@@ -3581,7 +3693,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ✅ Select all relevant elements
     const elements = svgElement.querySelectorAll(
-      "[id^='rehearsal_'], [id^='cue_'], [id^='anchor-'], [id^='label-']"
+      "[id^='rehearsal_'], [id^='cue'], [id^='anchor-'], [id^='label-']"
     );
     if (elements.length === 0) {
       console.warn("[WARNING] No rehearsal marks or cues found in SVG.");
@@ -3600,7 +3712,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = element.id.replace("rehearsal_", "");
         newRehearsalMarks[id] = { x: absoluteX };
         // console.log(`[DEBUG] 🎯 Rehearsal Mark Stored: ${id}, Position: (${absoluteX})`);
-      } else if (element.id.startsWith("cue_") || element.id.startsWith("s_") || element.id.startsWith("anchor-")) {
+      } else if (element.id.startsWith("cue") || element.id.startsWith("s_") || element.id.startsWith("anchor-")) {
         // console.log(`[DEBUG] Processing cue: ${element.id}`);
         newCues.push({ id: element.id, x: absoluteX, width: bbox.width });
         // console.log(`[DEBUG] 🎯 Cue Stored: ${element.id}, X: ${absoluteX}, Width: ${bbox.width}`);
@@ -3641,7 +3753,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log("[DEBUG] Loading speed cues for the first time.");
 
       elements.forEach((element) => {
-        if (element.id.startsWith("cue_speed_")) {
+        if (element.id.startsWith("cueSpeed_")) {
           const bbox = element.getBBox();
           const matrix = element.getCTM();
           let absoluteX = bbox.x;
@@ -3649,7 +3761,7 @@ document.addEventListener('DOMContentLoaded', () => {
             absoluteX += matrix.e;
           }
 
-          const match = element.id.match(/cue_speed_([\d.]+)/);
+          const match = element.id.match(/cueSpeed_([\d.]+)/);
           if (match) {
             const speedValue = parseFloat(match[1]);
             speedCueMap.push({ position: absoluteX, multiplier: speedValue });
@@ -4247,7 +4359,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log(`[CLIENT] Handling stop cue: ${cueId}`);
 
     if (isPlaying) {
-      console.log("[DEBUG] Pausing via togglePlay() for cue_pause.");
+      console.log("[DEBUG] Pausing via togglePlay() for cuePause.");
       togglePlay();
     } else {
       console.log("[DEBUG] Already paused, ensuring animation is fully stopped.");
@@ -4276,7 +4388,7 @@ document.addEventListener('DOMContentLoaded', () => {
   */
 
   // TODO: Add support for next(...) to automatically trigger another cue after pause ends.
-// This allows daisy-chaining actions like cue_pause(...) → cue_audio(...) or cue_animation(...).
+// This allows daisy-chaining actions like cuePause(...) → cueAudio(...) or cueAnimation(...).
 
 
   const handlePauseCue = (cueId, duration, showCountdownOverride = null, resumeTarget = cueId) => {
@@ -4291,7 +4403,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isPlaying) {
       togglePlay();
-      console.log("[DEBUG] Pausing via togglePlay() for cue_pause.");
+      console.log("[DEBUG] Pausing via togglePlay() for cuePause.");
     } else {
       isPlaying = false;
       stopAnimation();
@@ -4594,7 +4706,7 @@ document.addEventListener('DOMContentLoaded', () => {
   * and sets a short cooldown to prevent retriggering at the start point.
   *
   * @param {Object} repeat - The repeat object from repeatStateMap
-  * @param {string} cueId - The ID of the cue_repeat_* that triggered this jump
+  * @param {string} cueId - The ID of the cueRepeat_* that triggered this jump
   */
   const executeRepeatJump = async (repeat, cueId) => {
     if (repeat.busy) {
@@ -4657,16 +4769,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   /**
-  * cue_repeat_* → A powerful musical repeat handler for looping sections of the score.
+  * cueRepeat_* → A powerful musical repeat handler for looping sections of the score.
   *
   * Format:
-  *   cue_repeat_s_[startID][_e_[endID]]_x_[repeatCount|inf][_r_[resumeID]][_d_[f|r|p]][_a_[stop]]-[UID?]
+  *   cueRepeat_s_[startID][_e_[endID]]_x_[repeatCount|inf][_r_[resumeID]][_d_[f|r|p]][_a_[stop]]-[UID?]
   *
   * Parameters:
   *   s_[startID]      → REQUIRED. ID to jump to at the start of each repeat loop.
-  *   e_[endID]        → OPTIONAL. ID marking the end of the repeat section. If omitted, the cue_repeat object itself acts as the end.
+  *   e_[endID]        → OPTIONAL. ID marking the end of the repeat section. If omitted, the cueRepeat object itself acts as the end.
   *   x_[N|inf]        → REQUIRED. Number of times to repeat the section (e.g. x_2 = 2 repeats = 3 total plays). Use x_inf for infinite loop.
-  *   r_[resumeID]     → OPTIONAL. ID to jump to after the final repeat. Defaults to 'self' (the cue_repeat object itself).
+  *   r_[resumeID]     → OPTIONAL. ID to jump to after the final repeat. Defaults to 'self' (the cueRepeat object itself).
   *   d_[f|r|p]        → OPTIONAL. Playback direction:
   *                        - d_f (default): forward
   *                        - d_r: reverse
@@ -4675,11 +4787,11 @@ document.addEventListener('DOMContentLoaded', () => {
   *   -[UID]           → OPTIONAL. UID suffix for disambiguation. Has no effect on parsing logic.
   *
   * Example:
-  *   cue_repeat_s_loopA_e_loopB_x_2_r_bridge_d_p_a_stop-B12
+  *   cueRepeat_s_loopA_e_loopB_x_2_r_bridge_d_p_a_stop-B12
   *     → Jump to 'loopA', repeat to 'loopB' 2 times (pingpong),
   *       then stop playback after second repeat.
   *
-  *   cue_repeat_s_intro_x_3
+  *   cueRepeat_s_intro_x_3
   *     → Repeat from 'intro' to this cue’s location 3 times (forward), then continue.
   *
   * Notes:
@@ -4693,7 +4805,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let repeatStateMap = {}; // ✅ Store all active repeat states by cue ID
 
   /**
-  * Parses a cue_repeat_* ID into structured parameters.
+  * Parses a cueRepeat_* ID into structured parameters.
   * Supports:
   *   - s_[startId]
   *   - e_[endId] (optional — defaults to self)
@@ -4708,9 +4820,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const cueId = rawCueId.trim();
     console.log("[DEBUG] parseRepeatCueId loaded:", typeof parseRepeatCueId);
 
-    if (!cueId.startsWith("cue_repeat_")) return null;
+    if (!cueId.startsWith("cueRepeat_")) return null;
 
-    const base = cueId.slice("cue_repeat_".length);
+    const base = cueId.slice("cueRepeat_".length);
     const uidSuffix = null; // optional — not used in logic
 
     const repeat = {
@@ -4770,7 +4882,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (repeat.count === null && !repeat.isInfinite) errors.push("Missing or invalid x_ (count or inf)");
 
     if (errors.length > 0) {
-      console.warn(`[parseRepeatCueId] Invalid cue_repeat ID: ${cueId}`);
+      console.warn(`[parseRepeatCueId] Invalid cueRepeat ID: ${cueId}`);
       errors.forEach((e) => console.warn("  ↳", e));
       return null;
     }
@@ -4785,7 +4897,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const parsed = parseRepeatCueId(cueId);
     if (!parsed) return;
 
-    console.log('[handleRepeatCue] 🎯 Detected cue_repeat:', parsed);
+    console.log('[handleRepeatCue] 🎯 Detected cueRepeat:', parsed);
     document.getElementById("playhead").classList.add("repeating");
     document.getElementById("repeat-count-box").classList.remove("hidden");
     document.getElementById("repeat-count-box").classList.add("pulse");
@@ -6053,7 +6165,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       console.log("[DEBUG] `animations` at start:", animations);
 
-      // ✅ Ensure score pauses when the cue_choice appears
+      // ✅ Ensure score pauses when the cueChoice appears
       if (isPlaying) {
         console.log('[DEBUG] Pausing score for cue choice.');
         isPlaying = false;
@@ -6175,7 +6287,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * sendAudioOscTrigger({ cueId, filename, volume, loop })
  *
  * Sends a WebSocket message to trigger audio playback via OSC-compatible backend.
- * - Used for all cue_audio-style events that play sound files.
+ * - Used for all cueAudio-style events that play sound files.
  * - Ensures the WebSocket is open before sending.
  * - Includes filename, volume, loop count, and timestamp in the payload.
  *
@@ -6233,7 +6345,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🧱 Determine filename (required)
     const filenameBase = cueParams.file || cueParams.choice;
     if (!filenameBase) {
-      console.error(`[ERROR] cue_audio requires a 'file' or 'choice' param: ${cueId}`);
+      console.error(`[ERROR] cueAudio requires a 'file' or 'choice' param: ${cueId}`);
       return;
     }
 
@@ -6405,7 +6517,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Load the animation inside the container
-    handleAnimejsCue(`cue_animejs_${file}`, `animations/${file}.svg`, duration);
+    handleAnimejsCue(`cueAnimejs_${file}`, `animations/${file}.svg`, duration);
 
     svgThumbnail.onload = () => {
       console.log(`[DEBUG] Successfully loaded SVG thumbnail: ${choice}`);
@@ -6566,7 +6678,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const handleOscCue = (cueId) => {
     /**
-    * ✅ Processes `cue_osc` messages from clients.
+    * ✅ Processes `cueOsc` messages from clients.
     * - Extracts and validates the cue number before sending to OSC.
     * - Prevents duplicate triggers by tracking already sent cues.
     */
@@ -6597,31 +6709,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-
   ////CUE HANDLERS //////////////////////////////////////////
   // TODO check if moving all cue stuff here breaks anything
 
 
   /**
-  * resetTriggeredCues() → Clears the triggeredCues set while preserving active cue_repeat_* entries.
+  * resetTriggeredCues() → Clears the triggeredCues set while preserving active cueRepeat_* entries.
   *
   * Used during rewind, fast forward, or restart actions to allow regular cues to be retriggered
   * without accidentally restarting ongoing repeat loops.
   *
-  * cue_repeat_* cues are preserved if their corresponding repeatStateMap entry is still active.
+  * cueRepeat_* cues are preserved if their corresponding repeatStateMap entry is still active.
   * This prevents repeated re-entry into handleRepeatCue() after seeking or rewinding mid-loop.
   */
 
   let triggeredCues = new Set(); // ✅ Initialize it as a global Set()
 
   function resetTriggeredCues() {
-    console.log("[resetTriggeredCues] Resetting cues, preserving active cue_repeat_*");
+    console.log("[resetTriggeredCues] Resetting cues, preserving active cueRepeat_*");
 
     const preserved = new Set();
 
     for (const cueId of triggeredCues) {
-      if (cueId.startsWith("cue_repeat") && repeatStateMap[cueId]?.active) {
+      if (cueId.startsWith("cueRepeat") && repeatStateMap[cueId]?.active) {
         preserved.add(cueId);
       }
     }
@@ -6632,34 +6742,40 @@ document.addEventListener('DOMContentLoaded', () => {
       triggeredCues.add(cueId);
     }
 
-    console.log(`[resetTriggeredCues] Preserved ${preserved.size} active cue_repeat_* entries.`);
+    console.log(`[resetTriggeredCues] Preserved ${preserved.size} active cueRepeat_* entries.`);
   }
 
   /**
   * handleCueTrigger(cueId) → Determines the cue type and calls the corresponding cue handler.
   * It also sends a WebSocket message to the server to notify other connected clients.
-  * Related: Server-side "cue_triggered" handler (rebroadcasts the cue event for synchronization).
+  * Related: Server-side "cueTriggered" handler (rebroadcasts the cue event for synchronization).
   */
 
   const cueHandlers = {
-    "cue_speed": handleSpeedCue,
-    "cue_pause": handlePauseCue,
-    "cue_stop": handleStopCue,
-    "cue_choice": handleCueChoice,
-    "cue_animation": handleAnimationCue,
-    "cue_animejs": handleAnimejsCue,
-    "cue_audio": handleAudioCue,
-    "cue_video": handleVideoCue,
-    "cue_p5": handleP5Cue,
-    "cue_osc": handleOscCue,
-    "cue_repeat": handleRepeatCue,
-    "cue_traverse": handleTraverseCue,
+    "cueSpeed": handleSpeedCue,
+    "cuePause": handlePauseCue,
+    "cueStop": handleStopCue,
+    "cueChoice": handleCueChoice,
+    "cueAnimation": handleAnimationCue,
+    "cueAnimejs": handleAnimejsCue,
+    "cueAudio": handleAudioCue,
+    "cueVideo": handleVideoCue,
+    "cueP5": handleP5Cue,
+    "cueOsc": handleOscCue,
+    "cueOscTrigger": handleOscCue,
+    "cueOscValue": handleOscCue,
+    "cueOscSet": handleOscCue,
+    "cueOscRandom": handleOscCue,
+    "cueOscBurst": handleOscCue,
+    "cueOscPulse": handleOscCue,
+    "cueRepeat": handleRepeatCue,
+    "cueTraverse": handleTraverseCue,
     "c-t": handleTraverseCue,
   };
 
 
   /**
-   * Parses a cue_traverse or c-t cue using only ()-style tag values.
+   * Parses a cueTraverse or c-t cue using only ()-style tag values.
    * Supports:
    * - o(...) → ID of target object (required)
    * - t(1)   → mark as triggerable (optional)
@@ -6697,7 +6813,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   /**
-   * Starts animation for a cue_traverse (c-t) cue.
+   * Starts animation for a cueTraverse (c-t) cue.
    * Looks up an object by objId, reads its data-id, and triggers animation if _t(1).
    * Animation is triggered using the data-id as the key in all pending*Animations maps.
    */
@@ -6749,7 +6865,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const config = parseTraverseCueId(cueId);
     if (!config) return;
 
-    console.log("[handleTraverseCue] 🚶 Triggered cue_traverse:", config);
+    console.log("[handleTraverseCue] 🚶 Triggered cueTraverse:", config);
 
     // TODO: Animate the object
     startTraverseAnimation(config);
@@ -6763,11 +6879,13 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log(`[parseCueParams] Raw cueId: ${cueId}`);
 
     // 🧹 Clean suffixes like -123, -use, -clone
-    const cleaned = cueId.replace(/-\d+$|-use$|-clone$/, '');
-    console.log(`[parseCueParams] Cleaned cueId: ${cleaned}`);
+    const lastParenIndex = cueId.lastIndexOf(")");
+    const cleaned = lastParenIndex !== -1
+      ? cueId.slice(0, lastParenIndex + 1)
+      : cueId;    console.log(`[parseCueParams] Cleaned cueId: ${cleaned}`);
 
-    // 🎯 Extract cue type (e.g. cue_audio)
-    const typeMatch = cleaned.match(/^([a-z]+_[a-z]+)/);
+    // 🎯 Extract cue type (e.g. cueAudio)
+    const typeMatch = cleaned.match(/^([a-zA-Z][a-zA-Z0-9]*)/);
     const type = typeMatch ? typeMatch[1] : null;
 
     if (!type) {
@@ -6832,134 +6950,136 @@ document.addEventListener('DOMContentLoaded', () => {
   * extracts parameters (e.g., duration, speed, choice), and invokes the appropriate
   * cue handler from the cueHandlers map.
   *
-  * Handles both synchronous and asynchronous cue types. For example, cue_repeat_*
+  * Handles both synchronous and asynchronous cue types. For example, cueRepeat_*
   * uses async control flow (with await and pauses) to manage jump and playback timing.
   *
   * Special handling includes:
-  * - cue_repeat_*: Prevents retriggering if the repeat is already active (via repeatStateMap)
-  * - cue_speed, cue_pause, cue_choice: Parses duration/speed/choice from ID segments
+  * - cueRepeat_*: Prevents retriggering if the repeat is already active (via repeatStateMap)
+  * - cueSpeed, cuePause, cueChoice: Parses duration/speed/choice from ID segments
   *
   * After handling, the cueId is added to triggeredCues to prevent retriggering.
-  * Also emits a cue_triggered message over WebSocket if wsEnabled.
+  * Also emits a cueTriggered message over WebSocket if wsEnabled.
   */
-
   const handleCueTrigger = (cueId, isRemote = false) => {
     console.log(`[DEBUG] Attempting to trigger cue: ${cueId}`);
-
+  
     if (triggeredCues.has(cueId)) {
       console.log(`[DEBUG] Skipping already-triggered cue: ${cueId}`);
       return;
     }
-    triggeredCues.add(cueId);
-
-    // 🚫 Warn if cueId appears to use deprecated underscore-based param format
-    if (!cueId.includes('(') && cueId.match(/_[\w\-]+$/)) {
-      const warning = `[DEPRECATED] Cue '${cueId}' uses an outdated underscore format. Use param(value) instead.`;
-      console.warn(warning);
-      if (window?.alert) alert(warning); // Optional: show popup for user feedback
-      return;
-    }
-
-    // ✅ Parse cueId using param(value) format only
+  
+    // ✅ Parse cueId using param(value) format
     const { type, cueParams } = parseCueParams(cueId);
-
-    console.log(`[DEBUG] Cue Type: ${type}`);
-    console.log(`[DEBUG] Parsed cueParams:`, cueParams);
-
-    // ❗ Validate required param for cue_speed
-    if (type === "cue_speed" && (cueParams["speed"] === undefined || cueParams["speed"] === "")) {
-      console.warn(`[WARNING] ❌ Missing speed multiplier in cue: ${cueId}`);
-      return;
-    }
-
+  
+    console.log(`[parseCueParams] Final cue type: ${type}`);
+    console.log(`[parseCueParams] Final cueParams:`, cueParams);
+  
     // ❗ Validate cue type exists
     if (!cueHandlers.hasOwnProperty(type)) {
       console.warn(`[CLIENT] No handler found for cue type: ${type}`);
       return;
     }
-
-    console.log(`[DEBUG] Executing cue handler for ${type} with params`, cueParams);
-
+  
+    // 🔁 Switch-case dispatch based on cue type
     switch (type) {
-      case "cue_speed":
-        cueHandlers[type](cueId, cueParams["speed"]);
-        break;
-
-      case "cue_stop":
-        cueHandlers[type](cueId, cueParams["stop"]);
-        break;
-
-      case "cue_traverse":
-      case "c-t":
-        cueHandlers[type](cueId, cueParams[type]);
-        break;
-
-      case "cue_pause":
-        const duration = cueParams["dur"] * 1000;
-        if (!duration || isNaN(duration)) {
-          console.error(`[CLIENT] Invalid duration for cue_pause: ${cueId}`);
+      case "cueSpeed": {
+        const speed = cueParams.speed ?? cueParams.Speed ?? cueParams.choice;
+        if (!speed || isNaN(speed)) {
+          console.warn(`[CLIENT] ❌ Invalid or missing speed in cueSpeed: ${cueId}`);
           return;
         }
-        cueHandlers[type](cueId, duration);
+        cueHandlers[type](cueId, Number(speed));
         break;
-
-      case "cue_repeat":
-        if (repeatStateMap[cueId] && repeatStateMap[cueId].active) {
+      }
+  
+      case "cuePause": {
+        const durationSec = cueParams.duration ?? cueParams.dur ?? cueParams.choice;
+        const durationMs = Number(durationSec) * 1000;
+        if (!durationMs || isNaN(durationMs)) {
+          console.error(`[CLIENT] Invalid duration for cuePause: ${cueId}`);
+          return;
+        }
+        cueHandlers[type](cueId, durationMs);
+        break;
+      }
+  
+      case "cueStop": {
+        cueHandlers[type](cueId);
+        break;
+      }
+  
+      case "cueRepeat": {
+        if (repeatStateMap[cueId]?.active) {
           console.log(`[repeat] ⚠️ Repeat ${cueId} already active — skipping re-trigger`);
           return;
         }
-        cueHandlers[type](cueId);
+        cueHandlers[type](cueId, cueParams);
         break;
-
-      case "cue_animation":
-      case "cue_animejs":
-        const animDuration = cueParams["dur"];
-        const animationPath = `animations/${cueParams["choice"]}.svg`;
-
+      }
+  
+      case "cueTraverse":
+      case "c-t": {
+        cueHandlers[type](cueId, cueParams);
+        break;
+      }
+  
+      case "cueChoice": {
+        if (cueParams.choice && cueParams.dur) {
+          cueHandlers[type](cueId, cueParams);
+        } else {
+          console.error(`[CLIENT] Invalid cueChoice: missing 'choice' or 'dur' param`);
+        }
+        break;
+      }
+  
+      case "cueAudio": {
+        if (!cueParams || (!cueParams.choice && !cueParams.file)) {
+          console.error(`[CLIENT] cueAudio missing 'choice' or 'file' param: ${cueId}`);
+          return;
+        }
+        cueHandlers[type](cueId, cueParams);
+        break;
+      }
+  
+      case "cueAnimation":
+      case "cueAnimejs": {
+        const animDuration = Number(cueParams.dur);
+        const animationPath = `animations/${cueParams.choice}.svg`;
         if (!animDuration || isNaN(animDuration)) {
           console.error(`[CLIENT] Invalid duration for ${type}: ${cueId}`);
           return;
         }
-
         cueHandlers[type](cueId, animationPath, animDuration);
         break;
-
-      case "cue_audio":
-        if (!cueParams || (!cueParams.choice && !cueParams.file)) {
-          console.error(`[ERROR] cue_audio is missing required 'choice' or 'file' param: ${cueId}`);
-          return;
-        }
-        cueHandlers[type](cueId, cueParams); // ✅ passes full param object
+      }
+  
+      case "cueP5":
+      case "cueVideo": {
+        cueHandlers[type](cueId, cueParams);
         break;
-
-
-      case "cue_osc":
-        // This assumes that cue_osc(foo/bar) was used
-        const oscMessage = cueParams["message"] || "";
-        cueHandlers[type](cueId, oscMessage);
+      }
+  
+      case "cueOscTrigger":
+      case "cueOscValue":
+      case "cueOscSet":
+      case "cueOscRandom":
+      case "cueOscBurst":
+      case "cueOscPulse": {
+        cueHandlers[type](cueId, cueParams);
         break;
-
-      case "cue_choice":
-        if (cueParams.choice && cueParams.dur) {
-          cueHandlers[type](cueId, cueParams);
-        } else {
-          console.error(`[ERROR] Invalid cue_choice format: Missing choice or duration.`);
-          return;
-        }
-        break;
-
-      default:
-        console.warn(`[CLIENT] No handler found for cue type: ${type}`);
+      }
+  
+      default: {
+        console.warn(`[CLIENT] No cue handler matched for: ${type}`);
         return;
+      }
     }
-
-    // ✅ Only add to triggeredCues and broadcast after successful handling
-    const alreadyTriggered = triggeredCues.has(cueId);
-
-    if (!alreadyTriggered) {
+  
+    // ✅ Only mark + broadcast if successfully handled
+    if (!triggeredCues.has(cueId)) {
       triggeredCues.add(cueId);
       if (wsEnabled && socket && !isRemote) {
-        socket.send(JSON.stringify({ type: 'cue_triggered', cueId }));
+        socket.send(JSON.stringify({ type: 'cueTriggered', cueId }));
         console.log(`[CLIENT] Sent cue trigger to server: ${cueId}`);
       }
     } else {
@@ -6970,7 +7090,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   };
-
+  
 
 
 

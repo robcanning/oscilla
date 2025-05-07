@@ -1,114 +1,160 @@
 
-# `cue_osc` — Trigger OSC Messages to External Audio Engines
+# `cue_osc` — Send OSC Messages to External Audio Engines
 
-The `cue_osc(...)` cue sends an Open Sound Control (OSC) message from the browser client to the server, which then forwards it to connected software like **SuperCollider**, **Pure Data (Pd)**, **Max/MSP**, or other OSC-compatible environments.
-
----
-
-## 🔤 Syntax
-
-```
-cue_osc_trigger(01)
-```
-
-- `trigger` is the OSC message type
-- `(01)` is the cue number or identifier to send over OSC
-- The cue number is extracted as an integer from the cue ID
+The `cue_osc(...)` cue sends Open Sound Control (OSC) messages from the browser to a server, which forwards them to connected software like **SuperCollider**, **Pure Data (Pd)**, or **Max/MSP**.
 
 ---
 
-## ✅ Typical Use Cases
+## 🔤 Syntax Overview
 
-- 🎧 Trigger multichannel audio playback
-- 🌀 Activate spatialization algorithms or effects
-- 🎛️ Control synth parameters, reverb, granulation, or visual sync
-- 🎬 Cue visuals or lighting in other software
+Each cue type is defined by its subtype and arguments:
 
----
-
-## 🧠 Example Workflow
-
-In SuperCollider:
-
-```supercollider
-OSCdef.new(
-  \cueTrigger,
-  { |msg| 
-    var cueNum = msg[1];
-    ("Received OSC cue " ++ cueNum).postln;
-    // Add audio logic here
-  },
-  '/osc/trigger'
-)
+```txt
+cue_osc_trigger(1)
+cue_osc_random(0.4,1.2)
+cue_osc_pulse(4,3)
+cue_osc_burst(5,250)
+cue_osc_value(0.67)
+cue_osc_set(speed,1.5)
 ```
 
 ---
 
-## 🛠️ Server-Side Behavior
+## ✅ Supported Subtypes and Use Cases
 
-When a `cue_osc(...)` is triggered:
+### 🎯 `cue_osc_trigger(n)`
+Sends a basic integer-based cue trigger.
 
-1. Cue ID is parsed (e.g. `cue_osc_trigger(03)`)
-2. Number `03` is extracted and sent to the server
-3. Server sends:
-   ```json
-   {
-     "type": "osc",
-     "subType": "trigger",
-     "data": 3,
-     "timestamp": 1746516888000
-   }
-   ```
+**Example:**
+```txt
+cue_osc_trigger(7)
+```
 
----
+**OSC Message Sent:**
+```json
+{ "type": "osc", "subType": "trigger", "data": 7, "timestamp": 1746516000000 }
+```
 
-## 🪵 Viewing OSC Traffic
-
-- View OSC **in/out ports** in:
-  - Server logs
-  - Electron GUI or Web GUI
-- Messages show with timestamps and structure
+**Usage:**
+- Start a buffer in SuperCollider or Pd
+- Trigger a visual or cue marker
 
 ---
 
-## 🔁 Advanced OSC Output: `o2p` (Object-to-Path) Animations
+### 🎲 `cue_osc_random(min,max)`
+Sends a random number between two bounds.
 
-More expressive and continuous OSC output can be achieved using **`o2p` animation objects**, which emit OSC messages as objects move along SVG paths.
+**Example:**
+```txt
+cue_osc_random(0.4, 1.2)
+```
 
-- Position, speed, and timing can be mapped to OSC parameters
-- Ideal for real-time control of synths, spatialization, or visuals
-- See [`osc-o2p.md`](osc-o2p.md) for details
+**OSC Message Sent:**
+```json
+{ "type": "osc", "subType": "random", "data": { "min": 0.4, "max": 1.2 }, "timestamp": 1746516000123 }
+```
 
----
-
-## 🚧 TODO: Future OSC Cue Types
-
-The following are **not yet implemented** but represent musically useful extensions:
-
-### `cue_osc_random(min,max)`
-- Sends a float or int randomly between two bounds
-- Example: `cue_osc_random(0.4,1.2)`
-
-### `cue_osc_pulse(rate,duration)`
-- Sends a pulse stream at `rate` Hz for `duration` seconds
-- Example: `cue_osc_pulse(5,4)` → 5Hz for 4s
-
-### `cue_osc_burst(count,interval)`
-- Sends `count` triggers, `interval` ms apart
-- Example: `cue_osc_burst(6,200)`
-
-### `cue_osc_value(x)`
-- Sends a fixed value (e.g., `cue_osc_value(0.7)`)
-
-### `cue_osc_set(param,value)`
-- Sends key-value pair (e.g., `cue_osc_set(pitch,64)`)
-
-These would allow greater nuance in triggering real-time electronics while keeping complexity out of the browser.
+**Usage:**
+- Modulate parameters like filter Q, rate, density
+- Feed into a generative music system
 
 ---
 
-## 🧩 Related
+### 🕒 `cue_osc_pulse(rate,duration)`
+Instructs the audio engine to generate a rhythmic pulse.
 
-- [`cue_audio(...)`](cue_audio.md) — local/OSC-triggered audio
-- [`cue_traverse(...)`](cue_traverse.md) — point-based movement
-- [`cue_pause(...)`](cue_pause.md) — visual or logic pauses in score
+**Example:**
+```txt
+cue_osc_pulse(5, 4)
+```
+
+**OSC Message Sent:**
+```json
+{ "type": "osc", "subType": "pulse", "data": { "rate": 5, "duration": 4 }, "timestamp": 1746516000456 }
+```
+
+**Usage:**
+- Trigger grain clouds
+- Create tremolo or panning effects
+- Drive a visual flicker
+
+---
+
+### 💥 `cue_osc_burst(count,interval)`
+Triggers a burst of messages spaced by `interval` milliseconds.
+
+**Example:**
+```txt
+cue_osc_burst(6, 200)
+```
+
+**OSC Message Sent:**
+```json
+{ "type": "osc", "subType": "burst", "data": { "count": 6, "interval": 200 }, "timestamp": 1746516000890 }
+```
+
+**Usage:**
+- Fire events for percussion hits or light flashes
+- Manual step sequencer triggers
+
+---
+
+### 📏 `cue_osc_value(x)`
+Sends a scalar value (float or int).
+
+**Example:**
+```txt
+cue_osc_value(0.7)
+```
+
+**OSC Message Sent:**
+```json
+{ "type": "osc", "subType": "value", "data": 0.7, "timestamp": 1746516001300 }
+```
+
+**Usage:**
+- Set a parameter value: e.g. gain, modulation depth
+
+---
+
+### 🧩 `cue_osc_set(key,value)`
+Sends a key/value map.
+
+**Example:**
+```txt
+cue_osc_set(speed,1.5)
+```
+
+**OSC Message Sent:**
+```json
+{ "type": "osc", "subType": "set", "data": { "speed": 1.5 }, "timestamp": 1746516001450 }
+```
+
+**Usage:**
+- Set named parameters in Pd/SC (e.g. `/osc/set speed 1.5`)
+
+---
+
+## 🧪 Advanced OSC Output: `o2p` Animations
+
+More expressive, real-time OSC control is possible using `o2p` (object-to-path) animation logic.
+
+- Outputs OSC continuously as objects move
+- Great for position-based panning, gestures, envelopes
+- See [`osc-o2p.md`](osc-o2p.md) for syntax and examples
+
+---
+
+## 🛠️ Monitoring OSC Traffic
+
+- View outgoing OSC messages in the **server logs** or **GUI dashboard**
+- Port numbers and connection status are also displayed
+
+---
+
+## 🧩 Related Cues
+
+- [`cue_audio`](cue_audio.md) — browser-based or OSC-triggered audio playback
+- [`cue_traverse`](cue_traverse.md) — point-to-point animation
+- [`cue_choice`](cue_choice.md) — form branching
+- [`cue_stop`](cue_stop.md) — halts score playback
