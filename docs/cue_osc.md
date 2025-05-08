@@ -1,160 +1,109 @@
+# `cueOsc*` — Send OSC Messages to External Audio Engines
 
-# `cueOsc` — Send OSC Messages to External Audio Engines
-
-The `cueOsc(...)` cue sends Open Sound Control (OSC) messages from the browser to a server, which forwards them to connected software like **SuperCollider**, **Pure Data (Pd)**, or **Max/MSP**.
+The `cueOsc*` family of cues sends Open Sound Control (OSC) messages from the browser to the oscillaScore server, which forwards them to connected software like **SuperCollider**, **Pure Data (Pd)**, or **Max/MSP**.
 
 ---
 
 ## 🔤 Syntax Overview
 
-Each cue type is defined by its subtype and arguments:
+Each cue uses camelCase format and defines a sub-type of OSC action:
 
 ```txt
 cueOscTrigger(1)
-cueOscRandom(0.4,1.2)
-cueOscPulse(4,3)
-cueOscBurst(5,250)
-cueOscValue(0.67)
-cueOscSet(speed,1.5)
-```
-
----
-
-## ✅ Supported Subtypes and Use Cases
-
-### 🎯 `cueOscTrigger(n)`
-Sends a basic integer-based cue trigger.
-
-**Example:**
-```txt
-cueOscTrigger(7)
-```
-
-**OSC Message Sent:**
-```json
-{ "type": "osc", "subType": "trigger", "data": 7, "timestamp": 1746516000000 }
-```
-
-**Usage:**
-- Start a buffer in SuperCollider or Pd
-- Trigger a visual or cue marker
-
----
-
-### 🎲 `cueOscRandom(min,max)`
-Sends a random number between two bounds.
-
-**Example:**
-```txt
 cueOscRandom(0.4, 1.2)
+cueOscPulse(rate: 4, duration: 3)
+cueOscBurst(count: 5, interval: 250)
+cueOscValue(0.67)
+cueOscSet(speed, 1.5)
 ```
 
-**OSC Message Sent:**
-```json
-{ "type": "osc", "subType": "random", "data": { "min": 0.4, "max": 1.2 }, "timestamp": 1746516000123 }
-```
-
-**Usage:**
-- Modulate parameters like filter Q, rate, density
-- Feed into a generative music system
-
----
-
-### 🕒 `cueOscPulse(rate,duration)`
-Instructs the audio engine to generate a rhythmic pulse.
-
-**Example:**
+Optional suffix:
 ```txt
-cueOscPulse(5, 4)
+cueOscSet(speed, 1.5)_addr(synths/myEngine)
 ```
-
-**OSC Message Sent:**
-```json
-{ "type": "osc", "subType": "pulse", "data": { "rate": 5, "duration": 4 }, "timestamp": 1746516000456 }
-```
-
-**Usage:**
-- Trigger grain clouds
-- Create tremolo or panning effects
-- Drive a visual flicker
 
 ---
 
-### 💥 `cueOscBurst(count,interval)`
-Triggers a burst of messages spaced by `interval` milliseconds.
+## ✅ Supported OSC Cue Types
 
-**Example:**
+### 🎯 `cueOscTrigger(value)`
+Send a basic integer or float trigger.
+
+### 📏 `cueOscValue(value)`
+Send a single scalar float or integer.
+
+### 🧩 `cueOscSet(param, value)`
+Send a named parameter. Example:
 ```txt
-cueOscBurst(6, 200)
+cueOscSet(filterFreq, 880)
 ```
 
-**OSC Message Sent:**
+### 🎲 `cueOscRandom(min, max)`
+Send a random float between bounds.
+
+### 💥 `cueOscBurst(count, interval)`
+Send a timed burst of messages (handled client-side). Sends `count` messages spaced by `interval` milliseconds.
+
+### 🕒 `cueOscPulse(rate, duration)`
+Send a rhythmic stream of OSC messages for `duration` seconds at `rate` Hz.
+
+---
+
+## 📬 Routing with `_addr(...)`
+
+All `cueOsc*` cues can include an `_addr(...)` suffix to target a custom OSC address:
+
+```xml
+<circle id="cueOscSet(speed, 1.5)_addr(synths/drumEngine)" />
+```
+
+This will emit:
 ```json
-{ "type": "osc", "subType": "burst", "data": { "count": 6, "interval": 200 }, "timestamp": 1746516000890 }
+{
+  "type": "osc",
+  "subType": "set",
+  "address": "synths/drumEngine",
+  "data": { "speed": 1.5 }
+}
 ```
 
-**Usage:**
-- Fire events for percussion hits or light flashes
-- Manual step sequencer triggers
+Default address is `/oscilla` if none is given.
 
 ---
 
-### 📏 `cueOscValue(x)`
-Sends a scalar value (float or int).
+## 🛠 Dynamic Assignment via `assignCues(...)`
 
-**Example:**
-```txt
-cueOscValue(0.7)
+You can assign a group of randomized OSC cues using:
+
+```xml
+<g id="assignCues(cueOscTrigger(rnd[1,9]))">
 ```
 
-**OSC Message Sent:**
-```json
-{ "type": "osc", "subType": "value", "data": 0.7, "timestamp": 1746516001300 }
-```
+Supported patterns:
+- `rnd[min,max]` — random number
+- `ypos[min,max]` — map Y-position within group to value
 
-**Usage:**
-- Set a parameter value: e.g. gain, modulation depth
+Used by the `assignCues(svgRoot)` function in `app.js`.
 
 ---
 
-### 🧩 `cueOscSet(key,value)`
-Sends a key/value map.
+## 🧪 Continuous OSC via `o2p(...)`
 
-**Example:**
-```txt
-cueOscSet(speed,1.5)
+For path-following OSC animation, use:
+
+```xml
+<circle id="o2p(path-id)_osc(1)" />
 ```
 
-**OSC Message Sent:**
-```json
-{ "type": "osc", "subType": "set", "data": { "speed": 1.5 }, "timestamp": 1746516001450 }
-```
-
-**Usage:**
-- Set named parameters in Pd/SC (e.g. `/osc/set speed 1.5`)
-
----
-
-## 🧪 Advanced OSC Output: `o2p` Animations
-
-More expressive, real-time OSC control is possible using `o2p` (object-to-path) animation logic.
-
-- Outputs OSC continuously as objects move
-- Great for position-based panning, gestures, envelopes
-- See [`osc-o2p.md`](osc-o2p.md) for syntax and examples
-
----
-
-## 🛠️ Monitoring OSC Traffic
-
-- View outgoing OSC messages in the **server logs** or **GUI dashboard**
-- Port numbers and connection status are also displayed
+See `osc-o2p.md` for advanced OSC modulation via animation.
 
 ---
 
 ## 🧩 Related Cues
 
-- [`cueAudio`](cueAudio.md) — browser-based or OSC-triggered audio playback
-- [`cueTraverse`](cueTraverse.md) — point-to-point animation
-- [`cueChoice`](cueChoice.md) — form branching
-- [`cueStop`](cueStop.md) — halts score playback
+- [`cueAudio(...)`](cue_audio.md)
+- [`cueTraverse(...)`](cue_traverse.md)
+- [`cueChoice(...)`](cue_choice.md)
+- [`cuePause(...)`](cue_pause.md)
+
+For a full list, see [`cueSystem.md`](cueSystem.md)

@@ -6681,37 +6681,108 @@ function assignCues(svgRoot) {
   };
 
   ///////////////////////////////////////////////////////
+/**
+ * handleOscCue — send OSC messages based on cueOsc* type
+ * Supports:
+ * - cueOscTrigger(value)
+ * - cueOscValue(value)
+ * - cueOscSet(key, value)
+ * - cueOscRandom(min, max)
+ * - cueOscBurst(count, interval)
+ * - cueOscPulse(rate, duration)
+ * Optional suffix: _addr(custom/osc/path)
+ */
+function handleOscCue(cueId, cueParams = {}) {
+  const type = cueId.split('(')[0]; // e.g., cueOscTrigger
+  const subType = type.replace(/^cueOsc/, "").toLowerCase(); // e.g., "trigger"
 
-  const handleOscCue = (cueId) => {
-    /**
-    * ✅ Processes `cueOsc` messages from clients.
-    * - Extracts and validates the cue number before sending to OSC.
-    * - Prevents duplicate triggers by tracking already sent cues.
-    */
-    console.log(`[DEBUG] Triggering OSC cue: ${cueId}`);
+  // 🧠 Extract optional _addr(...) override
+  const addrMatch = cueId.match(/_addr\\(([^)]+)\\)/);
+  const oscAddr = addrMatch ? addrMatch[1] : "/oscilla";
 
-    // ✅ Extract the numeric cue number from `cueId`
-    const cueNumber = parseInt(cueId.replace(/\D/g, ""), 10); // Removes non-numeric characters
-
-    if (isNaN(cueNumber)) {
-      console.warn(`[WARNING] Invalid cue number detected: ${cueId}`);
-      return;
-    }
-
-    if (wsEnabled && socket && socket.readyState === WebSocket.OPEN) {
-      const oscMessage = {
-        type: "osc",
-        subType: "trigger",
-        data: cueNumber, // ✅ Now sends an integer instead of a string
-        timestamp: Date.now(),
-      };
-
-      socket.send(JSON.stringify(oscMessage));
-      console.log(`[DEBUG] OSC message sent:`, oscMessage);
-    } else {
-      console.warn(`[WARNING] WebSocket is not open. Cannot send OSC cue '${cueId}'.`);
-    }
+  const baseMessage = {
+    type: "osc",
+    subType,
+    address: oscAddr,
+    timestamp: Date.now()
   };
+
+  switch (subType) {
+    case "trigger":
+    case "value": {
+      const value = parseFloat(cueParams.choice ?? cueParams.value);
+      if (isNaN(value)) {
+        console.warn("[cueOsc] Missing or invalid value:", cueId);
+        return;
+      }
+      baseMessage.data = value;
+      socket.send(JSON.stringify(baseMessage));
+      break;
+    }
+
+    case "set": {
+      const [key, val] = Object.entries(cueParams)[0] || [];
+      if (!key || val === undefined) {
+        console.warn("[cueOsc] Invalid set params:", cueParams);
+        return;
+      }
+      baseMessage.data = { [key]: val };
+      socket.send(JSON.stringify(baseMessage));
+      break;
+    }
+
+    case "random": {
+      const min = parseFloat(cueParams.min);
+      const max = parseFloat(cueParams.max);
+      if (isNaN(min) || isNaN(max)) {
+        console.warn("[cueOsc] Invalid random range:", cueParams);
+        return;
+      }
+      baseMessage.data = { min, max };
+      socket.send(JSON.stringify(baseMessage));
+      break;
+    }
+
+    case "burst": {
+      const count = parseInt(cueParams.count ?? cueParams.choice);
+      const interval = parseInt(cueParams.interval ?? 100);
+      if (!count || isNaN(interval)) {
+        console.warn("[cueOsc] Invalid burst params:", cueParams);
+        return;
+      }
+      let sent = 0;
+      const burstTimer = setInterval(() => {
+        if (sent >= count) return clearInterval(burstTimer);
+        socket.send(JSON.stringify({ ...baseMessage }));
+        sent++;
+      }, interval);
+      break;
+    }
+
+    case "pulse": {
+      const rate = parseFloat(cueParams.rate);
+      const duration = parseFloat(cueParams.duration);
+      if (!rate || !duration) {
+        console.warn("[cueOsc] Invalid pulse params:", cueParams);
+        return;
+      }
+      const interval = 1000 / rate;
+      const total = Math.floor(duration * rate);
+      let sent = 0;
+      const pulseTimer = setInterval(() => {
+        if (sent >= total) return clearInterval(pulseTimer);
+        socket.send(JSON.stringify({ ...baseMessage }));
+        sent++;
+      }, interval);
+      break;
+    }
+
+    default:
+      console.warn("[cueOsc] Unsupported subType:", subType);
+      break;
+  }
+}
+
 
 
 
