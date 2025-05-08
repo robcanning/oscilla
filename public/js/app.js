@@ -1,3 +1,22 @@
+import {
+  handleCueTrigger,
+  checkCueTriggers,
+  parseCueParams,
+  resetTriggeredCues
+} from './cueHandlers.js';
+
+window.handleCueTrigger = handleCueTrigger;
+window.checkCueTriggers = checkCueTriggers;
+window.parseCueParams = parseCueParams;
+window.resetTriggeredCues = resetTriggeredCues;
+
+window.playheadX = 0;
+window.estimatedPlayheadX = 0;
+window.speedMultiplier = 1;
+window.scoreContainer = document.getElementById('scoreContainer');
+
+window.duration = 30;  // or however long your score is in ms
+
 const LogLevel = {
   DEBUG: 0,
   INFO: 1,
@@ -52,7 +71,7 @@ loadWaveSurfer(() => {
 
 
 
-const svgscoreContainer = document.getElementById('scoreContainer'); // Ensure the SVG is wrapped in a container with this ID
+// const svgscoreContainer = document.getElementById('scoreContainer'); // Ensure the SVG is wrapped in a container with this ID
 
 
 
@@ -65,14 +84,13 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('Interactive Scrolling Score Initialized.');
 
   const splash = document.getElementById('splash');
-  const scoreContainer = document.getElementById('scoreContainer');
   const controls = document.getElementById('controls');
   const playhead = document.getElementById('playhead');
-  let playheadX = 0; // ✅ Ensure `playheadX` is always available globally
-  let recentlyRecalculatedPlayhead = false;
+  // let playheadX = 0; // ✅ Ensure `playheadX` is always available globally
+  window.recentlyRecalculatedPlayhead = false;
 
   const score = document.getElementById('score');
-  const scoreWidth = document.querySelector('svg')?.getAttribute('width') || 40960; // Use SVG's intrinsic width
+  window.scoreWidth = document.querySelector('svg')?.getAttribute('width') || 40960; // Use SVG's intrinsic width
   const seekBar = document.getElementById('seek-bar');
   const toggleButton = document.getElementById('toggle-button');
   const rewindButton = document.getElementById('rewind-button');
@@ -121,10 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let animationPaused = false; // Global lock for animation state
   let maxScrollDistance = 40000; // todo GET THE VALUE FROM WIDTH
-  let elapsedTime = 0;
-  let isPlaying = false;
+  // let elapsedTime = 0;
+  // let isPlaying = false;
   let playbackSpeed = 1.0;
-  let lastAnimationFrameTime = null;
+  window.lastAnimationFrameTime = null;
   let wsEnabled = true; // WebSocket state
   let socket = null; // Define globally so all functions can access it
 
@@ -140,17 +158,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let scoreSVG = null; // ✅ Store global reference to SVG
 
-  const svgscoreContainer = document.getElementById('scoreContainer'); // Ensure the SVG is wrapped in a container with this ID
+  // const svgscoreContainer = document.getElementById('scoreContainer'); // Ensure the SVG is wrapped in a container with this ID
 
 
   const adjustscoreContainerHeight = () => {
     const controls = document.getElementById('controls');
-    const scoreContainer = document.getElementById('scoreContainer');
+    // const scoreContainer = document.getElementById('scoreContainer');
     //const controlsHeight = controls && !controls.classList.contains('hidden') ? controls.offsetHeight : 0;
     const controlsHeight = 5;
 
     // scoreContainer.style.height = `calc(100vh - ${controlsHeight}px)`; // Adjust height dynamically
-    console.log(`scoreContainer height adjusted to: ${scoreContainer.style.height}`);
+    console.log(`scoreContainer height adjusted to: ${window.scoreContainer.style.height}`);
   };
 
 
@@ -280,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const audioPopup = document.getElementById('audio-popup');
     const scoreOptionsPopup = document.getElementById('score-options-popup');
     const cueChoiceContainer = document.getElementById('cue-choice-container');
-    const scoreContainer = document.getElementById('scoreContainer');
+    // const scoreContainer = document.getElementById('scoreContainer');
     const playhead = document.getElementById('playhead');
     const playzone = document.getElementById('playzone');
     const animeJsContainer = document.getElementById('animejs-container');
@@ -325,8 +343,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       // Fade the score back in
-      if (scoreContainer) scoreContainer.classList.remove('fade-out');
-      if (scoreContainer) scoreContainer.classList.add('fade-in');
+      if (window.scoreContainer) window.scoreContainer.classList.remove('fade-out');
+      if (window.scoreContainer) window.scoreContainer.classList.add('fade-in');
       if (playhead) playhead.classList.remove('fade-out');
       if (playhead) playhead.classList.add('fade-in');
       if (playzone) playzone.classList.remove('fade-out');
@@ -334,14 +352,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Ensure the fade-in classes are removed after the transition completes
       setTimeout(() => {
-        if (scoreContainer) scoreContainer.classList.remove('fade-in');
+        if (window.scoreContainer) window.scoreContainer.classList.remove('fade-in');
         if (playhead) playhead.classList.remove('fade-in');
         if (playzone) playzone.classList.remove('fade-in');
       }, 1000); // Match the CSS transition duration
 
       // Resume playback only if the score was playing before the popup appeared
-      if (!isPlaying) {
-        isPlaying = true;
+      if (!window.isPlaying) {
+         window.isPlaying = true;
         animationPaused = false; // Ensure animations are not paused
         startAnimation(); // Resume the animation loop
         console.log('[CLIENT] Resuming playback after popup dismissal.');
@@ -384,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
           : cues.find(c => c.id === repeat.endId);
 
         if (startCue && endCue) {
-          const playheadCenter = playheadX + (scoreContainer.offsetWidth / 2);
+          const playheadCenter =window.playheadX + (window.scoreContainer.offsetWidth / 2);
           const inRange = playheadCenter >= startCue.x && playheadCenter <= endCue.x + endCue.width;
 
           if (inRange) {
@@ -486,8 +504,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const WS_URL = await getWebSocketURL(); // Get WebSocket URL dynamically
       console.log(`[CLIENT] Connecting to WebSocket at: ${WS_URL}`);
 
-      socket = new WebSocket(WS_URL);
-
+      const socket = new WebSocket(WS_URL);
+      window.socket = socket; // ✅ This makes it globally available
       /**
       * ✅ Event: Successfully Connected
       * Resets the reconnect counter when a connection is established.
@@ -499,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       socket.addEventListener("open", () => {
         console.log("[CLIENT] 🌐 WebSocket connected — requesting repeat state...");
-        socket.send(JSON.stringify({ type: "get_repeat_state" }));
+        window.socket.send(JSON.stringify({ type: "get_repeat_state" }));
       });
 
       /**
@@ -538,11 +556,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const roundedMultiplier = parseFloat(data.multiplier.toFixed(1));
 
                 console.log(`[CLIENT] 🔄 Server Speed Update Received: ${data.multiplier} (Rounded: ${roundedMultiplier})`);
-                console.log(`[CLIENT] 🔍 Current PlayheadX: ${playheadX}, Adjusted PlayheadX: ${playheadX + (window.innerWidth * 0.5)}`);
+                console.log(`[CLIENT] 🔍 Currentwindow.playheadX: ${window.playheadX}, Adjustedwindow.playheadX: ${window.playheadX + (window.innerWidth * 0.5)}`);
 
                 if (speedMultiplier !== roundedMultiplier) {
                   incomingServerUpdate = true;  // ✅ Prevent redundant updates
-                  speedMultiplier = roundedMultiplier;
+                  window.speedMultiplier = roundedMultiplier;
                   console.log(`[CLIENT] ✅ Speed multiplier updated from server: ${speedMultiplier}`);
                   updateSpeedDisplay();
                   setTimeout(() => { incomingServerUpdate = false; }, 100);  // ✅ Short delay to reset flag
@@ -557,23 +575,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             /** ✅ Pause Playback */
             case "pause":
-              console.log(`[DEBUG] Processing pause request. playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
+              console.log(`[DEBUG] Processing pause request.window.playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
 
               if (!isNaN(data.playheadX) && data.playheadX >= 0) {
-                playheadX = data.playheadX;
-                console.log(`[DEBUG] Applied server-provided playheadX: ${playheadX}`);
+               window.playheadX = data.playheadX;
+                console.log(`[DEBUG] Applied server-providedwindow.playheadX: ${window.playheadX}`);
               } else {
-                console.error(`[ERROR] Invalid playheadX received. Keeping last known value.`);
+                console.error(`[ERROR] Invalidwindow.playheadX received. Keeping last known value.`);
               }
 
               if (!isNaN(data.elapsedTime) && data.elapsedTime >= 0) {
-                elapsedTime = data.elapsedTime;
+                window.elapsedTime = data.elapsedTime;
               } else {
                 console.error(`[ERROR] Invalid elapsedTime received: ${data.elapsedTime}`);
                 return;
               }
 
-              isPlaying = false;
+               window.isPlaying = false;
               stopAnimation(); // ✅ Stop playhead movement
               togglePlayButton(); // ✅ Update UI play button
               console.log("[DEBUG] Playback paused successfully.");
@@ -581,23 +599,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             /** ✅ Resume Playback After Pause */
             case "resume_after_pause":
-              console.log(`[DEBUG] Processing resume_after_pause. playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
+              console.log(`[DEBUG] Processing resume_after_pause.window.playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
 
               if (!isNaN(data.playheadX) && data.playheadX >= 0) {
-                playheadX = data.playheadX;
-                console.log(`[DEBUG] Applied server-provided playheadX: ${playheadX}`);
+               window.playheadX = data.playheadX;
+                console.log(`[DEBUG] Applied server-providedwindow.playheadX: ${window.playheadX}`);
               } else {
-                console.error(`[ERROR] Invalid playheadX received. Keeping last known value.`);
+                console.error(`[ERROR] Invalidwindow.playheadX received. Keeping last known value.`);
               }
 
               if (!isNaN(data.elapsedTime) && data.elapsedTime >= 0) {
-                elapsedTime = data.elapsedTime;
+                window.elapsedTime = data.elapsedTime;
               } else {
                 console.error(`[ERROR] Invalid elapsedTime received: ${data.elapsedTime}`);
                 return;
               }
 
-              isPlaying = true;
+               window.isPlaying = true;
               togglePlayButton();
               startAnimation();
               console.log("[DEBUG] Playback resumed successfully.");
@@ -621,27 +639,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
               // ✅ Apply server-provided values BEFORE sending ack or triggering pause
               if (!isNaN(data.playheadX)) {
-                playheadX = data.playheadX;
-                console.log(`[CLIENT] Synced playheadX from cuePause: ${playheadX}`);
+               window.playheadX = data.playheadX;
+                console.log(`[CLIENT] Syncedwindow.playheadX from cuePause: ${window.playheadX}`);
               }
 
               if (!isNaN(data.elapsedTime)) {
-                elapsedTime = data.elapsedTime;
-                console.log(`[CLIENT] Synced elapsedTime from cuePause: ${elapsedTime}`);
+                window.elapsedTime = data.elapsedTime;
+                console.log(`[CLIENT] Synced window.elapsedTime from cuePause: ${elapsedTime}`);
               }
 
               stopAnimation();
-              isPlaying = false;
+               window.isPlaying = false;
               animationPaused = true;
               togglePlayButton();
 
               if (wsEnabled && socket) {
-                socket.send(JSON.stringify({
+                window.socket.send(JSON.stringify({
                   type: "cuePause_ack",
-                  playheadX: playheadX ?? -1,
-                  elapsedTime: elapsedTime ?? -1
+                  playheadX:window.playheadX ?? -1,
+                  elapsedTime: window.elapsedTime ?? -1
                 }));
-                console.log(`[CLIENT] Sent cuePause_ack to server. playheadX=${playheadX}, elapsedTime=${elapsedTime}`);
+                console.log(`[CLIENT] Sent cuePause_ack to server.window.playheadX=${window.playheadX}, window.elapsedTime=${elapsedTime}`);
               }
 
               handlePauseCue(data.id, data.duration);
@@ -694,15 +712,15 @@ document.addEventListener('DOMContentLoaded', () => {
               }
 
               if (data.playheadX) {
-                console.warn(`[WARNING] WebSocket message modifying playheadX: ${data.playheadX}`);
+                console.warn(`[WARNING] WebSocket message modifyingwindow.playheadX: ${data.playheadX}`);
               }
 
-              elapsedTime = data.state.elapsedTime;
-              isPlaying = data.state.isPlaying;
+              window.elapsedTime = data.state.elapsedTime;
+               window.isPlaying = data.state.isPlaying;
 
-              if (!recentlyRecalculatedPlayhead) {
-                playheadX = data.state.playheadX;
-                scoreContainer.scrollLeft = playheadX;
+              if (!window.recentlyRecalculatedPlayhead) {
+               window.playheadX = data.state.playheadX;
+                window.scoreContainer.scrollLeft = window.playheadX;
                 // console.log("[DEBUG] ⏳ Waiting for WebSocket Sync...");
                 // console.log("[DEBUG] 🛠️ Calling extractScoreElements...");
                 // if (!svgElement) {
@@ -734,20 +752,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 // console.log("[DEBUG] ✅ Extracted Score Elements. Now Checking Sync...");
 
 
-                // console.log(`[DEBUG] ✅ Applying server playheadX: ${playheadX}`);
+                // console.log(`[DEBUG] ✅ Applying serverwindow.playheadX: ${window.playheadX}`);
               } else {
-                console.log(`[DEBUG] 🔄 Ignoring server playheadX update to prevent override.`);
+                console.log(`[DEBUG] 🔄 Ignoring serverwindow.playheadX update to prevent override.`);
               }
 
               updatePosition();
-              recentlyRecalculatedPlayhead = false; // Reset flag after applying the state
+              window.recentlyRecalculatedPlayhead = false; // Reset flag after applying the state
 
               updateSeekBar();
               updateStopwatch();
 
               if (!isNaN(data.state.speedMultiplier) && data.state.speedMultiplier > 0) {
                 if (speedMultiplier !== data.state.speedMultiplier) {
-                  speedMultiplier = data.state.speedMultiplier;
+                  window.speedMultiplier = data.state.speedMultiplier;
                   console.log(`[CLIENT] Synced speed multiplier to ${speedMultiplier}`);
                 } else {
                   // console.log(`[CLIENT] Speed multiplier already set to ${speedMultiplier}. No update needed.`);
@@ -756,7 +774,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // console.warn(`[CLIENT] Invalid or unchanged speed multiplier received: ${data.state.speedMultiplier}`);
               }
 
-              if (isPlaying) {
+              if (window.isPlaying) {
                 //console.debug("[CLIENT] Resuming playback after sync.");
                 // ✅ Only start animation if the function is defined
                 if (typeof animate === "function" && animationFrameId === null) {
@@ -852,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             /** ✅ Jump to Rehearsal Mark */
             case "jump":
-              console.log(`[DEBUG] 🔄 Server jump received: playheadX=${data.playheadX}`);
+              console.log(`[DEBUG] 🔄 Server jump received:window.playheadX=${data.playheadX}`);
 
               const now = Date.now();
               if (now - lastJumpTime < 1000) { // ✅ Ignore duplicate jumps within 1s
@@ -860,9 +878,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
               }
 
-              playheadX = data.playheadX;
-              scoreContainer.scrollLeft = playheadX;
-              console.log(`[DEBUG] ✅ Applied Server Jump: playheadX=${playheadX}`);
+             window.playheadX = data.playheadX;
+              window.scoreContainer.scrollLeft =window.playheadX;
+              console.log(`[DEBUG] ✅ Applied Server Jump:window.playheadX=${window.playheadX}`);
 
               lastJumpTime = now; // ✅ Update the last jump timestamp
               break;
@@ -937,7 +955,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // ✅ Send the updated name to the server
       if (wsEnabled && socket) {
-        socket.send(JSON.stringify({ type: "update_client_name", name: newName.trim() }));
+        window.socket.send(JSON.stringify({ type: "update_client_name", name: newName.trim() }));
       }
 
       localClientName = newName.trim(); // ✅ Update locally stored client name
@@ -956,7 +974,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ✅ Names are arranged 1 per line, maintaining clarity and separation.
 
   const updateClientList = (clientArray) => {
-    clients = clientArray; // ✅ Store the latest client list globally
+    window.clients = clientArray; // ✅ Store the latest client list globally
     const clientListElement = document.getElementById("client-list");
 
     if (clientListElement) {
@@ -990,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ✅ If a stored name exists, send it to the server
     if (wsEnabled && socket && localClientName) {
-      socket.send(JSON.stringify({ type: "update_client_name", name: localClientName }));
+      window.socket.send(JSON.stringify({ type: "update_client_name", name: localClientName }));
     }
   };
 
@@ -1021,20 +1039,20 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("[CLIENT] toggleSplashScreen() called.");
 
     const splash = document.getElementById('splash');
-    const scoreContainer = document.getElementById('scoreContainer');
+    // const scoreContainer = document.getElementById('scoreContainer');
     const controls = document.getElementById('controls');
 
     if (splash.style.display === 'none' || splash.classList.contains('hidden')) {
       console.log("[CLIENT] Showing splash screen.");
       splash.style.display = 'flex';
       splash.classList.remove('hidden');
-      scoreContainer.style.display = 'none'; // Hide the score scoreContainer
+      window.scoreContainer.style.display = 'none'; // Hide the score window.scoreContainer
       controls.style.display = 'none'; // Hide controls
     } else {
       console.log("[CLIENT] Hiding splash screen.");
       splash.style.display = 'none';
       splash.classList.add('hidden');
-      scoreContainer.style.display = 'block'; // Show the score scoreContainer
+      window.scoreContainer.style.display = 'block'; // Show the score scoreContainer
       controls.style.display = 'flex'; // Show controls
 
       // Ensure scoreContainer size is recalculated
@@ -2081,6 +2099,232 @@ function assignCues(svgRoot) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+  //////////////////////////////////////////////////////
+  // Ensures Anime.js animations are detected and tracked dynamically
+  // Pauses animations when they are not visible and resumes them when they reappear
+  // Supports path-based (obj2path-*), rotation (obj_*_rotate_*), and other Anime.js animations
+  // Uses Intersection Observer to optimize performance by stopping off-screen animations
+  // Ensures the observer starts only after animations are fully initialized
+
+  window.runningAnimations = {}; // Store active animations globally
+
+  // Function to detect and track existing animations (including rotation)
+  window.detectExistingAnimations = function () {
+    console.log("[DEBUG] Checking currently running Anime.js animations...");
+
+    anime.running.forEach(anim => {
+      anim.animatables.forEach(animatable => {
+        const target = animatable.target;
+        if (target && target.getAttribute) {
+          const id = target.getAttribute("id");
+
+          // Ensure we track both path-based and rotation-based animations
+          if (id && (id.startsWith('obj2path') || id.startsWith('obj_') || id.includes('_rotate_'))) {
+            if (!window.runningAnimations[id]) {
+              // console.log("[DEBUG] Tracking new animation for: " + id);
+              window.runningAnimations[id] = anim;
+            }
+          }
+        }
+      });
+    });
+
+    // console.log("[DEBUG] Updated running animations:", Object.keys(window.runningAnimations));
+  };
+
+  /**
+  * ✅ Optimized Function: checkAnimationVisibility (with state change logging)
+  *
+  * - Checks both the object and its associated path for visibility.
+  * - If the path is visible but the object is off-screen, the animation **continues**.
+  * - Logs when an animation starts playing for the first time.
+  * - Logs when an animation pauses for the first time after it has been playing.
+  * - Uses `window.runningAnimations` to manage active animations.
+  * - Removes redundant event listeners and interval (handled elsewhere in app.js).
+  */
+
+  window.checkAnimationVisibility = function () {
+    Object.entries(window.runningAnimations).forEach(([id, instance]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      const rect = el.getBoundingClientRect();
+      const isVisible = rect.top < window.innerHeight &&
+        rect.bottom > 0 &&
+        rect.left < window.innerWidth &&
+        rect.right > 0;
+
+      if (isVisible) {
+        if (instance.wasPaused) {
+          // console.log(`[CHECK] ${id} became visible — resuming`);
+          if (typeof instance.resume === "function") instance.resume();
+          else if (typeof instance.play === "function") instance.play();
+          instance.wasPaused = false;
+        }
+      } else {
+        if (!instance.wasPaused) {
+          // console.log(`[CHECK] ${id} is off-screen — pausing`);
+          if (typeof instance.pause === "function") instance.pause();
+          instance.wasPaused = true;
+        }
+      }
+    });
+  };
+
+
+  window.initializeObserver = function () {
+    if (window.observer) window.observer.disconnect();
+
+    window.observer = new IntersectionObserver((entries) => {
+      if (window.disableObserver) return; // 🔥 Skip all observer logic
+
+      for (const entry of entries) {
+        const el = entry.target;
+        const id = el.id;
+        const instance = window.runningAnimations[id];
+
+        if (!instance) continue;
+
+        if (entry.isIntersecting) {
+          if (instance.wasPaused || instance.autoStart) {
+            if (typeof instance.resume === "function") instance.resume();
+            else if (typeof instance.play === "function") instance.play();
+            // console.log(`[OBSERVER] ${id} entered view — resumed`);
+            instance.wasPaused = false;
+            instance.autoStart = false;
+          }
+        } else {
+          if (typeof instance.pause === "function") instance.pause();
+          instance.wasPaused = true;
+          // console.log(`[OBSERVER] ${id} left view — paused`);
+        }
+      }
+    }, {
+      root: null,
+      threshold: 0.01,
+      rootMargin: "0px", // ✅ Use full viewport width for visibility detection.
+      // This ensures that any object visually inside the screen 
+      // (not just near the center) will trigger IntersectionObserver.
+      // Narrow values like "-45%" were previously used to simulate a 
+      // central "playhead zone", but caused false negatives on pause, 
+      // reload, or cue jumps. Defaulting to full view is more robust.    
+    });
+
+
+    // Global OBSERVER DISABLE for dubugging
+    // window.disableObserver = true;
+
+    Object.entries(window.runningAnimations).forEach(([id, instance]) => {
+      const el = document.getElementById(id);
+      if (el instanceof Element) {
+        window.observer.observe(el);
+      }
+    });
+
+    // ✅ Immediately check visibility
+    requestAnimationFrame(() => {
+      window.checkAnimationVisibility();
+    });
+  };
+
+  window.startAllVisibleAnimations = () => {
+    console.log(`[DEBUG] Checking ${Object.keys(window.runningAnimations).length} animations for visibility`);
+
+    Object.entries(window.runningAnimations).forEach(([id, instance]) => {
+      const el = document.getElementById(id);
+
+      if (!el) {
+        console.warn(`[MISSING] No DOM element for ${id}`);
+        return;
+      }
+
+      const rect = el.getBoundingClientRect();
+      const isVisible =
+        rect.top < window.innerHeight &&
+        rect.bottom > 0 &&
+        rect.left < window.innerWidth &&
+        rect.right > 0;
+
+      // console.log(`[CHECK] ${id}: visible=${isVisible}, rect=${JSON.stringify(rect)}`);
+
+      if (isVisible) {
+        // console.log(`[FORCE PLAY] ${id}`);
+        if (typeof instance.resume === "function") {
+          instance.resume();
+          // console.log(`[DEBUG] Called resume() on ${id}`);
+        } else if (typeof instance.play === "function") {
+          instance.play();
+          // console.log(`[DEBUG] Called play() on ${id}`);
+        } else {
+          console.warn(`[WARN] No resume() or play() method on ${id}`);
+        }
+      }
+    });
+  };
+
+  // Function to apply observer and visibility tracking
+  window.observeAnimations = function () {
+    if (!window.observer) {
+      window.initializeObserver();
+    }
+
+    document.querySelectorAll(window.ANIM_SELECTOR).forEach((element) => {
+      const id = element.id;
+      if (window.runningAnimations[id]) {
+        window.observer.observe(element);
+        console.log(`[DEBUG] Observer attached to: ${id}`);
+      } else {
+        console.warn(`[SKIPPED] ${id} exists but has no registered animation.`);
+      }
+    });
+  };
+
+  // // Function to wait for animations to be initialized before starting detection
+  function waitForAnimationsToInitialize() {
+    //console.log("[DEBUG] Waiting for animations to initialize...");
+
+    const checkAnimations = setInterval(() => {
+      if (anime.running.length > 0) { // Ensure at least one animation is running
+        //      console.log("[DEBUG] Animations are initialized. Running detection and observer.");
+        clearInterval(checkAnimations);
+
+        detectExistingAnimations();
+        observeAnimations();
+      }
+    }, 500);
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   ////// SVG LOADING LOGIC ///////////////////////////////////////////////
 
   // Loads an external SVG file and adds it to the scoreContainer, replacing any existing SVG.
@@ -2128,8 +2372,8 @@ function assignCues(svgRoot) {
       const svgElement = parser.parseFromString(atob(svgSource.split(",")[1]), 'image/svg+xml').documentElement;
       svgElement.id = "score";
 
-      scoreContainer.innerHTML = '';
-      scoreContainer.appendChild(svgElement);
+      window.scoreContainer.innerHTML = '';
+      window.scoreContainer.appendChild(svgElement);
 
       initializeSVG(svgElement);
 
@@ -2145,8 +2389,8 @@ function assignCues(svgRoot) {
         const svgElement = parser.parseFromString(svgText, 'image/svg+xml').documentElement;
         svgElement.id = "score";
 
-        scoreContainer.innerHTML = '';
-        scoreContainer.appendChild(svgElement);
+        window.scoreContainer.innerHTML = '';
+        window.scoreContainer.appendChild(svgElement);
 
         initializeSVG(svgElement);
         storePathVariants(svgElement);
@@ -2380,10 +2624,10 @@ function assignCues(svgRoot) {
     console.log("[DEBUG] Initializing SVG element:", svgElement);
 
     requestAnimationFrame(() => {
-      playheadX = 0;
-      elapsedTime = 0;
-      scoreContainer.scrollLeft = playheadX;
-      console.log(`[DEBUG] Initial scrollLeft set to: ${scoreContainer.scrollLeft}`);
+     window.playheadX = 0;
+      window.elapsedTime = 0;
+      window.scoreContainer.scrollLeft =window.playheadX;
+      console.log(`[DEBUG] Initial scrollLeft set to: ${window.scoreContainer.scrollLeft}`);
 
       preloadSpeedCues();
 
@@ -2507,7 +2751,7 @@ function assignCues(svgRoot) {
   
     if (popupDismissed) {
       console.log('[CLIENT] Resuming playback or animation after popup dismissal.');
-      isPlaying = true;
+       window.isPlaying = true;
       animationPaused = false;
   
       document.body.querySelectorAll('.blur-background').forEach((element) => {
@@ -2593,7 +2837,7 @@ function assignCues(svgRoot) {
       clearTimeout(controlsTimeout);
     }
 
-    // 🔥 Ensure playheadX is recalculated on fullscreen change
+    // 🔥 Ensurewindow.playheadX is recalculated on fullscreen change
     // recalculatePlayheadPosition(scoreSVG);
     calculateMaxScrollDistance();
     // extractScoreElements(svgElement);
@@ -2664,7 +2908,7 @@ function assignCues(svgRoot) {
 
   /////// START OF SPEED LOGIC ///////////////////////////////////////////////////
 
-  let speedMultiplier = 1.0;
+  window.speedMultiplier = 1.0;
 
   /**
   * Handles speed cue changes by setting and synchronizing the speed multiplier.
@@ -2694,7 +2938,7 @@ function assignCues(svgRoot) {
       return;
     }
 
-    speedMultiplier = newMultiplier;
+    window.speedMultiplier = newMultiplier;
     console.log(`[DEBUG] ✅ Speed multiplier set to ${speedMultiplier}`);
     updateSpeedDisplay();
 
@@ -2702,11 +2946,11 @@ function assignCues(svgRoot) {
     if (wsEnabled && socket && socket.readyState === WebSocket.OPEN && !incomingServerUpdate) {
       const speedMessage = {
         type: "set_speed_multiplier",
-        multiplier: speedMultiplier,
+        multiplier: window.speedMultiplier,
         timestamp: Date.now(),
       };
 
-      socket.send(JSON.stringify(speedMessage));
+      window.socket.send(JSON.stringify(speedMessage));
       console.log(`[DEBUG] 📡 Sent speed update to server:`, speedMessage);
     }
   };
@@ -2720,10 +2964,10 @@ function assignCues(svgRoot) {
 
   const getSpeedForPosition = (xPosition) => {
 
-    const viewportOffset = scoreContainer.offsetWidth / 2; // ✅ Center offset
+    const viewportOffset = window.scoreContainer.offsetWidth / 2; // ✅ Center offset
     const adjustedPlayheadX = xPosition + viewportOffset; // ✅ Align with visual playhead
 
-    console.log(`[DEBUG] Looking for speed at adjusted position: ${adjustedPlayheadX} (Raw playheadX: ${xPosition})`);
+    console.log(`[DEBUG] Looking for speed at adjusted position: ${adjustedPlayheadX} (window.playheadX: ${xPosition})`);
     //console.log("[DEBUG] Current speedCueMap:", speedCueMap);
 
     if (speedCueMap.length === 0) {
@@ -2738,10 +2982,10 @@ function assignCues(svgRoot) {
     if (lastSpeedCue) {
       console.log(`[DEBUG] ✅ Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
 
-      speedMultiplier = lastSpeedCue.multiplier; // ✅ Ensure it is stored globally
+      window.speedMultiplier = lastSpeedCue.multiplier; // ✅ Ensure it is stored globally
       updateSpeedDisplay();
 
-      return speedMultiplier;
+      return window.speedMultiplier;
     } else {
       console.log("[DEBUG] ❗ No previous speed cue found, defaulting to 1.0");
       return 1.0;
@@ -2789,21 +3033,21 @@ function assignCues(svgRoot) {
   document.addEventListener('keydown', (event) => {
     switch (event.key) {
       case '+':
-        speedMultiplier = Math.min(speedMultiplier + 0.1, 3);
+        window.speedMultiplier = Math.min(speedMultiplier + 0.1, 3);
         console.log(`[DEBUG] Speed multiplier increased to ${speedMultiplier}`);
 
         if (wsEnabled && socket) {
-          socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: speedMultiplier }));
+          window.socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: window.speedMultiplier }));
           console.log(`[CLIENT] Sent speed multiplier change to server: ${speedMultiplier}`);
         }
         break;
 
       case '-':
-        speedMultiplier = Math.max(speedMultiplier - 0.1, 0.1);
+        window.speedMultiplier = Math.max(speedMultiplier - 0.1, 0.1);
         console.log(`[DEBUG] Speed multiplier decreased to ${speedMultiplier}`);
 
         if (wsEnabled && socket) {
-          socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: speedMultiplier }));
+          window.socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: window.speedMultiplier }));
           console.log(`[CLIENT] Sent speed multiplier change to server: ${speedMultiplier}`);
         }
         break;
@@ -2814,17 +3058,17 @@ function assignCues(svgRoot) {
   });
 
   document.getElementById("increaseSpeed").addEventListener("click", () => {
-    speedMultiplier = Math.min(speedMultiplier + 0.1, 3.0); // Limit to 3x speed
+    window.speedMultiplier = Math.min(speedMultiplier + 0.1, 3.0); // Limit to 3x speed
     updateSpeedDisplay();
   });
 
   document.getElementById("decreaseSpeed").addEventListener("click", () => {
-    speedMultiplier = Math.max(speedMultiplier - 0.1, 0.5); // Limit to 0.5x speed
+    window.speedMultiplier = Math.max(speedMultiplier - 0.1, 0.5); // Limit to 0.5x speed
     updateSpeedDisplay();
   });
 
   document.getElementById("resetSpeed").addEventListener("click", () => {
-    speedMultiplier = 1.0;
+    window.speedMultiplier = 1.0;
     updateSpeedDisplay();
   });
 
@@ -2835,11 +3079,11 @@ function assignCues(svgRoot) {
   }
 
   function sendSpeedUpdateToServer(speed) {
-    if (!window.socket || socket.readyState !== WebSocket.OPEN) {
+    if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
       console.warn("[WARNING] WebSocket not available. Skipping speed update.");
       return;
     }
-    socket.send(JSON.stringify({ type: "speedUpdate", speed }));
+    window.socket?.send(JSON.stringify({ type: "speedUpdate", speed }));
   }
 
   /////// END OF SPEED LOGIC /////////////////////////////////////////////////////
@@ -2874,19 +3118,19 @@ function assignCues(svgRoot) {
   /**
   * Dynamically recalculates the max scrollable distance of the score.
   * Uses the actual rendered width of the SVG to ensure accuracy.
-  * Adjusts playheadX proportionally to prevent scaling misalignment.
-  * Uses scoreContainer width instead of viewport width for scaling calculations.
+  * Adjustswindow.playheadX proportionally to prevent scaling misalignment.
+  * Uses window.scoreContainer width instead of viewport width for scaling calculations.
   * Rounds scrollLeft to prevent sub-pixel rendering issues.
   * Ensures smooth and precise playhead alignment after resizing.
   */
 
-  let previousViewportWidth = scoreContainer.offsetWidth; // Track score container width
+  let previousViewportWidth = window.scoreContainer.offsetWidth; // Track score container width
   let previousMaxScrollDistance = null; // Track last max scroll distance
 
   const calculateMaxScrollDistance = () => {
     const svgElement = document.querySelector('svg');
 
-    if (!scoreContainer || !svgElement) {
+    if (!window.scoreContainer || !svgElement) {
       console.warn("[WARNING] Missing scoreContainer or SVG, cannot calculate maxScrollDistance.");
       return;
     }
@@ -2897,7 +3141,7 @@ function assignCues(svgRoot) {
 
 
     // Detect scale changes using scoreContainer width instead of viewport width
-    const newScoreContainerWidth = scoreContainer.offsetWidth;
+    const newScoreContainerWidth = window.scoreContainer.offsetWidth;
     const scaleRatio = newScoreContainerWidth / previousViewportWidth;
 
     // Update max scroll distance to the new SVG width
@@ -2905,19 +3149,19 @@ function assignCues(svgRoot) {
 
     console.log(`[DEBUG] 📏 Updated maxScrollDistance: ${maxScrollDistance} (SVG Rendered Width: ${svgWidth})`);
 
-    // Adjust playheadX using proportional scaling
+    // Adjustwindow.playheadX using proportional scaling
     if (previousMaxScrollDistance !== null && previousMaxScrollDistance > 0) {
-      let playheadPercentage = playheadX / previousMaxScrollDistance;
-      playheadX = playheadPercentage * maxScrollDistance;
-      console.log(`[DEBUG] 🔄 Recalculated playheadX: ${playheadX}`);
+      let playheadPercentage =window.playheadX / previousMaxScrollDistance;
+     window.playheadX = playheadPercentage * maxScrollDistance;
+      console.log(`[DEBUG] 🔄 Recalculatedwindow.playheadX: ${window.playheadX}`);
     }
 
     // Update stored values
     previousMaxScrollDistance = maxScrollDistance;
     previousViewportWidth = newScoreContainerWidth;
 
-    scoreContainer.scrollLeft = playheadX;
-    console.log(`[DEBUG] 🎯 Updated scoreContainer.scrollLeft: ${scoreContainer.scrollLeft}`);
+    window.scoreContainer.scrollLeft =window.playheadX;
+    console.log(`[DEBUG] 🎯 Updated window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
   };
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -2935,21 +3179,21 @@ function assignCues(svgRoot) {
   const syncState = (state) => {
     if (!state || typeof state !== "object") return;
 
-    console.log(`[DEBUG] 🔄 WebSocket Sync Received - playheadX=${state.playheadX}, isPlaying=${state.isPlaying}, scoreWidth=${state.scoreWidth}`);
+    console.log(`[DEBUG] 🔄 WebSocket Sync Received - window.playheadX=${state.playheadX},  window.isPlaying=${state.isPlaying}, window.scoreWidth=${state.scoreWidth}`);
 
     if (!isNaN(state.playheadX) && state.playheadX >= 0) {
-      if (!isSeeking) {
-        playheadX = state.playheadX;
+      if (!window.isSeeking) {
+        window.playheadX = state.playheadX;
         //
-        // // ✅ Ensure playheadX is properly adjusted after a screen resize
-        // if (recentlyRecalculatedPlayhead) {
+        // // ✅ Ensure window.playheadX is properly adjusted after a screen resize
+        // if (window.recentlyRecalculatedPlayhead) {
         //     const widthRatio = window.innerWidth / previousScreenWidth;
-        //     playheadX *= widthRatio;
-        //     console.log(`[DEBUG] 🔄 Adjusted playheadX after resize: ${playheadX}`);
+        //     window.playheadX *= widthRatio;
+        //     console.log(`[DEBUG] 🔄 Adjusted window.playheadX after resize: ${window.playheadX}`);
         // }
 
-        scoreContainer.scrollLeft = Math.max(0, playheadX);
-        console.log(`[DEBUG] Updated scoreContainer.scrollLeft=${scoreContainer.scrollLeft}`);
+        window.scoreContainer.scrollLeft = Math.max(0, window.playheadX);
+        console.log(`[DEBUG] Updated window.scoreContainer.scrollLeft=${window.scoreContainer.scrollLeft}`);
 
         // ✅ Also update window.playheadX (SVG space at center of screen)
         const svg = document.querySelector("svg");
@@ -2961,18 +3205,24 @@ function assignCues(svgRoot) {
           window.playheadX = playheadSVG.x;
           console.log(`[syncState] 🧭 Updated window.playheadX = ${window.playheadX.toFixed(2)} (SVG space)`);
         }
-        console.log(`[DEBUG] Updated scoreContainer.scrollLeft=${scoreContainer.scrollLeft}`);
+        console.log(`[DEBUG] Updated window.scoreContainer.scrollLeft=${window.scoreContainer.scrollLeft}`);
       } else {
-        console.log("[DEBUG] Skipping playheadX update from syncState during seeking.");
+        console.log("[DEBUG] Skipping window.playheadX update from syncState during seeking.");
       }
     }
 
-    isPlaying = state.isPlaying;
-    isPlaying ? startAnimation() : stopAnimation();
+     window.isPlaying = state.isPlaying;
+     window.isPlaying ? startAnimation() : stopAnimation();
 
     if (wsEnabled && socket) {
-      socket.send(JSON.stringify({ type: "sync", state: { playheadX, elapsedTime } }));
-      console.log(`[CLIENT] Sent sync update after state change: playheadX=${playheadX}, elapsedTime=${elapsedTime}`);
+      window.socket.send(JSON.stringify({
+        type: "sync",
+        state: {
+          playheadX: window.playheadX,
+          elapsedTime: window.elapsedTime
+        }
+      }));
+            console.log(`[CLIENT] Sent sync update after state change: window.playheadX=${window.playheadX}, window.elapsedTime=${elapsedTime}`);
     }
   };
 
@@ -2989,7 +3239,7 @@ function assignCues(svgRoot) {
   const estimatePlayheadPosition = () => {
     console.log(`[DEBUG] estimatePlayheadPosition() running at ${Date.now()}`);
 
-    if (!isPlaying || !freewheelingActive) {
+    if (!window.isPlaying || !freewheelingActive) {
       console.log("[DEBUG] Freewheeling stopped.");
       freewheelingActive = false;
       return;
@@ -2999,23 +3249,23 @@ function assignCues(svgRoot) {
     const timeSinceLastSync = now - lastSyncTime;
 
     // ✅ Calculate estimated position based on playback speed
-    const estimatedIncrement = ((timeSinceLastSync / 1000) * speedMultiplier) * pixelsPerSecond;
-    estimatedPlayheadX = lastSyncPlayheadX + estimatedIncrement;
+    const estimatedIncrement = ((timeSinceLastSync / 1000) * window.speedMultiplier) * pixelsPerSecond;
+    window.estimatedPlayheadX = lastSyncPlayheadX + estimatedIncrement;
 
-    // ✅ Ensure playheadX stays within valid bounds
-    if (estimatedPlayheadX > scoreWidth) estimatedPlayheadX = scoreWidth;
-    playheadX = estimatedPlayheadX;
-    scoreContainer.scrollLeft = playheadX;
+    // ✅ Ensure window.playheadX stays within valid bounds
+    if (window.estimatedPlayheadX > window.scoreWidth) window.estimatedPlayhe4adX = window.scoreWidth;
+    window.playheadX =window.estimatedPlayheadX;
+    window.scoreContainer.scrollLeft = window.playheadX;
 
     // ✅ Auto-correct small desyncs based on server sync updates
-    if (Math.abs(playheadX - serverSyncPlayheadX) > 50) {
-      console.log("[DEBUG] Auto-correcting playheadX due to drift.");
-      playheadX = serverSyncPlayheadX;
+    if (Math.abs(window.playheadX - serverSyncPlayheadX) > 50) {
+      console.log("[DEBUG] Auto-correcting window.playheadX due to drift.");
+      window.playheadX = serverSyncPlayheadX;
     }
 
     // ✅ Throttle debug logs to avoid spamming console
     if (now - lastDebugLog > 500) {
-      console.log(`[DEBUG] Freewheeling Playhead: ${playheadX}`);
+      console.log(`[DEBUG] Freewheeling Playhead: ${window.playheadX}`);
       lastDebugLog = now;
     }
 
@@ -3045,49 +3295,47 @@ function assignCues(svgRoot) {
   //TODO maybe no longer needed
   const correctDrift = (serverElapsedTime) => {
     const driftThreshold = 50; // Allowable drift in milliseconds
-    const drift = serverElapsedTime - elapsedTime;
+    const drift = serverElapsedTime - window.elapsedTime;
 
     if (Math.abs(drift) > driftThreshold) {
       //console.log([CLIENT] Correcting drift. Server: ${serverElapsedTime}, Local: ${elapsedTime}, Drift: ${drift});
 
-      // Smoothly adjust elapsedTime using a weighted approach
-      elapsedTime += drift * 0.1; // Adjust factor to balance smoothness vs speed
+      // Smoothly adjust window.elapsedTime using a weighted approach
+      window.elapsedTime += drift * 0.1; // Adjust factor to balance smoothness vs speed
     }
   };
 
 
+  window.lastAnimationFrameTime = null;
 
-
-  lastAnimationFrameTime = null;
-
-  const animate = async (currentTime) => {
-    if (!isPlaying || isSeeking) {
+  window.animate = async (currentTime) => {
+    if (!window.isPlaying || window.isSeeking) {
       // console.log("[DEBUG] Animation stopped mid-frame.");
       return;
     }
 
-    if (lastAnimationFrameTime === null) {
-      lastAnimationFrameTime = currentTime;
+    if (window.lastAnimationFrameTime === null) {
+      window.lastAnimationFrameTime = currentTime;
     } else {
-      const delta = (currentTime - lastAnimationFrameTime) * playbackSpeed;
+      const delta = (currentTime - window.lastAnimationFrameTime) * playbackSpeed;
 
 
-      // const speedMultiplier = 2; // Double the speed
+      // const window.speedMultiplier = 2; // Double the speed
 
-      // ✅ Predict new playheadX assuming constant playback speed
-      const estimatedIncrement = ((delta * speedMultiplier) / duration) * scoreWidth;
-      estimatedPlayheadX = playheadX + estimatedIncrement;
+      // ✅ Predict new window.playheadX assuming constant playback speed
+      const estimatedIncrement = ((delta * window.speedMultiplier) / window.duration) * window.scoreWidth;
+      window.estimatedPlayheadX = window.playheadX + estimatedIncrement;
 
-      // ✅ Ensure playheadX stays within valid bounds
-      estimatedPlayheadX = Math.max(0, Math.min(estimatedPlayheadX, scoreWidth));
+      // ✅ Ensure window.playheadX stays within valid bounds
+      window.estimatedPlayheadX = Math.max(0, Math.min(window.estimatedPlayheadX, window.scoreWidth));
 
-      playheadX = estimatedPlayheadX;
-      scoreContainer.scrollLeft = playheadX;
+      window.playheadX = window.estimatedPlayheadX;
+      window.scoreContainer.scrollLeft =window.playheadX;
 
-      //console.log(`[DEBUG] Frame update - delta: ${delta}ms, estimatedPlayheadX: ${estimatedPlayheadX}, scoreContainer.scrollLeft: ${scoreContainer.scrollLeft}`);
+      //console.log(`[DEBUG] Frame update - delta: ${delta}ms,window.estimatedPlayheadX: ${estimatedPlayheadX}, window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
     }
 
-    lastAnimationFrameTime = currentTime;
+    window.lastAnimationFrameTime = currentTime;
 
     // ✅ Ensure visibility detection runs inside the frame update
     // ✅ Throttle visibility check to every 150ms
@@ -3095,15 +3343,15 @@ function assignCues(svgRoot) {
     window.lastVisibilityCheckTime = window.lastVisibilityCheckTime || 0;
 
     if (currentTime - window.lastVisibilityCheckTime > visibilityCheckInterval) {
-      checkAnimationVisibility();
+      window.checkAnimationVisibility();
       window.lastVisibilityCheckTime = currentTime;
     }
 
-    // ✅ Ensure score movement matches playheadX
+    // ✅ Ensure score movement matcheswindow.playheadX
     updatePosition();
     updateSeekBar();
     updateStopwatch();
-    await checkCueTriggers(elapsedTime);
+    await checkCueTriggers (window.elapsedTime);
 
     requestAnimationFrame(animate);
   };
@@ -3115,7 +3363,7 @@ function assignCues(svgRoot) {
   // stopAnimation() cancels the loop when playback stops, preventing redundant frame updates.
 
   const startAnimation = () => {
-    if (!isPlaying || animationPaused || isSeeking) {
+    if (!window.isPlaying || animationPaused || window.isSeeking) {
       console.log("[DEBUG] Animation paused, stopped, or seeking, skipping start.");
       return;
     }
@@ -3123,7 +3371,7 @@ function assignCues(svgRoot) {
     // console.log("[DEBUG] Starting animation loop.");
 
     requestAnimationFrame((time) => {
-      lastAnimationFrameTime = time;
+      window.lastAnimationFrameTime = time;
       animate(time);
     });
   };
@@ -3140,7 +3388,7 @@ function assignCues(svgRoot) {
       // console.warn("[WARNING] stopAnimation() called but animationFrameId was already null.");
     }
 
-    isPlaying = false;
+     window.isPlaying = false;
   };
 
 
@@ -3163,14 +3411,14 @@ function assignCues(svgRoot) {
 
   // TODO maybe this can be removed now
   //
-  // const updateAlignment = (elapsedTime) => {
-  //   const svgElement = document.querySelector('#scoreContainer svg'); // Ensure correct selector
+  // const updateAlignment =  (window.elapsedTime) => {
+  //   const svgElement = document.querySelector('#window.scoreContainer svg'); // Ensure correct selector
   //   if (!svgElement) {
   //     console.error("[ERROR] SVG element not found. Skipping alignment.");
   //     return; // Exit function if no SVG element
   //   }
   //   const duration = 20 * 60 * 1000; // 20 minutes in milliseconds
-  //   const progress = elapsedTime / duration; // Fraction of time elapsed
+  //   const progress = window.elapsedTime / duration; // Fraction of time elapsed
   //   const scorePosition = maxScrollDistance * progress; // Position in pixels
   //
   //   // Scale the offset correction dynamically
@@ -3186,7 +3434,7 @@ function assignCues(svgRoot) {
   // SEEKBAR LOGIC
 
   const updateSeekBar = () => {
-    const progress = (elapsedTime / duration) * 100;
+    const progress =  (window.elapsedTime / duration) * 100;
     seekBar.value = progress;
   };
 
@@ -3194,10 +3442,10 @@ function assignCues(svgRoot) {
   // Updates `elapsedTime` and aligns the score
   // Ensures correct positioning and checks for active cues.
   const setElapsedTime = (newTime) => {
-    elapsedTime = newTime; // ✅ Update playback time
-    updatePosition(playheadX); // ✅ Use the correct playhead position
+    window.elapsedTime = newTime; // ✅ Update playback time
+    updatePosition(window.playheadX); // ✅ Use the correct playhead position
 
-    checkCueTriggers(elapsedTime); // ✅ Recheck cues
+    checkCueTriggers(window.elapsedTime); // ✅ Recheck cues
   };
 
 
@@ -3206,7 +3454,7 @@ function assignCues(svgRoot) {
   // Starts seeking mode when the user clicks the seek bar.
   // Pauses playback to allow smooth scrubbing.
   seekBar.addEventListener('mousedown', () => {
-    isSeeking = true; // ✅ Start seeking mode
+    window.isSeeking = true; // ✅ Start seeking mode
     stopAnimation(); // ✅ Pause playback
     console.log("[CLIENT] Playback paused for seeking.");
   });
@@ -3218,7 +3466,7 @@ function assignCues(svgRoot) {
     setElapsedTime(newTime); // ✅ Adjust playback position
 
     // ✅ Real-time UI updates
-    updatePosition(playheadX); // ✅ Ensure proper alignment
+    updatePosition(window.playheadX); // ✅ Ensure proper alignment
     updateSeekBar();
     updateStopwatch();
   });
@@ -3230,19 +3478,19 @@ function assignCues(svgRoot) {
   let seekingTimeout = null;
 
   seekBar.addEventListener('mouseup', (event) => {
-    isSeeking = false; // ✅ Stop seeking mode
+    window.isSeeking = false; // ✅ Stop seeking mode
     console.log("[CLIENT] Seeking ended. Applying debounce before re-enabling cues.");
 
     // ✅ Debounce before re-enabling cues
     if (seekingTimeout) clearTimeout(seekingTimeout);
     seekingTimeout = setTimeout(() => {
       console.log("[CLIENT] Cue triggering re-enabled after debounce.");
-      isPlaying = true;
+       window.isPlaying = true;
       startAnimation();
 
       // ✅ Send WebSocket sync to ensure all clients align
       if (wsEnabled && socket) {
-        socket.send(JSON.stringify({ type: 'jump', playheadX, elapsedTime }));
+        window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
         console.log(`[CLIENT] Sent jump message to server after seek. Elapsed Time: ${elapsedTime}`);
       }
     }, seekDebounceTime); // ✅ Wait before enabling cues
@@ -3299,7 +3547,7 @@ function assignCues(svgRoot) {
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault(); // ✅ Prevents page scrolling
 
-      isSeeking = true;
+      window.isSeeking = true;
       // console.log(`[CLIENT] Seeking with ${event.key}, disabling cue triggering temporarily.`);
 
       if (event.key === 'ArrowLeft') {
@@ -3313,7 +3561,7 @@ function assignCues(svgRoot) {
       if (seekingTimeout) clearTimeout(seekingTimeout);
       seekingTimeout = setTimeout(() => {
         // console.log("[CLIENT] Cue triggering re-enabled after debounce (Arrow Key Seek).");
-        isSeeking = false;
+        window.isSeeking = false;
       }, seekDebounceTime);
     }
   });
@@ -3324,7 +3572,7 @@ function assignCues(svgRoot) {
 
   const updateStopwatch = () => {
     // Use the accurate elapsed time without re-applying totalPauseDuration unnecessarily
-    const effectiveElapsedTime = elapsedTime;
+    const effectiveElapsedTime = window.elapsedTime;
     const minutesElapsed = Math.floor(effectiveElapsedTime / 60000);
     const secondsElapsed = Math.floor((effectiveElapsedTime % 60000) / 1000);
     const minutesTotal = Math.floor(duration / 60000);
@@ -3341,7 +3589,7 @@ function assignCues(svgRoot) {
   };
 
 
-  let isSeeking = false;
+  window.isSeeking = false;
 
   /**
   * ✅ Rewinds playback to the start of the score.
@@ -3358,26 +3606,26 @@ function assignCues(svgRoot) {
     console.log("[DEBUG] Rewinding to start.");
 
     // ✅ Ensure the playhead starts at the first position, not screen left
-    playheadX = 0;
-    elapsedTime = 0;
+   window.playheadX = 0;
+    window.elapsedTime = 0;
 
 
     // ✅ Instead of forcing `scrollLeft=0`, dynamically center the viewport
-    scoreContainer.scrollLeft = Math.max(0, playheadX);
+    window.scoreContainer.scrollLeft = Math.max(0,window.playheadX);
 
-    console.log(`[DEBUG] After rewind -> playheadX=${playheadX}, scrollLeft=${scoreContainer.scrollLeft}`);
+    console.log(`[DEBUG] After rewind ->window.playheadX=${window.playheadX}, scrollLeft=${window.scoreContainer.scrollLeft}`);
     console.log("[DEBUG] Rewinding to Zero...");
-    console.log("[DEBUG] scoreContainer.scrollLeft before:", scoreContainer.scrollLeft);
-    console.log("[DEBUG] scoreContainer offsetWidth:", scoreContainer.offsetWidth);
+    console.log("[DEBUG] window.scoreContainer.scrollLeft before:", window.scoreContainer.scrollLeft);
+    console.log("[DEBUG] window.scoreContainer offsetWidth:", window.scoreContainer.offsetWidth);
     console.log("[DEBUG] SVG Width:", scoreSVG.getBBox().width);
-    console.log("[DEBUG] scoreContainer.scrollLeft after:", scoreContainer.scrollLeft);
+    console.log("[DEBUG] window.scoreContainer.scrollLeft after:", window.scoreContainer.scrollLeft);
 
-    if (wsEnabled && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: "jump", playheadX, elapsedTime }));
+    if (wsEnabled && window.socket.readyState === WebSocket.OPEN) {
+      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
     }
 
     // // ✅ Apply and store correct speed based on the new playhead position
-    speedMultiplier = getSpeedForPosition(playheadX);
+    window.speedMultiplier = getSpeedForPosition(window.playheadX);
     console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
     updateSpeedDisplay();
 
@@ -3395,15 +3643,15 @@ function assignCues(svgRoot) {
   */
 
   const rewind = () => {
-    const REWIND_INCREMENT_X = (1000 / duration) * scoreWidth; // ✅ Convert time step into X coordinate shift
-    playheadX = Math.max(playheadX - REWIND_INCREMENT_X, 0);
+    const REWIND_INCREMENT_X = (1000 / duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
+   window.playheadX = Math.max(window.playheadX - REWIND_INCREMENT_X, 0);
 
-    scoreContainer.scrollLeft = playheadX;
-    // console.log(`[DEBUG] Rewind applied. New playheadX: ${playheadX}`);
+    window.scoreContainer.scrollLeft =window.playheadX;
+    // console.log(`[DEBUG] Rewind applied. Newwindow.playheadX: ${window.playheadX}`);
 
     // ✅ Calculate `elapsedTime` based on `playheadX` for reference
-    elapsedTime = (playheadX / scoreWidth) * duration;
-    // console.log(`[DEBUG] Synced elapsedTime from playheadX: ${elapsedTime}`);
+    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+    // console.log(`[DEBUG] Synced elapsedTime fromwindow.playheadX: ${elapsedTime}`);
 
     if (triggeredCues) {
       triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
@@ -3411,7 +3659,7 @@ function assignCues(svgRoot) {
     }
 
     // ✅ Apply and store correct speed based on the new playhead position
-    speedMultiplier = getSpeedForPosition(playheadX);
+    window.speedMultiplier = getSpeedForPosition(window.playheadX);
     // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
     updateSpeedDisplay();
 
@@ -3420,7 +3668,7 @@ function assignCues(svgRoot) {
     updateStopwatch();
 
     if (wsEnabled && socket) {
-      socket.send(JSON.stringify({ type: "jump", playheadX, elapsedTime }));
+      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
     }
   };
 
@@ -3432,15 +3680,15 @@ function assignCues(svgRoot) {
   */
 
   const forward = () => {
-    const FORWARD_INCREMENT_X = (1000 / duration) * scoreWidth; // ✅ Convert time step into X coordinate shift
-    playheadX = Math.min(playheadX + FORWARD_INCREMENT_X, scoreWidth);
+    const FORWARD_INCREMENT_X = (1000 / duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
+   window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
 
-    scoreContainer.scrollLeft = playheadX;
-    console.log(`[DEBUG] Forward applied. New playheadX: ${playheadX}`);
+    window.scoreContainer.scrollLeft =window.playheadX;
+    console.log(`[DEBUG] Forward applied. Newwindow.playheadX: ${window.playheadX}`);
 
     // ✅ Calculate `elapsedTime` based on `playheadX` for reference
-    elapsedTime = (playheadX / scoreWidth) * duration;
-    console.log(`[DEBUG] Synced elapsedTime from playheadX: ${elapsedTime}`);
+    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+    console.log(`[DEBUG] Synced window.elapsedTime fromwindow.playheadX: ${elapsedTime}`);
 
     if (triggeredCues) {
       triggeredCues.clear(); // ✅ Ensure cues retrigger after forward
@@ -3448,7 +3696,7 @@ function assignCues(svgRoot) {
     }
 
     // ✅ Apply and store correct speed based on the new playhead position
-    speedMultiplier = getSpeedForPosition(playheadX);
+    window.speedMultiplier = getSpeedForPosition(window.playheadX);
     console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
     updateSpeedDisplay();
 
@@ -3459,7 +3707,7 @@ function assignCues(svgRoot) {
 
 
     if (wsEnabled && socket) {
-      socket.send(JSON.stringify({ type: "jump", playheadX, elapsedTime }));
+      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
     }
   };
 
@@ -3467,11 +3715,11 @@ function assignCues(svgRoot) {
   const toggleHelp = () => {
     if (splash.style.display === 'none') {
       //splash.style.display = 'grid';
-      scoreContainer.style.display = 'none';
+      window.scoreContainer.style.display = 'none';
       controls.style.display = 'none';
     } else {
       splash.style.display = 'none';
-      scoreContainer.style.display = 'block';
+      window.scoreContainer.style.display = 'block';
       controls.style.display = 'flex';
     }
   };
@@ -3486,7 +3734,7 @@ function assignCues(svgRoot) {
     console.log(`[CLIENT] WebSocket is now ${wsEnabled ? 'enabled' : 'disabled'}.`);
 
     if (!wsEnabled && socket) {
-      socket.close();
+      window.socket.close();
       socket = null;
     } else if (wsEnabled) {
       connectWebSocket();
@@ -3517,11 +3765,11 @@ function assignCues(svgRoot) {
   */
 
   // const watchPlayheadX = () => {
-  //     let lastPlayheadX = playheadX;
+  //     let lastPlayheadX =window.playheadX;
   //     setInterval(() => {
-  //         if (playheadX !== lastPlayheadX) {
-  //             console.warn(`[WATCHDOG] 🚨 playheadX changed unexpectedly: ${lastPlayheadX} → ${playheadX}`);
-  //             lastPlayheadX = playheadX;
+  //         if (window.playheadX !== lastPlayheadX) {
+  //             console.warn(`[WATCHDOG] 🚨window.playheadX changed unexpectedly: ${lastPlayheadX} → ${window.playheadX}`);
+  //             lastPlayheadX =window.playheadX;
   //         }
   //     }, 50); // Check every 50ms
   // };
@@ -3537,8 +3785,8 @@ function assignCues(svgRoot) {
 
   const logState = () => {
     console.log(`[DEBUG] 📏 Screen Width: ${window.innerWidth}`);
-    console.log(`[DEBUG] 🎵 PlayheadX: ${playheadX}`);
-    console.log(`[DEBUG] 🎯 scoreContainer.scrollLeft: ${scoreContainer.scrollLeft}`);
+    console.log(`[DEBUG] 🎵window.playheadX: ${window.playheadX}`);
+    console.log(`[DEBUG] 🎯 window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
     console.log(`[DEBUG] 📏 Max Scroll Distance: ${maxScrollDistance}`);
     console.log(`[DEBUG] 🖥️ Current SVG Width: ${scoreSVG?.getAttribute('width')}`);
     console.log(`[DEBUG] 🖥️ Current SVG ViewBox: ${scoreSVG?.getAttribute('viewBox')}`);
@@ -3563,7 +3811,7 @@ function assignCues(svgRoot) {
 
     // Track scaling adjustments
     // console.log(`[DEBUG] Scaling Factor (scaleX): ${rehearsalMarks["B"]?.scale || 1}`);
-    // console.log(`[DEBUG] Recalculated X for Mark B: ${rehearsalMarks["B"]?.x} playheadX: ${playheadX} Screen Width: ${window.innerWidth} `);
+    // console.log(`[DEBUG] Recalculated X for Mark B: ${rehearsalMarks["B"]?.x}window.playheadX: ${window.playheadX} Screen Width: ${window.innerWidth} `);
     // console.log(`[DEBUG] Recalculated Y for Mark B: ${rehearsalMarks["B"]?.y}`);
 
     // Log the element count for rehearsal marks and cues
@@ -3571,13 +3819,13 @@ function assignCues(svgRoot) {
     console.log(`[DEBUG] 🔰 Number of Cues: ${cues.length}`);
 
     // Log state of animation
-    console.log(`[DEBUG] 🔄 Animation state: ${isPlaying ? "Playing" : "Paused"}`);
+    console.log(`[DEBUG] 🔄 Animation state: ${window.isPlaying ? "Playing" : "Paused"}`);
     console.log(`[DEBUG] 🧮 Elapsed Time: ${elapsedTime}`);
-    console.log(`[DEBUG] 🕰️ Last animation frame time: ${lastAnimationFrameTime}`);
+    console.log(`[DEBUG] 🕰️ Last animation frame time: ${window.lastAnimationFrameTime}`);
 
     // Log SVG Element states
     console.log(`[DEBUG] 🎨 SVG File: ${scoreSVG?.id || 'No SVG loaded'}`);
-    console.log(`[DEBUG] 🖥️ SVG Scroll Position (scrollLeft): ${scoreContainer.scrollLeft}`);
+    console.log(`[DEBUG] 🖥️ SVG Scroll Position (scrollLeft): ${window.scoreContainer.scrollLeft}`);
 
     // Log state of WebSocket
     console.log(`[DEBUG] 🌐 WebSocket State: ${wsEnabled ? 'Enabled' : 'Disabled'}`);
@@ -3585,7 +3833,7 @@ function assignCues(svgRoot) {
 
     // Log sync related variables
     console.log(`[DEBUG] 🕹️ Sync State - Elapsed Time: ${elapsedTime}`);
-    console.log(`[DEBUG] 🔄 PlayheadX during Sync: ${playheadX}`);
+    console.log(`[DEBUG] 🔄window.playheadX during Sync: ${window.playheadX}`);
 
     // Log viewport adjustments
     console.log(`[DEBUG] 🖥️ Fullscreen Mode: ${document.fullscreenElement ? "Enabled" : "Disabled"}`);
@@ -3593,7 +3841,7 @@ function assignCues(svgRoot) {
 
     // Log screen resizing adjustments
     console.log(`[DEBUG] 🌐 Max Scroll Distance: ${maxScrollDistance}`);
-    console.log(`[DEBUG] 🎯 ScrollLeft after resize: ${scoreContainer.scrollLeft}`);
+    console.log(`[DEBUG] 🎯 ScrollLeft after resize: ${window.scoreContainer.scrollLeft}`);
 
     // Log status of paused elements
     console.log(`[DEBUG] 🚦 Is Animation Paused? ${animationPaused ? "Yes" : "No"}`);
@@ -3684,7 +3932,7 @@ function assignCues(svgRoot) {
   // Global variables to store the extracted positions
   let rehearsalMarks = {};
   let cues = [];
-  // let speedCueMap = []; // ✅ Ensures speed cues are tracked globally
+  let speedCueMap = []; // ✅ Ensures speed cues are tracked globally
 
   const extractScoreElements = (svgElement) => {
     if (!svgElement) {
@@ -3739,7 +3987,7 @@ function assignCues(svgRoot) {
         // console.log("[DEBUG] ✅ Global `rehearsalMarks` sorted:", rehearsalMarks);
       }
 
-      sortedMarks = Object.entries(rehearsalMarks)
+      window.sortedMarks = Object.entries(rehearsalMarks)
         .sort((a, b) => a[1].x - b[1].x)
         .map(([mark]) => mark);
 
@@ -3793,7 +4041,7 @@ function assignCues(svgRoot) {
 
   /**
   * ✅ updatePosition
-  * Synchronizes the scroll position of #scoreContainer with the current `playheadX`.
+  * Synchronizes the scroll position of #window.scoreContainer with the current `playheadX`.
   *
   * - Smoothly follows the playhead while seeking (fast forward/rewind).
   * - Snaps directly to `playheadX` when not seeking (e.g., on pause, jump).
@@ -3816,8 +4064,8 @@ function assignCues(svgRoot) {
   const updatePosition = () => {
     const now = performance.now();
 
-    if (isSeeking) {
-      scoreContainer.scrollLeft += (playheadX - scoreContainer.scrollLeft) * 0.3;
+    if (window.isSeeking) {
+      window.scoreContainer.scrollLeft += (window.playheadX - window.scoreContainer.scrollLeft) * 0.3;
 
       //   ✅ Throttled animation update during active seeking
       // if (now - lastTriggerTime > 250) {
@@ -3829,8 +4077,8 @@ function assignCues(svgRoot) {
     }
 
     // Direct snap to playhead when not seeking
-    if (Math.abs(scoreContainer.scrollLeft - playheadX) > 1) {
-      scoreContainer.scrollLeft = playheadX;
+    if (Math.abs(window.scoreContainer.scrollLeft -window.playheadX) > 1) {
+      window.scoreContainer.scrollLeft =window.playheadX;
 
       // ✅ Throttled animation update during jump or resume
       // if (now - lastTriggerTime > 250) {
@@ -3853,9 +4101,9 @@ function assignCues(svgRoot) {
   * - Ensures buttons correctly trigger `jumpToRehearsalMark()` when clicked.
   */
   // Global variables
-  // let rehearsalMarks = {};
-  // let sortedMarks = []; // ✅ Now globally available sorted marks
-  // let cues = [];
+  //  let rehearsalMarks = {};
+   let sortedMarks = []; // ✅ Now globally available sorted marks
+  //  let cues = [];
 
   /**
   * ✅ Dynamically generates and updates rehearsal mark buttons.
@@ -3973,15 +4221,15 @@ function assignCues(svgRoot) {
 
     const { x } = rehearsalMarks[mark];
 
-    playheadX = x - (window.innerWidth / 2);
-    scoreContainer.scrollLeft = playheadX;
-    elapsedTime = (playheadX / scoreWidth) * duration;
+   window.playheadX = x - (window.innerWidth / 2);
+    window.scoreContainer.scrollLeft =window.playheadX;
+    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
     // window.startAllVisibleAnimations();
 
-    console.log(`[DEBUG] Jumping to Rehearsal Mark: ${mark}, playheadX=${playheadX}`);
+    console.log(`[DEBUG] Jumping to Rehearsal Mark: ${mark},window.playheadX=${window.playheadX}`);
 
     if (wsEnabled && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: "jump", playheadX, elapsedTime }));
+      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
     } else {
       console.warn("[WARNING] WebSocket is not open. Jump not sent.");
     }
@@ -4000,7 +4248,7 @@ function assignCues(svgRoot) {
   //         return;
   //     }
   //
-  //     let currentIndex = Object.keys(rehearsalMarks).findIndex(mark => rehearsalMarks[mark].x >= playheadX);
+  //     let currentIndex = Object.keys(rehearsalMarks).findIndex(mark => rehearsalMarks[mark].x >=window.playheadX);
   //
   //     if (event.key === "ArrowUp") {
   //         if (currentIndex < sortedMarks.length - 1) {
@@ -4030,7 +4278,7 @@ function assignCues(svgRoot) {
 
     console.log(`\n[DEBUG] Key Pressed: ${event.key}`);
     console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
-    console.log(`[DEBUG] Current PlayheadX: ${playheadX}`);
+    console.log(`[DEBUG] Currentwindow.playheadX: ${window.playheadX}`);
 
     // 🔹 Move Up or Down in the Index Directly
     if (event.key === "ArrowUp" && currentIndex < sortedMarks.length - 1) {
@@ -4047,11 +4295,11 @@ function assignCues(svgRoot) {
     console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
     console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
 
-    // 🔹 Ensure playheadX Updates Properly
-    playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent snapping back
+    // 🔹 Ensurewindow.playheadX Updates Properly
+   window.playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent snapping back
     jumpToRehearsalMark(nextMark);
 
-    console.log(`[DEBUG] Updated PlayheadX: ${playheadX}`);
+    console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
   });
 
 
@@ -4081,11 +4329,11 @@ function assignCues(svgRoot) {
     console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
     console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
 
-    // Update playheadX properly to prevent snapping issues
-    playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent looping
+    // Updatewindow.playheadX properly to prevent snapping issues
+   window.playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent looping
     jumpToRehearsalMark(nextMark);
 
-    console.log(`[DEBUG] Updated PlayheadX: ${playheadX}`);
+    console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
   });
 
   document.getElementById('fast-rewind-button').addEventListener('click', () => {
@@ -4110,11 +4358,11 @@ function assignCues(svgRoot) {
     console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
     console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
 
-    // Update playheadX properly
-    playheadX = rehearsalMarks[nextMark].x + 1;
+    // Updatewindow.playheadX properly
+   window.playheadX = rehearsalMarks[nextMark].x + 1;
     jumpToRehearsalMark(nextMark);
 
-    console.log(`[DEBUG] Updated PlayheadX: ${playheadX}`);
+    console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
   });
 
   //////// END OF REHEARSAL MARK LOGIC ///////////////////////////////////////////
@@ -4127,29 +4375,29 @@ function assignCues(svgRoot) {
   */
 
   const togglePlay = () => {
-    isPlaying = !isPlaying;
-    console.log(`[DEBUG] Toggling playback. Now playing: ${isPlaying}`);
+     window.isPlaying = !window.isPlaying;
+    console.log(`[DEBUG] Toggling playback. Now playing: ${window.isPlaying}`);
 
     // ✅ Apply correct speed before playing
-    speedMultiplier = getSpeedForPosition(playheadX);
+    window.speedMultiplier = getSpeedForPosition(window.playheadX);
     console.log(`[DEBUG] Applying speed: ${speedMultiplier}`);
     updateSpeedDisplay();
 
-    // ✅ Ensure playheadX is included in WebSocket message
+    // ✅ Ensurewindow.playheadX is included in WebSocket message
     if (wsEnabled && socket && socket.readyState === WebSocket.OPEN) {
       const message = {
-        type: isPlaying ? "play" : "pause",
-        playheadX: playheadX, // 🔥 Include playheadX
+        type:  window.isPlaying ? "play" : "pause",
+       playheadX:window.playheadX, // 🔥 Includewindow.playheadX
       };
 
-      console.log(`[DEBUG] Sending ${isPlaying ? "play" : "pause"} message:`, message);
-      socket.send(JSON.stringify(message));
+      console.log(`[DEBUG] Sending ${window.isPlaying ? "play" : "pause"} message:`, message);
+      window.socket?.send(JSON.stringify(message));
     }
 
     updatePosition();
     checkCueTriggers(); // ✅ Ensure cues are checked after speed update
 
-    if (isPlaying) {
+    if (window.isPlaying) {
       startAnimation();
       togglePlayButton();
       hideControls();
@@ -4168,8 +4416,8 @@ function assignCues(svgRoot) {
     const playButton = document.getElementById("toggle-button");
 
     if (playButton) {
-      playButton.innerHTML = isPlaying ? '<div class="custom-pause"></div>' : "▶";
-      // console.log(`[DEBUG] Play button updated. isPlaying=${isPlaying}`);
+      playButton.innerHTML =  window.isPlaying ? '<div class="custom-pause"></div>' : "▶";
+      // console.log(`[DEBUG] Play button updated.  window.isPlaying=${isPlaying}`);
     } else {
       console.error("[ERROR] Play button element not found.");
     }
@@ -4185,17 +4433,17 @@ function assignCues(svgRoot) {
   */
   const checkCueTriggers = async () => {
     // ✅ Update elapsed time based on playhead position
-    elapsedTime = (playheadX / scoreWidth) * duration;
+    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
 
     // 🛑 Skip cue checks if we’re seeking, paused, or stopped
-    if (isSeeking || animationPaused || !isPlaying) {
+    if (window.isSeeking || animationPaused || !window.isPlaying) {
       console.log("[DEBUG] Skipping cue checks.");
       return;
     }
 
     // ✅ Center correction for playhead alignment
-    const playheadOffset = scoreContainer.offsetWidth / 2;
-    const adjustedPlayheadX = playheadX + playheadOffset;
+    const playheadOffset = window.scoreContainer.offsetWidth / 2;
+    const adjustedPlayheadX =window.playheadX + playheadOffset;
 
     // 🔁 Loop through all cues
     for (const cue of cues) {
@@ -4283,7 +4531,7 @@ function assignCues(svgRoot) {
 
             if (repeat.action === 'stop') {
               stopAnimation();
-              isPlaying = false;
+               window.isPlaying = false;
               togglePlayButton();
               console.log(`[repeat] Repeat finished. Stopping playback.`);
             } else if (repeat.resumeId && repeat.resumeId !== 'self') {
@@ -4364,12 +4612,12 @@ function assignCues(svgRoot) {
   const handleStopCue = (cueId) => {
     console.log(`[CLIENT] Handling stop cue: ${cueId}`);
 
-    if (isPlaying) {
+    if (window.isPlaying) {
       console.log("[DEBUG] Pausing via togglePlay() for cuePause.");
       togglePlay();
     } else {
       console.log("[DEBUG] Already paused, ensuring animation is fully stopped.");
-      isPlaying = false;
+       window.isPlaying = false;
       stopAnimation();
     }
     // togglePlayButton();         // Update play/pause button visually
@@ -4400,18 +4648,18 @@ function assignCues(svgRoot) {
   const handlePauseCue = (cueId, duration, showCountdownOverride = null, resumeTarget = cueId) => {
     console.log(`[DEBUG] Handling pause cue: ${cueId}, duration: ${duration}ms.`);
 
-    if (isSeeking) {
+    if (window.isSeeking) {
       console.log(`[DEBUG] Ignoring pause cue '${cueId}' during seeking.`);
       return;
     }
 
-    ignoreSyncDuringPause = true;
+    window.ignoreSyncDuringPause = true;
 
-    if (isPlaying) {
+    if (window.isPlaying) {
       togglePlay();
       console.log("[DEBUG] Pausing via togglePlay() for cuePause.");
     } else {
-      isPlaying = false;
+       window.isPlaying = false;
       stopAnimation();
       console.log("[DEBUG] Already paused, animation stopped.");
     }
@@ -4473,7 +4721,7 @@ function assignCues(svgRoot) {
 
     window.pauseTimeout = setTimeout(() => {
       console.log("[DEBUG] Auto-resuming after pause duration.");
-      ignoreSyncDuringPause = false;
+      window.ignoreSyncDuringPause = false;
       dismissPauseCountdown();
     
       if (resumeTarget && resumeTarget !== cueId) {
@@ -4541,11 +4789,11 @@ function assignCues(svgRoot) {
     // ✅ Broadcast to all clients via WebSocket
     if (wsEnabled && socket && !receivedFromServer) {
       console.log("[DEBUG] Sending dismiss_pause_countdown event to server.");
-      socket.send(JSON.stringify({ type: "dismiss_pause_countdown" }));
+      window.socket?.send(JSON.stringify({ type: "dismiss_pause_countdown" }));
     }
 
     // ✅ Resume playback
-    isPlaying = true;
+     window.isPlaying = true;
     togglePlayButton();
     startAnimation();
   };
@@ -4601,10 +4849,10 @@ function assignCues(svgRoot) {
     console.log("[DEBUG] Resuming playback after countdown dismissal.");
 
     // Ensure `playheadX` is valid before proceeding
-    if (!isNaN(playheadX) && playheadX > 0) {
-      console.log(`[DEBUG] Keeping server-provided playheadX: ${playheadX}`);
+    if (!isNaN(window.playheadX) &&window.playheadX > 0) {
+      console.log(`[DEBUG] Keeping server-providedwindow.playheadX: ${window.playheadX}`);
     } else {
-      console.error(`[ERROR] Invalid playheadX received: ${playheadX}. Playback resume aborted.`);
+      console.error(`[ERROR] Invalidwindow.playheadX received: ${window.playheadX}. Playback resume aborted.`);
       return;
     }
 
@@ -4614,7 +4862,7 @@ function assignCues(svgRoot) {
     updateStopwatch();
 
     // Set play state and start animation
-    isPlaying = true;
+     window.isPlaying = true;
     animationPaused = false;
     togglePlayButton();
     startAnimation();
@@ -4668,16 +4916,16 @@ function assignCues(svgRoot) {
       resumeReceived = true;
 
       // Ensure we keep the correct playhead position
-      if (!isNaN(playheadX) && playheadX > 0) {
-        console.log(`[DEBUG] Keeping server-provided playheadX: ${playheadX}`);
+      if (!isNaN(window.playheadX) &&window.playheadX > 0) {
+        console.log(`[DEBUG] Keeping server-providedwindow.playheadX: ${window.playheadX}`);
       } else {
-        console.error(`[ERROR] Invalid playheadX. Keeping last known value.`);
+        console.error(`[ERROR] Invalidwindow.playheadX. Keeping last known value.`);
       }
 
       // Broadcast resume event
-      const message = JSON.stringify({ type: "resume_after_pause", elapsedTime, playheadX });
+      const message = JSON.stringify({ type: "resume_after_pause", elapsedTime: window.elapsedTime, playheadX: window.playheadX });
       console.log(`[CLIENT] Broadcasting resume_after_pause to all clients: ${message}`);
-      socket.send(message);
+      window.socket?.send(message);
 
       // Prevent duplicate resume signals for a short period
       setTimeout(() => {
@@ -4724,7 +4972,7 @@ function assignCues(svgRoot) {
 
     // ⏸ Pause playback before the jump
     console.log(`[repeat] ⏸ Pausing before jump to ${repeat.startId}`);
-    if (isPlaying) togglePlay();
+    if (window.isPlaying) togglePlay();
 
     // Wait before jumping
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -4745,7 +4993,7 @@ function assignCues(svgRoot) {
 
     // ▶️ Resume playback
     console.log(`[repeat] ▶️ Resuming playback after jump to ${targetId}`);
-    if (!isPlaying) togglePlay();
+    if (!window.isPlaying) togglePlay();
 
     // ✅ Mark repeat ready again after jump cooldown
     setTimeout(() => {
@@ -4761,7 +5009,7 @@ function assignCues(svgRoot) {
       const safeRepeatData = { ...repeat };
       delete safeRepeatData.recovered;
 
-      socket.send(JSON.stringify({
+      window.socket?.send(JSON.stringify({
         type: "repeat_update",
         cueId,
         repeatData: safeRepeatData
@@ -4961,14 +5209,14 @@ function assignCues(svgRoot) {
       targetX = parseFloat(target.getAttribute('x')) || 0;
     }
 
-    playheadX = targetX - (window.innerWidth / 2);
-    elapsedTime = (playheadX / scoreWidth) * duration;
-    scoreContainer.scrollLeft = playheadX;
+   window.playheadX = targetX - (window.innerWidth / 2);
+    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+    window.scoreContainer.scrollLeft = window.playheadX;
 
-    console.log(`[jumpToCueId] Jumping to ${id} (playheadX: ${playheadX})`);
+    console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
 
     if (wsEnabled && socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: "jump", playheadX, elapsedTime }));
+      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
     }
 
     updatePosition();
@@ -5127,11 +5375,11 @@ function assignCues(svgRoot) {
       videoPopup.classList.add('hidden');
       videoElement.src = ''; // Clear video
 
-      isPlaying = true;
+       window.isPlaying = true;
       startAnimation();
     };
 
-    isPlaying = false;
+     window.isPlaying = false;
     animationPaused = true;
     pauseStartTime = Date.now();
     videoElement.play();
@@ -5153,12 +5401,12 @@ function assignCues(svgRoot) {
       p5Popup.classList.add('hidden');
       p5Container.innerHTML = ''; // Clear p5 sketch
 
-      isPlaying = true;
+       window.isPlaying = true;
       animationPaused = false;
       startAnimation();
     }, duration);
 
-    isPlaying = false;
+     window.isPlaying = false;
     animationPaused = true;
     pauseStartTime = Date.now();
   };
@@ -5183,8 +5431,8 @@ function assignCues(svgRoot) {
     }
 
     // Pause playback
-    if (isPlaying) {
-      isPlaying = false; // Stop the score animation
+    if (window.isPlaying) {
+       window.isPlaying = false; // Stop the score animation
       animationPaused = true; // Set animation paused flag
       stopAnimation(); // Call the function to halt playback
       console.log('[DEBUG] Playback paused for animation popup.');
@@ -5232,8 +5480,8 @@ function assignCues(svgRoot) {
         console.log('[DEBUG] Animation popup dismissed.');
 
         // Resume playback when the popup is dismissed
-        if (!isPlaying && animationPaused) {
-          isPlaying = true; // Resume the score animation
+        if (!window.isPlaying && animationPaused) {
+           window.isPlaying = true; // Resume the score animation
           animationPaused = false; // Clear animation paused flag
           startAnimation(); // Restart playback
           console.log('[DEBUG] Playback resumed after popup dismissal.');
@@ -5247,8 +5495,8 @@ function assignCues(svgRoot) {
       console.log(`[DEBUG] Animation popup hidden after ${duration}ms.`);
 
       // Resume playback if the popup is hidden automatically
-      if (!isPlaying && animationPaused) {
-        isPlaying = true; // Resume the score animation
+      if (!window.isPlaying && animationPaused) {
+         window.isPlaying = true; // Resume the score animation
         animationPaused = false; // Clear animation paused flag
         startAnimation(); // Restart playback
         console.log('[DEBUG] Playback resumed after automatic popup dismissal.');
@@ -5818,7 +6066,7 @@ function assignCues(svgRoot) {
       angle
     };
 
-    socket.send(JSON.stringify(message));
+    window.socket.send(JSON.stringify(message));
 
     console.log(
       `[OSC] 🔄 Sent OSC for ${pathId} → x: ${normX.toFixed(3)}, y: ${normY.toFixed(3)}, angle: ${angle.toFixed(2)} ` +
@@ -5973,14 +6221,14 @@ function assignCues(svgRoot) {
       }
 
       // Pause scrolling score
-      const wasPlaying = isPlaying;
-      if (isPlaying) {
+      const wasPlaying =  window.isPlaying;
+      if (window.isPlaying) {
         console.log("[DEBUG] Pausing scrolling score for Anime.js cue.");
-        isPlaying = false;
+         window.isPlaying = false;
         stopAnimation();
 
         if (wsEnabled && socket) {
-          socket.send(JSON.stringify({ type: "pause", playheadX, elapsedTime }));
+          window.socket?.send(JSON.stringify({ type: "pause", playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
           console.log(`[DEBUG] Sent pause message to server. Elapsed Time: ${elapsedTime}`);
         }
       }
@@ -6078,16 +6326,16 @@ function assignCues(svgRoot) {
       console.log("[DEBUG] Blur effect fully removed after fade-out.");
 
       // ✅ Resume scrolling score playback
-      if (!isPlaying) {
+      if (!window.isPlaying) {
         console.log("[DEBUG] Resuming scrolling score after Anime.js popup.");
-        isPlaying = true;
+         window.isPlaying = true;
         animationPaused = false; // Ensure animations are not paused
         startAnimation(); // Resume the animation loop
 
         if (wsEnabled && socket) {
-          const message = JSON.stringify({ type: "play", elapsedTime });
+          const message = JSON.stringify({ type: "play", elapsedTime: window.elapsedTime });
           console.log(`[DEBUG] Sending play message to server: ${message}`);
-          socket.send(message);
+          window.socket?.send(message);
         }
       }
 
@@ -6147,7 +6395,7 @@ function assignCues(svgRoot) {
           }
 
           const file = param;
-          let duration = 30; // Default duration
+          window.duration = 30; // Default duration
 
           if (i + 2 < cueParams.length && cueParams[i + 1] === "dur" && !isNaN(cueParams[i + 2])) {
             duration = parseInt(cueParams[i + 2], 10);
@@ -6172,12 +6420,12 @@ function assignCues(svgRoot) {
       console.log("[DEBUG] `animations` at start:", animations);
 
       // ✅ Ensure score pauses when the cueChoice appears
-      if (isPlaying) {
+      if (window.isPlaying) {
         console.log('[DEBUG] Pausing score for cue choice.');
-        isPlaying = false;
+         window.isPlaying = false;
         stopAnimation();
         if (wsEnabled && socket) {
-          socket.send(JSON.stringify({ type: 'pause', playheadX, elapsedTime }));
+          window.socket?.send(JSON.stringify({ type: "pause", playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
           console.log(`[DEBUG] Sent pause message to server. Elapsed Time: ${elapsedTime}`);
         }
       } else {
@@ -6319,7 +6567,7 @@ function assignCues(svgRoot) {
     };
   
     console.log(`[OSC] 🎧 Sending audio cue:`, message);
-    socket.send(JSON.stringify(message));
+    window.socket.send(JSON.stringify(message));
   };
   
   /**
@@ -6562,11 +6810,11 @@ function assignCues(svgRoot) {
 
         // ✅ Restart the score animation after animation dismissal
         console.log('[DEBUG] Restarting score animation loop.');
-        isPlaying = true;
+         window.isPlaying = true;
         startAnimation();
 
         if (wsEnabled && socket) {
-          socket.send(JSON.stringify({ type: 'play', playheadX, elapsedTime }));
+          window.socket?.send(JSON.stringify({ type: 'play', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
           console.log(`[DEBUG] Sent play message to server. Elapsed Time: ${elapsedTime}`);
         }
       }, { once: true });
@@ -6716,7 +6964,7 @@ function handleOscCue(cueId, cueParams = {}) {
         return;
       }
       baseMessage.data = value;
-      socket.send(JSON.stringify(baseMessage));
+      window.socket.send(JSON.stringify(baseMessage));
       break;
     }
 
@@ -6727,7 +6975,7 @@ function handleOscCue(cueId, cueParams = {}) {
         return;
       }
       baseMessage.data = { [key]: val };
-      socket.send(JSON.stringify(baseMessage));
+      window.socket.send(JSON.stringify(baseMessage));
       break;
     }
 
@@ -6739,7 +6987,7 @@ function handleOscCue(cueId, cueParams = {}) {
         return;
       }
       baseMessage.data = { min, max };
-      socket.send(JSON.stringify(baseMessage));
+      window.socket.send(JSON.stringify(baseMessage));
       break;
     }
 
@@ -6753,7 +7001,7 @@ function handleOscCue(cueId, cueParams = {}) {
       let sent = 0;
       const burstTimer = setInterval(() => {
         if (sent >= count) return clearInterval(burstTimer);
-        socket.send(JSON.stringify({ ...baseMessage }));
+        window.socket.send(JSON.stringify({ ...baseMessage }));
         sent++;
       }, interval);
       break;
@@ -6771,7 +7019,7 @@ function handleOscCue(cueId, cueParams = {}) {
       let sent = 0;
       const pulseTimer = setInterval(() => {
         if (sent >= total) return clearInterval(pulseTimer);
-        socket.send(JSON.stringify({ ...baseMessage }));
+        window.socket.send(JSON.stringify({ ...baseMessage }));
         sent++;
       }, interval);
       break;
@@ -7155,8 +7403,8 @@ function handleOscCue(cueId, cueParams = {}) {
     // ✅ Only mark + broadcast if successfully handled
     if (!triggeredCues.has(cueId)) {
       triggeredCues.add(cueId);
-      if (wsEnabled && socket && !isRemote) {
-        socket.send(JSON.stringify({ type: 'cueTriggered', cueId }));
+      if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN && !isRemote) {
+        window.socket.send(JSON.stringify({ type: 'cueTriggered', cueId }));
         console.log(`[CLIENT] Sent cue trigger to server: ${cueId}`);
       }
     } else {
@@ -7207,7 +7455,9 @@ function handleOscCue(cueId, cueParams = {}) {
   const durationInput = document.getElementById("duration-input");
 
   // ✅ Set default duration after durationInput is defined
-  let duration = durationInput ? parseInt(durationInput.value, 10) * 60 * 1000 : 30 * 60 * 1000;
+  window.duration = durationInput
+  ? parseInt(durationInput.value, 10) * 60 * 1000
+  : 30 * 60 * 1000;
 
   if (scoreOptionsPopup) {
     scoreOptionsPopup.addEventListener("click", (event) => {
@@ -7474,214 +7724,19 @@ function handleOscCue(cueId, cueParams = {}) {
   updatePosition();
   updateStopwatch();
 
-  window.scoreContainer = scoreContainer; // Expose globally
-  window.scoreWidth = scoreWidth; // Expose globally
+  window.scoreContainer = window.scoreContainer; // Expose globally
   window.updatePosition = updatePosition; // Expose updatePosition globally
-  window.elapsedTime = elapsedTime; // Expose elapsedTime globally
-  window.debug = {
-    updatePosition,
-    elapsedTime,
-    setElapsedTime: (time) => {
-      elapsedTime = time;
-      updatePosition();
-    },
-    // calculateMaxScrollDistance,
-  };
+  // window.elapsedTime = elapsedTime; // Expose elapsedTime globally
+  // window.debug = {
+  //   updatePosition,
+  //   window.elapsedTime,
+  //   setElapsedTime: (time) => {
+  //     window.elapsedTime = time;
+  //     updatePosition();
+  //   },
+  //   // calculateMaxScrollDistance,
+  // };
 
-  //////////////////////////////////////////////////////
-  // Ensures Anime.js animations are detected and tracked dynamically
-  // Pauses animations when they are not visible and resumes them when they reappear
-  // Supports path-based (obj2path-*), rotation (obj_*_rotate_*), and other Anime.js animations
-  // Uses Intersection Observer to optimize performance by stopping off-screen animations
-  // Ensures the observer starts only after animations are fully initialized
-
-  window.runningAnimations = {}; // Store active animations globally
-
-  // Function to detect and track existing animations (including rotation)
-  window.detectExistingAnimations = function () {
-    console.log("[DEBUG] Checking currently running Anime.js animations...");
-
-    anime.running.forEach(anim => {
-      anim.animatables.forEach(animatable => {
-        const target = animatable.target;
-        if (target && target.getAttribute) {
-          const id = target.getAttribute("id");
-
-          // Ensure we track both path-based and rotation-based animations
-          if (id && (id.startsWith('obj2path') || id.startsWith('obj_') || id.includes('_rotate_'))) {
-            if (!window.runningAnimations[id]) {
-              // console.log("[DEBUG] Tracking new animation for: " + id);
-              window.runningAnimations[id] = anim;
-            }
-          }
-        }
-      });
-    });
-
-    // console.log("[DEBUG] Updated running animations:", Object.keys(window.runningAnimations));
-  };
-
-  /**
-  * ✅ Optimized Function: checkAnimationVisibility (with state change logging)
-  *
-  * - Checks both the object and its associated path for visibility.
-  * - If the path is visible but the object is off-screen, the animation **continues**.
-  * - Logs when an animation starts playing for the first time.
-  * - Logs when an animation pauses for the first time after it has been playing.
-  * - Uses `window.runningAnimations` to manage active animations.
-  * - Removes redundant event listeners and interval (handled elsewhere in app.js).
-  */
-
-  window.checkAnimationVisibility = function () {
-    Object.entries(window.runningAnimations).forEach(([id, instance]) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-
-      const rect = el.getBoundingClientRect();
-      const isVisible = rect.top < window.innerHeight &&
-        rect.bottom > 0 &&
-        rect.left < window.innerWidth &&
-        rect.right > 0;
-
-      if (isVisible) {
-        if (instance.wasPaused) {
-          // console.log(`[CHECK] ${id} became visible — resuming`);
-          if (typeof instance.resume === "function") instance.resume();
-          else if (typeof instance.play === "function") instance.play();
-          instance.wasPaused = false;
-        }
-      } else {
-        if (!instance.wasPaused) {
-          // console.log(`[CHECK] ${id} is off-screen — pausing`);
-          if (typeof instance.pause === "function") instance.pause();
-          instance.wasPaused = true;
-        }
-      }
-    });
-  };
-
-
-  window.initializeObserver = function () {
-    if (window.observer) window.observer.disconnect();
-
-    window.observer = new IntersectionObserver((entries) => {
-      if (window.disableObserver) return; // 🔥 Skip all observer logic
-
-      for (const entry of entries) {
-        const el = entry.target;
-        const id = el.id;
-        const instance = window.runningAnimations[id];
-
-        if (!instance) continue;
-
-        if (entry.isIntersecting) {
-          if (instance.wasPaused || instance.autoStart) {
-            if (typeof instance.resume === "function") instance.resume();
-            else if (typeof instance.play === "function") instance.play();
-            // console.log(`[OBSERVER] ${id} entered view — resumed`);
-            instance.wasPaused = false;
-            instance.autoStart = false;
-          }
-        } else {
-          if (typeof instance.pause === "function") instance.pause();
-          instance.wasPaused = true;
-          // console.log(`[OBSERVER] ${id} left view — paused`);
-        }
-      }
-    }, {
-      root: null,
-      threshold: 0.01,
-      rootMargin: "0px", // ✅ Use full viewport width for visibility detection.
-      // This ensures that any object visually inside the screen 
-      // (not just near the center) will trigger IntersectionObserver.
-      // Narrow values like "-45%" were previously used to simulate a 
-      // central "playhead zone", but caused false negatives on pause, 
-      // reload, or cue jumps. Defaulting to full view is more robust.    
-    });
-
-
-    // Global OBSERVER DISABLE for dubugging
-    // window.disableObserver = true;
-
-    Object.entries(window.runningAnimations).forEach(([id, instance]) => {
-      const el = document.getElementById(id);
-      if (el instanceof Element) {
-        window.observer.observe(el);
-      }
-    });
-
-    // ✅ Immediately check visibility
-    requestAnimationFrame(() => {
-      window.checkAnimationVisibility();
-    });
-  };
-
-  window.startAllVisibleAnimations = () => {
-    console.log(`[DEBUG] Checking ${Object.keys(window.runningAnimations).length} animations for visibility`);
-
-    Object.entries(window.runningAnimations).forEach(([id, instance]) => {
-      const el = document.getElementById(id);
-
-      if (!el) {
-        console.warn(`[MISSING] No DOM element for ${id}`);
-        return;
-      }
-
-      const rect = el.getBoundingClientRect();
-      const isVisible =
-        rect.top < window.innerHeight &&
-        rect.bottom > 0 &&
-        rect.left < window.innerWidth &&
-        rect.right > 0;
-
-      // console.log(`[CHECK] ${id}: visible=${isVisible}, rect=${JSON.stringify(rect)}`);
-
-      if (isVisible) {
-        // console.log(`[FORCE PLAY] ${id}`);
-        if (typeof instance.resume === "function") {
-          instance.resume();
-          // console.log(`[DEBUG] Called resume() on ${id}`);
-        } else if (typeof instance.play === "function") {
-          instance.play();
-          // console.log(`[DEBUG] Called play() on ${id}`);
-        } else {
-          console.warn(`[WARN] No resume() or play() method on ${id}`);
-        }
-      }
-    });
-  };
-
-  // Function to apply observer and visibility tracking
-  window.observeAnimations = function () {
-    if (!window.observer) {
-      window.initializeObserver();
-    }
-
-    document.querySelectorAll(window.ANIM_SELECTOR).forEach((element) => {
-      const id = element.id;
-      if (window.runningAnimations[id]) {
-        window.observer.observe(element);
-        console.log(`[DEBUG] Observer attached to: ${id}`);
-      } else {
-        console.warn(`[SKIPPED] ${id} exists but has no registered animation.`);
-      }
-    });
-  };
-
-  // // Function to wait for animations to be initialized before starting detection
-  function waitForAnimationsToInitialize() {
-    //console.log("[DEBUG] Waiting for animations to initialize...");
-
-    const checkAnimations = setInterval(() => {
-      if (anime.running.length > 0) { // Ensure at least one animation is running
-        //      console.log("[DEBUG] Animations are initialized. Running detection and observer.");
-        clearInterval(checkAnimations);
-
-        detectExistingAnimations();
-        observeAnimations();
-      }
-    }, 500);
-  }
 
 
   console.log('// EOF');
