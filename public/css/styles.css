@@ -1355,24 +1355,23 @@ padding: 20px;
 
 /* 🔹 Top Bar Styling (Floats Above Everything) */
 #top-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 50px;
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    display: flex;
-    align-items: center;
-    padding: 0 15px;
-    font-size: 1rem;
-    z-index: 2000; /* ✅ Ensures it stays above everything */
-    pointer-events: auto;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-
-    /* border-radius: 10px; */
-
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* ✅ Add this line */
+  padding: 0 15px;
+  font-size: 1rem;
+  z-index: 2000;
+  pointer-events: auto;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
+
 
 #hamburger-container {
   display: flex;
