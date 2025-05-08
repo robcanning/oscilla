@@ -1,13 +1,13 @@
-# `cue_choice` — Performer-Driven SVG Animation Selector
+# `cueChoice` — Performer-Driven SVG Animation Selector
 
-The `cue_choice(...)` cue displays a selection of SVG-based animations or images in a grid, allowing a performer to select one by clicking. The selected visual is displayed full screen for a set duration, after which the score resumes scrolling.
+The `cueChoice(...)` cue displays a selection of SVG-based animations or images in a grid, allowing a performer to select one by clicking. The selected visual is displayed full screen for a set duration, after which the score resumes scrolling.
 
 ---
 
 ## 🔤 Syntax
 
 ```
-cue_choice(choiceA)_dur(10)_choiceB_dur(5)_choiceC
+cueChoice(choiceA)_dur(10)_choiceB_dur(5)_choiceC
 ```
 
 - Each `choice` refers to an `.svg` file inside the `animations/` directory
@@ -34,7 +34,7 @@ All non-choice UI is blurred while the selection interface is active.
 ## ✅ Example
 
 ```
-cue_choice(spiral)_dur(10)_grid-lines_dur(6)_quiet-line
+cueChoice(spiral)_dur(10)_grid-lines_dur(6)_quiet-line
 ```
 
 This displays three clickable thumbnails:
@@ -67,7 +67,7 @@ This displays three clickable thumbnails:
 
 ## 🎼 Compositional Context: Indeterminacy, Choice, and Hypertext
 
-The `cue_choice` system introduces elements of **indeterminacy** and **user agency** into the score. By offering multiple potential directions through performer interaction, the music becomes **hypertextual**—capable of branching, forking, and diverging into alternate temporal experiences.
+The `cueChoice` system introduces elements of **indeterminacy** and **user agency** into the score. By offering multiple potential directions through performer interaction, the music becomes **hypertextual**—capable of branching, forking, and diverging into alternate temporal experiences.
 
 This is especially powerful in:
 
@@ -84,6 +84,6 @@ While each user may choose a different visual/sonic path, shared structural mome
 
 ```txt
 // TODO: Add a mode where the computer, not the performer, chooses the animation.
-// This allows fully generative branching where a cue_choice acts as a decision point
+// This allows fully generative branching where a cueChoice acts as a decision point
 // in an algorithmic or AI-driven form, supporting autopoietic music or score-as-agent design.
 ```

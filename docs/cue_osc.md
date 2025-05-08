@@ -1,7 +1,7 @@
 
-# `cue_osc` — Send OSC Messages to External Audio Engines
+# `cueOsc` — Send OSC Messages to External Audio Engines
 
-The `cue_osc(...)` cue sends Open Sound Control (OSC) messages from the browser to a server, which forwards them to connected software like **SuperCollider**, **Pure Data (Pd)**, or **Max/MSP**.
+The `cueOsc(...)` cue sends Open Sound Control (OSC) messages from the browser to a server, which forwards them to connected software like **SuperCollider**, **Pure Data (Pd)**, or **Max/MSP**.
 
 ---
 
@@ -10,24 +10,24 @@ The `cue_osc(...)` cue sends Open Sound Control (OSC) messages from the browser 
 Each cue type is defined by its subtype and arguments:
 
 ```txt
-cue_osc_trigger(1)
-cue_osc_random(0.4,1.2)
-cue_osc_pulse(4,3)
-cue_osc_burst(5,250)
-cue_osc_value(0.67)
-cue_osc_set(speed,1.5)
+cueOscTrigger(1)
+cueOscRandom(0.4,1.2)
+cueOscPulse(4,3)
+cueOscBurst(5,250)
+cueOscValue(0.67)
+cueOscSet(speed,1.5)
 ```
 
 ---
 
 ## ✅ Supported Subtypes and Use Cases
 
-### 🎯 `cue_osc_trigger(n)`
+### 🎯 `cueOscTrigger(n)`
 Sends a basic integer-based cue trigger.
 
 **Example:**
 ```txt
-cue_osc_trigger(7)
+cueOscTrigger(7)
 ```
 
 **OSC Message Sent:**
@@ -41,12 +41,12 @@ cue_osc_trigger(7)
 
 ---
 
-### 🎲 `cue_osc_random(min,max)`
+### 🎲 `cueOscRandom(min,max)`
 Sends a random number between two bounds.
 
 **Example:**
 ```txt
-cue_osc_random(0.4, 1.2)
+cueOscRandom(0.4, 1.2)
 ```
 
 **OSC Message Sent:**
@@ -60,12 +60,12 @@ cue_osc_random(0.4, 1.2)
 
 ---
 
-### 🕒 `cue_osc_pulse(rate,duration)`
+### 🕒 `cueOscPulse(rate,duration)`
 Instructs the audio engine to generate a rhythmic pulse.
 
 **Example:**
 ```txt
-cue_osc_pulse(5, 4)
+cueOscPulse(5, 4)
 ```
 
 **OSC Message Sent:**
@@ -80,12 +80,12 @@ cue_osc_pulse(5, 4)
 
 ---
 
-### 💥 `cue_osc_burst(count,interval)`
+### 💥 `cueOscBurst(count,interval)`
 Triggers a burst of messages spaced by `interval` milliseconds.
 
 **Example:**
 ```txt
-cue_osc_burst(6, 200)
+cueOscBurst(6, 200)
 ```
 
 **OSC Message Sent:**
@@ -99,12 +99,12 @@ cue_osc_burst(6, 200)
 
 ---
 
-### 📏 `cue_osc_value(x)`
+### 📏 `cueOscValue(x)`
 Sends a scalar value (float or int).
 
 **Example:**
 ```txt
-cue_osc_value(0.7)
+cueOscValue(0.7)
 ```
 
 **OSC Message Sent:**
@@ -117,12 +117,12 @@ cue_osc_value(0.7)
 
 ---
 
-### 🧩 `cue_osc_set(key,value)`
+### 🧩 `cueOscSet(key,value)`
 Sends a key/value map.
 
 **Example:**
 ```txt
-cue_osc_set(speed,1.5)
+cueOscSet(speed,1.5)
 ```
 
 **OSC Message Sent:**
@@ -154,7 +154,7 @@ More expressive, real-time OSC control is possible using `o2p` (object-to-path) 
 
 ## 🧩 Related Cues
 
-- [`cue_audio`](cue_audio.md) — browser-based or OSC-triggered audio playback
-- [`cue_traverse`](cue_traverse.md) — point-to-point animation
-- [`cue_choice`](cue_choice.md) — form branching
-- [`cue_stop`](cue_stop.md) — halts score playback
+- [`cueAudio`](cueAudio.md) — browser-based or OSC-triggered audio playback
+- [`cueTraverse`](cueTraverse.md) — point-to-point animation
+- [`cueChoice`](cueChoice.md) — form branching
+- [`cueStop`](cueStop.md) — halts score playback

@@ -1,7 +1,7 @@
 
-# `cue_repeat` — Structured Playback Loops and Jumps
+# `cueRepeat` — Structured Playback Loops and Jumps
 
-The `cue_repeat(...)` cue type enables controlled repetition of score sections using cue-based jump logic. It is designed for da capo, dal segno, and custom repeat behaviors.
+The `cueRepeat(...)` cue type enables controlled repetition of score sections using cue-based jump logic. It is designed for da capo, dal segno, and custom repeat behaviors.
 
 ---
 
@@ -64,12 +64,12 @@ Nested or overlapping repeat blocks (e.g., a repeat inside a larger form) are no
 - A repeat is considered "active" once it is triggered
 - After each loop, the playhead jumps back to `startId`
 - On final repeat, it jumps to `resumeId` or stays in place
-- Use `cue_repeat(...)` cues at or near the end of the section being looped
+- Use `cueRepeat(...)` cues at or near the end of the section being looped
 
 ---
 
 ## 🧩 Related Cues
 
-- [`cue_pause(...)`](cue_pause.md) — pause playback with optional countdown
-- [`cue_audio(...)`](cue_audio.md) — play local or OSC-triggered audio
-- [`cue_traverse(...)`](cue_traverse.md) — animate objects through points or steps
+- [`cuePause(...)`](cuePause.md) — pause playback with optional countdown
+- [`cueAudio(...)`](cueAudio.md) — play local or OSC-triggered audio
+- [`cueTraverse(...)`](cueTraverse.md) — animate objects through points or steps

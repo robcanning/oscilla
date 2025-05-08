@@ -1,6 +1,6 @@
-# `cue_traverse` — Animate Objects Between SVG Points
+# `cueTraverse` — Animate Objects Between SVG Points
 
-The `cue_traverse(...)` cue animates an SVG object along a path defined by a list of point elements (`<circle>`, `<rect>`, or `<ellipse>`). It's useful for moving symbols, playheads, or visual elements dynamically across the score.
+The `cueTraverse(...)` cue animates an SVG object along a path defined by a list of point elements (`<circle>`, `<rect>`, or `<ellipse>`). It's useful for moving symbols, playheads, or visual elements dynamically across the score.
 
 ---
 
@@ -64,7 +64,7 @@ As the animated object (defined via `o(...)`) moves through the points listed in
 When a match is found:
 
 - The corresponding element is **animated using its `data-id` definition**
-- This allows `cue_traverse` to function like a **trigger engine**
+- This allows `cueTraverse` to function like a **trigger engine**
 - It’s useful for triggering visual pulses, spins, or dynamic elements connected to spatial locations in the score
 
 #### 🧪 Example

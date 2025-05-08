@@ -1,14 +1,14 @@
 
-# `cue_stop` — Halt Playback and End the Score
+# `cueStop` — Halt Playback and End the Score
 
-The `cue_stop` cue is used to completely stop score playback at a designated point. It is often placed at the end of a piece or to mark a terminal branch of an open-form structure.
+The `cueStop` cue is used to completely stop score playback at a designated point. It is often placed at the end of a piece or to mark a terminal branch of an open-form structure.
 
 ---
 
 ## 🔤 Syntax
 
 ```
-cue_stop
+cueStop
 ```
 
 - No parameters are needed.
@@ -27,7 +27,7 @@ cue_stop
 ## 🧠 Use Cases
 
 - End of a fixed-form or open-form piece
-- Conditional endpoint after a `cue_repeat(...)` or `cue_choice(...)`
+- Conditional endpoint after a `cueRepeat(...)` or `cueChoice(...)`
 - Used in installations or performances where a visual/aural endpoint is necessary
 
 ---
@@ -35,7 +35,7 @@ cue_stop
 ## 🚧 TODO: Visual Fadeout & End Page Logic
 
 ```txt
-// TODO: Extend cue_stop to optionally fade the screen to black or white.
+// TODO: Extend cueStop to optionally fade the screen to black or white.
 // Optional parameter could define background color:
 //   cue_stop_color(black), cue_stop_color(white), cue_stop_color(#ccc)
 //
@@ -47,6 +47,6 @@ cue_stop
 
 ## 🧩 Related
 
-- [`cue_pause(...)`](cue_pause.md) — temporarily halt with countdown
-- [`cue_repeat(...)`](cue_repeat.md) — repeat sections
-- [`cue_choice(...)`](cue_choice.md) — user-chosen form branching
+- [`cuePause(...)`](cuePause.md) — temporarily halt with countdown
+- [`cueRepeat(...)`](cueRepeat.md) — repeat sections
+- [`cueChoice(...)`](cueChoice.md) — user-chosen form branching

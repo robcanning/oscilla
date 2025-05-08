@@ -7,7 +7,7 @@ This file documents the internal logic and architecture for implementing new cue
 
 ## 🔁 Cue Trigger Lifecycle
 
-1. SVG cue element (e.g. `<text id="cue_audio(kick.wav)">`) is intersected by the scrolling playhead.
+1. SVG cue element (e.g. `<text id="cueAudio(kick.wav)">`) is intersected by the scrolling playhead.
 2. The `handleCueTrigger(cueId, isRemote)` function is invoked.
 3. Cue type and parameters are parsed via `parseCueParams(cueId)`.
 4. Cue is dispatched to the relevant function in `cueHandlers[type]`.
@@ -31,13 +31,13 @@ Main dispatcher for cue execution:
 
 Parses cue strings like:
 ```txt
-cue_audio(file.wav)_loop(3)_amp(0.8)
+cueAudio(file.wav)_loop(3)_amp(0.8)
 ```
 
 Returns:
 ```js
 {
-  type: "cue_audio",
+  type: "cueAudio",
   cueParams: {
     choice: "file.wav",
     loop: 3,
@@ -57,13 +57,13 @@ Supports:
 A global map of known cue types:
 ```js
 cueHandlers = {
-  cue_pause: handlePauseCue,
-  cue_stop: handleStopCue,
-  cue_repeat: handleRepeatCue,
-  cue_audio: handleAudioCue,
-  cue_choice: handleCueChoice,
-  cue_traverse: handleTraverseCue,
-  cue_osc: handleOscCue,
+  cuePause: handlePauseCue,
+  cueStop: handleStopCue,
+  cueRepeat: handleRepeatCue,
+  cueAudio: handleAudioCue,
+  cueChoice: handleCueChoice,
+  cueTraverse: handleTraverseCue,
+  cueOsc: handleOscCue,
   ...
 }
 ```
@@ -109,7 +109,7 @@ You can use these globals and helpers:
 
 - Cues should degrade gracefully if not supported.
 - Most cues run once and are stateful.
-- Repeats (`cue_repeat`) and choice cues (`cue_choice`) may modify navigation or playback.
+- Repeats (`cueRepeat`) and choice cues (`cueChoice`) may modify navigation or playback.
 - OSC cues are dispatched via WebSocket with structured JSON.
 
 ---
@@ -126,12 +126,12 @@ You can use these globals and helpers:
 
 | Cue Type         | Description                                 |
 |------------------|---------------------------------------------|
-| `cue_pause(...)` | Pause with optional countdown UI            |
-| `cue_stop`       | Stop playback entirely                      |
-| `cue_audio(...)` | Play audio locally (Wavesurfer) or via OSC  |
-| `cue_choice(...)`| Fullscreen performer choices from SVGs      |
-| `cue_repeat(...)`| Repeat from start to end `x` times          |
-| `cue_traverse(...)` | Move object between points on screen     |
+| `cuePause(...)` | Pause with optional countdown UI            |
+| `cueStop`       | Stop playback entirely                      |
+| `cueAudio(...)` | Play audio locally (Wavesurfer) or via OSC  |
+| `cueChoice(...)`| Fullscreen performer choices from SVGs      |
+| `cueRepeat(...)`| Repeat from start to end `x` times          |
+| `cueTraverse(...)` | Move object between points on screen     |
 | `cue_animation(...)`| Trigger fullscreen SVG animation         |
 | `cue_osc_*`      | Send OSC: trigger, pulse, random, set, etc. |
 

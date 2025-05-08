@@ -1,14 +1,14 @@
 
-# `cue_pause` — Pause Playback with Optional Countdown and Resume
+# `cuePause` — Pause Playback with Optional Countdown and Resume
 
-The `cue_pause(...)` cue temporarily halts playback for a specified number of seconds. It can optionally show a visual countdown timer and trigger a jump or cue afterward.
+The `cuePause(...)` cue temporarily halts playback for a specified number of seconds. It can optionally show a visual countdown timer and trigger a jump or cue afterward.
 
 ---
 
 ## 🔤 Syntax
 
 ```
-cue_pause(duration)_count(true|false)_resume(cueId)
+cuePause(duration)_count(true|false)_resume(cueId)
 ```
 
 - `duration` → Duration of pause in seconds (required)
@@ -24,22 +24,22 @@ cue_pause(duration)_count(true|false)_resume(cueId)
 
 ### Basic 3-second pause with countdown:
 ```
-cue_pause(3)
+cuePause(3)
 ```
 
 ### 5-second pause with countdown explicitly disabled:
 ```
-cue_pause(5)_count(false)
+cuePause(5)_count(false)
 ```
 
 ### Pause 4 seconds and then jump to `sectionB`:
 ```
-cue_pause(4)_resume(sectionB)
+cuePause(4)_resume(sectionB)
 ```
 
 ### Disable countdown *and* jump to `outro` after pause:
 ```
-cue_pause(2)_count(false)_resume(outro)
+cuePause(2)_count(false)_resume(outro)
 ```
 
 ---
@@ -57,13 +57,13 @@ cue_pause(2)_count(false)_resume(outro)
 
 ```txt
 // TODO: Add support for next(...) to automatically trigger another cue after pause ends.
-// This allows daisy-chaining actions like cue_pause(...) → cue_audio(...) or cue_animation(...).
+// This allows daisy-chaining actions like cuePause(...) → cueAudio(...) or cue_animation(...).
 ```
 
 ---
 
 ## 🧩 Related Cues
 
-- [`cue_audio(...)`](cue_audio.md) — trigger browser or OSC-based audio
-- [`cue_repeat(...)`](cue_repeat.md) — handle repeat/jump logic
-- [`cue_traverse(...)`](cue_traverse.md) — move objects through points
+- [`cueAudio(...)`](cueAudio.md) — trigger browser or OSC-based audio
+- [`cueRepeat(...)`](cueRepeat.md) — handle repeat/jump logic
+- [`cueTraverse(...)`](cueTraverse.md) — move objects through points

@@ -1,14 +1,14 @@
 
-# `cue_audio` — Trigger Audio Playback (Local or OSC-Based)
+# `cueAudio` — Trigger Audio Playback (Local or OSC-Based)
 
-The `cue_audio(...)` cue allows playback of audio files from either the browser (via WaveSurfer.js) or through external OSC-compatible environments such as SuperCollider, Pure Data (Pd), Max, or similar tools.
+The `cueAudio(...)` cue allows playback of audio files from either the browser (via WaveSurfer.js) or through external OSC-compatible environments such as SuperCollider, Pure Data (Pd), Max, or similar tools.
 
 ---
 
 ## 🔤 Syntax
 
 ```
-cue_audio(filename)_amp(1.0)_loop(1)_ext(wav)
+cueAudio(filename)_amp(1.0)_loop(1)_ext(wav)
 ```
 
 - `filename` → The name of the audio file (with or without extension).
@@ -22,13 +22,13 @@ cue_audio(filename)_amp(1.0)_loop(1)_ext(wav)
 
 ### Local browser-based playback
 ```
-cue_audio(kick)_amp(0.8)
-cue_audio(drum-loop.wav)_loop(0)
+cueAudio(kick)_amp(0.8)
+cueAudio(drum-loop.wav)_loop(0)
 ```
 
 ### Explicit extension and volume
 ```
-cue_audio(ambient)_ext(ogg)_amp(0.4)
+cueAudio(ambient)_ext(ogg)_amp(0.4)
 ```
 
 ---
@@ -67,7 +67,7 @@ Only one client should be responsible for **local audio playback** (e.g. connect
 - By default, `window.isPlaybackMaster = false`
 - This prevents all clients from playing audio simultaneously
 - You can **toggle this role in the GUI** (e.g. checkbox or menu option)
-- When enabled, this client will handle `cue_audio(...)` locally
+- When enabled, this client will handle `cueAudio(...)` locally
 
 ```js
 if (!window.isPlaybackMaster) {
@@ -88,6 +88,6 @@ if (!window.isPlaybackMaster) {
 
 ## 🧩 Related Cues
 
-- [`cue_pause(...)`](cue_pause.md) — pause with optional countdown and jump
-- [`cue_repeat(...)`](cue_repeat.md) — structured loop and jump logic
-- [`cue_traverse(...)`](cue_traverse.md) — animate objects along paths or between points
+- [`cuePause(...)`](cuePause.md) — pause with optional countdown and jump
+- [`cueRepeat(...)`](cueRepeat.md) — structured loop and jump logic
+- [`cueTraverse(...)`](cueTraverse.md) — animate objects along paths or between points
