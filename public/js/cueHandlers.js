@@ -1398,6 +1398,138 @@ export function handleAnimationCue(cueId, file, duration) {
   }, duration);
 }
 
+// 📼 Media cue queue
+const mediaCueQueue = [];
+let isMediaPopupActive = false;
+
+/**
+ * handleMediaCue(cueId, mediaPath, duration)
+ *
+ * Displays SVG, video, or image in a centered popup.
+ * Supports Esc-key and click dismissal, auto-close on video end, and playback resume.
+ */
+export function handleMediaCue(cueId, mediaPath, duration = 5000) {
+  mediaCueQueue.push({ cueId, mediaPath, duration });
+  if (!isMediaPopupActive) {
+    playNextMediaCue();
+  }
+}
+
+// Internal playback logic
+function playNextMediaCue() {
+  if (mediaCueQueue.length === 0) return;
+
+  const { cueId, mediaPath, duration } = mediaCueQueue.shift();
+  isMediaPopupActive = true;
+
+  const popup = document.getElementById('media-popup');
+  const content = document.getElementById('media-content');
+  if (!popup || !content) {
+    console.error('[ERROR] Missing #media-popup or #media-content element.');
+    return;
+  }
+
+  console.log(`[MEDIA] ▶️ Showing media cue: ${cueId} (${mediaPath})`);
+
+  // Pause score playback
+  if (window.isPlaying) {
+    window.isPlaying = false;
+    window.animationPaused = true;
+    window.stopAnimation?.();
+  }
+
+  // Clear previous content
+  content.innerHTML = "";
+  popup.classList.remove('hidden');
+
+  const ext = mediaPath.split('.').pop().toLowerCase();
+  let el;
+
+  if (ext === 'svg') {
+    el = document.createElement('object');
+    el.type = 'image/svg+xml';
+    el.data = mediaPath;
+    el.onload = () => {
+      const svg = el.contentDocument?.documentElement;
+      if (svg) {
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      }
+    };
+  } else if (['mp4', 'webm', 'ogg'].includes(ext)) {
+    el = document.createElement('video');
+    el.src = mediaPath;
+    el.autoplay = true;
+    el.controls = true;
+    el.style.width = "100%";
+    el.style.height = "100%";
+
+    // ✅ Auto-dismiss when video ends
+    el.addEventListener('ended', dismissMediaPopup);
+  } else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+    el = document.createElement('img');
+    el.src = mediaPath;
+    el.style.maxWidth = "100%";
+    el.style.maxHeight = "100%";
+  } else {
+    console.warn(`[MEDIA] ⚠️ Unsupported media type: ${ext}`);
+    return;
+  }
+
+  content.appendChild(el);
+
+  // Auto-dismiss after timeout if not already dismissed
+  const timeoutId = setTimeout(() => {
+    dismissMediaPopup();
+  }, duration);
+
+  // ESC key support
+  const onKeydown = (e) => {
+    if (e.key === 'Escape') {
+      dismissMediaPopup();
+    }
+  };
+
+  // Dismiss logic
+  function dismissMediaPopup() {
+    popup.classList.add('hidden');
+    content.innerHTML = "";
+    isMediaPopupActive = false;
+
+    if (!window.isPlaying && window.animationPaused) {
+      window.isPlaying = true;
+      window.animationPaused = false;
+      window.startAnimation?.();
+
+      if (window.wsEnabled && window.socket) {
+        const msg = JSON.stringify({
+          type: "play",
+          playheadX: window.playheadX,
+          elapsedTime: window.elapsedTime,
+        });
+        window.socket.send(msg);
+      }
+    }
+
+    window.removeEventListener('keydown', onKeydown);
+    clearTimeout(timeoutId);
+
+    // Continue with next queued cue
+    if (mediaCueQueue.length > 0) {
+      playNextMediaCue();
+    }
+  }
+
+  // Click-to-dismiss
+  popup.addEventListener('click', (e) => {
+    if (e.target === popup) {
+      dismissMediaPopup();
+    }
+  }, { once: true });
+
+  window.addEventListener('keydown', onKeydown);
+}
 
 
 

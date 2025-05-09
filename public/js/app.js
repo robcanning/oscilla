@@ -24,6 +24,7 @@ import {
   dismissPauseCountdown,
   pauseDismissClickHandler,
   handleAudioCue,
+  handleMediaCue,
   handleOscCue,
   parseTraverseCueId,
   startTraverseAnimation,
@@ -131,14 +132,6 @@ loadWaveSurfer(() => {
 
 
 
-
-
-
-
-
-
-
-
 document.addEventListener('DOMContentLoaded', () => {
   setLogLevel(LogLevel.WARN);
   let pendingRepeatStateMap = null; // stores repeat state from server before cues[] are ready
@@ -195,6 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+///////////////////////////////////////////////////////////////
+
   const adjustscoreContainerHeight = () => {
     const controls = document.getElementById('controls');
     // const scoreContainer = document.getElementById('scoreContainer');
@@ -204,10 +199,10 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log(`scoreContainer height adjusted to: ${window.scoreContainer.style.height}`);
   };
 
+///////////////////////////////////////////////////////////////
 
 
-
-  /**
+  /** ///////////////////////////////////////////////////////////////
   * Toggles the visibility of all score annotations using the "note-" namespace.
   * Queries only the SVG elements and switches between "block" and "none" display states.
   * Controlled via the 📝 button in the GUI.
@@ -240,8 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-  // Handle Rehearsal Marks Popup
+  ///////////////////////////////////////////////////////////////
+  // Handle Rehearsal Marks Navigation Popup
   rehearsalMarksButton.addEventListener('click', () => {
     console.log("[DEBUG] Rehearsal Marks button clicked.");
     const popup = document.getElementById("rehearsal-popup");
@@ -256,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-
+ ///////////////////////////////////////////////////////////////
 
   //
   // // Function to adjust layout dynamically
@@ -4813,103 +4808,6 @@ function assignCues(svgRoot) {
     pauseStartTime = Date.now();
   };
 
-  // --
-
-  const handleAnimationCue = (cueId, animationFilePath, duration = 5000) => {
-    console.log(`[DEBUG] Handling animation cue '${cueId}' with file '${animationFilePath}'.`);
-
-    // Get the animation popup element
-    const popup = document.getElementById('animation-popup');
-    if (!popup) {
-      console.error('[ERROR] Animation popup element not found!');
-      return;
-    }
-
-    // Get the animation content element
-    const animationContent = document.getElementById('animation-content');
-    if (!animationContent) {
-      console.error('[ERROR] Animation content element not found!');
-      return;
-    }
-
-    // Pause playback
-    if (window.isPlaying) {
-       window.isPlaying = false; // Stop the score animation
-      animationPaused = true; // Set animation paused flag
-      stopAnimation(); // Call the function to halt playback
-      console.log('[DEBUG] Playback paused for animation popup.');
-    }
-
-    // Show the popup immediately
-    popup.classList.remove('hidden');
-    console.log('[DEBUG] Animation popup displayed.');
-
-    // Set the animation file and reset content
-    animationContent.removeAttribute('data'); // Clear any previous animation
-    animationContent.setAttribute('data', animationFilePath); // Load new animation
-    console.log(`[DEBUG] Loaded animation file: ${animationFilePath}`);
-
-    // Ensure the animation is loaded before proceeding
-    animationContent.addEventListener('load', () => {
-      console.log('[DEBUG] Animation content fully loaded.');
-
-      // Access the SVG content and apply scaling
-      const svgDocument = animationContent.contentDocument;
-      if (svgDocument) {
-        const svgElement = svgDocument.documentElement;
-        if (svgElement) {
-          svgElement.setAttribute('width', '100%');
-          svgElement.setAttribute('height', '100%');
-          svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-          console.log('[DEBUG] SVG scaling attributes applied.');
-
-          // Attach click handler to the SVG content
-          svgElement.addEventListener('click', () => {
-            console.log('[DEBUG] SVG content clicked inside animation popup.');
-          });
-        } else {
-          console.error('[ERROR] Could not access the root SVG element.');
-        }
-      } else {
-        console.error('[ERROR] Could not access SVG content from animation.');
-      }
-    });
-
-    // Add click listener for dismissing the popup
-    popup.addEventListener('click', (event) => {
-      if (event.target === popup) {
-        popup.classList.add('hidden'); // Hide the popup
-        console.log('[DEBUG] Animation popup dismissed.');
-
-        // Resume playback when the popup is dismissed
-        if (!window.isPlaying && animationPaused) {
-           window.isPlaying = true; // Resume the score animation
-          animationPaused = false; // Clear animation paused flag
-          startAnimation(); // Restart playback
-          console.log('[DEBUG] Playback resumed after popup dismissal.');
-        }
-      }
-    });
-
-    // Automatically hide the popup after the specified duration
-    setTimeout(() => {
-      popup.classList.add('hidden'); // Hide the popup
-      console.log(`[DEBUG] Animation popup hidden after ${duration}ms.`);
-
-      // Resume playback if the popup is hidden automatically
-      if (!window.isPlaying && animationPaused) {
-         window.isPlaying = true; // Resume the score animation
-        animationPaused = false; // Clear animation paused flag
-        startAnimation(); // Restart playback
-        console.log('[DEBUG] Playback resumed after automatic popup dismissal.');
-      }
-    }, duration);
-  };
-
-  window.handleAnimationCue = handleAnimationCue;
-
-
-  // --
 
   /////////// animateObjToPath ////////////////////////////////////////////////
 
