@@ -1,0 +1,11 @@
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <name>Insert Cue ID Stub</name>
+  <id>oscillascore.cueidstub</id>
+  <param name="id_stub" type="string" _gui-text="Cue ID Stub">
+    cue_audio(file(name.wav)_loop(1)_amp(1.0))
+  </param>
+  <script type="python">cue_id_stub.py</script>
+  <effect>
+    <object-type>all</object-type>
+  </effect>
+</inkscape-extension>

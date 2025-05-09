@@ -112,8 +112,11 @@ export function handlePauseCue(cueId, duration, showCountdownOverride = null, re
   if (window.isSeeking) return;
   window.ignoreSyncDuringPause = true;
   if (window.isPlaying) {
-    window.togglePlay?.();
-  } else {
+    window.isPlaying = false;
+    window.stopAnimation?.();
+    window.togglePlayButton?.(); // if needed for UI
+  }
+  else {
     window.isPlaying = false;
     window.stopAnimation?.();
   }

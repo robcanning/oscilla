@@ -10,6 +10,8 @@ window.checkCueTriggers = checkCueTriggers;
 window.parseCueParams = parseCueParams;
 window.resetTriggeredCues = resetTriggeredCues;
 
+window.triggeredCues = new Set();
+
 window.playheadX = 0;
 window.estimatedPlayheadX = 0;
 window.speedMultiplier = 1;
@@ -7268,153 +7270,153 @@ function handleOscCue(cueId, cueParams = {}) {
 
 
 
-  /**
-  * handleCueTrigger(cueId) → Main dispatcher for all cue types.
-  *
-  * Called when the playhead overlaps a cue element. Parses the cue type from the ID,
-  * extracts parameters (e.g., duration, speed, choice), and invokes the appropriate
-  * cue handler from the cueHandlers map.
-  *
-  * Handles both synchronous and asynchronous cue types. For example, cueRepeat_*
-  * uses async control flow (with await and pauses) to manage jump and playback timing.
-  *
-  * Special handling includes:
-  * - cueRepeat_*: Prevents retriggering if the repeat is already active (via repeatStateMap)
-  * - cueSpeed, cuePause, cueChoice: Parses duration/speed/choice from ID segments
-  *
-  * After handling, the cueId is added to triggeredCues to prevent retriggering.
-  * Also emits a cueTriggered message over WebSocket if wsEnabled.
-  */
-  const handleCueTrigger = (cueId, isRemote = false) => {
-    console.log(`[DEBUG] Attempting to trigger cue: ${cueId}`);
+  // /**
+  // * handleCueTrigger(cueId) → Main dispatcher for all cue types.
+  // *
+  // * Called when the playhead overlaps a cue element. Parses the cue type from the ID,
+  // * extracts parameters (e.g., duration, speed, choice), and invokes the appropriate
+  // * cue handler from the cueHandlers map.
+  // *
+  // * Handles both synchronous and asynchronous cue types. For example, cueRepeat_*
+  // * uses async control flow (with await and pauses) to manage jump and playback timing.
+  // *
+  // * Special handling includes:
+  // * - cueRepeat_*: Prevents retriggering if the repeat is already active (via repeatStateMap)
+  // * - cueSpeed, cuePause, cueChoice: Parses duration/speed/choice from ID segments
+  // *
+  // * After handling, the cueId is added to triggeredCues to prevent retriggering.
+  // * Also emits a cueTriggered message over WebSocket if wsEnabled.
+  // */
+  // const handleCueTrigger = (cueId, isRemote = false) => {
+  //   console.log(`[DEBUG] Attempting to trigger cue: ${cueId}`);
   
-    if (triggeredCues.has(cueId)) {
-      console.log(`[DEBUG] Skipping already-triggered cue: ${cueId}`);
-      return;
-    }
+  //   if (triggeredCues.has(cueId)) {
+  //     console.log(`[DEBUG] Skipping already-triggered cue: ${cueId}`);
+  //     return;
+  //   }
   
-    // ✅ Parse cueId using param(value) format
-    const { type, cueParams } = parseCueParams(cueId);
+  //   // ✅ Parse cueId using param(value) format
+  //   const { type, cueParams } = parseCueParams(cueId);
   
-    console.log(`[parseCueParams] Final cue type: ${type}`);
-    console.log(`[parseCueParams] Final cueParams:`, cueParams);
+  //   console.log(`[parseCueParams] Final cue type: ${type}`);
+  //   console.log(`[parseCueParams] Final cueParams:`, cueParams);
   
-    // ❗ Validate cue type exists
-    if (!cueHandlers.hasOwnProperty(type)) {
-      console.warn(`[CLIENT] No handler found for cue type: ${type}`);
-      return;
-    }
+  //   // ❗ Validate cue type exists
+  //   if (!cueHandlers.hasOwnProperty(type)) {
+  //     console.warn(`[CLIENT] No handler found for cue type: ${type}`);
+  //     return;
+  //   }
   
-    // 🔁 Switch-case dispatch based on cue type
-    switch (type) {
-      case "cueSpeed": {
-        const speed = cueParams.speed ?? cueParams.Speed ?? cueParams.choice;
-        if (!speed || isNaN(speed)) {
-          console.warn(`[CLIENT] ❌ Invalid or missing speed in cueSpeed: ${cueId}`);
-          return;
-        }
-        cueHandlers[type](cueId, Number(speed));
-        break;
-      }
+  //   // 🔁 Switch-case dispatch based on cue type
+  //   switch (type) {
+  //     case "cueSpeed": {
+  //       const speed = cueParams.speed ?? cueParams.Speed ?? cueParams.choice;
+  //       if (!speed || isNaN(speed)) {
+  //         console.warn(`[CLIENT] ❌ Invalid or missing speed in cueSpeed: ${cueId}`);
+  //         return;
+  //       }
+  //       cueHandlers[type](cueId, Number(speed));
+  //       break;
+  //     }
   
-      case "cuePause": {
-        const durationSec = cueParams.duration ?? cueParams.dur ?? cueParams.choice;
-        const durationMs = Number(durationSec) * 1000;
-        if (!durationMs || isNaN(durationMs)) {
-          console.error(`[CLIENT] Invalid duration for cuePause: ${cueId}`);
-          return;
-        }
-        cueHandlers[type](cueId, durationMs);
-        break;
-      }
+  //     case "cuePause": {
+  //       const durationSec = cueParams.duration ?? cueParams.dur ?? cueParams.choice;
+  //       const durationMs = Number(durationSec) * 1000;
+  //       if (!durationMs || isNaN(durationMs)) {
+  //         console.error(`[CLIENT] Invalid duration for cuePause: ${cueId}`);
+  //         return;
+  //       }
+  //       cueHandlers[type](cueId, durationMs);
+  //       break;
+  //     }
   
-      case "cueStop": {
-        cueHandlers[type](cueId);
-        break;
-      }
+  //     case "cueStop": {
+  //       cueHandlers[type](cueId);
+  //       break;
+  //     }
   
-      case "cueRepeat": {
-        if (repeatStateMap[cueId]?.active) {
-          console.log(`[repeat] ⚠️ Repeat ${cueId} already active — skipping re-trigger`);
-          return;
-        }
-        cueHandlers[type](cueId, cueParams);
-        break;
-      }
+  //     case "cueRepeat": {
+  //       if (repeatStateMap[cueId]?.active) {
+  //         console.log(`[repeat] ⚠️ Repeat ${cueId} already active — skipping re-trigger`);
+  //         return;
+  //       }
+  //       cueHandlers[type](cueId, cueParams);
+  //       break;
+  //     }
   
-      case "cueTraverse":
-      case "c-t": {
-        cueHandlers[type](cueId, cueParams);
-        break;
-      }
+  //     case "cueTraverse":
+  //     case "c-t": {
+  //       cueHandlers[type](cueId, cueParams);
+  //       break;
+  //     }
   
-      case "cueChoice": {
-        if (cueParams.choice && cueParams.dur) {
-          cueHandlers[type](cueId, cueParams);
-        } else {
-          console.error(`[CLIENT] Invalid cueChoice: missing 'choice' or 'dur' param`);
-        }
-        break;
-      }
+  //     case "cueChoice": {
+  //       if (cueParams.choice && cueParams.dur) {
+  //         cueHandlers[type](cueId, cueParams);
+  //       } else {
+  //         console.error(`[CLIENT] Invalid cueChoice: missing 'choice' or 'dur' param`);
+  //       }
+  //       break;
+  //     }
   
-      case "cueAudio": {
-        if (!cueParams || (!cueParams.choice && !cueParams.file)) {
-          console.error(`[CLIENT] cueAudio missing 'choice' or 'file' param: ${cueId}`);
-          return;
-        }
-        cueHandlers[type](cueId, cueParams);
-        break;
-      }
+  //     case "cueAudio": {
+  //       if (!cueParams || (!cueParams.choice && !cueParams.file)) {
+  //         console.error(`[CLIENT] cueAudio missing 'choice' or 'file' param: ${cueId}`);
+  //         return;
+  //       }
+  //       cueHandlers[type](cueId, cueParams);
+  //       break;
+  //     }
   
-      case "cueAnimation":
-      case "cueAnimejs": {
-        const animDuration = Number(cueParams.dur);
-        const animationPath = `animations/${cueParams.choice}.svg`;
-        if (!animDuration || isNaN(animDuration)) {
-          console.error(`[CLIENT] Invalid duration for ${type}: ${cueId}`);
-          return;
-        }
-        cueHandlers[type](cueId, animationPath, animDuration);
-        break;
-      }
+  //     case "cueAnimation":
+  //     case "cueAnimejs": {
+  //       const animDuration = Number(cueParams.dur);
+  //       const animationPath = `animations/${cueParams.choice}.svg`;
+  //       if (!animDuration || isNaN(animDuration)) {
+  //         console.error(`[CLIENT] Invalid duration for ${type}: ${cueId}`);
+  //         return;
+  //       }
+  //       cueHandlers[type](cueId, animationPath, animDuration);
+  //       break;
+  //     }
   
-      case "cueP5":
-      case "cueVideo": {
-        cueHandlers[type](cueId, cueParams);
-        break;
-      }
+  //     case "cueP5":
+  //     case "cueVideo": {
+  //       cueHandlers[type](cueId, cueParams);
+  //       break;
+  //     }
   
-      case "cueOscTrigger":
-      case "cueOscValue":
-      case "cueOscSet":
-      case "cueOscRandom":
-      case "cueOscBurst":
-      case "cueOscPulse": {
-        cueHandlers[type](cueId, cueParams);
-        break;
-      }
+  //     case "cueOscTrigger":
+  //     case "cueOscValue":
+  //     case "cueOscSet":
+  //     case "cueOscRandom":
+  //     case "cueOscBurst":
+  //     case "cueOscPulse": {
+  //       cueHandlers[type](cueId, cueParams);
+  //       break;
+  //     }
   
-      default: {
-        console.warn(`[CLIENT] No cue handler matched for: ${type}`);
-        return;
-      }
-    }
+  //     default: {
+  //       console.warn(`[CLIENT] No cue handler matched for: ${type}`);
+  //       return;
+  //     }
+  //   }
   
-    // ✅ Only mark + broadcast if successfully handled
-    if (!triggeredCues.has(cueId)) {
-      triggeredCues.add(cueId);
-      if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN && !isRemote) {
-        window.socket.send(JSON.stringify({ type: 'cueTriggered', cueId }));
-        console.log(`[CLIENT] Sent cue trigger to server: ${cueId}`);
-      }
-    } else {
-      if (isRemote) {
-        console.log(`[DEBUG] Cue '${cueId}' already triggered locally, but handled from server.`);
-      } else {
-        console.log(`[DEBUG] Cue '${cueId}' already triggered locally. No re-broadcast.`);
-      }
-    }
-  };
+  //   // ✅ Only mark + broadcast if successfully handled
+  //   if (!triggeredCues.has(cueId)) {
+  //     triggeredCues.add(cueId);
+  //     if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN && !isRemote) {
+  //       window.socket.send(JSON.stringify({ type: 'cueTriggered', cueId }));
+  //       console.log(`[CLIENT] Sent cue trigger to server: ${cueId}`);
+  //     }
+  //   } else {
+  //     if (isRemote) {
+  //       console.log(`[DEBUG] Cue '${cueId}' already triggered locally, but handled from server.`);
+  //     } else {
+  //       console.log(`[DEBUG] Cue '${cueId}' already triggered locally. No re-broadcast.`);
+  //     }
+  //   }
+  // };
   
 
 
