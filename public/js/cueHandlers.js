@@ -1398,137 +1398,131 @@ export function handleAnimationCue(cueId, file, duration) {
   }, duration);
 }
 
+
+
+
+/**
+ * handleMediaCue(cueId, cueParams)
+ *
+ * Displays a timed media popup for one or more files (SVG, image, or video).
+ * Supports optional shuffling, looping, or randomized selection.
+ * Automatically pauses score playback and resumes after timeout or manual dismissal.
+ *
+ * Supported cue parameters:
+ *   - choice: comma-separated media filenames (e.g. image1.jpg,image2.mp4)
+ *   - dur: total display time (in seconds)
+ *   - interval: per-item duration (in seconds); if omitted, uses dur / N
+ *   - shuffle: show all items once in random order
+ *   - random: pick random item repeatedly for full duration
+ *   - loop: cycle through items repeatedly until duration ends
+ *
+ * Example cue ID:
+ *   cueMedia(image1.svg,image2.jpg)_dur(10)_shuffle(1)_interval(3)
+ *
+ * DOM requirements:
+ *   - #media-popup (container for overlay)
+ *   - #media-content (content region inside popup)
+ *
+ * © 2025 Rob Canning | GPLv3
+ */
+
 // 📼 Media cue queue
 const mediaCueQueue = [];
 let isMediaPopupActive = false;
 
-/**
- * handleMediaCue(cueId, mediaPath, duration)
- *
- * Displays SVG, video, or image in a centered popup.
- * Supports Esc-key and click dismissal, auto-close on video end, and playback resume.
- */
-export function handleMediaCue(cueId, mediaPath, duration = 5000) {
-  mediaCueQueue.push({ cueId, mediaPath, duration });
-  if (!isMediaPopupActive) {
-    playNextMediaCue();
-  }
-}
+export function handleMediaCue(cueId, cueParams) {
+  const rawFiles = cueParams.choice || cueParams.file;
+  const totalDuration = parseFloat(cueParams.dur || 10) * 1000;
+  const interval = parseFloat(cueParams.interval || 0);
+  const shuffle = cueParams.shuffle == 1;
+  const random = cueParams.random == 1;
+  const loop = cueParams.loop == 1;
 
-// Internal playback logic
-function playNextMediaCue() {
-  if (mediaCueQueue.length === 0) return;
-
-  const { cueId, mediaPath, duration } = mediaCueQueue.shift();
-  isMediaPopupActive = true;
+  if (!rawFiles) return console.warn("[cueMedia] No file(s) provided in cue:", cueId);
+  const files = rawFiles.split(',').map(f => f.trim()).filter(Boolean);
+  if (files.length === 0) return console.warn("[cueMedia] Empty media list:", cueId);
 
   const popup = document.getElementById('media-popup');
   const content = document.getElementById('media-content');
-  if (!popup || !content) {
-    console.error('[ERROR] Missing #media-popup or #media-content element.');
-    return;
-  }
+  if (!popup || !content) return console.error('[cueMedia] Required DOM elements missing.');
 
-  console.log(`[MEDIA] ▶️ Showing media cue: ${cueId} (${mediaPath})`);
-
-  // Pause score playback
   if (window.isPlaying) {
     window.isPlaying = false;
     window.animationPaused = true;
     window.stopAnimation?.();
   }
 
-  // Clear previous content
-  content.innerHTML = "";
   popup.classList.remove('hidden');
+  content.innerHTML = '';
 
-  const ext = mediaPath.split('.').pop().toLowerCase();
-  let el;
+  const pickRandom = () => files[Math.floor(Math.random() * files.length)];
+  const shuffled = shuffle ? [...files].sort(() => Math.random() - 0.5) : files;
+  const displayTime = interval > 0 ? interval * 1000 : Math.floor(totalDuration / files.length);
+  const queue = random ? null : loop ? [...shuffled] : shuffled.slice();
 
-  if (ext === 'svg') {
-    el = document.createElement('object');
-    el.type = 'image/svg+xml';
-    el.data = mediaPath;
-    el.onload = () => {
-      const svg = el.contentDocument?.documentElement;
-      if (svg) {
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', '100%');
-        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  let elapsed = 0;
+
+  function playNext() {
+    if (elapsed >= totalDuration) return dismiss();
+
+    let file = random ? pickRandom() : queue.shift();
+    if (!file) {
+      if (loop) {
+        queue.push(...shuffled);
+        file = queue.shift();
+      } else {
+        return dismiss();
       }
-    };
-  } else if (['mp4', 'webm', 'ogg'].includes(ext)) {
-    el = document.createElement('video');
-    el.src = mediaPath;
-    el.autoplay = true;
-    el.controls = true;
-    el.style.width = "100%";
-    el.style.height = "100%";
+    }
 
-    // ✅ Auto-dismiss when video ends
-    el.addEventListener('ended', dismissMediaPopup);
-  } else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
-    el = document.createElement('img');
-    el.src = mediaPath;
-    el.style.maxWidth = "100%";
-    el.style.maxHeight = "100%";
-  } else {
-    console.warn(`[MEDIA] ⚠️ Unsupported media type: ${ext}`);
-    return;
+    renderMedia(file);
+    elapsed += displayTime;
+    setTimeout(playNext, displayTime);
   }
 
-  content.appendChild(el);
+  function renderMedia(file) {
+    const ext = file.split('.').pop().toLowerCase();
+    content.innerHTML = '';
+    let el;
 
-  // Auto-dismiss after timeout if not already dismissed
-  const timeoutId = setTimeout(() => {
-    dismissMediaPopup();
-  }, duration);
-
-  // ESC key support
-  const onKeydown = (e) => {
-    if (e.key === 'Escape') {
-      dismissMediaPopup();
+    if (ext === 'svg') {
+      el = document.createElement('object');
+      el.type = 'image/svg+xml';
+      el.data = `media/${file}`;
+    } else if (['mp4', 'webm', 'ogg'].includes(ext)) {
+      el = document.createElement('video');
+      el.src = `media/${file}`;
+      el.controls = true;
+      el.autoplay = true;
+      el.style.width = '100%';
+      el.onended = () => setTimeout(playNext, 500);
+    } else {
+      el = document.createElement('img');
+      el.src = `media/${file}`;
+      el.style.maxWidth = '100%';
     }
-  };
 
-  // Dismiss logic
-  function dismissMediaPopup() {
+    content.appendChild(el);
+  }
+
+  function dismiss() {
     popup.classList.add('hidden');
-    content.innerHTML = "";
-    isMediaPopupActive = false;
-
+    content.innerHTML = '';
     if (!window.isPlaying && window.animationPaused) {
       window.isPlaying = true;
       window.animationPaused = false;
       window.startAnimation?.();
-
-      if (window.wsEnabled && window.socket) {
-        const msg = JSON.stringify({
-          type: "play",
-          playheadX: window.playheadX,
-          elapsedTime: window.elapsedTime,
-        });
-        window.socket.send(msg);
-      }
-    }
-
-    window.removeEventListener('keydown', onKeydown);
-    clearTimeout(timeoutId);
-
-    // Continue with next queued cue
-    if (mediaCueQueue.length > 0) {
-      playNextMediaCue();
     }
   }
 
-  // Click-to-dismiss
-  popup.addEventListener('click', (e) => {
-    if (e.target === popup) {
-      dismissMediaPopup();
-    }
+  popup.onclick = (e) => {
+    if (e.target === popup) dismiss();
+  };
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') dismiss();
   }, { once: true });
 
-  window.addEventListener('keydown', onKeydown);
+  playNext();
 }
 
 
