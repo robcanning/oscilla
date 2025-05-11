@@ -20,6 +20,10 @@ import {
   resetTriggeredCues,
   preloadSpeedCues,
   getSpeedForPosition,
+  initializeSpeedControls,
+  updateSpeedDisplay,
+  setSpeed,
+  adjustSpeed,
   handlePauseCue,
   dismissPauseCountdown,
   pauseDismissClickHandler,
@@ -43,7 +47,10 @@ import {
 // 🚀 DOM Ready Initializers
 // ===========================
 
+
+
 window.addEventListener("DOMContentLoaded", () => {
+  initializeSpeedControls();
   pauseDismissClickHandler(); // Enables click/spacebar dismiss for pause UI
   pauseDismissHandler();      // Also binds countdown UI behavior
 });
@@ -575,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   incomingServerUpdate = true;  // ✅ Prevent redundant updates
                   window.speedMultiplier = roundedMultiplier;
                   console.log(`[CLIENT] ✅ Speed multiplier updated from server: ${speedMultiplier}`);
-                  updateSpeedDisplay();
+                  window.updateSpeedDisplay();
                   setTimeout(() => { incomingServerUpdate = false; }, 100);  // ✅ Short delay to reset flag
                 } else {
                   console.log(`[CLIENT] ⚠️ Speed multiplier already set to ${speedMultiplier}. No update needed.`);
@@ -2391,7 +2398,6 @@ function assignCues(svgRoot) {
       window.scoreContainer.appendChild(svgElement);
 
       initializeSVG(svgElement);
-
       storePathVariants(svgElement);
       return;
     }
@@ -2408,6 +2414,7 @@ function assignCues(svgRoot) {
         window.scoreContainer.appendChild(svgElement);
 
         initializeSVG(svgElement);
+
         storePathVariants(svgElement);
       })
       .catch(err => {
@@ -2481,6 +2488,8 @@ function assignCues(svgRoot) {
 
     console.log("calling assignCues...");
     assignCues(scoreSVG);    
+
+    preloadSpeedCues();
 
 
 
@@ -2646,7 +2655,6 @@ function assignCues(svgRoot) {
       window.scoreContainer.scrollLeft =window.playheadX;
       console.log(`[DEBUG] Initial scrollLeft set to: ${window.scoreContainer.scrollLeft}`);
 
-      preloadSpeedCues();
 
       requestAnimationFrame(() => {
         window.ensureWindowPlayheadX(); // 💡 ensure valid center before any jumping logic
@@ -2923,185 +2931,185 @@ function assignCues(svgRoot) {
 
   });
 
-  /////// START OF SPEED LOGIC ///////////////////////////////////////////////////
+  // /////// START OF SPEED LOGIC ///////////////////////////////////////////////////
 
-  window.speedMultiplier = 1.0;
-
-  /**
-  * Handles speed cue changes by setting and synchronizing the speed multiplier.
-  * Ensures speed changes are only applied when valid and different from the current value.
-  * Updates the UI and sends the new speed multiplier to the server if changed manually.
-  */
-
-  const handleSpeedCue = (cueId, newMultiplier) => {
-    /**
-    * ✅ Processes `cueSpeed` messages from clients.
-    * - Extracts and validates the speed multiplier before applying.
-    * - Prevents redundant updates by checking the current speed.
-    * - Sends a WebSocket message only if speed changes.
-    */
-    console.log(`[DEBUG] 🎯 Triggering Speed Cue: ${cueId}`);
-
-    // ✅ Ensure multiplier is a valid positive number
-    newMultiplier = parseFloat(newMultiplier.toFixed(1));
-    if (isNaN(newMultiplier) || newMultiplier <= 0) {
-      console.warn(`[WARNING] ❌ Invalid speed multiplier detected: ${cueId}`);
-      return;
-    }
-
-    // ✅ Prevent redundant updates
-    if (speedMultiplier === newMultiplier) {
-      console.log(`[DEBUG] ⚠️ Speed is already set to ${speedMultiplier}. No update needed.`);
-      return;
-    }
-
-    window.speedMultiplier = newMultiplier;
-    console.log(`[DEBUG] ✅ Speed multiplier set to ${speedMultiplier}`);
-    updateSpeedDisplay();
-
-    // ✅ Send update to WebSocket only if it was not from a sync message
-    if (wsEnabled && socket && socket.readyState === WebSocket.OPEN && !incomingServerUpdate) {
-      const speedMessage = {
-        type: "set_speed_multiplier",
-        multiplier: window.speedMultiplier,
-        timestamp: Date.now(),
-      };
-
-      window.socket.send(JSON.stringify(speedMessage));
-      console.log(`[DEBUG] 📡 Sent speed update to server:`, speedMessage);
-    }
-  };
-
+  // window.speedMultiplier = 1.0;
 
   // /**
-  // * Determines the correct speed multiplier when seeking to a new position.
-  // * Finds the most recent speed cue before the playhead and applies its value.
-  // * Resets to the default speed (1.0) if no previous speed cue is found.
+  // * Handles speed cue changes by setting and synchronizing the speed multiplier.
+  // * Ensures speed changes are only applied when valid and different from the current value.
+  // * Updates the UI and sends the new speed multiplier to the server if changed manually.
   // */
 
-  // const getSpeedForPosition = (xPosition) => {
+  // const handleSpeedCue = (cueId, newMultiplier) => {
+  //   /**
+  //   * ✅ Processes `cueSpeed` messages from clients.
+  //   * - Extracts and validates the speed multiplier before applying.
+  //   * - Prevents redundant updates by checking the current speed.
+  //   * - Sends a WebSocket message only if speed changes.
+  //   */
+  //   console.log(`[DEBUG] 🎯 Triggering Speed Cue: ${cueId}`);
 
-  //   const viewportOffset = window.scoreContainer.offsetWidth / 2; // ✅ Center offset
-  //   const adjustedPlayheadX = xPosition + viewportOffset; // ✅ Align with visual playhead
-
-  //   console.log(`[DEBUG] Looking for speed at adjusted position: ${adjustedPlayheadX} (window.playheadX: ${xPosition})`);
-  //   //console.log("[DEBUG] Current speedCueMap:", speedCueMap);
-
-  //   if (speedCueMap.length === 0) {
-  //     console.warn("[WARNING] No speed cues exist. Defaulting to 1.0x speed.");
-  //     return 1.0;
+  //   // ✅ Ensure multiplier is a valid positive number
+  //   newMultiplier = parseFloat(newMultiplier.toFixed(1));
+  //   if (isNaN(newMultiplier) || newMultiplier <= 0) {
+  //     console.warn(`[WARNING] ❌ Invalid speed multiplier detected: ${cueId}`);
+  //     return;
   //   }
 
-  //   let lastSpeedCue = speedCueMap
-  //     .filter(cue => cue.position <= adjustedPlayheadX)
-  //     .slice(-1)[0];
+  //   // ✅ Prevent redundant updates
+  //   if (speedMultiplier === newMultiplier) {
+  //     console.log(`[DEBUG] ⚠️ Speed is already set to ${speedMultiplier}. No update needed.`);
+  //     return;
+  //   }
 
-  //   if (lastSpeedCue) {
-  //     console.log(`[DEBUG] ✅ Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
+  //   window.speedMultiplier = newMultiplier;
+  //   console.log(`[DEBUG] ✅ Speed multiplier set to ${speedMultiplier}`);
+  //   window.updateSpeedDisplay();
 
-  //     window.speedMultiplier = lastSpeedCue.multiplier; // ✅ Ensure it is stored globally
-  //     updateSpeedDisplay();
+  //   // ✅ Send update to WebSocket only if it was not from a sync message
+  //   if (wsEnabled && socket && socket.readyState === WebSocket.OPEN && !incomingServerUpdate) {
+  //     const speedMessage = {
+  //       type: "set_speed_multiplier",
+  //       multiplier: window.speedMultiplier,
+  //       timestamp: Date.now(),
+  //     };
 
-  //     return window.speedMultiplier;
-  //   } else {
-  //     console.log("[DEBUG] ❗ No previous speed cue found, defaulting to 1.0");
-  //     return 1.0;
+  //     window.socket.send(JSON.stringify(speedMessage));
+  //     console.log(`[DEBUG] 📡 Sent speed update to server:`, speedMessage);
   //   }
   // };
 
 
+  // // /**
+  // // * Determines the correct speed multiplier when seeking to a new position.
+  // // * Finds the most recent speed cue before the playhead and applies its value.
+  // // * Resets to the default speed (1.0) if no previous speed cue is found.
+  // // */
+
+  // // const getSpeedForPosition = (xPosition) => {
+
+  // //   const viewportOffset = window.scoreContainer.offsetWidth / 2; // ✅ Center offset
+  // //   const adjustedPlayheadX = xPosition + viewportOffset; // ✅ Align with visual playhead
+
+  // //   console.log(`[DEBUG] Looking for speed at adjusted position: ${adjustedPlayheadX} (window.playheadX: ${xPosition})`);
+  // //   //console.log("[DEBUG] Current speedCueMap:", speedCueMap);
+
+  // //   if (speedCueMap.length === 0) {
+  // //     console.warn("[WARNING] No speed cues exist. Defaulting to 1.0x speed.");
+  // //     return 1.0;
+  // //   }
+
+  // //   let lastSpeedCue = speedCueMap
+  // //     .filter(cue => cue.position <= adjustedPlayheadX)
+  // //     .slice(-1)[0];
+
+  // //   if (lastSpeedCue) {
+  // //     console.log(`[DEBUG] ✅ Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
+
+  // //     window.speedMultiplier = lastSpeedCue.multiplier; // ✅ Ensure it is stored globally
+  // //     window.updateSpeedDisplay();
+
+  // //     return window.speedMultiplier;
+  // //   } else {
+  // //     console.log("[DEBUG] ❗ No previous speed cue found, defaulting to 1.0");
+  // //     return 1.0;
+  // //   }
+  // // };
+
+
+
+
+  // // /**
+  // // * Preloads all speed cues from the score and stores them in a sorted list.
+  // // * Extracts speed values and their positions to enable accurate speed restoration.
+  // // * Ensures correct speed lookup when seeking by sorting cues by position.
+  // // */
+
+  // // const preloadSpeedCues = () => {
+  // //   speedCueMap = []; // Reset stored cues
+
+  // //   // ✅ Find all speed cues in the score
+  // //   document.querySelectorAll('[id^="speed_"]').forEach(element => {
+  // //     const cueId = element.id;
+  // //     const match = cueId.match(/speed_(\d+(\.\d+)?)/); // Support floats
+
+  // //     if (match) {
+  // //       const speedValue = parseFloat(match[1]);
+  // //       const cuePosition = getCuePosition(element); // Function to determine X position
+
+  // //       speedCueMap.push({ position: cuePosition, multiplier: speedValue });
+  // //     }
+  // //   });
+
+  // //   // ✅ Sort cues by position to ensure correct lookup when seeking
+  // //   speedCueMap.sort((a, b) => a.position - b.position);
+
+  // //   console.log("[DEBUG] Preloaded speed cues:", speedCueMap);
+  // // };
+
 
 
   // /**
-  // * Preloads all speed cues from the score and stores them in a sorted list.
-  // * Extracts speed values and their positions to enable accurate speed restoration.
-  // * Ensures correct speed lookup when seeking by sorting cues by position.
+  // * Handles speed multiplier adjustments via keyboard shortcuts and UI buttons.
+  // * Updates the display and syncs changes with the server if WebSocket is enabled.
   // */
 
-  // const preloadSpeedCues = () => {
-  //   speedCueMap = []; // Reset stored cues
+  // document.addEventListener('keydown', (event) => {
+  //   switch (event.key) {
+  //     case '+':
+  //       window.speedMultiplier = Math.min(speedMultiplier + 0.1, 3);
+  //       console.log(`[DEBUG] Speed multiplier increased to ${speedMultiplier}`);
 
-  //   // ✅ Find all speed cues in the score
-  //   document.querySelectorAll('[id^="speed_"]').forEach(element => {
-  //     const cueId = element.id;
-  //     const match = cueId.match(/speed_(\d+(\.\d+)?)/); // Support floats
+  //       if (wsEnabled && socket) {
+  //         window.socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: window.speedMultiplier }));
+  //         console.log(`[CLIENT] Sent speed multiplier change to server: ${speedMultiplier}`);
+  //       }
+  //       break;
 
-  //     if (match) {
-  //       const speedValue = parseFloat(match[1]);
-  //       const cuePosition = getCuePosition(element); // Function to determine X position
+  //     case '-':
+  //       window.speedMultiplier = Math.max(speedMultiplier - 0.1, 0.1);
+  //       console.log(`[DEBUG] Speed multiplier decreased to ${speedMultiplier}`);
 
-  //       speedCueMap.push({ position: cuePosition, multiplier: speedValue });
-  //     }
-  //   });
+  //       if (wsEnabled && socket) {
+  //         window.socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: window.speedMultiplier }));
+  //         console.log(`[CLIENT] Sent speed multiplier change to server: ${speedMultiplier}`);
+  //       }
+  //       break;
 
-  //   // ✅ Sort cues by position to ensure correct lookup when seeking
-  //   speedCueMap.sort((a, b) => a.position - b.position);
+  //     default:
+  //       break;
+  //   }
+  // });
 
-  //   console.log("[DEBUG] Preloaded speed cues:", speedCueMap);
-  // };
+  // document.getElementById("increaseSpeed").addEventListener("click", () => {
+  //   window.speedMultiplier = Math.min(speedMultiplier + 0.1, 3.0); // Limit to 3x speed
+  //   window.updateSpeedDisplay();
+  // });
 
+  // document.getElementById("decreaseSpeed").addEventListener("click", () => {
+  //   window.speedMultiplier = Math.max(speedMultiplier - 0.1, 0.5); // Limit to 0.5x speed
+  //   window.updateSpeedDisplay();
+  // });
 
+  // document.getElementById("resetSpeed").addEventListener("click", () => {
+  //   window.speedMultiplier = 1.0;
+  //   window.updateSpeedDisplay();
+  // });
 
-  /**
-  * Handles speed multiplier adjustments via keyboard shortcuts and UI buttons.
-  * Updates the display and syncs changes with the server if WebSocket is enabled.
-  */
+  // function window.updateSpeedDisplay() {
+  //   document.getElementById("speedDisplay").textContent = `${speedMultiplier.toFixed(1)}×`;
+  //   sendSpeedUpdateToServer(speedMultiplier);
 
-  document.addEventListener('keydown', (event) => {
-    switch (event.key) {
-      case '+':
-        window.speedMultiplier = Math.min(speedMultiplier + 0.1, 3);
-        console.log(`[DEBUG] Speed multiplier increased to ${speedMultiplier}`);
+  // }
 
-        if (wsEnabled && socket) {
-          window.socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: window.speedMultiplier }));
-          console.log(`[CLIENT] Sent speed multiplier change to server: ${speedMultiplier}`);
-        }
-        break;
-
-      case '-':
-        window.speedMultiplier = Math.max(speedMultiplier - 0.1, 0.1);
-        console.log(`[DEBUG] Speed multiplier decreased to ${speedMultiplier}`);
-
-        if (wsEnabled && socket) {
-          window.socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: window.speedMultiplier }));
-          console.log(`[CLIENT] Sent speed multiplier change to server: ${speedMultiplier}`);
-        }
-        break;
-
-      default:
-        break;
-    }
-  });
-
-  document.getElementById("increaseSpeed").addEventListener("click", () => {
-    window.speedMultiplier = Math.min(speedMultiplier + 0.1, 3.0); // Limit to 3x speed
-    updateSpeedDisplay();
-  });
-
-  document.getElementById("decreaseSpeed").addEventListener("click", () => {
-    window.speedMultiplier = Math.max(speedMultiplier - 0.1, 0.5); // Limit to 0.5x speed
-    updateSpeedDisplay();
-  });
-
-  document.getElementById("resetSpeed").addEventListener("click", () => {
-    window.speedMultiplier = 1.0;
-    updateSpeedDisplay();
-  });
-
-  function updateSpeedDisplay() {
-    document.getElementById("speedDisplay").textContent = `${speedMultiplier.toFixed(1)}×`;
-    sendSpeedUpdateToServer(speedMultiplier);
-
-  }
-
-  function sendSpeedUpdateToServer(speed) {
-    if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
-      console.warn("[WARNING] WebSocket not available. Skipping speed update.");
-      return;
-    }
-    window.socket?.send(JSON.stringify({ type: "speedUpdate", speed }));
-  }
+  // function sendSpeedUpdateToServer(speed) {
+  //   if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
+  //     console.warn("[WARNING] WebSocket not available. Skipping speed update.");
+  //     return;
+  //   }
+  //   window.socket?.send(JSON.stringify({ type: "speedUpdate", speed }));
+  // }
 
   /////// END OF SPEED LOGIC /////////////////////////////////////////////////////
 
@@ -3636,7 +3644,7 @@ function assignCues(svgRoot) {
     // // ✅ Apply and store correct speed based on the new playhead position
     window.speedMultiplier = getSpeedForPosition(window.playheadX);
     console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
-    updateSpeedDisplay();
+    window.updateSpeedDisplay();
 
     updatePosition();
     updateSeekBar();
@@ -3670,7 +3678,7 @@ function assignCues(svgRoot) {
     // ✅ Apply and store correct speed based on the new playhead position
     window.speedMultiplier = getSpeedForPosition(window.playheadX);
     // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
-    updateSpeedDisplay();
+    window.updateSpeedDisplay();
 
     updatePosition();
     updateSeekBar();
@@ -3707,7 +3715,7 @@ function assignCues(svgRoot) {
     // ✅ Apply and store correct speed based on the new playhead position
     window.speedMultiplier = getSpeedForPosition(window.playheadX);
     console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
-    updateSpeedDisplay();
+    window.updateSpeedDisplay();
 
 
     updatePosition();
@@ -4390,7 +4398,7 @@ function assignCues(svgRoot) {
     // ✅ Apply correct speed before playing
     window.speedMultiplier = getSpeedForPosition(window.playheadX);
     console.log(`[DEBUG] Applying speed: ${speedMultiplier}`);
-    updateSpeedDisplay();
+    window.updateSpeedDisplay();
 
     // ✅ Ensurewindow.playheadX is included in WebSocket message
     if (wsEnabled && socket && socket.readyState === WebSocket.OPEN) {

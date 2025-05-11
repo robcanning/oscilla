@@ -801,29 +801,104 @@ export function getSpeedForPosition(xPosition) {
  * Used to enable accurate speed restoration during seek or jump.
  */
 export function preloadSpeedCues() {
-  window.speedCueMap = []; // Initialize or clear the list
+  window.speedCueMap = [];
 
-  const speedElements = document.querySelectorAll('[id^="speed_"]');
-
-  speedElements.forEach(element => {
-    const cueId = element.id;
-    const match = cueId.match(/speed_(\\d+(\\.\\d+)?)/); // Supports floats like speed_1.25
-
+  const elements = document.querySelectorAll('[id^="cueSpeed("]');
+  elements.forEach(el => {
+    const match = el.id.match(/cueSpeed\((\d+(\.\d+)?)\)/);
     if (match) {
-      const speedValue = parseFloat(match[1]);
-      const cuePosition = window.getCuePosition?.(element); // Requires global helper
-
-      if (!isNaN(speedValue) && typeof cuePosition === "number") {
-        window.speedCueMap.push({ position: cuePosition, multiplier: speedValue });
+      const speed = parseFloat(match[1]);
+      const bbox = el.getBBox();
+      const pos = bbox.x + bbox.width / 2;
+      if (!isNaN(speed)) {
+        window.speedCueMap.push({ position: pos, multiplier: speed });
       }
     }
   });
 
-  // Sort speed cues by X position
   window.speedCueMap.sort((a, b) => a.position - b.position);
-
   console.log("[DEBUG] Preloaded speed cues:", window.speedCueMap);
 }
+
+
+
+/**
+ * cueSpeedControls.js — Keyboard & UI Speed Multiplier Control
+ * Handles +/- keyboard keys and optional buttons for adjusting playback speed.
+ * Syncs changes with server via WebSocket and updates on-screen display.
+ */
+
+export function initializeSpeedControls() {
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "+" || event.key === "=") {
+      adjustSpeed(0.1);
+    } else if (event.key === "-") {
+      adjustSpeed(-0.1);
+    }
+  });
+
+  const incBtn = document.getElementById("increaseSpeed");
+  const decBtn = document.getElementById("decreaseSpeed");
+  const resetBtn = document.getElementById("resetSpeed");
+
+  if (incBtn) incBtn.addEventListener("click", () => adjustSpeed(0.1));
+  if (decBtn) decBtn.addEventListener("click", () => adjustSpeed(-0.1));
+  if (resetBtn) resetBtn.addEventListener("click", () => setSpeed(1.0));
+}
+
+/**
+ * Adjusts the global speed multiplier and updates the display.
+ * @param {number} delta - Amount to increase/decrease (e.g. 0.1 or -0.1)
+ */
+export function adjustSpeed(delta) {
+  const newSpeed = Math.max(0.5, Math.min(3.0, (window.speedMultiplier || 1) + delta));
+  setSpeed(newSpeed);
+}
+
+/**
+ * Sets the speed multiplier and syncs it.
+ * @param {number} newSpeed - The new speed multiplier
+ */
+export function setSpeed(newSpeed) {
+  window.speedMultiplier = parseFloat(newSpeed.toFixed(1));
+  updateSpeedDisplay();
+  sendSpeedUpdateToServer(window.speedMultiplier);
+}
+
+/**
+ * Updates the on-screen speed display.
+ */
+export function updateSpeedDisplay() {
+  const display = document.getElementById("speedDisplay");
+  if (display) display.textContent = `${window.speedMultiplier.toFixed(1)}×`;
+}
+
+/**
+ * Sends the speed to the server via WebSocket.
+ * Uses `set_speed_multiplier` to match server expectations.
+ */
+export function sendSpeedUpdateToServer(speed) {
+  if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
+    console.warn("[speedControl] WebSocket not ready — skipping update.");
+    return;
+  }
+
+  const message = {
+    type: "set_speed_multiplier",
+    multiplier: speed,
+    timestamp: Date.now(),
+  };
+
+  window.socket.send(JSON.stringify(message));
+  console.log("[speedControl] Sent speed update:", message);
+}
+
+
+window.updateSpeedDisplay = updateSpeedDisplay;
+window.setSpeed = setSpeed;
+window.adjustSpeed = adjustSpeed;
+
+
 
 
 
@@ -1841,16 +1916,6 @@ export async function checkCueTriggers() {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
 
 
 export function parseCueParams(cueId) {
