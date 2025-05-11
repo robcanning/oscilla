@@ -41,7 +41,23 @@ import {
   executeRepeatJump,
   repeatStateMap,
   handleRestoredRepeatState
-} from './cueHandlers.js';
+} from './cues.js';
+
+import {
+  startRotate,
+  startRotation,
+  startScale,
+  initializeObjectPathPairs,
+  parseO2PCompact,
+  animateObjToPath,
+  extractTagValue,
+  getEasingFromId,
+  applyPivotFromId,
+  setTransformOriginToCenter,
+  parseCompactAnimationValues,
+  checkAnimationVisibility,
+  initializeObserver
+} from './anim.js';
 
 // ===========================
 // 🚀 DOM Ready Initializers
@@ -52,7 +68,6 @@ import {
 window.addEventListener("DOMContentLoaded", () => {
   initializeSpeedControls();
   pauseDismissClickHandler(); // Enables click/spacebar dismiss for pause UI
-  pauseDismissHandler();      // Also binds countdown UI behavior
 });
 
 // ===========================
@@ -172,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // const durationInput = document.getElementById('duration-input');
   const svgFileInput = document.getElementById('svg-file');
   let svgElement = null; // Declare globally
-  let scoreSVG = null; // ✅ Store global reference to SVG
+  window.scoreSVG = null; // ✅ Store global reference to SVG
   const keybindingsPopup = document.getElementById('keybindings-popup');
   const scoreOptionsPopup = document.getElementById("score-options-popup");
   const closeKeybindingsButton = document.getElementById('close-keybindings');
@@ -180,8 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const SEEK_INCREMENT = 0.001; // Represents 1% of the total duration
   let animationPaused = false; // Global lock for animation state
   let maxScrollDistance = 40000; // todo GET THE VALUE FROM WIDTH
-  // let elapsedTime = 0;
-  // let isPlaying = false;
   let playbackSpeed = 1.0;
   window.lastAnimationFrameTime = null;
   let wsEnabled = true; // WebSocket state
@@ -218,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleScoreNotes = () => {
     console.log("[DEBUG] Toggling visibility of score notes.");
 
-    const scoreSVG = document.querySelector("svg"); // Get the SVG container
+    window.scoreSVG = document.querySelector("svg"); // Get the SVG container
     if (!scoreSVG) {
       console.error("[ERROR] SVG score not found.");
       return;
@@ -1089,909 +1102,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // END OF SPLASH SCREEEN TOGGLE ////////////////////////////////////////////////////
 
-
-  /**
-  * Initializes and animates object-path pairs within an SVG element.
-  * Supports float values for speed and dynamically extracts path IDs.
-  * Calls `animateObjToPath` for each detected object-path pair.
-  * Returns an array of active animations for external control if needed.
-  */
-
-
-  /**
-   * parseO2PCompact(id)
-   * --------------------
-   * Parses compact o2p(...) namespace IDs and extracts animation parameters.
-   * Supports direction, speed, osc, easing, and cue-trigger flags.
-   *
-   * Example:
-   *   o2p(path-5)_dir(1)_speed(2.5)_osc(1)_ease(3)_t(1)
-   *
-   * @param {string} id - The element's ID or data-id attribute.
-   * @returns {Object|null} Parsed config:
-   *   {
-   *     pathId: string,
-   *     direction: number,
-   *     speed: number,
-   *     osc: boolean,
-   *     ease: string|number|null,
-   *     trigger: boolean
-   *   }
-   */
-
-  window.parseO2PCompact = function (id) {
-    console.log(`[DEBUG] parseO2PCompact CALLED for id: ${id}`);
-
-    const match = id.match(/o2p\(([^)]+)\)/);
-    if (!match) {
-      console.warn(`[WARN] No o2p() match in id: ${id}`);
-      return null;
-    }
-
-    const pathId = match[1];
-    const direction = parseInt((id.match(/_dir\((\d)\)/) || [])[1] || "0", 10);
-    const speed = parseFloat((id.match(/_speed\(([^)]+)\)/) || [])[1] || "1");
-    const osc = parseInt((id.match(/_osc\((\d)\)/) || [])[1] || "0", 10) === 1;
-    const trigger = /_t\(1\)/.test(id);
-
-    let ease = null;
-    const easeMatch = id.match(/_ease\(([^)]+)\)/);
-    if (easeMatch) {
-      const val = easeMatch[1];
-      ease = isNaN(val) ? val : parseInt(val, 10);
-    }
-
-    const parsed = {
-      pathId,
-      direction,
-      speed,
-      osc,
-      ease,
-      trigger
-    };
-
-    console.log(`[DEBUG] parseO2PCompact → id: ${id}`, parsed);
-    return parsed;
-  };
-
-
-  /**
-   * initializeObjectPathPairs(svgElement, speed)
-   * -------------------------------------------------------
-   * Finds and animates SVG elements using legacy or compact
-   * namespace formats for motion along SVG paths.
-   *
-   * ✅ Legacy support:
-   *   - `obj2path-<pathId>_...`
-   *   - `o2p-<pathId>_...`
-   *
-   * ✅ Compact support:
-   *   - `o2p(<pathId>)_dir(<mode>)_speed(<val>)_osc(<0|1>)`
-   *
-   * ✅ Deferred trigger:
-   *   - Any ID or data-id containing `_t(1)` will not animate
-   *     immediately, but register as a cue for `cueTraverse`.
-   */
-  const initializeObjectPathPairs = (svgElement, speed = 10.0) => {
-    const objects = Array.from(svgElement.querySelectorAll(
-      '[id^="obj2path-"], [id^="o2p-"], [id^="o2p("],' +
-      '[data-id^="obj2path-"], [data-id^="o2p-"], [data-id^="o2p("]'
-    ));
-    if (objects.length === 0) return;
-
-    const animations = [];
-
-    objects.forEach((object) => {
-      const rawId = object.id;
-      const id = object.getAttribute('data-id') || rawId;
-
-      console.log(`[SCAN] Checking ${id}`); // 🔍 add this
-
-      if (id.startsWith("o2p(")) {
-        console.log(`[MATCH] ID starts with o2p: ${id}`); // 🔍 add this
-
-        const config = window.parseO2PCompact(id);
-        if (!config) {
-          console.warn(`[o2p] ⚠️ Could not parse compact ID: ${id}`);
-          return;
-        }
-
-        const path = svgElement.getElementById(config.pathId);
-        if (!path) {
-          console.warn(`[o2p] ⚠️ No path found with ID: ${config.pathId}`);
-          return;
-        }
-
-        const easing = typeof config.ease === "string"
-          ? config.ease
-          : {
-            0: 'linear', 1: 'easeInSine', 2: 'easeOutSine', 3: 'easeInOutSine',
-            4: 'easeInBack', 5: 'easeOutBack', 6: 'easeInOutBack',
-            7: 'easeInElastic', 8: 'easeOutElastic', 9: 'easeInOutElastic'
-          }[config.ease] || 'easeInOutSine';
-
-        const playAnimation = () => {
-          animateObjToPath(object, path, config.speed, [], true, easing, config.osc);
-        };
-
-        if (id.includes('_t(1)')) {
-          if (!window.pendingPathAnimations) window.pendingPathAnimations = new Map();
-          pendingPathAnimations.set(object.id, playAnimation);
-          console.log(`[o2p] ⏸️ Deferred animation registered for ${object.id}`);
-        } else {
-          playAnimation();
-        }
-
-        return; // skip legacy logic
-      }
-
-
-      // 🧱 Legacy obj2path/o2p- fallback
-      const pathId = rawId
-        .replace(/_(speed|spd|s)_\d+(\.\d+)?/, '')
-        .replace(/_(direction|dir|d)_\d+/, '')
-        .replace(/_(ease|easing|e)_\d+/, '')
-        .replace(/^obj2path-/, 'path-')
-        .replace(/^o2p-/, 'path-');
-
-      const path = svgElement.getElementById(pathId);
-      if (!path) return;
-
-      const playAnimation = () => {
-        animateObjToPath(object, path, parseFloat(speed), animations);
-      };
-
-      if (id.includes('_t(1)')) {
-        if (!window.pendingPathAnimations) window.pendingPathAnimations = new Map();
-        pendingPathAnimations.set(object.id, playAnimation);
-        console.log(`[obj2path] 🔁 Deferred path animation registered for ${object.id}`);
-      } else {
-        playAnimation(); // Immediate start
-      }
-    });
-
-    return animations;
-  };
-
-
-
-
-  ///////////////////////
-
-  /**
-   * Initializes all rotating SVG objects (legacy and new syntax).
-   * Supports immediate start or triggerable mode via `_t(1)` in ID.
-   * Uses: startRotation (legacy), startRotate (modern)
-   */
-  const initializeRotatingObjects = (svgElement) => {
-    const rotatingObjects = Array.from(svgElement.querySelectorAll(
-      '[id^="obj_rotate_"], [id^="r_"], [id*="deg["], ' +
-      '[data-id^="obj_rotate_"], [data-id^="r_"], [data-id*="deg["]'
-    ));
-
-
-    if (rotatingObjects.length === 0) {
-      console.log('[DEBUG] No rotating objects found.');
-      return;
-    }
-
-    console.log(`[DEBUG] Found ${rotatingObjects.length} rotating objects.`);
-
-    rotatingObjects.forEach((object) => {
-      const rawId = object.id;
-      const dataId = object.getAttribute('data-id');
-      const id = dataId || rawId;  // Use data-id if present, otherwise fallback to regular id
-
-      if (id.includes('_t(1)')) {
-        if (!window.pendingRotationAnimations) window.pendingRotationAnimations = new Map();
-        pendingRotationAnimations.set(id, () => {
-          if (id.includes('deg[') || id.includes('alt(') || id.includes('rpm(')) {
-            startRotate(object); // Modern rotation
-          } else {
-            startRotation(object); // Legacy rotation
-          }
-        });
-        console.log(`[DEBUG] Deferred rotation stored for ${id}`);
-        return;
-      }
-
-      if (id.includes('deg[') || id.includes('alt(') || id.includes('rpm(')) {
-        startRotate(object); // Modern rotation system
-      } else {
-        startRotation(object); // Legacy fallback
-      }
-    });
-  };
-
-  /**
-   * Initializes all scaling SVG objects (s_, scale, s[...]).
-   * Supports deferred triggering via `_t(1)` in ID.
-   */
-  const initializeScalingObjects = (svgElement) => {
-    // console.log('[DEBUG][scale] Initializing scaling objects.');
-
-    const scalingObjects = Array.from(svgElement.querySelectorAll(
-      '[id^="scale"], [id^="s_"], [id^="sXY_"], [id^="sX_"], [id^="sY_"],' +
-      '[id*="s["], [id*="sXY["], [id*="sX["], [id*="sY["],' +
-      '[data-id*="s["], [data-id*="sXY["], [data-id*="sX["], [data-id*="sY["],' +
-      '[data-id^="s_seq"], [data-id^="sXY_seq"]'
-    ));
-
-    if (scalingObjects.length === 0) {
-      //  console.log('[DEBUG][scale] No scaling objects found.');
-      return;
-    }
-
-    //  console.log(`[DEBUG][scale] Found ${scalingObjects.length} scaling objects.`);
-
-    scalingObjects.forEach((object) => {
-      const rawId = object.id;
-      const dataId = object.getAttribute('data-id');
-      const id = dataId || rawId;
-      //  console.log(`[scale:init] Found scale object: ${object.id}, data-id: ${object.getAttribute("data-id")}`);
-
-      // Always call startScale — it decides whether to play or defer
-      startScale(object);
-    });
-  };
-
-
-
-  // ✅ extractTagValue: returns numeric or string match from underscore/parenthesis syntax
-  function extractTagValue(id, tag, fallback = null) {
-    const parenMatch = id.match(new RegExp(`${tag}\\(([^)]+)\\)`));
-    const underscoreMatch = id.match(new RegExp(`${tag}_(\\d+(\\.\\d+)?)`));
-
-    if (parenMatch) return isNaN(Number(parenMatch[1])) ? parenMatch[1] : parseFloat(parenMatch[1]);
-    if (underscoreMatch) return isNaN(Number(underscoreMatch[1])) ? underscoreMatch[1] : parseFloat(underscoreMatch[1]);
-
-    return fallback;
-  }
-
-
-  // ✅ setTransformOriginToCenter: sets transform-origin to visual center of any SVG element
-  function setTransformOriginToCenter(element) {
-    const bbox = element.getBBox();
-    const cx = bbox.x + bbox.width / 2;
-    const cy = bbox.y + bbox.height / 2;
-    element.style.transformOrigin = `${cx}px ${cy}px`;
-  }
-
-  // ✅ getEasingFromId: supports ease_3, ease(3), and ease[1,3,5]
-  function getEasingFromId(id) {
-    const easeMap = {
-      '0': 'linear', '1': 'easeInSine', '2': 'easeOutSine', '3': 'easeInOutSine',
-      '4': 'easeInBack', '5': 'easeOutBack', '6': 'easeInOutBack',
-      '7': 'easeInElastic', '8': 'easeOutElastic', '9': 'easeInOutElastic'
-    };
-
-    const easeListMatch = id.match(/ease\[(.*?)\]/);
-    const easeParenMatch = id.match(/ease\((\d+)\)/);
-    const easeUnderscoreMatch = id.match(/_ease_(\d+)/);
-
-    if (easeListMatch) {
-      const options = easeListMatch[1].split(',').map(v => easeMap[v.trim()]).filter(Boolean);
-      if (options.length) return () => options[Math.floor(Math.random() * options.length)];
-    }
-    const code = easeParenMatch?.[1] || easeUnderscoreMatch?.[1];
-    return easeMap[code] || 'linear';
-  }
-
-
-  /**
-  * Parses compact animation value sequences from an ID string, supporting both
-  * fixed values and randomized value generation in bracketed namespace format.
-  *
-  * Supports syntax like:
-  *   - s[1,2,3]
-  *   - s[rnd6x0-40] or s[r6x0-40]   ← generates 6 random values between 0 and 40
-  *
-  * Options:
-  *   - 'rnd' or 'r' prefix: defines a random sequence
-  *   - 'x' after count: regenerate sequence on every animation loop (e.g. rnd6x...)
-  *   - underscore or dash between min and max are supported: e.g. rnd4x10_30
-  *
-  * @param {string} id - The object's ID attribute.
-  * @param {string} prefix - The namespace prefix to look for (e.g. 's', 'r', etc.).
-  * @returns {object|null} An object with `values`, `regenerate`, and `generate` function, or null if parsing failed.
-  */
-  /**
-   * Parses compact animation values from IDs like s[...], sXY[...], deg[...], etc.
-   * Supports:
-   *   - rnd(6x0-360x) → random range with regenerate
-   *   - 5x1-2x        → shorthand mini-random
-   *   - static values like [1,2,3]
-   *   - Logs failures at each stage
-   */
-  function parseCompactAnimationValues(id, prefix = 's') {
-    // console.log(`[parseCompact] 🧪 Testing parseCompactAnimationValues(${prefix}):`, id);
-
-    // Normalize prefix search
-    id = id.replace(/^r_/, '').replace(/^obj_rotate_/, '');
-
-    const pattern = new RegExp(`${prefix}\\[(.*?)\\]`);
-    const match = id.match(pattern);
-    if (!match) {
-      // console.log(`[parseCompact] ❌ No match found for prefix ${prefix} in: ${id}`);
-      return null;
-    }
-
-    let raw = match[1].trim();
-    // console.log(`[parseCompact] ✅ Matched ${prefix}[...] → raw: ${raw}`);
-
-    // --- rnd(...) wrapper
-    if (raw.startsWith('rnd(') && raw.endsWith(')')) {
-      const inner = raw.slice(4, -1);
-
-      const miniMatch = inner.match(/^(\d+)x(\d+(?:\.\d+)?)[-_](\d+(?:\.\d+)?)(x?)$/);
-      if (miniMatch) {
-        const count = parseInt(miniMatch[1]);
-        const min = parseFloat(miniMatch[2]);
-        const max = parseFloat(miniMatch[3]);
-        const regen = miniMatch[4] === 'x';
-        const generate = () => Array.from({ length: count }, () => min + Math.random() * (max - min));
-        return { values: generate(), regenerate: regen, generate };
-      }
-
-      // fallback: list syntax rnd(1,2,3)
-      const values = inner.split(',').map(Number).filter(n => !isNaN(n));
-      const generate = () => values.sort(() => Math.random() - 0.5);
-      return { values: generate(), regenerate: true, generate };
-    }
-
-    // --- legacy mini-random: 5x1-3x
-    const miniMatch = raw.match(/^(\d+)x(\d+(?:\.\d+)?)[-_](\d+(?:\.\d+)?)(x?)$/);
-    if (miniMatch) {
-      const count = parseInt(miniMatch[1]);
-      const min = parseFloat(miniMatch[2]);
-      const max = parseFloat(miniMatch[3]);
-      const regen = miniMatch[4] === 'x';
-      const generate = () => Array.from({ length: count }, () => min + Math.random() * (max - min));
-      return { values: generate(), regenerate: regen, generate };
-    }
-
-    // --- XY pair fallback: [[a,b], [c,d]]
-    if (prefix === 'sXY' && raw.includes('],')) {
-      try {
-        const tupleVals = JSON.parse(`[${raw}]`);
-        if (Array.isArray(tupleVals) && Array.isArray(tupleVals[0])) {
-          return { values: tupleVals, regenerate: false };
-        }
-      } catch (e) {
-        // console.warn(`[parseCompact] ⚠️ Failed to parse XY pair array in ${raw}`);
-      }
-    }
-
-    // --- fallback: static comma-separated values
-    const values = raw.split(',').map(v => {
-      const parsed = Number(v);
-      return isNaN(parsed) ? v : parsed;
-    }).filter(v => typeof v === 'number' || Array.isArray(v));
-
-    if (values.length) {
-      // console.log(`[parseCompact] 📦 Static parsed values:`, values);
-      return { values, regenerate: false };
-    }
-
-    // console.warn(`[parseCompact] ❌ Failed to extract values from raw: ${raw}`);
-    return null;
-  }
-
-
-
-
-
-
-  // ✅ Helper: Resolves pivot_x/y(...) and pivot(x,y) with % or px
-
-  function applyPivotFromId(object, id) {
-    const bbox = object.getBBox();
-    const pivotMatch = id.match(/pivot\(([^,]+),([^)]+)\)/);
-    const pxRaw = extractTagValue(id, 'pivot_x', null);
-    const pyRaw = extractTagValue(id, 'pivot_y', null);
-
-    let px = pivotMatch ? pivotMatch[1].trim() : pxRaw;
-    let py = pivotMatch ? pivotMatch[2].trim() : pyRaw;
-
-    const resolvePivotValue = (val, ref) => {
-      if (typeof val === 'string' && val.endsWith('%')) {
-        return bbox.x + (parseFloat(val) / 100) * ref;
-      }
-      return parseFloat(val);
-    };
-
-    if (px !== null && py !== null) {
-      const pivotX = resolvePivotValue(px, bbox.width);
-      const pivotY = resolvePivotValue(py, bbox.height);
-      object.style.transformOrigin = `${pivotX}px ${pivotY}px`;
-    } else {
-      setTransformOriginToCenter(object);
-    }
-  }
-
-
-
-
-  /**
-   * Rotates an SVG object using parameters encoded in its ID.
-   *
-   * Supports:
-   * - alt(...) pingpong rotation
-   * - deg[...] step-based rotation
-   * - rpm(...) continuous rotation
-   * - pivot(...) or pivot_x/y
-   * - easing: ease(...) or ease[...] or ease[rnd(...)]
-   * - deferred start via _t(1)
-   *
-   * Registered in window.runningAnimations for observer control.
-   */
-  function startRotate(object) {
-    if (!object || !object.id) return;
-    const rawId = object.id;
-    const dataId = object.getAttribute('data-id');
-    const id = dataId || rawId;  // Use data-id if present, otherwise fallback to regular id
-
-    // 🛑 Triggerable mode: store and wait for cue
-    if (id.includes('_t(1)')) {
-      if (!window.pendingRotationAnimations) window.pendingRotationAnimations = new Map();
-      pendingRotationAnimations.set(id, () => startRotate(object));
-      console.log(`[rotatest] ⏸ Deferred rotation for ${id}`);
-      return;
-    }
-
-    console.log(`[rotatest] Dispatching startRotate for ${id}`);
-    const easing = getEasingFromId(id);
-
-    // 1. ALT (pingpong) mode
-    const altMatch = id.match(/alt\(([^)]+)\)/);
-    if (altMatch) {
-      const altAngle = parseFloat(altMatch[1]);
-      const dir = extractTagValue(id, 'dir', 1);
-      const speed = extractTagValue(id, 'speed', 1.0);
-      applyPivotFromId(object, id);
-
-      console.log(`[rotatest] ALT mode → angle=${altAngle}, dir=${dir}, speed=${speed}, easing=${easing}`);
-
-      const anim = anime({
-        targets: object,
-        keyframes: [
-          { rotate: `${dir >= 0 ? altAngle : -altAngle}deg` },
-          { rotate: `${dir >= 0 ? -altAngle : altAngle}deg` }
-        ],
-        duration: speed * 1000,
-        easing: typeof easing === 'function' ? easing() : easing,
-        direction: 'alternate',
-        loop: true,
-        autoplay: true
-      });
-
-      window.runningAnimations[object.id] = {
-        play: () => anim.play?.(),
-        pause: () => anim.pause?.(),
-        resume: () => anim.play?.(),
-        wasPaused: false
-      };
-      return;
-    }
-
-    // 2. Step rotation via deg[]
-    const degParsed = parseCompactAnimationValues(id, 'deg');
-
-    // 3. Continuous rotation fallback
-    if (!degParsed) {
-      const rpm = extractTagValue(id, 'rpm', 1.0);
-      const direction = extractTagValue(id, 'dir', 1);
-      applyPivotFromId(object, id);
-
-      const duration = (60 / rpm) * 1000;
-      console.log(`[rotatest] CONTINUOUS mode → rpm=${rpm}, dir=${direction}, duration=${duration}ms, easing=${easing}`);
-
-      const anim = anime({
-        targets: object,
-        rotate: direction >= 0 ? '+=360' : '-=360',
-        duration: duration,
-        easing: typeof easing === 'function' ? easing() : easing,
-        loop: true,
-        autoplay: true
-      });
-
-      window.runningAnimations[object.id] = {
-        play: () => anim.play?.(),
-        pause: () => anim.pause?.(),
-        resume: () => anim.play?.(),
-        wasPaused: false
-      };
-      return;
-    }
-
-    // 🔁 deg[...] timeline
-    if (degParsed.values.length < 2) return;
-    let angleValues = degParsed.values;
-
-    const durParsed = parseCompactAnimationValues(id, 'dur');
-    let pauseDurations = durParsed?.durations || [];
-    const hasRegenerate = durParsed?.regenerate;
-    if (hasRegenerate) object.__regenerateDurations = durParsed.generate;
-
-    const seqDur = extractTagValue(id, 'seqdur', null);
-    const rotationSpeed = extractTagValue(id, 'speed', null);
-
-    let baseDur;
-    if (seqDur) {
-      baseDur = (seqDur * 1000) / (angleValues.length - 1);
-      console.log(`[rotatest] Using seqdur: ${seqDur}s → step duration: ${baseDur}ms`);
-    } else {
-      baseDur = (rotationSpeed || 0.5) * 1000;
-      console.log(`[rotatest] Using speed: ${rotationSpeed || 0.5}s → step duration: ${baseDur}ms`);
-    }
-
-    applyPivotFromId(object, id);
-
-    const buildTimeline = (initialAngle = null) => {
-      let angles = angleValues;
-
-      if (initialAngle !== null && typeof degParsed.generate === 'function') {
-        angles = [initialAngle, ...degParsed.generate()];
-        angleValues = angles;
-      }
-
-      const timeline = anime.timeline({
-        targets: object,
-        loop: false,
-        autoplay: true
-      });
-
-      for (let i = 0; i < angles.length; i++) {
-        const angle = angles[i];
-        const currentEasing = typeof easing === 'function' ? easing() : easing;
-        timeline.add({
-          rotate: `${angle}deg`,
-          duration: baseDur,
-          easing: currentEasing
-        });
-
-        if (i < angles.length - 1) {
-          const pauseSec = pauseDurations[i % pauseDurations.length] || 1.0;
-          timeline.add({ duration: pauseSec * 1000 });
-        }
-      }
-
-      timeline.finished.then(() => {
-        if (hasRegenerate && object.__regenerateDurations) {
-          pauseDurations = object.__regenerateDurations();
-        }
-        const currentTransform = object.style.transform || '';
-        const match = currentTransform.match(/rotate\(([-\d.]+)deg\)/);
-        const lastAngle = match ? parseFloat(match[1]) : angles[angles.length - 1];
-        buildTimeline(lastAngle);
-      });
-    };
-
-    buildTimeline();
-  }
-
-
-
-
-
-  /**
-   * startRotation(object)
-   * Starts a continuous or alternate (pingpong) rotation animation on an object using Anime.js.
-   * Supports RPM, custom pivot points, easing, direction, and alternate oscillation.
-   * Compatible with nested group logic and unique DOM IDs.
-   * Now supports `_t(1)` to defer animation until triggered externally.
-   */
-  const startRotation = (object) => {
-
-    console.warn("[rotate] Using legacy startRotation(). Prefer startRotate() with compact syntax.");
-
-    if (!object || !object.id) return;
-    const rawId = object.id;
-    const dataId = object.getAttribute('data-id');
-    const id = dataId || rawId;  // Use data-id if present, otherwise fallback to regular id
-
-    // 🕹 Check for triggerable mode
-    if (id.includes('_t(1)')) {
-      if (!window.pendingRotationAnimations) {
-        window.pendingRotationAnimations = new Map();
-      }
-      console.log(`[rotate] ⏸ Deferred rotation for ${id}`);
-      pendingRotationAnimations.set(id, () => startRotation(object));
-      return;
-    }
-
-    // 🔍 Parse ID parameters
-    const rpmMatch = id.match(/_rpm_([\d.]+)/);
-    const rpm = rpmMatch ? parseFloat(rpmMatch[1]) : 1.0;
-
-    const directionMatch = id.match(/_dir_(-?\d+)/);
-    const direction = directionMatch ? parseInt(directionMatch[1], 10) : 1;
-
-    const pivotXMatch = id.match(/_pivot_x_(-?\d+(\.\d+)?)/);
-    const pivotYMatch = id.match(/_pivot_y_(-?\d+(\.\d+)?)/);
-    const pivotX = pivotXMatch ? parseFloat(pivotXMatch[1]) : null;
-    const pivotY = pivotYMatch ? parseFloat(pivotYMatch[1]) : null;
-
-    const easingMatch = id.match(/_ease_([a-zA-Z0-9_]+)/);
-    const easing = easingMatch ? easingMatch[1].replace(/_/g, '-') : 'linear';
-
-    const alternateMatch = id.match(/_alternate_deg_([\d.]+)/);
-
-    // 🎯 Determine transform origin
-    if (pivotX !== null && pivotY !== null) {
-      object.style.transformOrigin = `${pivotX}px ${pivotY}px`;
-    } else {
-      const bbox = object.getBBox();
-      const centerX = bbox.x + bbox.width / 2;
-      const centerY = bbox.y + bbox.height / 2;
-      object.style.transformOrigin = `${centerX}px ${centerY}px`;
-    }
-
-    const duration = (60 / rpm) * 1000;
-
-    let animeInstance;
-
-    // ↔️ Alternate (pingpong) rotation
-    if (alternateMatch) {
-      const deg = parseFloat(alternateMatch[1]);
-      const start = direction === 0 ? deg : -deg;
-      const end = -start;
-
-      animeInstance = anime({
-        targets: object,
-        keyframes: [
-          { rotate: start },
-          { rotate: end }
-        ],
-        duration: duration,
-        easing: easing,
-        direction: 'alternate',
-        loop: true,
-        autoplay: false // Deferred start
-      });
-    } else {
-      // 🔁 Standard continuous rotation
-      animeInstance = anime({
-        targets: object,
-        rotate: direction === 1 ? '+=360' : '-=360',
-        duration: duration,
-        easing: easing,
-        loop: true,
-        autoplay: false // Deferred start
-      });
-    }
-
-    animeInstance.play();
-
-    // 📦 Register in global runningAnimations map for pause/resume
-    window.runningAnimations[object.id] = {
-      play: () => animeInstance.play(),
-      pause: () => animeInstance.pause(),
-      resume: () => animeInstance.play(),
-      wasPaused: false
-    };
-
-    // console.log(`[DEBUG] Started rotation for ${id}`);
-  };
-
-
-
-  const stopRotation = (object) => {
-    //console.log(`[DEBUG] Stopping rotation for object: ${object.id}`);
-    anime.remove(object); // Stop the Anime.js animation
-  };
-
-
-
-
-
-  /**
-   * startScale(object)
-   *
-   * Initializes and animates SVG object scaling based on its `id` or `data-id`.
-   * Supports:
-   * - Uniform scale (`s[...]`)
-   * - Non-uniform scale (`sXY[...]`, `sX[...]`, `sY[...]`)
-   * - Randomized or regenerating sequences
-   * - Legacy format `s_seq_...`
-   * - Triggerable animations (`_t(1)`)
-   * - Optional duration weights via `dur_...`
-   * - Pivot/origin control: `_pivot_x_`, `_pivot_y_`
-   * - Optional easing, looping, alternation, etc.
-   *
-   * Registers into `window.runningAnimations` and `window.pendingScaleAnimations` if needed.
-   */
-
-  const startScale = (object) => {
-    const rawId = object.id;
-    const dataId = object.getAttribute('data-id');
-    const id = dataId || rawId;
-    // console.log(`[scale] 🟡 Starting scale animation for ${object.id} (parsed id: ${id})`);
-
-    const easeMap = {
-      '0': 'linear', '1': 'easeInSine', '2': 'easeOutSine', '3': 'easeInOutSine',
-      '4': 'easeInBack', '5': 'easeOutBack', '6': 'easeInOutBack',
-      '7': 'easeInElastic', '8': 'easeOutElastic', '9': 'easeInOutElastic'
-    };
-
-    const seqDur = extractTagValue(id, 'seqdur', null);
-    const easingCode = id.match(/ease_?(\d)/)?.[1];
-    const easing = easeMap[easingCode] || 'linear';
-    const modeRaw = id.match(/_(once|alt|bounce|pulse|pde)/)?.[1] || 'alt';
-    const mode = ['pde', 'pulse', 'alt', 'bounce'].includes(modeRaw) ? 'alternate' : 'once';
-
-    const pivotX = extractTagValue(id, 'pivot_x', null);
-    const pivotY = extractTagValue(id, 'pivot_y', null);
-    const bbox = object.getBBox();
-    const originX = pivotX !== null ? pivotX : bbox.x + bbox.width / 2;
-    const originY = pivotY !== null ? pivotY : bbox.y + bbox.height / 2;
-    object.style.transformOrigin = `${originX}px ${originY}px`;
-
-    const isXY = id.includes("sXY[");
-    const isX = id.includes("sX[");
-    const isY = id.includes("sY[");
-    const compactPrefix = isXY ? "sXY" : isX ? "sX" : isY ? "sY" : "s";
-
-    // console.log(`[parseCompact] 🧪 Trying parseCompactAnimationValues(${compactPrefix}): ${id}`);
-    let scaleParsed = parseCompactAnimationValues(id, compactPrefix);
-    let scaleValues = [];
-
-    // ✅ Handle compact animation values
-    if (scaleParsed) {
-      scaleValues = scaleParsed.values;
-      if (scaleParsed.regenerate) {
-        object.__regenerateScaleSeq = scaleParsed.generate;
-        scaleValues = scaleParsed.generate(); // Initial random set
-        // console.log(`[scale] 🔁 Generated random scale values:`, scaleValues);
-      }
-    }
-
-    // ✅ Legacy fallback for s_seq_...
-    if (scaleValues.length === 0) {
-      // console.log(`[fallback] ⏳ Trying legacy s_seq_ fallback: ${id}`);
-      const legacyMatch = id.match(/s(?:eq)?_([\d._]+)/);
-      if (legacyMatch) {
-        scaleValues = legacyMatch[1].split('_').map(n => parseFloat(n)).filter(n => !isNaN(n));
-        // console.log(`[fallback] ✅ Parsed legacy scale values:`, scaleValues);
-      }
-    }
-
-    // ✅ Sanity check
-    scaleValues = scaleValues.map(val => {
-      if (typeof val === 'number') return val;
-      if (Array.isArray(val)) return val;
-      const num = parseFloat(val);
-      return isNaN(num) ? 1 : num;
-    });
-
-    if (scaleValues.length === 0) {
-      console.warn(`[scale] ❌ No valid scale values found for ${id}`);
-      return;
-    }
-
-    const useXY = isXY || Array.isArray(scaleValues[0]);
-    const steps = scaleValues.length;
-
-    const durMatch = id.match(/dur_((?:\d+_?)+)/);
-    const durParts = durMatch ? durMatch[1].split('_').map(Number) : null;
-    const totalWeight = durParts ? durParts.reduce((a, b) => a + b, 0) : steps;
-    const baseDur = (seqDur || 1) * 1000;
-    const durations = [];
-
-    for (let i = 0; i < steps; i++) {
-      const weight = durParts ? durParts[i % durParts.length] : 1;
-      durations.push((weight / totalWeight) * baseDur);
-    }
-
-    const timeline = anime.timeline({
-      targets: object,
-      easing: easing,
-      loop: mode !== 'once',
-      direction: mode === 'alternate' ? 'alternate' : 'normal',
-      autoplay: false
-    });
-
-    // ✅ Add each step to the timeline
-    for (let i = 0; i < steps; i++) {
-      const val = scaleValues[i];
-      const scaleX = useXY ? val[0] : isX ? val : val;
-      const scaleY = useXY ? val[1] : isY ? val : val;
-
-      timeline.add({
-        scaleX,
-        scaleY,
-        duration: durations[i] || baseDur / steps,
-        begin: () => console.log(`[scale] Step ${i} → scaleX(${scaleX}) scaleY(${scaleY})`)
-      });
-    }
-
-    // ✅ Regenerate entire loop on finish
-    if (object.__regenerateScaleSeq) {
-      timeline.finished.then(() => {
-        const newValues = object.__regenerateScaleSeq();
-        // console.log(`[scale] 🔁 Regenerated scale sequence:`, newValues);
-        requestAnimationFrame(() => startScale(object)); // full restart
-      });
-    }
-
-    const key = dataId || rawId;
-    const isTriggerable = id.includes('_t(1)');
-
-    if (isTriggerable) {
-      if (!window.pendingScaleAnimations) window.pendingScaleAnimations = new Map();
-      pendingScaleAnimations.set(key, () => {
-        console.log(`[scale] 🔴 timeline.play() called for ${key}`);
-        requestAnimationFrame(() => timeline.play());
-      });
-      console.log(`[scale] Deferred scale stored for ${key}`);
-    } else {
-      timeline.play();
-    }
-
-    // ✅ Register animation hooks
-    window.runningAnimations[object.id] = {
-      play: () => {
-        if (isTriggerable) {
-          console.log(`[scale] 🚫 Skipping auto-play for triggerable ${object.id}`);
-          return;
-        }
-        timeline.play();
-      },
-      pause: () => timeline.pause(),
-      resume: () => {
-        if (isTriggerable) {
-          console.log(`[scale] 🚫 Skipping resume for triggerable ${object.id}`);
-          return;
-        }
-        timeline.play();
-      },
-      wasPaused: false,
-      triggerable: isTriggerable
-    };
-  };
-
-
-
-  /**
-   * Triggers any deferred animation attached to a short object ID via `data-id`.
-   *
-   * Usage:
-   *   <circle id="myDot" data-id="s[1,2,1.5]_seqdur_3_ease_5_t(1)"></circle>
-   *   cue: c-t_o(myDot)... will trigger the actual animation stored in `data-id`.
-   *
-   * Supports: rotation, scale, path-follow, and other ID-driven animations.
-   * Dependencies: initializeSVG() must have scanned all animated IDs first.
-   */
-
-  function triggerDeferredAnimations(objectId) {
-    const el = document.getElementById(objectId);
-    if (!el) {
-      console.warn(`[triggerDeferredAnimations] ⚠️ No element found for ID: ${objectId}`);
-      return;
-    }
-
-    const targetId = el.getAttribute("data-id");
-    if (!targetId) {
-      console.warn(`[triggerDeferredAnimations] ❌ No data-id found on ${objectId}`);
-      return;
-    }
-
-    const targetEl = document.getElementById(targetId);
-    if (!targetEl) {
-      console.warn(`[triggerDeferredAnimations] ❌ No element with ID ${targetId} found.`);
-      return;
-    }
-
-    // ✅ Trigger animation start (used by scale, rotation, path-follow, etc)
-    if (window.runningAnimations?.[targetId]) {
-      console.log(`[triggerDeferredAnimations] ▶️ Starting animation for ${targetId}`);
-      window.runningAnimations[targetId].play?.();
-    } else {
-      console.warn(`[triggerDeferredAnimations] ❓ No registered animation for ${targetId}`);
-    }
-  }
-
-
   // helper for obj2path case3
 
   window.ensureWindowPlayheadX = () => {
@@ -2382,7 +1492,7 @@ function assignCues(svgRoot) {
   // - sessionStorage holds a data URL encoded from the user's uploaded SVG
 
   // [svgpersist] Full SVG persistence and upload logic
-  let pathVariantsMap = {};
+  window.pathVariantsMap = {};
 
   window.loadExternalSVG = (svgSource) => {
     console.log('[svgpersist] Loading external SVG...');
@@ -2427,14 +1537,14 @@ function assignCues(svgRoot) {
   };
 
   const storePathVariants = (svgElement) => {
-    pathVariantsMap = {};
+    window.pathVariantsMap = {};
     const allPaths = svgElement.querySelectorAll("path");
     allPaths.forEach(path => {
       const id = path.id;
       if (id && id.match(/^path-\d+-\d+$/)) {
         const baseID = id.replace(/-\d+$/, '');
-        if (!pathVariantsMap[baseID]) pathVariantsMap[baseID] = [];
-        pathVariantsMap[baseID].push(path);
+        if (!window.pathVariantsMap[baseID]) window.pathVariantsMap[baseID] = [];
+        window.pathVariantsMap[baseID].push(path);
       }
     });
   };
@@ -2451,7 +1561,6 @@ function assignCues(svgRoot) {
       loadExternalSVG("svg/help.svg");
     }
   };
-
 
   
   initializeScore(); // ⬅️ Make sure this runs outside any event listener
@@ -2472,32 +1581,36 @@ function assignCues(svgRoot) {
   });
 
 
+/**
+ * initializeSVG(svgElement)
+ * --------------------------
+ * This function initializes all interactive behaviors for a loaded SVG score.
+ * It performs cue assignment, transforms flattening, animation setup, and 
+ * preloads timing cues like `cueSpeed(...)`. It must be called after the 
+ * SVG is appended to the DOM to ensure that all elements are present and measurable.
+ *
+ * @param {SVGElement} svgElement - The <svg> element representing the musical score.
+ */
 
+const initializeSVG = (svgElement) => {
 
+  // 🔍 Ensure we received a valid SVG element before continuing
+  if (!svgElement) {
+    console.error("[ERROR] No SVG element provided to initializeSVG.");
+    return;
+  }
 
+  // 📦 Store global reference to the SVG for later use
+  window.scoreSVG = svgElement;
 
+  // 🧠 Assign cue IDs dynamically (e.g. from assignCues(...) groups)
+  // This must happen before any cue parsing or trigger handling
+  console.log("calling assignCues...");
+  assignCues(window.scoreSVG);    
 
-  const initializeSVG = (svgElement) => {
+  // ⚡ Preload timing cues like cueSpeed(...) once they exist in the DOM
+  preloadSpeedCues();
 
-    if (!svgElement) {
-      console.error("[ERROR] No SVG element provided to initializeSVG.");
-      return;
-    }
-
-    scoreSVG = svgElement;
-
-    console.log("calling assignCues...");
-    assignCues(scoreSVG);    
-
-    preloadSpeedCues();
-
-
-
-    document.querySelectorAll("use").forEach(u => {
-      // console.log("[DEBUG <use>]", u.id, "→", u.getAttribute("xlink:href") || u.getAttribute("href"));
-    });
-
-    //console.log("[TRANSFORM-FIX] 🔍 Starting flattening of all groups...");
 
     const flattenPathTranslate = (path, dx, dy) => {
       const d = path.getAttribute('d');
@@ -2863,7 +1976,7 @@ function assignCues(svgRoot) {
     }
 
     // 🔥 Ensurewindow.playheadX is recalculated on fullscreen change
-    // recalculatePlayheadPosition(scoreSVG);
+    // recalculatePlayheadPosition(window.scoreSVG);
     calculateMaxScrollDistance();
     // extractScoreElements(svgElement);
 
@@ -3491,7 +2604,7 @@ function assignCues(svgRoot) {
   // Ends seeking mode and re-enables cues after debounce.
   // Sends a WebSocket `jump` message to sync all connected clients.
 
-  let seekDebounceTime = 800; // ✅ Adjust debounce as needed
+  let seekDebounceTime = 300; // ✅ Adjust debounce as needed
   let seekingTimeout = null;
 
   seekBar.addEventListener('mouseup', (event) => {
@@ -3506,8 +2619,9 @@ function assignCues(svgRoot) {
       startAnimation();
 
       // ✅ Send WebSocket sync to ensure all clients align
-      if (wsEnabled && socket) {
-        window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
+      if (wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+        window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
+          elapsedTime: window.elapsedTime }));
         console.log(`[CLIENT] Sent jump message to server after seek. Elapsed Time: ${elapsedTime}`);
       }
     }, seekDebounceTime); // ✅ Wait before enabling cues
@@ -3555,33 +2669,40 @@ function assignCues(svgRoot) {
     }
   }
 
-
-
-
   document.addEventListener('keydown', (event) => {
-    //console.log(`[DEBUG] Key pressed: ${event.key}`);
-
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault(); // ✅ Prevents page scrolling
-
+  
+      // 🟢 Capture whether playback was active before seek
+      const wasPlayingBeforeSeek = window.isPlaying === true;
+  
       window.isSeeking = true;
-      // console.log(`[CLIENT] Seeking with ${event.key}, disabling cue triggering temporarily.`);
-
+  
       if (event.key === 'ArrowLeft') {
-        // console.log("[DEBUG] Calling rewind() from ArrowLeft.");
         rewind();
       } else if (event.key === 'ArrowRight') {
-        // console.log("[DEBUG] Calling forward() from ArrowRight.");
         forward();
       }
-
+  
       if (seekingTimeout) clearTimeout(seekingTimeout);
+  
       seekingTimeout = setTimeout(() => {
-        // console.log("[CLIENT] Cue triggering re-enabled after debounce (Arrow Key Seek).");
         window.isSeeking = false;
+        window.allowCues = true;
+        window.cueDisabledUntil = 0;
+  
+        checkCueTriggers();
+  
+        // ✅ Always resume playback if it was running before seek
+        if (wasPlayingBeforeSeek) {
+          startPlayback(); // resume
+        }
+  
       }, seekDebounceTime);
     }
   });
+  
+
 
   // end of seeking logiC ///////////////////////////////////////////////
 
@@ -3604,7 +2725,6 @@ function assignCues(svgRoot) {
 
     log(LogLevel.INFO, `Stopwatch updated: Elapsed = ${formattedElapsed}, Total = ${formattedTotal}`);
   };
-
 
   window.isSeeking = false;
 
@@ -3634,11 +2754,12 @@ function assignCues(svgRoot) {
     console.log("[DEBUG] Rewinding to Zero...");
     console.log("[DEBUG] window.scoreContainer.scrollLeft before:", window.scoreContainer.scrollLeft);
     console.log("[DEBUG] window.scoreContainer offsetWidth:", window.scoreContainer.offsetWidth);
-    console.log("[DEBUG] SVG Width:", scoreSVG.getBBox().width);
+    console.log("[DEBUG] SVG Width:", window.scoreSVG.getBBox().width);
     console.log("[DEBUG] window.scoreContainer.scrollLeft after:", window.scoreContainer.scrollLeft);
 
     if (wsEnabled && window.socket.readyState === WebSocket.OPEN) {
-      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
+      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
+        elapsedTime: window.elapsedTime }));
     }
 
     // // ✅ Apply and store correct speed based on the new playhead position
@@ -3684,8 +2805,9 @@ function assignCues(svgRoot) {
     updateSeekBar();
     updateStopwatch();
 
-    if (wsEnabled && socket) {
-      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
+    if (wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
+        elapsedTime: window.elapsedTime }));
     }
   };
 
@@ -3723,8 +2845,9 @@ function assignCues(svgRoot) {
     updateStopwatch();
 
 
-    if (wsEnabled && socket) {
-      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
+    if (wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
+        elapsedTime: window.elapsedTime }));
     }
   };
 
@@ -3805,8 +2928,8 @@ function assignCues(svgRoot) {
     console.log(`[DEBUG] 🎵window.playheadX: ${window.playheadX}`);
     console.log(`[DEBUG] 🎯 window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
     console.log(`[DEBUG] 📏 Max Scroll Distance: ${maxScrollDistance}`);
-    console.log(`[DEBUG] 🖥️ Current SVG Width: ${scoreSVG?.getAttribute('width')}`);
-    console.log(`[DEBUG] 🖥️ Current SVG ViewBox: ${scoreSVG?.getAttribute('viewBox')}`);
+    console.log(`[DEBUG] 🖥️ Current SVG Width: ${window.scoreSVG?.getAttribute('width')}`);
+    console.log(`[DEBUG] 🖥️ Current SVG ViewBox: ${window.scoreSVG?.getAttribute('viewBox')}`);
 
     // Log the transformation matrix for the SVG elements
     console.log(`[DEBUG] Transform Matrix of first rehearsal mark: ${getMatrixString(rehearsalMarks["B"])}`);
@@ -3841,7 +2964,7 @@ function assignCues(svgRoot) {
     console.log(`[DEBUG] 🕰️ Last animation frame time: ${window.lastAnimationFrameTime}`);
 
     // Log SVG Element states
-    console.log(`[DEBUG] 🎨 SVG File: ${scoreSVG?.id || 'No SVG loaded'}`);
+    console.log(`[DEBUG] 🎨 SVG File: ${window.scoreSVG?.id || 'No SVG loaded'}`);
     console.log(`[DEBUG] 🖥️ SVG Scroll Position (scrollLeft): ${window.scoreContainer.scrollLeft}`);
 
     // Log state of WebSocket
@@ -4245,8 +3368,9 @@ function assignCues(svgRoot) {
 
     console.log(`[DEBUG] Jumping to Rehearsal Mark: ${mark},window.playheadX=${window.playheadX}`);
 
-    if (wsEnabled && socket.readyState === WebSocket.OPEN) {
-      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
+    if (wsEnabled && window.socket.readyState === WebSocket.OPEN) {
+      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
+        elapsedTime: window.elapsedTime }));
     } else {
       console.warn("[WARNING] WebSocket is not open. Jump not sent.");
     }
@@ -4440,6 +3564,19 @@ function assignCues(svgRoot) {
     }
   };
 
+
+
+  function startPlayback() {
+    if (!window.isPlaying) {
+      window.isPlaying = true;
+      window.transportStartTime = performance.now() - (window.elapsedTime || 0);
+      requestAnimationFrame(updateTransport);
+      console.log('[Playback] ▶️ Playback started from startPlayback()');
+    }
+  }
+  
+
+
   //// END OF TOGGLE PLAY LOGIC  ///////////////////////////////////////////
 
   // /**
@@ -4627,7 +3764,8 @@ function assignCues(svgRoot) {
     console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
 
     if (wsEnabled && socket && socket.readyState === WebSocket.OPEN) {
-      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, elapsedTime: window.elapsedTime }));
+      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
+        elapsedTime: window.elapsedTime }));
     }
 
     updatePosition();
@@ -4763,660 +3901,6 @@ function assignCues(svgRoot) {
   };
 
 
-  ////////////////////////////////////////////////////
-
-  // -- handleVideoCue
-
-  const handleVideoCue = (cueId, videoFilePath) => {
-    //  log(LogLevel.INFO, Handling video cue '${cueId}' with file '${videoFilePath}'.);
-    const videoPopup = document.getElementById('video-popup');
-    const videoElement = document.getElementById('video-content');
-
-    videoElement.src = videoFilePath;
-    videoPopup.classList.remove('hidden');
-
-    videoElement.onended = () => {
-      //log(LogLevel.INFO, Video cue '${cueId}' completed.);
-      videoPopup.classList.add('hidden');
-      videoElement.src = ''; // Clear video
-
-       window.isPlaying = true;
-      startAnimation();
-    };
-
-     window.isPlaying = false;
-    animationPaused = true;
-    pauseStartTime = Date.now();
-    videoElement.play();
-  };
-
-  // --
-
-  const handleP5Cue = (cueId, sketchFunction) => {
-    //  log(LogLevel.INFO, Handling p5.js cue '${cueId}'.);
-    const p5Popup = document.getElementById('p5-popup');
-    const p5Container = document.getElementById('p5-container');
-
-    new p5(sketchFunction, p5Container);
-
-    // Simulate a fixed duration or provide custom logic for the p5 sketch lifecycle
-    const duration = 5000; // Example duration
-    setTimeout(() => {
-      //  log(LogLevel.INFO, p5.js cue '${cueId}' completed.);
-      p5Popup.classList.add('hidden');
-      p5Container.innerHTML = ''; // Clear p5 sketch
-
-       window.isPlaying = true;
-      animationPaused = false;
-      startAnimation();
-    }, duration);
-
-     window.isPlaying = false;
-    animationPaused = true;
-    pauseStartTime = Date.now();
-  };
-
-
-  /////////// animateObjToPath ////////////////////////////////////////////////
-
-  /**
-   * animateObjToPath()
-   * ------------------
-   * Animates a given SVG object along a specified path using Anime.js.
-   *
-   * 🔁 Supports multiple direction modes based on namespace parsing:
-   *   - Case 0: Pingpong (alternate motion)
-   *   - Case 1: Forward loop
-   *   - Case 2: Reverse loop
-   *   - Case 3: Random jumps constrained to a playzone (with pause)
-   *   - Case 4: Fixed-node jumps along the path (variable durations)
-   *   - Case 5: Ghost-led path switching with countdown and sync
-   *
-   * 🧠 Features:
-   *   - Parses speed, direction, and easing from object ID
-   *   - Calculates accurate transform origin
-   *   - Registers all animations to `window.runningAnimations`
-   *   - Supports `play()`, `pause()`, and `resume()` lifecycle hooks
-   *   - Integrates with `IntersectionObserver` for pause-on-scroll efficiency
-   *
-   * @param {SVGElement} object - The SVG object to animate
-   * @param {SVGPathElement} path - The path element to follow
-   * @param {number} duration - Fallback duration (in seconds) if speed is not specified
-   * @param {Array} animations - Array to push raw anime() timelines for tracking/debug
-   */
-
-
-  const animateObjToPath = (object, path, duration, animations) => {
-
-    if (!Array.isArray(animations)) {
-      console.warn(`[WARN] animations param was not an array. Wrapping it. ID: ${object.id}`);
-      animations = [];
-    }
-    const effectiveId = object.getAttribute('data-id') || object.id;
-
-    try {
-      const pathMotion = anime.path(path);
-      const startPoint = path.getPointAtLength(0);
-      const boundingRect = path.getBBox();
-      const adjustedX = startPoint.x - boundingRect.x;
-      const adjustedY = startPoint.y - boundingRect.y;
-
-      if (['circle', 'ellipse'].includes(object.tagName)) {
-        object.setAttribute('cx', adjustedX);
-        object.setAttribute('cy', adjustedY);
-      } else if (object.tagName === 'rect') {
-        const w = object.getBBox().width, h = object.getBBox().height;
-        object.setAttribute('x', adjustedX - w / 2);
-        object.setAttribute('y', adjustedY - h / 2);
-      }
-
-      object.style.transformOrigin = `${adjustedX}px ${adjustedY}px`;
-
-      const speedMatch = effectiveId.match(/_(?:speed|spd|s)_(\d+(\.\d+)?)/);
-      const animationSpeed = speedMatch ? parseFloat(speedMatch[1]) * 1000 : duration * 1000;
-
-      const directionMatch = effectiveId.match(/_(?:direction|dir|d)_(\d+)/);
-      let direction = directionMatch ? parseInt(directionMatch[1], 10) : 0;
-
-      if (![0, 1, 2, 3, 4, 5].includes(direction)) direction = 0;
-
-      const rotate = !object.id.includes('_rotate_0');
-      const easingCode = parseInt((effectiveId.match(/_(?:ease|easing|e)_(\d+)/) || [])[1]) || 3;
-      const easingMap = {
-        0: 'linear', 1: 'easeInSine', 2: 'easeOutSine', 3: 'easeInOutSine',
-        4: 'easeInBack', 5: 'easeOutBack', 6: 'easeInOutBack',
-        7: 'easeInElastic', 8: 'easeOutElastic', 9: 'easeInOutElastic'
-      };
-      const easing = easingMap[easingCode] || 'easeInOutSine';
-
-      switch (direction) {
-        case 0: {
-          const anim0 = anime({
-            targets: object,
-            translateX: pathMotion('x'),
-            translateY: pathMotion('y'),
-            rotate: rotate ? pathMotion('angle') : 0,
-            duration: animationSpeed,
-            easing,
-            loop: true,
-            direction: 'alternate',
-
-            update: (anim) => {
-              emitOSCFromPathProgress({
-                path,
-                progress: anim.progress,
-                pathId: path.id
-              });
-            }
-          });
-
-          window.runningAnimations[object.id] = {
-            play: () => anim0.play(),
-            pause: () => anim0.pause(),
-            resume: () => anim0.play(),
-            wasPaused: false
-          };
-
-          animations.push(anim0);
-          break;
-        }
-
-        case 1: {
-          const anim1 = anime({ targets: object, translateX: pathMotion('x'), translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, duration: animationSpeed, easing, loop: true });
-          window.runningAnimations[object.id] = { play: () => anim1.play(), pause: () => anim1.pause(), resume: () => anim1.play(), wasPaused: false };
-          animations.push(anim1);
-          break;
-        }
-
-        case 2: {
-          const anim2 = anime({ targets: object, translateX: pathMotion('x'), translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, duration: animationSpeed, easing, loop: true, direction: 'reverse' });
-          window.runningAnimations[object.id] = { play: () => anim2.play(), pause: () => anim2.pause(), resume: () => anim2.play(), wasPaused: false };
-          animations.push(anim2);
-          break;
-        }
-        /**
-         * 🎯 Case 3 — Random Jump Animation Within Visible Path Segment
-         * -------------------------------------------------------------
-         * - Animates objects (typically circles or groups) by jumping to a random point
-         *   along the visible portion of an assigned path.
-         * - Uses Anime.js to animate position via `cx/cy` or `translateX/translateY`.
-         * - Each jump occurs after a short animation and continues in a loop.
-         * - Objects pause/resume when scrolled off/on screen using IntersectionObserver.
-         *
-         * ✅ Features:
-         * - Initial placement at path start
-         * - Visibility-aware sampling of points (SVG-to-screen space conversion)
-         * - Integration with observer system (play/pause/resume)
-         * - Object can be an <ellipse>, <circle>, or a <g> group wrapper
-         *
-         * 🧪 Known Issues:
-         * - When multiple Case 3 objects are active simultaneously, their animations
-         *   interfere, causing erratic jumping or layout glitches.
-         * - Positioning via `cx/cy` works reliably when only one object is active.
-         * - Using `translateX/Y` avoids some layout bugs but causes object to jump offscreen.
-         * - Transform origin logic has been validated and works for other cases.
-         *
-         * ❌ NOT the Cause:
-         * - Not due to observer logic (was disabled and glitch persisted)
-         * - Not due to SVG geometry (verified shapes, r/cx/cy set correctly)
-         * - Not due to DOM visibility or style (verified display/opacity/transform)
-         * - Not due to case logic conflicts (case 5 and 3 operate independently)
-         *
-         * 📝 TODO:
-         * - Investigate **multi-object transform side effects**, especially with groups.
-         * - Try dedicated inner wrapper for positioning if in <g>.
-         * - Isolate minimal reproducible test with 2 animated objects on same path.
-         */
-        case 3: {
-
-          // console.warn(`[case3][${object.id}] 🚫 Temporarily disabled`);
-          return;
-
-          const pathLength = path.getTotalLength();
-          const sampleStep = 10;
-
-          const getVisibleTarget = () => {
-            const svg = document.querySelector("svg");
-            const screenCTM = svg?.getScreenCTM();
-            if (!svg || !screenCTM) {
-              console.warn(`[case3][${object.id}] ⚠️ SVG or CTM missing`);
-              return null;
-            }
-
-            const visible = [];
-            const pt = svg.createSVGPoint();
-            for (let len = 0; len < pathLength; len += sampleStep) {
-              const p = path.getPointAtLength(len);
-              pt.x = p.x;
-              pt.y = p.y;
-              const screenX = pt.matrixTransform(screenCTM).x;
-              if (screenX >= 0 && screenX <= window.innerWidth) visible.push(len);
-            }
-
-            if (visible.length === 0) return null;
-            const chosen = visible[Math.floor(Math.random() * visible.length)];
-            return path.getPointAtLength(chosen);
-          };
-
-          const JumpController = {
-            running: true,
-            currentAnim: null,
-
-            placeAtStart() {
-              const start = path.getPointAtLength(0);
-              const bbox = object.getBBox();
-              const centerX = bbox.x + bbox.width / 2;
-              const centerY = bbox.y + bbox.height / 2;
-
-              object.removeAttribute("transform");
-              object.style.transform = "";
-              object.style.transformOrigin = `${centerX}px ${centerY}px`;
-
-              anime.set(object, {
-                translateX: start.x - centerX,
-                translateY: start.y - centerY
-              });
-
-              console.log(`[case3][${object.id}] 🧭 Init at (${start.x.toFixed(1)}, ${start.y.toFixed(1)})`);
-            },
-
-            loop() {
-              if (!this.running) return;
-
-              const target = getVisibleTarget();
-              if (!target) {
-                console.warn(`[case3][${object.id}] ❌ No visible point`);
-                this.running = false;
-                return;
-              }
-
-              const bbox = object.getBBox();
-              const centerX = bbox.x + bbox.width / 2;
-              const centerY = bbox.y + bbox.height / 2;
-
-              object.style.transformOrigin = `${centerX}px ${centerY}px`;
-
-              this.currentAnim = anime({
-                targets: object,
-                translateX: target.x - centerX,
-                translateY: target.y - centerY,
-                duration: 1000,
-                easing,
-                loop: false,
-                complete: () => {
-                  if (this.running) this.loop();
-                }
-              });
-
-              console.log(`[case3][${object.id}] 🚀 Jumping to (${target.x.toFixed(1)}, ${target.y.toFixed(1)})`);
-            },
-
-            start() {
-              console.log(`[case3][${object.id}] ▶️ Starting`);
-              this.running = true;
-              this.placeAtStart();
-              this.loop();
-            },
-
-            pause() {
-              this.running = false;
-              if (this.currentAnim) this.currentAnim.pause();
-            },
-
-            resume() {
-              if (!this.running) {
-                this.running = true;
-                this.loop();
-              }
-            }
-          };
-
-          JumpController.start();
-
-          window.runningAnimations[object.id] = {
-            play: () => JumpController.resume(),
-            pause: () => JumpController.pause(),
-            resume: () => JumpController.resume(),
-            wasPaused: true,
-            autoStart: true
-          };
-
-          observer.observe(object);
-          break;
-        }
-
-
-        case 4: {
-          const pathLen = path.getTotalLength();
-          const fixedNodes = Array.from({ length: 5 }, (_, i) => path.getPointAtLength((i / 4) * pathLen));
-          const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
-
-          const controller4 = {
-            running: true,
-            timer: null,
-            jump() {
-              if (!this.running) return;
-              const point = getRandom(fixedNodes);
-              const anim4 = anime({
-                targets: object,
-                translateX: point.x,
-                translateY: point.y,
-                rotate: rotate ? pathMotion('angle') : 0,
-                duration: getRandom([2000, 3000, 5000, 8000, 13000]),
-                easing,
-                autoplay: false,
-                complete: () => this.timer = setTimeout(() => this.jump(), getRandom([1000, 2000, 3000, 4000]))
-              });
-              window.runningAnimations[object.id] = { play: () => anim4.play(), pause: () => anim4.pause(), resume: () => anim4.play(), wasPaused: false };
-              observer.observe(object);
-              anim4.play();
-            },
-            pause() { this.running = false; clearTimeout(this.timer); },
-            resume() { if (!this.running) { this.running = true; this.jump(); } }
-          };
-
-          controller4.jump();
-          break;
-        }
-
-        case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
-
-          // console.log(`[DEBUG] Initializing Case 5: Animating between precomputed path variants for object ${object.id}`);
-
-          // Get the original path ID dynamically
-          const originalPathID = path.id;
-
-          // Extract basePathID while keeping the main path intact
-          const basePathIDMatch = originalPathID.match(/^(path-\d+)/);
-          const basePathID = basePathIDMatch ? basePathIDMatch[1] : originalPathID; // Use full ID if no match
-
-          // console.log(`[DEBUG] Original Path ID: ${originalPathID}`);
-          // console.log(`[DEBUG] Base Path ID (for variant lookup): ${basePathID}`);
-
-          // Retrieve precomputed path variants
-          const case5Paths = [...(pathVariantsMap[basePathID] || [])];
-
-          if (!case5Paths.some(p => p.id === originalPathID)) {
-            case5Paths.unshift(path);
-            // console.log(`[DEBUG] Added original path '${object.id}' to variant list.`);
-          }
-
-          // console.log(`[DEBUG] Found ${case5Paths.length} total paths for '${basePathID}'.`);
-
-          if (case5Paths.length < 2) {
-            // console.warn("[DEBUG] Not enough valid path variants detected for Case 5. Aborting.");
-            break;
-          }
-
-          const case5StartPositions = case5Paths.map(path => path.getPointAtLength(0));
-          const case5PauseDurations = [3000, 5000, 8000, 13000, 21000, 34000];
-          const animationDuration = 2000;
-
-          let nextTargetPosition = null; // Stores the next position so the object can follow it
-
-          // **Find the ghost object based on the main object's ID**
-          const baseObjectID = object.id.split("_")[0]; // Strip speed/direction data
-          const ghostID = `ghost-${baseObjectID}`;
-          let ghostObject = document.getElementById(ghostID);
-
-          // **If ghost object exists, reset only its location-related attributes**
-          if (ghostObject) {
-            // console.log(`[DEBUG] Resetting ghost object '${ghostID}' location.`);
-            ghostObject.removeAttribute("transform");
-            ghostObject.removeAttribute("cx");
-            ghostObject.removeAttribute("cy");
-          } else {
-            // console.warn(`[DEBUG] Ghost object '${ghostID}' not found. Creating it.`);
-            ghostObject = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            ghostObject.setAttribute("id", ghostID);
-            ghostObject.setAttribute("r", "10");
-            ghostObject.setAttribute("fill", "rgba(0,0,255,0.5)");
-            ghostObject.setAttribute("stroke", "blue");
-            ghostObject.setAttribute("stroke-width", "2");
-            scoreSVG.appendChild(ghostObject);
-          }
-
-          // **Create a countdown text next to the ghost**
-          let countdownText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          countdownText.setAttribute("id", `${ghostID}-countdown`);
-          countdownText.setAttribute("fill", "red");
-          countdownText.setAttribute("stroke", "red");
-          countdownText.setAttribute("stroke-width", "1");
-          countdownText.setAttribute("font-size", "56");
-          countdownText.setAttribute("text-anchor", "middle");
-          scoreSVG.appendChild(countdownText);
-
-          // Optional: test label
-          let testText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          testText.setAttribute("id", `${object.id}-test-label`);
-          testText.setAttribute("fill", "black");
-          testText.setAttribute("stroke", "black");
-          testText.setAttribute("stroke-width", "1");
-          testText.setAttribute("font-size", "46");
-          testText.setAttribute("text-anchor", "middle");
-          scoreSVG.appendChild(testText);
-          testText.textContent = "TEST"; // Set text content
-
-          /**
-           * Case 5 Controller — Ghost-following randomized path jumper
-           *
-           * Controls a "ghost" SVG object that jumps between random precomputed path positions,
-           * along with a synchronized countdown indicator and the actual animated object.
-           *
-           * This version is fully observer-aware:
-           *   - Ghost is registered with window.runningAnimations[ghostID]
-           *   - Ghost is paused/resumed based on visibility
-           *   - The main object follows the ghost after randomized delays
-           *   - Countdown text is updated on screen and cleared cleanly
-           */
-
-          const Case5Controller = {
-            object,
-            ghost: ghostObject,
-            countdown: countdownText,
-            initialized: false,
-            running: true,
-            loopTimeout: null,
-            countdownInterval: null,
-
-            loop() {
-              if (!this.running) return;
-
-              // Select new random position from precomputed variant start points
-              nextTargetPosition = case5StartPositions[Math.floor(Math.random() * case5StartPositions.length)];
-              const case5PauseDuration = case5PauseDurations[Math.floor(Math.random() * case5PauseDurations.length)];
-              const case5PauseSeconds = Math.round(case5PauseDuration / 1000);
-
-              // Animate ghost to new position
-              anime({
-                targets: this.ghost,
-                cx: nextTargetPosition.x,
-                cy: nextTargetPosition.y,
-                duration: animationDuration,
-                easing: easing
-              });
-
-              // ✅ Align main object immediately on first loop
-              if (!this.initialized) {
-                anime({
-                  targets: this.object,
-                  translateX: nextTargetPosition.x,
-                  translateY: nextTargetPosition.y,
-                  duration: 1,
-                  easing: 'linear'
-                });
-                this.initialized = true;
-              }
-
-
-              // Move and update countdown text
-              this.countdown.setAttribute("x", nextTargetPosition.x);
-              this.countdown.setAttribute("y", nextTargetPosition.y - 75);
-              this.countdown.textContent = `${case5PauseSeconds}`;
-
-              let remainingTime = case5PauseDuration / 1000;
-              this.countdownInterval = setInterval(() => {
-                remainingTime -= 1;
-                this.countdown.textContent = `${remainingTime}`;
-                if (remainingTime <= 0) {
-                  clearInterval(this.countdownInterval);
-                  this.countdown.textContent = "";
-                }
-              }, 1000);
-
-              // After delay, move main object to ghost's position
-              this.loopTimeout = setTimeout(() => {
-                anime({
-                  targets: this.object,
-                  translateX: nextTargetPosition.x,
-                  translateY: nextTargetPosition.y,
-                  duration: animationDuration,
-                  easing: easing,
-                  complete: () => {
-                    if (this.running) this.loop();
-                  }
-                });
-
-                anime({
-                  targets: this.countdown,
-                  x: nextTargetPosition.x,
-                  y: nextTargetPosition.y - 75,
-                  duration: animationDuration,
-                  easing: easing
-                });
-
-              }, case5PauseDuration);
-            },
-
-            pause() {
-              this.running = false;
-              clearTimeout(this.loopTimeout);
-              clearInterval(this.countdownInterval);
-            },
-
-            resume() {
-              if (!this.running) {
-                this.running = true;
-                this.loop();
-              }
-            }
-          };
-
-          // 🔁 Start the initial loop
-          Case5Controller.loop();
-
-          // ✅ Register main controller
-          window.runningAnimations[object.id] = Case5Controller;
-
-          // ✅ Register ghost object with visibility-based control logic
-          window.runningAnimations[ghostID] = {
-            play: () => {
-              if (!Case5Controller.running) Case5Controller.resume();
-            },
-            pause: () => {
-              if (Case5Controller.running) Case5Controller.pause();
-            },
-            wasPaused: false
-          };
-
-          // ✅ Optionally register countdown text to ensure observer doesn't throw errors
-          window.runningAnimations[`${ghostID}-countdown`] = {
-            play: () => { },
-            pause: () => { },
-            wasPaused: false
-          };
-
-          // ✅ Observe both the main object and ghost for visibility-based control
-          observer.observe(object);
-          observer.observe(ghostObject);
-
-
-          console.warn(`[DEBUG] Fallback pingpong animation created for object ${object.id}`);
-      }
-    } catch (error) {
-      console.error(`[DEBUG] Error animating object ${object.id} along path ${path.id}: ${error.message}`);
-    }
-  };
-
-  //////////////////////////////////////////////////////////////
-  // OPEN SOUND CONTROL OSC ////////////////////////////////////
-  //////////////////////////////////////////////////////////////
-
-  window.ENABLE_OBJ2PATH_OSC = false; // 🚫 globally disable OSC for now
-
-  // Store last sent timestamps per path
-  const oscLastSent = new Map();
-
-  // Helper: Send OSC message to server via WebSocket
-  function sendObj2PathOsc(pathId, normX, normY, angle = 0) {
-    if (!window.ENABLE_OBJ2PATH_OSC) return; // 👈 bail early while in testing phase
-
-    const now = performance.now();
-    const THROTTLE_MS = 100;
-
-    if (oscLastSent.has(pathId) && now - oscLastSent.get(pathId) < THROTTLE_MS) return;
-    oscLastSent.set(pathId, now);
-
-    if (typeof socket === "undefined" || socket.readyState !== WebSocket.OPEN) {
-      console.warn("[OSC] ⚠️ WebSocket not ready yet. Skipping OSC.");
-      return;
-    }
-
-    const message = {
-      type: "osc_obj2path",
-      pathId,
-      x: normX,
-      y: normY,
-      angle
-    };
-
-    window.socket.send(JSON.stringify(message));
-
-    console.log(
-      `[OSC] 🔄 Sent OSC for ${pathId} → x: ${normX.toFixed(3)}, y: ${normY.toFixed(3)}, angle: ${angle.toFixed(2)} ` +
-      `/obj2path/${pathId} ${normX.toFixed(3)} ${normY.toFixed(3)} ${angle.toFixed(2)}`
-
-    );
-
-  }
-
-
-  function emitOSCFromPathProgress({ path, progress, pathId = null }) {
-
-
-    if (!path || typeof path.getTotalLength !== 'function') return;
-
-    const length = path.getTotalLength();
-    const pathProgress = progress / 100;  // 💥 Normalize to 0–1
-    const point = path.getPointAtLength(pathProgress * length);
-
-    const bbox = path.getBBox();
-
-    const normX = (point.x - bbox.x) / bbox.width;
-    const normY = (point.y - bbox.y) / bbox.height;
-
-    const delta = 0.1;
-    const ahead = path.getPointAtLength(Math.min(length, progress * length + delta));
-    const angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
-
-    // console.log(`[OSC-debug] raw point: (${point.x.toFixed(2)}, ${point.y.toFixed(2)})`);
-    // console.log(`[OSC-debug] bbox: x=${bbox.x}, y=${bbox.y}, w=${bbox.width}, h=${bbox.height}`);
-    // console.log(`[OSC-debug] progress: ${progress.toFixed(4)}`);
-
-    sendObj2PathOsc(pathId || path.id, normX, normY, angle);
-  }
-
-  window.addEventListener("load", () => {
-    console.log("[DEBUG] Page reloaded, dismissing splash screen.");
-
-    const splashScreen = document.getElementById("splash-screen");
-    if (splashScreen) {
-      splashScreen.style.display = "none"; // 🔥 Hide splash screen after reload
-    }
-
-  });
-
-  // end of event handlers
 
 
 
@@ -5688,7 +4172,6 @@ function assignCues(svgRoot) {
 
   window.scoreContainer = window.scoreContainer; // Expose globally
   window.updatePosition = updatePosition; // Expose updatePosition globally
-
 
 
   console.log('// EOF');
