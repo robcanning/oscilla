@@ -24,150 +24,221 @@
  */
 
 
+/**
+ * startRotate(object)
+ *
+ * Fully merged and complete version.
+ * Supports:
+ * - ALT mode (pingpong): r(alt[...])
+ * - RND mode (randomized): r(rnd[6]), r(rnd[6x,...])
+ * - DEG mode (stepped): r(deg[...])
+ * - Continuous: r(1)_rpm(...), r(-1)_bpm(...)
+ * - BPM/Speed per step, throttle, OSC, transform origin from shape
+ * - Trigger-only with _t(1)
+ * - TODO support: seq[...] and quant(...)
+ */
 function startRotate(object) {
-    if (!object || !object.id) return;
-    const rawId = object.id;
-    const dataId = object.getAttribute('data-id');
-    const id = dataId || rawId;  // Use data-id if present, otherwise fallback to regular id
+  if (!object || !object.id) return;
+  const rawId = object.id;
+  const dataId = object.getAttribute('data-id');
+  const id = dataId || rawId;
 
-    // 🛑 Triggerable mode: store and wait for cue
-    if (id.includes('_t(1)')) {
-      if (!window.pendingRotationAnimations) window.pendingRotationAnimations = new Map();
-      pendingRotationAnimations.set(id, () => startRotate(object));
-      console.log(`[rotatest] ⏸ Deferred rotation for ${id}`);
-      return;
+  if (id.includes('_t(1)')) {
+    window.pendingRotationAnimations = window.pendingRotationAnimations || new Map();
+    window.pendingRotationAnimations.set(id, () => startRotate(object));
+    console.log(`[rotate] ⏸ Deferred rotation for ${id}`);
+    return;
+  }
+
+  const easing = getEasingFromId(id);
+
+    const quantized = extractTagValue(id, 'quant', false);
+    const bpmClock = window.oscillaQuantBPM || 120;
+    const beatMs = 60000 / bpmClock;
+    const now = performance.now();
+    const quantDelay = quantized ? (beatMs - (now % beatMs)) : 0;
+
+  const oscEnabled = extractTagValue(id, "osc", false);
+  const throttleRate = extractTagValue(id, "throttle", window.oscRotationThrottleRate || 20);
+  let lastOscSent = 0;
+
+  const sendRotationOsc = (angle, id) => {
+    const now = performance.now();
+    if ((now - lastOscSent) < (1000 / throttleRate)) return;
+    lastOscSent = now;
+    const norm = (angle % 360) / 360;
+    const radians = (angle % 360) * Math.PI / 180;
+    if (!window.socket || socket.readyState !== WebSocket.OPEN) return;
+    window.socket.send(JSON.stringify({ type: "osc_rotate", id: object.id, angle, radians, norm, timestamp: Date.now() }));
+  };
+
+  const applyTransformOrigin = () => {
+    let target = object;
+    const shape = object.querySelector("circle,path,rect,ellipse,line,polygon,polyline");
+    if (shape) target = shape;
+    const bbox = target.getBBox?.();
+    if (bbox && bbox.width > 0 && bbox.height > 0) {
+      const cx = bbox.x + bbox.width / 2;
+      const cy = bbox.y + bbox.height / 2;
+      object.style.transformOrigin = `${cx}px ${cy}px`;
     }
+  };
 
-    console.log(`[rotatest] Dispatching startRotate for ${id}`);
-    const easing = getEasingFromId(id);
+  applyTransformOrigin();
 
-    // 1. ALT (pingpong) mode
-    const altMatch = id.match(/alt\(([^)]+)\)/);
-    if (altMatch) {
-      const altAngle = parseFloat(altMatch[1]);
-      const dir = extractTagValue(id, 'dir', 1);
-      const speed = extractTagValue(id, 'speed', 1.0);
-      applyPivotFromId(object, id);
+  const rMatch = id.match(/^r\(([^)]+)\)/);
+  const mode = rMatch ? rMatch[1] : null;
+  if (!mode) return;
 
-      console.log(`[rotatest] ALT mode → angle=${altAngle}, dir=${dir}, speed=${speed}, easing=${easing}`);
-
-      const anim = anime({
-        targets: object,
-        keyframes: [
-          { rotate: `${dir >= 0 ? altAngle : -altAngle}deg` },
-          { rotate: `${dir >= 0 ? -altAngle : altAngle}deg` }
-        ],
-        duration: speed * 1000,
-        easing: typeof easing === 'function' ? easing() : easing,
-        direction: 'alternate',
-        loop: true,
-        autoplay: true
-      });
-
-      window.runningAnimations[object.id] = {
-        play: () => anim.play?.(),
-        pause: () => anim.pause?.(),
-        resume: () => anim.play?.(),
-        wasPaused: false
-      };
-      return;
-    }
-
-    // 2. Step rotation via deg[]
-    const degParsed = parseCompactAnimationValues(id, 'deg');
-
-    // 3. Continuous rotation fallback
-    if (!degParsed) {
-      const rpm = extractTagValue(id, 'rpm', 1.0);
-      const direction = extractTagValue(id, 'dir', 1);
-      applyPivotFromId(object, id);
-
-      const duration = (60 / rpm) * 1000;
-      console.log(`[rotatest] CONTINUOUS mode → rpm=${rpm}, dir=${direction}, duration=${duration}ms, easing=${easing}`);
-
-      const anim = anime({
-        targets: object,
-        rotate: direction >= 0 ? '+=360' : '-=360',
-        duration: duration,
-        easing: typeof easing === 'function' ? easing() : easing,
-        loop: true,
-        autoplay: true
-      });
-
-      window.runningAnimations[object.id] = {
-        play: () => anim.play?.(),
-        pause: () => anim.pause?.(),
-        resume: () => anim.play?.(),
-        wasPaused: false
-      };
-      return;
-    }
-
-    // 🔁 deg[...] timeline
-    if (degParsed.values.length < 2) return;
-    let angleValues = degParsed.values;
-
-    const durParsed = parseCompactAnimationValues(id, 'dur');
-    let pauseDurations = durParsed?.durations || [];
-    const hasRegenerate = durParsed?.regenerate;
-    if (hasRegenerate) object.__regenerateDurations = durParsed.generate;
-
-    const seqDur = extractTagValue(id, 'seqdur', null);
-    const rotationSpeed = extractTagValue(id, 'speed', null);
-
-    let baseDur;
-    if (seqDur) {
-      baseDur = (seqDur * 1000) / (angleValues.length - 1);
-      console.log(`[rotatest] Using seqdur: ${seqDur}s → step duration: ${baseDur}ms`);
-    } else {
-      baseDur = (rotationSpeed || 0.5) * 1000;
-      console.log(`[rotatest] Using speed: ${rotationSpeed || 0.5}s → step duration: ${baseDur}ms`);
-    }
-
-    applyPivotFromId(object, id);
-
-    const buildTimeline = (initialAngle = null) => {
-      let angles = angleValues;
-
-      if (initialAngle !== null && typeof degParsed.generate === 'function') {
-        angles = [initialAngle, ...degParsed.generate()];
-        angleValues = angles;
+  // ALT
+  const altMatch = mode.match(/^alt\[([^\]]+)\]/);
+  if (altMatch) {
+    const [min, max] = altMatch[1].split(',').map(Number);
+    const speed = extractTagValue(id, 'speed', 1.0);
+    const anim = anime({
+      targets: object,
+      rotate: [min, max],
+      duration: speed * 1000,
+      easing,
+      direction: "alternate",
+      loop: true,
+      autoplay: true,
+      update: () => {
+        if (oscEnabled) {
+          const angle = parseFloat(object.style.transform?.match(/rotate\(([-\d.]+)deg\)/)?.[1] || 0);
+          sendRotationOsc((angle + 90) % 360, object.id);
+        }
       }
+    });
+    return;
+  }
 
-      const timeline = anime.timeline({
-        targets: object,
-        loop: false,
-        autoplay: true
-      });
-
-      for (let i = 0; i < angles.length; i++) {
-        const angle = angles[i];
-        const currentEasing = typeof easing === 'function' ? easing() : easing;
+  // RND
+  const rndMatch = mode.match(/^rnd\[(\d+)(x)?(?:,(\d+))?(?:,(\d+))?\]$/);
+  if (rndMatch) {
+    const count = parseInt(rndMatch[1]);
+    const looped = rndMatch[2] === 'x';
+    const min = rndMatch[4] ? parseFloat(rndMatch[3]) : 0;
+    const max = rndMatch[4] ? parseFloat(rndMatch[4]) : (rndMatch[3] ? parseFloat(rndMatch[3]) : 359);
+    const pool = Array.from({ length: 100 }, () => Math.random() * (max - min) + min).sort(() => Math.random() - 0.5);
+    let offset = 0;
+    const speed = extractTagValue(id, 'speed', 1.0);
+    const values = looped
+      ? () => {
+          const chunk = pool.slice(offset, offset + count);
+          offset = (offset + count) % pool.length;
+          return chunk;
+        }
+      : () => pool.slice(0, count);
+    const playRandomCycle = () => {
+      const angles = values();
+      const timeline = anime.timeline({ targets: object, autoplay: true, delay: quantDelay });
+      angles.forEach((angle) => {
         timeline.add({
           rotate: `${angle}deg`,
-          duration: baseDur,
-          easing: currentEasing
+          duration: speed * 1000,
+          easing,
+          begin: () => {
+            if (oscEnabled) sendRotationOsc((angle + 90) % 360, object.id);
+          }
         });
-
-        if (i < angles.length - 1) {
-          const pauseSec = pauseDurations[i % pauseDurations.length] || 1.0;
-          timeline.add({ duration: pauseSec * 1000 });
-        }
-      }
-
-      timeline.finished.then(() => {
-        if (hasRegenerate && object.__regenerateDurations) {
-          pauseDurations = object.__regenerateDurations();
-        }
-        const currentTransform = object.style.transform || '';
-        const match = currentTransform.match(/rotate\(([-\d.]+)deg\)/);
-        const lastAngle = match ? parseFloat(match[1]) : angles[angles.length - 1];
-        buildTimeline(lastAngle);
       });
+      if (looped) timeline.finished.then(() => playRandomCycle());
+    };
+    playRandomCycle();
+    return;
+  }
+
+  
+  // SEQ
+  const seqMatch = mode.match(/^seq\[([^\]]+)\]/);
+  if (seqMatch) {
+    const values = seqMatch[1].split(',').map(v => parseFloat(v.trim()));
+    if (values.length < 2) return;
+
+    const bpm = extractTagValue(id, 'bpm', null);
+    const seqDur = extractTagValue(id, 'seqdur', null);
+    const rawSpeed = extractTagValue(id, 'speed', null);
+    const dur = extractTagValue(id, 'dur', null);
+    const rotationSpeed = bpm ? (60 / bpm) * 1000 : (rawSpeed ? rawSpeed * 1000 : (dur ? dur * 1000 : 1000));
+
+    const modeValue = extractTagValue(id, 'mode', 'loop');
+
+    let timeline = anime.timeline({ targets: object, autoplay: true, delay: quantDelay });
+    let steps = [...values];
+
+    const build = () => {
+      steps.forEach((angle, i) => {
+        timeline.add({
+          rotate: `${angle}deg`,
+          duration: rotationSpeed,
+          easing: easing,
+          begin: () => {
+            if (oscEnabled) sendRotationOsc((angle + 90) % 360, object.id);
+          }
+        });
+      });
+      if (modeValue === 'bounce') {
+        steps.reverse();
+        timeline.finished.then(build);
+      } else if (modeValue === 'loop') {
+        timeline.finished.then(build);
+      }
     };
 
-    buildTimeline();
+    build();
+    return;
   }
+
+
+// DEG
+  const degParsed = parseCompactAnimationValues(id, 'deg');
+  if (degParsed?.values?.length >= 2) {
+    const angleValues = degParsed.values;
+    const speed = extractTagValue(id, 'speed', 1.0);
+    const timeline = anime.timeline({ targets: object, loop: false, autoplay: true, delay: quantDelay });
+    angleValues.forEach((angle) => {
+      timeline.add({
+        rotate: `${angle}deg`,
+        duration: speed * 1000,
+        easing,
+        begin: () => {
+          if (oscEnabled) sendRotationOsc((angle + 90) % 360, object.id);
+        }
+      });
+    });
+    return;
+  }
+
+  // CONTINUOUS
+  const rpm = extractTagValue(id, 'rpm', null);
+  const bpm = extractTagValue(id, 'bpm', null);
+  const dirMatch = id.match(/^r\((-?\d)\)/);
+  const direction = dirMatch ? parseInt(dirMatch[1]) : 1;
+  const rotRpm = bpm ? bpm / 4 : (rpm || 20);
+  const duration = (60 / rotRpm) * 1000;
+
+  const anim = anime({
+    targets: object,
+    rotate: direction >= 0 ? '+=360' : '-=360',
+    duration,
+    easing,
+    loop: true,
+    autoplay: true,
+    update: () => {
+      if (oscEnabled) {
+        const angle = parseFloat(object.style.transform?.match(/rotate\(([-\d.]+)deg\)/)?.[1] || 0);
+        sendRotationOsc((angle + 90) % 360, object.id);
+      }
+    }
+  });
+
+  window.runningAnimations[object.id] = {
+    play: () => anim.play?.(),
+    pause: () => anim.pause?.(),
+    resume: () => anim.play?.()
+  };
+}
 
 const startRotation = (object) => {
 
@@ -410,24 +481,24 @@ const startScale = (object) => {
     };
   }
 
-
-
 /**
- * Initializes all rotating SVG objects using both legacy and modern ID formats.
- * Supports triggerable animations via `_t(1)`, and deferred execution via pendingRotationAnimations.
+ * Initializes all rotating SVG objects using modern compact syntax.
+ * Supports:
+ *   - r(...) with deg[], alt[], rnd[], seq[] modes
+ *   - _rpm(...), _bpm(...), _dur[...]
+ *   - defers `_t(1)` animations via pendingRotationAnimations
  */
 function initializeRotatingObjects(svgElement) {
   const rotatingObjects = Array.from(svgElement.querySelectorAll(
-    '[id^="obj_rotate_"], [id^="r_"], [id*="deg["], ' +
-    '[data-id^="obj_rotate_"], [data-id^="r_"], [data-id*="deg["]'
+    '[id^="r("], [data-id^="r("]' // match anything starting with r(...) wrapper
   ));
 
   if (rotatingObjects.length === 0) {
-    console.log('[DEBUG] No rotating objects found.');
+    console.log('[rotate] ⚠️ No rotating objects found.');
     return;
   }
 
-  console.log(`[DEBUG] Found ${rotatingObjects.length} rotating objects.`);
+  console.log(`[rotate] Found ${rotatingObjects.length} rotating objects.`);
 
   rotatingObjects.forEach((object) => {
     const rawId = object.id;
@@ -435,25 +506,19 @@ function initializeRotatingObjects(svgElement) {
     const id = dataId || rawId;
 
     if (id.includes('_t(1)')) {
-      if (!window.pendingRotationAnimations) window.pendingRotationAnimations = new Map();
+      window.pendingRotationAnimations = window.pendingRotationAnimations || new Map();
       window.pendingRotationAnimations.set(id, () => {
-        if (id.includes('deg[') || id.includes('alt(') || id.includes('rpm(')) {
-          startRotate(object); // Modern rotation
-        } else {
-          startRotation(object); // Legacy rotation
-        }
+        startRotate(object);
       });
-      console.log(`[DEBUG] Deferred rotation stored for ${id}`);
+      console.log(`[rotate] ⏸ Deferred rotation stored for ${id}`);
       return;
     }
 
-    if (id.includes('deg[') || id.includes('alt(') || id.includes('rpm(')) {
-      startRotate(object); // Modern
-    } else {
-      startRotation(object); // Legacy
-    }
+    // Start immediately
+    startRotate(object);
   });
 }
+
 
 /**
  * Initializes all scaling SVG objects using legacy and compact syntax.
