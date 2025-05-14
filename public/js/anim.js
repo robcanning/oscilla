@@ -74,9 +74,8 @@ function startRotate(object) {
 
   const applyTransformOrigin = () => {
     let target = object;
-    const shape = object.querySelector("circle,path,rect,ellipse,line,polygon,polyline");
-    if (shape) target = shape;
-    const bbox = target.getBBox?.();
+    const bbox = object.getBBox?.();
+
     if (bbox && bbox.width > 0 && bbox.height > 0) {
       const cx = bbox.x + bbox.width / 2;
       const cy = bbox.y + bbox.height / 2;
@@ -84,7 +83,8 @@ function startRotate(object) {
     }
   };
 
-  applyTransformOrigin();
+  // applyTransformOrigin();
+  applyPivotFromId(object, id);
 
   const rMatch = id.match(/^r\(([^)]+)\)/);
   const mode = rMatch ? rMatch[1] : null;
@@ -332,154 +332,152 @@ const startRotation = (object) => {
 
     // console.log(`[DEBUG] Started rotation for ${id}`);
   }
+/**
+ * startScale(object)
+ *
+ * Modern-only version supporting:
+ * - Compact syntax: s(...), sXY(...), sX(...), sY(...)
+ * - Timing: seqdur(...), dur[...], bpm(...), speed(...)
+ * - Looping: loop, alternate, once
+ * - Pivot control: pivot(...), _pivot_x_, _pivot_y_
+ * - OSC support: osc(1), throttle(...) (default 20 Hz)
+ * - Triggerable mode: _t(1)
+ */
+function startScale(object) {
+  const rawId = object.id;
+  const dataId = object.getAttribute('data-id');
+  const id = dataId || rawId;
 
-const startScale = (object) => {
-    const rawId = object.id;
-    const dataId = object.getAttribute('data-id');
-    const id = dataId || rawId;
-    // console.log(`[scale] 🟡 Starting scale animation for ${object.id} (parsed id: ${id})`);
+  const isXY = id.includes("sXY(");
+  const isX = id.includes("sX(");
+  const isY = id.includes("sY(");
+  const prefix = isXY ? "sXY" : isX ? "sX" : isY ? "sY" : "s";
 
-    const easeMap = {
-      '0': 'linear', '1': 'easeInSine', '2': 'easeOutSine', '3': 'easeInOutSine',
-      '4': 'easeInBack', '5': 'easeOutBack', '6': 'easeInOutBack',
-      '7': 'easeInElastic', '8': 'easeOutElastic', '9': 'easeInOutElastic'
-    };
+  const easing = getEasingFromId(id);
+  const modeRaw = id.match(/_(once|alt|bounce|pulse|pde)/)?.[1] || 'alt';
+  const mode = ['pde', 'pulse', 'alt', 'bounce'].includes(modeRaw) ? 'alternate' : 'once';
 
-    const seqDur = extractTagValue(id, 'seqdur', null);
-    const easingCode = id.match(/ease_?(\d)/)?.[1];
-    const easing = easeMap[easingCode] || 'linear';
-    const modeRaw = id.match(/_(once|alt|bounce|pulse|pde)/)?.[1] || 'alt';
-    const mode = ['pde', 'pulse', 'alt', 'bounce'].includes(modeRaw) ? 'alternate' : 'once';
+  const seqDur = extractTagValue(id, 'seqdur', 1);
+  const bpm = extractTagValue(id, 'bpm', null);
+  const speed = extractTagValue(id, 'speed', null);
 
-    const pivotX = extractTagValue(id, 'pivot_x', null);
-    const pivotY = extractTagValue(id, 'pivot_y', null);
-    const bbox = object.getBBox();
-    const originX = pivotX !== null ? pivotX : bbox.x + bbox.width / 2;
-    const originY = pivotY !== null ? pivotY : bbox.y + bbox.height / 2;
-    object.style.transformOrigin = `${originX}px ${originY}px`;
+  const pivotX = extractTagValue(id, 'pivot_x', null);
+  const pivotY = extractTagValue(id, 'pivot_y', null);
+  const bbox = object.getBBox();
+  const originX = pivotX !== null ? pivotX : bbox.x + bbox.width / 2;
+  const originY = pivotY !== null ? pivotY : bbox.y + bbox.height / 2;
+  object.style.transformOrigin = `${originX}px ${originY}px`;
 
-    const isXY = id.includes("sXY[");
-    const isX = id.includes("sX[");
-    const isY = id.includes("sY[");
-    const compactPrefix = isXY ? "sXY" : isX ? "sX" : isY ? "sY" : "s";
-
-    // console.log(`[parseCompact] 🧪 Trying parseCompactAnimationValues(${compactPrefix}): ${id}`);
-    let scaleParsed = parseCompactAnimationValues(id, compactPrefix);
-    let scaleValues = [];
-
-    // ✅ Handle compact animation values
-    if (scaleParsed) {
-      scaleValues = scaleParsed.values;
-      if (scaleParsed.regenerate) {
-        object.__regenerateScaleSeq = scaleParsed.generate;
-        scaleValues = scaleParsed.generate(); // Initial random set
-        // console.log(`[scale] 🔁 Generated random scale values:`, scaleValues);
-      }
-    }
-
-    // ✅ Legacy fallback for s_seq_...
-    if (scaleValues.length === 0) {
-      // console.log(`[fallback] ⏳ Trying legacy s_seq_ fallback: ${id}`);
-      const legacyMatch = id.match(/s(?:eq)?_([\d._]+)/);
-      if (legacyMatch) {
-        scaleValues = legacyMatch[1].split('_').map(n => parseFloat(n)).filter(n => !isNaN(n));
-        // console.log(`[fallback] ✅ Parsed legacy scale values:`, scaleValues);
-      }
-    }
-
-    // ✅ Sanity check
-    scaleValues = scaleValues.map(val => {
-      if (typeof val === 'number') return val;
-      if (Array.isArray(val)) return val;
-      const num = parseFloat(val);
-      return isNaN(num) ? 1 : num;
-    });
-
-    if (scaleValues.length === 0) {
-      console.warn(`[scale] ❌ No valid scale values found for ${id}`);
-      return;
-    }
-
-    const useXY = isXY || Array.isArray(scaleValues[0]);
-    const steps = scaleValues.length;
-
-    const durMatch = id.match(/dur_((?:\d+_?)+)/);
-    const durParts = durMatch ? durMatch[1].split('_').map(Number) : null;
-    const totalWeight = durParts ? durParts.reduce((a, b) => a + b, 0) : steps;
-    const baseDur = (seqDur || 1) * 1000;
-    const durations = [];
-
-    for (let i = 0; i < steps; i++) {
-      const weight = durParts ? durParts[i % durParts.length] : 1;
-      durations.push((weight / totalWeight) * baseDur);
-    }
-
-    const timeline = anime.timeline({
-      targets: object,
-      easing: easing,
-      loop: mode !== 'once',
-      direction: mode === 'alternate' ? 'alternate' : 'normal',
-      autoplay: false
-    });
-
-    // ✅ Add each step to the timeline
-    for (let i = 0; i < steps; i++) {
-      const val = scaleValues[i];
-      const scaleX = useXY ? val[0] : isX ? val : val;
-      const scaleY = useXY ? val[1] : isY ? val : val;
-
-      timeline.add({
-        scaleX,
-        scaleY,
-        duration: durations[i] || baseDur / steps,
-        begin: () => console.log(`[scale] Step ${i} → scaleX(${scaleX}) scaleY(${scaleY})`)
-      });
-    }
-
-    // ✅ Regenerate entire loop on finish
-    if (object.__regenerateScaleSeq) {
-      timeline.finished.then(() => {
-        const newValues = object.__regenerateScaleSeq();
-        // console.log(`[scale] 🔁 Regenerated scale sequence:`, newValues);
-        requestAnimationFrame(() => startScale(object)); // full restart
-      });
-    }
-
-    const key = dataId || rawId;
-    const isTriggerable = id.includes('_t(1)');
-
-    if (isTriggerable) {
-      if (!window.pendingScaleAnimations) window.pendingScaleAnimations = new Map();
-      pendingScaleAnimations.set(key, () => {
-        console.log(`[scale] 🔴 timeline.play() called for ${key}`);
-        requestAnimationFrame(() => timeline.play());
-      });
-      console.log(`[scale] Deferred scale stored for ${key}`);
-    } else {
-      timeline.play();
-    }
-
-    // ✅ Register animation hooks
-    window.runningAnimations[object.id] = {
-      play: () => {
-        if (isTriggerable) {
-          console.log(`[scale] 🚫 Skipping auto-play for triggerable ${object.id}`);
-          return;
-        }
-        timeline.play();
-      },
-      pause: () => timeline.pause(),
-      resume: () => {
-        if (isTriggerable) {
-          console.log(`[scale] 🚫 Skipping resume for triggerable ${object.id}`);
-          return;
-        }
-        timeline.play();
-      },
-      wasPaused: false,
-      triggerable: isTriggerable
-    };
+  const parsed = parseCompactAnimationValues(id, prefix);
+  if (!parsed || !parsed.values || parsed.values.length === 0) {
+    console.warn(`[scale] ❌ No valid values parsed for ${id}`);
+    return;
   }
+
+  const scaleValues = parsed.values;
+  const regenerate = parsed.regenerate;
+
+  const steps = scaleValues.length;
+  const durMatch = id.match(/dur\[([\d_,]+)\]/);
+  const durParts = durMatch ? durMatch[1].split(',').map(Number) : null;
+  const totalWeight = durParts ? durParts.reduce((a, b) => a + b, 0) : steps;
+  const baseDur = (seqDur || 1) * 1000;
+  const durations = [];
+
+  for (let i = 0; i < steps; i++) {
+    const weight = durParts ? durParts[i % durParts.length] : 1;
+    durations.push((weight / totalWeight) * baseDur);
+  }
+
+  const oscEnabled = extractTagValue(id, 'osc', false);
+  const throttleRate = extractTagValue(id, 'throttle', 20);
+  let lastOscSent = 0;
+
+  const sendScaleOsc = (scaleX, scaleY) => {
+    const now = performance.now();
+    if ((now - lastOscSent) < (1000 / throttleRate)) return;
+    lastOscSent = now;
+    if (!window.socket || socket.readyState !== WebSocket.OPEN) return;
+    const message = {
+      type: "osc_scale",
+      id: object.id,
+      scaleX,
+      scaleY,
+      timestamp: Date.now()
+    };
+    window.socket.send(JSON.stringify(message));
+  };
+
+  const useXY = isXY || Array.isArray(scaleValues[0]);
+  const timeline = anime.timeline({
+    targets: object,
+    easing,
+    loop: mode !== 'once',
+    direction: mode === 'alternate' ? 'alternate' : 'normal',
+    autoplay: false,
+    update: () => {
+      if (oscEnabled && mode !== 'once') {
+        const matrix = window.getComputedStyle(object).transform;
+        if (matrix && matrix !== 'none') {
+          const match = matrix.match(/matrix\(([^)]+)\)/);
+          if (match) {
+            const parts = match[1].split(',').map(parseFloat);
+            const currentX = parts[0];
+            const currentY = parts[3];
+            sendScaleOsc(currentX, currentY);
+          }
+        }
+      }
+    }
+  });
+
+  for (let i = 0; i < steps; i++) {
+    const val = scaleValues[i];
+    const scaleX = useXY ? val[0] : isX ? val : val;
+    const scaleY = useXY ? val[1] : isY ? val : val;
+
+    timeline.add({
+      scaleX,
+      scaleY,
+      duration: durations[i] || baseDur / steps,
+      begin: () => {
+        if (oscEnabled && mode === 'once') sendScaleOsc(scaleX, scaleY);
+      }
+    });
+  }
+
+  if (regenerate) {
+    timeline.finished.then(() => {
+      requestAnimationFrame(() => startScale(object));
+    });
+  }
+
+  const key = dataId || rawId;
+  const isTriggerable = id.includes('_t(1)');
+  if (isTriggerable) {
+    window.pendingScaleAnimations = window.pendingScaleAnimations || new Map();
+    window.pendingScaleAnimations.set(key, () => {
+      requestAnimationFrame(() => timeline.play());
+    });
+  } else {
+    timeline.play();
+  }
+
+  window.runningAnimations[object.id] = {
+    play: () => {
+      if (!isTriggerable) timeline.play();
+    },
+    pause: () => timeline.pause(),
+    resume: () => {
+      if (!isTriggerable) timeline.play();
+    },
+    wasPaused: false,
+    triggerable: isTriggerable
+  };
+}
+
+
+
 
 /**
  * Initializes all rotating SVG objects using modern compact syntax.
@@ -520,31 +518,21 @@ function initializeRotatingObjects(svgElement) {
 }
 
 
-/**
- * Initializes all scaling SVG objects using legacy and compact syntax.
- * Defers triggerable animations via `_t(1)` and stores them in pendingScaleAnimations.
- */
 function initializeScalingObjects(svgElement) {
   const scalingObjects = Array.from(svgElement.querySelectorAll(
-    '[id^="scale"], [id^="s_"], [id^="sXY_"], [id^="sX_"], [id^="sY_"],' +
-    '[id*="s["], [id*="sXY["], [id*="sX["], [id*="sY["],' +
-    '[data-id*="s["], [data-id*="sXY["], [data-id*="sX["], [data-id*="sY["],' +
-    '[data-id^="s_seq"], [data-id^="sXY_seq"]'
+    '[id^="s("], [id^="sXY("], [id^="sX("], [id^="sY("],' +
+    '[data-id^="s("], [data-id^="sXY("], [data-id^="sX("], [data-id^="sY("]'
   ));
 
   if (scalingObjects.length === 0) {
-    // console.log('[DEBUG][scale] No scaling objects found.');
+    console.log('[scale] ⚠️ No scaling objects found.');
     return;
   }
 
-  // console.log(`[DEBUG][scale] Found ${scalingObjects.length} scaling objects.`);
+  console.log(`[scale] Found ${scalingObjects.length} scaling objects.`);
 
   scalingObjects.forEach((object) => {
-    const rawId = object.id;
-    const dataId = object.getAttribute('data-id');
-    const id = dataId || rawId;
-
-    startScale(object); // Always call; startScale handles `_t(1)` logic internally
+    startScale(object);
   });
 }
 
@@ -1261,30 +1249,29 @@ function getEasingFromId(id) {
     return easeMap[code] || 'linear';
   }
 
-function applyPivotFromId(object, id) {
+  function applyPivotFromId(object, id) {
     const bbox = object.getBBox();
     const pivotMatch = id.match(/pivot\(([^,]+),([^)]+)\)/);
     const pxRaw = extractTagValue(id, 'pivot_x', null);
     const pyRaw = extractTagValue(id, 'pivot_y', null);
-
-    let px = pivotMatch ? pivotMatch[1].trim() : pxRaw;
-    let py = pivotMatch ? pivotMatch[2].trim() : pyRaw;
-
-    const resolvePivotValue = (val, ref) => {
-      if (typeof val === 'string' && val.endsWith('%')) {
-        return bbox.x + (parseFloat(val) / 100) * ref;
-      }
-      return parseFloat(val);
-    };
-
-    if (px !== null && py !== null) {
-      const pivotX = resolvePivotValue(px, bbox.width);
-      const pivotY = resolvePivotValue(py, bbox.height);
-      object.style.transformOrigin = `${pivotX}px ${pivotY}px`;
-    } else {
+  
+    let px = pivotMatch ? parseFloat(pivotMatch[1].trim()) : pxRaw;
+    let py = pivotMatch ? parseFloat(pivotMatch[2].trim()) : pyRaw;
+  
+    if (px === null || py === null || isNaN(px) || isNaN(py)) {
       setTransformOriginToCenter(object);
+      return;
     }
+  
+    const centerX = bbox.x + bbox.width / 2;
+    const centerY = bbox.y + bbox.height / 2;
+  
+    const finalX = centerX + px;
+    const finalY = centerY + py;
+  
+    object.style.transformOrigin = `${finalX}px ${finalY}px`;
   }
+  
 
 function setTransformOriginToCenter(element) {
     const bbox = element.getBBox();
@@ -1293,26 +1280,26 @@ function setTransformOriginToCenter(element) {
     element.style.transformOrigin = `${cx}px ${cy}px`;
   }
 
-function parseCompactAnimationValues(id, prefix = 's') {
-    // console.log(`[parseCompact] 🧪 Testing parseCompactAnimationValues(${prefix}):`, id);
 
-    // Normalize prefix search
-    id = id.replace(/^r_/, '').replace(/^obj_rotate_/, '');
 
-    const pattern = new RegExp(`${prefix}\\[(.*?)\\]`);
-    const match = id.match(pattern);
-    if (!match) {
-      // console.log(`[parseCompact] ❌ No match found for prefix ${prefix} in: ${id}`);
+
+
+
+  function parseCompactAnimationValues(id, prefix = 's') {
+    // Only accept new format: s(...), sXY(...), etc.
+    const parenMatch = id.match(new RegExp(`${prefix}\\((.*?)\\)`));
+    if (!parenMatch) {
+      console.warn(`[parseCompact] ❌ Expected ${prefix}(...) but not found in: ${id}`);
       return null;
     }
-
-    let raw = match[1].trim();
-    // console.log(`[parseCompact] ✅ Matched ${prefix}[...] → raw: ${raw}`);
-
-    // --- rnd(...) wrapper
+  
+    const raw = parenMatch[1].trim();
+  
+    // ✅ Regenerating random: s(rnd(5x0.5-1.5x))
     if (raw.startsWith('rnd(') && raw.endsWith(')')) {
       const inner = raw.slice(4, -1);
-
+  
+      // pattern: 5x0.5-1.5x
       const miniMatch = inner.match(/^(\d+)x(\d+(?:\.\d+)?)[-_](\d+(?:\.\d+)?)(x?)$/);
       if (miniMatch) {
         const count = parseInt(miniMatch[1]);
@@ -1322,50 +1309,27 @@ function parseCompactAnimationValues(id, prefix = 's') {
         const generate = () => Array.from({ length: count }, () => min + Math.random() * (max - min));
         return { values: generate(), regenerate: regen, generate };
       }
-
-      // fallback: list syntax rnd(1,2,3)
+  
+      // fallback: explicit list inside rnd(...)
       const values = inner.split(',').map(Number).filter(n => !isNaN(n));
       const generate = () => values.sort(() => Math.random() - 0.5);
       return { values: generate(), regenerate: true, generate };
     }
-
-    // --- legacy mini-random: 5x1-3x
-    const miniMatch = raw.match(/^(\d+)x(\d+(?:\.\d+)?)[-_](\d+(?:\.\d+)?)(x?)$/);
-    if (miniMatch) {
-      const count = parseInt(miniMatch[1]);
-      const min = parseFloat(miniMatch[2]);
-      const max = parseFloat(miniMatch[3]);
-      const regen = miniMatch[4] === 'x';
-      const generate = () => Array.from({ length: count }, () => min + Math.random() * (max - min));
-      return { values: generate(), regenerate: regen, generate };
-    }
-
-    // --- XY pair fallback: [[a,b], [c,d]]
-    if (prefix === 'sXY' && raw.includes('],')) {
-      try {
-        const tupleVals = JSON.parse(`[${raw}]`);
-        if (Array.isArray(tupleVals) && Array.isArray(tupleVals[0])) {
-          return { values: tupleVals, regenerate: false };
-        }
-      } catch (e) {
-        // console.warn(`[parseCompact] ⚠️ Failed to parse XY pair array in ${raw}`);
+  
+    // ✅ JSON-style values: [1,2,1] or [[1,1],[2,1]]
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return { values: parsed, regenerate: false };
       }
+    } catch (e) {
+      console.warn(`[parseCompact] ⚠️ Invalid JSON array inside ${prefix}(...): ${raw}`);
     }
-
-    // --- fallback: static comma-separated values
-    const values = raw.split(',').map(v => {
-      const parsed = Number(v);
-      return isNaN(parsed) ? v : parsed;
-    }).filter(v => typeof v === 'number' || Array.isArray(v));
-
-    if (values.length) {
-      // console.log(`[parseCompact] 📦 Static parsed values:`, values);
-      return { values, regenerate: false };
-    }
-
-    // console.warn(`[parseCompact] ❌ Failed to extract values from raw: ${raw}`);
+  
+    console.warn(`[parseCompact] ❌ Could not parse values from ${prefix}(...) in: ${id}`);
     return null;
   }
+  
 
 /**
  * ✅ checkAnimationVisibility
