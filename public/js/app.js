@@ -165,7 +165,6 @@ loadWaveSurfer(() => {
 
 document.addEventListener('DOMContentLoaded', () => {
   setLogLevel(LogLevel.WARN);
-  let suppressSync = false;
   let pendingRepeatStateMap = null; // stores repeat state from server before cues[] are ready
   console.log('Interactive Scrolling Score Initialized.');
   const splash = document.getElementById('splash');
