@@ -181,6 +181,23 @@ export function handleCueTrigger(cueId, isRemote = false) {
 export function handlePauseCue(cueId, duration, showCountdownOverride = null, resumeTarget = cueId) {
   console.log(`[DEBUG] Handling pause cue: ${cueId}, duration: ${duration}ms.`);
 
+  window.isPaused = true;
+  window.ignoreSyncPlayback = true;
+
+  stopAnimation(); // ✅ Stops local animation
+  // wiindow.stopStopwatch(); // ✅ Optional if stopwatch is linked
+
+  // Send pause message to server to stop advancing playhead globally
+  if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+    const pausePayload = {
+      type: "pause",
+      playheadX: window.playheadX,
+      elapsedTime: window.elapsedTime,
+    };
+    console.log("[CLIENT] Sending pause message to server:", pausePayload);
+    window.socket.send(JSON.stringify(pausePayload));
+  }
+
   if (window.isSeeking) {
     console.log(`[DEBUG] Ignoring pause cue '${cueId}' during seeking.`);
     return;
@@ -1782,6 +1799,27 @@ export function handleAudioCue(cueId, cueParams) {
   sendAudioOscTrigger({ cueId, filename, volume, loop: loopCount });
 }
 window.sendAudioOscTrigger = sendAudioOscTrigger;
+
+document.getElementById("stop-audio-button").addEventListener("click", () => {
+  console.log("[AUDIO] 🔇 Hard audio stop triggered");
+
+  if (window.activeAudioCues) {
+    for (const [filename, { wavesurfer }] of window.activeAudioCues.entries()) {
+      try {
+        wavesurfer.stop();       // ✅ Stop immediately
+        wavesurfer.destroy();    // ✅ Clean up
+      } catch (err) {
+        console.warn(`[AUDIO] Error stopping ${filename}:`, err);
+      }
+    }
+
+    window.activeAudioCues.clear(); // ✅ Reset the cue map
+  }
+});
+
+
+
+
 
 
 export function handleP5Cue(cueId, cueParams) {

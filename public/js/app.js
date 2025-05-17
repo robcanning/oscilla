@@ -651,29 +651,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
             /** ✅ Resume Playback After Pause */
             case "resume_after_pause":
-              console.log(`[DEBUG] Processing resume_after_pause.window.playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
-
+              console.log(`[DEBUG] Processing resume_after_pause. window.playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
+            
               if (!isNaN(data.playheadX) && data.playheadX >= 0) {
-               window.playheadX = data.playheadX;
-                console.log(`[DEBUG] Applied server-providedwindow.playheadX: ${window.playheadX}`);
+                window.playheadX = data.playheadX;
+                console.log(`[DEBUG] Applied server-provided playheadX: ${window.playheadX}`);
               } else {
-                console.error(`[ERROR] Invalidwindow.playheadX received. Keeping last known value.`);
+                console.error(`[ERROR] Invalid playheadX received. Keeping last known value.`);
               }
-
+            
               if (!isNaN(data.elapsedTime) && data.elapsedTime >= 0) {
                 window.elapsedTime = data.elapsedTime;
               } else {
                 console.error(`[ERROR] Invalid elapsedTime received: ${data.elapsedTime}`);
                 return;
               }
-
-               window.isPlaying = true;
-               window.isMusicalPause = false;
+            
+              // ✅ Prevent unwanted resume if pause logic is still active
+              if (window.isMusicalPause) {
+                console.warn("[DEBUG] Ignoring resume_after_pause because isMusicalPause is still true.");
+                return;
+              }
+            
+              window.isPlaying = true;
               startStopwatch();
               togglePlayButton();
               startAnimation();
               console.log("[DEBUG] Playback resumed successfully.");
               break;
+            
 
             /** ✅ Dismiss Pause Countdown */
             case "dismiss_pause_countdown":
@@ -760,92 +766,65 @@ document.addEventListener('DOMContentLoaded', () => {
               handleAudioCue(data.cueId);
               break;
 
-            /** ✅ Synchronize Playback State */
-            case "sync":
-              if (suppressSync) {
-                console.warn(`[WARNING] Ignoring sync message to prevent overriding rewind.`);
-                return;
-              }
+  /** ✅ Synchronize Playback State */
+  case "sync":
+    if (suppressSync) {
+      console.warn(`[WARNING] Ignoring sync message to prevent overriding rewind.`);
+      return;
+    }
 
-              if (data.playheadX) {
-                console.warn(`[WARNING] WebSocket message modifyingwindow.playheadX: ${data.playheadX}`);
-              }
+    if (data.playheadX) {
+      console.warn(`[WARNING] WebSocket message modifying window.playheadX: ${data.playheadX}`);
+    }
 
-              window.elapsedTime = data.state.elapsedTime;
-               window.isPlaying = data.state.isPlaying;
+    window.elapsedTime = data.state.elapsedTime;
 
-              if (!window.recentlyRecalculatedPlayhead) {
-               window.playheadX = data.state.playheadX;
-                window.scoreContainer.scrollLeft = window.playheadX;
-                // console.log("[DEBUG] ⏳ Waiting for WebSocket Sync...");
-                // console.log("[DEBUG] 🛠️ Calling extractScoreElements...");
-                // if (!svgElement) {
-                //     console.warn("[WARNING] ❌ extractScoreElements skipped: SVG not ready. Retrying...");
-                //     setTimeout(() => {
-                //         if (svgElement) {
-                //             console.log("[DEBUG] ✅ SVG is now ready. Extracting...");
-                //             const startTime = performance.now();
-                //             extractScoreElements(svgElement);
-                //             const endTime = performance.now();
-                //             console.log(`[DEBUG] ⏳ extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
-                //             console.log("[DEBUG] ✅ Extracted Score Elements. Now Checking Sync...");
-                //         } else {
-                //             console.error("[ERROR] ❌ SVG still not ready after retry. Investigate further.");
-                //         }
-                //     }, 100);  // Small delay to wait for SVG to be ready
-                // } else {
-                //   const startTime = performance.now();
-                //   extractScoreElements(svgElement);
-                //   const endTime = performance.now();
-                //   console.log(`[DEBUG] ⏳ extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
-                //   console.log("[DEBUG] ✅ Extracted Score Elements. Now Checking Sync...");
-                // }
+    // ✅ Respect local pause state: block playback state updates
+    if (!window.ignoreSyncPlayback) {
+      window.isPlaying = data.state.isPlaying;
+    } else {
+      console.log("[SYNC] Ignoring isPlaying update due to local enforced pause.");
+    }
 
-                // const startTime = performance.now();
-                // extractScoreElements(svgElement);
-                // const endTime = performance.now();
-                // console.log(`[DEBUG] ⏳ extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
-                // console.log("[DEBUG] ✅ Extracted Score Elements. Now Checking Sync...");
+    if (!window.recentlyRecalculatedPlayhead) {
+      window.playheadX = data.state.playheadX;
+      window.scoreContainer.scrollLeft = window.playheadX;
+    } else {
+      console.log(`[DEBUG] 🔄 Ignoring server window.playheadX update to prevent override.`);
+    }
+
+    updatePosition();
+    window.recentlyRecalculatedPlayhead = false; // Reset flag after applying the state
+
+    updateSeekBar();
+    // updatestopwatch();
+
+    if (!isNaN(data.state.speedMultiplier) && data.state.speedMultiplier > 0) {
+      if (speedMultiplier !== data.state.speedMultiplier) {
+        window.speedMultiplier = data.state.speedMultiplier;
+        console.log(`[CLIENT] Synced speed multiplier to ${speedMultiplier}`);
+      }
+    }
+
+    if (window.isPlaying) {
+      if (window.ignoreSyncPlayback) {
+        console.log("[SYNC] ⏸ Playback is locally paused (e.g. cuePause); ignoring sync-triggered resume.");
+        return; // ✅ fully exit sync handling to avoid triggering animation
+      }
+
+      if (typeof animate === "function" && animationFrameId === null) {
+        requestAnimationFrame(animate);
+      } else if (animationFrameId === null) {
+        console.warn("[CLIENT] Cannot start animation: `animate` is not defined.");
+      }
+    } else {
+      stopAnimation();
+    }
+
+    ignoreRewindOnStartup = true;
+    break;
 
 
-                // console.log(`[DEBUG] ✅ Applying serverwindow.playheadX: ${window.playheadX}`);
-              } else {
-                console.log(`[DEBUG] 🔄 Ignoring serverwindow.playheadX update to prevent override.`);
-              }
-
-              updatePosition();
-              window.recentlyRecalculatedPlayhead = false; // Reset flag after applying the state
-
-              updateSeekBar();
-              //updatestopwatch();
-
-              if (!isNaN(data.state.speedMultiplier) && data.state.speedMultiplier > 0) {
-                if (speedMultiplier !== data.state.speedMultiplier) {
-                  window.speedMultiplier = data.state.speedMultiplier;
-                  console.log(`[CLIENT] Synced speed multiplier to ${speedMultiplier}`);
-                } else {
-                  // console.log(`[CLIENT] Speed multiplier already set to ${speedMultiplier}. No update needed.`);
-                }
-              } else {
-                // console.warn(`[CLIENT] Invalid or unchanged speed multiplier received: ${data.state.speedMultiplier}`);
-              }
-
-              if (window.isPlaying) {
-                //console.debug("[CLIENT] Resuming playback after sync.");
-                // ✅ Only start animation if the function is defined
-                if (typeof animate === "function" && animationFrameId === null) {
-                  //console.debug("[CLIENT] Starting animation loop.");
-                  requestAnimationFrame(animate);
-                } else if (animationFrameId === null) {
-                  console.warn("[CLIENT] Cannot start animation: `animate` is not defined.");
-                }
-              } else {
-                // console.log("[CLIENT] Paused after sync.");
-                stopAnimation();
-              }
-
-              ignoreRewindOnStartup = true;
-              break;
 
             //  🔁 Repeat Sync Messages from Server
 
@@ -941,9 +920,9 @@ document.addEventListener('DOMContentLoaded', () => {
               lastJumpTime = now; // ✅ Update the last jump timestamp
               break;
 
-            case "sync":
-              console.log(`[DEBUG] 🔄 Received sync message, ignoring jump.`);
-              break;
+            // case "sync":
+            //   console.log(`[DEBUG] 🔄 Received sync message, ignoring jump.`);
+            //   break;
             /** ❌ Handle Unknown Messages */
             default:
               console.warn(`[WARNING] Received unknown Webwindow.socket message:`, data);
@@ -3629,9 +3608,19 @@ const initializeSVG = (svgElement) => {
       startAnimation();
       togglePlayButton();
       console.log("[Playback] ▶️ Playback started.");
+  
+      // ✅ Send play message to server
+      if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+        window.socket.send(JSON.stringify({
+          type: "play",
+          playheadX: window.playheadX,
+          elapsedTime: window.elapsedTime
+        }));
+      }
     }
   };
   
+
   window.pausePlayback = function pausePlayback() {
     if (window.isPlaying) {
       window.isPlaying = false;
@@ -3640,8 +3629,47 @@ const initializeSVG = (svgElement) => {
       stopAnimation();
       togglePlayButton();
       console.log("[Playback] ⏸ Playback paused.");
+  
+      // ✅ Send pause message to server
+      if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+        window.socket.send(JSON.stringify({
+          type: "pause",
+          playheadX: window.playheadX,
+          elapsedTime: window.elapsedTime
+        }));
+      }
     }
   };
+  
+  window.resumePlayback = function resumePlayback() {
+    if (!window.isPlaying) {
+      window.isPlaying = true;
+      window.isPaused = false;
+      window.isMusicalPause = false;
+      window.ignoreSyncPlayback = false;
+  
+      console.log("[Playback] 🔁 Resuming after musical pause or manual stop.");
+  
+      // ✅ Send play message to server (but do not reset anything local)
+      if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+        window.socket.send(JSON.stringify({
+          type: "play",
+          playheadX: window.playheadX,
+          elapsedTime: window.elapsedTime
+        }));
+      }
+  
+      // Optionally resume animation if it's not already running
+      if (typeof animate === "function" && animationFrameId === null) {
+        requestAnimationFrame(animate);
+      }
+  
+      window.resumeStopwatch();
+      togglePlayButton();
+    }
+  };
+  
+  
 
 
   //// END OF TOGGLE PLAY LOGIC  ///////////////////////////////////////////
@@ -3997,7 +4025,7 @@ const initializeSVG = (svgElement) => {
   // });
 
   toggleButton.addEventListener('click', () => {
-    window.isPlaying ? window.pausePlayback() : window.startPlayback();
+    window.isPlaying ? window.pausePlayback() : window.resumePlayback();
   });
 
   rewindButton.addEventListener('click', () => {
