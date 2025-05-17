@@ -165,6 +165,7 @@ loadWaveSurfer(() => {
 
 document.addEventListener('DOMContentLoaded', () => {
   setLogLevel(LogLevel.WARN);
+  let suppressSync = false;
   let pendingRepeatStateMap = null; // stores repeat state from server before cues[] are ready
   console.log('Interactive Scrolling Score Initialized.');
   const splash = document.getElementById('splash');
@@ -2754,52 +2755,46 @@ const initializeSVG = (svgElement) => {
   //   log(LogLevel.INFO, `Stopwatch updated: Elapsed = ${formattedElapsed}, Total = ${formattedTotal}`);
   // };
 
-  // window.isSeeking = false;
+  window.isSeeking = false;
 
-  // /**
-  // * ✅ Rewinds playback to the start of the score.
-  // * - Resets `playheadX` to 0 and ensures immediate UI update.
-  // * - Prevents unwanted sync overrides from reverting the rewind.
-  // * - Clears triggered cues and resets playback state.
-  // * - Sends an updated state to the server to sync all clients.
-  // */
+  /**
+  * ✅ Rewinds playback to the start of the score.
+  * - Resets `playheadX` to 0 and ensures immediate UI update.
+  * - Prevents unwanted sync overrides from reverting the rewind.
+  * - Clears triggered cues and resets playback state.
+  * - Sends an updated state to the server to sync all clients.
+  */
 
-  // let ignoreRewindOnStartup = false; // ✅ Prevents unnecessary resets
-  // let suppressSync = false;
+  let ignoreRewindOnStartup = false; // ✅ Prevents unnecessary resets
+  let suppressSync = false;
 
-  // const rewindToStart = () => {
-  //   console.log("[DEBUG] Rewinding to start.");
-
-  //   // ✅ Ensure the playhead starts at the first position, not screen left
-  //  window.playheadX = 0;
-  //   window.elapsedTime = 0;
-
-
-  //   // ✅ Instead of forcing `scrollLeft=0`, dynamically center the viewport
-  //   window.scoreContainer.scrollLeft = Math.max(0,window.playheadX);
-
-  //   console.log(`[DEBUG] After rewind ->window.playheadX=${window.playheadX}, scrollLeft=${window.scoreContainer.scrollLeft}`);
-  //   console.log("[DEBUG] Rewinding to Zero...");
-  //   console.log("[DEBUG] window.scoreContainer.scrollLeft before:", window.scoreContainer.scrollLeft);
-  //   console.log("[DEBUG] window.scoreContainer offsetWidth:", window.scoreContainer.offsetWidth);
-  //   console.log("[DEBUG] SVG Width:", window.scoreSVG.getBBox().width);
-  //   console.log("[DEBUG] window.scoreContainer.scrollLeft after:", window.scoreContainer.scrollLeft);
-
-  //   if (wsEnabled && window.socket.readyState === WebSocket.OPEN) {
-  //     window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-  //       elapsedTime: window.elapsedTime }));
-  //   }
-
-  //   // // ✅ Apply and store correct speed based on the new playhead position
-  //   window.speedMultiplier = getSpeedForPosition(window.playheadX);
-  //   console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
-  //   window.updateSpeedDisplay();
-
-  //   updatePosition();
-  //   updateSeekBar();
-  //   //updatestopwatch();
-  // };
-
+  const rewindToStart = () => {
+    console.log("[DEBUG] Rewinding to start.");
+  
+    window.playheadX = 0;
+    window.elapsedTime = 0;
+    resetStopwatch(); // ✅ Reset stopwatch
+  
+    window.scoreContainer.scrollLeft = Math.max(0, window.playheadX);
+    window.speedMultiplier = getSpeedForPosition(window.playheadX);
+    window.updateSpeedDisplay();
+  
+    updatePosition();
+    updateSeekBar();
+  
+    suppressSync = true;
+  
+    if (wsEnabled && window.socket.readyState === WebSocket.OPEN) {
+      window.socket.send(JSON.stringify({
+        type: 'jump',
+        playheadX: window.playheadX,
+        elapsedTime: window.elapsedTime
+      }));
+    }
+  
+    setTimeout(() => { suppressSync = false; }, 500);
+  };
+  
 
 
   /**
