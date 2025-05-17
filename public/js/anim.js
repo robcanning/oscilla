@@ -598,9 +598,9 @@ const initializeObjectPathPairs = (svgElement, speed = 10.0) => {
             7: 'easeInElastic', 8: 'easeOutElastic', 9: 'easeInOutElastic'
           }[config.ease] || 'easeInOutSine';
 
-        const playAnimation = () => {
-          animateObjToPath(object, path, config.speed, [], true, easing, config.osc);
-        };
+          const playAnimation = () => {
+            animateObjToPath(object, path, config.speed, animations, config);
+          };
 
         if (id.includes('_t(1)')) {
           if (!window.pendingPathAnimations) window.pendingPathAnimations = new Map();
@@ -643,8 +643,27 @@ const initializeObjectPathPairs = (svgElement, speed = 10.0) => {
 
 /**
  * ✅ parseO2PCompact
- * Parses object ID strings like o2p(pathId)_dir(1)_speed(2)_osc(1)_t(1)
- * into a config object usable by animateObjToPath().
+ * ------------------
+ * Parses compact object ID strings in the form:
+ *   o2p(pathId)_dir(n)_dur(n)_speed(n)_osc(1)_throttle(n)_rotate(0)_ease(n|[...])_quant(1)_t(1)
+ *
+ * This function extracts configuration for path-following animations,
+ * enabling modernized syntax for o2p animations in OscillaScore.
+ *
+ * Supported Parameters:
+ *   - pathId       → required: name of the path (e.g. "path-99")
+ *   - dir(n)       → direction mode [0–5], default = 0
+ *   - dur(n)       → duration in seconds per loop (preferred over speed)
+ *   - speed(n)     → legacy: alternative to dur (in seconds per loop)
+ *   - osc(1)       → enable OSC transmission (true/false)
+ *   - throttle(n)  → throttle rate for OSC (Hz), default = 10–20
+ *   - rotate(0)    → disable rotation along path if 0, otherwise rotate = true
+ *   - ease(n) or ease[n,...] → easing style (int or list), resolved later
+ *   - quant(1)     → start aligned to BPM clock (true/false)
+ *   - t(1)         → trigger-only mode (wait for cue)
+ *
+ * Example:
+ *   o2p(path-7)_dir(1)_dur(3.5)_osc(1)_throttle(30)_rotate(0)_ease(2)_t(1)
  *
  * @param {string} id - The full ID string of the animated object.
  * @returns {object|null} Parsed config object or null if invalid.
@@ -656,13 +675,19 @@ function parseO2PCompact(id) {
   const config = {
     pathId: match[1],
     direction: parseInt(extractTagValue(id, "dir", "0")),
-    speed: parseFloat(extractTagValue(id, "speed", "1")),
+    duration: parseFloat(extractTagValue(id, "dur", "0")),  // in seconds
+    speed: parseFloat(extractTagValue(id, "speed", "1")),   // fallback if no duration
     osc: extractTagValue(id, "osc", "0") === 1,
+    throttle: parseInt(extractTagValue(id, "throttle", "20")),
+    rotate: extractTagValue(id, "rotate", "1") !== 0,
+    easing: extractTagValue(id, "ease", null), // Can be number or list; resolved later
+    quant: extractTagValue(id, "quant", "0") === 1,
     trigger: id.includes("_t(1)")
   };
 
   return config;
 }
+
 
 
 
@@ -749,7 +774,8 @@ function emitOSCFromPathProgress({ path, progress, pathId = null }) {
 
 
 
-const animateObjToPath = (object, path, duration, animations) => {
+const animateObjToPath = (object, path, duration, animations = [], config = {}) => {
+  console.log("[o2p] Config for", object.id, config);
 
     if (!Array.isArray(animations)) {
       console.warn(`[WARN] animations param was not an array. Wrapping it. ID: ${object.id}`);
@@ -776,7 +802,18 @@ const animateObjToPath = (object, path, duration, animations) => {
       object.style.transformOrigin = `${adjustedX}px ${adjustedY}px`;
 
       const speedMatch = effectiveId.match(/_(?:speed|spd|s)_(\d+(\.\d+)?)/);
-      const animationSpeed = speedMatch ? parseFloat(speedMatch[1]) * 1000 : duration * 1000;
+      let animationSpeed = 1000; // fallback
+
+      if (config && typeof config.duration === 'number' && config.duration > 0) {
+        animationSpeed = config.duration * 1000;
+      } else if (config && typeof config.speed === 'number' && config.speed > 0) {
+        animationSpeed = config.speed * 1000;
+      } else if (typeof duration === 'number' && duration > 0) {
+        animationSpeed = duration * 1000;
+      } else {
+        console.warn(`[o2p] ❌ No valid duration/speed for ${object.id}, using fallback 1s`);
+      }
+      
 
       const directionMatch = effectiveId.match(/_(?:direction|dir|d)_(\d+)/);
       let direction = directionMatch ? parseInt(directionMatch[1], 10) : 0;
