@@ -9,6 +9,15 @@
  * and environment detection for the OscillaScore client.
  */
 
+import {
+  startStopwatch,
+  stopStopwatch,
+  resetStopwatch,
+  resumeStopwatch,
+  setupStopwatchFullscreenToggle
+} from './stopwatch.js';
+
+
 // ===========================
 // 📦 Import Cue Handlers
 // ===========================
@@ -299,6 +308,11 @@ document.addEventListener('DOMContentLoaded', () => {
   //
 
 
+
+  setupStopwatchFullscreenToggle();
+
+
+
   /**
   * ✅ Function: Dismiss the Splash Screen
   */
@@ -401,6 +415,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Resume playback only if the score was playing before the popup appeared
       if (!window.isPlaying) {
          window.isPlaying = true;
+         window.isMusicalPause = false;
+         startStopwatch();
         animationPaused = false; // Ensure animations are not paused
         startAnimation(); // Resume the animation loop
         console.log('[CLIENT] Resuming playback after popup dismissal.');
@@ -625,6 +641,8 @@ document.addEventListener('DOMContentLoaded', () => {
               }
 
                window.isPlaying = false;
+               window.isMusicalPause = false;
+              stopStopwatch();
               stopAnimation(); // ✅ Stop playhead movement
               togglePlayButton(); // ✅ Update UI play button
               console.log("[DEBUG] Playback paused successfully.");
@@ -649,6 +667,8 @@ document.addEventListener('DOMContentLoaded', () => {
               }
 
                window.isPlaying = true;
+               window.isMusicalPause = false;
+              startStopwatch();
               togglePlayButton();
               startAnimation();
               console.log("[DEBUG] Playback resumed successfully.");
@@ -683,6 +703,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
               stopAnimation();
                window.isPlaying = false;
+               window.isMusicalPause = false;
+              stopStopwatch();
               animationPaused = true;
               togglePlayButton();
 
@@ -794,7 +816,7 @@ document.addEventListener('DOMContentLoaded', () => {
               window.recentlyRecalculatedPlayhead = false; // Reset flag after applying the state
 
               updateSeekBar();
-              updateStopwatch();
+              //updatestopwatch();
 
               if (!isNaN(data.state.speedMultiplier) && data.state.speedMultiplier > 0) {
                 if (speedMultiplier !== data.state.speedMultiplier) {
@@ -1812,7 +1834,7 @@ const initializeSVG = (svgElement) => {
       logState("Initial Load");
 
       updateSeekBar();
-      updateStopwatch();
+      //updatestopwatch();
       toggleScoreNotes();
 
       setTimeout(() => {
@@ -1890,6 +1912,8 @@ const initializeSVG = (svgElement) => {
     if (popupDismissed) {
       console.log('[CLIENT] Resuming playback or animation after popup dismissal.');
        window.isPlaying = true;
+       window.isMusicalPause = false;
+      startStopwatch();
       animationPaused = false;
   
       document.body.querySelectorAll('.blur-background').forEach((element) => {
@@ -2488,7 +2512,7 @@ const initializeSVG = (svgElement) => {
     // ✅ Ensure score movement matcheswindow.playheadX
     updatePosition();
     updateSeekBar();
-    updateStopwatch();
+    //updatestopwatch();
     await checkCueTriggers (window.elapsedTime);
 
     requestAnimationFrame(animate);
@@ -2520,6 +2544,8 @@ const initializeSVG = (svgElement) => {
     }
   
     window.isPlaying = false;
+    window.isMusicalPause = false;
+    stopStopwatch();
   };
   
 
@@ -2598,7 +2624,7 @@ const initializeSVG = (svgElement) => {
     // ✅ Real-time UI updates
     updatePosition(window.playheadX); // ✅ Ensure proper alignment
     updateSeekBar();
-    updateStopwatch();
+    //updatestopwatch();
   });
 
   // Ends seeking mode and re-enables cues after debounce.
@@ -2616,6 +2642,8 @@ const initializeSVG = (svgElement) => {
     seekingTimeout = setTimeout(() => {
       console.log("[CLIENT] Cue triggering re-enabled after debounce.");
        window.isPlaying = true;
+       window.isMusicalPause = false;
+      startStopwatch();
       startAnimation();
 
       // ✅ Send WebSocket sync to ensure all clients align
@@ -2695,7 +2723,7 @@ const initializeSVG = (svgElement) => {
   
         // ✅ Always resume playback if it was running before seek
         if (wasPlayingBeforeSeek) {
-          startPlayback(); // resume
+          window.startPlayback(); // resume
         }
   
       }, seekDebounceTime);
@@ -2708,69 +2736,69 @@ const initializeSVG = (svgElement) => {
 
 
 
-  const updateStopwatch = () => {
-    // Use the accurate elapsed time without re-applying totalPauseDuration unnecessarily
-    const effectiveElapsedTime = window.elapsedTime;
-    const minutesElapsed = Math.floor(effectiveElapsedTime / 60000);
-    const secondsElapsed = Math.floor((effectiveElapsedTime % 60000) / 1000);
-    const minutesTotal = Math.floor(duration / 60000);
-    const secondsTotal = Math.floor((duration % 60000) / 1000);
+  // const //updatestopwatch = () => {
+  //   // Use the accurate elapsed time without re-applying totalPauseDuration unnecessarily
+  //   const effectiveElapsedTime = window.elapsedTime;
+  //   const minutesElapsed = Math.floor(effectiveElapsedTime / 60000);
+  //   const secondsElapsed = Math.floor((effectiveElapsedTime % 60000) / 1000);
+  //   const minutesTotal = Math.floor(duration / 60000);
+  //   const secondsTotal = Math.floor((duration % 60000) / 1000);
 
 
-    const formattedElapsed = `${minutesElapsed}:${secondsElapsed.toString().padStart(2, '0')}`;
-    const formattedTotal = `${minutesTotal}:${secondsTotal.toString().padStart(2, '0')}`;
+  //   const formattedElapsed = `${minutesElapsed}:${secondsElapsed.toString().padStart(2, '0')}`;
+  //   const formattedTotal = `${minutesTotal}:${secondsTotal.toString().padStart(2, '0')}`;
 
-    // stopwatch.textContent = `${formattedElapsed} / ${formattedTotal}`;
-    stopwatch.textContent = `${formattedElapsed}`;
+  //   // stopwatch.textContent = `${formattedElapsed} / ${formattedTotal}`;
+  //   stopwatch.textContent = `${formattedElapsed}`;
 
-    log(LogLevel.INFO, `Stopwatch updated: Elapsed = ${formattedElapsed}, Total = ${formattedTotal}`);
-  };
+  //   log(LogLevel.INFO, `Stopwatch updated: Elapsed = ${formattedElapsed}, Total = ${formattedTotal}`);
+  // };
 
-  window.isSeeking = false;
+  // window.isSeeking = false;
 
-  /**
-  * ✅ Rewinds playback to the start of the score.
-  * - Resets `playheadX` to 0 and ensures immediate UI update.
-  * - Prevents unwanted sync overrides from reverting the rewind.
-  * - Clears triggered cues and resets playback state.
-  * - Sends an updated state to the server to sync all clients.
-  */
+  // /**
+  // * ✅ Rewinds playback to the start of the score.
+  // * - Resets `playheadX` to 0 and ensures immediate UI update.
+  // * - Prevents unwanted sync overrides from reverting the rewind.
+  // * - Clears triggered cues and resets playback state.
+  // * - Sends an updated state to the server to sync all clients.
+  // */
 
-  let ignoreRewindOnStartup = false; // ✅ Prevents unnecessary resets
-  let suppressSync = false;
+  // let ignoreRewindOnStartup = false; // ✅ Prevents unnecessary resets
+  // let suppressSync = false;
 
-  const rewindToStart = () => {
-    console.log("[DEBUG] Rewinding to start.");
+  // const rewindToStart = () => {
+  //   console.log("[DEBUG] Rewinding to start.");
 
-    // ✅ Ensure the playhead starts at the first position, not screen left
-   window.playheadX = 0;
-    window.elapsedTime = 0;
+  //   // ✅ Ensure the playhead starts at the first position, not screen left
+  //  window.playheadX = 0;
+  //   window.elapsedTime = 0;
 
 
-    // ✅ Instead of forcing `scrollLeft=0`, dynamically center the viewport
-    window.scoreContainer.scrollLeft = Math.max(0,window.playheadX);
+  //   // ✅ Instead of forcing `scrollLeft=0`, dynamically center the viewport
+  //   window.scoreContainer.scrollLeft = Math.max(0,window.playheadX);
 
-    console.log(`[DEBUG] After rewind ->window.playheadX=${window.playheadX}, scrollLeft=${window.scoreContainer.scrollLeft}`);
-    console.log("[DEBUG] Rewinding to Zero...");
-    console.log("[DEBUG] window.scoreContainer.scrollLeft before:", window.scoreContainer.scrollLeft);
-    console.log("[DEBUG] window.scoreContainer offsetWidth:", window.scoreContainer.offsetWidth);
-    console.log("[DEBUG] SVG Width:", window.scoreSVG.getBBox().width);
-    console.log("[DEBUG] window.scoreContainer.scrollLeft after:", window.scoreContainer.scrollLeft);
+  //   console.log(`[DEBUG] After rewind ->window.playheadX=${window.playheadX}, scrollLeft=${window.scoreContainer.scrollLeft}`);
+  //   console.log("[DEBUG] Rewinding to Zero...");
+  //   console.log("[DEBUG] window.scoreContainer.scrollLeft before:", window.scoreContainer.scrollLeft);
+  //   console.log("[DEBUG] window.scoreContainer offsetWidth:", window.scoreContainer.offsetWidth);
+  //   console.log("[DEBUG] SVG Width:", window.scoreSVG.getBBox().width);
+  //   console.log("[DEBUG] window.scoreContainer.scrollLeft after:", window.scoreContainer.scrollLeft);
 
-    if (wsEnabled && window.socket.readyState === WebSocket.OPEN) {
-      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-        elapsedTime: window.elapsedTime }));
-    }
+  //   if (wsEnabled && window.socket.readyState === WebSocket.OPEN) {
+  //     window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
+  //       elapsedTime: window.elapsedTime }));
+  //   }
 
-    // // ✅ Apply and store correct speed based on the new playhead position
-    window.speedMultiplier = getSpeedForPosition(window.playheadX);
-    console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
-    window.updateSpeedDisplay();
+  //   // // ✅ Apply and store correct speed based on the new playhead position
+  //   window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  //   console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
+  //   window.updateSpeedDisplay();
 
-    updatePosition();
-    updateSeekBar();
-    updateStopwatch();
-  };
+  //   updatePosition();
+  //   updateSeekBar();
+  //   //updatestopwatch();
+  // };
 
 
 
@@ -2803,7 +2831,7 @@ const initializeSVG = (svgElement) => {
 
     updatePosition();
     updateSeekBar();
-    updateStopwatch();
+    //updatestopwatch();
 
     if (wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
@@ -2842,7 +2870,7 @@ const initializeSVG = (svgElement) => {
 
     updatePosition();
     updateSeekBar();
-    updateStopwatch();
+    //updatestopwatch();
 
 
     if (wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
@@ -3377,7 +3405,7 @@ const initializeSVG = (svgElement) => {
 
     updatePosition();
     updateSeekBar();
-    updateStopwatch();
+    //updatestopwatch();
   };
 
   /**
@@ -3564,17 +3592,27 @@ const initializeSVG = (svgElement) => {
     }
   };
 
-
-
-  function startPlayback() {
+  window.startPlayback = function startPlayback() {
     if (!window.isPlaying) {
       window.isPlaying = true;
-      window.transportStartTime = performance.now() - (window.elapsedTime || 0);
-      requestAnimationFrame(updateTransport);
-      console.log('[Playback] ▶️ Playback started from startPlayback()');
+      window.isMusicalPause = false;
+      startStopwatch();
+      startAnimation();
+      togglePlayButton();
+      console.log("[Playback] ▶️ Playback started.");
     }
-  }
+  };
   
+  window.pausePlayback = function pausePlayback() {
+    if (window.isPlaying) {
+      window.isPlaying = false;
+      window.isMusicalPause = false;
+      stopStopwatch();
+      stopAnimation();
+      togglePlayButton();
+      console.log("[Playback] ⏸ Playback paused.");
+    }
+  };
 
 
   //// END OF TOGGLE PLAY LOGIC  ///////////////////////////////////////////
@@ -3703,33 +3741,6 @@ const initializeSVG = (svgElement) => {
   // };
 
 
-  /////////////////////////////////////////
-  // STOPWATCH TO FULLSCREEN FUNCTION
-
-  const mainContent = document.getElementById("scoreContainer"); // Main score area
-
-  if (!stopwatch || !mainContent) {
-    console.error("[ERROR] Stopwatch or scoreContainer not found.");
-    return;
-  }
-
-  stopwatch.addEventListener("click", (event) => {
-    event.preventDefault();  // ✅ Prevents default browser behavior
-    event.stopImmediatePropagation();  // ✅ Fully stops propagation
-
-    if (stopwatch.classList.contains("fullscreen")) {
-      console.log("[DEBUG] Exiting fullscreen mode for stopwatch.");
-      stopwatch.classList.remove("fullscreen");
-      mainContent.classList.remove("blur-background");
-      mainContent.classList.add("unblur-background");
-    } else {
-      console.log("[DEBUG] Entering fullscreen mode for stopwatch.");
-      stopwatch.classList.add("fullscreen");
-      mainContent.classList.add("blur-background");
-      mainContent.classList.remove("unblur-background");
-    }
-  });
-
 
   // this is never used anywhere?
   // todo what is this for - can it be removed
@@ -3770,7 +3781,7 @@ const initializeSVG = (svgElement) => {
 
     updatePosition();
     updateSeekBar();
-    updateStopwatch();
+    //updatestopwatch();
   };
 
 
@@ -3953,10 +3964,12 @@ const initializeSVG = (svgElement) => {
   //   //console.log(Duration updated to ${durationInput.value} minutes (${duration} milliseconds).);
   //   calculateMaxScrollDistance();
   //   updatePosition();
-  //   updateStopwatch(); // Ensure the stopwatch reflects the updated total duration
+  //   //updatestopwatch(); // Ensure the stopwatch reflects the updated total duration
   // });
 
-  toggleButton.addEventListener('click', togglePlay);
+  toggleButton.addEventListener('click', () => {
+    window.isPlaying ? window.pausePlayback() : window.startPlayback();
+  });
 
   rewindButton.addEventListener('click', () => {
     resetTriggeredCues(); // Clear triggered cues
@@ -3969,6 +3982,8 @@ const initializeSVG = (svgElement) => {
   rewindToZeroButton.addEventListener('click', () => {
     resetTriggeredCues(); // Clear triggered cues
     rewindToStart(); // Existing function to reset playback to the start
+    resetStopwatch();
+
   });
 
   fullscreenButton.addEventListener('click', toggleFullscreen);
@@ -4025,7 +4040,8 @@ const initializeSVG = (svgElement) => {
       toggleSplashScreen(); // Toggle splash screen visibility
     } else if (event.key === ' ') {
       event.preventDefault(); // Prevent default browser behavior for space key
-      togglePlay(); // Play/Pause score
+      window.isPlaying ? window.pausePlayback() : window.startPlayback();
+     // Play/Pause score
       // } else if (event.key === 'r' || event.key === 'R') {
       //     rewindToStart(); // Rewind to start
     } else if (event.key === 'p' || event.key === 'P') {
@@ -4052,7 +4068,7 @@ const initializeSVG = (svgElement) => {
     if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
       // Double-tap detected
       console.log("[DEBUG] Double-tap detected. Toggling play/pause.");
-      togglePlay(); // Call your existing function
+      window.isPlaying ? window.pausePlayback() : window.startPlayback();
     }
 
     lastTap = currentTime; // Update the lastTap timestamp
@@ -4168,7 +4184,7 @@ const initializeSVG = (svgElement) => {
 
   // calculateMaxScrollDistance();
   updatePosition();
-  updateStopwatch();
+  //updatestopwatch();
 
   window.scoreContainer = window.scoreContainer; // Expose globally
   window.updatePosition = updatePosition; // Expose updatePosition globally

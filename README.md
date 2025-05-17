@@ -129,8 +129,8 @@ See `docs/multi-client-setup.html` for more detailed instructions on LAN setup a
 ## Installing & Running the Server
 
 ```bash
-git clone https://github.com/YOURNAME/oscillaScore.git
-cd oscillaScore
+git clone https://git.kompot.si/rob/rotula.score.git
+cd rotula.score
 npm install
 node server.js  # Starts WebSocket + OSC server
 ```

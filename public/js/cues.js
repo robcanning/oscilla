@@ -188,6 +188,8 @@ export function handlePauseCue(cueId, duration, showCountdownOverride = null, re
   window.ignoreSyncDuringPause = true;
 
   window.isPlaying = false;
+  window.isMusicalPause = true;
+
   window.stopAnimation?.();
   window.animationPaused = true;
   window.togglePlayButton?.();
@@ -908,6 +910,8 @@ window.adjustSpeed = adjustSpeed;
 export function handleStopCue(cueId) {
   window.stopAnimation?.();
   window.isPlaying = false;
+  window.isMusicalPause = true;
+
   window.togglePlayButton?.();
   console.log("[CLIENT] Playback stopped by cue:", cueId);
 }
@@ -958,6 +962,8 @@ export function handleCueChoice(cueId) {
     if (window.isPlaying) {
       console.log('[DEBUG] Pausing score for cue choice.');
       window.isPlaying = false;
+      window.isMusicalPause = true;
+
       window.stopAnimation?.();
 
       if (window.wsEnabled && window.socket) {
@@ -1144,6 +1150,8 @@ export async function handleAnimejsCue(cueId, animationPath, duration) {
   const wasPlaying = window.isPlaying;
   if (wasPlaying) {
     window.isPlaying = false;
+    window.isMusicalPause = true;
+
     window.stopAnimation?.();
     if (window.wsEnabled && window.socket) {
       window.socket.send(JSON.stringify({
@@ -1523,6 +1531,8 @@ export function handleMediaCue(cueId, cueParams) {
 
   if (window.isPlaying) {
     window.isPlaying = false;
+    window.isMusicalPause = true;
+
     window.animationPaused = true;
     window.stopAnimation?.();
   }
@@ -1901,11 +1911,13 @@ export async function checkCueTriggers() {
             console.log(`[repeat] Repeat complete → stopping playback.`);
             window.stopAnimation?.();
             window.isPlaying = false;
+            window.isMusicalPause = true;
+
             window.togglePlayButton?.();
           } else if (repeat.resumeId && repeat.resumeId !== 'self') {
             console.log(`[repeat] Repeat complete → jumping to ${repeat.resumeId}`);
             window.jumpToCueId?.(repeat.resumeId);
-            window.togglePlay?.();
+            window.isPlaying ? window.pausePlayback() : window.startPlayback();
           } else {
             console.log(`[repeat] Repeat complete → staying at current location.`);
           }
