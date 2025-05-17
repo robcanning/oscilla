@@ -160,9 +160,6 @@ loadWaveSurfer(() => {
 });
 
 
-
-
-
 document.addEventListener('DOMContentLoaded', () => {
   setLogLevel(LogLevel.WARN);
   let pendingRepeatStateMap = null; // stores repeat state from server before cues[] are ready
@@ -206,8 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let maxScrollDistance = 40000; // todo GET THE VALUE FROM WIDTH
   let playbackSpeed = 1.0;
   window.lastAnimationFrameTime = null;
-  let wsEnabled = true; // WebSocket state
-  let socket = null; // Define globally so all functions can access it
+  window.wsEnabled = true;
+  // letwindow.socket= null; // Define globally so all functions can access it
   let resumeReceived = false; // ✅ Prevents infinite broadcast loops
   let totalPauseDuration = 0; // Tracks cumulative pause time for musical pauses
   let pauseStartTime = null; // Start time of the current musical pause
@@ -539,12 +536,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const MAX_RETRIES = 5;
 
   const connectWebSocket = async () => {
-    if (!wsEnabled) {
+    if (!window.wsEnabled) {
       console.warn('[CLIENT] WebSocket is disabled.');
       return;
     }
 
-    if (socket && socket.readyState === WebSocket.OPEN) {
+    if (window.socket&& window.socket.readyState === WebSocket.OPEN) {
       console.warn('[CLIENT] WebSocket is already connected.');
       return; // ✅ Prevent duplicate connections
     }
@@ -559,13 +556,15 @@ document.addEventListener('DOMContentLoaded', () => {
       * ✅ Event: Successfully Connected
       * Resets the reconnect counter when a connection is established.
       */
-      socket.addEventListener('open', () => {
+      window.socket.addEventListener('open', () => {
         console.log(`[CLIENT] WebSocket connected successfully to: ${WS_URL}`);
         reconnectAttempts = 0; // ✅ Reset retry counter
       });
 
-      socket.addEventListener("open", () => {
+      window.socket.addEventListener("open", () => {
         console.log("[CLIENT] 🌐 WebSocket connected — requesting repeat state...");
+        window.wsEnabled = true;  
+
         window.socket.send(JSON.stringify({ type: "get_repeat_state" }));
       });
 
@@ -576,7 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let recentlyJumped = false; // ✅ New flag to prevent double jumps
 
-      socket.addEventListener("message", (event) => {
+      window.socket.addEventListener("message", (event) => {
         // console.log(`[DEBUG] 🌐 WebSocket Message Received: ${event.data}`);
 
         try {
@@ -593,6 +592,8 @@ document.addEventListener('DOMContentLoaded', () => {
             /** ✅ Welcome Message - Assigns client name */
             case "welcome":
               console.log(`[CLIENT] Connected as: ${data.name}`);
+              window.localClientName = data.name;
+              console.log("[CLIENT] Assigned local client name:", data.name);
               break;
 
             // ✅ Handle receiving the updated client list from the server
@@ -708,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
               animationPaused = true;
               togglePlayButton();
 
-              if (wsEnabled && socket) {
+              if (window.wsEnabled && window.socket) {
                 window.socket.send(JSON.stringify({
                   type: "cuePause_ack",
                   playheadX:window.playheadX ?? -1,
@@ -945,7 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
               break;
             /** ❌ Handle Unknown Messages */
             default:
-              console.warn(`[WARNING] Received unknown WebSocket message:`, data);
+              console.warn(`[WARNING] Received unknown Webwindow.socket message:`, data);
               break;
           }
         } catch (error) {
@@ -957,7 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
       * ✅ Event: WebSocket Connection Closed
       * Attempts to reconnect if the closure was unexpected.
       */
-      socket.addEventListener('close', (event) => {
+      window.socket.addEventListener('close', (event) => {
         console.warn(`[CLIENT] WebSocket closed. Code: ${event.code}, Reason: ${event.reason || "No reason provided"}`);
 
         if (!event.wasClean && reconnectAttempts < MAX_RETRIES) {
@@ -973,7 +974,7 @@ document.addEventListener('DOMContentLoaded', () => {
       * ✅ Event: WebSocket Encountered an Error
       * Logs WebSocket errors but does not close the connection.
       */
-      socket.addEventListener('error', (err) => {
+      window.socket.addEventListener('error', (err) => {
         console.error('[CLIENT] WebSocket encountered an error:', err);
       });
 
@@ -989,15 +990,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-
   // START OF CLIENT MANAGMENT LOGIC ////////////////////////////////////////////
 
   //  Allows users to update their displayed name by clicking the client list.
   //  Sends the updated name to the server for synchronization across clients.
   //  Ensures the local client's name is updated globally and reflected in the UI.
 
-  let localClientName = localStorage.getItem("clientName") || "";
+  window.localClientName = localStorage.getItem("clientName") || "";
 
   document.getElementById("client-list").addEventListener("click", () => {
     const newName = prompt("Enter your name:");
@@ -1009,11 +1008,11 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem("clientName", newName.trim());
 
       // ✅ Send the updated name to the server
-      if (wsEnabled && socket) {
+      if (window.wsEnabled && window.socket) {
         window.socket.send(JSON.stringify({ type: "update_client_name", name: newName.trim() }));
       }
 
-      localClientName = newName.trim(); // ✅ Update locally stored client name
+      window.localClientName = newName.trim(); // ✅ Update locally stored client name
       updateClientList(clients); // ✅ Refresh UI with updated name
 
     }
@@ -1029,45 +1028,80 @@ document.addEventListener('DOMContentLoaded', () => {
   // ✅ Names are arranged 1 per line, maintaining clarity and separation.
 
   const updateClientList = (clientArray) => {
-    window.clients = clientArray; // ✅ Store the latest client list globally
+    window.clients = clientArray; // ✅ Store globally
     const clientListElement = document.getElementById("client-list");
-
+  
     if (clientListElement) {
-      const formattedNames = clients
+      const formattedNames = clientArray
         .map((name, index) => {
-          const isLocal = name === localClientName; // ✅ Detect local client
+          const isLocal = name === window.localClientName;
           const cssClass = isLocal ? "local-client" : "remote-client";
-          const separator = (index % 1 === 0 && index < clients.length - 1) ? ',  ' : ''; // ✅ Add commas correctly
+          const separator = (index < clientArray.length - 1) ? ', ' : '';
           return `<span class="${cssClass}">${name}${separator}</span>`;
         })
         .join('');
-
-      // ✅ Prepend "Online: " and ensure wrapping behavior
+  
       clientListElement.innerHTML = `<strong>Online: </strong> ${formattedNames}`;
       clientListElement.style.whiteSpace = "normal";
-      clientListElement.style.wordWrap = "break-word"; // ✅ Prevent overflow issues
+      clientListElement.style.wordWrap = "break-word";
+       
+      if (clientArray.length === 1 && clientArray[0] === window.localClientName) {
+        isAudioMaster = true;
+        updateAudioMasterUI();
+        console.log("[AudioMaster] Auto-enabled: only client connected.");
+      } else {
+        console.log("[AudioMaster] false.");
+
+        isAudioMaster = false;
+        updateAudioMasterUI();
+      }
+  
     } else {
       console.error("[CLIENT] Client list container not found.");
     }
   };
-
+  
   /**
   * ✅ Sends stored client name to the server upon connection.
   * - Ensures the stored name is sent right after connecting.
   */
 
   const handleClientConnected = (clientName) => {
-    localClientName = localStorage.getItem("clientName") || clientName; // ✅ Use stored name if available
+    window.localClientName = localStorage.getItem("clientName") || clientName; // ✅ Use stored name if available
 
-    console.log(`[CLIENT] Connected as: ${localClientName}`);
+    console.log(`[CLIENT] Connected as: ${window.localClientName}`);
 
     // ✅ If a stored name exists, send it to the server
-    if (wsEnabled && socket && localClientName) {
-      window.socket.send(JSON.stringify({ type: "update_client_name", name: localClientName }));
+    if (window.wsEnabled &&window.socket&& localClientName) {
+      window.socket.send(JSON.stringify({ type: "update_client_name", name: window.localClientName }));
     }
   };
 
   // end of client management /////////////////////////////////////////////////
+
+// AUDIO MASTER LOGIC 
+
+let isAudioMaster = false;
+
+Object.defineProperty(window, 'isAudioMaster', {
+  get: () => isAudioMaster,
+  configurable: true
+});
+
+function updateAudioMasterUI() {
+  const button = document.getElementById("audio-master-button");
+  if (isAudioMaster) {
+    button.classList.add("active");
+  } else {
+    button.classList.remove("active");
+  }
+}
+
+document.getElementById("audio-master-button").addEventListener("click", () => {
+  isAudioMaster = !isAudioMaster;
+  updateAudioMasterUI();
+  console.log(`[AudioMaster] Audio Master is now: ${isAudioMaster}`);
+});
 
 
 
@@ -2105,7 +2139,7 @@ const initializeSVG = (svgElement) => {
   //   window.updateSpeedDisplay();
 
   //   // ✅ Send update to WebSocket only if it was not from a sync message
-  //   if (wsEnabled && socket && socket.readyState === WebSocket.OPEN && !incomingServerUpdate) {
+  //   if (window.wsEnabled &&window.socket&& socket.readyState === WebSocket.OPEN && !incomingServerUpdate) {
   //     const speedMessage = {
   //       type: "set_speed_multiplier",
   //       multiplier: window.speedMultiplier,
@@ -2198,7 +2232,7 @@ const initializeSVG = (svgElement) => {
   //       window.speedMultiplier = Math.min(speedMultiplier + 0.1, 3);
   //       console.log(`[DEBUG] Speed multiplier increased to ${speedMultiplier}`);
 
-  //       if (wsEnabled && socket) {
+  //       if (window.wsEnabled && socket) {
   //         window.socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: window.speedMultiplier }));
   //         console.log(`[CLIENT] Sent speed multiplier change to server: ${speedMultiplier}`);
   //       }
@@ -2208,7 +2242,7 @@ const initializeSVG = (svgElement) => {
   //       window.speedMultiplier = Math.max(speedMultiplier - 0.1, 0.1);
   //       console.log(`[DEBUG] Speed multiplier decreased to ${speedMultiplier}`);
 
-  //       if (wsEnabled && socket) {
+  //       if (window.wsEnabled && socket) {
   //         window.socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: window.speedMultiplier }));
   //         console.log(`[CLIENT] Sent speed multiplier change to server: ${speedMultiplier}`);
   //       }
@@ -2376,7 +2410,7 @@ const initializeSVG = (svgElement) => {
      window.isPlaying = state.isPlaying;
      window.isPlaying ? startAnimation() : stopAnimation();
 
-    if (wsEnabled && socket) {
+    if (window.wsEnabled && window.socket) {
       window.socket.send(JSON.stringify({
         type: "sync",
         state: {
@@ -2647,7 +2681,7 @@ const initializeSVG = (svgElement) => {
       startAnimation();
 
       // ✅ Send WebSocket sync to ensure all clients align
-      if (wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+      if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
         window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
           elapsedTime: window.elapsedTime }));
         console.log(`[CLIENT] Sent jump message to server after seek. Elapsed Time: ${elapsedTime}`);
@@ -2783,7 +2817,7 @@ const initializeSVG = (svgElement) => {
   
     suppressSync = true;
   
-    if (wsEnabled && window.socket.readyState === WebSocket.OPEN) {
+    if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
       window.socket.send(JSON.stringify({
         type: 'jump',
         playheadX: window.playheadX,
@@ -2827,7 +2861,7 @@ const initializeSVG = (svgElement) => {
     updateSeekBar();
     //updatestopwatch();
 
-    if (wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+    if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
         elapsedTime: window.elapsedTime }));
     }
@@ -2867,7 +2901,7 @@ const initializeSVG = (svgElement) => {
     //updatestopwatch();
 
 
-    if (wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+    if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
         elapsedTime: window.elapsedTime }));
     }
@@ -2892,18 +2926,19 @@ const initializeSVG = (svgElement) => {
   };
 
   const toggleWebSocket = () => {
-    wsEnabled = !wsEnabled;
-    console.log(`[CLIENT] WebSocket is now ${wsEnabled ? 'enabled' : 'disabled'}.`);
+    window.wsEnabled = !window.wsEnabled;
+    console.log(`[CLIENT] WebSocket is now ${window.wsEnabled ? 'enabled' : 'disabled'}.`);
 
-    if (!wsEnabled && socket) {
-      window.socket.close();
-      socket = null;
-    } else if (wsEnabled) {
-      connectWebSocket();
-    }
+    if (!window.wsEnabled && window.socket) {
+  window.socket.close();
+  window.socket = null;
+} else if (window.wsEnabled) {
+  connectWebSocket();
+}
+  }
 
-    wsToggleButton.textContent = wsEnabled ? 'Disable WebSocket' : 'Enable WebSocket';
-  };
+  wsToggleButton.textContent = window.wsEnabled ? '🌐' : '❌';
+
 
 
   const toggleFullscreen = () => {
@@ -2990,7 +3025,7 @@ const initializeSVG = (svgElement) => {
     console.log(`[DEBUG] 🖥️ SVG Scroll Position (scrollLeft): ${window.scoreContainer.scrollLeft}`);
 
     // Log state of WebSocket
-    console.log(`[DEBUG] 🌐 WebSocket State: ${wsEnabled ? 'Enabled' : 'Disabled'}`);
+    console.log(`[DEBUG] 🌐 WebSocket State: ${window.wsEnabled ? 'Enabled' : 'Disabled'}`);
     console.log(`[DEBUG] 🔗 WebSocket Connection Open: ${socket && socket.readyState === WebSocket.OPEN}`);
 
     // Log sync related variables
@@ -3390,7 +3425,7 @@ const initializeSVG = (svgElement) => {
 
     console.log(`[DEBUG] Jumping to Rehearsal Mark: ${mark},window.playheadX=${window.playheadX}`);
 
-    if (wsEnabled && window.socket.readyState === WebSocket.OPEN) {
+    if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
         elapsedTime: window.elapsedTime }));
     } else {
@@ -3547,7 +3582,7 @@ const initializeSVG = (svgElement) => {
     window.updateSpeedDisplay();
 
     // ✅ Ensurewindow.playheadX is included in WebSocket message
-    if (wsEnabled && socket && socket.readyState === WebSocket.OPEN) {
+    if (window.wsEnabled &&window.socket&& socket.readyState === WebSocket.OPEN) {
       const message = {
         type:  window.isPlaying ? "play" : "pause",
        playheadX:window.playheadX, // 🔥 Includewindow.playheadX
@@ -3768,7 +3803,7 @@ const initializeSVG = (svgElement) => {
 
     console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
 
-    if (wsEnabled && socket && socket.readyState === WebSocket.OPEN) {
+    if (window.wsEnabled &&window.socket&& socket.readyState === WebSocket.OPEN) {
       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
         elapsedTime: window.elapsedTime }));
     }
@@ -4128,9 +4163,9 @@ const initializeSVG = (svgElement) => {
 
     if (!isCommunicationEnabled) {
       // Disable WebSocket
-      if (socket) {
-        socket.close();
-        socket = null;
+      if (window.socket) {
+        window.socket.close();
+        window.socket= null;
       }
       console.log('WebSocket and OSC messages are disabled.');
     } else {

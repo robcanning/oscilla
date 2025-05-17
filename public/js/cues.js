@@ -21,6 +21,7 @@
  * All handlers are exportable and usable within app.js and other modules.
  */
 
+
 export const cueHandlers = {
   cueSpeed: handleSpeedCue,
   cuePause: handlePauseCue,
@@ -1683,7 +1684,7 @@ export function startFadeOutBeforeEnd(wavesurfer, fadeOutSec, filename = "") {
 export function handleAudioCue(cueId, cueParams) {
   console.log(`[DEBUG] Handling audio cue: ${cueId}`);
 
-  if (!window.isPlaybackMaster) {
+  if (!window.isAudioMaster) {
     console.log(`[INFO] Skipping local audio playback: not the designated playback master.`);
     return;
   }
@@ -1780,6 +1781,7 @@ export function handleAudioCue(cueId, cueParams) {
   activeAudioCues.set(filename, { wavesurfer, volume });
   sendAudioOscTrigger({ cueId, filename, volume, loop: loopCount });
 }
+window.sendAudioOscTrigger = sendAudioOscTrigger;
 
 
 export function handleP5Cue(cueId, cueParams) {

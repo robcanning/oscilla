@@ -263,10 +263,7 @@ const broadcastClientList = () => {
 ////////////////////////////////
 let cuePauseAcks = new Set(); // ✅ Moved to global scope so it persists for all clients
 
-
 let repeatStateMap = {}; // cueId → { currentCount, count, active, ... }
-
-
 
 // ✅ Declare a set to track triggered cues
 let triggeredCues = new Set();
@@ -276,19 +273,12 @@ wss.on('connection', (ws, req) => {
   clientNames.set(ws, clientName);
   activeClients.add(ws);
   console.log(`[DEBUG] New WebSocket connection: ${clientName}`);
-
-
-  const ip = req.socket.remoteAddress;
-
-  console.log(JSON.stringify({
-    gui: true,
-    type: "client_connected",
-    name: clientName,
-    ip
-  }));
-
+  
+  // ✅ Send welcome message to client so they know their name
+  ws.send(JSON.stringify({ type: 'welcome', name: clientName }));
+  
   broadcastClientList();
-
+  
   // ✅ Instead of resetting, send the current state to the new client
   // ws.send(JSON.stringify({ type: "welcome", name: clientName }));
   // ✅ Sync the new client with existing state
@@ -329,6 +319,14 @@ wss.on('connection', (ws, req) => {
         broadcastState(); // Optional, ensures clients reflect stopped state
 
         break;
+
+        case "osc_rotate":
+          console.log(`[OSC] 🔄 Received osc_rotate:`, data);
+        
+          // Optionally broadcast this OSC message to all clients (if needed)
+          // Or forward to an OSC server if you're using node-osc or similar
+        
+          break;
 
       case 'set_speed_multiplier':
         if (!isNaN(data.multiplier) && data.multiplier > 0) {

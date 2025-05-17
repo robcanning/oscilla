@@ -23,6 +23,8 @@
  
  */
 
+window.OSC_ENABLED = false; // master global OSC mute
+
 
 /**
  * startRotate(object)
@@ -63,14 +65,32 @@ function startRotate(object) {
   let lastOscSent = 0;
 
   const sendRotationOsc = (angle, id) => {
+    if (!window.OSC_ENABLED) return;
+
     const now = performance.now();
+  
     if ((now - lastOscSent) < (1000 / throttleRate)) return;
     lastOscSent = now;
+  
+    // ✅ Check if this animation is visible before sending OSC
+    const animEntry = window.runningAnimations[id];
+    if (animEntry && animEntry.visible === false) return;
+  
     const norm = (angle % 360) / 360;
     const radians = (angle % 360) * Math.PI / 180;
-    if (!window.socket || socket.readyState !== WebSocket.OPEN) return;
-    window.socket.send(JSON.stringify({ type: "osc_rotate", id: object.id, angle, radians, norm, timestamp: Date.now() }));
+  
+    if (!window.socket || window.socket.readyState !== WebSocket.OPEN) return;
+  
+    window.socket.send(JSON.stringify({
+      type: "osc_rotate",
+      id,
+      angle,
+      radians,
+      norm,
+      timestamp: Date.now()
+    }));
   };
+  
 
   const applyTransformOrigin = () => {
     let target = object;
@@ -394,6 +414,8 @@ function startScale(object) {
   let lastOscSent = 0;
 
   const sendScaleOsc = (scaleX, scaleY) => {
+    if (!window.OSC_ENABLED) return;
+
     const now = performance.now();
     if ((now - lastOscSent) < (1000 / throttleRate)) return;
     lastOscSent = now;
@@ -488,7 +510,8 @@ function startScale(object) {
  */
 function initializeRotatingObjects(svgElement) {
   const rotatingObjects = Array.from(svgElement.querySelectorAll(
-    '[id^="r("], [data-id^="r("]' // match anything starting with r(...) wrapper
+    '[id^="obj_rotate_"], [id^="r("], [id^="r_"], ' +
+    '[data-id^="obj_rotate_"], [data-id^="r("], [data-id^="r_"]'
   ));
 
   if (rotatingObjects.length === 0) {
@@ -647,9 +670,6 @@ function parseO2PCompact(id) {
 // OPEN SOUND CONTROL (OSC) for obj2path animations
 //////////////////////////////////////////////////////////////
 
-// Toggle: globally enable or disable OSC transmission
-window.ENABLE_OBJ2PATH_OSC = false;
-
 // Map to track last send timestamps per path (throttling)
 const oscLastSent = new Map();
 
@@ -663,7 +683,8 @@ const oscLastSent = new Map();
  * @param {number} angle - Heading angle in degrees
  */
 function sendObj2PathOsc(pathId, normX, normY, angle = 0) {
-  if (!window.ENABLE_OBJ2PATH_OSC) return;
+ 
+  if (!window.OSC_ENABLED) return;
 
   const now = performance.now();
   const THROTTLE_MS = 100;

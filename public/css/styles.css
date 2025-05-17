@@ -413,13 +413,26 @@ height: 100% !important; /* Or a fixed height / 100vh */
 }
 
 
-
-
 #toggle-notes-button {
     font-size: 30px !important; /* Adjust the size as needed */
     min-width: 40px; /* ✅ Ensures button is not too small */
     max-width: 100px; /* ✅ Prevents it from growing too large */
   }
+
+  #audio-master-button {
+    border: 2px solid red;
+    background: black;
+    color: white;
+    font-size: 20px;
+    padding: 5px 10px;
+    margin-left: 5px;
+    border-radius: 4px;
+  }
+  
+  #audio-master-button.active {
+    border-color: limegreen;
+  }
+  
 
 #rehearsal-marks-button {
     font-size: 30px !important; /* Adjust the size as needed */
