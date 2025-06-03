@@ -23,7 +23,95 @@
  
  */
 
-window.OSC_ENABLED = false; // master global OSC mute
+function extractUid(id) {
+  const match = id.match(/_uid(\d+)/);
+  return match ? `uid${match[1]}` : id;
+}
+
+
+
+window.OSC_ENABLED = true; // master global OSC mute
+const rotationLastSent = new Map();
+
+const sendRotationOsc = (angle, id) => {
+  if (!window.OSC_ENABLED) return;
+
+  const now = performance.now();
+  const throttleRate = window.oscRotationThrottleRate || 20;
+
+  const last = rotationLastSent.get(id) || 0;
+  if ((now - last) < (1000 / throttleRate)) return;
+  rotationLastSent.set(id, now);
+
+  const animEntry = window.runningAnimations[id];
+  if (animEntry && animEntry.visible === false) return;
+
+  const norm = (angle % 360) / 360;
+  const radians = (angle % 360) * Math.PI / 180;
+
+  if (!window.socket || window.socket.readyState !== WebSocket.OPEN) return;
+
+window.socket.send(JSON.stringify({
+  type: "osc_rotate",
+  id,
+  uid: extractUid(id),
+  angle,
+  radians,
+  norm,
+  timestamp: Date.now()
+}));
+};
+
+
+
+function getStepDurations(id) {
+  const dur = extractTagValue(id, 'dur', null);
+  const speed = extractTagValue(id, 'speed', 1.0);
+  const stepDuration = (dur !== null ? dur : speed) * 1000;
+
+  const tweenRaw = extractTagValue(id, 'tween', null);
+  const tween = tweenRaw !== null ? parseFloat(tweenRaw) : 0.2; // default 0.2s
+  const tweenDuration = Math.min(stepDuration, tween * 1000);
+  const holdDuration = Math.max(0, stepDuration - tweenDuration);
+
+  return { stepDuration, tweenDuration, holdDuration };
+}
+
+function addRotationStep(timeline, object, angle, tweenDuration, holdDuration, easing, oscEnabled) {
+  if (tweenDuration > 0) {
+    timeline.add({
+      targets: object,
+      rotate: `${angle}deg`,
+      duration: tweenDuration,
+      easing,
+      begin: () => {
+        if (oscEnabled) sendRotationOsc((angle + 90) % 360, object.id);
+      }
+    });
+  } else {
+    timeline.add({
+      targets: object,
+      opacity: [1, 1],
+      duration: 0,
+      begin: () => {
+        object.style.transform = `rotate(${angle}deg)`;
+        if (oscEnabled) sendRotationOsc((angle + 90) % 360, object.id);
+      }
+    });
+  }
+
+  if (holdDuration > 0) {
+    timeline.add({
+      targets: object,
+      opacity: [1, 1],
+      duration: holdDuration
+    });
+  }
+}
+
+
+
+
 
 
 /**
@@ -62,179 +150,216 @@ function startRotate(object) {
 
   const oscEnabled = extractTagValue(id, "osc", false);
   const throttleRate = extractTagValue(id, "throttle", window.oscRotationThrottleRate || 20);
-  let lastOscSent = 0;
 
-  const sendRotationOsc = (angle, id) => {
-    if (!window.OSC_ENABLED) return;
-
-    const now = performance.now();
-  
-    if ((now - lastOscSent) < (1000 / throttleRate)) return;
-    lastOscSent = now;
-  
-    // ✅ Check if this animation is visible before sending OSC
-    const animEntry = window.runningAnimations[id];
-    if (animEntry && animEntry.visible === false) return;
-  
-    const norm = (angle % 360) / 360;
-    const radians = (angle % 360) * Math.PI / 180;
-  
-    if (!window.socket || window.socket.readyState !== WebSocket.OPEN) return;
-  
-    window.socket.send(JSON.stringify({
-      type: "osc_rotate",
-      id,
-      angle,
-      radians,
-      norm,
-      timestamp: Date.now()
-    }));
-  };
   
 
-  const applyTransformOrigin = () => {
-    let target = object;
-    const bbox = object.getBBox?.();
+  // const applyTransformOrigin = () => {
+  //   let target = object;
+  //   const bbox = object.getBBox?.();
 
-    if (bbox && bbox.width > 0 && bbox.height > 0) {
-      const cx = bbox.x + bbox.width / 2;
-      const cy = bbox.y + bbox.height / 2;
-      object.style.transformOrigin = `${cx}px ${cy}px`;
-    }
-  };
+  //   if (bbox && bbox.width > 0 && bbox.height > 0) {
+  //     const cx = bbox.x + bbox.width / 2;
+  //     const cy = bbox.y + bbox.height / 2;
+  //     object.style.transformOrigin = `${cx}px ${cy}px`;
+  //   }
+  // };
 
-  // applyTransformOrigin();
+  // // applyTransformOrigin();
   applyPivotFromId(object, id);
 
   const rMatch = id.match(/^r\(([^)]+)\)/);
   const mode = rMatch ? rMatch[1] : null;
   if (!mode) return;
+  
+  
 
-  // ALT
-  const altMatch = mode.match(/^alt\[([^\]]+)\]/);
-  if (altMatch) {
-    const [min, max] = altMatch[1].split(',').map(Number);
-    const speed = extractTagValue(id, 'speed', 1.0);
-    const anim = anime({
-      targets: object,
-      rotate: [min, max],
-      duration: speed * 1000,
-      easing,
-      direction: "alternate",
-      loop: true,
-      autoplay: true,
-      update: () => {
-        if (oscEnabled) {
-          const angle = parseFloat(object.style.transform?.match(/rotate\(([-\d.]+)deg\)/)?.[1] || 0);
-          sendRotationOsc((angle + 90) % 360, object.id);
-        }
-      }
-    });
+
+// SEQ
+// -------------------------------------------
+// Executes a sequence of absolute rotation angles.
+// Example: r(seq([0,90,180]))_dur(3)_tween(1.2)_ease(2)_x(3)
+// Each angle is visited in order with:
+//   - `tweenDuration` controlling the rotation time
+//   - `holdDuration` controlling pause after arrival
+//   - Optional repeat via `_x(N)` where N = number of loops (0 = infinite)
+// Notes:
+//   - Accepts any angle list (e.g. [0,90,0,120] for gestures or patterns)
+//   - Replaces the older deg[...] mode for general use
+//   - Uses helper functions:
+//     - getStepDurations(id): extracts dur/speed/tween/hold
+//     - addRotationStep(...): applies rotation, hold, and OSC
+// -------------------------------------------
+
+const seqMatch = mode.match(/^seq\[([^\]]+)\]/);
+if (seqMatch) {
+  const angles = seqMatch[1]
+    .split(',')
+    .map((v) => parseFloat(v.trim()))
+    .filter((v) => !isNaN(v));
+
+  if (!angles.length) {
+    console.warn("[rotate] ⚠️ Invalid or empty seq[...]");
     return;
   }
 
-  // RND
-  const rndMatch = mode.match(/^rnd\[(\d+)(x)?(?:,(\d+))?(?:,(\d+))?\]$/);
-  if (rndMatch) {
-    const count = parseInt(rndMatch[1]);
-    const looped = rndMatch[2] === 'x';
-    const min = rndMatch[4] ? parseFloat(rndMatch[3]) : 0;
-    const max = rndMatch[4] ? parseFloat(rndMatch[4]) : (rndMatch[3] ? parseFloat(rndMatch[3]) : 359);
-    const pool = Array.from({ length: 100 }, () => Math.random() * (max - min) + min).sort(() => Math.random() - 0.5);
-    let offset = 0;
-    const speed = extractTagValue(id, 'speed', 1.0);
-    const values = looped
-      ? () => {
-          const chunk = pool.slice(offset, offset + count);
-          offset = (offset + count) % pool.length;
-          return chunk;
-        }
-      : () => pool.slice(0, count);
-    const playRandomCycle = () => {
-      const angles = values();
-      const timeline = anime.timeline({ targets: object, autoplay: true, delay: quantDelay });
-      angles.forEach((angle) => {
-        timeline.add({
-          rotate: `${angle}deg`,
-          duration: speed * 1000,
-          easing,
-          begin: () => {
-            if (oscEnabled) sendRotationOsc((angle + 90) % 360, object.id);
-          }
-        });
-      });
-      if (looped) timeline.finished.then(() => playRandomCycle());
-    };
-    playRandomCycle();
-    return;
-  }
+  const repeatRaw = extractTagValue(id, 'x', null);
+  const repeatCount = repeatRaw === null ? 1 : parseInt(repeatRaw); // default = 1, x(0) = infinite
+
+  const { tweenDuration, holdDuration } = getStepDurations(id);
+
 
   
-  // SEQ
-  const seqMatch = mode.match(/^seq\[([^\]]+)\]/);
-  if (seqMatch) {
-    const values = seqMatch[1].split(',').map(v => parseFloat(v.trim()));
-    if (values.length < 2) return;
+  const playSequence = () => {
+    const timeline = anime.timeline({ autoplay: true, delay: quantDelay });
 
-    const bpm = extractTagValue(id, 'bpm', null);
-    const seqDur = extractTagValue(id, 'seqdur', null);
-    const rawSpeed = extractTagValue(id, 'speed', null);
-    const dur = extractTagValue(id, 'dur', null);
-    const rotationSpeed = bpm ? (60 / bpm) * 1000 : (rawSpeed ? rawSpeed * 1000 : (dur ? dur * 1000 : 1000));
-
-    const modeValue = extractTagValue(id, 'mode', 'loop');
-
-    let timeline = anime.timeline({ targets: object, autoplay: true, delay: quantDelay });
-    let steps = [...values];
-
-    const build = () => {
-      steps.forEach((angle, i) => {
-        timeline.add({
-          rotate: `${angle}deg`,
-          duration: rotationSpeed,
-          easing: easing,
-          begin: () => {
-            if (oscEnabled) sendRotationOsc((angle + 90) % 360, object.id);
-          }
-        });
-      });
-      if (modeValue === 'bounce') {
-        steps.reverse();
-        timeline.finished.then(build);
-      } else if (modeValue === 'loop') {
-        timeline.finished.then(build);
-      }
-    };
-
-    build();
-    return;
-  }
-
-
-// DEG
-  const degParsed = parseCompactAnimationValues(id, 'deg');
-  if (degParsed?.values?.length >= 2) {
-    const angleValues = degParsed.values;
-    const speed = extractTagValue(id, 'speed', 1.0);
-    const timeline = anime.timeline({ targets: object, loop: false, autoplay: true, delay: quantDelay });
-    angleValues.forEach((angle) => {
-      timeline.add({
-        rotate: `${angle}deg`,
-        duration: speed * 1000,
-        easing,
-        begin: () => {
-          if (oscEnabled) sendRotationOsc((angle + 90) % 360, object.id);
-        }
-      });
+    angles.forEach((angle) => {
+      addRotationStep(timeline, object, angle, tweenDuration, holdDuration, easing, oscEnabled);
     });
-    return;
-  }
 
-  // CONTINUOUS
+    if (repeatCount === 0) {
+      timeline.finished.then(playSequence);
+    } else if (repeatCount > 1) {
+      timeline.finished.then(() => {
+        currentRepeat++;
+        if (currentRepeat < repeatCount) playSequence();
+      });
+    }
+  };
+
+  let currentRepeat = 0;
+  playSequence();
+  return;
+}
+
+// RND
+// -------------------------------------------
+// Generates a new randomized sequence of angles on each cycle.
+// Example: r(rnd[6x,45,90])_dur(3)_tween(1.2)_ease(2)
+// - 6x: regenerate 6 random angles each time the sequence repeats
+// - [min,max]: range of random angle values
+//
+// Features:
+//   - Runtime randomness: values are regenerated per loop
+//   - Looping via `x(...)` supported (e.g. _x(0) = infinite)
+//   - Uses same tween + hold logic as seq[…]
+//
+// Notes:
+//   - Functionally similar to seq[…], but dynamic
+//   - Best for generative and non-deterministic rotation behavior
+//   - Internally uses the same timeline structure as seq[…]
+// -------------------------------------------
+
+const rndMatch = mode.match(/^rnd\[(\d+)(x)?(?:,(\d+))?(?:,(\d+))?\]$/);
+if (rndMatch) {
+  const count = parseInt(rndMatch[1]);
+  const looped = rndMatch[2] === 'x';
+  const min = rndMatch[4] ? parseFloat(rndMatch[3]) : 0;
+  const max = rndMatch[4] ? parseFloat(rndMatch[4]) : (rndMatch[3] ? parseFloat(rndMatch[3]) : 359);
+
+  const { tweenDuration, holdDuration } = getStepDurations(id);
+
+  const values = () => {
+    return Array.from({ length: count }, () => min + Math.random() * (max - min));
+  };
+
+  const playRandomCycle = () => {
+    const angles = values();
+    if (!angles.length) {
+      console.warn("[rotate] ⚠️ No angles generated in rnd[...]");
+      return;
+    }
+
+    const timeline = anime.timeline({ autoplay: true, delay: quantDelay });
+
+    angles.forEach((angle) => {
+      addRotationStep(timeline, object, angle, tweenDuration, holdDuration, easing, oscEnabled);
+    });
+
+    if (looped) {
+      timeline.finished.then(() => playRandomCycle());
+    }
+  };
+
+  playRandomCycle();
+  return;
+}
+
+
+// ALT
+// -------------------------------------------
+// Creates continuous alternating rotation between two angles.
+// Example: r(alt[0,180])_tween(1.5)_ease(3)
+// Internally uses Anime.js `direction: "alternate"` for smooth back-and-forth motion.
+//
+// Notes:
+//   - Equivalent behavior can be replicated with:
+//       r(seq([0,180]))_tween(1.5)_x(0)
+//   - However, `alt[...]` is more efficient for pure alternation,
+//     requires less logic, and serves as convenient shorthand.
+//   - Does not support pause/hold at endpoints — use `seq[...]` for that.
+// -------------------------------------------
+
+const altMatch = mode.match(/^alt\[([^\]]+)\]/);
+if (altMatch) {
+  const [min, max] = altMatch[1].split(',').map(Number);
+  const { stepDuration, tweenDuration } = getStepDurations(id);
+
+  const anim = anime({
+    targets: object,
+    rotate: [min, max],
+    duration: tweenDuration,
+    easing,
+    direction: "alternate",
+    loop: true,
+    autoplay: true,
+    update: () => {
+      // Fallback to extracting from style if anime.get fails
+      let angle = anime.get(object, 'rotate');
+
+      if (typeof angle !== 'number') {
+        const match = object.style.transform?.match(/rotate\(([-\d.]+)deg\)/);
+        angle = match ? parseFloat(match[1]) : NaN;
+      }
+
+      if (typeof angle === 'number' && !isNaN(angle)) {
+        // console.log(`[ALT] angle = ${angle.toFixed(2)} deg`);
+        if (oscEnabled) {
+          sendRotationOsc((angle + 90) % 360, object.id);
+        }
+      } else {
+        console.warn(`[ALT] ⚠️ Unable to retrieve valid angle`);
+      }
+    }
+  });
+
+  return;
+}
+
+
+// CONTINUOUS
+// -------------------------------------------
+// Applies infinite continuous rotation using the compact r(...) syntax.
+// Example: r(rpm(2.5))_dir(1)_ease(3)_osc(1)
+// - rpm: rotations per minute (e.g. 2.5 = 2.5 full rotations per minute)
+// - bpm: alternative to rpm (interpreted as bpm / 4)
+// - dir: 1 = clockwise, -1 = counterclockwise
+// - ease: Anime.js easing function
+// - osc: if set to 1, sends OSC rotation data continuously
+//
+// Features:
+//   - Continuous smooth spin in either direction
+//   - Optional easing and OSC output
+//   - Uses Anime.js looped rotation via +=360 or -=360
+//
+// Notes:
+//   - Not cue-based: starts and runs indefinitely once triggered
+//   - Use seq[…] or alt[…] if you need stepwise or reversible control
+//   - Compatible only with modern compact r(...) rotation syntax
+// -------------------------------------------
+
   const rpm = extractTagValue(id, 'rpm', null);
   const bpm = extractTagValue(id, 'bpm', null);
-  const dirMatch = id.match(/^r\((-?\d)\)/);
-  const direction = dirMatch ? parseInt(dirMatch[1]) : 1;
+  const direction = parseInt(extractTagValue(id, 'dir', '1'));
   const rotRpm = bpm ? bpm / 4 : (rpm || 20);
   const duration = (60 / rotRpm) * 1000;
 
@@ -259,6 +384,16 @@ function startRotate(object) {
     resume: () => anim.play?.()
   };
 }
+
+
+
+
+
+
+
+
+
+
 
 const startRotation = (object) => {
 
@@ -1342,7 +1477,6 @@ function setTransformOriginToCenter(element) {
 
 
 
-
   function parseCompactAnimationValues(id, prefix = 's') {
     // Only accept new format: s(...), sXY(...), etc.
     const parenMatch = id.match(new RegExp(`${prefix}\\((.*?)\\)`));
@@ -1353,7 +1487,7 @@ function setTransformOriginToCenter(element) {
   
     const raw = parenMatch[1].trim();
   
-    // ✅ Regenerating random: s(rnd(5x0.5-1.5x))
+    // ✅ Regenerating random: s(rnd(5x0.5-1.5x)) or r(rnd[6x,45,90])
     if (raw.startsWith('rnd(') && raw.endsWith(')')) {
       const inner = raw.slice(4, -1);
   
@@ -1381,7 +1515,13 @@ function setTransformOriginToCenter(element) {
         return { values: parsed, regenerate: false };
       }
     } catch (e) {
-      console.warn(`[parseCompact] ⚠️ Invalid JSON array inside ${prefix}(...): ${raw}`);
+      // fallback below
+    }
+  
+    // ✅ Fallback: single numeric value (e.g., deg(45), dur(5), s(1.2))
+    const singleValue = parseFloat(raw);
+    if (!isNaN(singleValue)) {
+      return { values: [singleValue], regenerate: false };
     }
   
     console.warn(`[parseCompact] ❌ Could not parse values from ${prefix}(...) in: ${id}`);

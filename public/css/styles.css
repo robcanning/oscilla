@@ -44,7 +44,7 @@ body {
 #splash .splash-container {
   /* align-items: center;
   max-width: 100%; /* Restrict width for better readability
-  padding: 0px; /* Add padding for spacing */ */
+  padding: 0px; /* Add padding for spacing */ 
 }
 
 
@@ -368,7 +368,7 @@ height: 100% !important; /* Or a fixed height / 100vh */
 
 /* ✅ Buttons Should Distribute Evenly */
 #button-container button {
-    flex: 1; /* ✅ Ensures buttons fill space evenly */ */
+    flex: 1; /* ✅ Ensures buttons fill space evenly */ 
     text-align: center;
     padding: 0px;
 }
@@ -1336,9 +1336,9 @@ padding: 20px;
 }
 
 .rehearsal-button {
-  /* font-size: 1.5vw;  /* Adjust based on desired scaling */ */
+  /* font-size: 1.5vw;  /* Adjust based on desired scaling */ 
 
-    /* width: 3vw; /* Adjust size as needed */ */
+    /* width: 3vw; /* Adjust size as needed */ 
     /* height: 60px; */
     /* font-size: 30px; */
     color: black;

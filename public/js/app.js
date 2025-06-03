@@ -9,6 +9,9 @@
  * and environment detection for the OscillaScore client.
  */
 
+// import { SVGPathData } from 'https://cdn.jsdelivr.net/npm/svg-path-commander@6.1.0/+esm';
+
+
 import {
   startStopwatch,
   stopStopwatch,
@@ -17,6 +20,7 @@ import {
   setupStopwatchFullscreenToggle
 } from './stopwatch.js';
 
+import * as SVGPathCommander from "https://cdn.skypack.dev/svg-path-commander";
 
 // ===========================
 // 📦 Import Cue Handlers
@@ -37,6 +41,7 @@ import {
   dismissPauseCountdown,
   pauseDismissClickHandler,
   handleAudioCue,
+  activeAudioCues,
   handleMediaCue,
   handleOscCue,
   parseTraverseCueId,
@@ -226,6 +231,73 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 ///////////////////////////////////////////////////////////////
+let SVGPathData = null;
+
+if (!window.SVGPathCommander) {
+  console.error("[SVG] ⚠️ svg-path-commander not loaded or incorrect script version.");
+} else {
+  SVGPathData = window.SVGPathCommander.SVGPathData;
+}
+
+/**
+ * flattenTransforms(svgRoot)
+ * -------------------------------------------
+ * Flattens all SVG `transform` attributes into actual geometry
+ * using svg-path-commander where applicable.
+ * Supports: <path>, <rect>, <circle>, <ellipse>, <line>, <polygon>, <polyline>.
+ * Skips <text> (preserved as-is) and logs warnings for Inkscape-specific elements
+ * like sodipodi:star or spiral.
+ */
+function flattenTransforms(svgRoot) {
+  if (!SVGPathData) {
+    console.error("[flatten] ❌ SVGPathData not available — skipping transform flattening.");
+    return;
+  }
+
+  const transformed = svgRoot.querySelectorAll('[transform]');
+
+  transformed.forEach((el) => {
+    const transform = el.getAttribute('transform');
+    if (!transform) return;
+
+    const tag = el.tagName.toLowerCase();
+
+    // Skip unsupported or Inkscape-specific shapes
+    if (el.hasAttribute('sodipodi:type')) {
+      console.warn(`[flatten] ⚠️ Skipping Inkscape-specific shape <${tag}> with sodipodi:type`, el);
+      return;
+    }
+
+    if (tag === 'path') {
+      try {
+        const path = new SVGPathData(el.getAttribute('d')).transform(transform);
+        el.setAttribute('d', path.encode());
+        el.removeAttribute('transform');
+      } catch (err) {
+        console.warn(`[flatten] ⚠️ Failed to transform path:`, el, err);
+      }
+    } else if (['rect', 'circle', 'ellipse', 'line', 'polygon', 'polyline'].includes(tag)) {
+      try {
+        const tempPath = SVGPathData.fromElement(el); // this uses svg-path-commander
+        const transformedPath = new SVGPathData(tempPath).transform(transform);
+        const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        newPath.setAttribute('d', transformedPath.encode());
+        newPath.setAttribute('id', el.id);
+        newPath.setAttribute('class', el.getAttribute('class'));
+        el.replaceWith(newPath);
+      } catch (err) {
+        console.warn(`[flatten] ⚠️ Failed to convert <${tag}> to path:`, el, err);
+      }
+    } else if (tag === 'text') {
+      console.info(`[flatten] ℹ️ Preserving <text> element with transform:`, el);
+    } else {
+      console.warn(`[flatten] ⚠️ Unsupported tag <${tag}> — transform not flattened`, el);
+    }
+  });
+}
+
+
+
 
 
   /** ///////////////////////////////////////////////////////////////
@@ -1599,7 +1671,7 @@ function assignCues(svgRoot) {
 
   
   initializeScore(); // ⬅️ Make sure this runs outside any event listener
-
+  
   // [svgpersist] Upload and persist new SVG to sessionStorage
   document.getElementById("upload-score").addEventListener("change", (event) => {
     const file = event.target.files[0];
@@ -1627,6 +1699,8 @@ function assignCues(svgRoot) {
  * @param {SVGElement} svgElement - The <svg> element representing the musical score.
  */
 
+
+
 const initializeSVG = (svgElement) => {
 
   // 🔍 Ensure we received a valid SVG element before continuing
@@ -1635,16 +1709,6 @@ const initializeSVG = (svgElement) => {
     return;
   }
 
-  // 📦 Store global reference to the SVG for later use
-  window.scoreSVG = svgElement;
-
-  // 🧠 Assign cue IDs dynamically (e.g. from assignCues(...) groups)
-  // This must happen before any cue parsing or trigger handling
-  console.log("calling assignCues...");
-  assignCues(window.scoreSVG);    
-
-  // ⚡ Preload timing cues like cueSpeed(...) once they exist in the DOM
-  preloadSpeedCues();
 
 
     const flattenPathTranslate = (path, dx, dy) => {
@@ -1715,28 +1779,56 @@ const initializeSVG = (svgElement) => {
       }
     };
 
-    const flattenGroupTransform = (group) => {
-      const transform = group.getAttribute('transform');
-      if (!transform || !transform.startsWith("translate")) return;
+const flattenGroupTransform = (group, inherited = '') => {
+  const localTransform = group.getAttribute('transform') || '';
+  const combinedTransform = [inherited, localTransform].filter(Boolean).join(' ');
 
-      const match = /translate\((-?\d+(\.\d+)?)[ ,]?(-?\d+(\.\d+)?)?\)/.exec(transform);
-      if (!match) {
-        // console.warn(`[TRANSFORM-FIX] Could not parse transform on group: ${group.id}`);
-        return;
+  Array.from(group.children).forEach(child => {
+    if (child.tagName === 'g') {
+      flattenGroupTransform(child, combinedTransform); // recurse
+    } else if (child.tagName === 'path') {
+      const d = child.getAttribute('d');
+      if (d && combinedTransform) {
+        try {
+          const newD = SVGPathCommander.transformPathData(d, {
+            transform: combinedTransform,
+          });
+          child.setAttribute('d', newD);
+          child.removeAttribute('transform');
+        } catch (err) {
+          console.warn(`[flattenGroupTransform] ⚠️ Failed to flatten path '${child.id}':`, err);
+        }
       }
+    }
+  });
 
-      const dx = parseFloat(match[1]);
-      const dy = parseFloat(match[3] || 0);
+  if (localTransform) {
+    group.removeAttribute('transform');
+  }
+};
 
-      // console.log(`[TRANSFORM-FIX] 📦 Flattening group ${group.id} with translate(${dx}, ${dy})`);
 
-      Array.from(group.children).forEach(child => applyTranslationToShape(child, dx, dy));
-      group.removeAttribute('transform');
-      // console.log(`[TRANSFORM-FIX] ✅ Removed transform from group: ${group.id}`);
-    };
 
-    // Flatten all group transforms
-    svgElement.querySelectorAll('g[transform]').forEach(flattenGroupTransform);
+
+// ✅ Apply transforms first (flatten <use> and group transforms)
+// applyInkscapeTransforms(svgElement);
+
+// 📦 Store global reference to the SVG for later use
+window.scoreSVG = svgElement;
+
+// ✅ Flatten transforms (already done here)
+// svgElement.querySelectorAll('g[transform]').forEach(flattenGroupTransform);
+
+// ✅ Replace <use> elements (already done here)
+
+// ✅ Assign cues immediately (no delay)
+assignCues(svgElement);
+preloadSpeedCues();
+
+
+
+
+
 
     // Handle all <use> clones
     const useElements = svgElement.querySelectorAll('use');

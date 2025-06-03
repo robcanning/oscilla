@@ -11,8 +11,9 @@
   <link rel="stylesheet" href="css/phone.css" media="screen and (max-width: 768px)">
   <!-- <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet"> -->
   <!-- <script src="https://cdn.jsdelivr.net/npm/svg-path-commander"></script> -->
-  <script src="js/svg-path-commander"></script>
+  <!-- <script src="https://cdn.jsdelivr.net/npm/svg-path-commander@6.1.0/dist/svg-path-commander.umd.min.js"></script> -->
 
+  
 <!-- Shoelace JS + CSS -->
 <script type="module">
   import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.0/cdn/shoelace.js';
@@ -116,12 +117,25 @@
       <!-- Group of 4 Seek Buttons -->
       <div id="seek-controls">
         <button id="fast-rewind-button" title="Fast Rewind (Jump to previous mark)">
-          < </button>
-            <button id="rewind-button" title="Slow Rewind">&#x23EE;</button>
-            <button id="toggle-button">&#x25B6;</button>
-
-            <button id="forward-button" title="Slow Forward">&#x23ED;</button>
-            <button id="fast-forward-button" title="Fast Forward (Jump to next mark)">></button>
+          &#x276E; <!-- ❮ -->
+        </button>
+        
+        <button id="rewind-button" title="Slow Rewind">
+          &#x23EE; <!-- ⏮ -->
+        </button>
+        
+        <button id="toggle-button" title="Play/Pause">
+          &#x25B6; <!-- ▶ -->
+        </button>
+        
+        <button id="forward-button" title="Slow Forward">
+          &#x23ED; <!-- ⏭ -->
+        </button>
+        
+        <button id="fast-forward-button" title="Fast Forward (Jump to next mark)">
+          &#x276F; <!-- ❯ -->
+        </button>
+        
             <button id="fullscreen-button">⛶</button>
 
             <div id="speedControls">
@@ -162,8 +176,9 @@
   <div id="keybindings-popup" class="popup hidden">
     <h2>Keybindings</h2>
     <p><strong>Space:</strong> PLAY/PAUSE</p>
-    <p><strong>Arrow Left:</strong> SEEK << </p>
-        <p><strong>Arrow Right:</strong> SEEK >> </p>
+    <p><strong>Arrow Left:</strong> SEEK &#x276E;&#x276E;</p>   <!-- ❮❮ -->
+    <p><strong>Arrow Right:</strong> SEEK &#x276F;&#x276F;</p> <!-- ❯❯ -->
+    
         <p><strong>Arrow Up:</strong> Jump to Previous Rehearsal Mark</p>
         <p><strong>Arrow Down:</strong> Jump to Next Rehearsal Mark</p>
         <p><strong>+</strong> Increase Speed</p>

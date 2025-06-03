@@ -71,6 +71,7 @@ app.get('/config', (req, res) => {
 
 
 app.use(express.static('public'));
+// app.use(express.static('dist'));
 
 // serve the docs ////////////////////////
 const path = require('path');
@@ -298,37 +299,44 @@ wss.on('connection', (ws, req) => {
 
     switch (data.type) {
       case "cue_stop":
-        console.log(`[DEBUG] Broadcasting cue_stop from client.`);
+  console.log(`[DEBUG] Broadcasting cue_stop from client.`);
 
-        const stopMessage = JSON.stringify({
-          type: "cue_stop",
-          elapsedTime: data.elapsedTime || sharedState.elapsedTime,
-          id: data.id || "cue_stop"
-        });
+  // ✅ Use client-provided state
+  sharedState.isPlaying = false;
+  sharedState.elapsedTime = !isNaN(data.elapsedTime) ? data.elapsedTime : sharedState.elapsedTime;
+  sharedState.playheadX = !isNaN(data.playheadX) ? data.playheadX : sharedState.playheadX;
+  lastUpdateTime = null;
 
-        // ✅ Broadcast to all clients
-        wss.clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(stopMessage);
-          }
-        });
+  const stopMessage = JSON.stringify({
+    type: "cue_stop",
+    elapsedTime: sharedState.elapsedTime,
+    playheadX: sharedState.playheadX,
+    id: data.id || "cue_stop"
+  });
 
-        // ✅ Optionally update server playback state
-        sharedState.isPlaying = false;
-        lastUpdateTime = null;
-        broadcastState(); // Optional, ensures clients reflect stopped state
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(stopMessage);
+    }
+  });
 
-        break;
+  broadcastState();
+  break;
 
-        case "osc_rotate":
-          console.log(`[OSC] 🔄 Received osc_rotate:`, data);
 
-          // TODO: Add routing logic here
+case "osc_rotate":
+  const { uid, angle, radians, norm } = data;
+  console.log(`[OSC] 🔁 ROTATE ${uid}: ${angle.toFixed(1)}°`);
+  oscPort.send({
+    address: `/rotate/${uid}`,
+    args: [
+      { type: "f", value: angle },
+      { type: "f", value: radians },
+      { type: "f", value: norm },
+    ],
+  });
+  break;
 
-          // Optionally broadcast this OSC message to all clients (if needed)
-          // Or forward to an OSC server if you're using node-osc or similar
-        
-          break;
 
       case 'set_speed_multiplier':
         if (!isNaN(data.multiplier) && data.multiplier > 0) {
@@ -419,6 +427,9 @@ wss.on('connection', (ws, req) => {
         break;
 
 
+
+
+          
       /**
       * ✅ Handles manual pause requests from a client.
       * - Updates `isPlaying` state to false and stops playback tracking.
@@ -458,6 +469,8 @@ wss.on('connection', (ws, req) => {
 
         broadcastState();
         break;
+
+
 
 
       /**
@@ -675,6 +688,8 @@ wss.on('connection', (ws, req) => {
 
           console.log(`[DEBUG] ✅ Jump applied. playheadX: ${sharedState.playheadX}, elapsedTime: ${sharedState.elapsedTime}`);
           console.log(`[DEBUG] ✅ Broadcasting updated state immediately.`);
+
+          triggeredCues.clear();
 
           broadcastState();  // ✅ Ensure clients receive the new state
         } else {

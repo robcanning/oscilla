@@ -931,6 +931,17 @@ export function handleStopCue(cueId) {
   window.isMusicalPause = true;
 
   window.togglePlayButton?.();
+  
+  if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+    window.socket.send(JSON.stringify({
+      type: "cue_stop",
+      elapsedTime: window.elapsedTime, // precise local time
+      playheadX: window.playheadX,
+      id: cueId
+    }));
+    }
+
+
   console.log("[CLIENT] Playback stopped by cue:", cueId);
 }
 
@@ -1803,19 +1814,25 @@ window.sendAudioOscTrigger = sendAudioOscTrigger;
 document.getElementById("stop-audio-button").addEventListener("click", () => {
   console.log("[AUDIO] 🔇 Hard audio stop triggered");
 
-  if (window.activeAudioCues) {
-    for (const [filename, { wavesurfer }] of window.activeAudioCues.entries()) {
+  if (activeAudioCues && activeAudioCues.size > 0) {
+    for (const [filename, { wavesurfer }] of activeAudioCues.entries()) {
       try {
-        wavesurfer.stop();       // ✅ Stop immediately
-        wavesurfer.destroy();    // ✅ Clean up
+        console.log(`[AUDIO] 🔻 Stopping: ${filename}`);
+        wavesurfer.pause();
+        wavesurfer.stop();  
+        wavesurfer.destroy();
       } catch (err) {
-        console.warn(`[AUDIO] Error stopping ${filename}:`, err);
+        console.warn(`[AUDIO] ❌ Error stopping ${filename}:`, err);
       }
     }
 
-    window.activeAudioCues.clear(); // ✅ Reset the cue map
+    activeAudioCues.clear();
+    console.log("[AUDIO] ✅ All audio cues cleared.");
+  } else {
+    console.warn("[AUDIO] ⚠️ No active audio cues to stop.");
   }
 });
+
 
 
 
@@ -1868,6 +1885,12 @@ export function resetTriggeredCues() {
  * - Manual playback stop or resume via cueRepeat_* directives
  */
 export async function checkCueTriggers() {
+  // ✅ Ensure cues are ready
+  if (!Array.isArray(window.cues)) {
+    console.warn("[cue] ⚠️ window.cues is not iterable yet. Skipping cue check.");
+    return;
+  }
+
   // ✅ Sync elapsed time based on current scroll position
   window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
 
