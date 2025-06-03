@@ -165,6 +165,24 @@ loadWaveSurfer(() => {
 });
 
 
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("download-template-btn");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.href = "svg/template.svg";
+      link.download = "template.svg";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  }
+});
+
+
+
+
 document.addEventListener('DOMContentLoaded', () => {
   setLogLevel(LogLevel.WARN);
   let pendingRepeatStateMap = null; // stores repeat state from server before cues[] are ready

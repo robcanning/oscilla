@@ -27,7 +27,7 @@
 <body>
 
   <div id="rotula-splash-screen" class="rotula-splash hidden">
-    <h1>Welcome to Rotula Score</h1>
+    <h1>Welcome to Oscilla</h1>
     <p>Select an existing score or upload a new one.</p>
 
     <!-- List of Available Scores -->
@@ -49,25 +49,11 @@
   <div id="splash">
     <div class="splash-container">
       <div class="title-section">
-        <h1>1:10,560</h1>
-        <p class="subtitle">(6 inches to the Mile)</p>
-        <p class="forces">An intermedia score for<br>electric guitar, synthesiser and e-drums.
-        <p>
+        <h1>Oscilla</h1>
+        <h2>system loading...</h2>
+       
 
-        <div class="instructions">
-          <p class="instruction">press [ENTER] to continue or [h] help, [f] fullscreen
-        </div>
 
-        <p class="author">Rob Canning (2025)</p>
-        <p class="commission">Commissioned by Pony Says<br>Funded by the Arts Council of Ireland</p>
-
-        <div id="action-buttons">
-          <!-- Visible on mobile -->
-          <button onclick="toggleSplashScreen()">Start Score</button>
-          <button onclick="toggleKeybindingsPopup()">Keybindings</button>
-          <button onclick="toggleProgrammeNotePopup()">Programme Note</button>
-          <button onclick="toggleScoreNotesPopup()">Score Notes</button>
-        </div>
       </div>
 
 
@@ -273,7 +259,7 @@
     <input type="number" id="duration-input" value="20" min="1">
     <br>
     <h3>⬇️ Download the Template:</h3>
-    <button onclick="downloadTemplate()">Download template.svg</button>
+     <button id="download-template-btn">Download template.svg</button>
 
   </div>
 
@@ -281,29 +267,7 @@
   <div id="programme-popup" class="popup hidden">
     <h2>Programme Note</h2>
     <p>
-      1:10,560 (6 inches to the Mile) unfolds as a meditation on journeys—both personal and collective. Inspired by the
-      evocative language of maps, the piece reflects on how we chart, explore, and interpret the world around us. Maps
-      have long been tools of discovery, capturing landscapes and sparking imagination, yet they also serve as
-      instruments of power, imposing boundaries and reshaping perceptions. This duality—a source of wonder and a
-      reminder of historical and ongoing traumas—informs the piece's emotional and conceptual landscape.
-
-      The score itself acts as a metaphorical map, with dynamic elements inviting performers to chart their own paths.
-      Symbols in the graphic score directly reference the visual language of Irish Ordnance Survey maps, their contours
-      echoing themes of exploration and control. The music resists easy categorization, offering moments of spontaneity,
-      reflection, and raw intensity.
-
-      While rooted in historical cartography, the piece also turns its gaze to the present. Digital cartographies extend
-      beyond GPS systems, reflecting how our interactions are continuously mapped—from browsing habits to personality
-      profiling. These processes shape our perceptions, often targeting us with precision while keeping us within
-      curated echo chambers. In this way, mapping becomes yet another instrument of control, reinforcing the dominance
-      of global tech corporations as the new colonial powers of a digital age. Against this backdrop, 1:10,560
-      encourages us to pause and reflect on the act of mapping itself—both as a metaphor and as a means of understanding
-      the landscapes within and around us.
-
-      The composition's score is a networked digital artefact, blending traditional and graphic notation with media
-      elements such as animation and audio-visual cues. It creates a dynamic, ever-shifting terrain for performers to
-      navigate. Performers are guided but not constrained, navigating a rich and interpretive environment that mirrors
-      the complexities of exploration and choice.
+      
     </p>
     <button onclick="toggleProgrammeNotePopup()">Close</button>
   </div>
