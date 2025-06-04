@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title or "OscillaScore" }}</title>
+
+  <!-- Pico CSS for layout -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
+
+<style>
+  header {
+    margin: 0 !important;
+    padding: 0 !important;
+
+  }
+
+  main {
+    margin: 0 !important;
+        padding-top: 0 !important;
+
+  }
+
+</style>
+
+
+  <!-- PhotoSwipe styles -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css" />
+</head>
+
+<body class="container">
+
+<header>
+<nav>
+  <ul>
+    <li><strong><a href="/webdocs/">Home</a></strong></li>
+    <li><a href="/docs/">Docs</a></li>
+    <li><a href="https://github.com/robcanning/oscilla" target="_blank">GitHub</a></li>
+  </ul>
+</nav>
+  <hgroup>
+    <h1>OscillaScore</h1>
+    <p>Animated graphic scores for performers and systems — improvisation meets interactivity</p>
+  </hgroup>
+</header>
+
+
+<main>
+  {{ content | safe }}
+</main>
+
+<footer>
+  <hr />
+  <p>© 2025 Rob Canning · <a href="mailto:rscanning@gmail.com">rscanning@gmail.com</a></p>
+</footer>
+
+<!-- PhotoSwipe scripts -->
+<script src="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/umd/photoswipe.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/umd/photoswipe-lightbox.umd.min.js"></script>
+
+<script>
+  if (typeof PhotoSwipeLightbox !== "undefined") {
+    const lightbox = new PhotoSwipeLightbox({
+      gallery: '#gallery',
+      children: 'a',
+      pswpModule: PhotoSwipe
+    });
+    lightbox.init();
+  } else {
+    console.warn("⚠️ PhotoSwipe script not loaded or failed.");
+  }
+</script>
+
+</body>
+</html>
