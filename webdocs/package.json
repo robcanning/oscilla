@@ -1,0 +1,11 @@
+{
+  "name": "oscilla-webdocs",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "eleventy",
+    "start": "eleventy --serve"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^2.0.0"
+  }
+}
