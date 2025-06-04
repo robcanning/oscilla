@@ -75,7 +75,7 @@ app.use(express.static('public'));
 
 // serve the docs ////////////////////////
 const path = require('path');
-app.use('/docs', express.static(path.join(__dirname, 'docs')));
+app.use('/webdocs', express.static(path.join(__dirname, 'webdocs/site')));
 
 const server = app.listen(port, () => {
   console.log(`HTTP server is running on http://localhost:${port}`);
