@@ -4,7 +4,7 @@ layout: layout.njk
 ---
 <p style="text-align: left;">
   <a href="./assets/oscilla-title-logo.png" target="_blank">
-    <img src="./assets/oscilla-title-logo.png" alt="OscillaScore Title" style="width: 20%; height: auto; border-radius: 6px;" />
+    <img src="./assets/oscilla-title-logo.png" alt="OscillaScore Title" style="width: 40%; height: auto; border-radius: 6px;" />
   </a>
 </p>
 
@@ -22,14 +22,6 @@ OscillaScore is an open-source platform for creating and performing time-based, 
 ---
 
 -  Full documentation and source code on [GitHub](https://github.com/robcanning/oscilla)
-
-<p style="text-align: left;">
-  <a href="./assets/oscilla-ponysays-canning-dublin.png
-" target="_blank">
-    <img src="./assets/oscilla-ponysays-canning-dublin.png
-" alt="OscillaScore Live" style="width: 50%; height: auto; border-radius: 6px;" />
-  </a>
-</p>
 
 ## What Kind of Software Is OscillaScore?
 
@@ -49,6 +41,16 @@ OscillaScore is best described as a hybrid system that sits between score playba
 - A full-featured notation program like MuseScore or Sibelius  
 
 OscillaScore is designed to support composers and performers working with contemporary forms of notation, multimedia integration, and distributed coordination.
+
+<p style="text-align: left;">
+  <a href="./assets/oscilla-ponysays-canning-dublin.png" target="_blank">
+    <img src="./assets/oscilla-ponysays-canning-dublin.png" alt="OscillaScore Live" style="width: 70%; height: auto; border-radius: 6px;" />
+  </a>
+</p>
+<p style="font-size: 0.9em; color: #666; max-width: 70%; text-align: left; margin-top: -0.5em;">
+  <em>PonySays trio performing <strong>Rob Canning, <em>1:10,560 (6 inches to the Mile)</em></strong>, 2025 — intermedia score for electric guitar, synthesiser, and drums — at Dublin Sound Lab’s Music Current Festival, Project Arts Centre, Dublin.</em>
+</p>
+
 
 ## Conceptual Overview
 
