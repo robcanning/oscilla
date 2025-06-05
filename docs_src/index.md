@@ -83,6 +83,50 @@ OscillaScore is designed to work with [Inkscape](https://inkscape.org/) — a fr
 - See [GitHub](https://github.com/robcanning/oscilla) for templates and examples
 
 ---
+## Interactive Help Score File
+
+Oscilla comes with an interactive help file help.svg. Here are some screenshots from the help score:
+
+{% set galleryImages = [
+  "oscilla_interface_screenshot.png",
+  "oscilla-help-cues.png",
+  "oscilla-help-cues2.png",
+  "oscilla-help-osc1.png",
+  "oscilla-help-osc2.png",
+  "oscilla-help-paths1.png",
+  "oscilla-help-paths2.png",
+  "oscilla-help-rotation1.png",
+  "oscilla-help-raster.png"
+] %}
+
+<div id="gallery" class="grid">
+  {% for image in galleryImages %}
+    <a href="./assets/{{ image }}"
+       data-pswp-width="1920"
+       data-pswp-height="1080"
+       target="_blank" class="thumbnail">
+      <img src="./assets/{{ image }}"
+           alt="{{ image | replace('.png', '') | replace('_', ' ') }}" />
+    </a>
+  {% endfor %}
+</div>
+
+<style>
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .thumbnail img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+</style>
+---
 
 ## PonySays Trio using Oscilla @ MusicCurrent Festival 2025
 
@@ -129,48 +173,6 @@ For workshops, collaborations, or support:
 
 ---
 
-## Interactive Help Score File
 
-Oscilla comes with an interactive help file help.svg. Here are some screenshots from the help score:
-
-{% set galleryImages = [
-  "oscilla_interface_screenshot.png",
-  "oscilla-help-cues.png",
-  "oscilla-help-cues2.png",
-  "oscilla-help-osc1.png",
-  "oscilla-help-osc2.png",
-  "oscilla-help-paths1.png",
-  "oscilla-help-paths2.png",
-  "oscilla-help-rotation1.png",
-  "oscilla-help-raster.png"
-] %}
-
-<div id="gallery" class="grid">
-  {% for image in galleryImages %}
-    <a href="./assets/{{ image }}"
-       data-pswp-width="1920"
-       data-pswp-height="1080"
-       target="_blank" class="thumbnail">
-      <img src="./assets/{{ image }}"
-           alt="{{ image | replace('.png', '') | replace('_', ' ') }}" />
-    </a>
-  {% endfor %}
-</div>
-
-<style>
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-
-  .thumbnail img {
-    width: 100%;
-    height: 140px;
-    object-fit: cover;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-  }
-</style>
 
 ---
