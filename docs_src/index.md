@@ -72,9 +72,10 @@ OscillaScore supports a wide range of use cases, including:
 - **Score composition for ensembles**: Design dynamic, cue-based scores using SVG animations and transformation syntax tailored for group performance  
 - **Rehearsal and performance for ensembles**: Share synchronized score playback with multiple musicians in real time using WebSockets or OSC
 - **Telematic and distributed improvisation**: Use cues and visual animations to coordinate remote performers across networks  
-- **Solo electronic music composition**: Compose and structure media-rich or animated works within a single local environment  
-- **Interactive installations**: Embed visual or spatial scores in gallery contexts with OSC-driven sound interaction  
 - **Mixed-media or hypermedia works**: Integrate text, video, sound, and interactivity in dynamic score designs  
+**Solo electronic music composition**: Structure and trigger sound processes in synthesis tools like SuperCollider or Pure Data using animated SVG cues and OSC output
+- **Interactive installations**: Embed visual or spatial scores in gallery contexts with OSC-driven sound interaction  
+
 
 <p style="text-align: left;">
   <a href="./assets/oscilla-ponysays-canning-dublin.png" target="_blank">
