@@ -129,16 +129,30 @@ For workshops, collaborations, or support:
 
 ---
 
-## Gallery
+## Interactive Help Score File
+
+Oscilla comes with an interactive help file help.svg. Here are some screenshots from the help score:
+
+{% set galleryImages = [
+  "oscilla_interface_screenshot.png",
+  "oscilla-help-cues.png",
+  "oscilla-help-cues2.png",
+  "oscilla-help-osc1.png",
+  "oscilla-help-osc2.png",
+  "oscilla-help-paths1.png",
+  "oscilla-help-paths2.png",
+  "oscilla-help-rotation1.png",
+  "oscilla-help-raster.png"
+] %}
 
 <div id="gallery" class="grid">
-  {% for i in [1,2,3,4,5,6,7,8] %}
-    <a href="./assets/oscilla_interface_screenshot.png"
+  {% for image in galleryImages %}
+    <a href="./assets/{{ image }}"
        data-pswp-width="1920"
        data-pswp-height="1080"
        target="_blank" class="thumbnail">
-      <img src="./assets/oscilla_interface_screenshot.png"
-           alt="Screenshot {{ i }}" />
+      <img src="./assets/{{ image }}"
+           alt="{{ image | replace('.png', '') | replace('_', ' ') }}" />
     </a>
   {% endfor %}
 </div>
