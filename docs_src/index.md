@@ -2,6 +2,11 @@
 title: OscillaScore
 layout: layout.njk
 ---
+<p style="text-align: left;">
+  <a href="./assets/oscilla-title-logo.png" target="_blank">
+    <img src="./assets/oscilla-title-logo.png.png" alt="OscillaScore Title" style="width: 20%; height: auto; border-radius: 6px;" />
+  </a>
+</p>
 
 OscillaScore is an open-source platform for creating and performing time-based, animated notation in the browser. It supports collaborative performance, synthesis control, and visual experimentation using simple SVG and web technologies.
 
