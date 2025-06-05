@@ -187,6 +187,16 @@ OscillaScore workshops explore graphic notation, live performance, and networked
 
 Workshops typically include live demos, collaborative score creation, and integrations with synthesis, spatial sound, or video. Please get in touch if you are interested in hosting a workshop.
 
+<p style="text-align: left;">
+  <a href="./assets/oscilla-workshop-cmc2025.png" target="_blank">
+    <img src="./assets/oscilla-workshop-cmc2025.png" alt="Oscilla Workshop CMC 2025" style="width: 70%; height: auto; border-radius: 6px;" />
+  </a>
+</p>
+<p style="font-size: 0.9em; color: #666; max-width: 70%; text-align: left; margin-top: -0.5em;">
+  <em>The first Oscilla workshop hosted by the Contemporary Music Centre of Ireland as part of the Music Current Festival 2025. More details at <a href="https://www.cmc.ie/events/2025/apr/music-current-2025-rob-canning-digital-score-workshop" target="_blank">cmc.ie</a>.<br>
+  Photo © Contemporary Music Centre of Ireland, 2025.</em>
+</p>
+
 ---
 
 ## Papers in Preparation
