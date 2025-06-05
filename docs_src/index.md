@@ -133,11 +133,11 @@ For workshops, collaborations, or support:
 
 <div id="gallery" class="grid">
   {% for i in [1,2,3,4,5,6,7,8] %}
-    <a href="/docs/assets/oscilla_interface_screenshot.png"
+    <a href="./assets/oscilla_interface_screenshot.png"
        data-pswp-width="1920"
        data-pswp-height="1080"
        target="_blank" class="thumbnail">
-      <img src="/docs/assets/oscilla_interface_screenshot.png"
+      <img src="./assets/oscilla_interface_screenshot.png"
            alt="Screenshot {{ i }}" />
     </a>
   {% endfor %}
