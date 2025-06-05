@@ -130,24 +130,11 @@ Oscilla comes with an interactive help file help.svg. Here are some screenshots 
   .grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-
-  @media (max-width: 768px) {
-    .grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  @media (max-width: 480px) {
-    .grid {
-      grid-template-columns: 1fr;
-    }
+    gap: 0.5rem;
   }
 
   .thumbnail img {
     width: 100%;
-    height: auto;
     aspect-ratio: 4 / 3;
     object-fit: cover;
     border-radius: 6px;
