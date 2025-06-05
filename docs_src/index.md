@@ -48,7 +48,7 @@ OscillaScore is designed to support composers and performers working with contem
   </a>
 </p>
 <p style="font-size: 0.9em; color: #666; max-width: 70%; text-align: left; margin-top: -0.5em;">
-  <em>PonySays trio performing <strong>Rob Canning, <em>1:10,560 (6 inches to the Mile)</em></strong>, 2025 — intermedia score for electric guitar, synthesiser, and drums — at Dublin Sound Lab’s Music Current Festival, Project Arts Centre, Dublin.</em>
+  <em>PonySays trio performing <strong>Rob Canning's composition <em>1:10,560 (6 inches to the Mile)</em></strong>, 2025 — intermedia score for electric guitar, synthesiser, and drums — at Dublin Sound Lab’s Music Current Festival, Project Arts Centre, Dublin. The musicians performed using iPads synchronized over a local network with Oscilla, while the projector was connected as a fourth client displaying the score to the audience.</em>
 </p>
 
 
