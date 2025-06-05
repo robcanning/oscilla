@@ -54,7 +54,7 @@
 <main>
   <p style="text-align: left;">
   <a href="./assets/oscilla-title-logo.png" target="_blank">
-    <img src="./assets/oscilla-title-logo.png" alt="OscillaScore Title" style="width: 40%; height: auto; border-radius: 6px;" />
+    <img src="./assets/oscilla-title-logo.png" alt="OscillaScore Title" style="width: 100%; height: auto; border-radius: 6px;" />
   </a>
 </p>
 <p>OscillaScore is an open-source platform for creating and performing time-based, animated notation in the browser. It supports collaborative performance, synthesis control, and visual experimentation using simple SVG and web technologies.</p>
@@ -88,7 +88,7 @@
 <p>OscillaScore is designed to support composers and performers working with contemporary forms of notation, multimedia integration, and distributed coordination.</p>
 <p style="text-align: left;">
   <a href="./assets/oscilla-ponysays-canning-dublin.png" target="_blank">
-    <img src="./assets/oscilla-ponysays-canning-dublin.png" alt="OscillaScore Live" style="width: 70%; height: auto; border-radius: 6px;" />
+    <img src="./assets/oscilla-ponysays-canning-dublin.png" alt="OscillaScore Live" style="width: 100%; height: auto; border-radius: 6px;" />
   </a>
 </p>
 <p style="font-size: 0.9em; color: #666; max-width: 70%; text-align: left; margin-top: -0.5em;">
@@ -201,13 +201,26 @@
 <style>
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   .thumbnail img {
     width: 100%;
-    height: 140px;
+    height: auto;
+    aspect-ratio: 4 / 3;
     object-fit: cover;
     border-radius: 6px;
     border: 1px solid #ccc;
@@ -215,7 +228,33 @@
 </style>
 <hr>
 <h2>PonySays Trio using Oscilla @ MusicCurrent Festival 2025</h2>
-<iframe width="560" height="315" src="https://www.youtube.com/embed/6LMr5QH07kk?si=8P0dZc2AABIRCOYN" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<div class="video-container">
+  <iframe src="https://www.youtube.com/embed/6LMr5QH07kk?si=8P0dZc2AABIRCOYN"
+          title="YouTube video player"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen>
+  </iframe>
+</div>
+<style>
+  .video-container {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+    max-width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+</style>
 <hr>
 <h2>Workshops</h2>
 <p>OscillaScore workshops explore graphic notation, live performance, and networked interaction. These sessions are designed for composers, improvisers, and artists working at the intersection of sound, code, and visual media — exploring new modes of performance, interaction, and notation. OscillaScore workshops can be adapted to:</p>
