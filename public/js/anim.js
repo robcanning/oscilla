@@ -916,7 +916,10 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
       console.warn(`[WARN] animations param was not an array. Wrapping it. ID: ${object.id}`);
       animations = [];
     }
+    
     const effectiveId = object.getAttribute('data-id') || object.id;
+    
+    const oscEnabled = /_(?:osc|o)\(1\)/.test(effectiveId);
 
     try {
       const pathMotion = anime.path(path);
@@ -950,51 +953,89 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
       }
       
 
-      const directionMatch = effectiveId.match(/_(?:direction|dir|d)_(\d+)/);
-      let direction = directionMatch ? parseInt(directionMatch[1], 10) : 0;
+      let direction = Number.isInteger(config.direction) ? config.direction : 0;
 
-      if (![0, 1, 2, 3, 4, 5].includes(direction)) direction = 0;
+      const rotate = config.rotate === true;
+   
+   // TODO THIS DOESNT SEEM TO BE WORKING AS EXPECTED
 
-      const rotate = !object.id.includes('_rotate_0');
-      const easingCode = parseInt((effectiveId.match(/_(?:ease|easing|e)_(\d+)/) || [])[1]) || 3;
       const easingMap = {
         0: 'linear', 1: 'easeInSine', 2: 'easeOutSine', 3: 'easeInOutSine',
         4: 'easeInBack', 5: 'easeOutBack', 6: 'easeInOutBack',
         7: 'easeInElastic', 8: 'easeOutElastic', 9: 'easeInOutElastic'
       };
-      const easing = easingMap[easingCode] || 'easeInOutSine';
 
-      switch (direction) {
-        case 0: {
-          const anim0 = anime({
-            targets: object,
-            translateX: pathMotion('x'),
-            translateY: pathMotion('y'),
-            rotate: rotate ? pathMotion('angle') : 0,
-            duration: animationSpeed,
-            easing,
-            loop: true,
-            direction: 'alternate',
+      function parseEasingSequence(effectiveId) {
+        const match = effectiveId.match(/_(?:ease|easing|e)\(((?:[^\(\)]|\[[^\]]*\])*)\)/);
+        if (!match) return ['easeInOutSine'];
 
-            update: (anim) => {
+        const raw = match[1].trim();
+
+        if (raw.startsWith('r[') && raw.endsWith(']')) {
+          const items = raw.slice(2, -1).split(',').map(s => s.trim());
+          const chosen = items[Math.floor(Math.random() * items.length)];
+          return [ /^\d+$/.test(chosen) ? easingMap[+chosen] || 'easeInOutSine' : chosen ];
+
+        } else if (raw.startsWith('[') && raw.endsWith(']')) {
+          return raw.slice(1, -1).split(',').map(s => {
+            s = s.trim();
+            return /^\d+$/.test(s) ? easingMap[+s] || 'easeInOutSine' : s;
+          });
+
+        } else if (/^\d+$/.test(raw)) {
+          return [ easingMap[+raw] || 'easeInOutSine' ];
+
+        } else {
+          return [ raw ];
+        }
+      }
+
+
+   switch (direction) {
+      case 0: {
+        const easingSequence = parseEasingSequence(effectiveId);
+        let cycleCount = 0;
+
+        const anim0 = anime({
+          targets: object,
+          translateX: pathMotion('x'),
+          translateY: pathMotion('y'),
+          rotate: rotate ? pathMotion('angle') : 0,
+          duration: animationSpeed,
+          easing: easingSequence[0], // initial easing
+          loop: true,
+          direction: 'alternate',
+
+          begin: (anim) => {
+            const easing = easingSequence[cycleCount % easingSequence.length];
+            anim.animations.forEach(a => a.easing = easing);
+            cycleCount++;
+          },
+
+          update: (anim) => {
+            if (oscEnabled) {
               emitOSCFromPathProgress({
                 path,
                 progress: anim.progress,
                 pathId: path.id
               });
             }
-          });
+          }
 
-          window.runningAnimations[object.id] = {
-            play: () => anim0.play(),
-            pause: () => anim0.pause(),
-            resume: () => anim0.play(),
-            wasPaused: false
-          };
+        });
 
-          animations.push(anim0);
-          break;
-        }
+        window.runningAnimations[object.id] = {
+          play: () => anim0.play(),
+          pause: () => anim0.pause(),
+          resume: () => anim0.play(),
+          wasPaused: false
+        };
+
+        animations.push(anim0);
+        break;
+
+
+              }
 
         case 1: {
           const anim1 = anime({ targets: object, translateX: pathMotion('x'), translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, duration: animationSpeed, easing, loop: true });

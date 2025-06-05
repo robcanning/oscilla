@@ -49,7 +49,7 @@ export function stopStopwatch() {
       isRunning = false;
       console.log("[stopwatch] ⏸ Stopped via stopStopwatch(). Accumulated:", accumulatedTime.toFixed(2), "s");
     } else {
-      console.log("[stopwatch] ⏸ Already stopped.");
+      // console.log("[stopwatch] ⏸ Already stopped.");
     }
   }
   

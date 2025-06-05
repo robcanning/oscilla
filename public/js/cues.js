@@ -790,8 +790,6 @@ export function getSpeedForPosition(xPosition) {
   const viewportOffset = window.scoreContainer?.offsetWidth / 2 || 0; // Center of the screen
   const adjustedPlayheadX = xPosition + viewportOffset;
 
-  console.log(`[DEBUG] Looking for speed at adjusted position: ${adjustedPlayheadX} (window.playheadX: ${xPosition})`);
-
   if (!window.speedCueMap || window.speedCueMap.length === 0) {
     console.warn("[WARNING] No speed cues exist. Defaulting to 1.0x speed.");
     return 1.0;
@@ -802,7 +800,7 @@ export function getSpeedForPosition(xPosition) {
     .slice(-1)[0];
 
   if (lastSpeedCue) {
-    console.log(`[DEBUG] ✅ Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
+    // console.log(`[DEBUG] ✅ Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
     window.speedMultiplier = lastSpeedCue.multiplier;
     window.updateSpeedDisplay?.();
     return window.speedMultiplier;
@@ -1887,7 +1885,7 @@ export function resetTriggeredCues() {
 export async function checkCueTriggers() {
   // ✅ Ensure cues are ready
   if (!Array.isArray(window.cues)) {
-    console.warn("[cue] ⚠️ window.cues is not iterable yet. Skipping cue check.");
+    // console.warn("[cue] ⚠️ window.cues is not iterable yet. Skipping cue check.");
     return;
   }
 
@@ -1896,7 +1894,7 @@ export async function checkCueTriggers() {
 
   // 🛑 Skip cue checks if we're paused, seeking, or animation is suspended
   if (window.isSeeking || window.animationPaused || !window.isPlaying) {
-    console.log("[DEBUG] Skipping cue checks.");
+    // console.log("[DEBUG] Skipping cue checks.");
     return;
   }
 

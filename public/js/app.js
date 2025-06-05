@@ -790,12 +790,12 @@ function flattenTransforms(svgRoot) {
               // ✅ Apply server-provided values BEFORE sending ack or triggering pause
               if (!isNaN(data.playheadX)) {
                window.playheadX = data.playheadX;
-                console.log(`[CLIENT] Syncedwindow.playheadX from cuePause: ${window.playheadX}`);
+                // console.log(`[CLIENT] Syncedwindow.playheadX from cuePause: ${window.playheadX}`);
               }
 
               if (!isNaN(data.elapsedTime)) {
                 window.elapsedTime = data.elapsedTime;
-                console.log(`[CLIENT] Synced window.elapsedTime from cuePause: ${elapsedTime}`);
+                // console.log(`[CLIENT] Synced window.elapsedTime from cuePause: ${elapsedTime}`);
               }
 
               stopAnimation();
@@ -892,7 +892,7 @@ function flattenTransforms(svgRoot) {
     if (!isNaN(data.state.speedMultiplier) && data.state.speedMultiplier > 0) {
       if (speedMultiplier !== data.state.speedMultiplier) {
         window.speedMultiplier = data.state.speedMultiplier;
-        console.log(`[CLIENT] Synced speed multiplier to ${speedMultiplier}`);
+        // console.log(`[CLIENT] Synced speed multiplier to ${speedMultiplier}`);
       }
     }
 
@@ -2007,7 +2007,7 @@ preloadSpeedCues();
 
 
   const handleSvgPopupClick = (event) => {
-    console.log(`[DEBUG] SVG Click Detected on: ${event.target.tagName}, ID: ${event.target.id}`);
+    // console.log(`[DEBUG] SVG Click Detected on: ${event.target.tagName}, ID: ${event.target.id}`);
   
     // ✅ Skip handling if click is inside Shoelace menu or dropdown
     if (
@@ -2045,7 +2045,7 @@ preloadSpeedCues();
   
       startAnimation();
     } else {
-      console.log('[DEBUG] No active popups found to dismiss.');
+      // console.log('[DEBUG] No active popups found to dismiss.');
     }
   
     event.stopPropagation();
@@ -2930,7 +2930,7 @@ preloadSpeedCues();
    window.playheadX = Math.max(window.playheadX - REWIND_INCREMENT_X, 0);
 
     window.scoreContainer.scrollLeft =window.playheadX;
-    // console.log(`[DEBUG] Rewind applied. Newwindow.playheadX: ${window.playheadX}`);
+     console.log(`[DEBUG] Rewind applied. Newwindow.playheadX: ${window.playheadX}`);
 
     // ✅ Calculate `elapsedTime` based on `playheadX` for reference
     window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
@@ -2972,16 +2972,16 @@ preloadSpeedCues();
 
     // ✅ Calculate `elapsedTime` based on `playheadX` for reference
     window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-    console.log(`[DEBUG] Synced window.elapsedTime fromwindow.playheadX: ${elapsedTime}`);
+    // console.log(`[DEBUG] Synced window.elapsedTime fromwindow.playheadX: ${elapsedTime}`);
 
     if (triggeredCues) {
       triggeredCues.clear(); // ✅ Ensure cues retrigger after forward
-      console.log("[DEBUG] Cleared triggered cues due to forward.");
+      // console.log("[DEBUG] Cleared triggered cues due to forward.");
     }
 
     // ✅ Apply and store correct speed based on the new playhead position
     window.speedMultiplier = getSpeedForPosition(window.playheadX);
-    console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
+    // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
     window.updateSpeedDisplay();
 
 
@@ -3563,9 +3563,9 @@ preloadSpeedCues();
       return;
     }
 
-    console.log(`\n[DEBUG] Key Pressed: ${event.key}`);
-    console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
-    console.log(`[DEBUG] Currentwindow.playheadX: ${window.playheadX}`);
+    // console.log(`\n[DEBUG] Key Pressed: ${event.key}`);
+    // console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
+    // console.log(`[DEBUG] Currentwindow.playheadX: ${window.playheadX}`);
 
     // 🔹 Move Up or Down in the Index Directly
     if (event.key === "ArrowUp" && currentIndex < sortedMarks.length - 1) {
@@ -3580,7 +3580,7 @@ preloadSpeedCues();
     let nextMark = sortedMarks[currentIndex];
 
     console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
-    console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
+    // console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
 
     // 🔹 Ensurewindow.playheadX Updates Properly
    window.playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent snapping back
