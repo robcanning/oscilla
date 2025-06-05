@@ -88,9 +88,10 @@ OscillaScore supports a wide range of use cases, including:
 
 
 ---
-##  Create Scores with Inkscape
+##  Create Oscilla Scores with Inkscape
 
-OscillaScore is designed to work with [Inkscape](https://inkscape.org/) — a free, open-source vector graphics tool.
+OscillaScore is designed to work seamlessly with [Inkscape](https://inkscape.org/) — a free and open-source vector graphics editor. It is also compatible with other SVG-capable tools such as Adobe Illustrator, though some advanced features may vary in support. If you encounter any issues, please report them via the [GitHub Discussions](https://github.com/robcanning/oscilla/discussions) or the [Oscilla Matrix room](https://matrix.to/#/#oscilla:matrix.org).
+
 
 - Download: [inkscape.org/release](https://inkscape.org/release/)
 - Use OscillaScore templates and naming conventions for animated SVG scores
