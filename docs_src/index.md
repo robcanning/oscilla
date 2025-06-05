@@ -39,7 +39,7 @@ Oscilla is a hybrid system that sits between score playback engine, cue-based me
 - A full-featured notation program like MuseScore or Sibelius  
 - A DAW or audio sequencing environment  
 
-
+Nonetheless, when integrated with external tools such as Inkscape or conventional notation software, OscillaScore offers a robust environment for the composition and design of animated and spatial graphic scores. This hybrid approach supports a range of experimental, electroacoustic, and intermedia practices, enabling composers to work beyond the constraints of traditional notation.
 
 <p style="text-align: left;">
   <a href="./assets/oscilla-ponysays-canning-dublin.png" target="_blank">
