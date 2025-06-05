@@ -4,9 +4,10 @@ layout: layout.njk
 ---
 <p style="text-align: left;">
   <a href="./assets/oscilla-title-logo.png" target="_blank">
-    <img src="./assets/oscilla-title-logo.png.png" alt="OscillaScore Title" style="width: 20%; height: auto; border-radius: 6px;" />
+    <img src="./assets/oscilla-title-logo.png" alt="OscillaScore Title" style="width: 20%; height: auto; border-radius: 6px;" />
   </a>
 </p>
+
 
 OscillaScore is an open-source platform for creating and performing time-based, animated notation in the browser. It supports collaborative performance, synthesis control, and visual experimentation using simple SVG and web technologies.
 
@@ -22,6 +23,13 @@ OscillaScore is an open-source platform for creating and performing time-based, 
 
 -  Full documentation and source code on [GitHub](https://github.com/robcanning/oscilla)
 
+<p style="text-align: left;">
+  <a href="./assets/oscilla-ponysays-canning-dublin.png
+" target="_blank">
+    <img src="./assets/oscilla-ponysays-canning-dublin.png
+" alt="OscillaScore Live" style="width: 50%; height: auto; border-radius: 6px;" />
+  </a>
+</p>
 
 ## What Kind of Software Is OscillaScore?
 
