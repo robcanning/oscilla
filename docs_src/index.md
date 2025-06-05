@@ -2,14 +2,15 @@
 title: OscillaScore
 layout: layout.njk
 ---
+
+OscillaScore is an open-source platform for creating and performing time-based, animated notation in the browser. It supports collaborative performance, synthesis control, and visual experimentation using simple SVG and web technologies.
+
 <p style="text-align: left;">
   <a href="./assets/oscilla-title-logo.png" target="_blank">
     <img src="./assets/oscilla-title-logo.png" alt="OscillaScore Title" style="width: 100%; height: auto; border-radius: 6px;" />
   </a>
 </p>
 
-
-OscillaScore is an open-source platform for creating and performing time-based, animated notation in the browser. It supports collaborative performance, synthesis control, and visual experimentation using simple SVG and web technologies.
 
 ##  What Can OscillaScore Do?
 
@@ -40,16 +41,6 @@ Oscilla is a hybrid system that sits between score playback engine, cue-based me
 - A DAW or audio sequencing environment  
 
 Nonetheless, when integrated with external tools such as Inkscape or conventional notation software, OscillaScore offers a robust environment for the composition and design of animated and spatial graphic scores. This hybrid approach supports a range of experimental, electroacoustic, and intermedia practices, enabling composers to work beyond the constraints of traditional notation.
-
-<p style="text-align: left;">
-  <a href="./assets/oscilla-ponysays-canning-dublin.png" target="_blank">
-    <img src="./assets/oscilla-ponysays-canning-dublin.png" alt="OscillaScore Live" style="width: 100%; height: auto; border-radius: 6px;" />
-  </a>
-</p>
-<p style="font-size: 0.9em; color: #666; max-width: 100%; text-align: left; margin-top: -0.5em;">
-  <em>PonySays trio performing <strong>Rob Canning's composition <em>1:10,560 (6 inches to the Mile)</em></strong>, 2025 — intermedia score for electric guitar, synthesiser, and drums — at Dublin Sound Lab’s Music Current Festival, Project Arts Centre, Dublin. The musicians performed using iPads synchronized over a local network with Oscilla, while the projector was connected as a fourth client displaying the score to the audience.</em>
-</p>
-
 
 ## Conceptual Overview
 
@@ -85,6 +76,14 @@ OscillaScore supports a wide range of use cases, including:
 - **Interactive installations**: Embed visual or spatial scores in gallery contexts with OSC-driven sound interaction  
 - **Mixed-media or hypermedia works**: Integrate text, video, sound, and interactivity in dynamic score designs  
 
+<p style="text-align: left;">
+  <a href="./assets/oscilla-ponysays-canning-dublin.png" target="_blank">
+    <img src="./assets/oscilla-ponysays-canning-dublin.png" alt="OscillaScore Live" style="width: 100%; height: auto; border-radius: 6px;" />
+  </a>
+</p>
+<p style="font-size: 0.9em; color: #666; max-width: 100%; text-align: left; margin-top: -0.5em;">
+  <em>PonySays trio performing <strong>Rob Canning's composition <em>1:10,560 (6 inches to the Mile)</em></strong>, 2025 — intermedia score for electric guitar, synthesiser, and drums — at Dublin Sound Lab’s Music Current Festival, Project Arts Centre, Dublin. The musicians performed using iPads synchronized over a local network with Oscilla, while the projector was connected as a fourth client displaying the score to the audience.</em>
+</p>
 
 
 ---
