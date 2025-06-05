@@ -990,8 +990,11 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
         }
       }
 
+    const easingSequence = parseEasingSequence(effectiveId);
+    let cycleCount = 0;
+    const defaultEasing = easingSequence[0];
 
-   switch (direction) {
+    switch (direction) {
       case 0: {
         const easingSequence = parseEasingSequence(effectiveId);
         let cycleCount = 0;
@@ -1002,7 +1005,7 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
           translateY: pathMotion('y'),
           rotate: rotate ? pathMotion('angle') : 0,
           duration: animationSpeed,
-          easing: easingSequence[0], // initial easing
+          easing: defaultEasing,
           loop: true,
           direction: 'alternate',
 
@@ -1038,14 +1041,19 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
               }
 
         case 1: {
-          const anim1 = anime({ targets: object, translateX: pathMotion('x'), translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, duration: animationSpeed, easing, loop: true });
+          const anim1 = anime({ targets: object, translateX: pathMotion('x'), 
+            translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, 
+            duration: animationSpeed, easing: defaultEasing,
+ loop: true });
           window.runningAnimations[object.id] = { play: () => anim1.play(), pause: () => anim1.pause(), resume: () => anim1.play(), wasPaused: false };
           animations.push(anim1);
           break;
         }
 
         case 2: {
-          const anim2 = anime({ targets: object, translateX: pathMotion('x'), translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, duration: animationSpeed, easing, loop: true, direction: 'reverse' });
+          const anim2 = anime({ targets: object, translateX: pathMotion('x'), 
+            translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, duration: animationSpeed, easing: defaultEasing,
+ loop: true, direction: 'reverse' });
           window.runningAnimations[object.id] = { play: () => anim2.play(), pause: () => anim2.pause(), resume: () => anim2.play(), wasPaused: false };
           animations.push(anim2);
           break;
@@ -1157,7 +1165,7 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
                 translateX: target.x - centerX,
                 translateY: target.y - centerY,
                 duration: 1000,
-                easing,
+                easing: defaultEasing,
                 loop: false,
                 complete: () => {
                   if (this.running) this.loop();
@@ -1219,7 +1227,7 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
                 translateY: point.y,
                 rotate: rotate ? pathMotion('angle') : 0,
                 duration: getRandom([2000, 3000, 5000, 8000, 13000]),
-                easing,
+                easing: defaultEasing,
                 autoplay: false,
                 complete: () => this.timer = setTimeout(() => this.jump(), getRandom([1000, 2000, 3000, 4000]))
               });
@@ -1387,7 +1395,7 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
                   translateX: nextTargetPosition.x,
                   translateY: nextTargetPosition.y,
                   duration: animationDuration,
-                  easing: easing,
+                  easing: defaultEasing,
                   complete: () => {
                     if (this.running) this.loop();
                   }
