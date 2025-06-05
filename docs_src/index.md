@@ -25,29 +25,28 @@ OscillaScore is an open-source platform for creating and performing time-based, 
 
 ## What Kind of Software Is OscillaScore?
 
-OscillaScore is best described as a hybrid system that sits between score playback engine, cue-based media framework, and distributed performance interface.
+Oscilla is a hybrid system that sits between score playback engine, cue-based media framework, and distributed performance interface. It is designed to support composers and performers working with contemporary forms of notation, multimedia integration, and distributed coordination.
 
 **It is:**
 
+- A performance framework for distributed setups, allowing composers and performers to coordinate audio, animation, and media in real time  
 - A cue-driven score playback and control system for structured, time-based, and media-integrated works  
 - A networked playback environment supporting multi-client synchronization via WebSockets and OSC  
-- A performance framework for distributed setups, allowing composers and performers to coordinate audio, animation, and media in real time  
 - A score authoring platform supporting compact mini-syntax for animation, transformation, and timing control using SVG ID conventions  
 
 **It is not:**
 
-- A real-time collaborative score editor  
-- A DAW or audio sequencing environment  
 - A full-featured notation program like MuseScore or Sibelius  
+- A DAW or audio sequencing environment  
 
-OscillaScore is designed to support composers and performers working with contemporary forms of notation, multimedia integration, and distributed coordination.
+
 
 <p style="text-align: left;">
   <a href="./assets/oscilla-ponysays-canning-dublin.png" target="_blank">
     <img src="./assets/oscilla-ponysays-canning-dublin.png" alt="OscillaScore Live" style="width: 100%; height: auto; border-radius: 6px;" />
   </a>
 </p>
-<p style="font-size: 0.9em; color: #666; max-width: 70%; text-align: left; margin-top: -0.5em;">
+<p style="font-size: 0.9em; color: #666; max-width: 100%; text-align: left; margin-top: -0.5em;">
   <em>PonySays trio performing <strong>Rob Canning's composition <em>1:10,560 (6 inches to the Mile)</em></strong>, 2025 — intermedia score for electric guitar, synthesiser, and drums — at Dublin Sound Lab’s Music Current Festival, Project Arts Centre, Dublin. The musicians performed using iPads synchronized over a local network with Oscilla, while the projector was connected as a fourth client displaying the score to the audience.</em>
 </p>
 
@@ -189,10 +188,10 @@ Workshops typically include live demos, collaborative score creation, and integr
 
 <p style="text-align: left;">
   <a href="./assets/oscilla-workshop-cmc2025.png" target="_blank">
-    <img src="./assets/oscilla-workshop-cmc2025.png" alt="Oscilla Workshop CMC 2025" style="width: 70%; height: auto; border-radius: 6px;" />
+    <img src="./assets/oscilla-workshop-cmc2025.png" alt="Oscilla Workshop CMC 2025" style="width: 100%; height: auto; border-radius: 6px;" />
   </a>
 </p>
-<p style="font-size: 0.9em; color: #666; max-width: 70%; text-align: left; margin-top: -0.5em;">
+<p style="font-size: 0.9em; color: #666; max-width: 100%; text-align: left; margin-top: -0.5em;">
   <em>The first Oscilla workshop hosted by the Contemporary Music Centre of Ireland as part of the Music Current Festival 2025. More details at <a href="https://www.cmc.ie/events/2025/apr/music-current-2025-rob-canning-digital-score-workshop" target="_blank">cmc.ie</a>.<br>
   Photo © Contemporary Music Centre of Ireland, 2025.</em>
 </p>
