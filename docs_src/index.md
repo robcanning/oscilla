@@ -210,20 +210,9 @@ One or more research papers related to Oscilla are currently in preparation for 
 
 ---
 
-<p style="text-align: left;">
-  <a href="./assets/oscilla_interface_screenshot.png" target="_blank">
-    <img src="./assets/oscilla_interface_screenshot.png" alt="OscillaScore Interface" style="width: 50%; height: auto; border-radius: 6px;" />
-  </a>
-</p>
-
 ## Contact
 
 For workshops, collaborations, or support:
-- Email: <a href="mailto:rscanning@gmail.com">rscanning@gmail.com</a>
-- Mastodon: [@rob@toot.si](https://toot.si/@rob)
-
+Email: <a href="mailto:r&#115;ca&#110;ning&#64;g&#109;ail&#46;com">&#114;&#115;c&#97;nning&#64;gm&#97;il&#46;com</a>
 ---
 
-
-
----
