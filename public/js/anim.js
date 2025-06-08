@@ -458,7 +458,7 @@ const startRotation = (object) => {
           { rotate: end }
         ],
         duration: duration,
-        easing: easing,
+        easing: easing || 'easeInOutSine',
         direction: 'alternate',
         loop: true,
         autoplay: false // Deferred start
@@ -469,7 +469,7 @@ const startRotation = (object) => {
         targets: object,
         rotate: direction === 1 ? '+=360' : '-=360',
         duration: duration,
-        easing: easing,
+        easing: easing || 'easeInOutSine',
         loop: true,
         autoplay: false // Deferred start
       });
@@ -815,7 +815,7 @@ function parseO2PCompact(id) {
     osc: extractTagValue(id, "osc", "0") === 1,
     throttle: parseInt(extractTagValue(id, "throttle", "20")),
     rotate: extractTagValue(id, "rotate", "1") !== 0,
-    easing: extractTagValue(id, "ease", null), // Can be number or list; resolved later
+    easing: extractTagValue(id, "ease", 3), // 3 = easeInOutSine, default fallback
     quant: extractTagValue(id, "quant", "0") === 1,
     trigger: id.includes("_t(1)")
   };
@@ -1279,8 +1279,8 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
           let nextTargetPosition = null; // Stores the next position so the object can follow it
 
           // **Find the ghost object based on the main object's ID**
-          const baseObjectID = object.id.split("_")[0]; // Strip speed/direction data
-          const ghostID = `ghost-${baseObjectID}`;
+          const baseObjectID = object.getAttribute('id') || object.id;
+          const ghostID = `ghost-${baseObjectID.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
           let ghostObject = document.getElementById(ghostID);
 
           // **If ghost object exists, reset only its location-related attributes**
@@ -1357,7 +1357,7 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
                 cx: nextTargetPosition.x,
                 cy: nextTargetPosition.y,
                 duration: animationDuration,
-                easing: easing
+                easing: defaultEasing,
               });
 
               // ✅ Align main object immediately on first loop
@@ -1406,7 +1406,7 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
                   x: nextTargetPosition.x,
                   y: nextTargetPosition.y - 75,
                   duration: animationDuration,
-                  easing: easing
+                  easing: defaultEasing,
                 });
 
               }, case5PauseDuration);
