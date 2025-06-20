@@ -1730,6 +1730,15 @@ window.scoreSVG = svgElement;
 // ✅ Assign cues immediately (no delay)
 window.cues = [];
 assignCues(svgElement, window.cues);
+console.log("[Debug] Total cues:", window.cues.length);
+for (const cue of window.cues) {
+  if (!cue.element) {
+    console.warn(`[Debug] Cue "${cue.id}" is missing element`);
+  }
+}
+
+
+
 
 preloadSpeedCues();
 
@@ -2022,7 +2031,7 @@ preloadSpeedCues();
   window.dispatchEvent(new Event("resize"));
   window.addEventListener('resize', () => {
     const startTime = performance.now();
-    extractScoreElements(svgElement);
+    extractScoreElements(window.scoreSVG);
     const endTime = performance.now();
     console.log(`[DEBUG] ⏳ extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
     console.log("[DEBUG] ✅ Extracted Score Elements. Now Checking Sync...");
@@ -3209,9 +3218,24 @@ preloadSpeedCues();
     if (Object.keys(rehearsalMarks).length > 0) {
       createRehearsalMarkButtons();
     }
-    window.cues = cues;
 
-  };
+
+
+    const newCueIds = new Set(newCues.map(c => c.id));
+
+    for (const existingCue of window.cues) {
+      newCueIds.delete(existingCue.id); // Keep only truly new cues
+    }
+
+    const filteredNewCues = newCues.filter(c => newCueIds.has(c.id) && c.element);
+    if (filteredNewCues.length < newCues.length) {
+      console.warn(`[extractScoreElements] ⚠️ Skipped ${newCues.length - filteredNewCues.length} newCues without element`);
+    }
+
+    window.cues.push(...filteredNewCues);
+
+    
+      };
 
   //////  end of extract score elements  /////////////////////////////////////////
 

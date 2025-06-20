@@ -686,24 +686,23 @@ export function handleRestoredRepeatState(repeatStateMap, cues) {
  * Assigns cue IDs to each child based on:
  *   - rnd[min,max]     → random float value
  *   - ypos[min,max]    → scaled vertical position
+ * Also walks the entire SVG tree to catch other cue(...) elements.
  */
 export function assignCues(svgRoot, cuesArray = []) {
-
   const cueGroups = svgRoot.querySelectorAll('g[id^="assignCues("]');
   if (!cueGroups.length) {
     console.log("[assignCues] No assignCues(...) groups found in SVG.");
-    return;
+  } else {
+    console.log(`[assignCues] Found ${cueGroups.length} cue group(s).`);
   }
-
-  console.log(`[assignCues] Found ${cueGroups.length} cue group(s).`);
 
   cueGroups.forEach(group => {
     console.log(`[assignCues] Raw group ID: '${group.id}'`);
 
-  const baseId = group.id.split('-')[0]; // e.g. "assignCues(cueOscTrigger(rnd[1,9]))"
-  const match = baseId.match(/^assignCues\((.+)\)$/);    
-  
-  if (!match) {
+    const baseId = group.id.split('-')[0];
+    const match = baseId.match(/^assignCues\((.+)\)$/);
+
+    if (!match) {
       console.warn(`[assignCues] Skipping malformed group ID: ${group.id}`);
       return;
     }
@@ -711,19 +710,16 @@ export function assignCues(svgRoot, cuesArray = []) {
     const instruction = match[1].trim();
     console.log(`[assignCues] Processing group: ${group.id} with ${group.children.length} child(ren)`);
 
-    // ------------------------------------------
     // 1. Special case: cueOscSet(param, rnd[...] / ypos[...])
-    // ------------------------------------------
     const setMatch = instruction.match(/^cueOscSet\(([^,]+),\s*(rnd|ypos)\[([\d.]+),([\d.]+)\]\)$/);
     if (setMatch) {
       const param = setMatch[1].trim();
       const mode = setMatch[2];
       const min = parseFloat(setMatch[3]);
       const max = parseFloat(setMatch[4]);
+      const bbox = group.getBBox();
 
       console.log(`[assignCues] → cueOscSet(${param}, ${mode}[${min}, ${max}])`);
-
-      const bbox = group.getBBox();
 
       Array.from(group.children).forEach((child, index) => {
         let value = mode === "rnd"
@@ -738,20 +734,13 @@ export function assignCues(svgRoot, cuesArray = []) {
         const cueId = `cueOscSet(${param},${formattedValue})`;
         child.id = cueId;
 
-        if (typeof cues !== "undefined" && Array.isArray(cues)) {
-          cues.push({ id: cueId, element: child, triggered: false });
-        }
-
+        cuesArray.push({ id: cueId, element: child, triggered: false });
         console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
       });
       return;
     }
 
-    // ------------------------------------------
-    // 2. General case: cueOscTrigger, cueOscValue, cueOscRandom, etc.
-    // ------------------------------------------
-    console.log(`[assignCues] Evaluating instruction: '${instruction}'`);
-
+    // 2. General case: cueOscTrigger(rnd[1,9]), etc.
     const cueMatch = instruction.match(/^([a-zA-Z][a-zA-Z0-9]*)\((rnd|ypos)\[([\d.]+),([\d.]+)\]\)$/);
     console.log(`[assignCues] cueMatch result:`, cueMatch);
 
@@ -764,10 +753,9 @@ export function assignCues(svgRoot, cuesArray = []) {
     const mode = cueMatch[2];
     const min = parseFloat(cueMatch[3]);
     const max = parseFloat(cueMatch[4]);
+    const bbox = group.getBBox();
 
     console.log(`[assignCues] → ${cueType}(${mode}[${min}, ${max}])`);
-
-    const bbox = group.getBBox();
 
     Array.from(group.children).forEach((child, index) => {
       let value = mode === "rnd"
@@ -782,13 +770,34 @@ export function assignCues(svgRoot, cuesArray = []) {
       const cueId = `${cueType}(${formattedValue})`;
       child.id = cueId;
 
-      if (typeof cues !== "undefined" && Array.isArray(cues)) {
-        cues.push({ id: cueId, element: child, triggered: false });
-      }
-
+      cuesArray.push({ id: cueId, element: child, triggered: false });
       console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
     });
   });
+
+  // 🔁 Additional pass: walk all children for standalone cue IDs
+  function walkForCueElements(node) {
+    for (const child of node.children) {
+      const id = child.id;
+      if (id?.startsWith("cue") && !cuesArray.some(c => c.id === id && c.element)) {
+        const bbox = child.getBBox?.();
+        cuesArray.push({
+          id: id,
+          element: child,
+          triggered: false,
+          ...(bbox && { x: bbox.x, width: bbox.width })
+        });
+        console.log(`[assignCues] ➕ Added external cue: ${id}`);
+      } else if (id?.includes("cue") && !id.startsWith("cue")) {
+        console.warn(`[assignCues] ⚠️ Skipped suspicious cue-like ID: ${id}`);
+      }
+      walkForCueElements(child); // recurse
+    }
+  }
+
+  walkForCueElements(svgRoot);
+
+  console.log(`[assignCues] ✅ Total cues assigned: ${cuesArray.length}`);
 }
 
 
@@ -2016,20 +2025,33 @@ export async function checkCueTriggers() {
     return;
   }
 
-  const playheadOffset = window.scoreContainer.offsetWidth / 2;
-  const adjustedPlayheadX = window.playheadX + playheadOffset;
+const scoreContainer = window.scoreContainer;
+const playhead = document.getElementById("playhead");
 
-  // 🎯 Evaluate cue collisions
-  for (const cue of window.cues) {
-    const cueStart = cue.x;
-    const cueEnd = cueStart + cue.width;
-    const isInsideCue = adjustedPlayheadX >= cueStart && adjustedPlayheadX <= cueEnd;
+if (!scoreContainer || !playhead) return;
 
-    if (isInsideCue && !window.triggeredCues.has(cue.id)) {
-      console.log(`[DEBUG] Triggering Cue: ${cue.id} at X: ${cueStart}, Adjusted: ${adjustedPlayheadX}`);
-      window.handleCueTrigger?.(cue.id);
-      window.triggeredCues.add(cue.id);
-    }
+const containerRect = scoreContainer.getBoundingClientRect();
+const playheadRect = playhead.getBoundingClientRect();
+const playheadX = playheadRect.left - containerRect.left;
+
+for (const cue of window.cues) {
+  if (!cue.element) {
+    console.warn(`[cueTrigger] Cue "${cue.id}" has no element and will be skipped.`);
+    continue;
+  }
+
+  const cueRect = cue.element.getBoundingClientRect();
+  const cueX = cueRect.left - containerRect.left;
+  const cueWidth = cueRect.width;
+
+  const isInsideCue = playheadX >= cueX && playheadX <= (cueX + cueWidth);
+
+  if (isInsideCue && !window.triggeredCues.has(cue.id)) {
+    console.log(`[cueTrigger] Triggering: ${cue.id}`);
+    window.handleCueTrigger?.(cue.id);
+    window.triggeredCues.add(cue.id);
+  }
+
 
     // 🔁 Evaluate repeat loop conditions
     for (const [repeatCueId, repeat] of Object.entries(window.repeatStateMap || {})) {
