@@ -1243,216 +1243,177 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
           break;
         }
 
-        case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
 
-          // console.log(`[DEBUG] Initializing Case 5: Animating between precomputed path variants for object ${object.id}`);
+case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
 
-          // Get the original path ID dynamically
-          const originalPathID = path.id;
+  const originalPathID = path.id;
+  const basePathIDMatch = originalPathID.match(/^(path-\d+)/);
+  const basePathID = basePathIDMatch ? basePathIDMatch[1] : originalPathID;
 
-          // Extract basePathID while keeping the main path intact
-          const basePathIDMatch = originalPathID.match(/^(path-\d+)/);
-          const basePathID = basePathIDMatch ? basePathIDMatch[1] : originalPathID; // Use full ID if no match
+  const case5Paths = [...(window.pathVariantsMap[basePathID] || [])];
+  if (!case5Paths.some(p => p.id === originalPathID)) {
+    case5Paths.unshift(path);
+  }
 
-          // console.log(`[DEBUG] Original Path ID: ${originalPathID}`);
-          // console.log(`[DEBUG] Base Path ID (for variant lookup): ${basePathID}`);
+  if (case5Paths.length < 2) break;
 
-          // Retrieve precomputed path variants
-          const case5Paths = [...(window.pathVariantsMap[basePathID] || [])];
+  const case5StartPositions = case5Paths.map(p => p.getPointAtLength(0));
+  const case5PauseDurations = [3000, 5000, 8000, 13000, 21000, 34000];
+  const animationDuration = 2000;
 
-          if (!case5Paths.some(p => p.id === originalPathID)) {
-            case5Paths.unshift(path);
-            // console.log(`[DEBUG] Added original path '${object.id}' to variant list.`);
+  let nextTargetPosition = null;
+
+  // ✅ Find ghost using ghost(path-XXXX) pattern
+  const mainId = object.getAttribute('id') || object.id;
+  const pathMatch = mainId.match(/o2p\(path-(\d+)\)/);
+  const ghostID = pathMatch ? `ghost(path-${pathMatch[1]})` : null;
+  let ghostObject = ghostID ? document.getElementById(ghostID) : null;
+
+  if (ghostObject) {
+    ghostObject.removeAttribute("transform");
+
+    if (!ghostObject.hasAttribute("cx")) ghostObject.setAttribute("cx", "0");
+    if (!ghostObject.hasAttribute("cy")) ghostObject.setAttribute("cy", "0");
+
+    // ✅ Snap ghost to first valid point
+    const first = case5StartPositions[0];
+    ghostObject.setAttribute("cx", first.x);
+    ghostObject.setAttribute("cy", first.y);
+  } else {
+    console.warn(`[Case5] Ghost not found for ID '${ghostID}', using fallback.`);
+    ghostObject = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    ghostObject.setAttribute("id", ghostID || `ghost-${mainId.replace(/[^a-zA-Z0-9_-]/g, '-')}`);
+    ghostObject.setAttribute("r", "10");
+    ghostObject.setAttribute("fill", "rgba(0,0,255,0.5)");
+    ghostObject.setAttribute("stroke", "blue");
+    ghostObject.setAttribute("stroke-width", "2");
+    ghostObject.setAttribute("cx", "0");
+    ghostObject.setAttribute("cy", "0");
+    window.scoreSVG.appendChild(ghostObject);
+  }
+
+  // 🧮 Create countdown text
+  let countdownText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  countdownText.setAttribute("id", `${ghostID}-countdown`);
+  countdownText.setAttribute("fill", "red");
+  countdownText.setAttribute("stroke", "red");
+  countdownText.setAttribute("stroke-width", "1");
+  countdownText.setAttribute("font-size", "56");
+  countdownText.setAttribute("text-anchor", "middle");
+  window.scoreSVG.appendChild(countdownText);
+
+  const Case5Controller = {
+    object,
+    ghost: ghostObject,
+    countdown: countdownText,
+    initialized: false,
+    running: true,
+    loopTimeout: null,
+    countdownInterval: null,
+
+    loop() {
+      if (!this.running) return;
+
+      nextTargetPosition = case5StartPositions[Math.floor(Math.random() * case5StartPositions.length)];
+      const case5PauseDuration = case5PauseDurations[Math.floor(Math.random() * case5PauseDurations.length)];
+      const case5PauseSeconds = Math.round(case5PauseDuration / 1000);
+
+      // Animate ghost
+      anime({
+        targets: this.ghost,
+        cx: nextTargetPosition.x,
+        cy: nextTargetPosition.y,
+        duration: animationDuration,
+        easing: defaultEasing,
+      });
+
+      // On first loop, snap main object to same spot
+      if (!this.initialized) {
+        anime.set(this.object, {
+          translateX: nextTargetPosition.x,
+          translateY: nextTargetPosition.y
+        });
+        this.initialized = true;
+      }
+
+      // Move and update countdown
+      this.countdown.setAttribute("x", nextTargetPosition.x);
+      this.countdown.setAttribute("y", nextTargetPosition.y - 75);
+      this.countdown.textContent = `${case5PauseSeconds}`;
+
+      let remainingTime = case5PauseDuration / 1000;
+      this.countdownInterval = setInterval(() => {
+        remainingTime -= 1;
+        this.countdown.textContent = `${remainingTime}`;
+        if (remainingTime <= 0) {
+          clearInterval(this.countdownInterval);
+          this.countdown.textContent = "";
+        }
+      }, 1000);
+
+      // After wait, move main object
+      this.loopTimeout = setTimeout(() => {
+        anime({
+          targets: this.object,
+          translateX: nextTargetPosition.x,
+          translateY: nextTargetPosition.y,
+          duration: animationDuration,
+          easing: defaultEasing,
+          complete: () => {
+            if (this.running) this.loop();
           }
+        });
 
-          // console.log(`[DEBUG] Found ${case5Paths.length} total paths for '${basePathID}'.`);
+        anime({
+          targets: this.countdown,
+          x: nextTargetPosition.x,
+          y: nextTargetPosition.y - 75,
+          duration: animationDuration,
+          easing: defaultEasing,
+        });
 
-          if (case5Paths.length < 2) {
-            // console.warn("[DEBUG] Not enough valid path variants detected for Case 5. Aborting.");
-            break;
-          }
+      }, case5PauseDuration);
+    },
 
-          const case5StartPositions = case5Paths.map(path => path.getPointAtLength(0));
-          const case5PauseDurations = [3000, 5000, 8000, 13000, 21000, 34000];
-          const animationDuration = 2000;
+    pause() {
+      this.running = false;
+      clearTimeout(this.loopTimeout);
+      clearInterval(this.countdownInterval);
+    },
 
-          let nextTargetPosition = null; // Stores the next position so the object can follow it
+    resume() {
+      if (!this.running) {
+        this.running = true;
+        this.loop();
+      }
+    }
+  };
 
-          // **Find the ghost object based on the main object's ID**
-          const baseObjectID = object.getAttribute('id') || object.id;
-          const ghostID = `ghost-${baseObjectID.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
-          let ghostObject = document.getElementById(ghostID);
+  Case5Controller.loop();
 
-          // **If ghost object exists, reset only its location-related attributes**
-          if (ghostObject) {
-            // console.log(`[DEBUG] Resetting ghost object '${ghostID}' location.`);
-            ghostObject.removeAttribute("transform");
-            ghostObject.removeAttribute("cx");
-            ghostObject.removeAttribute("cy");
-          } else {
-            // console.warn(`[DEBUG] Ghost object '${ghostID}' not found. Creating it.`);
-            ghostObject = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            ghostObject.setAttribute("id", ghostID);
-            ghostObject.setAttribute("r", "10");
-            ghostObject.setAttribute("fill", "rgba(0,0,255,0.5)");
-            ghostObject.setAttribute("stroke", "blue");
-            ghostObject.setAttribute("stroke-width", "2");
-            window.scoreSVG.appendChild(ghostObject);
-          }
+  window.runningAnimations[object.id] = Case5Controller;
+  window.runningAnimations[ghostID] = {
+    play: () => {
+      if (!Case5Controller.running) Case5Controller.resume();
+    },
+    pause: () => {
+      if (Case5Controller.running) Case5Controller.pause();
+    },
+    wasPaused: false
+  };
 
-          // **Create a countdown text next to the ghost**
-          let countdownText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          countdownText.setAttribute("id", `${ghostID}-countdown`);
-          countdownText.setAttribute("fill", "red");
-          countdownText.setAttribute("stroke", "red");
-          countdownText.setAttribute("stroke-width", "1");
-          countdownText.setAttribute("font-size", "56");
-          countdownText.setAttribute("text-anchor", "middle");
-          window.scoreSVG.appendChild(countdownText);
+  window.runningAnimations[`${ghostID}-countdown`] = {
+    play: () => {},
+    pause: () => {},
+    wasPaused: false
+  };
 
-          // Optional: test label
-          let testText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          testText.setAttribute("id", `${object.id}-test-label`);
-          testText.setAttribute("fill", "black");
-          testText.setAttribute("stroke", "black");
-          testText.setAttribute("stroke-width", "1");
-          testText.setAttribute("font-size", "46");
-          testText.setAttribute("text-anchor", "middle");
-          window.scoreSVG.appendChild(testText);
-          testText.textContent = "TEST"; // Set text content
+  observer.observe(object);
+  observer.observe(ghostObject);
 
-          /**
-           * Case 5 Controller — Ghost-following randomized path jumper
-           *
-           * Controls a "ghost" SVG object that jumps between random precomputed path positions,
-           * along with a synchronized countdown indicator and the actual animated object.
-           *
-           * This version is fully observer-aware:
-           *   - Ghost is registered with window.runningAnimations[ghostID]
-           *   - Ghost is paused/resumed based on visibility
-           *   - The main object follows the ghost after randomized delays
-           *   - Countdown text is updated on screen and cleared cleanly
-           */
-
-          const Case5Controller = {
-            object,
-            ghost: ghostObject,
-            countdown: countdownText,
-            initialized: false,
-            running: true,
-            loopTimeout: null,
-            countdownInterval: null,
-
-            loop() {
-              if (!this.running) return;
-
-              // Select new random position from precomputed variant start points
-              nextTargetPosition = case5StartPositions[Math.floor(Math.random() * case5StartPositions.length)];
-              const case5PauseDuration = case5PauseDurations[Math.floor(Math.random() * case5PauseDurations.length)];
-              const case5PauseSeconds = Math.round(case5PauseDuration / 1000);
-
-              // Animate ghost to new position
-              anime({
-                targets: this.ghost,
-                cx: nextTargetPosition.x,
-                cy: nextTargetPosition.y,
-                duration: animationDuration,
-                easing: defaultEasing,
-              });
-
-              // ✅ Align main object immediately on first loop
-              if (!this.initialized) {
-                anime({
-                  targets: this.object,
-                  translateX: nextTargetPosition.x,
-                  translateY: nextTargetPosition.y,
-                  duration: 1,
-                  easing: 'linear'
-                });
-                this.initialized = true;
-              }
+  console.warn(`[DEBUG] Case 5 fallback animation active for object ${object.id}`);
 
 
-              // Move and update countdown text
-              this.countdown.setAttribute("x", nextTargetPosition.x);
-              this.countdown.setAttribute("y", nextTargetPosition.y - 75);
-              this.countdown.textContent = `${case5PauseSeconds}`;
-
-              let remainingTime = case5PauseDuration / 1000;
-              this.countdownInterval = setInterval(() => {
-                remainingTime -= 1;
-                this.countdown.textContent = `${remainingTime}`;
-                if (remainingTime <= 0) {
-                  clearInterval(this.countdownInterval);
-                  this.countdown.textContent = "";
-                }
-              }, 1000);
-
-              // After delay, move main object to ghost's position
-              this.loopTimeout = setTimeout(() => {
-                anime({
-                  targets: this.object,
-                  translateX: nextTargetPosition.x,
-                  translateY: nextTargetPosition.y,
-                  duration: animationDuration,
-                  easing: defaultEasing,
-                  complete: () => {
-                    if (this.running) this.loop();
-                  }
-                });
-
-                anime({
-                  targets: this.countdown,
-                  x: nextTargetPosition.x,
-                  y: nextTargetPosition.y - 75,
-                  duration: animationDuration,
-                  easing: defaultEasing,
-                });
-
-              }, case5PauseDuration);
-            },
-
-            pause() {
-              this.running = false;
-              clearTimeout(this.loopTimeout);
-              clearInterval(this.countdownInterval);
-            },
-
-            resume() {
-              if (!this.running) {
-                this.running = true;
-                this.loop();
-              }
-            }
-          };
-
-          // 🔁 Start the initial loop
-          Case5Controller.loop();
-
-          // ✅ Register main controller
-          window.runningAnimations[object.id] = Case5Controller;
-
-          // ✅ Register ghost object with visibility-based control logic
-          window.runningAnimations[ghostID] = {
-            play: () => {
-              if (!Case5Controller.running) Case5Controller.resume();
-            },
-            pause: () => {
-              if (Case5Controller.running) Case5Controller.pause();
-            },
-            wasPaused: false
-          };
-
-          // ✅ Optionally register countdown text to ensure observer doesn't throw errors
-          window.runningAnimations[`${ghostID}-countdown`] = {
-            play: () => { },
-            pause: () => { },
-            wasPaused: false
-          };
-
-          // ✅ Observe both the main object and ghost for visibility-based control
-          observer.observe(object);
-          observer.observe(ghostObject);
 
 
           console.warn(`[DEBUG] Fallback pingpong animation created for object ${object.id}`);

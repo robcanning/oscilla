@@ -285,16 +285,16 @@ export function dismissPauseCountdown(forceNoResume = false, receivedFromServer 
   resumePlayback(receivedFromServer);
 }
 
-export function hidePauseCountdownUI() {
-  const pauseCountdown = document.getElementById("pause-countdown");
-  if (pauseCountdown) {
-    pauseCountdown.classList.add("hidden");
-    pauseCountdown.style.display = "none";
-    const pauseTime = document.getElementById("pause-time");
-    if (pauseTime) pauseTime.textContent = "";
-    console.log("[DEBUG] Pause countdown UI hidden.");
-  }
-}
+// export function hidePauseCountdownUI() {
+//   const pauseCountdown = document.getElementById("pause-countdown");
+//   if (pauseCountdown) {
+//     pauseCountdown.classList.add("hidden");
+//     pauseCountdown.style.display = "none";
+//     const pauseTime = document.getElementById("pause-time");
+//     if (pauseTime) pauseTime.textContent = "";
+//     console.log("[DEBUG] Pause countdown UI hidden.");
+//   }
+// }
 
 export function clearPauseTimers() {
   if (window.pauseCountdownInterval) {
@@ -327,11 +327,14 @@ export function resumePlayback(receivedFromServer = false) {
   window.updateSeekBar?.();
   window.updateStopwatch?.();
 
-  window.isPlaying = true;
-  window.animationPaused = false;
-  window.togglePlayButton?.();
-  console.log("[DEBUG] Calling startAnimation()");
-  window.startAnimation?.();
+ window.isPlaying = true;
+window.animationPaused = false;
+window.ignoreSyncPlayback = false;
+window.togglePlayButton?.();
+console.log("[DEBUG] Calling startAnimation() from resumePlayback()");
+window.startAnimation?.();
+window.startStopwatch?.();
+
   
   preventAccidentalPauses();
   handleWebSocketSync(receivedFromServer);
@@ -734,7 +737,14 @@ export function assignCues(svgRoot, cuesArray = []) {
         const cueId = `cueOscSet(${param},${formattedValue})`;
         child.id = cueId;
 
-        cuesArray.push({ id: cueId, element: child, triggered: false });
+const bbox = child.getBBox();
+cuesArray.push({
+  id: cueId,
+  element: child,
+  triggered: false,
+  x: bbox.x,
+  width: bbox.width
+});
         console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
       });
       return;
@@ -770,8 +780,16 @@ export function assignCues(svgRoot, cuesArray = []) {
       const cueId = `${cueType}(${formattedValue})`;
       child.id = cueId;
 
-      cuesArray.push({ id: cueId, element: child, triggered: false });
-      console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
+const bbox = child.getBBox();
+cuesArray.push({
+  id: cueId,
+  element: child,
+  triggered: false,
+  x: bbox.x,
+  width: bbox.width
+});
+
+console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
     });
   });
 
@@ -1049,26 +1067,25 @@ window.adjustSpeed = adjustSpeed;
 
 
 
-// 🛑 Handles cueStop: halts playback entirely
-export function handleStopCue(cueId) {
-  window.stopAnimation?.();
-  window.isPlaying = false;
-  window.isMusicalPause = true;
+export function handleStopCue(cueId = "cueStop") {
+  console.log("[CLIENT] 🛑 cueStop triggered:", cueId);
 
-  window.togglePlayButton?.();
-  
-  if (window.socket && window.socket.readyState === WebSocket.OPEN) {
-    window.socket.send(JSON.stringify({
-      type: "cue_stop",
-      elapsedTime: window.elapsedTime, // precise local time
-      playheadX: window.playheadX,
-      id: cueId
-    }));
-    }
+  window.isPlaying ? window.pausePlayback() : window.startPlayback();
 
+  // // Tell the server and other clients
+  // if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+  //   window.socket.send(JSON.stringify({
+  //     type: "cueStop",
+  //     elapsedTime: window.elapsedTime,
+  //     playheadX: window.playheadX,
+  //     id: cueId
+  //   }));
+  // }
 
   console.log("[CLIENT] Playback stopped by cue:", cueId);
 }
+
+
 
 
 
@@ -1991,11 +2008,18 @@ export function resetTriggeredCues() {
 }
 
 
+window.getPlayheadX = function () {
+  const playhead = document.getElementById("playhead");
+  const scoreContainer = window.scoreContainer;
+  if (!playhead || !scoreContainer) return null;
 
+  const containerRect = scoreContainer.getBoundingClientRect();
+  const playheadRect = playhead.getBoundingClientRect();
+  return playheadRect.left - containerRect.left;
+};
 
 
 // -------------------- Cue Utilities --------------------
-
 /**
  * checkCueTriggers()
  *
@@ -2011,79 +2035,64 @@ export function resetTriggeredCues() {
  */
 export async function checkCueTriggers() {
   // ✅ Ensure cues are ready
-  if (!Array.isArray(window.cues)) {
-    // console.warn("[cue] ⚠️ window.cues is not iterable yet. Skipping cue check.");
-    return;
-  }
+  if (!Array.isArray(window.cues)) return;
 
   // ✅ Sync elapsed time based on current scroll position
   window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
 
-  // 🛑 Skip cue checks if we're paused, seeking, or animation is suspended
-  if (window.isSeeking || window.animationPaused || !window.isPlaying) {
-    // console.log("[DEBUG] Skipping cue checks.");
-    return;
-  }
+  // 🛑 Skip cue checks if paused, seeking, or not playing
+  if (window.isSeeking || window.animationPaused || !window.isPlaying) return;
 
-const scoreContainer = window.scoreContainer;
-const playhead = document.getElementById("playhead");
+const playheadX = window.getPlayheadX();
+if (playheadX === null) {
+  console.warn("[checkCueTriggers] Could not determine playhead x position.");
+  return;
+}
 
-if (!scoreContainer || !playhead) return;
+  for (const cue of window.cues) {
+    if (!cue.element) continue;
 
-const containerRect = scoreContainer.getBoundingClientRect();
-const playheadRect = playhead.getBoundingClientRect();
-const playheadX = playheadRect.left - containerRect.left;
+    const cueRect = cue.element.getBoundingClientRect();
+    const containerRect = window.scoreContainer.getBoundingClientRect();
+    const cueX = cueRect.left - containerRect.left;
+    const cueWidth = cueRect.width;
 
-for (const cue of window.cues) {
-  if (!cue.element) {
-    console.warn(`[cueTrigger] Cue "${cue.id}" has no element and will be skipped.`);
-    continue;
-  }
+    const isInsideCue = playheadX >= cueX && playheadX <= (cueX + cueWidth);
+    
 
-  const cueRect = cue.element.getBoundingClientRect();
-  const cueX = cueRect.left - containerRect.left;
-  const cueWidth = cueRect.width;
+    if (isInsideCue && !window.triggeredCues.has(cue.id)) {
+      console.log(`[cueTrigger] Triggering: ${cue.id}`);
+      window.handleCueTrigger?.(cue.id);
+      window.triggeredCues.add(cue.id);
+    }
 
-  const isInsideCue = playheadX >= cueX && playheadX <= (cueX + cueWidth);
-
-  if (isInsideCue && !window.triggeredCues.has(cue.id)) {
-    console.log(`[cueTrigger] Triggering: ${cue.id}`);
-    window.handleCueTrigger?.(cue.id);
-    window.triggeredCues.add(cue.id);
-  }
-
-
-    // 🔁 Evaluate repeat loop conditions
+    // 🔁 Handle repeat logic
     for (const [repeatCueId, repeat] of Object.entries(window.repeatStateMap || {})) {
       if (!repeat.active || !repeat.ready || !repeat.initialJumpDone) continue;
 
       let isAtRepeatEnd = false;
 
-      // Self-referential end marker
       if (repeat.endId === 'self') {
         const repeatCue = window.cues.find(c => c.id === repeat.cueId || c.id.startsWith(`${repeat.cueId}-`));
-        if (repeatCue) {
-          const selfX = repeatCue.x;
-          const selfEnd = selfX + (repeatCue.width || 40);
-          isAtRepeatEnd = adjustedPlayheadX >= selfX && adjustedPlayheadX <= selfEnd;
+        if (repeatCue?.element) {
+          const repeatRect = repeatCue.element.getBoundingClientRect();
+          const repeatX = repeatRect.left - containerRect.left;
+          const repeatEnd = repeatX + (repeatRect.width || 40);
+          isAtRepeatEnd = playheadX >= repeatX && playheadX <= repeatEnd;
         }
-      }
-      // Named cue end
-      else if (cue.id === repeat.endId || cue.id.startsWith(`${repeat.endId}-`)) {
+      } else if (cue.id === repeat.endId || cue.id.startsWith(`${repeat.endId}-`)) {
         isAtRepeatEnd = true;
       }
 
       const now = Date.now();
       if (repeat.jumpCooldownUntil && now < repeat.jumpCooldownUntil) {
-        console.log(`[repeat] ⏳ Skipping repeat end due to cooldown (${repeatCueId})`);
+        console.log(`[repeat] ⏳ Cooldown active for ${repeatCueId}`);
         continue;
       }
 
       if (isAtRepeatEnd) {
         const cooldown = 500;
-        if (now - repeat.lastTriggerTime < cooldown) {
-          continue;
-        }
+        if (now - repeat.lastTriggerTime < cooldown) continue;
 
         repeat.lastTriggerTime = now;
         repeat.currentCount++;
@@ -2102,9 +2111,7 @@ for (const cue of window.cues) {
           } catch (err) {
             console.error(`[repeat] ❌ Error during repeat jump (${repeatCueId}):`, err);
           }
-
         } else {
-          // ✅ Repeat sequence is complete
           repeat.active = false;
           window.hideRepeatCountDisplay?.();
 
@@ -2113,7 +2120,6 @@ for (const cue of window.cues) {
             window.stopAnimation?.();
             window.isPlaying = false;
             window.isMusicalPause = true;
-
             window.togglePlayButton?.();
           } else if (repeat.resumeId && repeat.resumeId !== 'self') {
             console.log(`[repeat] Repeat complete → jumping to ${repeat.resumeId}`);
@@ -2124,11 +2130,12 @@ for (const cue of window.cues) {
           }
         }
 
-        break; // ⚠️ Prevent multiple repeat triggers in a single frame
+        break; // 🛑 Prevent multiple repeat triggers in one frame
       }
     }
   }
 }
+
 
 
 export function parseCueParams(cueId) {

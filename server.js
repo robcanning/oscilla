@@ -298,7 +298,7 @@ wss.on('connection', (ws, req) => {
     const data = JSON.parse(message);
 
     switch (data.type) {
-      case "cue_stop":
+      case "cueStop":
   console.log(`[DEBUG] Broadcasting cue_stop from client.`);
 
   // ✅ Use client-provided state
@@ -308,20 +308,20 @@ wss.on('connection', (ws, req) => {
   lastUpdateTime = null;
 
   const stopMessage = JSON.stringify({
-    type: "cue_stop",
+    type: "cueStop",
     elapsedTime: sharedState.elapsedTime,
     playheadX: sharedState.playheadX,
-    id: data.id || "cue_stop"
+    id: data.id || "cueStop"
   });
 
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(stopMessage);
-    }
-  });
+wss.clients.forEach((client) => {
+  if (client !== ws && client.readyState === WebSocket.OPEN) {
+    client.send(stopMessage);
+  }
+});
 
-  broadcastState();
-  break;
+broadcastState();
+break;
 
 
 case "osc_rotate":
@@ -675,30 +675,38 @@ case "osc_rotate":
         console.log(`[DEBUG] Sent OSC cue: /cue/trigger ${cueNumber}`);
         break;
 
-      /**
-      * ✅ Handles jump requests from clients.
-      * - Prevents unnecessary override by delaying the next sync update.
-      */
-      case "jump":
-        console.log(`[DEBUG] 🏃 Handling jump request. Received playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
+case "jump":
+  console.log(`[DEBUG] 🏃 Handling jump request. Received playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
 
-        if (!isNaN(data.playheadX) && data.playheadX >= 0) {
-          sharedState.playheadX = data.playheadX;  // ✅ Trust client-side value
-          sharedState.elapsedTime = data.elapsedTime;
+  if (!isNaN(data.playheadX) && data.playheadX >= 0) {
+    // ✅ Trust absolute pixel value
+    sharedState.playheadX = data.playheadX;
 
-          console.log(`[DEBUG] ✅ Jump applied. playheadX: ${sharedState.playheadX}, elapsedTime: ${sharedState.elapsedTime}`);
-          console.log(`[DEBUG] ✅ Broadcasting updated state immediately.`);
+    // Optionally update elapsedTime (can be skipped if syncing by pixel only)
+    if (!isNaN(data.elapsedTime)) {
+      sharedState.elapsedTime = data.elapsedTime;
+    }
 
-          triggeredCues.clear();
+    console.log(`[DEBUG] ✅ Jump applied to server state: playheadX=${sharedState.playheadX}`);
 
-          broadcastState();  // ✅ Ensure clients receive the new state
-        } else {
-          console.warn("[WARNING] ❌ Invalid playheadX received. Ignoring.");
-        }
-        break;
+    const jumpMessage = JSON.stringify({
+      type: "jump",
+      playheadX: sharedState.playheadX,
+      elapsedTime: sharedState.elapsedTime,
+    });
 
+    // ✅ Broadcast only to other clients
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN && client !== ws) {
+        client.send(jumpMessage);
+      }
+    });
 
-
+    // ⛔️ Don't call broadcastState() here to avoid overriding with center-based local view
+  } else {
+    console.warn("[WARNING] ❌ Invalid playheadX received in jump. Ignoring.");
+  }
+  break;
 
 
 
