@@ -1242,8 +1242,6 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
           controller4.jump();
           break;
         }
-
-
 case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
 
   const originalPathID = path.id;
@@ -1258,41 +1256,37 @@ case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
   if (case5Paths.length < 2) break;
 
   const case5StartPositions = case5Paths.map(p => p.getPointAtLength(0));
-  const case5PauseDurations = [3000, 5000, 8000, 13000, 21000, 34000];
   const animationDuration = 2000;
-
   let nextTargetPosition = null;
 
+  // ✅ Parse duration from object ID
+  const id = object.getAttribute("id") || object.id;
+  const durationParsed = parseCompactAnimationValues(id, "dur");
+  const case5PauseDurations = durationParsed?.values?.length ? durationParsed.values.map(v => v * 1000) : [3000, 5000, 8000, 13000, 21000, 34000];
+
   // ✅ Find ghost using ghost(path-XXXX) pattern
-  const mainId = object.getAttribute('id') || object.id;
-  const pathMatch = mainId.match(/o2p\(path-(\d+)\)/);
+  const pathMatch = id.match(/o2p\(path-(\d+)\)/);
   const ghostID = pathMatch ? `ghost(path-${pathMatch[1]})` : null;
   let ghostObject = ghostID ? document.getElementById(ghostID) : null;
 
-  if (ghostObject) {
-    ghostObject.removeAttribute("transform");
+  if (!ghostObject) break;
+  ghostObject.removeAttribute("transform");
 
+  const ghostTag = ghostObject.tagName.toLowerCase();
+  const first = case5StartPositions[0];
+
+  if (ghostTag === "circle" || ghostTag === "ellipse") {
     if (!ghostObject.hasAttribute("cx")) ghostObject.setAttribute("cx", "0");
     if (!ghostObject.hasAttribute("cy")) ghostObject.setAttribute("cy", "0");
-
-    // ✅ Snap ghost to first valid point
-    const first = case5StartPositions[0];
     ghostObject.setAttribute("cx", first.x);
     ghostObject.setAttribute("cy", first.y);
-  } else {
-    console.warn(`[Case5] Ghost not found for ID '${ghostID}', using fallback.`);
-    ghostObject = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    ghostObject.setAttribute("id", ghostID || `ghost-${mainId.replace(/[^a-zA-Z0-9_-]/g, '-')}`);
-    ghostObject.setAttribute("r", "10");
-    ghostObject.setAttribute("fill", "rgba(0,0,255,0.5)");
-    ghostObject.setAttribute("stroke", "blue");
-    ghostObject.setAttribute("stroke-width", "2");
-    ghostObject.setAttribute("cx", "0");
-    ghostObject.setAttribute("cy", "0");
-    window.scoreSVG.appendChild(ghostObject);
+  } else if (ghostTag === "rect") {
+    const width = parseFloat(ghostObject.getAttribute("width")) || 0;
+    const height = parseFloat(ghostObject.getAttribute("height")) || 0;
+    ghostObject.setAttribute("x", first.x - width / 2);
+    ghostObject.setAttribute("y", first.y - height / 2);
   }
 
-  // 🧮 Create countdown text
   let countdownText = document.createElementNS("http://www.w3.org/2000/svg", "text");
   countdownText.setAttribute("id", `${ghostID}-countdown`);
   countdownText.setAttribute("fill", "red");
@@ -1310,33 +1304,40 @@ case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
     running: true,
     loopTimeout: null,
     countdownInterval: null,
+    pauseIndex: 0,
 
     loop() {
       if (!this.running) return;
 
       nextTargetPosition = case5StartPositions[Math.floor(Math.random() * case5StartPositions.length)];
-      const case5PauseDuration = case5PauseDurations[Math.floor(Math.random() * case5PauseDurations.length)];
+
+      // 🔁 Select pause duration
+      let case5PauseDuration;
+      if (durationParsed?.regenerate && typeof durationParsed.generate === 'function') {
+        case5PauseDurations.splice(0, case5PauseDurations.length, ...durationParsed.generate().map(v => v * 1000));
+      }
+      if (durationParsed?.order === 'sequential') {
+        case5PauseDuration = case5PauseDurations[this.pauseIndex % case5PauseDurations.length];
+        this.pauseIndex++;
+      } else {
+        case5PauseDuration = case5PauseDurations[Math.floor(Math.random() * case5PauseDurations.length)];
+      }
+
       const case5PauseSeconds = Math.round(case5PauseDuration / 1000);
 
-      // Animate ghost
-      anime({
-        targets: this.ghost,
-        cx: nextTargetPosition.x,
-        cy: nextTargetPosition.y,
-        duration: animationDuration,
-        easing: defaultEasing,
-      });
+      if (ghostTag === "circle" || ghostTag === "ellipse") {
+        anime({ targets: this.ghost, cx: nextTargetPosition.x, cy: nextTargetPosition.y, duration: animationDuration, easing: defaultEasing });
+      } else if (ghostTag === "rect") {
+        const width = parseFloat(this.ghost.getAttribute("width")) || 0;
+        const height = parseFloat(this.ghost.getAttribute("height")) || 0;
+        anime({ targets: this.ghost, x: nextTargetPosition.x - width / 2, y: nextTargetPosition.y - height / 2, duration: animationDuration, easing: defaultEasing });
+      }
 
-      // On first loop, snap main object to same spot
       if (!this.initialized) {
-        anime.set(this.object, {
-          translateX: nextTargetPosition.x,
-          translateY: nextTargetPosition.y
-        });
+        anime({ targets: this.object, translateX: nextTargetPosition.x, translateY: nextTargetPosition.y, duration: 1, easing: 'linear' });
         this.initialized = true;
       }
 
-      // Move and update countdown
       this.countdown.setAttribute("x", nextTargetPosition.x);
       this.countdown.setAttribute("y", nextTargetPosition.y - 75);
       this.countdown.textContent = `${case5PauseSeconds}`;
@@ -1351,27 +1352,9 @@ case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
         }
       }, 1000);
 
-      // After wait, move main object
       this.loopTimeout = setTimeout(() => {
-        anime({
-          targets: this.object,
-          translateX: nextTargetPosition.x,
-          translateY: nextTargetPosition.y,
-          duration: animationDuration,
-          easing: defaultEasing,
-          complete: () => {
-            if (this.running) this.loop();
-          }
-        });
-
-        anime({
-          targets: this.countdown,
-          x: nextTargetPosition.x,
-          y: nextTargetPosition.y - 75,
-          duration: animationDuration,
-          easing: defaultEasing,
-        });
-
+        anime({ targets: this.object, translateX: nextTargetPosition.x, translateY: nextTargetPosition.y, duration: animationDuration, easing: defaultEasing, complete: () => { if (this.running) this.loop(); } });
+        anime({ targets: this.countdown, x: nextTargetPosition.x, y: nextTargetPosition.y - 75, duration: animationDuration, easing: defaultEasing });
       }, case5PauseDuration);
     },
 
@@ -1390,31 +1373,19 @@ case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
   };
 
   Case5Controller.loop();
-
   window.runningAnimations[object.id] = Case5Controller;
-  window.runningAnimations[ghostID] = {
-    play: () => {
-      if (!Case5Controller.running) Case5Controller.resume();
-    },
-    pause: () => {
-      if (Case5Controller.running) Case5Controller.pause();
-    },
-    wasPaused: false
-  };
-
-  window.runningAnimations[`${ghostID}-countdown`] = {
-    play: () => {},
-    pause: () => {},
-    wasPaused: false
-  };
-
+  window.runningAnimations[ghostID] = { play: () => { if (!Case5Controller.running) Case5Controller.resume(); }, pause: () => { if (Case5Controller.running) Case5Controller.pause(); }, wasPaused: false };
+  window.runningAnimations[`${ghostID}-countdown`] = { play: () => {}, pause: () => {}, wasPaused: false };
   observer.observe(object);
   observer.observe(ghostObject);
 
+
+
+
+
+
+
   console.warn(`[DEBUG] Case 5 fallback animation active for object ${object.id}`);
-
-
-
 
           console.warn(`[DEBUG] Fallback pingpong animation created for object ${object.id}`);
       }
@@ -1487,56 +1458,61 @@ function setTransformOriginToCenter(element) {
 
 
 
-  function parseCompactAnimationValues(id, prefix = 's') {
-    // Only accept new format: s(...), sXY(...), etc.
-    const parenMatch = id.match(new RegExp(`${prefix}\\((.*?)\\)`));
-    if (!parenMatch) {
-      console.warn(`[parseCompact] ❌ Expected ${prefix}(...) but not found in: ${id}`);
-      return null;
-    }
-  
-    const raw = parenMatch[1].trim();
-  
-    // ✅ Regenerating random: s(rnd(5x0.5-1.5x)) or r(rnd[6x,45,90])
-    if (raw.startsWith('rnd(') && raw.endsWith(')')) {
-      const inner = raw.slice(4, -1);
-  
-      // pattern: 5x0.5-1.5x
-      const miniMatch = inner.match(/^(\d+)x(\d+(?:\.\d+)?)[-_](\d+(?:\.\d+)?)(x?)$/);
-      if (miniMatch) {
-        const count = parseInt(miniMatch[1]);
-        const min = parseFloat(miniMatch[2]);
-        const max = parseFloat(miniMatch[3]);
-        const regen = miniMatch[4] === 'x';
-        const generate = () => Array.from({ length: count }, () => min + Math.random() * (max - min));
-        return { values: generate(), regenerate: regen, generate };
-      }
-  
-      // fallback: explicit list inside rnd(...)
-      const values = inner.split(',').map(Number).filter(n => !isNaN(n));
-      const generate = () => values.sort(() => Math.random() - 0.5);
-      return { values: generate(), regenerate: true, generate };
-    }
-  
-    // ✅ JSON-style values: [1,2,1] or [[1,1],[2,1]]
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return { values: parsed, regenerate: false };
-      }
-    } catch (e) {
-      // fallback below
-    }
-  
-    // ✅ Fallback: single numeric value (e.g., deg(45), dur(5), s(1.2))
-    const singleValue = parseFloat(raw);
-    if (!isNaN(singleValue)) {
-      return { values: [singleValue], regenerate: false };
-    }
-  
-    console.warn(`[parseCompact] ❌ Could not parse values from ${prefix}(...) in: ${id}`);
+function parseCompactAnimationValues(id, prefix = 's') {
+  const parenMatch = id.match(new RegExp(`[\\-_]${prefix}\\((.*?)\\)`));
+  if (!parenMatch) {
+    console.warn(`[parseCompact] ❌ Expected ${prefix}(...) but not found in: ${id}`);
     return null;
   }
+
+  let raw = parenMatch[1].trim();
+  let order = null;
+
+  // 🔍 Detect and unwrap seq(...) or rnd(...)
+  const wrapperMatch = raw.match(/^(seq|rnd)\((.*)\)$/);
+  if (wrapperMatch) {
+    order = wrapperMatch[1] === 'seq' ? 'sequential' : 'random';
+    raw = wrapperMatch[2].trim();
+  }
+
+  // ✅ Regenerating random range: e.g., rnd(5x0.5-1.5x)
+  if (order === 'random') {
+    const miniMatch = raw.match(/^(\d+)x(\d+(?:\.\d+)?)[-_](\d+(?:\.\d+)?)(x?)$/);
+    if (miniMatch) {
+      const count = parseInt(miniMatch[1]);
+      const min = parseFloat(miniMatch[2]);
+      const max = parseFloat(miniMatch[3]);
+      const regen = miniMatch[4] === 'x';
+      const generate = () => Array.from({ length: count }, () => min + Math.random() * (max - min));
+      return { values: generate(), regenerate: regen, generate, order };
+    }
+
+    // ✅ Fallback: comma-separated list inside rnd(...)
+    const values = raw.split(',').map(Number).filter(n => !isNaN(n));
+    const generate = () => values.sort(() => Math.random() - 0.5);
+    return { values: generate(), regenerate: true, generate, order };
+  }
+
+  // ✅ JSON-style values: [1,2,1]
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return { values: parsed, regenerate: false, order };
+    }
+  } catch (e) {
+    // continue
+  }
+
+  // ✅ Fallback: single numeric value
+  const singleValue = parseFloat(raw);
+  if (!isNaN(singleValue)) {
+    return { values: [singleValue], regenerate: false, order };
+  }
+
+  console.warn(`[parseCompact] ❌ Could not parse values from ${prefix}(...) in: ${id}`);
+  return null;
+}
+
   
 
 /**
