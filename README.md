@@ -126,22 +126,44 @@ See `docs/multi-client-setup.html` for more detailed instructions on LAN setup a
 
 ---
 
+
 ## Installing & Running the Server
 
+### Prerequisites
+Make sure you have the following installed:
+
+- **[Git](https://git-scm.com/downloads)** (to clone the repository)  
+- **[Node.js](https://nodejs.org/en/download/)** **v18 or newer** (to run the server)  
+  - Check your version:
+    ```bash
+    node -v
+    ```
+  - If it’s lower than 18, upgrade via [nvm](https://github.com/nvm-sh/nvm) or your OS package manager.
+
+### Installation
 ```bash
-git clone https://git.kompot.si/rob/rotula.score.git
-cd rotula.score
+git clone https://github.com/robcanning/oscilla.git
+cd oscilla
 npm install
-node server.js  # Starts WebSocket + OSC server
+
 ```
 
-Then open `index.html` in your browser or navigate to the default local server address:
+
+### Running the server
+```bash
+
+node server.js   # Starts WebSocket + OSC server
+
+```
+Then navigate to the default local server address:
 
 ```
 http://localhost:8001
-```
 
-The system listens for incoming OSC messages, SVG uploads, and client sync events.
+
+⚠️ **Note:** The responsive design is currently buggy. For cue and trigger alignments to work correctly, open your browser’s Developer Tools and set the responsive mode to **iPad Pro (landscape)**.
+
+
 
 ---
 
