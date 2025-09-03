@@ -159,7 +159,7 @@ Then navigate to the default local server address:
 
 ```
 http://localhost:8001
-
+```
 
 ⚠️ **Note:** The responsive design is currently buggy. For cue and trigger alignments to work correctly, open your browser’s Developer Tools and set the responsive mode to **iPad Pro (landscape)**.
 
