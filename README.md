@@ -128,42 +128,7 @@ See `docs/multi-client-setup.html` for more detailed instructions on LAN setup a
 
 
 ## Installing & Running the Server
-
-### Prerequisites
-Make sure you have the following installed:
-
-- **[Git](https://git-scm.com/downloads)** (to clone the repository)  
-- **[Node.js](https://nodejs.org/en/download/)** **v18 or newer** (to run the server)  
-  - Check your version:
-    ```bash
-    node -v
-    ```
-  - If it’s lower than 18, upgrade via [nvm](https://github.com/nvm-sh/nvm) or your OS package manager.
-
-### Installation
-```bash
-git clone https://github.com/robcanning/oscilla.git
-cd oscilla
-npm install
-
-```
-
-
-### Running the server
-```bash
-
-node server.js   # Starts WebSocket + OSC server
-
-```
-Then navigate to the default local server address:
-
-```
-http://localhost:8001
-```
-
-⚠️ **Note:** The responsive design is currently buggy. For cue and trigger alignments to work correctly, open your browser’s Developer Tools and set the responsive mode to **iPad Pro (landscape)**.
-
-
+For full setup and installation instructions, please see [INSTALL.md](./INSTALL.md)
 
 ---
 
@@ -173,6 +138,8 @@ http://localhost:8001
 2. **Tag elements** using `id` attributes with cue or animation syntax. In Inkscape, select an object and press **Ctrl+Shift+X** to open the XML Editor and assign or edit its `id`.
 3. **Upload your SVG** through the interface or place it in the `/scores/` folder. Press \`\` to open the score/template loader interface, which allows you to browse and select from available files.
 4. **Perform the score** using time-based scroll, page navigation, or cue-triggered logic.
+
+⚠️ **Note:** The responsive design is currently buggy. For cue and trigger alignments to work correctly, open your browser’s Developer Tools and set the responsive mode to **iPad Pro (landscape)**.
 
 ---
 
