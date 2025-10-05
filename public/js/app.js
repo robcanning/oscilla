@@ -21,6 +21,7 @@ import {
 } from './stopwatch.js';
 
 import * as SVGPathCommander from "https://cdn.skypack.dev/svg-path-commander";
+console.info("[SVG] ✅ svg-path-commander imported:", SVGPathCommander);
 
 // ===========================
 // 📦 Import Cue Handlers
@@ -255,14 +256,102 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log(`scoreContainer height adjusted to: ${window.scoreContainer.style.height}`);
   };
 
-///////////////////////////////////////////////////////////////
-let SVGPathData = null;
 
-if (!window.SVGPathCommander) {
-  console.error("[SVG] ⚠️ svg-path-commander not loaded or incorrect script version.");
-} else {
-  SVGPathData = window.SVGPathCommander.SVGPathData;
-}
+
+
+
+
+///////////////////////////////////////////////////////////////
+// let SVGPathData = null;
+const { SVGPathData } = SVGPathCommander;
+// const flattenGroupTransform = (group, inherited = '') => {
+//   const localTransform = group.getAttribute('transform') || '';
+//   const combinedTransform = [inherited, localTransform].filter(Boolean).join(' ').trim();
+
+//   console.groupCollapsed(`[flattenGroupTransform] ▶️ Group: ${group.id || '(no id)'} transform="${localTransform}"`);
+
+//   Array.from(group.children).forEach(child => {
+//     const tag = child.tagName?.toLowerCase();
+
+//     // Recurse into nested groups
+//     if (tag === 'g') {
+//       console.log(`↪️ Nested group: ${child.id || '(no id)'}`);
+//       flattenGroupTransform(child, combinedTransform);
+//       return;
+//     }
+
+//     if (tag !== 'path') {
+//       console.log(`⏭️ Skipping non-path <${tag}>`, child.id);
+//       return;
+//     }
+
+//     const d = child.getAttribute('d');
+//     const id = child.id || '(no id)';
+//     console.groupCollapsed(`[flattenGroupTransform] 🧩 Path: ${id}`);
+//     console.log('Original d:', d?.slice(0, 120) + (d?.length > 120 ? '...' : ''));
+//     console.log('Combined transform:', combinedTransform);
+
+//     if (!d || !d.trim()) {
+//       console.warn(`⚠️ Skipping '${id}' — no valid path data.`);
+//       console.groupEnd();
+//       return;
+//     }
+
+//     if (!combinedTransform) {
+//       console.info(`ℹ️ No transform for '${id}' — nothing to flatten.`);
+//       console.groupEnd();
+//       return;
+//     }
+
+//     try {
+//       // Step 1: Normalize shorthand/relative commands
+//       let normalized = d;
+//       if (typeof SVGPathCommander.normalizePathData === 'function') {
+//         try {
+//           normalized = SVGPathCommander.normalizePathData(d);
+//           console.log('✅ normalizePathData succeeded');
+//         } catch (errNorm) {
+//           console.warn(`⚠️ normalizePathData failed for '${id}':`, errNorm.message);
+//         }
+//       }
+
+//       // Step 2: Try to apply transform
+//       let newD;
+//       try {
+//         newD = SVGPathCommander.transformPath(normalized, combinedTransform);
+//         console.log('✅ transformPath succeeded');
+//       } catch (innerErr) {
+//         console.error(`❌ transformPath() failed for '${id}':`, innerErr.message);
+//         console.groupEnd();
+//         return;
+//       }
+
+//       // Step 3: Validate and replace
+//       if (typeof newD === 'string' && newD.includes(' ')) {
+//         child.setAttribute('d', newD);
+//         child.removeAttribute('transform');
+//         console.log('✅ Path flattened successfully.');
+//       } else {
+//         console.warn(`⚠️ Invalid transform output for '${id}':`, newD);
+//       }
+//     } catch (err) {
+//       console.error(`[flattenGroupTransform] ❌ Failed to flatten '${id}':`, err.message);
+//     }
+
+//     console.groupEnd();
+//   });
+
+//   if (localTransform) {
+//     console.log(`🧹 Removing transform from group ${group.id || '(no id)'}`);
+//     group.removeAttribute('transform');
+//   }
+
+//   console.groupEnd();
+// };
+
+
+
+
 
 /**
  * flattenTransforms(svgRoot)
@@ -273,53 +362,64 @@ if (!window.SVGPathCommander) {
  * Skips <text> (preserved as-is) and logs warnings for Inkscape-specific elements
  * like sodipodi:star or spiral.
  */
-function flattenTransforms(svgRoot) {
-  if (!SVGPathData) {
-    console.error("[flatten] ❌ SVGPathData not available — skipping transform flattening.");
-    return;
-  }
+// const { SVGPathData } = SVGPathCommander;
 
-  const transformed = svgRoot.querySelectorAll('[transform]');
 
-  transformed.forEach((el) => {
-    const transform = el.getAttribute('transform');
-    if (!transform) return;
+// function flattenTransforms(svgRoot) {
 
-    const tag = el.tagName.toLowerCase();
+//   const transformed = svgRoot.querySelectorAll('[transform]');
 
-    // Skip unsupported or Inkscape-specific shapes
-    if (el.hasAttribute('sodipodi:type')) {
-      console.warn(`[flatten] ⚠️ Skipping Inkscape-specific shape <${tag}> with sodipodi:type`, el);
-      return;
-    }
+//   transformed.forEach((el) => {
+//     const transform = el.getAttribute('transform');
+//     if (!transform) return;
 
-    if (tag === 'path') {
-      try {
-        const path = new SVGPathData(el.getAttribute('d')).transform(transform);
-        el.setAttribute('d', path.encode());
-        el.removeAttribute('transform');
-      } catch (err) {
-        console.warn(`[flatten] ⚠️ Failed to transform path:`, el, err);
-      }
-    } else if (['rect', 'circle', 'ellipse', 'line', 'polygon', 'polyline'].includes(tag)) {
-      try {
-        const tempPath = SVGPathData.fromElement(el); // this uses svg-path-commander
-        const transformedPath = new SVGPathData(tempPath).transform(transform);
-        const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        newPath.setAttribute('d', transformedPath.encode());
-        newPath.setAttribute('id', el.id);
-        newPath.setAttribute('class', el.getAttribute('class'));
-        el.replaceWith(newPath);
-      } catch (err) {
-        console.warn(`[flatten] ⚠️ Failed to convert <${tag}> to path:`, el, err);
-      }
-    } else if (tag === 'text') {
-      console.info(`[flatten] ℹ️ Preserving <text> element with transform:`, el);
-    } else {
-      console.warn(`[flatten] ⚠️ Unsupported tag <${tag}> — transform not flattened`, el);
-    }
-  });
-}
+//     const tag = el.tagName.toLowerCase();
+
+//     // Skip unsupported or Inkscape-specific shapes
+//     if (el.hasAttribute('sodipodi:type')) {
+//       console.warn(`[flatten] ⚠️ Skipping Inkscape-specific shape <${tag}> with sodipodi:type`, el);
+//       return;
+//     }
+
+//     if (tag === 'path') {
+//       try {
+//         const path = new SVGPathData(el.getAttribute('d')).transform(transform);
+//         el.setAttribute('d', path.encode());
+//         el.removeAttribute('transform');
+//       } catch (err) {
+//         console.warn(`[flatten] ⚠️ Failed to transform path:`, el, err);
+//       }
+//     } else if (['rect', 'circle', 'ellipse', 'line', 'polygon', 'polyline'].includes(tag)) {
+//       try {
+//         const tempPath = SVGPathData.fromElement(el); // this uses svg-path-commander
+//         const transformedPath = new SVGPathData(tempPath).transform(transform);
+//         const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+//         newPath.setAttribute('d', transformedPath.encode());
+//         newPath.setAttribute('id', el.id);
+//         newPath.setAttribute('class', el.getAttribute('class'));
+//         el.replaceWith(newPath);
+//       } catch (err) {
+//         console.warn(`[flatten] ⚠️ Failed to convert <${tag}> to path:`, el, err);
+//       }
+//     } else if (tag === 'text') {
+//       console.info(`[flatten] ℹ️ Preserving <text> element with transform:`, el);
+//     } else if (tag === 'g') {
+//   try {
+//     console.info(`[flatten] 🌀 Flattening group <${tag}> with transform:`, transform);
+//     flattenGroupTransform(el); // call your recursive function
+//   } catch (err) {
+//     console.warn(`[flatten] ⚠️ Failed to flatten group <${tag}>:`, err);
+//   }
+// }
+    
+//     else {
+//       console.warn(`[flatten] ⚠️ Unsupported tag <${tag}> — transform not flattened`, el);
+//     }
+//   });
+// }
+
+
+
 
 
 
@@ -1449,8 +1549,150 @@ document.getElementById("audio-master-button").addEventListener("click", () => {
   }
 
 
+/**
+ * propagate(svgRoot)
+ * ------------------------------------------------------------
+ * Generalised group-level operator for Oscilla microsyntax with
+ * per-element parameter substitution.
+ *
+ * Usage (in SVG):
+ *   <g id="propagate(s(rnd(10x0.2-1.8x))_mode(loop)_seqdur($1)_ease(step)_uid(123), rnd(0.4,3.0))">
+ *     <circle ... />
+ *     <circle ... />
+ *   </g>
+ *
+ * Behaviour:
+ *   - Detects <g> elements whose IDs start with "propagate(".
+ *   - Extracts the first argument as a microsyntax template
+ *     (e.g., any Oscilla animation or cue definition).
+ *   - Treats subsequent comma-separated arguments as expressions
+ *     (supports rnd(min,max), numeric literals, etc.).
+ *   - For each child inside the group:
+ *       • Evaluates all argument expressions individually so each
+ *         child receives unique random values.
+ *       • Substitutes placeholders ($1, $2, …) in the template
+ *         with those evaluated results.
+ *       • Appends a unique _uid(base_index) suffix to the ID.
+ *   - Assigns the expanded ID string to each child element,
+ *     leaving the parent group untouched.
+ */
+function propagate(svgRoot) {
+  const groups = svgRoot.querySelectorAll('[id^="propagate("]');
+  if (!groups.length) return;
 
+  console.info(`[propagate] Found ${groups.length} groups to process`);
 
+  groups.forEach((group, groupIndex) => {
+    const id = group.id;
+
+    // Extract the full contents inside propagate(...)
+    const match = id.match(/^propagate\((.*)\)$/);
+    if (!match) return;
+
+    const inner = match[1];
+    const parts = [];
+    let depth = 0, current = '';
+
+    // Split on commas that are not inside parentheses
+    for (const ch of inner) {
+      if (ch === '(') depth++;
+      if (ch === ')') depth--;
+      if (ch === ',' && depth === 0) {
+        parts.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    if (current.trim()) parts.push(current.trim());
+
+    const template = parts[0];
+    const argExprs = parts.slice(1);
+    const uidMatch = template.match(/_uid\((.*?)\)/);
+    const baseUID = uidMatch ? uidMatch[1] : `${groupIndex}`;
+
+    const children = Array.from(group.children);
+    if (!children.length) {
+      console.warn(`[propagate] ⚠️ No children found in group ${id}`);
+      return;
+    }
+
+    children.forEach((child, i) => {
+      // Evaluate argument expressions separately for each child
+      const argValues = argExprs.map(expr => evaluateExpr(expr));
+
+      // Substitute $1, $2, ... in template with evaluated results
+      let expanded = template;
+      argValues.forEach((val, idx) => {
+        expanded = expanded.replace(new RegExp(`\\$${idx + 1}`, 'g'), val);
+      });
+
+      // Replace or append _uid(...)
+      const uniqueUID = `${baseUID}_${i}`;
+      expanded = expanded.replace(/_uid\([^)]*\)/, `_uid(${uniqueUID})`);
+      if (!expanded.includes('_uid(')) expanded += `_uid(${uniqueUID})`;
+
+      child.id = expanded;
+    });
+  });
+}
+
+/**
+ * evaluateExpr(expr)
+ * ------------------------------------------------------------
+ * Evaluates argument expressions for propagate().
+ * Supports:
+ *   • rnd(a,b)        → random float/int depending on input type
+ *   • rnd([a,b,c])    → random pick from list (numbers or strings)
+ *   • rnd(x)          → random float 0–x
+ *   • numeric literal → returned as number
+ *   • text literal    → returned as string
+ */
+function evaluateExpr(expr) {
+  expr = expr.trim();
+
+  const rndMatch = expr.match(/^rnd\((.*)\)$/);
+  if (rndMatch) {
+    const inner = rndMatch[1].trim();
+
+    // --- Case 1: rnd([a,b,c]) → pick from list ---
+    const listMatch = inner.match(/^\[(.*)\]$/);
+    if (listMatch) {
+      const parts = listMatch[1]
+        .split(',')
+        .map(v => v.trim())
+        .filter(v => v.length > 0);
+      return parts[Math.floor(Math.random() * parts.length)];
+    }
+
+    // --- Case 2: rnd(a,b) → numeric range ---
+    const range = inner.split(',').map(v => v.trim());
+    if (range.length === 2) {
+      const a = parseFloat(range[0]);
+      const b = parseFloat(range[1]);
+      const isInt = Number.isInteger(a) && Number.isInteger(b);
+      const val = a + Math.random() * (b - a);
+      return isInt ? Math.floor(val) : parseFloat(val.toFixed(3));
+    }
+
+    // --- Case 3: rnd(x) → 0–x float ---
+    if (range.length === 1 && !isNaN(parseFloat(range[0]))) {
+      const b = parseFloat(range[0]);
+      const val = Math.random() * b;
+      return parseFloat(val.toFixed(3));
+    }
+
+    console.warn(`[evaluateExpr] ⚠️ Unrecognised rnd() pattern: ${expr}`);
+    return expr;
+  }
+
+  // --- Plain numeric literal ---
+  const num = parseFloat(expr);
+  if (!isNaN(num)) return num;
+
+  // --- Fallback string literal ---
+  return expr;
+}
 
 
 
@@ -1681,35 +1923,6 @@ const initializeSVG = (svgElement) => {
       }
     };
 
-const flattenGroupTransform = (group, inherited = '') => {
-  const localTransform = group.getAttribute('transform') || '';
-  const combinedTransform = [inherited, localTransform].filter(Boolean).join(' ');
-
-  Array.from(group.children).forEach(child => {
-    if (child.tagName === 'g') {
-      flattenGroupTransform(child, combinedTransform); // recurse
-    } else if (child.tagName === 'path') {
-      const d = child.getAttribute('d');
-      if (d && combinedTransform) {
-        try {
-          const newD = SVGPathCommander.transformPathData(d, {
-            transform: combinedTransform,
-          });
-          child.setAttribute('d', newD);
-          child.removeAttribute('transform');
-        } catch (err) {
-          console.warn(`[flattenGroupTransform] ⚠️ Failed to flatten path '${child.id}':`, err);
-        }
-      }
-    }
-  });
-
-  if (localTransform) {
-    group.removeAttribute('transform');
-  }
-};
-
-
 
 
 // ✅ Apply transforms first (flatten <use> and group transforms)
@@ -1734,6 +1947,7 @@ for (const cue of window.cues) {
 }
 
 
+propagate(svgElement);
 
 
 preloadSpeedCues();

@@ -508,9 +508,30 @@ function startScale(object) {
   const isY = id.includes("sY(");
   const prefix = isXY ? "sXY" : isX ? "sX" : isY ? "sY" : "s";
 
-  const easing = getEasingFromId(id);
-  const modeRaw = id.match(/_(once|alt|bounce|pulse|pde)/)?.[1] || 'alt';
-  const mode = ['pde', 'pulse', 'alt', 'bounce'].includes(modeRaw) ? 'alternate' : 'once';
+  let easing = getEasingFromId(id);
+  if (!easing || easing === '0' || easing === 'none' || easing === 'step') {
+    easing = 'linear';
+  }
+
+  const modeRaw = extractTagValue(id, 'mode', 'alt');
+
+  let mode;
+  switch (modeRaw) {
+    case 'once':
+      mode = 'once';
+      break;
+    case 'loop':
+      mode = 'loop';
+      break;
+    case 'alt':
+      mode = 'alternate';
+      break;
+    default:
+      console.warn(`[scale]  Unknown mode: ${modeRaw}, defaulting to 'alt'`);
+      mode = 'alternate';
+      break;
+  }
+
 
   const seqDur = extractTagValue(id, 'seqdur', 1);
   const bpm = extractTagValue(id, 'bpm', null);
@@ -588,15 +609,21 @@ function startScale(object) {
     }
   });
 
+
   for (let i = 0; i < steps; i++) {
     const val = scaleValues[i];
-    const scaleX = useXY ? val[0] : isX ? val : val;
-    const scaleY = useXY ? val[1] : isY ? val : val;
+    const scaleX = useXY ? val[0] : (isX ? val : (isY ? 1 : val));
+    const scaleY = useXY ? val[1] : (isY ? val : (isX ? 1 : val));
+
+    const jumpMode = /_ease\(?(?:step|none)\)?/.test(id);
+    const stepDur = durations[i] || baseDur / steps;
 
     timeline.add({
       scaleX,
       scaleY,
-      duration: durations[i] || baseDur / steps,
+      duration: jumpMode ? 1 : stepDur,   // 🔸 instant jump
+      delay: jumpMode ? stepDur : 0,      // 🔸 hold value for normal interval
+      easing: jumpMode ? 'linear' : easing,
       begin: () => {
         if (oscEnabled && mode === 'once') sendScaleOsc(scaleX, scaleY);
       }
@@ -1456,16 +1483,38 @@ function setTransformOriginToCenter(element) {
 
 
 
-
-
 function parseCompactAnimationValues(id, prefix = 's') {
-  const parenMatch = id.match(new RegExp(`[\\-_]${prefix}\\((.*?)\\)`));
-  if (!parenMatch) {
+  // ✅ Find `${prefix}(` and extract the balanced (...) contents (handles s(rnd(...)) etc.)
+  const token = `${prefix}(`;
+  const start = id.indexOf(token);
+  if (start === -1) {
     console.warn(`[parseCompact] ❌ Expected ${prefix}(...) but not found in: ${id}`);
     return null;
   }
 
-  let raw = parenMatch[1].trim();
+  let i = start + token.length;
+  let depth = 1;
+  let raw = '';
+
+  while (i < id.length && depth > 0) {
+    const ch = id[i++];
+    if (ch === '(') {
+      depth++;
+      raw += ch;
+    } else if (ch === ')') {
+      depth--;
+      if (depth > 0) raw += ch; // don't include the final closing ')'
+    } else {
+      raw += ch;
+    }
+  }
+
+  if (depth !== 0) {
+    console.warn(`[parseCompact] ❌ Unbalanced parentheses in ${prefix}(...) for: ${id}`);
+    return null;
+  }
+
+  raw = raw.trim();
   let order = null;
 
   // 🔍 Detect and unwrap seq(...) or rnd(...)
@@ -1475,31 +1524,31 @@ function parseCompactAnimationValues(id, prefix = 's') {
     raw = wrapperMatch[2].trim();
   }
 
-  // ✅ Regenerating random range: e.g., rnd(5x0.5-1.5x)
+  // ✅ Random mini-syntax: rnd(10x0.6-1.2x)  →  10 values in [0.6,1.2], regen each loop if trailing 'x'
   if (order === 'random') {
     const miniMatch = raw.match(/^(\d+)x(\d+(?:\.\d+)?)[-_](\d+(?:\.\d+)?)(x?)$/);
     if (miniMatch) {
-      const count = parseInt(miniMatch[1]);
+      const count = parseInt(miniMatch[1], 10);
       const min = parseFloat(miniMatch[2]);
       const max = parseFloat(miniMatch[3]);
       const regen = miniMatch[4] === 'x';
-      const generate = () => Array.from({ length: count }, () => min + Math.random() * (max - min));
+      const generate = () =>
+        Array.from({ length: count }, () => min + Math.random() * (max - min));
       return { values: generate(), regenerate: regen, generate, order };
     }
-
     // ✅ Fallback: comma-separated list inside rnd(...)
     const values = raw.split(',').map(Number).filter(n => !isNaN(n));
-    const generate = () => values.sort(() => Math.random() - 0.5);
+    const generate = () => values.slice().sort(() => Math.random() - 0.5);
     return { values: generate(), regenerate: true, generate, order };
   }
 
-  // ✅ JSON-style values: [1,2,1]
+  // ✅ JSON-style list: [1,2,1]
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
       return { values: parsed, regenerate: false, order };
     }
-  } catch (e) {
+  } catch (_) {
     // continue
   }
 
@@ -1513,7 +1562,7 @@ function parseCompactAnimationValues(id, prefix = 's') {
   return null;
 }
 
-  
+
 
 /**
  * ✅ checkAnimationVisibility
