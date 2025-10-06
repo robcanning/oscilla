@@ -13,7 +13,7 @@
  *  - cueRepeat_*                 → Repeating sections with jump logic
  *  - cueAudio, cueOsc*           → Media and OSC triggering
  *  - cueTraverse (c-t)           → Object animation along defined points
- *  - cueAnimejs, cueAnimation    → Fullscreen animated SVG overlays
+ *  - cuePage                     → Fullscreen animated SVG overlays
  *
  * The module also manages cue state (triggeredCues), repeat state synchronization,
  * and UI updates related to pause countdowns, audio playback, and cue highlighting.
@@ -21,14 +21,12 @@
  * All handlers are exportable and usable within app.js and other modules.
  */
 
-
 export const cueHandlers = {
   cueSpeed: handleSpeedCue,
   cuePause: handlePauseCue,
   cueStop: handleStopCue,
   cueChoice: handleCueChoice,
-  cueAnimation: handleAnimationCue,
-  cueAnimejs: handleAnimationCue,
+  cuePage: handlePageCue,
   cueAudio: handleAudioCue,
   cueVideo: handleVideoCue,
   cueP5: handleP5Cue,
@@ -45,10 +43,10 @@ export const cueHandlers = {
 };
 
 // 🔁 Main dispatcher function for cue triggers
-export function handleCueTrigger(cueId, isRemote = false) {
+export function handleCueTrigger(cueId, isRemote = false, force = false) {
   console.log(`[DEBUG] Attempting to trigger cue: ${cueId}`);
 
-  if (window.triggeredCues.has(cueId)) {
+  if (!force && window.triggeredCues.has(cueId)) {
     console.log(`[DEBUG] Skipping already-triggered cue: ${cueId}`);
     return;
   }
@@ -91,15 +89,28 @@ export function handleCueTrigger(cueId, isRemote = false) {
     } else {
       console.error(`[CLIENT] Invalid cueChoice: missing 'choice' or 'dur' param`);
     }
-  } else if (["cueAnimation", "cueAnimejs"].includes(type)) {
-    const animDuration = Number(cueParams.dur);
-    const animationPath = `animations/${cueParams.choice}.svg`;
-    if (!animDuration || isNaN(animDuration)) {
-      console.error(`[CLIENT] Invalid duration for ${type}: ${cueId}`);
-      return;
-    }
-    handler(cueId, animationPath, animDuration);
-  } else {
+  }  else if (type === "cuePage") {
+  // Detect playlist syntax like cuePage(seq(...)), loop(...), or rand(...)
+  const inner = cueId.match(/cuePage\(([^)]+)\)/)?.[1] || "";
+  if (/^(seq|loop|rand)\(/.test(inner)) {
+    console.log(`[cuePage] Detected playlist expression: ${inner}`);
+    handleCuePagePlaylist(cueId, inner);
+    return;
+  }
+
+  // Normal single page cue (legacy behaviour)
+  let animDuration = Number(cueParams.dur);
+  if (isNaN(animDuration) || animDuration < 0) animDuration = 0;
+  const pageName = cueParams.choice || cueId.match(/cuePage\(([^)]+)\)/)?.[1];
+  if (!pageName) {
+    console.error(`[CLIENT] cuePage missing page name: ${cueId}`);
+    return;
+  }
+  const animationPath = `animations/${pageName}.svg`;
+  handler(cueId, animationPath, animDuration);
+}
+
+ else {
   console.log(`[CUE] Triggering cue handler: ${type}`);
     handler(cueId, cueParams);
   }
@@ -1255,144 +1266,303 @@ export function dismissCueChoice() {
 
 
 
+/**
+ * handleCuePagePlaylist()
+ * -----------------------
+ * Parses playlist expressions like:
+ *   cuePage(seq(page1:10,page2:12,page3:8))
+ *   cuePage(loop(page1:10,page2:10,rand(page1,page2,page3):20))
+ *   cuePage(rand(page1,page2,page3):15)
+ */
+function handleCuePagePlaylist(cueId, expr) {
+  const mode =
+    expr.startsWith("loop(") ? "loop" :
+    expr.startsWith("seq(")  ? "seq"  :
+    expr.startsWith("rand(") ? "rand" : "seq";
 
+  // Strip outer wrapper
+  const inner = expr.replace(/^(loop|seq|rand)\(|\)$/g, "");
+  const parts = inner.split(/,(?![^(]*\))/); // split by commas not inside ()
+  const items = parts.map(part => {
+    // e.g. "page1:10" or "rand(page1,page2,page3):20"
+    const [pageExpr, durStr] = part.split(":");
+    const dur = Number(durStr) || 10;
+
+    if (pageExpr.trim().startsWith("rand(")) {
+      const innerRand = pageExpr.match(/\(([^)]+)\)/)?.[1] || "";
+      const pages = innerRand.split(/\s*,\s*/);
+      return { rand: pages, dur };
+    }
+    return { page: pageExpr.trim(), dur };
+  });
+
+  runCuePagePlaylist({ mode, items });
+}
+
+function runCuePagePlaylist({ mode, items }) {
+  window.isCuePagePlaylistActive = true;
+
+  if (!window.pagePlaylistState)
+    window.pagePlaylistState = { index: 0, mode, items };
+
+  const ps = window.pagePlaylistState;
+
+  async function nextStep() {
+    const item = ps.items[ps.index];
+
+    let nextPage;
+    if (item.page) nextPage = item.page;
+    else if (item.rand)
+      nextPage = item.rand[Math.floor(Math.random() * item.rand.length)];
+
+    const dur = item.dur;
+    console.log(`[cuePage] ▶ ${nextPage} (${dur}s) [${mode}]`);
+
+    // true flag when triggering from within playlist so we allow repeated cues
+    handleCueTrigger(`cuePage(${nextPage})_dur(${dur})`, false, true);
+
+    setTimeout(() => {
+      if (mode === "rand") {
+        // choose a random item each time
+        ps.index = Math.floor(Math.random() * ps.items.length);
+      } else {
+        ps.index++;
+        if (ps.index >= ps.items.length) {
+          if (mode === "loop") ps.index = 0;
+            else if (mode === "seq") {
+              console.log("[cuePage] ✅ Playlist finished — returning to scroll.");
+              window.isCuePagePlaylistActive = false;
+              const container = document.getElementById("singlePage-container");
+              const content = document.getElementById("singlePage-content");
+              if (container) container.style.display = "none";
+              if (content) content.innerHTML = "";
+              if (window.pageState) window.pageState.mode = "scroll";
+              resumeScrollScore();
+              return;
+            }
+
+        }
+      }
+      nextStep();
+    }, dur * 1000);
+  }
+
+  nextStep();
+}
 
 
 /**
- * handleAnimejsCue(cueId, animationPath, duration)
+ * handlePageCue(cueId, animationPath, duration)
+ * ---------------------------------------------
+ * State-driven single-page cue handler.
+ * Supports seamless transitions between pages and controlled return
+ * to the scrolling score.
  *
- * Displays an Anime.js SVG animation overlay for a given duration.
- * Handles SVG loading, countdown, fade-in/out, and playback pausing/resuming.
- * Animation parsing logic has been removed for modular replacement.
+ * Example cues:
+ *   cuePage(page0)_dur(20)_mode(page)_next(page1)
+ *   cuePage(page1)_dur(10)_mode(page)
+ *   cuePage(page2)_dur(15)_mode(popup)_return(1)
  *
- * @param {string} cueId - Cue identifier
- * @param {string} animationPath - Path to the SVG animation
- * @param {number} duration - Duration of the animation in seconds
+ * HTML:
+ *   <div id="singlePage-container" class="popup hidden">
+ *     <div id="singlePage-content"></div>
+ *     <div id="singlePage-countdown"></div>
+ *   </div>
  */
-export async function handleAnimejsCue(cueId, animationPath, duration) {
-  console.log(`[DEBUG] Handling anime.js cue: ${cueId}`);
+export async function handlePageCue(cueId, animationPath, duration) {
+  console.log(`[cuePage] Handling page cue: ${cueId}`);
 
-  const container = document.getElementById("animejs-container");
-  const content = document.getElementById("animejs-content");
-  const countdownElement = document.getElementById("animejs-countdown");
+  // -------------------------------------------------------------
+  // 0️⃣ Parse parameters (self-contained)
+  // -------------------------------------------------------------
+  const pageName = cueId.match(/cuePage\(([^)]+)\)/)?.[1];
+  const dur = cueId.match(/_dur\(([^)]+)\)/)?.[1];
+  const next = cueId.match(/_next\(([^)]+)\)/)?.[1];
+  const mode = cueId.match(/_mode\(([^)]+)\)/)?.[1]?.toLowerCase() || "popup";
+  const ret  = cueId.match(/_return\(([^)]+)\)/)?.[1] === "1";
+  const wait = cueId.match(/_wait\(([^)]+)\)/)?.[1] === "1";
+  const durationSec = dur ? Number(dur) : duration || 0;
 
+  // -------------------------------------------------------------
+  // 1️⃣ Global state
+  // -------------------------------------------------------------
+  if (!window.pageState) {
+    window.pageState = { mode: "scroll", current: null, next: null, countdown: null };
+  }
+  const ps = window.pageState;
+
+  // -------------------------------------------------------------
+  // 2️⃣ Pause scroll if entering page mode
+  // -------------------------------------------------------------
+  if (ps.mode === "scroll") {
+    console.log("[cuePage] → Pausing scrolling score.");
+    pauseScrollScore();
+  }
+
+  // Update state
+  ps.mode = "page";
+  ps.current = pageName;
+  ps.next = next || null;
+
+  // -------------------------------------------------------------
+  // 3️⃣ Prepare DOM
+  // -------------------------------------------------------------
+  const container = document.getElementById("singlePage-container");
+  const content = document.getElementById("singlePage-content");
+  const countdownElement = document.getElementById("singlePage-countdown");
   if (!container || !content || !countdownElement) {
-    console.error("[ERROR] Required Anime.js DOM elements not found.");
+    console.error("[cuePage] Missing DOM container elements.");
     return;
   }
 
-  // ✅ Show the animation overlay
-  container.classList.add("active");
+  container.classList.remove("hidden");
   container.style.display = "flex";
   container.style.opacity = "1";
+  content.innerHTML = "";
 
-  // ✅ Stop any existing countdown
-  if (window.countdownInterval) {
-    clearInterval(window.countdownInterval);
-    window.countdownInterval = null;
+  // -------------------------------------------------------------
+  // 4️⃣ Load SVG page
+  // -------------------------------------------------------------
+  const filePath = animationPath || `animations/${pageName}.svg`;
+  try {
+    const response = await fetch(filePath);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const svgText = await response.text();
+    content.innerHTML = svgText;
+    const svg = content.querySelector("svg");
+    if (!svg) throw new Error("No <svg> in loaded page.");
+
+    svg.id = "pageSVG";
+    svg.classList.add("oscilla-page");
+    svg.setAttribute("width", "100vw");
+    svg.setAttribute("height", "100vh");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+    // Reuse animation init logic
+    window.initializeSVG?.(svg);
+    window.initializeRotatingObjects?.(svg);
+    window.initializeScalingObjects?.(svg);
+    window.initializePathFollowers?.(svg);
+    window.initializeObserver?.(svg);
+
+    console.log(`[cuePage] ✅ Loaded ${pageName}.svg`);
+  } catch (err) {
+    console.error(`[cuePage] Failed to load SVG: ${err.message}`);
+    return;
   }
 
-  // ✅ Start countdown
-  let timeLeft = duration;
-  countdownElement.textContent = timeLeft;
+  // -------------------------------------------------------------
+  // 5️⃣ Countdown and transition logic
+  // -------------------------------------------------------------
+  clearInterval(ps.countdown);
   countdownElement.style.display = "block";
+  countdownElement.textContent = durationSec;
 
-  window.countdownInterval = setInterval(() => {
-    timeLeft -= 1;
-    countdownElement.textContent = timeLeft;
+  if (!wait && durationSec > 0) {
+    let timeLeft = durationSec;
+    ps.countdown = setInterval(() => {
+      timeLeft -= 1;
+      countdownElement.textContent = timeLeft;
 
-    if (timeLeft === 3) {
-      console.log("[DEBUG] Starting fade-out.");
-      container.style.transition = "opacity 2.5s ease-in-out";
-      container.style.opacity = "0";
-      document.body.querySelectorAll('.blur-background').forEach((el) => {
-        el.style.transition = "filter 2.5s ease-in-out";
-        el.style.filter = "blur(0px)";
-      });
-    }
+      if (timeLeft <= 3 && next) {
+        container.style.transition = "opacity 2s ease-in-out";
+        container.style.opacity = "0.3";
+      }
 
-    if (timeLeft <= 0) {
-      clearInterval(window.countdownInterval);
-      window.countdownInterval = null;
-    }
-  }, 1000);
+      if (timeLeft <= 0) {
+        clearInterval(ps.countdown);
+        ps.countdown = null;
+        resolvePageTransition({ mode, next, ret });
+      }
+    }, 1000);
+  } else {
+    console.log("[cuePage] Waiting indefinitely for user trigger or external event.");
+  }
+}
 
-  // ✅ Pause score playback
-  const wasPlaying = window.isPlaying;
-  if (wasPlaying) {
-    window.isPlaying = false;
-    window.isMusicalPause = true;
+/**
+ * resolvePageTransition()
+ * -----------------------
+ * Called when a page duration ends or a trigger fires.
+ */
+function resolvePageTransition({ mode, next, ret }) {
+  const ps = window.pageState;
+  const container = document.getElementById("singlePage-container");
+  const content = document.getElementById("singlePage-content");
+  const countdown = document.getElementById("singlePage-countdown");
 
-    window.stopAnimation?.();
-    if (window.wsEnabled && window.socket) {
-      window.socket.send(JSON.stringify({
+  if (!ps) return;
+  clearInterval(ps.countdown);
+  if (countdown) countdown.style.display = "none";
+
+  // --- Case 1: chain to next page
+  if (next) {
+    console.log(`[cuePage] ⏭ Transitioning directly to next page: ${next}`);
+    ps.mode = "transition";
+    container.style.transition = "opacity 0.5s ease";
+    container.style.opacity = "0";
+    setTimeout(() => {
+      ps.mode = "page";
+      content.innerHTML = "";
+      handleCueTrigger(`cuePage(${next})`);
+    }, 500);
+    return;
+  }
+
+  // --- Case 2: return to scrolling score
+  if (!window.isCuePagePlaylistActive && (ret || mode === "popup")) {
+    console.log("[cuePage] ✅ Returning to scrolling score.");
+    container.style.transition = "opacity 0.5s ease";
+    container.style.opacity = "0";
+    setTimeout(() => {
+      container.style.display = "none";
+      content.innerHTML = "";
+      ps.mode = "scroll";
+      ps.current = null;
+      resumeScrollScore();
+    }, 500);
+    return;
+  }
+
+
+  // --- Case 3: persistent page mode
+  console.log("[cuePage] Holding page mode.");
+  ps.mode = "page";
+}
+
+/**
+ * pauseScrollScore() / resumeScrollScore()
+ * ----------------------------------------
+ * Encapsulate your pause/resume logic.
+ */
+function pauseScrollScore() {
+  window.isPlaying = false;
+  window.isMusicalPause = true;
+  window.stopAnimation?.();
+  if (window.wsEnabled && window.socket) {
+    window.socket.send(
+      JSON.stringify({
         type: "pause",
         playheadX: window.playheadX,
         elapsedTime: window.elapsedTime,
-      }));
-    }
+      })
+    );
   }
+}
 
-  // ✅ Load the SVG
-  try {
-    const response = await fetch(animationPath);
-    if (!response.ok) throw new Error("Failed to load SVG.");
-
-    const svgText = await response.text();
-    content.innerHTML = svgText;
-
-    const svgElement = content.querySelector("svg");
-    if (!svgElement) {
-      console.error("[ERROR] No <svg> element found in loaded animation.");
-      return;
-    }
-
-    svgElement.setAttribute("width", "100vw");
-    svgElement.setAttribute("height", "100vh");
-    svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet");
-
-    console.log("[DEBUG] SVG loaded successfully.");
-
-    // ✅ Remove inline <animate> and <animateTransform> elements
-    svgElement.querySelectorAll("animate, animateTransform").forEach(el => el.remove());
-
-    // TODO: 🔧 Parse and apply animations (obj2path, rotate, etc.)
-    console.warn("[TODO] SVG animation parsing not implemented in this stub.");
-
-  } catch (error) {
-    console.error(`[ERROR] Failed to load SVG: ${error.message}`);
-    return;
+function resumeScrollScore() {
+  window.isPlaying = true;
+  window.isMusicalPause = false;
+  window.startAnimation?.();
+  if (window.wsEnabled && window.socket) {
+    window.socket.send(
+      JSON.stringify({
+        type: "play",
+        playheadX: window.playheadX,
+        elapsedTime: window.elapsedTime,
+      })
+    );
   }
-
-  // ✅ Cleanup and resume playback
-  setTimeout(() => {
-    container.classList.remove("active");
-    container.style.display = "none";
-    content.innerHTML = "";
-    countdownElement.style.display = "none";
-
-    document.body.querySelectorAll('.blur-background').forEach((el) => {
-      el.style.filter = "";
-      el.classList.remove("blur-background");
-    });
-
-    if (!window.isPlaying) {
-      window.isPlaying = true;
-      window.animationPaused = false;
-      window.startAnimation?.();
-
-      if (window.wsEnabled && window.socket) {
-        const msg = JSON.stringify({
-          type: "play",
-          playheadX: window.playheadX,
-          elapsedTime: window.elapsedTime,
-        });
-        window.socket.send(msg);
-      }
-    }
-
-    console.log(`[DEBUG] Anime.js cue complete: ${cueId}`);
-  }, duration * 1000);
 }
 
 
@@ -1405,85 +1575,6 @@ export async function handleAnimejsCue(cueId, animationPath, duration) {
 
 
 
-
-
-// ====================================
-// 🎞️ handleEnlargeAnimation (ES Style)
-// ====================================
-
-/**
- * Handles the animation enlargement effect using Anime.js.
- * Loads and displays a full-screen SVG animation, applies blur effects,
- * and removes everything after the animation finishes.
- *
- * @param {string} file - Name of the SVG file (without .svg extension)
- * @param {number} duration - Duration of the animation in seconds
- */
-export function handleEnlargeAnimation(file, duration) {
-  console.log(`[DEBUG] Enlarging animation using handleAnimejsCue: ${file}`);
-
-  let container = document.getElementById("animejs-container");
-
-  // ✅ Ensure the container exists
-  if (!container) {
-    console.error("[ERROR] animejs-container not found. Creating new one.");
-    container = document.createElement("div");
-    container.id = "animejs-container";
-    container.classList.add("animejs-container");
-    document.body.appendChild(container);
-  }
-
-  // ✅ Blur all but the container and controls
-  document.body.querySelectorAll(':scope > *').forEach((el) => {
-    if (el.id !== 'animejs-container' && el.id !== 'controls') {
-      el.classList.add('blur-background');
-      el.classList.remove('unblur-background');
-    }
-  });
-
-  container.classList.add('fade-in');
-  setTimeout(() => container.classList.add('active'), 10);
-
-  // ✅ Load and play the animation
-  const cueId = `cueAnimejs_${file}`;
-  const svgPath = `animations/${file}.svg`;
-
-  window.handleAnimejsCue?.(cueId, svgPath, duration); // must be globally available
-
-  // ✅ Wait for end of animation duration, then fade out
-  setTimeout(() => {
-    console.log(`[DEBUG] Animation ${file} complete. Fading out.`);
-    container.classList.add('fade-out');
-    container.classList.remove('active');
-
-    container.addEventListener('transitionend', () => {
-      console.log('[DEBUG] Fade-out transition completed. Cleaning up.');
-
-      if (container.parentNode) {
-        container.parentNode.removeChild(container);
-      }
-
-      // ✅ Remove blur and restore interface
-      document.body.querySelectorAll('.blur-background').forEach((el) => {
-        el.classList.remove('blur-background');
-        el.classList.add('unblur-background');
-      });
-
-      console.log('[DEBUG] Blur removed. Resuming playback.');
-
-      // ✅ Restart the score animation
-      window.isPlaying = true;
-      window.startAnimation?.();
-
-      if (window.wsEnabled && window.socket) {
-        const playMsg = JSON.stringify({ type: 'play', playheadX: window.playheadX, elapsedTime: window.elapsedTime });
-        window.socket.send(playMsg);
-        console.log(`[DEBUG] Sent play message to server. Elapsed Time: ${window.elapsedTime}`);
-      }
-    }, { once: true });
-
-  }, duration * 1000);
-}
 
 
 
@@ -1624,33 +1715,6 @@ export function handleOscCue(cueId, cueParams = {}) {
 
 
 
-
-
-
-// 🖼️ Handles cueAnimation: shows SVG animation for a duration
-export function handleAnimationCue(cueId, file, duration) {
-  const overlay = document.getElementById("animation-overlay");
-  const container = document.getElementById("animation-container");
-  if (!overlay || !container) return;
-
-  container.innerHTML = "";
-  const embed = document.createElement("embed");
-  embed.src = file;
-  embed.type = "image/svg+xml";
-  embed.classList.add("animation-svg");
-
-  container.appendChild(embed);
-  overlay.style.display = "flex";
-  overlay.style.opacity = "1";
-
-  setTimeout(() => {
-    overlay.style.opacity = "0";
-    setTimeout(() => {
-      overlay.style.display = "none";
-      container.innerHTML = "";
-    }, 500);
-  }, duration);
-}
 
 
 

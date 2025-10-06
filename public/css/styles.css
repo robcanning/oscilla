@@ -993,7 +993,7 @@ body.inverted #stopwatch {
 }
 
 /* -------------------------------------  */
-#animejs-container {
+#singlePage-container {
     display: none; /* Hide by default */
     justify-content: center;
     align-items: center;
@@ -1013,13 +1013,13 @@ body.inverted #stopwatch {
 
 
 /* ✅ Make visible when active */
-#animejs-container.active {
+#singlePage-container.active {
   display: flex !important;
     opacity: 1;
 }
 
 
-#animejs-content {
+#singlePage-content {
     display: block; /* Ensure it's visible */
     width: 100vw;  /* Keep the original SVG width */
     height: 100vh; /* Keep the original SVG height */
@@ -1030,7 +1030,7 @@ body.inverted #stopwatch {
 
 
 /* 🔹 Countdown styling */
-#animejs-countdown {
+#singlePage-countdown {
     position: absolute;
     top: 20px;
     right: 20px;
@@ -1045,13 +1045,13 @@ body.inverted #stopwatch {
 }
 
 /* 🔹 Ensure the animation container fills the screen */
-#animejs-container object {
+#singlePage-container object {
     width: auto;
     height: auto;
 }
 
 /* 🔹 Prevent interactions with background when the popup is active */
-#animejs-container::before {
+#singlePage-container::before {
     content: "";
     position: fixed;
     top: 0;
@@ -1061,7 +1061,7 @@ body.inverted #stopwatch {
     z-index: 9998;
 }
 
-.animejs-close-button {
+.singlePage-close-button {
     position: absolute !important;
     top: 10px !important;
     right: 10px !important;
@@ -1075,7 +1075,7 @@ body.inverted #stopwatch {
 }
 
 
-.animejs-close-button:hover {
+.singlePage-close-button:hover {
     background: darkred;
 }
 

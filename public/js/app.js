@@ -493,7 +493,7 @@ const { SVGPathData } = SVGPathCommander;
 
 
 
-  // let triggeredCues = new Set(); // ✅ Initialize it as a global Set()
+  // let triggeredCues = new Set(); //  Initialize it as a global Set()
   //
   // const resetTriggeredCues = () => {
   //   console.log("[DEBUG] Resetting all triggered cues.");
@@ -501,14 +501,10 @@ const { SVGPathData } = SVGPathCommander;
   // };
   //
 
-
-
   setupStopwatchFullscreenToggle();
 
-
-
   /**
-  * ✅ Function: Dismiss the Splash Screen
+  * Function: Dismiss the Splash Screen
   */
   function dismissSplashScreen() {
     const splashScreen = document.getElementById("main-splash-screen");
@@ -519,16 +515,15 @@ const { SVGPathData } = SVGPathCommander;
   }
 
   /**
-  * ✅ Ensure Splash Screen is Visible on Load
+  * Ensure Splash Screen is Visible on Load
   */
   window.onload = () => {
     const splashScreen = document.getElementById("main-splash-screen");
     if (splashScreen) splashScreen.style.display = "flex";
   };
 
-
   // /**
-  // * ✅ Function: Hide Splash Screen and Load Selected Score
+  // * Hide Splash Screen and Load Selected Score
   // */
   function loadScore(scoreFile) {
     console.log(`[DEBUG] Loading score: ${scoreFile}`);
@@ -536,25 +531,21 @@ const { SVGPathData } = SVGPathCommander;
     initializeScore(scoreFile); // Existing function to load a score
   }
 
-
   const clearPopupsOnInteraction = (event) => {
-    //controls.classList.add("hidden"); // Ensure they stay hidden
     // Ensure the event and event.target are valid
     if (!event || !event.target || event.target.closest("#stopwatch")) {
       console.log("[DEBUG] Ignoring stopwatch click for popup dismissal.");
       return;
     }
-    //console.log("[DEBUG] Document clicked:", event.target);
     const animationPopup = document.getElementById('animation-popup');
     const videoPopup = document.getElementById('video-popup');
     const audioPopup = document.getElementById('audio-popup');
     const scoreOptionsPopup = document.getElementById('score-options-popup');
     const cueChoiceContainer = document.getElementById('cue-choice-container');
-    // const scoreContainer = document.getElementById('scoreContainer');
     const playhead = document.getElementById('playhead');
     const playzone = document.getElementById('playzone');
-    const animeJsContainer = document.getElementById('animejs-container');
-    const animeJsContent = document.getElementById('animejs-content'); // Get the SVG container
+    const animeJsContainer = document.getElementById('singlePage-container');
+    const animeJsContent = document.getElementById('singlePage-content'); // Get the SVG container
     const popupsToClear = [animationPopup, videoPopup, audioPopup, animeJsContainer];
     let popupCleared = false;
     // Ignore clicks inside cue-choice-container or score-options-popup
@@ -572,7 +563,7 @@ const { SVGPathData } = SVGPathCommander;
         popupCleared = true;
 
         // ✅ Special handling for Anime.js popup
-        if (popup.id === "animejs-container") {
+        if (popup.id === "singlePage-container") {
           console.log("[DEBUG] Closing Anime.js popup...");
           popup.classList.remove("active"); // Ensure it is fully hidden
           popup.style.display = "none";
@@ -2187,7 +2178,7 @@ preloadSpeedCues();
 
 
   document.addEventListener("DOMContentLoaded", function () {
-    const popup = document.getElementById("animejs-content");
+    const popup = document.getElementById("singlePage-content");
 
     document.addEventListener("click", function (event) {
       if (popup && !popup.contains(event.target)) {
