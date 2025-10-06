@@ -323,19 +323,44 @@ wss.clients.forEach((client) => {
 broadcastState();
 break;
 
+  case "osc_rotate": {
+    const { uid, angle, radians, norm } = data;
+    console.log(`[OSC] 🔁 ROTATE ${uid}: ${angle.toFixed(1)}°`);
+    oscPort.send({
+      address: `/oscilla/rotate/${uid}`,
+      args: [
+        { type: "f", value: angle },
+        { type: "f", value: radians },
+        { type: "f", value: norm },
+      ],
+    });
+    break;
+  }
 
-case "osc_rotate":
-  const { uid, angle, radians, norm } = data;
-  console.log(`[OSC] 🔁 ROTATE ${uid}: ${angle.toFixed(1)}°`);
+case "osc_scale": {
+  let { uid, scaleX, scaleY } = data;
+
+  // Coerce to numeric
+  scaleX = parseFloat(scaleX);
+  scaleY = parseFloat(scaleY);
+
+  // Fallbacks to avoid crash
+  if (isNaN(scaleX)) scaleX = 1;
+  if (isNaN(scaleY)) scaleY = 1;
+
+  console.log(`[OSC] 📏 SCALE ${uid}: X=${scaleX.toFixed(3)} Y=${scaleY.toFixed(3)}`);
+
   oscPort.send({
-    address: `/rotate/${uid}`,
+    address: `/oscilla/scale/${uid}`,
     args: [
-      { type: "f", value: angle },
-      { type: "f", value: radians },
-      { type: "f", value: norm },
+      { type: "f", value: scaleX },
+      { type: "f", value: scaleY },
     ],
   });
   break;
+}
+
+
 
 
       case 'set_speed_multiplier':

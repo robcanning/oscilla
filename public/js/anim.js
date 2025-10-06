@@ -23,18 +23,25 @@
  
  */
 
-function extractUid(id) {
-  const match = id.match(/_uid(\d+)/);
-  return match ? `uid${match[1]}` : id;
-}
-
-
 
 window.OSC_ENABLED = true; // master global OSC mute
 const rotationLastSent = new Map();
 
-const sendRotationOsc = (angle, id) => {
-  if (!window.OSC_ENABLED) return;
+/**
+ * sendRotationOsc(angle, object)
+ * ------------------------------
+ * Sends OSC rotation data for the given object.
+ * Throttled to avoid network flooding.
+ *
+ * @param {number} angle   Rotation angle in degrees
+ * @param {Element} object SVG element being rotated
+ */
+const sendRotationOsc = (angle, object) => {
+
+  if (!window.OSC_ENABLED || !object) return;
+
+  const id = object.id;
+  if (!id) return; // ⚡ Prevent undefined 'id.match' error
 
   const now = performance.now();
   const throttleRate = window.oscRotationThrottleRate || 20;
@@ -46,23 +53,29 @@ const sendRotationOsc = (angle, id) => {
   const animEntry = window.runningAnimations[id];
   if (animEntry && animEntry.visible === false) return;
 
-  const norm = (angle % 360) / 360;
+  // compute derived rotation values
+  const norm = ((angle % 360) + 360) % 360 / 360;
   const radians = (angle % 360) * Math.PI / 180;
 
   if (!window.socket || window.socket.readyState !== WebSocket.OPEN) return;
 
-window.socket.send(JSON.stringify({
-  type: "osc_rotate",
-  id,
-  uid: extractUid(id),
-  angle,
-  radians,
-  norm,
-  timestamp: Date.now()
-}));
+  // Extract UID safely
+  const uidMatch = id.match(/[_-]uid\(?([^)]+)\)?/);
+  const uid = uidMatch ? uidMatch[1] : id;
+
+  // Send OSC message
+  const message = {
+    type: "osc_rotate",
+    uid,
+    angle,
+    radians,
+    norm,
+    timestamp: Date.now()
+  };
+
+  window.socket.send(JSON.stringify(message));
 };
-
-
+ 
 
 function getStepDurations(id) {
   const dur = extractTagValue(id, 'dur', null);
@@ -324,7 +337,7 @@ if (altMatch) {
       if (typeof angle === 'number' && !isNaN(angle)) {
         // console.log(`[ALT] angle = ${angle.toFixed(2)} deg`);
         if (oscEnabled) {
-          sendRotationOsc((angle + 90) % 360, object.id);
+          sendRotationOsc((angle + 90) % 360, object);
         }
       } else {
         console.warn(`[ALT] ⚠️ Unable to retrieve valid angle`);
@@ -373,7 +386,7 @@ if (altMatch) {
     update: () => {
       if (oscEnabled) {
         const angle = parseFloat(object.style.transform?.match(/rotate\(([-\d.]+)deg\)/)?.[1] || 0);
-        sendRotationOsc((angle + 90) % 360, object.id);
+        sendRotationOsc((angle + 90) % 360, object);
       }
     }
   });
@@ -508,35 +521,27 @@ function startScale(object) {
   const isY = id.includes("sY(");
   const prefix = isXY ? "sXY" : isX ? "sX" : isY ? "sY" : "s";
 
+  // --- Easing setup ---
   let easing = getEasingFromId(id);
   if (!easing || easing === '0' || easing === 'none' || easing === 'step') {
     easing = 'linear';
   }
 
+  // --- Mode handling ---
   const modeRaw = extractTagValue(id, 'mode', 'alt');
-
   let mode;
   switch (modeRaw) {
-    case 'once':
-      mode = 'once';
-      break;
-    case 'loop':
-      mode = 'loop';
-      break;
+    case 'once': mode = 'once'; break;
+    case 'loop': mode = 'loop'; break;
     case 'alt':
-      mode = 'alternate';
-      break;
     default:
-      console.warn(`[scale]  Unknown mode: ${modeRaw}, defaulting to 'alt'`);
-      mode = 'alternate';
-      break;
+      mode = 'alternate'; break;
   }
 
-
+  // --- Timing and pivot ---
   const seqDur = extractTagValue(id, 'seqdur', 1);
   const bpm = extractTagValue(id, 'bpm', null);
   const speed = extractTagValue(id, 'speed', null);
-
   const pivotX = extractTagValue(id, 'pivot_x', null);
   const pivotY = extractTagValue(id, 'pivot_y', null);
   const bbox = object.getBBox();
@@ -544,41 +549,47 @@ function startScale(object) {
   const originY = pivotY !== null ? pivotY : bbox.y + bbox.height / 2;
   object.style.transformOrigin = `${originX}px ${originY}px`;
 
+  // --- Parse scale values ---
   const parsed = parseCompactAnimationValues(id, prefix);
   if (!parsed || !parsed.values || parsed.values.length === 0) {
     console.warn(`[scale] ❌ No valid values parsed for ${id}`);
     return;
   }
-
   const scaleValues = parsed.values;
   const regenerate = parsed.regenerate;
-
   const steps = scaleValues.length;
-  const durMatch = id.match(/dur\[([\d_,]+)\]/);
-  const durParts = durMatch ? durMatch[1].split(',').map(Number) : null;
-  const totalWeight = durParts ? durParts.reduce((a, b) => a + b, 0) : steps;
-  const baseDur = (seqDur || 1) * 1000;
-  const durations = [];
 
-  for (let i = 0; i < steps; i++) {
-    const weight = durParts ? durParts[i % durParts.length] : 1;
-    durations.push((weight / totalWeight) * baseDur);
-  }
+// --- Initial scale setup to avoid double-scaling ---
+if (steps > 0) {
+  const firstVal = scaleValues[0];
+  const scaleX0 = Array.isArray(firstVal) ? firstVal[0] : firstVal;
+  const scaleY0 = Array.isArray(firstVal) ? firstVal[1] : firstVal;
 
+  object.style.transformBox = "fill-box";
+  object.style.transformOrigin = "center";
+
+  // ✅ Reset transform so Anime.js has full control
+  object.style.transform = "scale(1,1)";
+  anime.set(object, { scaleX: scaleX0, scaleY: scaleY0 });
+}
+
+  // --- OSC setup ---
   const oscEnabled = extractTagValue(id, 'osc', false);
   const throttleRate = extractTagValue(id, 'throttle', 20);
   let lastOscSent = 0;
 
   const sendScaleOsc = (scaleX, scaleY) => {
     if (!window.OSC_ENABLED) return;
-
     const now = performance.now();
     if ((now - lastOscSent) < (1000 / throttleRate)) return;
     lastOscSent = now;
     if (!window.socket || socket.readyState !== WebSocket.OPEN) return;
+
+    const uidMatch = object.id.match(/[_-]uid\(?([^)]+)\)?/);
+    const uid = uidMatch ? uidMatch[1] : object.id;
     const message = {
       type: "osc_scale",
-      id: object.id,
+      uid,
       scaleX,
       scaleY,
       timestamp: Date.now()
@@ -586,7 +597,65 @@ function startScale(object) {
     window.socket.send(JSON.stringify(message));
   };
 
+  // --- Duration weighting ---
+  const durMatch = id.match(/dur\[([\d_,]+)\]/);
+  const durParts = durMatch ? durMatch[1].split(',').map(Number) : null;
+  const totalWeight = durParts ? durParts.reduce((a, b) => a + b, 0) : steps;
+  const baseDur = (seqDur || 1) * 1000;
+  const durations = [];
+  for (let i = 0; i < steps; i++) {
+    const weight = durParts ? durParts[i % durParts.length] : 1;
+    durations.push((weight / totalWeight) * baseDur);
+  }
+
   const useXY = isXY || Array.isArray(scaleValues[0]);
+  const isTriggerable = id.includes('_t(1)');
+
+  // --- If exactly two values → use direct Anime.js curve (smooth ping-pong) ---
+  if (steps === 2) {
+    const firstVal = scaleValues[0];
+    const lastVal = scaleValues[1];
+    const scaleX1 = Array.isArray(firstVal) ? firstVal[0] : firstVal;
+    const scaleY1 = Array.isArray(firstVal) ? firstVal[1] : firstVal;
+    const scaleX2 = Array.isArray(lastVal) ? lastVal[0] : lastVal;
+    const scaleY2 = Array.isArray(lastVal) ? lastVal[1] : lastVal;
+
+    const anim = anime({
+      targets: object,
+      scaleX: [scaleX1, scaleX2],
+      scaleY: [scaleY1, scaleY2],
+      duration: baseDur,
+      easing,
+      direction: mode === 'alternate' ? 'alternate' : 'normal',
+      loop: mode !== 'once',
+      autoplay: false,
+      update: () => {
+        if (oscEnabled) {
+          const currentX = anime.get(object, 'scaleX') ?? 1;
+          const currentY = anime.get(object, 'scaleY') ?? 1;
+          sendScaleOsc(currentX, currentY);
+        }
+      }
+    });
+
+    if (isTriggerable) {
+      window.pendingScaleAnimations ??= new Map();
+      window.pendingScaleAnimations.set(id, () => requestAnimationFrame(() => anim.play()));
+    } else {
+      anim.play();
+    }
+
+    window.runningAnimations[object.id] = {
+      play: () => anim.play(),
+      pause: () => anim.pause(),
+      resume: () => anim.play(),
+      triggerable: isTriggerable,
+      wasPaused: false
+    };
+    return;
+  }
+
+  // --- Otherwise (3+ values) use timeline sequence ---
   const timeline = anime.timeline({
     targets: object,
     easing,
@@ -594,21 +663,13 @@ function startScale(object) {
     direction: mode === 'alternate' ? 'alternate' : 'normal',
     autoplay: false,
     update: () => {
-      if (oscEnabled && mode !== 'once') {
-        const matrix = window.getComputedStyle(object).transform;
-        if (matrix && matrix !== 'none') {
-          const match = matrix.match(/matrix\(([^)]+)\)/);
-          if (match) {
-            const parts = match[1].split(',').map(parseFloat);
-            const currentX = parts[0];
-            const currentY = parts[3];
-            sendScaleOsc(currentX, currentY);
-          }
-        }
+      if (oscEnabled) {
+        const currentX = anime.get(object, 'scaleX') ?? 1;
+        const currentY = anime.get(object, 'scaleY') ?? 1;
+        sendScaleOsc(currentX, currentY);
       }
     }
   });
-
 
   for (let i = 0; i < steps; i++) {
     const val = scaleValues[i];
@@ -621,8 +682,8 @@ function startScale(object) {
     timeline.add({
       scaleX,
       scaleY,
-      duration: jumpMode ? 1 : stepDur,   // 🔸 instant jump
-      delay: jumpMode ? stepDur : 0,      // 🔸 hold value for normal interval
+      duration: jumpMode ? 1 : stepDur,
+      delay: jumpMode ? stepDur : 0,
       easing: jumpMode ? 'linear' : easing,
       begin: () => {
         if (oscEnabled && mode === 'once') sendScaleOsc(scaleX, scaleY);
@@ -631,34 +692,25 @@ function startScale(object) {
   }
 
   if (regenerate) {
-    timeline.finished.then(() => {
-      requestAnimationFrame(() => startScale(object));
-    });
+    timeline.finished.then(() => requestAnimationFrame(() => startScale(object)));
   }
 
-  const key = dataId || rawId;
-  const isTriggerable = id.includes('_t(1)');
   if (isTriggerable) {
-    window.pendingScaleAnimations = window.pendingScaleAnimations || new Map();
-    window.pendingScaleAnimations.set(key, () => {
-      requestAnimationFrame(() => timeline.play());
-    });
+    window.pendingScaleAnimations ??= new Map();
+    window.pendingScaleAnimations.set(id, () => requestAnimationFrame(() => timeline.play()));
   } else {
     timeline.play();
   }
 
   window.runningAnimations[object.id] = {
-    play: () => {
-      if (!isTriggerable) timeline.play();
-    },
+    play: () => timeline.play(),
     pause: () => timeline.pause(),
-    resume: () => {
-      if (!isTriggerable) timeline.play();
-    },
-    wasPaused: false,
-    triggerable: isTriggerable
+    resume: () => timeline.play(),
+    triggerable: isTriggerable,
+    wasPaused: false
   };
 }
+
 
 
 
@@ -1542,15 +1594,29 @@ function parseCompactAnimationValues(id, prefix = 's') {
     return { values: generate(), regenerate: true, generate, order };
   }
 
-  // ✅ JSON-style list: [1,2,1]
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return { values: parsed, regenerate: false, order };
+    // ✅ JSON-style or plain comma-separated values: [1,2,1] or 1,2
+    try {
+      let parsed;
+
+      // If square brackets are present → parse as JSON
+      if (raw.startsWith('[') && raw.endsWith(']')) {
+        parsed = JSON.parse(raw);
+      } else if (raw.includes(',')) {
+        // If comma-separated values without brackets → split manually
+        parsed = raw.split(',').map(v => parseFloat(v.trim())).filter(n => !isNaN(n));
+      } else {
+        // Single numeric value
+        const num = parseFloat(raw);
+        parsed = !isNaN(num) ? [num] : [];
+      }
+
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return { values: parsed, regenerate: false, order };
+      }
+    } catch (e) {
+      console.warn(`[parseCompact] ⚠️ Parse error in ${prefix}(...) for ${raw}`, e);
     }
-  } catch (_) {
-    // continue
-  }
+
 
   // ✅ Fallback: single numeric value
   const singleValue = parseFloat(raw);
