@@ -1007,8 +1007,8 @@ body.inverted #stopwatch {
     z-index: 29999;
     opacity: 0;
     transition: opacity 1s ease-in-out;
-    pointer-events: auto; /* ✅ Allows clicking */
-    cursor: pointer !important;
+    /* pointer-events: auto; ✅ Allows clicking */
+    /* cursor: pointer !important; */
 }
 
 
@@ -1026,8 +1026,13 @@ body.inverted #stopwatch {
     max-width: 100%; /* Prevent it from overflowing */
     max-height: 100%; /* Ensure it fits inside the container */
     object-fit: contain; /* Maintain aspect ratio */
-}
+    pointer-events: auto;
 
+}
+.oscilla-cue-button {
+  pointer-events: auto;
+  z-index: 100001;
+}
 
 /* 🔹 Countdown styling */
 #singlePage-countdown {

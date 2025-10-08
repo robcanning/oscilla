@@ -23,7 +23,7 @@
      showgrid="false"
      inkscape:zoom="0.59"
      inkscape:cx="369.49153"
-     inkscape:cy="294.0678"
+     inkscape:cy="297.45763"
      inkscape:window-width="1854"
      inkscape:window-height="1011"
      inkscape:window-x="0"
@@ -102,13 +102,6 @@
   </defs>
   <!-- Outer Circle -->
   <!-- Animated Object -->
-  <rect
-     style="display:inline;opacity:0.755784;fill:none;stroke:#ff0505;stroke-width:2.86488;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
-     id="r(bpm(45))_dir(-1)_pivot_x(100)_pivot_y(100)_uid(p1-00)"
-     width="299.97186"
-     height="299.97186"
-     x="346.91479"
-     y="163.85918" />
   <text
      xml:space="preserve"
      style="font-size:192px;fill:#808000"
@@ -127,5 +120,49 @@
      y="313.47986"
      id="text300835"><tspan
        sodipodi:role="line"
-       id="tspan300833"></tspan></text>
+       id="tspan300833" /></text>
+  <text
+     xml:space="preserve"
+     style="font-weight:bold;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000"
+     x="61.778347"
+     y="603.11176"
+     id="cueButton(cueNav(stopAndTrigger(cuePage(page0)_wait(1))),140x48,#a00,&quot;Home&quot;)"><tspan
+       sodipodi:role="line"
+       id="tspan79023"
+       x="61.778347"
+       y="603.11176"
+       style="font-size:16px">cueButton(cueNav(stopAndTrigger(cuePage(page0)_wait(1))),140x48,#a00,&quot;Home&quot;)</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';white-space:pre;inline-size:275.946;display:inline;fill:#000000"
+     x="22360.326"
+     y="698.08252"
+     id="cueButton(cuePage(loop(page3:1,rand(page0:2,page1:2,page2:2),page2:3)),300x100,green, _class(myBtn),_broadcast(1),_conductor(0),_repeatable(1),_scroll(0),_uid(random score loop))"
+     transform="translate(-22138.394,-608.64632)"><tspan
+       x="22360.326"
+       y="698.08252"
+       id="tspan79181">cueButton(cuePage(loop(page3</tspan><tspan
+       x="22360.326"
+       y="718.08253"
+       id="tspan79183">:1,rand(page0:2,page1:2,page</tspan><tspan
+       x="22360.326"
+       y="738.08253"
+       id="tspan79185">2:2),page2:3)),</tspan><tspan
+       x="22360.326"
+       y="758.08253"
+       id="tspan79187">300x100,green,
+</tspan><tspan
+       x="22360.326"
+       y="778.08253"
+       id="tspan79189">_class(myBtn),_broadcast(1),</tspan><tspan
+       x="22360.326"
+       y="798.08253"
+       id="tspan79191">_conductor(0),_repeatable(1)</tspan><tspan
+       x="22360.326"
+       y="818.08253"
+       id="tspan79193">,_scroll(0),_uid(random </tspan><tspan
+       x="22360.326"
+       y="838.08253"
+       id="tspan79195">score loop))
+</tspan></text>
 </svg>

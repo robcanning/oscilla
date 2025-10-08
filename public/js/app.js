@@ -622,8 +622,8 @@ const { SVGPathData } = SVGPathCommander;
 
 
   // document.addEventListener('mousemove', clearPopupsOnInteraction);
-  document.addEventListener('keydown', clearPopupsOnInteraction);
-  document.addEventListener('touchstart', clearPopupsOnInteraction);
+  // document.addEventListener('keydown', clearPopupsOnInteraction);
+  // document.addEventListener('touchstart', clearPopupsOnInteraction);
 
 
 
@@ -2103,8 +2103,8 @@ preloadSpeedCues();
     clickableElements.forEach((element) => {
       element.addEventListener('click', (event) => {
         console.log(`[DEBUG] Clicked on SVG element: ${element.id}`);
-        event.stopPropagation(); // Prevent bubbling if required
-        handleSvgPopupClick(event); // Handle the popup logic or trigger relevant actions
+        // event.stopPropagation(); // Prevent bubbling if required
+        // handleSvgPopupClick(event); // Handle the popup logic or trigger relevant actions
       });
     });
 
@@ -2176,7 +2176,7 @@ preloadSpeedCues();
   if (svgAnimationElement) {
     svgAnimationElement.addEventListener('click', (event) => {
       console.log(`[DEBUG] SVG animation clicked: ${event.target.id}`);
-      handleSvgPopupClick(event);
+      // handleSvgPopupClick(event);
     });
   }
 
@@ -2187,10 +2187,10 @@ preloadSpeedCues();
   });
 
   // Add global event listener for dismissing popups
-  document.addEventListener('click', (event) => {
-    console.log(`[DEBUG] Document clicked at (${event.clientX}, ${event.clientY}) on element:`, event.target);
-    handleSvgPopupClick(event);
-  });
+  // document.addEventListener('click', (event) => {
+  //   console.log(`[DEBUG] Document clicked at (${event.clientX}, ${event.clientY}) on element:`, event.target);
+  //   // handleSvgPopupClick(event);
+  // });
 
 
 

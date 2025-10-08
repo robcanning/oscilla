@@ -27,6 +27,7 @@ export const cueHandlers = {
   cueStop: handleStopCue,
   cueChoice: handleCueChoice,
   cuePage: handlePageCue,
+  cueNav: handleCueNav,  
   cueAudio: handleAudioCue,
   cueVideo: handleVideoCue,
   cueP5: handleP5Cue,
@@ -72,6 +73,7 @@ export function handleCueTrigger(cueId, isRemote = false, force = false) {
     return;
   }
 
+
   // Invoke the appropriate cue handler
   if (type === "cueSpeed") {
     const speed = cueParams.speed ?? cueParams.Speed ?? cueParams.choice;
@@ -96,41 +98,49 @@ export function handleCueTrigger(cueId, isRemote = false, force = false) {
       console.error(`[CLIENT] Invalid cueChoice: missing 'choice' or 'dur' param`);
     }
   } else if (type === "cuePage") {
-  // --- Robustly extract everything inside cuePage(...)
-  const openIdx = cueId.indexOf("(");
-  let inner = "";
-  if (openIdx !== -1) {
-    let depth = 0;
-    for (let i = openIdx + 1; i < cueId.length; i++) {
-      const ch = cueId[i];
-      if (ch === "(") depth++;
-      else if (ch === ")") {
-        if (depth === 0) {
-          inner = cueId.slice(openIdx + 1, i);
-          break;
-        } else depth--;
+      // --- Robustly extract everything inside cuePage(...)
+      const openIdx = cueId.indexOf("(");
+      let inner = "";
+      if (openIdx !== -1) {
+        let depth = 0;
+        for (let i = openIdx + 1; i < cueId.length; i++) {
+          const ch = cueId[i];
+          if (ch === "(") depth++;
+          else if (ch === ")") {
+            if (depth === 0) {
+              inner = cueId.slice(openIdx + 1, i);
+              break;
+            } else depth--;
+          }
+        } 
+
+
       }
+
+      if (/^(seq|loop|rand)\(/.test(inner)) {
+        console.log(`[cuePage] Detected playlist expression: ${inner}`);
+        handleCuePagePlaylist(cueId, inner);
+        return;
+      }
+
+
+      // Normal single page cue (legacy behaviour)
+      let animDuration = Number(cueParams.dur);
+      if (isNaN(animDuration) || animDuration < 0) animDuration = 0;
+      const pageName = cueParams.choice || cueId.match(/cuePage\(([^)]+)\)/)?.[1];
+      if (!pageName) {
+        console.error(`[CLIENT] cuePage missing page name: ${cueId}`);
+        return;
+      }
+      const animationPath = `animations/${pageName}.svg`;
+      handler(cueId, animationPath, animDuration);
     }
-  }
 
-  if (/^(seq|loop|rand)\(/.test(inner)) {
-    console.log(`[cuePage] Detected playlist expression: ${inner}`);
-    handleCuePagePlaylist(cueId, inner);
-    return;
-  }
+    else if (cueId.startsWith("cueNav(") || cueId.startsWith("cueNavigate(")) {
+      const parsed = parseCueNav(cueId);
+      return handleCueNav(parsed);
+    }   
 
-
-  // Normal single page cue (legacy behaviour)
-  let animDuration = Number(cueParams.dur);
-  if (isNaN(animDuration) || animDuration < 0) animDuration = 0;
-  const pageName = cueParams.choice || cueId.match(/cuePage\(([^)]+)\)/)?.[1];
-  if (!pageName) {
-    console.error(`[CLIENT] cuePage missing page name: ${cueId}`);
-    return;
-  }
-  const animationPath = `animations/${pageName}.svg`;
-  handler(cueId, animationPath, animDuration);
-}
 
  else {
   console.log(`[CUE] Triggering cue handler: ${type}`);
@@ -1621,6 +1631,16 @@ export async function handlePageCue(cueId, animationPath, duration) {
     window.initializeObserver?.(svg);
 
     console.log(`[cuePage] ✅ Loaded ${pageName}.svg`);
+    if (window.triggeredCues instanceof Set) {
+      console.log("[cuePage] 🔄 Resetting triggeredCues for new page");
+      window.triggeredCues.clear();
+    }
+
+
+    // 🟦 Build cueButtons inside the page overlay
+    window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
+    window._activePageButtons = assignCueButtonsIn(svg, container);
+
   } catch (err) {
     console.error(`[cuePage] Failed to load SVG: ${err.message}`);
     return;
@@ -1678,6 +1698,9 @@ function resolvePageTransition({ mode, next, ret }) {
     container.style.opacity = "0";
     setTimeout(() => {
       ps.mode = "page";
+      // 🧹 remove buttons from the previous page
+      window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
+      window._activePageButtons = [];
       content.innerHTML = "";
       handleCueTrigger(`cuePage(${next})`);
     }, 500);
@@ -1690,6 +1713,10 @@ function resolvePageTransition({ mode, next, ret }) {
     container.style.transition = "opacity 0.5s ease";
     container.style.opacity = "0";
     setTimeout(() => {
+      // 🧹 remove buttons from the page we’re closing
+      window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
+      window._activePageButtons = [];
+
       container.style.display = "none";
       content.innerHTML = "";
       ps.mode = "scroll";
@@ -2622,28 +2649,43 @@ export function parseCueButton(cueId) {
   return { cueExpr, width, height, color, label: finalLabel, opt };
 }
 
+/**
+ * Create an HTML button for a cueButton(...) SVG element.
+ * - Positions relative to the provided container (score or page overlay).
+ * - Hides the source SVG cue element.
+ * - Debounce, repeatable, broadcast, conductor-only, font family/size.
+ *
+ * @param {SVGGraphicsElement} cueSvgEl  The SVG element with id="cueButton(...)"
+ * @param {object} parsed                Result of parseCueButton(id)
+ * @param {HTMLElement} containerEl      Target container to overlay into
+ *                                       (defaults to window.scoreContainer)
+ * @return {HTMLButtonElement|null}
+ */
+export function createCueButtonForElement(
+  cueSvgEl,
+  parsed,
+  containerEl = window.scoreContainer
+) {
+  if (!cueSvgEl || !parsed || !containerEl) return null;
 
-export function createCueButtonForElement(cueSvgEl, parsed) {
-  if (!cueSvgEl || !parsed) return null;
   const { cueExpr, width, height, color, label, opt } = parsed;
-
-  const container = window.scoreContainer;
-  if (!container) return null;
 
   // Hide the SVG cue element (replacement behavior)
   cueSvgEl.style.visibility = "hidden";
+  cueSvgEl.style.pointerEvents = "none";
 
-  // Overlay button
+  // Build HTML button
   const btn = document.createElement("button");
   btn.type = "button";
   btn.textContent = label;
   btn.className = "oscilla-cue-button";
   if (opt.className) btn.classList.add(opt.className);
 
-  // Pointer-only: don't capture Enter/Space (reserved for transport)
+  // Pointer only (don’t capture Enter/Space; reserved for transport)
   btn.setAttribute("tabindex", "-1");
   btn.setAttribute("aria-hidden", "true");
 
+  // Style
   Object.assign(btn.style, {
     position: "absolute",
     width: `${width}px`,
@@ -2653,54 +2695,58 @@ export function createCueButtonForElement(cueSvgEl, parsed) {
     borderRadius: `${opt.radius}px`,
     padding: "6px 10px",
     fontWeight: "600",
-    fontSize: (opt.fontSize != null)
-    ? (Number.isFinite(opt.fontSize) ? `${opt.fontSize}px` : String(opt.fontSize))
-    : "24px",
+    fontSize:
+      opt.fontSize != null
+        ? (Number.isFinite(opt.fontSize) ? `${opt.fontSize}px` : String(opt.fontSize))
+        : "14px",
     fontFamily: opt.fontFamily || "system-ui, sans-serif",
-    zIndex: "2000", // high z
+    zIndex: "2000",
     cursor: "pointer",
     userSelect: "none",
   });
 
-  container.appendChild(btn);
+  containerEl.appendChild(btn);
 
-  // Positioning
+  // Positioning (relative to the container)
   const place = () => {
     const r = cueSvgEl.getBoundingClientRect();
-    const c = container.getBoundingClientRect();
-    const left = r.left - c.left + opt.offsetX;
-    const top  = r.top  - c.top  + opt.offsetY;
+    const c = containerEl.getBoundingClientRect();
+    const left = r.left - c.left + (opt.offsetX || 0);
+    const top  = r.top  - c.top  + (opt.offsetY || 0);
     btn.style.left = `${Math.round(left)}px`;
     btn.style.top  = `${Math.round(top)}px`;
   };
 
-  // Initial place
+  // Initial placement
   place();
 
-  // Repositioning: follow=1 → RAF; follow=0 → resize only
+  // Repositioning (optional follow)
   let rafId = null;
   const tick = () => { place(); rafId = requestAnimationFrame(tick); };
   if (opt.scrollFollow) rafId = requestAnimationFrame(tick);
+
+  // Keep aligned on resize
   const onResize = () => place();
   window.addEventListener("resize", onResize);
 
-  // Click handling (debounced)
+  // Debounced click
   let lastClick = 0;
   btn.addEventListener("click", () => {
     const now = performance.now();
     if (now - lastClick < (opt.debounceMs || 300)) return;
     lastClick = now;
 
-    // Conductor restriction
+    // Conductor-only?
     if (opt.conductorOnly && !window.isConductor) {
       console.warn("[cueButton] Click ignored: conductor-only.");
       return;
     }
 
     // Execute locally
-    window.handleCueTrigger?.(cueExpr);
-
-    // Broadcast if requested
+    // window.handleCueTrigger?.(cueExpr);
+    // Force = true → bypass “already triggered” de-dup.
+    window.handleCueTrigger?.(cueExpr, /*isRemote*/ false, /*force*/ true);
+    // Broadcast (if requested)
     if (opt.broadcast && window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
       const msg = {
         type: "cue_button_click",
@@ -2711,26 +2757,56 @@ export function createCueButtonForElement(cueSvgEl, parsed) {
       window.socket.send(JSON.stringify(msg));
     }
 
-    // Visual selection state (but keep visible)
+    // Selected state (keeps visible)
     btn.classList.add("oscilla-cue-button--selected");
 
-    // Repeatable?
+    // One-shot?
     if (!opt.repeatable) {
       btn.disabled = true;
       btn.style.opacity = "0.7";
     }
   });
 
-  // Cleanup hook (optional export later)
+  // Cleanup
   btn._destroyCueButton = () => {
     window.removeEventListener("resize", onResize);
     if (rafId) cancelAnimationFrame(rafId);
     btn.remove();
-    cueSvgEl.style.visibility = ""; // restore if desired
+    cueSvgEl.style.visibility = "";       // restore if desired
+    cueSvgEl.style.pointerEvents = "";    // restore if desired
   };
 
   return btn;
 }
+
+export function assignCueButtonsIn(rootNode, containerEl) {
+  if (!rootNode || !containerEl) return [];
+  const created = [];
+
+  const walk = (node) => {
+    for (const child of node.children || []) {
+      const id = child.id;
+      if (id && id.startsWith("cueButton(")) {
+        const parsed = parseCueButton(id);
+        if (parsed) {
+          const btn = createCueButtonForElement(child, parsed, containerEl);
+          if (btn) created.push(btn);
+          console.log("[assignCueButtonsIn] Created cueButton:", id);
+        } else {
+          console.warn("[assignCueButtonsIn] Failed to parse cueButton:", id);
+        }
+        continue; // don't recurse under this node
+      }
+      walk(child);
+    }
+  };
+
+  walk(rootNode);
+  return created;
+}
+
+
+
 
 // Optional: WS receiver hook — call once during app init
 export function installCueButtonSocketReceiver() {
@@ -2744,4 +2820,180 @@ export function installCueButtonSocketReceiver() {
       }
     } catch (e) {}
   });
+}
+
+
+
+// ---- helpers
+function extractFuncInner(id, fnName) {
+  const key = fnName + "(";
+  const start = id.indexOf(key);
+  if (start === -1) return null;
+  let i = start + key.length, depth = 1;
+  for (; i < id.length; i++) {
+    const ch = id[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") {
+      depth--;
+      if (depth === 0) return id.slice(start + key.length, i);
+    }
+  }
+  return null;
+}
+
+// ---- parser
+export function parseCueNav(id) {
+  const inner = extractFuncInner(id, "cueNav") || extractFuncInner(id, "cueNavigate");
+  if (!inner) return null;
+
+  // first token is the action at top level; optional arg in (...) after it
+  // e.g. "goto(page3)" or "exit" or "stopAndTrigger(cuePage(...))"
+  const parts = splitTopLevel(inner, ","); // safe, though usually 1 part
+  const actionExpr = parts[0].trim();
+
+  // action(arg?) pattern
+  const m = actionExpr.match(/^([a-zA-Z]+)(?:\(([\s\S]*)\))?$/);
+  if (!m) return null;
+
+  const action = m[1];
+  const argExpr = m[2] ? m[2].trim() : null; // may itself be a full cue expression
+
+  return { action: action.toLowerCase(), argExpr };
+}
+// ---- handler (instrumented)
+export async function handleCueNav(parsed) {
+  if (!parsed) return;
+  const { action, argExpr } = parsed;
+
+  // ---- tiny debug helper
+  const dbg = (...a) => { if (window.DEBUG_NAV !== false) console.log("[cueNav]", ...a); };
+  const now = () => Math.round(performance.now());
+
+  // helpers (adapt to your actual page API names)
+  const exitPageMode = () => {
+    dbg("exitPageMode() start", { pageState: window.pageState?.mode });
+    const r =
+      window.exitPageMode?.() ||
+      window.setPageMode?.(false) ||
+      window.closePageOverlay?.();
+    dbg("exitPageMode() done", { pageState: window.pageState?.mode });
+    return r;
+  };
+
+  const stopPlaylist = () => {
+    dbg("stopPlaylist() start", {
+      isCuePagePlaylistActive: window.isCuePagePlaylistActive,
+      hasTimer: !!window.cuePagePlaylistTimer,
+    });
+
+    // Preferred API (if you have it)
+    const r = window.stopCuePagePlaylist?.() || window.pageController?.stop?.();
+
+    // Fallback: hard stop
+    if (window.cuePagePlaylistTimer) {
+      clearTimeout(window.cuePagePlaylistTimer);
+      window.cuePagePlaylistTimer = null;
+      dbg("cleared cuePagePlaylistTimer");
+    }
+    if (window.isCuePagePlaylistActive) {
+      window.isCuePagePlaylistActive = false;
+      dbg("set isCuePagePlaylistActive = false");
+    }
+    if (window.pageState) {
+      window.pageState.mode = "page"; // keep current page visible
+      dbg("set pageState.mode = 'page'");
+    }
+
+    // NEW: clear any other guards your scheduler may check
+    window.cuePageCountdownActive = false;
+    window.cuePageTransitioning  = false;
+    window.cuePageHold           = false;   // if you track waits/holds explicitly
+    window.cuePageNextDue        = 0;       // if you compare times for next hop
+
+    dbg("stopPlaylist() done");
+    return r;
+  };
+
+  const gotoPage = (pid) => {
+    dbg("gotoPage()", pid);
+    return window.showPage?.(pid) || window.pageController?.goto?.(pid);
+  };
+  const nextPage = () => { dbg("nextPage()"); return window.nextPage?.() || window.pageController?.next?.(); };
+  const prevPage = () => { dbg("prevPage()"); return window.prevPage?.() || window.pageController?.prev?.(); };
+  const restartPlaylist = () => { dbg("restartPlaylist()"); return window.restartCuePagePlaylist?.() || window.pageController?.restart?.(); };
+
+  const triggerCueExpr = (expr, label="trigger") => {
+    dbg(`${label}:`, expr);
+    try {
+      window.handleCueTrigger?.(expr);
+    } catch (e) {
+      console.error("[cueNav] trigger failed:", expr, e);
+    }
+  };
+
+  // small delay helper to avoid race conditions switching modes
+  const afterTick = (fn, label="afterTick") => {
+    const t = now();
+    dbg(`${label} scheduled (+30ms)`);
+    setTimeout(() => { dbg(`${label} firing (~${now()-t}ms)`); fn(); }, 30);
+  };
+
+  dbg("→ action:", action, "arg:", argExpr, {
+    pageState: window.pageState?.mode,
+    isCuePagePlaylistActive: window.isCuePagePlaylistActive,
+    hasTimer: !!window.cuePagePlaylistTimer,
+  });
+
+  switch (action) {
+    case "exit":
+      exitPageMode();
+      break;
+
+    case "stop":
+      stopPlaylist();
+      break;
+
+    case "next":
+      nextPage();
+      break;
+
+    case "prev":
+      prevPage();
+      break;
+
+    case "restart":
+      restartPlaylist();
+      break;
+
+    case "goto":
+      if (!argExpr) { dbg("goto() missing arg"); break; }
+      gotoPage(argExpr);
+      break;
+
+    case "trigger":
+      if (!argExpr) { dbg("trigger() missing arg"); break; }
+      triggerCueExpr(argExpr, "trigger()");
+      break;
+
+    case "stopandtrigger":
+      stopPlaylist();
+      if (argExpr) afterTick(() => triggerCueExpr(argExpr, "stopAndTrigger→trigger"));
+      break;
+
+    case "exitandtrigger":
+      exitPageMode();
+      if (argExpr) afterTick(() => triggerCueExpr(argExpr, "exitAndTrigger→trigger"));
+      break;
+
+    case "replace":
+      stopPlaylist();
+      exitPageMode();
+      if (argExpr) afterTick(() => triggerCueExpr(argExpr, "replace→trigger"));
+      break;
+
+    default:
+      console.warn("[cueNav] Unknown action:", action, "arg:", argExpr);
+  }
+
+  dbg("✓ done", { action, argExpr, pageState: window.pageState?.mode, isCuePagePlaylistActive: window.isCuePagePlaylistActive });
 }
