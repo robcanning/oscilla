@@ -2915,9 +2915,22 @@ export async function handleCueNav(parsed) {
   };
 
   const gotoPage = (pid) => {
-    dbg("gotoPage()", pid);
-    return window.showPage?.(pid) || window.pageController?.goto?.(pid);
+    // Stop any active playlist so it doesn’t overwrite navigation
+    if (window.isCuePagePlaylistActive) stopPlaylist();
+
+    // Open the target page and hold until user action
+    // (use _wait(1) as a simple “hold” mode; change to _dur if you prefer timed)
+    const target = `cuePage(${pid})_wait(1)`;
+    dbg("goto→trigger:", target);
+
+    // Force = true to bypass de-duplication if this cue fired before
+    try {
+      window.handleCueTrigger?.(target, /*isRemote*/ false, /*force*/ true);
+    } catch (e) {
+      console.error("[cueNav] goto trigger failed:", target, e);
+    }
   };
+
   const nextPage = () => { dbg("nextPage()"); return window.nextPage?.() || window.pageController?.next?.(); };
   const prevPage = () => { dbg("prevPage()"); return window.prevPage?.() || window.pageController?.prev?.(); };
   const restartPlaylist = () => { dbg("restartPlaylist()"); return window.restartCuePagePlaylist?.() || window.pageController?.restart?.(); };
