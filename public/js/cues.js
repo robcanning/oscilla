@@ -2567,17 +2567,21 @@ export function parseCueButton(cueId) {
   }
 
   // 5) suffix options
+  // inside parseCueButton() options object:
   const opt = {
     className: null,
-    repeatable: 1,      // default true
-    broadcast: 0,       // default false
-    conductorOnly: 0,   // default false
-    scrollFollow: 0,    // default false
+    repeatable: 1,
+    broadcast: 0,
+    conductorOnly: 0,
+    scrollFollow: 0,
     offsetX: 0,
     offsetY: 0,
     radius: 8,
     debounceMs: 300,
     uid: null,
+    // NEW:
+    fontFamily: null,   // e.g. "Inter, system-ui, sans-serif"
+    fontSize: null      // number (px) or string like "16px"
   };
 
   for (; idx < parts.length; idx++) {
@@ -2603,8 +2607,13 @@ export function parseCueButton(cueId) {
       const n = parseInt(val, 10); if (!isNaN(n)) opt.debounceMs = n;
     } else if (key === "uid") {
       opt.uid = String(val);
+    } else if (key === "font") {
+  opt.fontFamily = val; // keep commas/spaces (top-level split already handled)
+    } else if (key === "fontsize") {
+      const n = parseInt(val, 10);
+      opt.fontSize = Number.isFinite(n) ? n : val; // allow "16" or "16px"
     }
-  }
+      }
 
   // Label default: uid if available else cue type prefix
   const cueTypeFallback = cueExpr.split("(")[0] || "cue";
@@ -2643,7 +2652,11 @@ export function createCueButtonForElement(cueSvgEl, parsed) {
     border: "1px solid rgba(0,0,0,.2)",
     borderRadius: `${opt.radius}px`,
     padding: "6px 10px",
-    font: "600 14px system-ui, sans-serif",
+    fontWeight: "600",
+    fontSize: (opt.fontSize != null)
+    ? (Number.isFinite(opt.fontSize) ? `${opt.fontSize}px` : String(opt.fontSize))
+    : "24px",
+    fontFamily: opt.fontFamily || "system-ui, sans-serif",
     zIndex: "2000", // high z
     cursor: "pointer",
     userSelect: "none",
