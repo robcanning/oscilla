@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 1000 650"
+   width="1000"
+   height="650"
+   version="1.1"
+   id="svg5125"
+   sodipodi:docname="page0.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview141"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.59"
+     inkscape:cx="369.49153"
+     inkscape:cy="294.0678"
+     inkscape:window-width="1854"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg5125" />
+  <defs
+     id="defs5129">
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect49990"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="powerstroke"
+       id="path-effect49984"
+       is_visible="true"
+       lpeversion="1"
+       offset_points="0.75800528,1.6949153"
+       not_jump="true"
+       sort_points="true"
+       interpolator_type="CentripetalCatmullRom"
+       interpolator_beta="0.75"
+       start_linecap_type="round"
+       linejoin_type="spiro"
+       miter_limit="4"
+       scale_width="1"
+       end_linecap_type="round" />
+    <inkscape:path-effect
+       effect="simplify"
+       id="path-effect49982"
+       is_visible="true"
+       lpeversion="1"
+       steps="1"
+       threshold="0.0032025118"
+       smooth_angles="0"
+       helper_size="0"
+       simplify_individual_paths="false"
+       simplify_just_coalesce="false"
+       step="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect49916"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect29312"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect28564"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect24137"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect17567"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect581"
+       is_visible="true"
+       lpeversion="1" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect389"
+       is_visible="true"
+       lpeversion="1" />
+  </defs>
+  <!-- Outer Circle -->
+  <!-- Animated Object -->
+  <rect
+     style="display:inline;opacity:0.755784;fill:none;stroke:#ff0505;stroke-width:2.86488;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+     id="r(bpm(45))_dir(-1)_pivot_x(100)_pivot_y(100)_uid(p1-00)"
+     width="299.97186"
+     height="299.97186"
+     x="346.91479"
+     y="163.85918" />
+  <text
+     xml:space="preserve"
+     style="font-size:192px;fill:#808000"
+     x="161.11981"
+     y="382.79199"
+     id="text300713"><tspan
+       sodipodi:role="line"
+       id="tspan300711"
+       x="161.11981"
+       y="382.79199"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono">PAGE 0</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:192px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#808000"
+     x="835.15625"
+     y="313.47986"
+     id="text300835"><tspan
+       sodipodi:role="line"
+       id="tspan300833"></tspan></text>
+</svg>

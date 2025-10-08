@@ -46,10 +46,16 @@ export const cueHandlers = {
 export function handleCueTrigger(cueId, isRemote = false, force = false) {
   console.log(`[DEBUG] Attempting to trigger cue: ${cueId}`);
 
-  if (!force && window.triggeredCues.has(cueId)) {
-    console.log(`[DEBUG] Skipping already-triggered cue: ${cueId}`);
+  // ⚡ Allow duplicates if cuePage is inside a playlist
+  const isPagePlaylist = cueId.startsWith("cuePage(") && window.isCuePagePlaylistActive;
+
+  if (!isPagePlaylist && window.triggeredCues?.has(cueId)) {
+    console.debug("[DEBUG] Skipping already-triggered cue:", cueId);
     return;
   }
+
+  // ✅ Mark cue as triggered
+  window.triggeredCues?.add(cueId);
 
   const { type, cueParams } = parseCueParams(cueId);
   console.log(`[parseCueParams] Final cue type: ${type}`);
@@ -89,14 +95,30 @@ export function handleCueTrigger(cueId, isRemote = false, force = false) {
     } else {
       console.error(`[CLIENT] Invalid cueChoice: missing 'choice' or 'dur' param`);
     }
-  }  else if (type === "cuePage") {
-  // Detect playlist syntax like cuePage(seq(...)), loop(...), or rand(...)
-  const inner = cueId.match(/cuePage\(([^)]+)\)/)?.[1] || "";
+  } else if (type === "cuePage") {
+  // --- Robustly extract everything inside cuePage(...)
+  const openIdx = cueId.indexOf("(");
+  let inner = "";
+  if (openIdx !== -1) {
+    let depth = 0;
+    for (let i = openIdx + 1; i < cueId.length; i++) {
+      const ch = cueId[i];
+      if (ch === "(") depth++;
+      else if (ch === ")") {
+        if (depth === 0) {
+          inner = cueId.slice(openIdx + 1, i);
+          break;
+        } else depth--;
+      }
+    }
+  }
+
   if (/^(seq|loop|rand)\(/.test(inner)) {
     console.log(`[cuePage] Detected playlist expression: ${inner}`);
     handleCuePagePlaylist(cueId, inner);
     return;
   }
+
 
   // Normal single page cue (legacy behaviour)
   let animDuration = Number(cueParams.dur);
@@ -1074,10 +1096,6 @@ window.adjustSpeed = adjustSpeed;
 
 
 
-
-
-
-
 export function handleStopCue(cueId = "cueStop") {
   console.log("[CLIENT] 🛑 cueStop triggered:", cueId);
 
@@ -1263,92 +1281,224 @@ export function dismissCueChoice() {
 
   console.log("[DEBUG] Cue choice dismissed and reset.");
 }
+export function handleCuePagePlaylist(cueId, expr) {
+  // --- Detect mode cleanly
+  const outerMatch = expr.match(/^(loop|seq|rand)\(([\s\S]*)\)$/);
+  const mode = outerMatch ? outerMatch[1] : "seq";
+  let inner = outerMatch ? outerMatch[2] : expr;
 
+  // 🧹 Defensive cleanup: strip unmatched parentheses if any
+  const lastParen = inner.lastIndexOf(")");
+  if (lastParen === inner.length - 1) {
+    inner = inner.slice(0, -1);
+  }
 
+  // --- Split only top-level commas (ignore commas inside rand())
+  const parts = splitTopLevel(inner, ",");
 
-/**
- * handleCuePagePlaylist()
- * -----------------------
- * Parses playlist expressions like:
- *   cuePage(seq(page1:10,page2:12,page3:8))
- *   cuePage(loop(page1:10,page2:10,rand(page1,page2,page3):20))
- *   cuePage(rand(page1,page2,page3):15)
- */
-function handleCuePagePlaylist(cueId, expr) {
-  const mode =
-    expr.startsWith("loop(") ? "loop" :
-    expr.startsWith("seq(")  ? "seq"  :
-    expr.startsWith("rand(") ? "rand" : "seq";
+  const items = parts
+    .map(p => parseCueItem(p.trim()))
+    .filter(Boolean);
 
-  // Strip outer wrapper
-  const inner = expr.replace(/^(loop|seq|rand)\(|\)$/g, "");
-  const parts = inner.split(/,(?![^(]*\))/); // split by commas not inside ()
-  const items = parts.map(part => {
-    // e.g. "page1:10" or "rand(page1,page2,page3):20"
-    const [pageExpr, durStr] = part.split(":");
-    const dur = Number(durStr) || 10;
+  if (!items.length) {
+    console.warn("[cuePage] ⚠️ No valid playlist items parsed:", expr);
+    return;
+  }
 
-    if (pageExpr.trim().startsWith("rand(")) {
-      const innerRand = pageExpr.match(/\(([^)]+)\)/)?.[1] || "";
-      const pages = innerRand.split(/\s*,\s*/);
-      return { rand: pages, dur };
-    }
-    return { page: pageExpr.trim(), dur };
-  });
-
+  console.log(`[cuePage] ✅ Parsed playlist items (${mode}):`, items);
   runCuePagePlaylist({ mode, items });
 }
 
-function runCuePagePlaylist({ mode, items }) {
-  window.isCuePagePlaylistActive = true;
 
-  if (!window.pagePlaylistState)
-    window.pagePlaylistState = { index: 0, mode, items };
+/* -----------------------------------------------------------
+   Helper: splitTopLevel(str, delimiter)
+   Splits by commas but ignores commas inside parentheses
+------------------------------------------------------------ */
+function splitTopLevel(str, delimiter = ",") {
+  const result = [];
+  let depth = 0;
+  let current = "";
 
-  const ps = window.pagePlaylistState;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (ch === "(") depth++;
+    if (ch === ")") depth--;
+    if (ch === delimiter && depth === 0) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) result.push(current.trim());
+  return result;
+}
 
-  async function nextStep() {
-    const item = ps.items[ps.index];
+/* -----------------------------------------------------------
+   Helper: parseCueItem(str)
+   Parses page expressions, e.g.:
+   - page3:5
+   - rand(page0,page1,page2):2
+   - rand(page0:2,page1:4)
+------------------------------------------------------------ */
+function parseCueItem(str) {
+  if (!str) return null;
 
-    let nextPage;
-    if (item.page) nextPage = item.page;
-    else if (item.rand)
-      nextPage = item.rand[Math.floor(Math.random() * item.rand.length)];
+  // Handle rand(...) group
+  if (str.startsWith("rand(")) {
+    // Extract inner content and possible duration
+    const match = str.match(/^rand\((.*)\)(?::([\d.]+))?$/);
+    if (!match) return null;
 
-    const dur = item.dur;
-    console.log(`[cuePage] ▶ ${nextPage} (${dur}s) [${mode}]`);
+    const inner = match[1];
+    const groupDur = match[2] ? parseFloat(match[2]) : 0;
+    const pages = splitTopLevel(inner, ",").map(x => {
+      const [page, durStr] = x.split(":").map(s => s.trim());
+      const dur = durStr ? parseFloat(durStr) : 0;
+      return { page, dur };
+    });
 
-    // true flag when triggering from within playlist so we allow repeated cues
-    handleCueTrigger(`cuePage(${nextPage})_dur(${dur})`, false, true);
-
-    setTimeout(() => {
-      if (mode === "rand") {
-        // choose a random item each time
-        ps.index = Math.floor(Math.random() * ps.items.length);
-      } else {
-        ps.index++;
-        if (ps.index >= ps.items.length) {
-          if (mode === "loop") ps.index = 0;
-            else if (mode === "seq") {
-              console.log("[cuePage] ✅ Playlist finished — returning to scroll.");
-              window.isCuePagePlaylistActive = false;
-              const container = document.getElementById("singlePage-container");
-              const content = document.getElementById("singlePage-content");
-              if (container) container.style.display = "none";
-              if (content) content.innerHTML = "";
-              if (window.pageState) window.pageState.mode = "scroll";
-              resumeScrollScore();
-              return;
-            }
-
-        }
-      }
-      nextStep();
-    }, dur * 1000);
+    return { rand: pages, dur: groupDur };
   }
 
+  // Handle plain page:dur
+  const [page, durStr] = str.split(":").map(s => s.trim());
+  const dur = durStr ? parseFloat(durStr) : 0;
+
+  if (!page) {
+    console.warn("[cuePage] ⚠️ Invalid entry:", str);
+    return null;
+  }
+
+  return { page, dur };
+}
+async function runCuePagePlaylist({ mode, items, waitFlag = false, returnFlag = false }) {
+  console.log(`[cuePage] ▶ Starting playlist in mode [${mode}] with ${items.length} items`);
+
+  // --- Global flags
+  window.isCuePagePlaylistActive = true;
+  window.cuePagePlaylistTimer = null;
+
+  // --- Create or reuse global page state
+  if (!window.pageState)
+    window.pageState = { mode: "scroll", current: null, next: null, countdown: null };
+
+  const ps = window.pageState;
+
+  // --- Pause scrolling score if active
+  if (ps.mode === "scroll") {
+    console.log("[cuePage] 🛑 Pausing scrolling score.");
+    pauseScrollScore();
+    ps.mode = "page";
+  }
+
+  let index = 0;
+  const total = items.length;
+async function nextStep() {
+  // 🧹 Safety check: playlist stopped or popup closed
+  if (!window.isCuePagePlaylistActive) {
+    console.log("[cuePage] 🛑 Playlist aborted before next step.");
+    clearTimeout(window.cuePagePlaylistTimer);
+    window.cuePagePlaylistTimer = null;
+    return;
+  }
+
+  // 🧩 Select current item
+  const item = items[index];
+  if (!item) {
+    console.warn("[cuePage] ⚠️ Missing playlist item, stopping.");
+    stopPlaylist();
+    return;
+  }
+
+  // 🧠 Resolve which page to load
+  let nextPage = null;
+  let dur = item.dur && item.dur > 0 ? item.dur : 10;
+
+  if (item.page) {
+    // normal page
+    nextPage = item.page;
+  } else if (item.rand && item.rand.length) {
+    // random page selection
+    const randChoice = item.rand[Math.floor(Math.random() * item.rand.length)];
+    if (typeof randChoice === "string") {
+      nextPage = randChoice;
+    } else if (typeof randChoice === "object" && randChoice.page) {
+      nextPage = randChoice.page;
+      if (randChoice.dur && !isNaN(randChoice.dur)) dur = randChoice.dur;
+    } else {
+      console.warn("[cuePage] ⚠️ Invalid rand() entry:", randChoice);
+    }
+    console.log(`[cuePage] 🎲 Random choice: ${nextPage} (${dur}s)`);
+  } else {
+    console.warn("[cuePage] ⚠️ Empty playlist entry skipped:", item);
+    advanceIndex();
+    return nextStep();
+  }
+
+  if (!nextPage) {
+    console.warn("[cuePage] ⚠️ No valid next page; skipping.");
+    advanceIndex();
+    return nextStep();
+  }
+
+  console.log(`[cuePage] ▶ ${nextPage} (${dur}s) [${mode}]`);
+  handleCueTrigger(`cuePage(${nextPage})_dur(${dur})`, false, true);
+
+  advanceIndex();
+
+  // ⏳ Schedule next step unless waiting or stopped
+  if (!window.isCuePagePlaylistActive) return;
+
+  if (waitFlag) {
+    console.log("[cuePage] ⏸ Waiting indefinitely (wait=1).");
+    return; // don't schedule next step
+  }
+
+  window.cuePagePlaylistTimer = setTimeout(() => {
+    if (window.isCuePagePlaylistActive) nextStep();
+    else stopPlaylist();
+  }, dur * 1000);
+}
+
+
+  function advanceIndex() {
+    if (mode === "seq") index++;
+    else if (mode === "loop") index = (index + 1) % total;
+    else if (mode === "rand") index = Math.floor(Math.random() * total);
+
+    // --- If we reached the end of a non-loop sequence
+    if (index >= total && mode !== "loop") {
+      console.log("[cuePage] ▶ Playlist finished.");
+      stopPlaylist();
+    }
+  }
+
+  function stopPlaylist() {
+    clearTimeout(window.cuePagePlaylistTimer);
+    window.cuePagePlaylistTimer = null;
+    window.isCuePagePlaylistActive = false;
+
+    // --- Resume scrolling if requested
+    if (returnFlag) {
+      console.log("[cuePage] ✅ Playlist completed — returning to scrolling score.");
+      ps.mode = "scroll";
+      ps.current = null;
+      resumeScrollScore();
+    } else {
+      console.log("[cuePage] ⏹ Playlist stopped; holding current page.");
+      ps.mode = "page";
+    }
+  }
+
+  // 🚀 Start first step
   nextStep();
 }
+
+
+
+
+
 
 
 /**
@@ -1371,6 +1521,13 @@ function runCuePagePlaylist({ mode, items }) {
  */
 export async function handlePageCue(cueId, animationPath, duration) {
   console.log(`[cuePage] Handling page cue: ${cueId}`);
+
+  // Always ensure scrolling score is paused before page mode
+  if (window.isPlaying) {
+    console.log("[cuePage] 🛑 Pausing scrolling score.");
+    pauseScrollScore();
+  }
+
 
   // -------------------------------------------------------------
   // 0️⃣ Parse parameters (self-contained)
@@ -1509,7 +1666,7 @@ function resolvePageTransition({ mode, next, ret }) {
     return;
   }
 
-  // --- Case 2: return to scrolling score
+  // // --- Case 2: return to scrolling score
   if (!window.isCuePagePlaylistActive && (ret || mode === "popup")) {
     console.log("[cuePage] ✅ Returning to scrolling score.");
     container.style.transition = "opacity 0.5s ease";
@@ -1539,8 +1696,10 @@ function pauseScrollScore() {
   window.isPlaying = false;
   window.isMusicalPause = true;
   window.stopAnimation?.();
-  if (window.wsEnabled && window.socket) {
-    window.socket.send(
+
+  const socket = window.socket;
+  if (window.wsEnabled && socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(
       JSON.stringify({
         type: "pause",
         playheadX: window.playheadX,
@@ -1551,11 +1710,40 @@ function pauseScrollScore() {
 }
 
 function resumeScrollScore() {
+  console.log("[cuePage] ▶ Resuming scrolling score...");
+
+  window.ignoreNextSync = true;   
+
+  // Reset playback state flags
   window.isPlaying = true;
   window.isMusicalPause = false;
-  window.startAnimation?.();
-  if (window.wsEnabled && window.socket) {
-    window.socket.send(
+
+  // ✅ Restart the scrolling timeline / playhead motion
+  if (typeof window.startPlayback === "function") {
+    
+    window.isPlaying = false;      // ✅ trick: clear guard
+    window.startPlayback(true);
+
+  } else if (typeof window.startAnimation === "function") {
+    // fallback if your app uses startAnimation internally
+    window.startAnimation();
+  } else {
+    console.warn("[cuePage] ⚠️ No playback start function found.");
+  }
+
+  // ✅ Resume stopwatch / elapsed-time logic if available
+  if (typeof window.startStopwatch === "function") {
+    window.startStopwatch();
+  }
+
+  // ✅ Reset timing baseline for smooth interpolation
+  window.lastSyncTime = performance.now();
+  window.lastElapsedTime = window.elapsedTime ?? 0;
+
+  // ✅ Notify server
+  const socket = window.socket;
+  if (window.wsEnabled && socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(
       JSON.stringify({
         type: "play",
         playheadX: window.playheadX,
@@ -1563,7 +1751,12 @@ function resumeScrollScore() {
       })
     );
   }
+
+  console.log("[cuePage] ▶ Scroll resume complete.");
 }
+
+
+
 
 
 
@@ -2068,7 +2261,9 @@ export function handleVideoCue(cueId, cueParams) {
 }
 
 export function resetTriggeredCues() {
-  if (window.triggeredCues) window.triggeredCues.clear();
+  if (window.triggeredCues) 
+    window.triggeredCues.clear(); 
+    window._cueInsideState?.clear();
 }
 
 
@@ -2107,30 +2302,61 @@ export async function checkCueTriggers() {
   // 🛑 Skip cue checks if paused, seeking, or not playing
   if (window.isSeeking || window.animationPaused || !window.isPlaying) return;
 
-const playheadX = window.getPlayheadX();
-if (playheadX === null) {
-  console.warn("[checkCueTriggers] Could not determine playhead x position.");
-  return;
-}
+  const playheadX = window.getPlayheadX();
+  if (playheadX === null) {
+    console.warn("[checkCueTriggers] Could not determine playhead x position.");
+    return;
+  }
+
+  // We track cue-left positions across frames (since the playhead is fixed)
+  if (!window._prevCueLefts) window._prevCueLefts = new Map();
+  if (!window._cueInsideState) window._cueInsideState = new Map();
+  if (!window.triggeredCues) window.triggeredCues = new Set();
+
+  const tolerance = 8; // px (tweak 5–10)
+  const containerRect = window.scoreContainer.getBoundingClientRect();
 
   for (const cue of window.cues) {
-    if (!cue.element) continue;
+    if (!cue?.element) continue;
 
     const cueRect = cue.element.getBoundingClientRect();
-    const containerRect = window.scoreContainer.getBoundingClientRect();
-    const cueX = cueRect.left - containerRect.left;
-    const cueWidth = cueRect.width;
+    const cueLeft = cueRect.left - containerRect.left;
+    const cueRight = cueLeft + cueRect.width;
 
-    const isInsideCue = playheadX >= cueX && playheadX <= (cueX + cueWidth);
-    
+    const prevLeft = window._prevCueLefts.has(cue.id)
+      ? window._prevCueLefts.get(cue.id)
+      : undefined;
 
-    if (isInsideCue && !window.triggeredCues.has(cue.id)) {
-      console.log(`[cueTrigger] Triggering: ${cue.id}`);
+    const wasInside = window._cueInsideState.get(cue.id) || false;
+    const isInside = playheadX >= cueLeft && playheadX <= cueRight;
+
+    // Initialize previous left on first sight (prevents start/resume/seek retriggers)
+    if (prevLeft === undefined) {
+      window._prevCueLefts.set(cue.id, cueLeft);
+      window._cueInsideState.set(cue.id, isInside);
+      continue;
+    }
+
+    // Forward scroll = cues move LEFT (cueLeft decreases)
+    const movingForward = cueLeft < prevLeft;
+
+    // Trigger when the LEFT edge crosses the playhead from right -> left (with tolerance)
+    const crossedLeftEdgeForward =
+      movingForward &&
+      prevLeft > (playheadX + tolerance) &&
+      cueLeft <= (playheadX + tolerance);
+
+    if (crossedLeftEdgeForward && !window.triggeredCues.has(cue.id)) {
+      console.log(`[cueTrigger] ✅ Left-edge crossing → ${cue.id}`);
       window.handleCueTrigger?.(cue.id);
       window.triggeredCues.add(cue.id);
     }
 
-    // 🔁 Handle repeat logic
+    // Update per-cue state for next frame
+    window._prevCueLefts.set(cue.id, cueLeft);
+    window._cueInsideState.set(cue.id, isInside);
+
+    // 🔁 Repeat logic — unchanged from your working version
     for (const [repeatCueId, repeat] of Object.entries(window.repeatStateMap || {})) {
       if (!repeat.active || !repeat.ready || !repeat.initialJumpDone) continue;
 
@@ -2200,39 +2426,62 @@ if (playheadX === null) {
   }
 }
 
-
-
 export function parseCueParams(cueId) {
-  const lastParenIndex = cueId.lastIndexOf(")");
-  const cleaned = lastParenIndex !== -1 ? cueId.slice(0, lastParenIndex + 1) : cueId;
-
-  const typeMatch = cleaned.match(/^([a-zA-Z][a-zA-Z0-9]*)/);
+  // Extract cue type (e.g. cuePage, cueAudio, etc.)
+  const typeMatch = cueId.match(/^([a-zA-Z][a-zA-Z0-9]*)/);
   const type = typeMatch ? typeMatch[1] : null;
-  if (!type) return { type: cueId, cueParams: {}, cleanedId: cleaned };
+  if (!type) return { type: cueId, cueParams: {}, cleanedId: cueId };
 
   const cueParams = {};
-  const paramString = cleaned.slice(type.length);
-  if (paramString.startsWith("(")) {
-    const leading = paramString.match(/^\(([^)]+)\)/);
-    if (leading) {
-      const raw = leading[1];
-      cueParams.choice = isNaN(raw) ? raw : parseFloat(raw);
-      parseKeyValueParams(paramString.slice(leading[0].length), cueParams);
+  let rest = cueId.slice(type.length);
+
+  // --- 🧠 Handle first parenthetical block safely (choice)
+  if (rest.startsWith("(")) {
+    let depth = 0;
+    let endIndex = -1;
+    for (let i = 0; i < rest.length; i++) {
+      const ch = rest[i];
+      if (ch === "(") depth++;
+      else if (ch === ")") {
+        depth--;
+        if (depth === 0) {
+          endIndex = i;
+          break;
+        }
+      }
     }
-  } else {
-    parseKeyValueParams(paramString, cueParams);
+
+    if (endIndex !== -1) {
+      const inner = rest.slice(1, endIndex); // everything between ( ... )
+      cueParams.choice = isNaN(inner) ? inner.trim() : parseFloat(inner);
+      rest = rest.slice(endIndex + 1); // remaining suffix (e.g. _dur(10)_uid(abc))
+    }
   }
 
-  return { type, cueParams, cleanedId: cleaned };
+  // --- Parse remaining _key(value) pairs
+  const regex = /_([a-zA-Z0-9]+)\(([^)]+)\)/g;
+  let match;
+  while ((match = regex.exec(rest)) !== null) {
+    const [, key, value] = match;
+    cueParams[key] = isNaN(value) ? value.trim() : parseFloat(value);
+  }
+
+  return { type, cueParams, cleanedId: cueId };
 }
 
 function parseKeyValueParams(str, cueParams) {
   const regex = /_([a-zA-Z0-9]+)\(([^)]+)\)/g;
-  let match;
-  while ((match = regex.exec(str)) !== null) {
-    const [, key, value] = match;
+  let m;
+  while ((m = regex.exec(str)) !== null) {
+    const [, key, value] = m;
     cueParams[key] = isNaN(value) ? value : parseFloat(value);
   }
 }
 
-  if (window.triggeredCues) window.triggeredCues.clear();
+
+
+
+  if (window.triggeredCues) 
+    window.triggeredCues.clear();
+    window._cueInsideState?.clear();
+    

@@ -217,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let animationFrameId = null; // ✅ Ensure global tracking of requestAnimationFrame
   let incomingServerUpdate = false;
   let ignorePauseAfterResume = false;
+  window.ignoreNextSync = false;
   let pauseCooldownActive = false;
   const stopwatch = document.getElementById('stopwatch');
   const rehearsalMarksButton = document.getElementById('rehearsal-marks-button');
@@ -569,6 +570,16 @@ const { SVGPathData } = SVGPathCommander;
           popup.style.display = "none";
           if (animeJsContent) animeJsContent.innerHTML = ""; // ✅ Remove the loaded SVG
           console.log("[DEBUG] Anime.js popup cleared and SVG removed.");
+
+          // 🛑 Stop any active cuePage playlist timers
+          if (window.isCuePagePlaylistActive) {
+            console.log("[cuePage] 🛑 Playlist aborted due to popup clear.");
+            window.isCuePagePlaylistActive = false;
+          }
+          if (window.cuePagePlaylistTimer) {
+            clearTimeout(window.cuePagePlaylistTimer);
+            window.cuePagePlaylistTimer = null;
+          }
         }
       }
     });
@@ -957,53 +968,59 @@ const { SVGPathData } = SVGPathCommander;
 
   /** ✅ Synchronize Playback State */
   case "sync":
-  if (suppressSync) {
-    console.warn(`[WARNING] Ignoring sync message to prevent overriding rewind.`);
-    return;
+     if (window.ignoreNextSync) {
+    console.log("[SYNC] ⏭ Ignoring first sync after resume.");
+    window.ignoreNextSync = false;
+    break;
   }
 
-  if (data.playheadX) {
-    console.warn(`[WARNING] WebSocket message modifying window.playheadX: ${data.playheadX}`);
-  }
-
-  const wasPlaying = window.isPlaying;
-
-  window.elapsedTime = data.state.elapsedTime;
-
-  if (!window.ignoreSyncPlayback) {
-    window.isPlaying = data.state.isPlaying;
-  } else {
-    console.log("[SYNC] Ignoring isPlaying update due to local enforced pause.");
-  }
-
-  if (!window.recentlyRecalculatedPlayhead) {
-    window.playheadX = data.state.playheadX;
-    window.scoreContainer.scrollLeft = window.playheadX;
-  } else {
-    console.log(`[DEBUG] 🔄 Ignoring server window.playheadX update to prevent override.`);
-  }
-
-  updatePosition();
-  window.recentlyRecalculatedPlayhead = false;
-  updateSeekBar();
-
-  if (!isNaN(data.state.speedMultiplier) && data.state.speedMultiplier > 0) {
-    if (speedMultiplier !== data.state.speedMultiplier) {
-      window.speedMultiplier = data.state.speedMultiplier;
+    if (suppressSync) {
+      console.warn(`[WARNING] Ignoring sync message to prevent overriding rewind.`);
+      return;
     }
-  }
 
-  // ✅ Only start animation if transitioning from not playing → playing
-  if (window.isPlaying && !wasPlaying) {
-    console.log("[SYNC] ▶️ Starting playback due to sync message.");
-    window.startAnimation?.();
-  } else if (!window.isPlaying && wasPlaying) {
-    console.log("[SYNC] ⏸ Stopping playback due to sync message.");
-    window.stopAnimation?.();
-  }
+    if (data.playheadX) {
+      console.warn(`[WARNING] WebSocket message modifying window.playheadX: ${data.playheadX}`);
+    }
 
-  ignoreRewindOnStartup = true;
-  break;
+    const wasPlaying = window.isPlaying;
+
+    window.elapsedTime = data.state.elapsedTime;
+
+    if (!window.ignoreSyncPlayback) {
+      window.isPlaying = data.state.isPlaying;
+    } else {
+      console.log("[SYNC] Ignoring isPlaying update due to local enforced pause.");
+    }
+
+    if (!window.recentlyRecalculatedPlayhead) {
+      window.playheadX = data.state.playheadX;
+      window.scoreContainer.scrollLeft = window.playheadX;
+    } else {
+      console.log(`[DEBUG] 🔄 Ignoring server window.playheadX update to prevent override.`);
+    }
+
+    updatePosition();
+    window.recentlyRecalculatedPlayhead = false;
+    updateSeekBar();
+
+    if (!isNaN(data.state.speedMultiplier) && data.state.speedMultiplier > 0) {
+      if (speedMultiplier !== data.state.speedMultiplier) {
+        window.speedMultiplier = data.state.speedMultiplier;
+      }
+    }
+
+    // ✅ Only start animation if transitioning from not playing → playing
+    if (window.isPlaying && !wasPlaying) {
+      console.log("[SYNC] ▶️ Starting playback due to sync message.");
+      window.startAnimation?.();
+    } else if (!window.isPlaying && wasPlaying) {
+      console.log("[SYNC] ⏸ Stopping playback due to sync message.");
+      window.stopAnimation?.();
+    }
+
+    ignoreRewindOnStartup = true;
+    break;
 
 
 
@@ -3026,6 +3043,7 @@ window.startAnimation = () => {
 
     if (triggeredCues) {
       triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
+      window._cueInsideState?.clear(); 
       // console.log("[DEBUG] Cleared triggered cues due to rewind.");
     }
 
@@ -3064,6 +3082,7 @@ window.startAnimation = () => {
 
     if (triggeredCues) {
       triggeredCues.clear(); // ✅ Ensure cues retrigger after forward
+      window._cueInsideState?.clear(); 
       // console.log("[DEBUG] Cleared triggered cues due to forward.");
     }
 
@@ -3832,6 +3851,7 @@ window.startPlayback = function startPlayback() {
     window.ignoreSyncPlayback = false;
     window.animationPaused = false;
     window.isPaused = false;
+    
 
     // Set speed multiplier from current playhead position
     window.speedMultiplier = getSpeedForPosition(window.playheadX);
@@ -3893,139 +3913,6 @@ window.resumePlayback = function resumePlayback() {
 };
 
 
-
-
-
-
-
-  // /**
-  // * checkCueTriggers()
-  // * Called every animation frame to evaluate whether the playhead intersects any cues.
-  // * Triggers associated actions (via `handleCueTrigger`) and manages repeat logic with delays.
-  // * Includes logic to avoid retriggers at the repeat start point right after a jump.
-  // */
-  // const checkCueTriggers = async () => {
-  //   // ✅ Update elapsed time based on playhead position
-  //   window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-
-  //   // 🛑 Skip cue checks if we’re seeking, paused, or stopped
-  //   if (window.isSeeking || animationPaused || !window.isPlaying) {
-  //     console.log("[DEBUG] Skipping cue checks.");
-  //     return;
-  //   }
-
-  //   // ✅ Center correction for playhead alignment
-  //   const playheadOffset = window.scoreContainer.offsetWidth / 2;
-  //   const adjustedPlayheadX =window.playheadX + playheadOffset;
-
-  //   // 🔁 Loop through all cues
-  //   for (const cue of cues) {
-  //     const cueStart = cue.x;
-  //     const cueEnd = cueStart + cue.width;
-  //     const isInsideCue = adjustedPlayheadX >= cueStart && adjustedPlayheadX <= cueEnd;
-
-  //     // 🎯 Trigger cues if not already triggered
-  //     if (isInsideCue && !triggeredCues.has(cue.id)) {
-  //       console.log(`[DEBUG] Triggering Cue: ${cue.id} at X: ${cueStart}, Adjusted Playhead: ${adjustedPlayheadX}, Reported Window.innerWidth: ${window.innerWidth}`);
-  //       handleCueTrigger(cue.id);
-  //       triggeredCues.add(cue.id);
-  //     }
-
-  //     // 🔁 Check if cue is the end marker for a repeat
-  //     for (const [repeatCueId, repeat] of Object.entries(repeatStateMap)) {
-  //       // 🚫 Skip if repeat isn’t active or not ready (e.g., just jumped)
-  //       if (!repeat.active || !repeat.ready || !repeat.initialJumpDone) continue;
-
-  //       let isAtRepeatEnd = false;
-
-  //       // 🧭 If endId is "self", check if playhead is on the original repeat cue itself
-  //       if (repeat.endId === 'self') {
-  //         const repeatCue = cues.find(c => c.id === repeat.cueId || c.id.startsWith(repeat.cueId + "-"));
-  //         if (repeatCue) {
-  //           const selfX = repeatCue.x;
-  //           const selfWidth = repeatCue.width || 40;
-  //           const selfEndX = selfX + selfWidth;
-  //           if (adjustedPlayheadX >= selfX && adjustedPlayheadX <= selfEndX) {
-  //             isAtRepeatEnd = true;
-  //           }
-  //         }
-  //       }
-  //       // 📍 Otherwise, match against a different cue
-  //       else if (cue.id === repeat.endId || cue.id.startsWith(repeat.endId + "-")) {
-  //         isAtRepeatEnd = true;
-  //       }
-
-  //       // 🧨 Skip false triggers that happen during jump cooldown (landed on start point)
-  //       const now = Date.now();
-  //       if (repeat.jumpCooldownUntil && now < repeat.jumpCooldownUntil) {
-  //         console.log(`[repeat] ⏳ Skipping due to jumpCooldownUntil for ${repeatCueId}`);
-  //         continue;
-  //       }
-
-  //       if (isAtRepeatEnd) {
-  //         const cooldown = 500;
-  //         if (now - repeat.lastTriggerTime < cooldown) {
-  //           continue;
-  //         }
-
-  //         repeat.lastTriggerTime = now;
-
-  //         repeat.currentCount++;
-  //         updateRepeatCountDisplay(repeat.currentCount);
-  //         // Add highlighting to playhead when in repeat cycle
-  //         // document.getElementById('playhead').classList.add('repeating');
-  //         // document.getElementById("repeat-count-box").classList.add("pulse");
-  //         //
-
-  //         console.log(`[repeat] Reached end (${repeat.endId}) for ${repeatCueId}, count: ${repeat.currentCount}`);
-
-  //         if (repeat.isInfinite || repeat.currentCount < repeat.count) {
-  //           if (repeat.directionMode === 'p') {
-  //             repeat.currentlyReversing = !repeat.currentlyReversing;
-  //           }
-
-  //           console.log(`[repeat] ⏳ Pausing before repeat jump for ${repeatCueId}`);
-
-  //           try {
-  //             await executeRepeatJump(repeat, repeatCueId);
-  //           } catch (err) {
-  //             console.error(`[repeat] ❌ Error during executeRepeatJump for ${repeatCueId}:`, err);
-  //           }
-
-  //         } else {
-
-  //           // ✅ All repeats complete
-  //           repeat.active = false;
-  //           hideRepeatCountDisplay();
-  //           // document.getElementById('playhead').classList.remove('repeating');
-  //           // document.getElementById("repeat-count-box").classList.add("hidden");
-  //           // document.getElementById("repeat-count-box").classList.remove("pulse");
-
-
-  //           if (repeat.action === 'stop') {
-  //             stopAnimation();
-  //              window.isPlaying = false;
-  //             togglePlayButton();
-  //             console.log(`[repeat] Repeat finished. Stopping playback.`);
-  //           } else if (repeat.resumeId && repeat.resumeId !== 'self') {
-  //             jumpToCueId(repeat.resumeId);
-  //             togglePlay();
-  //           } else {
-  //             console.log(`[repeat] Repeat finished. Staying at current location.`);
-  //           }
-  //         }
-
-  //         break; // ✅ Avoid multiple repeat triggers per frame
-  //       }
-  //     }
-  //   }
-  // };
-
-
-
-  // this is never used anywhere?
-  // todo what is this for - can it be removed
-  // const originalSyncState = syncState; // Keep a reference to the original syncState
 
 
   //////////////////////////////////////////////////
