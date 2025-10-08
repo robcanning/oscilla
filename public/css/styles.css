@@ -1533,3 +1533,8 @@ padding: 20px;
 .custom-pause::after {
   right: 4px;
 }
+
+
+.oscilla-cue-button { transition: box-shadow .15s, border-color .15s; }
+.oscilla-cue-button:hover { box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+.oscilla-cue-button--selected { border: 2px solid red !important; }

@@ -830,6 +830,24 @@ console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
   function walkForCueElements(node) {
     for (const child of node.children) {
       const id = child.id;
+
+      // 🟦 SPECIAL: cueButton(...) → create HTML button and DO NOT add to cuesArray
+      if (id?.startsWith("cueButton(")) {
+        const parsed = parseCueButton(id);         // ← from the helper we added
+        if (parsed) {
+          createCueButtonForElement(child, parsed); // ← overlays button, hides SVG cue
+          console.log(`[assignCues] 🟦 Created cueButton: ${id}`);
+        } else {
+          console.warn(`[assignCues] ⚠️ Failed to parse cueButton: ${id}`);
+        }
+        // Do NOT recurse into this child (prevents duplicate handling of its subtree)
+        // and do NOT push to cuesArray (buttons are click-driven, not scroll-triggered).
+        continue;
+      }
+
+
+    // ✅ Normal cue element handling
+
       if (id?.startsWith("cue") && !cuesArray.some(c => c.id === id && c.element)) {
         const bbox = child.getBBox?.();
         cuesArray.push({
@@ -2485,3 +2503,232 @@ function parseKeyValueParams(str, cueParams) {
     window.triggeredCues.clear();
     window._cueInsideState?.clear();
     
+// Robustly extract cueButton(...) inner content even if the ID has suffixes like -uid...
+function extractCueButtonInner(id) {
+  const key = "cueButton(";
+  const start = id.indexOf(key);
+  if (start === -1) return null;
+  let i = start + key.length, depth = 1;
+  for (; i < id.length; i++) {
+    const ch = id[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") {
+      depth--;
+      if (depth === 0) {
+        // inner is between start+key.length and i (exclusive)
+        return id.slice(start + key.length, i);
+      }
+    }
+  }
+  return null; // unbalanced
+}
+
+// ------------------------------
+// cueButton: parsing (robust)
+// ------------------------------
+export function parseCueButton(cueId) {
+  const inner = extractCueButtonInner(cueId);
+  if (!inner) return null;
+
+  // Use your existing helper to split only top-level commas
+  const parts = splitTopLevel(inner, ",").map(s => s.trim());
+  if (parts.length < 3) {
+    console.warn("[cueButton] Not enough args. Expected at least <cueExpr>, <dimensions>, <color>.");
+    return null;
+  }
+
+  // 1) cue expression (can be nested)
+  const cueExpr = parts[0];
+  if (!cueExpr) return null;
+
+  // 2) dimensions: "WxH" or "N" (square), px only
+  const dimRaw = parts[1];
+  let width = 100, height = 100;
+  if (/^\d+(x\d+)?$/.test(dimRaw)) {
+    if (dimRaw.includes("x")) {
+      const [w, h] = dimRaw.split("x").map(n => parseInt(n, 10));
+      if (!isNaN(w) && !isNaN(h)) { width = w; height = h; }
+    } else {
+      const n = parseInt(dimRaw, 10);
+      if (!isNaN(n)) { width = n; height = n; }
+    }
+  } else {
+    console.warn(`[cueButton] Bad dimensions '${dimRaw}', using 100x100.`);
+  }
+
+  // 3) color: css name / hex / rgb(a)
+  const color = parts[2] || "red";
+
+  // 4) optional label: only if the next token does NOT start with "_"
+  let idx = 3;
+  let label = null;
+  if (parts[idx] && !parts[idx].startsWith("_")) {
+    label = parts[idx++];
+  }
+
+  // 5) suffix options
+  const opt = {
+    className: null,
+    repeatable: 1,      // default true
+    broadcast: 0,       // default false
+    conductorOnly: 0,   // default false
+    scrollFollow: 0,    // default false
+    offsetX: 0,
+    offsetY: 0,
+    radius: 8,
+    debounceMs: 300,
+    uid: null,
+  };
+
+  for (; idx < parts.length; idx++) {
+    const tok = parts[idx];
+    // _key(value) format; value may contain commas (already top-level safe)
+    const m = tok.match(/^_([a-zA-Z]+)\(([\s\S]*)\)$/);
+    if (!m) continue;
+    const key = m[1].toLowerCase();
+    const val = m[2];
+
+    if (key === "class") opt.className = val;
+    else if (key === "repeatable") opt.repeatable = Number(val) ? 1 : 0;
+    else if (key === "broadcast")  opt.broadcast  = Number(val) ? 1 : 0;
+    else if (key === "conductor")  opt.conductorOnly = Number(val) ? 1 : 0;
+    else if (key === "scroll")     opt.scrollFollow  = Number(val) ? 1 : 0;
+    else if (key === "offset") {
+      const [x, y] = val.split(/[, ]+/).map(n => parseInt(n, 10));
+      if (!isNaN(x)) opt.offsetX = x;
+      if (!isNaN(y)) opt.offsetY = y;
+    } else if (key === "radius") {
+      const n = parseInt(val, 10); if (!isNaN(n)) opt.radius = n;
+    } else if (key === "debounce") {
+      const n = parseInt(val, 10); if (!isNaN(n)) opt.debounceMs = n;
+    } else if (key === "uid") {
+      opt.uid = String(val);
+    }
+  }
+
+  // Label default: uid if available else cue type prefix
+  const cueTypeFallback = cueExpr.split("(")[0] || "cue";
+  const finalLabel = label || opt.uid || cueTypeFallback;
+
+  return { cueExpr, width, height, color, label: finalLabel, opt };
+}
+
+
+export function createCueButtonForElement(cueSvgEl, parsed) {
+  if (!cueSvgEl || !parsed) return null;
+  const { cueExpr, width, height, color, label, opt } = parsed;
+
+  const container = window.scoreContainer;
+  if (!container) return null;
+
+  // Hide the SVG cue element (replacement behavior)
+  cueSvgEl.style.visibility = "hidden";
+
+  // Overlay button
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = label;
+  btn.className = "oscilla-cue-button";
+  if (opt.className) btn.classList.add(opt.className);
+
+  // Pointer-only: don't capture Enter/Space (reserved for transport)
+  btn.setAttribute("tabindex", "-1");
+  btn.setAttribute("aria-hidden", "true");
+
+  Object.assign(btn.style, {
+    position: "absolute",
+    width: `${width}px`,
+    height: `${height}px`,
+    background: color,
+    border: "1px solid rgba(0,0,0,.2)",
+    borderRadius: `${opt.radius}px`,
+    padding: "6px 10px",
+    font: "600 14px system-ui, sans-serif",
+    zIndex: "2000", // high z
+    cursor: "pointer",
+    userSelect: "none",
+  });
+
+  container.appendChild(btn);
+
+  // Positioning
+  const place = () => {
+    const r = cueSvgEl.getBoundingClientRect();
+    const c = container.getBoundingClientRect();
+    const left = r.left - c.left + opt.offsetX;
+    const top  = r.top  - c.top  + opt.offsetY;
+    btn.style.left = `${Math.round(left)}px`;
+    btn.style.top  = `${Math.round(top)}px`;
+  };
+
+  // Initial place
+  place();
+
+  // Repositioning: follow=1 → RAF; follow=0 → resize only
+  let rafId = null;
+  const tick = () => { place(); rafId = requestAnimationFrame(tick); };
+  if (opt.scrollFollow) rafId = requestAnimationFrame(tick);
+  const onResize = () => place();
+  window.addEventListener("resize", onResize);
+
+  // Click handling (debounced)
+  let lastClick = 0;
+  btn.addEventListener("click", () => {
+    const now = performance.now();
+    if (now - lastClick < (opt.debounceMs || 300)) return;
+    lastClick = now;
+
+    // Conductor restriction
+    if (opt.conductorOnly && !window.isConductor) {
+      console.warn("[cueButton] Click ignored: conductor-only.");
+      return;
+    }
+
+    // Execute locally
+    window.handleCueTrigger?.(cueExpr);
+
+    // Broadcast if requested
+    if (opt.broadcast && window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+      const msg = {
+        type: "cue_button_click",
+        cueExpr,
+        uid: opt.uid || null,
+        timestamp: Date.now(),
+      };
+      window.socket.send(JSON.stringify(msg));
+    }
+
+    // Visual selection state (but keep visible)
+    btn.classList.add("oscilla-cue-button--selected");
+
+    // Repeatable?
+    if (!opt.repeatable) {
+      btn.disabled = true;
+      btn.style.opacity = "0.7";
+    }
+  });
+
+  // Cleanup hook (optional export later)
+  btn._destroyCueButton = () => {
+    window.removeEventListener("resize", onResize);
+    if (rafId) cancelAnimationFrame(rafId);
+    btn.remove();
+    cueSvgEl.style.visibility = ""; // restore if desired
+  };
+
+  return btn;
+}
+
+// Optional: WS receiver hook — call once during app init
+export function installCueButtonSocketReceiver() {
+  if (!window.wsEnabled || !window.socket) return;
+  window.socket.addEventListener("message", (ev) => {
+    try {
+      const data = JSON.parse(ev.data);
+      if (data?.type === "cue_button_click" && data?.cueExpr) {
+        // Prevent echo storms (optional: compare client IDs if you have them)
+        window.handleCueTrigger?.(data.cueExpr);
+      }
+    } catch (e) {}
+  });
+}
