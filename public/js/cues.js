@@ -2550,156 +2550,136 @@ function extractCueButtonInner(id) {
   return null; // unbalanced
 }
 
-// ------------------------------
-// cueButton: parsing (robust)
-// ------------------------------
-export function parseCueButton(cueId) {
-  const inner = extractCueButtonInner(cueId);
-  if (!inner) return null;
+// // ------------------------------
+// // cueButton: parsing (robust)
+// // ------------------------------
+// export function parseCueButton(cueId) {
+//   const inner = extractCueButtonInner(cueId);
+//   if (!inner) return null;
 
-  // Use your existing helper to split only top-level commas
-  const parts = splitTopLevel(inner, ",").map(s => s.trim());
-  if (parts.length < 3) {
-    console.warn("[cueButton] Not enough args. Expected at least <cueExpr>, <dimensions>, <color>.");
-    return null;
-  }
+//   // Use your existing helper to split only top-level commas
+//   const parts = splitTopLevel(inner, ",").map(s => s.trim());
+//   if (parts.length < 3) {
+//     console.warn("[cueButton] Not enough args. Expected at least <cueExpr>, <dimensions>, <color>.");
+//     return null;
+//   }
 
-  // 1) cue expression (can be nested)
-  const cueExpr = parts[0];
-  if (!cueExpr) return null;
+//   // 1) cue expression (can be nested)
+//   const cueExpr = parts[0];
+//   if (!cueExpr) return null;
 
-  // 2) dimensions: "WxH" or "N" (square), px only
-  const dimRaw = parts[1];
-  let width = 100, height = 100;
-  if (/^\d+(x\d+)?$/.test(dimRaw)) {
-    if (dimRaw.includes("x")) {
-      const [w, h] = dimRaw.split("x").map(n => parseInt(n, 10));
-      if (!isNaN(w) && !isNaN(h)) { width = w; height = h; }
-    } else {
-      const n = parseInt(dimRaw, 10);
-      if (!isNaN(n)) { width = n; height = n; }
-    }
-  } else {
-    console.warn(`[cueButton] Bad dimensions '${dimRaw}', using 100x100.`);
-  }
+//   // 2) dimensions: "WxH" or "N" (square), px only
+//   const dimRaw = parts[1];
+//   let width = 100, height = 100;
+//   if (/^\d+(x\d+)?$/.test(dimRaw)) {
+//     if (dimRaw.includes("x")) {
+//       const [w, h] = dimRaw.split("x").map(n => parseInt(n, 10));
+//       if (!isNaN(w) && !isNaN(h)) { width = w; height = h; }
+//     } else {
+//       const n = parseInt(dimRaw, 10);
+//       if (!isNaN(n)) { width = n; height = n; }
+//     }
+//   } else {
+//     console.warn(`[cueButton] Bad dimensions '${dimRaw}', using 100x100.`);
+//   }
 
-  // 3) color: css name / hex / rgb(a)
-  const color = parts[2] || "red";
+//   // 3) color: css name / hex / rgb(a)
+//   const color = parts[2] || "red";
 
-  // 4) optional label: only if the next token does NOT start with "_"
-  let idx = 3;
-  let label = null;
-  if (parts[idx] && !parts[idx].startsWith("_")) {
-    label = parts[idx++];
-  }
+//   // 4) optional label: only if the next token does NOT start with "_"
+//   let idx = 3;
+//   let label = null;
+//   if (parts[idx] && !parts[idx].startsWith("_")) {
+//     label = parts[idx++];
+//   }
 
-  // 5) suffix options
-  // inside parseCueButton() options object:
-  const opt = {
-    className: null,
-    repeatable: 1,
-    broadcast: 0,
-    conductorOnly: 0,
-    scrollFollow: 0,
-    offsetX: 0,
-    offsetY: 0,
-    radius: 8,
-    debounceMs: 300,
-    uid: null,
-    // NEW:
-    fontFamily: null,   // e.g. "Inter, system-ui, sans-serif"
-    fontSize: null      // number (px) or string like "16px"
-  };
+//   // 5) suffix options
+//   // inside parseCueButton() options object:
+//   const opt = {
+//     className: null,
+//     repeatable: 1,
+//     broadcast: 0,
+//     conductorOnly: 0,
+//     scrollFollow: 0,
+//     offsetX: 0,
+//     offsetY: 0,
+//     radius: 8,
+//     debounceMs: 300,
+//     uid: null,
+//     // NEW:
+//     fontFamily: null,   // e.g. "Inter, system-ui, sans-serif"
+//     fontSize: null      // number (px) or string like "16px"
+//   };
 
-  for (; idx < parts.length; idx++) {
-    const tok = parts[idx];
-    // _key(value) format; value may contain commas (already top-level safe)
-    const m = tok.match(/^_([a-zA-Z]+)\(([\s\S]*)\)$/);
-    if (!m) continue;
-    const key = m[1].toLowerCase();
-    const val = m[2];
+//   for (; idx < parts.length; idx++) {
+//     const tok = parts[idx];
+//     // _key(value) format; value may contain commas (already top-level safe)
+//     const m = tok.match(/^_([a-zA-Z]+)\(([\s\S]*)\)$/);
+//     if (!m) continue;
+//     const key = m[1].toLowerCase();
+//     const val = m[2];
 
-    if (key === "class") opt.className = val;
-    else if (key === "repeatable") opt.repeatable = Number(val) ? 1 : 0;
-    else if (key === "broadcast")  opt.broadcast  = Number(val) ? 1 : 0;
-    else if (key === "conductor")  opt.conductorOnly = Number(val) ? 1 : 0;
-    else if (key === "scroll")     opt.scrollFollow  = Number(val) ? 1 : 0;
-    else if (key === "offset") {
-      const [x, y] = val.split(/[, ]+/).map(n => parseInt(n, 10));
-      if (!isNaN(x)) opt.offsetX = x;
-      if (!isNaN(y)) opt.offsetY = y;
-    } else if (key === "radius") {
-      const n = parseInt(val, 10); if (!isNaN(n)) opt.radius = n;
-    } else if (key === "debounce") {
-      const n = parseInt(val, 10); if (!isNaN(n)) opt.debounceMs = n;
-    } else if (key === "uid") {
-      opt.uid = String(val);
-    } else if (key === "font") {
-  opt.fontFamily = val; // keep commas/spaces (top-level split already handled)
-    } else if (key === "fontsize") {
-      const n = parseInt(val, 10);
-      opt.fontSize = Number.isFinite(n) ? n : val; // allow "16" or "16px"
-    }
-      }
+//     if (key === "class") opt.className = val;
+//     else if (key === "repeatable") opt.repeatable = Number(val) ? 1 : 0;
+//     else if (key === "broadcast")  opt.broadcast  = Number(val) ? 1 : 0;
+//     else if (key === "conductor")  opt.conductorOnly = Number(val) ? 1 : 0;
+//     else if (key === "scroll")     opt.scrollFollow  = Number(val) ? 1 : 0;
+//     else if (key === "offset") {
+//       const [x, y] = val.split(/[, ]+/).map(n => parseInt(n, 10));
+//       if (!isNaN(x)) opt.offsetX = x;
+//       if (!isNaN(y)) opt.offsetY = y;
+//     } else if (key === "radius") {
+//       const n = parseInt(val, 10); if (!isNaN(n)) opt.radius = n;
+//     } else if (key === "debounce") {
+//       const n = parseInt(val, 10); if (!isNaN(n)) opt.debounceMs = n;
+//     } else if (key === "uid") {
+//       opt.uid = String(val);
+//     } else if (key === "font") {
+//   opt.fontFamily = val; // keep commas/spaces (top-level split already handled)
+//     } else if (key === "fontsize") {
+//       const n = parseInt(val, 10);
+//       opt.fontSize = Number.isFinite(n) ? n : val; // allow "16" or "16px"
+//     }
+//       }
 
-  // Label default: uid if available else cue type prefix
-  const cueTypeFallback = cueExpr.split("(")[0] || "cue";
-  const finalLabel = label || opt.uid || cueTypeFallback;
+//   // Label default: uid if available else cue type prefix
+//   const cueTypeFallback = cueExpr.split("(")[0] || "cue";
+//   const finalLabel = label || opt.uid || cueTypeFallback;
 
-  return { cueExpr, width, height, color, label: finalLabel, opt };
-}
+//   return { cueExpr, width, height, color, label: finalLabel, opt };
+// }
 
-/**
- * Create an HTML button for a cueButton(...) SVG element.
- * - Positions relative to the provided container (score or page overlay).
- * - Hides the source SVG cue element.
- * - Debounce, repeatable, broadcast, conductor-only, font family/size.
- *
- * @param {SVGGraphicsElement} cueSvgEl  The SVG element with id="cueButton(...)"
- * @param {object} parsed                Result of parseCueButton(id)
- * @param {HTMLElement} containerEl      Target container to overlay into
- *                                       (defaults to window.scoreContainer)
- * @return {HTMLButtonElement|null}
- */
-export function createCueButtonForElement(
-  cueSvgEl,
-  parsed,
-  containerEl = window.scoreContainer
-) {
+export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window.scoreContainer) {
   if (!cueSvgEl || !parsed || !containerEl) return null;
+  const { cueExpr, opt } = parsed;
 
-  const { cueExpr, width, height, color, label, opt } = parsed;
-
-  // Hide the SVG cue element (replacement behavior)
+  // Hide the SVG cue element (replacement)
   cueSvgEl.style.visibility = "hidden";
   cueSvgEl.style.pointerEvents = "none";
 
-  // Build HTML button
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.textContent = label;
+  btn.textContent = opt.label || "";
   btn.className = "oscilla-cue-button";
   if (opt.className) btn.classList.add(opt.className);
 
-  // Pointer only (don’t capture Enter/Space; reserved for transport)
-  btn.setAttribute("tabindex", "-1");
-  btn.setAttribute("aria-hidden", "true");
+  // Keep document-level popup clearers from stealing the click
+  btn.addEventListener("mousedown", e => e.preventDefault());
+  btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); });
 
   // Style
   Object.assign(btn.style, {
     position: "absolute",
-    width: `${width}px`,
-    height: `${height}px`,
-    background: color,
+    width: `${opt.width}px`,
+    height: `${opt.height}px`,
+    background: opt.color,
     border: "1px solid rgba(0,0,0,.2)",
     borderRadius: `${opt.radius}px`,
     padding: "6px 10px",
-    fontWeight: "600",
-    fontSize:
-      opt.fontSize != null
-        ? (Number.isFinite(opt.fontSize) ? `${opt.fontSize}px` : String(opt.fontSize))
-        : "14px",
+    fontWeight: opt.fontWeight || "600",
+    fontSize: (opt.fontSize != null) ? (Number.isFinite(opt.fontSize) ? `${opt.fontSize}px` : String(opt.fontSize)) : "14px",
     fontFamily: opt.fontFamily || "system-ui, sans-serif",
+    color: opt.textColor || "",
     zIndex: "2000",
     cursor: "pointer",
     userSelect: "none",
@@ -2707,7 +2687,7 @@ export function createCueButtonForElement(
 
   containerEl.appendChild(btn);
 
-  // Positioning (relative to the container)
+  // Positioning relative to container
   const place = () => {
     const r = cueSvgEl.getBoundingClientRect();
     const c = containerEl.getBoundingClientRect();
@@ -2716,68 +2696,82 @@ export function createCueButtonForElement(
     btn.style.left = `${Math.round(left)}px`;
     btn.style.top  = `${Math.round(top)}px`;
   };
-
-  // Initial placement
   place();
 
-  // Repositioning (optional follow)
+  // Follow (optional)
   let rafId = null;
   const tick = () => { place(); rafId = requestAnimationFrame(tick); };
   if (opt.scrollFollow) rafId = requestAnimationFrame(tick);
-
-  // Keep aligned on resize
   const onResize = () => place();
   window.addEventListener("resize", onResize);
 
-  // Debounced click
+  // Toggle logic (good for audio cues)
+  const audioMatch = /^cueAudio\(\s*([^)]+)\s*\)/i.exec(cueExpr);
+  const audioFile  = audioMatch?.[1]?.trim() || null;
+  const stopCue    = audioFile ? `cueAudioStop(${audioFile})` : null;
+
+  let isActive = false;
+  const setActive = (on) => {
+    isActive = !!on;
+    btn.classList.toggle("oscilla-cue-button--active", isActive);
+    btn.classList.remove("oscilla-cue-button--flash","oscilla-cue-button--pulse","oscilla-cue-button--fade");
+    if (isActive) {
+      if (opt.activeStyle === "flash") btn.classList.add("oscilla-cue-button--flash");
+      else if (opt.activeStyle === "pulse") btn.classList.add("oscilla-cue-button--pulse");
+      else if (opt.activeStyle === "fade") btn.classList.add("oscilla-cue-button--fade");
+    }
+  };
+
+  // Debounce
   let lastClick = 0;
+
   btn.addEventListener("click", () => {
     const now = performance.now();
     if (now - lastClick < (opt.debounceMs || 300)) return;
     lastClick = now;
 
     // Conductor-only?
-    if (opt.conductorOnly && !window.isConductor) {
-      console.warn("[cueButton] Click ignored: conductor-only.");
+    if (opt.conductorOnly && !window.isConductor) return;
+
+    // Toggle stop
+    if (opt.toggle && isActive && stopCue) {
+      window.handleCueTrigger?.(stopCue, false, true);
+      setActive(false);
       return;
     }
 
-    // Execute locally
-    // window.handleCueTrigger?.(cueExpr);
-    // Force = true → bypass “already triggered” de-dup.
-    window.handleCueTrigger?.(cueExpr, /*isRemote*/ false, /*force*/ true);
-    // Broadcast (if requested)
+    // Fire main cue
+    window.handleCueTrigger?.(cueExpr, false, true);
+    if (audioFile) setActive(true); // immediate visual for audio
+    // Broadcast click intent (optional)
     if (opt.broadcast && window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-      const msg = {
-        type: "cue_button_click",
-        cueExpr,
-        uid: opt.uid || null,
-        timestamp: Date.now(),
-      };
-      window.socket.send(JSON.stringify(msg));
-    }
-
-    // Selected state (keeps visible)
-    btn.classList.add("oscilla-cue-button--selected");
-
-    // One-shot?
-    if (!opt.repeatable) {
-      btn.disabled = true;
-      btn.style.opacity = "0.7";
+      window.socket.send(JSON.stringify({ type: "cue_button_click", cueExpr, uid: opt.uid || null, timestamp: Date.now() }));
     }
   });
+
+  // Sync with audio engine (local/remote)
+  const onAudio = (ev) => {
+    if (!audioFile) return;
+    const d = ev.detail || {};
+    if (d.file !== audioFile) return;
+    if (d.state === "play") setActive(true);
+    if (d.state === "stop") setActive(false);
+  };
+  window.addEventListener("oscilla:audio", onAudio);
 
   // Cleanup
   btn._destroyCueButton = () => {
     window.removeEventListener("resize", onResize);
+    window.removeEventListener("oscilla:audio", onAudio);
     if (rafId) cancelAnimationFrame(rafId);
     btn.remove();
-    cueSvgEl.style.visibility = "";       // restore if desired
-    cueSvgEl.style.pointerEvents = "";    // restore if desired
+    cueSvgEl.style.visibility = "";
+    cueSvgEl.style.pointerEvents = "";
   };
 
   return btn;
 }
+
 
 export function assignCueButtonsIn(rootNode, containerEl) {
   if (!rootNode || !containerEl) return [];
@@ -2824,22 +2818,156 @@ export function installCueButtonSocketReceiver() {
 
 
 
-// ---- helpers
-function extractFuncInner(id, fnName) {
+// Extract inner of fnName(...) by counting parentheses
+function extractFuncInner(str, fnName) {
   const key = fnName + "(";
-  const start = id.indexOf(key);
+  const start = str.indexOf(key);
   if (start === -1) return null;
   let i = start + key.length, depth = 1;
-  for (; i < id.length; i++) {
-    const ch = id[i];
+  for (; i < str.length; i++) {
+    const ch = str[i];
     if (ch === "(") depth++;
     else if (ch === ")") {
       depth--;
-      if (depth === 0) return id.slice(start + key.length, i);
+      if (depth === 0) return str.slice(start + key.length, i);
     }
   }
   return null;
 }
+
+// Simple boolean parser for opts
+function parseBool(v) {
+  return /^(1|true|on|yes)$/i.test(String(v).trim());
+}
+
+
+
+export function parseCueButton(cueId) {
+  console.log("\n[parseCueButton] called with:", cueId);
+
+  // 1) pull inner of cueButton(...)
+  const inner = extractFuncInner(cueId, "cueButton");
+  if (!inner) {
+    console.warn("[parseCueButton] ❌ extractFuncInner failed for cueButton()");
+    return null;
+  }
+  console.log("[parseCueButton] inner:", inner);
+
+  // 2) try to find _opts(...) INSIDE inner (preferred form)
+  let cueExpr = inner.trim();
+  let optsInner = null;
+
+  const insideStart = inner.lastIndexOf("_opts(");
+  if (insideStart !== -1) {
+    const insideSub = inner.slice(insideStart);             // "_opts(..."
+    optsInner = extractFuncInner(insideSub, "_opts");       // "key:...,key:..."
+    cueExpr = inner.slice(0, insideStart).trim();           // everything before _opts(
+  }
+
+  // 3) if not found, try OUTSIDE (i.e., after ")")
+  if (!optsInner) {
+    const outerStart = cueId.lastIndexOf("_opts(");
+    if (outerStart !== -1) {
+      const outerSub = cueId.slice(outerStart);             // slice from that _opts(
+      optsInner = extractFuncInner(outerSub, "_opts");      // contents
+      // cueExpr remains as 'inner'
+      console.log("[parseCueButton] ⚠️ _opts found OUTSIDE cueButton(...) — supported but consider moving it inside.");
+    }
+  }
+
+  console.log("[parseCueButton] cueExpr:", cueExpr);
+  console.log("[parseCueButton] optsInner:", optsInner);
+
+  if (!cueExpr) {
+    console.warn("[parseCueButton] ⚠️ Missing cue expression in:", cueId);
+    return null;
+  }
+
+  // 4) defaults
+  const opt = {
+    width: 100, height: 100,
+    color: "#222", textColor: null,
+    label: null, fontFamily: null, fontSize: null, fontWeight: null,
+    radius: 8, offsetX: 0, offsetY: 0,
+    debounceMs: 300,
+    toggle: false, activeStyle: "none",
+    className: null, uid: null,
+    broadcast: 0, conductorOnly: 0, scrollFollow: 0,
+  };
+
+  // 5) parse key:value pairs
+  if (optsInner) {
+    let kvs;
+    try {
+      kvs = splitTopLevel(optsInner, ",");
+    } catch (err) {
+      console.error("[parseCueButton] splitTopLevel failed; fallback split:", err);
+      kvs = optsInner.split(/,(?![^()]*\))/);
+    }
+
+    console.log("[parseCueButton] splitTopLevel result:", kvs);
+
+    kvs.forEach(kvRaw => {
+      const kv = kvRaw.trim(); if (!kv) return;
+      const ix = kv.indexOf(":"); if (ix < 0) return;
+      const key = kv.slice(0, ix).trim().toLowerCase();
+      let val = kv.slice(ix + 1).trim().replace(/^["']|["']$/g, "");
+      console.log(`[parseCueButton] kv → key: "${key}" val: "${val}"`);
+
+      switch (key) {
+        case "size": {
+          if (/^\d+(x\d+)?$/.test(val)) {
+            if (val.includes("x")) {
+              const [w, h] = val.split("x").map(Number);
+              if (!isNaN(w) && !isNaN(h)) { opt.width = w; opt.height = h; }
+            } else {
+              const n = Number(val);
+              if (!isNaN(n)) { opt.width = n; opt.height = n; }
+            }
+          }
+          break;
+        }
+        case "color":      opt.color = val; break;
+        case "textcolor":  opt.textColor = val; break;
+        case "label":      opt.label = val; break;
+        case "font":       opt.fontFamily = val; break;
+        case "fontsize":   opt.fontSize = /^\d+(\.\d+)?$/.test(val) ? Number(val) : val; break;
+        case "fontweight": opt.fontWeight = val; break;
+        case "radius":     if (!isNaN(+val)) opt.radius = +val; break;
+        case "offset": {
+          const [x, y] = val.split(/[, ]+/);
+          if (!isNaN(+x)) opt.offsetX = +x;
+          if (!isNaN(+y)) opt.offsetY = +y;
+          break;
+        }
+        case "debounce":   if (!isNaN(+val)) opt.debounceMs = +val; break;
+        case "toggle":     opt.toggle = /^(1|true|on|yes)$/i.test(val); break;
+        case "active":     opt.activeStyle = val.toLowerCase(); break;
+        case "class":      opt.className = val; break;
+        case "uid":        opt.uid = val; break;
+        case "broadcast":  opt.broadcast = /^(1|true|on|yes)$/i.test(val) ? 1 : 0; break;
+        case "conductor":  opt.conductorOnly = /^(1|true|on|yes)$/i.test(val) ? 1 : 0; break;
+        case "scroll":     opt.scrollFollow = /^(1|true|on|yes)$/i.test(val) ? 1 : 0; break;
+        default:
+          console.warn("[parseCueButton] ⚠️ Unhandled key:", key, "=", val);
+      }
+    });
+  } else {
+    console.warn("[parseCueButton] ⚠️ No _opts(...) found in:", cueId);
+  }
+
+  if (!opt.label) {
+    const type = cueExpr.split("(")[0] || "cue";
+    opt.label = opt.uid || type;
+  }
+
+  console.log("[parseCueButton] ✅ Parsed result:", { cueExpr, opt });
+  return { cueExpr, opt };
+}
+
+
+
+
 
 // ---- parser
 export function parseCueNav(id) {

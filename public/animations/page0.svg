@@ -21,9 +21,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="0.295"
-     inkscape:cx="-240.67797"
-     inkscape:cy="-537.28813"
+     inkscape:zoom="0.59"
+     inkscape:cx="1066.1017"
+     inkscape:cy="533.05085"
      inkscape:window-width="1854"
      inkscape:window-height="1011"
      inkscape:window-x="0"
@@ -32,6 +32,12 @@
      inkscape:current-layer="svg5125" />
   <defs
      id="defs5129">
+    <rect
+       x="663.24153"
+       y="209.32865"
+       width="117.51854"
+       height="49.251854"
+       id="rect252081" />
     <inkscape:path-effect
        effect="spiro"
        id="path-effect49990"
@@ -143,29 +149,29 @@
      transform="translate(-22352.326,-616.72426)"><tspan
        x="22360.326"
        y="698.08252"
-       id="tspan91807">cueButton(cuePage(loop(page3</tspan><tspan
+       id="tspan252124">cueButton(cuePage(loop(page3</tspan><tspan
        x="22360.326"
        y="718.08253"
-       id="tspan91809">:1,rand(page0:2,page1:2,page</tspan><tspan
+       id="tspan252126">:1,rand(page0:2,page1:2,page</tspan><tspan
        x="22360.326"
        y="738.08253"
-       id="tspan91811">2:2),page2:3)),</tspan><tspan
+       id="tspan252128">2:2),page2:3)),</tspan><tspan
        x="22360.326"
        y="758.08253"
-       id="tspan91813">166x100,green,
+       id="tspan252130">166x100,green,
 </tspan><tspan
        x="22360.326"
        y="778.08253"
-       id="tspan91815">_class(myBtn),_broadcast(1),</tspan><tspan
+       id="tspan252132">_class(myBtn),_broadcast(1),</tspan><tspan
        x="22360.326"
        y="798.08253"
-       id="tspan91817">_conductor(0),_repeatable(1)</tspan><tspan
+       id="tspan252134">_conductor(0),_repeatable(1)</tspan><tspan
        x="22360.326"
        y="818.08253"
-       id="tspan91819">,_scroll(0),_uid(random </tspan><tspan
+       id="tspan252136">,_scroll(0),_uid(random </tspan><tspan
        x="22360.326"
        y="838.08253"
-       id="tspan91821">score loop))
+       id="tspan252138">score loop))
 </tspan></text>
   <text
      xml:space="preserve"
@@ -215,4 +221,14 @@
        x="985.96338"
        y="969.79614"
        style="stroke-width:1.75042">p3</tspan></text>
+  <text
+     xml:space="preserve"
+     id="cueButton(cueNav(goto(page0)),
+  _opts(size:&quot;220x150&quot;, color:&quot;orange&quot;,
+        label:&quot;Jump into page mode to see examples of cueNav&quot;,
+        font:&quot;Arial Black&quot;, fontsize:20))"
+     style="font-size:32px;font-family:FreeMono;-inkscape-font-specification:FreeMono;white-space:pre;shape-inside:url(#rect252081);fill:#008000"><tspan
+       x="663.24219"
+       y="238.92812"
+       id="tspan252140">goto0</tspan></text>
 </svg>

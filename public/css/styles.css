@@ -1539,7 +1539,12 @@ padding: 20px;
   right: 4px;
 }
 
+.oscilla-cue-button--active { outline: 2px solid #e33; }
 
-.oscilla-cue-button { transition: box-shadow .15s, border-color .15s; }
-.oscilla-cue-button:hover { box-shadow: 0 2px 8px rgba(0,0,0,.2); }
-.oscilla-cue-button--selected { border: 2px solid red !important; }
+@keyframes osc-flash { 0%,100% { filter: none; } 50% { filter: brightness(1.6); } }
+@keyframes osc-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+@keyframes osc-fade  { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
+
+.oscilla-cue-button--flash.oscilla-cue-button--active { animation: osc-flash 0.9s ease-in-out infinite; }
+.oscilla-cue-button--pulse.oscilla-cue-button--active { animation: osc-pulse 1.2s ease-in-out infinite; }
+.oscilla-cue-button--fade.oscilla-cue-button--active  { animation: osc-fade 1.2s ease-in-out infinite; }
