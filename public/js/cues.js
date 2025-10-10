@@ -29,6 +29,7 @@ export const cueHandlers = {
   cuePage: handlePageCue,
   cueNav: handleCueNav,  
   cueAudio: handleAudioCue,
+  cueAudioStop: handleAudioStopCue,
   cueVideo: handleVideoCue,
   cueP5: handleP5Cue,
   cueOsc: handleOscCue,
@@ -41,6 +42,7 @@ export const cueHandlers = {
   cueRepeat: handleRepeatCue,
   cueTraverse: handleTraverseCue,
   "c-t": handleTraverseCue,
+  cueText: handleTextCue,
 };
 
 // 🔁 Main dispatcher function for cue triggers
@@ -126,6 +128,7 @@ export function handleCueTrigger(cueId, isRemote = false, force = false) {
 
       // Normal single page cue (legacy behaviour)
       let animDuration = Number(cueParams.dur);
+    
       if (isNaN(animDuration) || animDuration < 0) animDuration = 0;
       const pageName = cueParams.choice || cueId.match(/cuePage\(([^)]+)\)/)?.[1];
       if (!pageName) {
@@ -140,6 +143,19 @@ export function handleCueTrigger(cueId, isRemote = false, force = false) {
       const parsed = parseCueNav(cueId);
       return handleCueNav(parsed);
     }   
+
+    else if (cueId.startsWith("cueAudioStop(")) {
+      const match = cueId.match(/^cueAudioStop\(([^)]+)\)/);
+      const file = match?.[1]?.trim();
+      if (file) {
+        console.log(`[CUE] 🔻 cueAudioStop for ${file}`);
+        stopAudioCue(file);  // uses the helper from your audio module
+        const ev = new CustomEvent("oscilla:audio", { detail: { file, state: "stop" }});
+        window.dispatchEvent(ev);
+      }
+      return;
+    }
+
 
 
  else {
@@ -2277,6 +2293,381 @@ document.getElementById("stop-audio-button").addEventListener("click", () => {
   }
 });
 
+// 🎧 Handle cueAudioStop(filename)
+export function handleAudioStopCue(cueId, cueParams = {}) {
+  // Extract the filename argument from cueId if not in params
+  let match = cueId.match(/^cueAudioStop\(([^)]+)\)/);
+  const filename = (match?.[1] || cueParams.file || "").trim();
+
+  if (!filename) {
+    console.warn(`[AUDIO] cueAudioStop missing filename: ${cueId}`);
+    return;
+  }
+
+  console.log(`[AUDIO] 🔻 cueAudioStop: ${filename}`);
+  stopAudioCue(filename);
+
+  // Optional: inform UI and other clients
+  const ev = new CustomEvent("oscilla:audio", { detail: { file: filename, state: "stop" } });
+  window.dispatchEvent(ev);
+}
+
+
+// Stop a specific audio cue by filename, with optional fade-out
+export function stopAudioCue(filename, fadeOutSec = 1.5) {
+  if (!activeAudioCues.has(filename)) return;
+
+  const { wavesurfer } = activeAudioCues.get(filename);
+  if (!wavesurfer) return;
+
+  console.log(`[AUDIO] 🔻 Stopping single cue: ${filename} (fade-out: ${fadeOutSec}s)`);
+
+  try {
+    const initialVol = wavesurfer.getVolume();
+    const steps = 20; // how many volume steps
+    const intervalMs = (fadeOutSec * 1000) / steps;
+    const stepVol = initialVol / steps;
+
+    let currentStep = 0;
+    const fadeInterval = setInterval(() => {
+      const newVol = Math.max(0, initialVol - stepVol * currentStep);
+      wavesurfer.setVolume(newVol);
+      currentStep++;
+
+      if (currentStep >= steps) {
+        clearInterval(fadeInterval);
+        wavesurfer.pause();
+        wavesurfer.stop();
+        wavesurfer.destroy();
+        activeAudioCues.delete(filename);
+        console.log(`[AUDIO] ✅ Fade-out complete and stopped: ${filename}`);
+      }
+    }, intervalMs);
+  } catch (err) {
+    console.warn(`[AUDIO] ❌ Error fading/stopping ${filename}:`, err);
+    try { wavesurfer.destroy(); } catch {}
+    activeAudioCues.delete(filename);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+
+// import anime from "animejs";
+
+/**
+ * handleTextCue(cueParams)
+ * ------------------------
+ * Displays timed text as an HTML overlay above the SVG score.
+ */
+export async function handleTextCue(cueId, cueParams = {}) {
+  console.log("[handleTextCue] called:", cueId, cueParams);
+
+  // Support old (single-param) style just in case
+  if (typeof cueId === "object" && !cueParams.choice) {
+    cueParams = cueId;
+  }
+
+  try {
+    const clean = v => (typeof v === "string" ? v.replace(/^"|"$/g, "") : v);
+
+    // Unescape any backslash-escaped quotes from SVG IDs
+    if (typeof cueParams.choice === "string") {
+      cueParams.choice = cueParams.choice.replace(/\\"/g, '"');
+    }
+
+    const {
+      choice,
+      speed = 1,
+      deviation = 0,
+      anim = "fade",
+      loop = 1,
+      next = null,
+      pos = "center",
+      opts = {},
+    } = Object.fromEntries(Object.entries(cueParams).map(([k, v]) => [k, clean(v)]));
+
+      // --------------------------------------------------------
+      // 🧱 CREATE / REUSE CONTAINER
+      // --------------------------------------------------------
+      // 🧱 CREATE / REUSE CONTAINER — now unique per cueId
+    let container = document.getElementById(`cueText-${cueId}`);
+    if (!container) {
+      container = document.createElement("div");
+      container.id = `cueText-${cueId}`;
+      document.body.appendChild(container);
+    }
+
+    Object.assign(container.style, {
+      position: "absolute",
+      zIndex: 9999,
+      pointerEvents: "none",
+      color: opts.color || "black",
+      fontFamily: opts.font || "sans-serif",
+      fontSize: (opts.fontsize ? `${opts.fontsize}px` : "32px"),
+      textAlign: opts.align || "center",
+      textShadow: opts.textshadow || "0 0 10px rgba(0,0,0,0.6)",
+      transition: "opacity 0.3s ease",
+      opacity: 1,
+      background: opts.bg || "transparent",
+      padding: opts.padding !== undefined ? `${Number(opts.padding)}px` : "10px",
+      borderRadius: opts.radius !== undefined ? `${Number(opts.radius)}px` : "8px",
+      backdropFilter: opts.blur ? `blur(${Number(opts.blur)}px)` : "none",
+    });
+
+
+    // --------------------------------------------------------
+    // 🎯 POSITION HANDLING (preset, coordinates, or SVG anchor)
+    // --------------------------------------------------------
+    const posVal = (pos || "").toString().trim();
+
+    // 1️⃣ default: center
+    let left = "50%";
+    let top = "50%";
+    let transform = "translate(-50%, -50%)";
+
+    // 2️⃣ if it matches an SVG element ID, anchor to that element
+    if (posVal && !["center", "top", "bottom", "left", "right"].includes(posVal.toLowerCase()) && !posVal.includes(",")) {
+      const target = document.getElementById(posVal);
+      if (target) {
+        const svg = target.closest("svg");
+        if (svg) {
+          const rect = target.getBoundingClientRect();
+          const svgRect = svg.getBoundingClientRect();
+
+          // calculate center of the target element in screen coords
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+
+          left = `${cx}px`;
+          top = `${cy}px`;
+          transform = "translate(-50%, -50%)";
+
+          console.log(`[cueText] 🧭 Anchored to element #${posVal} at (${cx}, ${cy})`);
+        }
+      }
+    }
+
+    // 3️⃣ named presets
+    else {
+      const posLower = posVal.toLowerCase();
+      if (posLower === "top") top = "10%";
+      else if (posLower === "bottom") top = "90%";
+      else if (posLower === "left") { left = "10%"; transform = "translate(0, -50%)"; }
+      else if (posLower === "right") { left = "90%"; transform = "translate(-100%, -50%)"; }
+      else if (posLower.includes(",")) {
+        const [x, y] = posLower.split(",").map(s => s.trim());
+        left = x.endsWith("%") ? x : `${x}px`;
+        top = y.endsWith("%") ? y : `${y}px`;
+      }
+    }
+
+    // apply computed styles
+    Object.assign(container.style, { left, top, transform });
+
+
+      // --------------------------------------------------------
+      // 🧾 PARSE SOURCE (file, inline, or words[...])
+      // --------------------------------------------------------
+      let entries = [];
+      if (Array.isArray(choice)) {
+        entries = choice.map(t => ({ text: t, dur: null }));
+      } 
+      else if (typeof choice === "string" && choice.endsWith(".txt")) {
+        const res = await fetch(choice);
+        const text = await res.text();
+        entries = text.split(/\r?\n/).filter(Boolean).map(line => ({ text: line, dur: null }));
+      } 
+      else if (typeof choice === "string" && choice.includes("words[")) {
+        console.log("[cueText DEBUG] raw choice:", choice);
+        console.log("[cueText DEBUG] typeof choice:", typeof choice);
+        console.log("[cueText DEBUG] choice literal chars:", Array.from(choice).join("|"));
+        entries = parseWordsSource(choice.trim());
+      }
+      else if (typeof choice === "string") {
+        entries = [{ text: choice, dur: null }];
+      }
+      
+      console.log("[cueText] parsed entries:", entries);
+
+      if (!entries.length) {
+        console.warn("[cueText] No text content found.");
+        return;
+      }
+
+      // --------------------------------------------------------
+      // 🎲 RANDOMIZE ORDER if requested (_random(1))
+      // --------------------------------------------------------
+      if (cueParams.random && Array.isArray(entries) && entries.length > 1) {
+        console.log("[cueText] 🎲 Randomizing line order");
+        entries.sort(() => Math.random() - 0.5);
+      }
+
+      // --------------------------------------------------------
+      // ⏱️ COMPUTE DURATIONS
+      // --------------------------------------------------------
+      const baseDur = 1 / speed;
+      const avgLen = entries.reduce((a, b) => a + b.text.length, 0) / entries.length;
+
+      // uniform _dur from cue parameters (seconds per word)
+      const uniformDur = cueParams.dur ? Number(cueParams.dur) : null;
+
+      entries.forEach(e => {
+        if (uniformDur) {
+          e.dur = uniformDur;
+        } else if (e.dur) {
+          // keep explicit per-word duration
+          return;
+        } else {
+          // default: length-weighted based on speed
+          const lenFactor = e.text.length / avgLen;
+          const weight = 1 + (lenFactor - 1) * deviation;
+          e.dur = baseDur * weight;
+        }
+      });
+
+
+      // --------------------------------------------------------
+      // 🎬 ANIMATION LOOP
+      // --------------------------------------------------------
+      let loopCount = 0;
+      let running = true;
+
+      while (running) {
+        for (let i = 0; i < entries.length; i++) {
+          const { text, dur } = entries[i];
+          const ms = dur * 1000;
+
+          // 💤 handle rests
+          if (text === "rest" || text === "r") {
+            container.textContent = "";
+            await delay(ms);
+            continue;
+          }
+
+          // 🎭 ANIMATION MODES
+          if (anim === "fade") {
+            // total cycle = dur exactly
+            const fadeTime = Math.min(ms * 0.25, 400); // fade in/out = 25% each, max 400 ms
+            const holdTime = Math.max(0, ms - 2 * fadeTime);
+
+            container.style.opacity = 0;
+            container.textContent = text;
+
+            // fade in
+            await anime({
+              targets: container,
+              opacity: [0, 1],
+              duration: fadeTime,
+              easing: "easeOutQuad"
+            }).finished;
+
+            // hold visible
+            await delay(holdTime);
+
+            // fade out
+            await anime({
+              targets: container,
+              opacity: [1, 0],
+              duration: fadeTime,
+              easing: "easeInQuad"
+            }).finished;
+          }
+
+          else if (anim === "typewriter") {
+            // ensure full text renders exactly within dur
+            const perChar = ms / text.length;
+            container.textContent = "";
+
+            for (let j = 0; j < text.length; j++) {
+              container.textContent += text[j];
+              await delay(perChar);
+            }
+
+            // small pause before next word (so total ≈ dur)
+            // optional: await delay(perChar * 2);
+          }
+
+          else {
+            // plain
+            container.textContent = text;
+            await delay(ms);
+          }
+        }
+
+        loopCount++;
+        if (loop > 0 && loopCount >= loop) running = false;
+      }
+
+
+      // --------------------------------------------------------
+      // 🧹 END ACTIONS
+      // --------------------------------------------------------
+      container.textContent = "";
+      if (next) triggerCueById(next);
+
+    } catch (err) {
+      console.error("[cueText] Error:", err);
+    }
+}
+
+
+// --------------------------------------------------------
+// 🔍 SUPPORT FUNCTIONS
+// --------------------------------------------------------
+
+function delay(ms) {
+  return new Promise(res => setTimeout(res, ms));
+}
+function parseWordsSource(input) {
+
+  if (!input) return [];
+
+  // 🧹 unescape any escaped quotes from XML id parsing
+  input = input.replace(/\\"/g, '"');
+  console.log("[parseWordsSource DEBUG] input raw:", input);
+
+
+
+  // Strip wrapper
+  let inner = input
+    .replace(/^words\[/i, "")
+    .replace(/\]$/, "")
+    .trim();
+  console.log("[parseWordsSource DEBUG] inner string:", inner);
+
+  // Split on commas not inside quotes
+  const rawItems = inner
+    .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  const entries = rawItems.map(item => {
+    const m = item.match(/^"?([^":]+?)"?\s*:\s*([\d.]+)?$/);
+    let text, dur;
+
+    if (m) {
+      text = m[1];
+      dur = m[2] ? parseFloat(m[2]) : null;
+    } else {
+      text = item.replace(/^"|"$/g, "").trim();
+      dur = null;
+    }
+
+    if (/^r(est)?$/i.test(text)) text = "rest";
+    return { text, dur };
+  });
+
+  console.log("[parseWordsSource] inner:", inner, "entries:", entries);
+  return entries;
+}
+
+
+
+
+
+
+
 
 
 
@@ -2503,13 +2894,43 @@ export function parseCueParams(cueId) {
     }
   }
 
-  // --- Parse remaining _key(value) pairs
-  const regex = /_([a-zA-Z0-9]+)\(([^)]+)\)/g;
+  // --- Parse remaining _key(value) pairs, including nested _opts(...)
+  const regex = /_([a-zA-Z0-9]+)\(([\s\S]*?)\)/g; // ✅ [\s\S]*? handles multi-line
   let match;
   while ((match = regex.exec(rest)) !== null) {
     const [, key, value] = match;
-    cueParams[key] = isNaN(value) ? value.trim() : parseFloat(value);
+
+if (key === "opts") {
+  const rawOpts = match[2];
+
+  // Match key:value pairs robustly — allows quoted strings, numbers, rgba(), etc.
+  const kvRegex = /([\w-]+)\s*:\s*(("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|rgba?\([^)]*\)|[^,]+))/g;
+  const obj = {};
+  let m;
+
+  while ((m = kvRegex.exec(rawOpts)) !== null) {
+    const kRaw = m[1].trim().toLowerCase();
+    let vRaw = m[2].trim();
+
+    // Strip surrounding quotes
+    vRaw = vRaw.replace(/^["']|["']$/g, "");
+
+    // Convert to number if numeric and not rgba()
+    if (!/^rgba?\(/i.test(vRaw) && !isNaN(vRaw) && vRaw !== "") {
+      vRaw = parseFloat(vRaw);
+    }
+
+    obj[kRaw] = vRaw;
   }
+
+  cueParams.opts = obj;
+}
+ else {
+      cueParams[key] = isNaN(value) ? value.trim() : parseFloat(value);
+    }
+  }
+
+
 
   return { type, cueParams, cleanedId: cueId };
 }
@@ -2852,17 +3273,50 @@ export function parseCueButton(cueId) {
     return null;
   }
   console.log("[parseCueButton] inner:", inner);
+// 2) try to find _opts(...) INSIDE inner (preferred form)
+let cueExpr = inner.trim();
+let optsInner = null;
 
-  // 2) try to find _opts(...) INSIDE inner (preferred form)
-  let cueExpr = inner.trim();
-  let optsInner = null;
-
-  const insideStart = inner.lastIndexOf("_opts(");
-  if (insideStart !== -1) {
-    const insideSub = inner.slice(insideStart);             // "_opts(..."
-    optsInner = extractFuncInner(insideSub, "_opts");       // "key:...,key:..."
-    cueExpr = inner.slice(0, insideStart).trim();           // everything before _opts(
+// PASS 1 — Detect inner cue _opts(...) (like inside cueText)
+const lastInnerOpts = inner.lastIndexOf("_opts(");
+if (lastInnerOpts !== -1) {
+  // find closing parenthesis for this _opts(
+  let depth = 0, endIndex = -1;
+  for (let i = lastInnerOpts; i < inner.length; i++) {
+    const ch = inner[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") {
+      depth--;
+      if (depth === 0) {
+        endIndex = i;
+        break;
+      }
+    }
   }
+
+  // if the _opts ends BEFORE the final parenthesis of the cueButton(...)
+  // treat it as inner cue _opts — leave intact
+  const lastParen = inner.lastIndexOf(")");
+  if (endIndex !== -1 && endIndex < lastParen) {
+    cueExpr = inner.trim(); // keep cue intact
+  }
+}
+
+// PASS 2 — Detect outer button _opts(...) (after cueText(...))
+const outerStart = cueId.lastIndexOf("_opts(");
+if (outerStart !== -1) {
+  const sub = cueId.slice(outerStart);
+  optsInner = extractFuncInner(sub, "_opts");
+  if (outerStart > cueId.lastIndexOf(")")) {
+    // cleanly remove outer opts from cueExpr
+    cueExpr = cueId.slice(0, outerStart).trim();
+  }
+}
+
+console.log("[parseCueButton] cueExpr:", cueExpr);
+console.log("[parseCueButton] optsInner:", optsInner);
+
+
 
   // 3) if not found, try OUTSIDE (i.e., after ")")
   if (!optsInner) {
@@ -3138,3 +3592,6 @@ export async function handleCueNav(parsed) {
 
   dbg("✓ done", { action, argExpr, pageState: window.pageState?.mode, isCuePagePlaylistActive: window.isCuePagePlaylistActive });
 }
+
+
+console.log("[DEBUG] handleTextCue registered:", typeof handleTextCue);
