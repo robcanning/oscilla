@@ -426,16 +426,6 @@ export function dismissPauseCountdown(forceNoResume = false, receivedFromServer 
   resumePlayback(receivedFromServer);
 }
 
-// export function hidePauseCountdownUI() {
-//   const pauseCountdown = document.getElementById("pause-countdown");
-//   if (pauseCountdown) {
-//     pauseCountdown.classList.add("hidden");
-//     pauseCountdown.style.display = "none";
-//     const pauseTime = document.getElementById("pause-time");
-//     if (pauseTime) pauseTime.textContent = "";
-//     console.log("[DEBUG] Pause countdown UI hidden.");
-//   }
-// }
 
 export function clearPauseTimers() {
   if (window.pauseCountdownInterval) {
@@ -457,29 +447,41 @@ export function clearPauseTimers() {
 export function resumePlayback(receivedFromServer = false) {
   console.log("[DEBUG] Resuming playback after countdown dismissal.");
 
-  if (!isNaN(window.playheadX) && window.playheadX > 0) {
+  // ✅ Allow resuming even if playheadX = 0 (only reject NaN)
+  if (!Number.isNaN(window.playheadX)) {
     console.log(`[DEBUG] Resuming from playheadX: ${window.playheadX}`);
   } else {
     console.error(`[ERROR] Invalid playheadX: ${window.playheadX}. Aborting resume.`);
     return;
   }
 
+  // ✅ Refresh UI state
   window.updatePosition?.();
   window.updateSeekBar?.();
   window.updateStopwatch?.();
 
- window.isPlaying = true;
-window.animationPaused = false;
-window.ignoreSyncPlayback = false;
-window.togglePlayButton?.();
-console.log("[DEBUG] Calling startAnimation() from resumePlayback()");
-window.startAnimation?.();
-window.startStopwatch?.();
+  // ✅ Reset animation clock baseline to avoid delta jumps
+  window.lastAnimationFrameTime = null;
 
-  
+  // ✅ Use the canonical startPlayback() for a full smooth resume
+  if (typeof window.startPlayback === "function") {
+    console.log("[DEBUG] Calling startPlayback() from resumePlayback()");
+    window.startPlayback();
+  } else {
+    // fallback (legacy)
+    window.isPlaying = true;
+    window.animationPaused = false;
+    window.ignoreSyncPlayback = false;
+    window.togglePlayButton?.();
+    console.log("[DEBUG] Calling startAnimation() from resumePlayback()");
+    window.startAnimation?.();
+    window.startStopwatch?.();
+  }
+
   preventAccidentalPauses();
   handleWebSocketSync(receivedFromServer);
 }
+
 
 /**
  * Blocks accidental cue retriggers and pause loops after resume.

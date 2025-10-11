@@ -700,38 +700,46 @@ case "osc_scale": {
         console.log(`[DEBUG] Sent OSC cue: /cue/trigger ${cueNumber}`);
         break;
 
-case "jump":
+case "jump": {
   console.log(`[DEBUG] 🏃 Handling jump request. Received playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
 
   if (!isNaN(data.playheadX) && data.playheadX >= 0) {
     // ✅ Trust absolute pixel value
     sharedState.playheadX = data.playheadX;
 
-    // Optionally update elapsedTime (can be skipped if syncing by pixel only)
+    // ✅ Update elapsedTime if valid
     if (!isNaN(data.elapsedTime)) {
       sharedState.elapsedTime = data.elapsedTime;
     }
 
-    console.log(`[DEBUG] ✅ Jump applied to server state: playheadX=${sharedState.playheadX}`);
+    // ✅ Preserve play state if we were already playing
+    if (sharedState.isPlaying) {
+      console.log("[SERVER] 🏃 Jump occurred during playback — keeping isPlaying = true");
+    } else {
+      console.log("[SERVER] 💤 Jump received while paused — maintaining paused state");
+    }
 
+    // ✅ Build jump message (no isPlaying flip)
     const jumpMessage = JSON.stringify({
       type: "jump",
       playheadX: sharedState.playheadX,
       elapsedTime: sharedState.elapsedTime,
+      isPlaying: sharedState.isPlaying, // 🔁 explicitly include so clients know not to pause
     });
 
-    // ✅ Broadcast only to other clients
+    // ✅ Send to all other clients
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN && client !== ws) {
         client.send(jumpMessage);
       }
     });
 
-    // ⛔️ Don't call broadcastState() here to avoid overriding with center-based local view
+    // ⛔️ No broadcastState() here — prevents redundant sync
   } else {
     console.warn("[WARNING] ❌ Invalid playheadX received in jump. Ignoring.");
   }
   break;
+}
 
 
 
@@ -822,7 +830,7 @@ const updateLoop = () => {
   } else {
     //  console.log("[DEBUG] Skipping updates; playback is paused.");
   }
-  setTimeout(updateLoop, 1400);
+  setTimeout(updateLoop, 250);
 };
 
 updateLoop();

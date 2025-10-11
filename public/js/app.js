@@ -2753,6 +2753,12 @@ window.animate = async (currentTime) => {
   // stopAnimation() cancels the loop when playback stops, preventing redundant frame updates.
 
 window.startAnimation = () => {
+
+  console.log("[DEBUG] startAnimation check:",
+  "animationPaused=", window.animationPaused,
+  "animationStopped=", window.animationStopped,
+  "isSeeking=", window.isSeeking);
+
   if (!window.isPlaying || window.animationPaused || window.isSeeking) {
     console.log("[DEBUG] Animation paused, stopped, or seeking, skipping start.");
     return;
@@ -3063,6 +3069,24 @@ window.startAnimation = () => {
       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
         elapsedTime: window.elapsedTime }));
     }
+
+    /* ✅ Ignore the next sync broadcast — it's our own jump being echoed */
+    window.ignoreNextSync = true;
+
+    /* ✅ Prevent server from overriding our new position for a short window */
+    window.recentlyRecalculatedPlayhead = true;
+    setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
+
+    /* ✅ Ensure local animation keeps running if playback is active */
+    if (window.isPlaying) {
+      console.log("[DEBUG] Freewheel continue after seek");
+      window.animationPaused = false;
+      window.isSeeking = false;
+
+      window.startAnimation?.();
+      window.startStopwatch?.();
+    }
+
   };
 
 
@@ -3104,6 +3128,24 @@ window.startAnimation = () => {
       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
         elapsedTime: window.elapsedTime }));
     }
+
+    /* ✅ Ignore the next sync broadcast — it's our own jump being echoed */
+    window.ignoreNextSync = true;
+
+    /* ✅ Prevent server from overriding our new position for a short window */
+    window.recentlyRecalculatedPlayhead = true;
+    setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
+
+    /* ✅ Ensure local animation keeps running if playback is active */
+    if (window.isPlaying) {
+      console.log("[DEBUG] Freewheel continue after seek");
+      window.animationPaused = false;
+      window.isSeeking = false;
+
+      window.startAnimation?.();
+      window.startStopwatch?.();
+    }
+
   };
 
 
@@ -3860,11 +3902,11 @@ window.startPlayback = function startPlayback() {
     window.speedMultiplier = getSpeedForPosition(window.playheadX);
     window.updateSpeedDisplay?.();
 
-// Force start animation loop (even if already partially running)
-if (typeof window.animate === "function") {
-  cancelAnimationFrame(window.animationFrameId);
-  window.animationFrameId = requestAnimationFrame(window.animate);
-}
+    // Force start animation loop (even if already partially running)
+    if (typeof window.animate === "function") {
+      cancelAnimationFrame(window.animationFrameId);
+      window.animationFrameId = requestAnimationFrame(window.animate);
+    }
 
 
     window.startStopwatch?.();
