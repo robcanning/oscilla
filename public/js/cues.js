@@ -43,7 +43,60 @@ export const cueHandlers = {
   cueTraverse: handleTraverseCue,
   "c-t": handleTraverseCue,
   cueText: handleTextCue,
+  cueSeq: handleSeqCue,
+
 };
+
+// 🔁 Allow re-triggering of cues with the given UID or cueId
+// export function resetCueTrigger(cueIdOrUid) {
+//   if (!window.cuesTriggered) return;
+
+//   const key = cueIdOrUid.trim();
+//   if (window.cuesTriggered.has(key)) {
+//     window.cuesTriggered.delete(key);
+//     console.log(`[cueReset] ♻️ Reset cue trigger: ${key}`);
+//   }
+// } 
+
+// Emulate the rewind reset: clear every gating structure we might use
+export function resetCueTrigger() {
+  const cleared = [];
+  if (window.triggeredCues?.clear) { window.triggeredCues.clear(); cleared.push("triggeredCues"); }
+  if (window.cuesTriggered?.clear) { window.cuesTriggered.clear(); cleared.push("cuesTriggered"); }
+  if (window._cueInsideState?.clear) { window._cueInsideState.clear(); cleared.push("_cueInsideState"); }
+  if (window._cueDebounce?.clear) { window._cueDebounce.clear(); cleared.push("_cueDebounce"); }
+  console.log(`[rewindReset] cleared: ${cleared.join(", ") || "nothing"}`);
+}
+
+function waitForCueComplete(targetId, timeout = 60000) {
+  return new Promise(resolve => {
+    const onDone = (ev) => {
+      const { id } = ev.detail || {};
+      if (!id) return;
+      if (id.includes(targetId)) {
+        window.removeEventListener("oscilla:cueComplete", onDone);
+        resolve();
+      }
+    };
+    window.addEventListener("oscilla:cueComplete", onDone);
+    // safety timeout (so it doesn't hang forever)
+    setTimeout(() => {
+      window.removeEventListener("oscilla:cueComplete", onDone);
+      resolve();
+    }, timeout);
+  });
+}
+
+
+// export function resetAllCueTriggers() {
+//   if (window.cuesTriggered) {
+//     // window.cuesTriggered.clear();
+//     triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
+//     window._cueInsideState?.clear(); 
+
+//     console.log("[cueReset] ♻️ Cleared all triggered cues (global reset)");
+//   }
+// }
 
 // 🔁 Main dispatcher function for cue triggers
 export function handleCueTrigger(cueId, isRemote = false, force = false) {
@@ -172,6 +225,35 @@ export function handleCueTrigger(cueId, isRemote = false, force = false) {
     }
   }
 }
+
+
+
+// =========================
+// 🧭 Universal UID Registry
+// =========================
+export function registerCueUid(cueExpr, context = "unknown") {
+  if (!cueExpr || typeof cueExpr !== "string") return;
+  if (!window.cueRegistry) window.cueRegistry = {};
+
+  const uidMatch = cueExpr.match(/_uid\(([^)]+)\)/);
+  if (!uidMatch) return;
+
+  const uid = uidMatch[1].trim();
+  window.cueRegistry[uid] = cueExpr;
+
+  console.log(`[REGISTRY] ✅ Registered UID "${uid}" (${context}) → ${cueExpr}`);
+}
+
+
+
+// 🔔 Unified cue completion event emitter
+export function emitCueComplete(id, type = "generic") {
+  console.log(`[cueComplete] 🔚 ${type} complete → ${id}`);
+  window.dispatchEvent(new CustomEvent("oscilla:cueComplete", {
+    detail: { id, type, timestamp: Date.now() }
+  }));
+}
+
 
 
 
@@ -883,6 +965,9 @@ console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
           ...(bbox && { x: bbox.x, width: bbox.width })
         });
         console.log(`[assignCues] ➕ Added external cue: ${id}`);
+      
+        registerCueUid(id, "walk");
+
       } else if (id?.includes("cue") && !id.startsWith("cue")) {
         console.warn(`[assignCues] ⚠️ Skipped suspicious cue-like ID: ${id}`);
       }
@@ -2111,6 +2196,7 @@ export const maxAudioInstances = 5;
 // 🔇 Stop all currently playing audio cues
 export function stopAllAudio() {
   console.log("[INFO] Stopping all active audio cues.");
+  // emitCueComplete(filename, "cueAudio"); // not sure this is good here as it might trigger more stuff and this is a kinda killall event
   activeAudioCues.forEach(({ wavesurfer }) => wavesurfer.destroy());
   activeAudioCues.clear();
 }
@@ -2260,9 +2346,22 @@ export function handleAudioCue(cueId, cueParams) {
       playCount++;
       wavesurfer.play();
     } else {
-      console.log(`[INFO] Done looping ${filename}`);
-      activeAudioCues.delete(filename);
-      wavesurfer.destroy();
+
+    console.log(`[INFO] Done looping ${filename}`);
+
+    // 🔹 Tell the UI and remote peers that playback has ended
+    const ev = new CustomEvent("oscilla:audio", {
+      detail: { file: filename, state: "stop" },
+    });
+    window.dispatchEvent(ev);
+
+    // 🔹 Mark cue complete (for sequencing etc.)
+    emitCueComplete(filename, "cueAudio");
+    resetCueTrigger(filename);
+
+    // 🔹 Cleanup
+    activeAudioCues.delete(filename);
+    wavesurfer.destroy();
     }
   });
 
@@ -2279,7 +2378,11 @@ document.getElementById("stop-audio-button").addEventListener("click", () => {
       try {
         console.log(`[AUDIO] 🔻 Stopping: ${filename}`);
         wavesurfer.pause();
-        wavesurfer.stop();  
+        wavesurfer.stop();
+        emitCueComplete(filename, "cueAudio"); 
+        resetCueTrigger(filename);
+  
+
         wavesurfer.destroy();
       } catch (err) {
         console.warn(`[AUDIO] ❌ Error stopping ${filename}:`, err);
@@ -2338,11 +2441,19 @@ export function stopAudioCue(filename, fadeOutSec = 1.5) {
         clearInterval(fadeInterval);
         wavesurfer.pause();
         wavesurfer.stop();
+        emitCueComplete(filename, "cueAudio"); 
+        resetCueTrigger(filename);
+
         wavesurfer.destroy();
         activeAudioCues.delete(filename);
         console.log(`[AUDIO] ✅ Fade-out complete and stopped: ${filename}`);
       }
     }, intervalMs);
+
+    emitCueComplete(filename, "cueAudio"); 
+    const ev = new CustomEvent("oscilla:audio", { detail: { file: filename, state: "stop" } });
+    window.dispatchEvent(ev);
+
   } catch (err) {
     console.warn(`[AUDIO] ❌ Error fading/stopping ${filename}:`, err);
     try { wavesurfer.destroy(); } catch {}
@@ -2619,6 +2730,7 @@ export async function handleTextCue(cueId, cueParams = {}) {
 function delay(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
+
 function parseWordsSource(input) {
 
   if (!input) return [];
@@ -3207,6 +3319,7 @@ export function assignCueButtonsIn(rootNode, containerEl) {
           const btn = createCueButtonForElement(child, parsed, containerEl);
           if (btn) created.push(btn);
           console.log("[assignCueButtonsIn] Created cueButton:", id);
+
         } else {
           console.warn("[assignCueButtonsIn] Failed to parse cueButton:", id);
         }
@@ -3273,6 +3386,8 @@ export function parseCueButton(cueId) {
     return null;
   }
   console.log("[parseCueButton] inner:", inner);
+  registerCueUid(cueId, "button");
+
 // 2) try to find _opts(...) INSIDE inner (preferred form)
 let cueExpr = inner.trim();
 let optsInner = null;
@@ -3414,6 +3529,18 @@ console.log("[parseCueButton] optsInner:", optsInner);
     const type = cueExpr.split("(")[0] || "cue";
     opt.label = opt.uid || type;
   }
+
+  // ✅ Register UID safely here — cueExpr is now guaranteed to exist
+  try {
+    let innerCue = cueExpr;
+    const innerMatch = cueExpr.match(/cueButton\s*\(\s*([^)]+)\s*\)/);
+    if (innerMatch) innerCue = innerMatch[1].trim();
+
+    registerCueUid(innerCue, "button");
+  } catch (err) {
+    console.warn("[parseCueButton] ⚠️ UID registration failed:", err);
+  }
+
 
   console.log("[parseCueButton] ✅ Parsed result:", { cueExpr, opt });
   return { cueExpr, opt };
@@ -3594,4 +3721,213 @@ export async function handleCueNav(parsed) {
 }
 
 
-console.log("[DEBUG] handleTextCue registered:", typeof handleTextCue);
+
+
+
+/**
+ * handleSeqCue(cueId, cueParams)
+ * ------------------------------
+ * Sequences existing cues (#ids or UIDs) one after another.
+ * Supports overlaps, waits, and parallel cues.
+ *
+ * Example:
+ * cueSeq(#a1, #t2:+2, wait(1), #p3:-1)
+ */
+/**
+ * handleSeqCue(cueSeq)
+ * --------------------
+ * Sequences multiple cues (by UID or expression).
+ * Supports waits, random choice, offsets, looping, and parallel cues.
+ */
+export async function handleSeqCue(cueId, cueParams = {}) {
+  try {
+    console.log("[handleSeqCue] called:", cueId, cueParams);
+
+    const { choice, loop = 1, speed = 1, next = null } = cueParams;
+    if (!choice) return console.warn("[cueSeq] Missing sequence list");
+
+    const steps = parseCueSeqList(choice);
+    if (!steps.length) return console.warn("[cueSeq] No valid steps parsed");
+
+    console.log("[cueSeq] ▶ Parsed sequence:", steps);
+
+    // A safety flag to stop sequence early (e.g., on user stop)
+    window._seqAbort = false;
+
+    // 🌀 Main loop over sequence passes
+    for (let round = 0; loop <= 0 || round < loop; round++) {
+      console.log(`[cueSeq] 🔁 Sequence pass ${round + 1}`);
+
+      for (const step of steps) {
+        if (window._seqAbort) {
+          console.warn("[cueSeq] ⚠️ Sequence aborted.");
+          return;
+        }
+
+        // 💤 WAIT step
+        if (step.type === "wait") {
+          console.log(`[cueSeq] ⏱️ Waiting ${step.value}s`);
+          await delay(step.value * 1000 / speed);
+          continue;
+        }
+
+        // 🎲 RANDOM CHOICE
+        if (step.type === "choose") {
+          const pick = step.options[Math.floor(Math.random() * step.options.length)];
+          console.log(`[cueSeq] 🎲 Random choice → ${pick}`);
+          await triggerCueByRef(pick);
+          continue;
+        }
+
+        // 🎬 NORMAL CUE STEP
+        if (step.type === "cue") {
+          console.log(`[cueSeq] 🎬 Trigger cue ${step.target} (offset ${step.offset}s)`);
+
+          // Offset <0 = overlap (start before previous cue ends)
+          if (step.offset < 0) {
+            triggerCueByRef(step.target);
+            await delay(Math.abs(step.offset * 1000 / speed));
+          }
+          // Offset >0 = delay start
+          else if (step.offset > 0) {
+            await delay(step.offset * 1000 / speed);
+            triggerCueByRef(step.target);
+          }
+          // Offset = 0 = immediate / parallel start
+          else {
+            triggerCueByRef(step.target);
+          }
+
+          // Only wait for completion if not parallel (":0" or step.parallel flag)
+          if (!step.parallel) {
+            console.log(`[cueSeq] 🕒 Waiting for ${step.target} to complete`);
+            await waitForCueCompletion(step.target);
+          } else {
+            console.log(`[cueSeq] ⚡ Parallel cue, continuing immediately`);
+          }
+        }
+      }
+    }
+
+    console.log("[cueSeq] ✅ Sequence complete.");
+    if (next) triggerCueById(next);
+
+  } catch (err) {
+    console.error("[cueSeq] Error:", err);
+  }
+}
+
+function waitForCueCompletion(targetId, timeout = 60000) {
+  return new Promise(resolve => {
+    const listener = (ev) => {
+      const { id, type } = ev.detail || {};
+      if (!id) return;
+      // Match either by UID, filename, or partial
+      if (id.includes(targetId) || targetId.includes(id)) {
+        console.log(`[waitForCueCompletion] ✅ ${id} (${type}) completed`);
+        window.removeEventListener("oscilla:cueComplete", listener);
+        resolve();
+      }
+    };
+    window.addEventListener("oscilla:cueComplete", listener);
+    setTimeout(() => {
+      window.removeEventListener("oscilla:cueComplete", listener);
+      console.warn(`[waitForCueCompletion] ⚠️ Timeout waiting for ${targetId}`);
+      resolve();
+    }, timeout);
+  });
+}
+
+
+/**
+ * parseCueSeqList()
+ * -----------------
+ * Parses the inner contents of cueSeq(...), e.g. "#a1, wait(2), #b1:+1"
+ */
+function parseCueSeqList(str) {
+  if (!str) return [];
+  str = str.replace(/^cueSeq\(/i, "").replace(/\)$/, "").trim();
+
+  const parts = splitTopLevel(str, ",");
+  const steps = [];
+
+  for (let raw of parts) {
+    raw = raw.trim();
+    if (!raw) continue;
+
+    if (/^wait\(/i.test(raw)) {
+      const val = parseFloat(raw.match(/\(([^)]+)\)/)?.[1]) || 0;
+      steps.push({ type: "wait", value: val });
+    } else if (/^choose\[/i.test(raw)) {
+      const inner = raw.replace(/^choose\[/i, "").replace(/\]$/, "");
+      const opts = splitTopLevel(inner, ",").map(s => s.trim());
+      steps.push({ type: "choose", options: opts });
+    } else {
+      // Regular cue reference, possibly with offset (:N)
+      const match = raw.match(/^(#?[A-Za-z0-9_\-]+)(?::([+\-]?\d+(\.\d+)?))?$/);
+      if (match) {
+        const target = match[1];
+        const offset = parseFloat(match[2]) || 0;
+        const parallel = match[2] === "0";
+        steps.push({ type: "cue", target, offset, parallel });
+      }
+    }
+  }
+
+  return steps;
+}
+
+/**
+ * triggerCueByRef(target)
+ * -----------------------
+ * Resolves and triggers an existing cue by id or UID reference.
+ */
+// 🔍 Trigger cue by UID or element reference
+export function triggerCueByRef(ref, extraParams = {}) {
+  if (!ref) return console.warn("[cueSeq] ⚠️ Empty ref passed to triggerCueByRef");
+
+  let expr = null;
+
+  // 1️⃣ Try direct registry lookup
+  if (window.cueRegistry && window.cueRegistry[ref]) {
+    expr = window.cueRegistry[ref];
+    console.log(`[cueSeq] 🔗 Resolved UID "${ref}" → ${expr}`);
+  }
+
+  // 2️⃣ Try if ref starts with "#" (strip it and retry)
+  if (!expr && ref.startsWith("#")) {
+    const id = ref.slice(1);
+    if (window.cueRegistry && window.cueRegistry[id]) {
+      expr = window.cueRegistry[id];
+      console.log(`[cueSeq] 🔗 Resolved #UID "${id}" → ${expr}`);
+    }
+  }
+
+  // 3️⃣ Fallback: try direct SVG element ID
+  if (!expr) {
+    const el = document.getElementById(ref.startsWith("#") ? ref.slice(1) : ref);
+    if (el) expr = el.id;
+  }
+
+  // 4️⃣ Still nothing?
+  if (!expr) {
+    console.warn(`[cueSeq] ❌ Cue not found: ${ref}`);
+    return;
+  }
+
+  // 🧠 Trigger it
+  console.log(`[cueSeq] 🎬 Triggering resolved cue: ${expr}`);
+  window.handleCueTrigger?.(expr, false, true, extraParams);
+}
+
+
+// /**
+//  * waitForCueCompletion()
+//  * ----------------------
+//  * Future placeholder — currently just a delay fallback.
+//  * Later this will listen for cue-specific completion events.
+//  */
+// async function waitForCueCompletion(ref) {
+//   // TODO: implement real completion tracking
+//   await delay(1000); // fallback 1s per cue
+// }
