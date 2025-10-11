@@ -22,8 +22,8 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="0.59"
-     inkscape:cx="979.66102"
-     inkscape:cy="439.83051"
+     inkscape:cx="1066.1017"
+     inkscape:cy="441.52542"
      inkscape:window-width="1854"
      inkscape:window-height="1011"
      inkscape:window-x="0"
@@ -135,9 +135,9 @@
      transform="matrix(0.23659034,0,0,0.23659034,-69.542768,-84.140528)"><tspan
        x="366.70773"
        y="569.79199"
-       id="tspan173915"><tspan
+       id="tspan176366"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173913">PAGE 0</tspan></tspan></text>
+         id="tspan176364">PAGE 0</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:192px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#808000"
@@ -169,18 +169,38 @@
      transform="matrix(0.99191568,0,0,1.0081502,18.485169,-35.666049)"><tspan
        x="575.57843"
        y="925.75702"
-       id="tspan173917">p1</tspan></text>
+       id="tspan176368">p1</tspan></text>
   <text
      xml:space="preserve"
      style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';white-space:pre;inline-size:40.8619;display:inline;fill:#000000;stroke-width:1.75042"
      x="575.57843"
      y="925.75702"
-     id="cueButton(cuePage(page2)_dur(20)_next(page3))_style(size:&quot;120x50&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 2&quot;) 
+     id="cueButton(cuePage(page2)_dur(10)_next(page3))_style(size:&quot;120x80&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 2 then 3&quot;) 
 "
      transform="matrix(0.99191568,0,0,1.0081502,200.37769,-36.109618)"><tspan
        x="575.57843"
        y="925.75702"
-       id="tspan173919">p2</tspan></text>
+       id="tspan176370">p2</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';white-space:pre;inline-size:40.8619;display:inline;fill:#000000;stroke-width:1.75042"
+     x="575.57843"
+     y="925.75702"
+     id="cueButton(cuePage(page2)_dur(20))_style(size:&quot;120x80&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 2 then exit page mode&quot;)  "
+     transform="matrix(0.99191568,0,0,1.0081502,444.00111,-194.2333)"><tspan
+       x="575.57843"
+       y="925.75702"
+       id="tspan176372">p2</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';white-space:pre;inline-size:40.8619;display:inline;fill:#000000;stroke-width:1.75042"
+     x="575.57843"
+     y="925.75702"
+     id="cueButton(cuePage(page2)_wait(1))_style(size:&quot;120x80&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 2 then wait()&quot;)  -3"
+     transform="matrix(0.99191568,0,0,1.0081502,581.89173,-304.98541)"><tspan
+       x="575.57843"
+       y="925.75702"
+       id="tspan176374">p2</tspan></text>
   <text
      xml:space="preserve"
      style="font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
@@ -396,61 +416,61 @@
      transform="translate(-55.29661,31.806144)"><tspan
        x="155.13109"
        y="142.2868"
-       id="tspan173923"><tspan
+       id="tspan176378"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173921">The cueNav command provides navigation control within OscillaScore, allowing performers or </tspan></tspan><tspan
+         id="tspan176376">The cueNav command provides navigation control within OscillaScore, allowing performers or </tspan></tspan><tspan
        x="155.13109"
        y="169.27609"
-       id="tspan173927"><tspan
+       id="tspan176382"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173925">the score itself to jump between pages or switch display modes during playback. A cue like </tspan></tspan><tspan
+         id="tspan176380">the score itself to jump between pages or switch display modes during playback. A cue like </tspan></tspan><tspan
        x="155.13109"
        y="196.26538"
-       id="tspan173931"><tspan
+       id="tspan176386"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173929">cueNav(goto(page1)) directs the system to load a specific page, while cueNav(mode(scroll)) </tspan></tspan><tspan
+         id="tspan176384">cueNav(goto(page1)) directs the system to load a specific page, while cueNav(mode(scroll)) </tspan></tspan><tspan
        x="155.13109"
        y="223.25466"
-       id="tspan173935"><tspan
+       id="tspan176390"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173933">exits page mode and returns to the continuous scrolling score view. In addition to simple </tspan></tspan><tspan
+         id="tspan176388">exits page mode and returns to the continuous scrolling score view. In addition to simple </tspan></tspan><tspan
        x="155.13109"
        y="250.24395"
-       id="tspan173939"><tspan
+       id="tspan176394"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173937">“goto” and “mode” actions, cueNav supports optional parameters such as timed transitions </tspan></tspan><tspan
+         id="tspan176392">“goto” and “mode” actions, cueNav supports optional parameters such as timed transitions </tspan></tspan><tspan
        x="155.13109"
        y="277.23324"
-       id="tspan173943"><tspan
+       id="tspan176398"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173941">(_wait(n)), chained cues (triggering additional actions after navigation), and integration </tspan></tspan><tspan
+         id="tspan176396">(_wait(n)), chained cues (triggering additional actions after navigation), and integration </tspan></tspan><tspan
        x="155.13109"
        y="304.22253"
-       id="tspan173947"><tspan
+       id="tspan176402"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173945">with the broader cue system—meaning navigation can be synchronized across clients or linked </tspan></tspan><tspan
+         id="tspan176400">with the broader cue system—meaning navigation can be synchronized across clients or linked </tspan></tspan><tspan
        x="155.13109"
        y="331.21182"
-       id="tspan173951"><tspan
+       id="tspan176406"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173949">to other events like media playback or repeats. 
+         id="tspan176404">to other events like media playback or repeats. 
 </tspan></tspan><tspan
        x="155.13109"
        y="358.20111"
-       id="tspan173955"><tspan
+       id="tspan176410"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173953">
+         id="tspan176408">
 </tspan></tspan><tspan
        x="155.13109"
        y="385.19039"
-       id="tspan173959"><tspan
+       id="tspan176414"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173957">It effectively serves as the bridge between static pages and fluid scrolling navigation, </tspan></tspan><tspan
+         id="tspan176412">It effectively serves as the bridge between static pages and fluid scrolling navigation, </tspan></tspan><tspan
        x="155.13109"
        y="412.17968"
-       id="tspan173963"><tspan
+       id="tspan176418"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan173961">giving composers precise control over the score’s visual and temporal flow.</tspan></tspan></text>
+         id="tspan176416">giving composers precise control over the score’s visual and temporal flow.</tspan></tspan></text>
   <text
      xml:space="preserve"
      id="text218"
@@ -472,19 +492,19 @@
      transform="translate(-36.261918,131.16393)"><tspan
        x="242.56488"
        y="693.58447"
-       id="tspan173967"><tspan
+       id="tspan176422"><tspan
          style="font-weight:bold;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan173965">cueButton(cueNav(goto(page0))_styl</tspan></tspan><tspan
+         id="tspan176420">cueButton(cueNav(goto(page0))_styl</tspan></tspan><tspan
        x="242.56488"
        y="713.82649"
-       id="tspan173971"><tspan
+       id="tspan176426"><tspan
          style="font-weight:bold;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan173969">e(size:&quot;120x50&quot;, color:&quot;#008&quot;, </tspan></tspan><tspan
+         id="tspan176424">e(size:&quot;120x50&quot;, color:&quot;#008&quot;, </tspan></tspan><tspan
        x="242.56488"
        y="734.06849"
-       id="tspan173975"><tspan
+       id="tspan176430"><tspan
          style="font-weight:bold;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan173973">label:&quot;Go to Page 0&quot;)) </tspan></tspan></text>
+         id="tspan176428">label:&quot;Go to Page 0&quot;)) </tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:48px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
@@ -504,37 +524,92 @@
      id="text18790"><tspan
        x="755.42902"
        y="766.00238"
-       id="tspan173977">ueButton(</tspan></text>
+       id="tspan176432">ueButton(</tspan></text>
   <text
      xml:space="preserve"
-     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;white-space:pre;inline-size:221.711;display:inline;fill:#ff0000"
-     x="755.42902"
-     y="766.00238"
-     transform="translate(-24.066473,-22.609905)"
-     id="text18482"><tspan
-       x="755.42902"
-       y="766.00238"
-       id="tspan173979">ueButton(</tspan></text>
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';white-space:pre;inline-size:218.962;display:inline;fill:#000000"
+     x="733.19653"
+     y="716.57172"
+     id="text18796"
+     transform="translate(-33.448093,61.500265)"><tspan
+       x="733.19653"
+       y="716.57172"
+       id="tspan176434">cueButton(cuePage(page</tspan><tspan
+       x="733.19653"
+       y="736.57173"
+       id="tspan176436">2)_dur(20)_next(page3)</tspan><tspan
+       x="733.19653"
+       y="756.57173"
+       id="tspan176438">)_style(size:&quot;120x50&quot;, </tspan><tspan
+       x="733.19653"
+       y="776.57173"
+       id="tspan176440">color:&quot;#008&quot;, </tspan><tspan
+       x="733.19653"
+       y="796.57173"
+       id="tspan176442">label:&quot;Go to Page 2&quot;) </tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000"
-     x="697.25238"
-     y="711.61279"
-     id="text18796"><tspan
+     x="137.46028"
+     y="663.6123"
+     id="cueButton(
+  cuePage(
+    loop(
+      page3:3,
+      page2:3
+    )
+  ))_style(size:&quot;120x80&quot;, color:&quot;#008&quot;, label:&quot;Seq 2 then 3&quot;)"><tspan
        sodipodi:role="line"
-       x="697.25238"
-       y="711.61279"
-       id="tspan18802">cueButton(</tspan><tspan
+       id="tspan175184"
+       x="137.46028"
+       y="663.6123">cueButton(</tspan><tspan
        sodipodi:role="line"
-       x="697.25238"
-       y="731.61279"
-       id="tspan18964">  cueNav(goto(page2))_dur(20)_next(page3)</tspan><tspan
+       x="137.46028"
+       y="683.6123"
+       id="tspan175188">  cuePage(</tspan><tspan
        sodipodi:role="line"
-       x="697.25238"
-       y="751.61279"
-       id="tspan18966">  _style(size:&quot;120x50&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 2&quot;)</tspan><tspan
+       x="137.46028"
+       y="703.6123"
+       id="tspan175190">    seq(</tspan><tspan
        sodipodi:role="line"
-       x="697.25238"
-       y="771.61279"
-       id="tspan18968">)</tspan></text>
+       x="137.46028"
+       y="723.6123"
+       id="tspan175194">      page3:2,</tspan><tspan
+       sodipodi:role="line"
+       x="137.46028"
+       y="743.6123"
+       id="tspan175196">      page2:2</tspan><tspan
+       sodipodi:role="line"
+       x="137.46028"
+       y="763.6123"
+       id="tspan175198">    )</tspan><tspan
+       sodipodi:role="line"
+       x="137.46028"
+       y="783.6123"
+       id="tspan175200">  )_style(size:&quot;120x80&quot;, color:&quot;#008&quot;, label:&quot;Seq 2 then 3&quot;) </tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000"
+     x="406.20367"
+     y="665.55219"
+     id="cueButton(
+  cueNav(stopAndTrigger(cuePage(page0)))
+  _style(label:&quot;Stop Loop → Page 0&quot;, color:&quot;orange&quot;, fontsize:18, radius:10)
+)"><tspan
+       sodipodi:role="line"
+       id="tspan176236"
+       x="406.20367"
+       y="665.55219">cueButton(</tspan><tspan
+       sodipodi:role="line"
+       x="406.20367"
+       y="685.55219"
+       id="tspan176240">  cueNav(stopAndTrigger(cuePage(page0)))</tspan><tspan
+       sodipodi:role="line"
+       x="406.20367"
+       y="705.55219"
+       id="tspan176242">  _style(label:&quot;Stop Loop → Page 0&quot;, color:&quot;orange&quot;, fontsize:18, radius:10)</tspan><tspan
+       sodipodi:role="line"
+       x="406.20367"
+       y="725.55219"
+       id="tspan176244">)</tspan></text>
 </svg>

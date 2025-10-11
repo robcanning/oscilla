@@ -1525,6 +1525,10 @@ async function runCuePagePlaylist({ mode, items, waitFlag = false, returnFlag = 
 
   let index = 0;
   const total = items.length;
+
+
+
+
 async function nextStep() {
   // 🧹 Safety check: playlist stopped or popup closed
   if (!window.isCuePagePlaylistActive) {
@@ -1697,6 +1701,11 @@ export async function handlePageCue(
     pauseScrollScore();
   }
 
+  // 🧩 ensure consistent transition behavior for loops
+  if (ps.mode === "scroll" && mode === "loop") {
+    ps.mode = "page";
+  }
+
   // Update state
   ps.mode = "page";
   ps.current = pageName;
@@ -1745,7 +1754,6 @@ export async function handlePageCue(
     // Reuse animation init logic
     console.log(`initialising animations in ${pageName}.svg`);
     window.initializeSVG?.(svg);
-
 
 
     // 🧩 ensure propagation happens for embedded page SVGs
@@ -1805,25 +1813,21 @@ export async function handlePageCue(
   }
 
 
-  if (!wait && durationSec > 0) {
-    let timeLeft = durationSec;
-    ps.countdown = setInterval(() => {
-      timeLeft -= 1;
-      countdownElement.textContent = timeLeft;
+if (!wait && durationSec > 0) {
+  let timeLeft = durationSec;
+  ps.countdown = setInterval(() => {
+    timeLeft -= 1;
+    countdownElement.textContent = timeLeft;
 
-      if (timeLeft <= 3 && !next) {
-        // 🔸 Fade only if there is no next page (end of sequence)
-        container.style.transition = "opacity 2s ease-in-out";
-        container.style.opacity = "0.3";
-      }
-
-      if (timeLeft <= 0) {
-        clearInterval(ps.countdown);
-        ps.countdown = null;
-        resolvePageTransition({ mode, next, ret });
-      }
-    }, 1000);
-  } else {
+    // 🔹 No fades or transitions — just jump instantly when time runs out
+    if (timeLeft <= 0) {
+      clearInterval(ps.countdown);
+      ps.countdown = null;
+      resolvePageTransition({ mode, next, ret });
+    }
+  }, 1000);
+}
+ else {
     console.log("[cuePage] Waiting indefinitely for user trigger or external event.");
   }
 }
@@ -1867,83 +1871,95 @@ function startPageAnimations(svg) {
 }
 
 
-
-/**
- * resolvePageTransition()
- * -----------------------
- * Called when a page duration ends or a trigger fires.
- */
 function resolvePageTransition({ mode, next, ret }) {
+
   const ps = window.pageState;
   const container = document.getElementById("singlePage-container");
   const content = document.getElementById("singlePage-content");
   const countdown = document.getElementById("singlePage-countdown");
+  const mainScore = document.getElementById("scoreContainer");
+
+  console.log(`[resolvePageTransition] mode=${mode}, ps.mode=${ps.mode}, next=${next}`);
+
 
   if (!ps) return;
   clearInterval(ps.countdown);
   if (countdown) countdown.style.display = "none";
 
-  // --- Case 1: chain to next page
+  // -------------------------------------------------------------
+  // 1️⃣ Case: chain to next page (_next or loop)
+  // -------------------------------------------------------------
   if (next) {
-    console.log(`[cuePage] ⏭ Crossfade to next page: ${next}`);
-    ps.mode = "transition";
+    console.log(`[cuePage] ⏭ Transitioning directly to next page: ${next}`);
 
-    // 🟣 fade out only the page content, not the container
-    content.style.transition = "opacity 0.6s ease-in-out";
-    content.style.opacity = "0";
-
-    // ⏳ after fade-out, replace content and fade back in
-    setTimeout(() => {
-      // clear current buttons & page visuals
+    // If we're looping, skip fades entirely for immediate cut
+    if (mode === "loop") {
+      console.log("[cuePage] 🔁 Loop mode — cutting directly to next page.");
+      ps.mode = "page";
       window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
       window._activePageButtons = [];
       content.innerHTML = "";
-
-      // load next page’s SVG
       handleCueTrigger(`cuePage(${next})`);
+      return;
+    }
 
-      // make sure the new page starts invisible for fade-in
-      requestAnimationFrame(() => {
-        const newContent = document.getElementById("singlePage-content");
-        if (newContent) {
-          newContent.style.opacity = "0";
-          newContent.style.transition = "opacity 0.6s ease-in-out";
-          setTimeout(() => {
-            newContent.style.opacity = "1";
-          }, 100);
-        }
-      });
-    }, 600);
+    // Otherwise, do a fade transition
+    ps.mode = "transition";
+    container.style.transition = "opacity 0.5s ease";
+    container.style.opacity = "0";
 
+    // 🧩 Keep background hidden during transition
+    if (mainScore) {
+      mainScore.style.opacity = "0";
+      mainScore.style.pointerEvents = "none";
+    }
+
+    setTimeout(() => {
+      ps.mode = "page";
+
+      // 🧹 Clean up and load next
+      window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
+      window._activePageButtons = [];
+      content.innerHTML = "";
+      handleCueTrigger(`cuePage(${next})`);
+    }, 500);
     return;
   }
 
-
-
-  // // --- Case 2: return to scrolling score
+  // -------------------------------------------------------------
+  // 2️⃣ Case: return to scrolling score (_return or popup)
+  // -------------------------------------------------------------
   if (!window.isCuePagePlaylistActive && (ret || mode === "popup")) {
     console.log("[cuePage] ✅ Returning to scrolling score.");
     container.style.transition = "opacity 0.5s ease";
     container.style.opacity = "0";
+
     setTimeout(() => {
-      // 🧹 remove buttons from the page we’re closing
       window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
       window._activePageButtons = [];
-
       container.style.display = "none";
       content.innerHTML = "";
       ps.mode = "scroll";
       ps.current = null;
+
+      // 🟢 Fade background back in
+      if (mainScore) {
+        mainScore.style.opacity = "1";
+        mainScore.style.pointerEvents = "auto";
+      }
+
       resumeScrollScore();
     }, 500);
     return;
   }
 
-
-  // --- Case 3: persistent page mode
+  // -------------------------------------------------------------
+  // 3️⃣ Case: persistent page mode
+  // -------------------------------------------------------------
   console.log("[cuePage] Holding page mode.");
   ps.mode = "page";
 }
+
 
 /**
  * pauseScrollScore() / resumeScrollScore()
