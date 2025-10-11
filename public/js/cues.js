@@ -27,7 +27,7 @@ export const cueHandlers = {
   cueStop: handleStopCue,
   cueChoice: handleCueChoice,
   cuePage: handlePageCue,
-  cueNav: handleCueNav,  
+  cueNav: handleNavCue,  
   cueAudio: handleAudioCue,
   cueAudioStop: handleAudioStopCue,
   cueVideo: handleVideoCue,
@@ -193,8 +193,8 @@ export function handleCueTrigger(cueId, isRemote = false, force = false) {
     }
 
     else if (cueId.startsWith("cueNav(") || cueId.startsWith("cueNavigate(")) {
-      const parsed = parseCueNav(cueId);
-      return handleCueNav(parsed);
+      const parsed = parseNavCue(cueId);
+      return handleNavCue(parsed);
     }   
 
     else if (cueId.startsWith("cueAudioStop(")) {
@@ -878,14 +878,14 @@ export function assignCues(svgRoot, cuesArray = []) {
         const cueId = `cueOscSet(${param},${formattedValue})`;
         child.id = cueId;
 
-const bbox = child.getBBox();
-cuesArray.push({
-  id: cueId,
-  element: child,
-  triggered: false,
-  x: bbox.x,
-  width: bbox.width
-});
+        const bbox = child.getBBox();
+        cuesArray.push({
+          id: cueId,
+          element: child,
+          triggered: false,
+          x: bbox.x,
+          width: bbox.width
+        });
         console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
       });
       return;
@@ -1750,9 +1750,19 @@ export async function handlePageCue(cueId, animationPath, duration) {
   // -------------------------------------------------------------
   // 5️⃣ Countdown and transition logic
   // -------------------------------------------------------------
+
   clearInterval(ps.countdown);
   countdownElement.style.display = "block";
-  countdownElement.textContent = durationSec;
+
+  // If no duration is specified or _wait(1) is active, show a pause symbol
+  if (wait || !durationSec || durationSec <= 0) {
+    countdownElement.textContent = "⏸"; // visually indicate "paused / indefinite"
+    countdownElement.style.opacity = "0.7";
+    console.log("[cuePage] ⏸ No duration set — showing pause symbol.");
+  } else {
+    countdownElement.textContent = durationSec;
+  }
+
 
   if (!wait && durationSec > 0) {
     let timeLeft = durationSec;
@@ -2495,7 +2505,7 @@ export async function handleTextCue(cueId, cueParams = {}) {
       loop = 1,
       next = null,
       pos = "center",
-      opts = {},
+      style = {},
     } = Object.fromEntries(Object.entries(cueParams).map(([k, v]) => [k, clean(v)]));
 
       // --------------------------------------------------------
@@ -2513,17 +2523,17 @@ export async function handleTextCue(cueId, cueParams = {}) {
       position: "absolute",
       zIndex: 9999,
       pointerEvents: "none",
-      color: opts.color || "black",
-      fontFamily: opts.font || "sans-serif",
-      fontSize: (opts.fontsize ? `${opts.fontsize}px` : "32px"),
-      textAlign: opts.align || "center",
-      textShadow: opts.textshadow || "0 0 10px rgba(0,0,0,0.6)",
+      color: style.color || "black",
+      fontFamily: style.font || "sans-serif",
+      fontSize: (style.fontsize ? `${style.fontsize}px` : "32px"),
+      textAlign: style.align || "center",
+      textShadow: style.textshadow || "0 0 10px rgba(0,0,0,0.6)",
       transition: "opacity 0.3s ease",
       opacity: 1,
-      background: opts.bg || "transparent",
-      padding: opts.padding !== undefined ? `${Number(opts.padding)}px` : "10px",
-      borderRadius: opts.radius !== undefined ? `${Number(opts.radius)}px` : "8px",
-      backdropFilter: opts.blur ? `blur(${Number(opts.blur)}px)` : "none",
+      background: style.bg || "transparent",
+      padding: style.padding !== undefined ? `${Number(style.padding)}px` : "10px",
+      borderRadius: style.radius !== undefined ? `${Number(style.radius)}px` : "8px",
+      backdropFilter: style.blur ? `blur(${Number(style.blur)}px)` : "none",
     });
 
 
@@ -3006,21 +3016,21 @@ export function parseCueParams(cueId) {
     }
   }
 
-  // --- Parse remaining _key(value) pairs, including nested _opts(...)
+  // --- Parse remaining _key(value) pairs, including nested _style(...)
   const regex = /_([a-zA-Z0-9]+)\(([\s\S]*?)\)/g; // ✅ [\s\S]*? handles multi-line
   let match;
   while ((match = regex.exec(rest)) !== null) {
     const [, key, value] = match;
 
-if (key === "opts") {
-  const rawOpts = match[2];
+if (key === "style") {
+  const rawStyle = match[2];
 
   // Match key:value pairs robustly — allows quoted strings, numbers, rgba(), etc.
   const kvRegex = /([\w-]+)\s*:\s*(("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|rgba?\([^)]*\)|[^,]+))/g;
   const obj = {};
   let m;
 
-  while ((m = kvRegex.exec(rawOpts)) !== null) {
+  while ((m = kvRegex.exec(rawStyle)) !== null) {
     const kRaw = m[1].trim().toLowerCase();
     let vRaw = m[2].trim();
 
@@ -3035,7 +3045,7 @@ if (key === "opts") {
     obj[kRaw] = vRaw;
   }
 
-  cueParams.opts = obj;
+  cueParams.style = obj;
 }
  else {
       cueParams[key] = isNaN(value) ? value.trim() : parseFloat(value);
@@ -3369,7 +3379,7 @@ function extractFuncInner(str, fnName) {
   return null;
 }
 
-// Simple boolean parser for opts
+// Simple boolean parser for style
 function parseBool(v) {
   return /^(1|true|on|yes)$/i.test(String(v).trim());
 }
@@ -3388,16 +3398,16 @@ export function parseCueButton(cueId) {
   console.log("[parseCueButton] inner:", inner);
   registerCueUid(cueId, "button");
 
-// 2) try to find _opts(...) INSIDE inner (preferred form)
+// 2) try to find _style(...) INSIDE inner (preferred form)
 let cueExpr = inner.trim();
-let optsInner = null;
+let styleInner = null;
 
-// PASS 1 — Detect inner cue _opts(...) (like inside cueText)
-const lastInnerOpts = inner.lastIndexOf("_opts(");
-if (lastInnerOpts !== -1) {
-  // find closing parenthesis for this _opts(
+// PASS 1 — Detect inner cue _style(...) (like inside cueText)
+const lastInnerStyle = inner.lastIndexOf("_style(");
+if (lastInnerStyle !== -1) {
+  // find closing parenthesis for this _style(
   let depth = 0, endIndex = -1;
-  for (let i = lastInnerOpts; i < inner.length; i++) {
+  for (let i = lastInnerStyle; i < inner.length; i++) {
     const ch = inner[i];
     if (ch === "(") depth++;
     else if (ch === ")") {
@@ -3409,43 +3419,43 @@ if (lastInnerOpts !== -1) {
     }
   }
 
-  // if the _opts ends BEFORE the final parenthesis of the cueButton(...)
-  // treat it as inner cue _opts — leave intact
+  // if the _style ends BEFORE the final parenthesis of the cueButton(...)
+  // treat it as inner cue _style — leave intact
   const lastParen = inner.lastIndexOf(")");
   if (endIndex !== -1 && endIndex < lastParen) {
     cueExpr = inner.trim(); // keep cue intact
   }
 }
 
-// PASS 2 — Detect outer button _opts(...) (after cueText(...))
-const outerStart = cueId.lastIndexOf("_opts(");
+// PASS 2 — Detect outer button _style(...) (after cueText(...))
+const outerStart = cueId.lastIndexOf("_style(");
 if (outerStart !== -1) {
   const sub = cueId.slice(outerStart);
-  optsInner = extractFuncInner(sub, "_opts");
+  styleInner = extractFuncInner(sub, "_style");
   if (outerStart > cueId.lastIndexOf(")")) {
-    // cleanly remove outer opts from cueExpr
+    // cleanly remove outer style from cueExpr
     cueExpr = cueId.slice(0, outerStart).trim();
   }
 }
 
 console.log("[parseCueButton] cueExpr:", cueExpr);
-console.log("[parseCueButton] optsInner:", optsInner);
+console.log("[parseCueButton] styleInner:", styleInner);
 
 
 
   // 3) if not found, try OUTSIDE (i.e., after ")")
-  if (!optsInner) {
-    const outerStart = cueId.lastIndexOf("_opts(");
+  if (!styleInner) {
+    const outerStart = cueId.lastIndexOf("_style(");
     if (outerStart !== -1) {
-      const outerSub = cueId.slice(outerStart);             // slice from that _opts(
-      optsInner = extractFuncInner(outerSub, "_opts");      // contents
+      const outerSub = cueId.slice(outerStart);             // slice from that _style(
+      styleInner = extractFuncInner(outerSub, "_style");      // contents
       // cueExpr remains as 'inner'
-      console.log("[parseCueButton] ⚠️ _opts found OUTSIDE cueButton(...) — supported but consider moving it inside.");
+      console.log("[parseCueButton] ⚠️ _style found OUTSIDE cueButton(...) — supported but consider moving it inside.");
     }
   }
 
   console.log("[parseCueButton] cueExpr:", cueExpr);
-  console.log("[parseCueButton] optsInner:", optsInner);
+  console.log("[parseCueButton] styleInner:", styleInner);
 
   if (!cueExpr) {
     console.warn("[parseCueButton] ⚠️ Missing cue expression in:", cueId);
@@ -3465,13 +3475,13 @@ console.log("[parseCueButton] optsInner:", optsInner);
   };
 
   // 5) parse key:value pairs
-  if (optsInner) {
+  if (styleInner) {
     let kvs;
     try {
-      kvs = splitTopLevel(optsInner, ",");
+      kvs = splitTopLevel(styleInner, ",");
     } catch (err) {
       console.error("[parseCueButton] splitTopLevel failed; fallback split:", err);
-      kvs = optsInner.split(/,(?![^()]*\))/);
+      kvs = styleInner.split(/,(?![^()]*\))/);
     }
 
     console.log("[parseCueButton] splitTopLevel result:", kvs);
@@ -3522,13 +3532,22 @@ console.log("[parseCueButton] optsInner:", optsInner);
       }
     });
   } else {
-    console.warn("[parseCueButton] ⚠️ No _opts(...) found in:", cueId);
+    console.warn("[parseCueButton] ⚠️ No _style(...) found in:", cueId);
   }
 
-  if (!opt.label) {
+  // 6️⃣ Label fallback hierarchy: label → UID → cue type
+  if (!opt.label || opt.label.trim() === "") {
     const type = cueExpr.split("(")[0] || "cue";
-    opt.label = opt.uid || type;
+    const uidMatch = cueId.match(/_uid\(([^)]+)\)/);
+    const uid = opt.uid || (uidMatch ? uidMatch[1] : null);
+
+    if (uid) {
+      opt.label = uid.trim();
+    } else {
+      opt.label = type.replace(/^cue/, "").trim();
+    }
   }
+
 
   // ✅ Register UID safely here — cueExpr is now guaranteed to exist
   try {
@@ -3551,7 +3570,7 @@ console.log("[parseCueButton] optsInner:", optsInner);
 
 
 // ---- parser
-export function parseCueNav(id) {
+export function parseNavCue(id) {
   const inner = extractFuncInner(id, "cueNav") || extractFuncInner(id, "cueNavigate");
   if (!inner) return null;
 
@@ -3569,8 +3588,11 @@ export function parseCueNav(id) {
 
   return { action: action.toLowerCase(), argExpr };
 }
+
+
+
 // ---- handler (instrumented)
-export async function handleCueNav(parsed) {
+export async function handleNavCue(parsed) {
   if (!parsed) return;
   const { action, argExpr } = parsed;
 
@@ -3712,6 +3734,56 @@ export async function handleCueNav(parsed) {
       exitPageMode();
       if (argExpr) afterTick(() => triggerCueExpr(argExpr, "replace→trigger"));
       break;
+
+
+    case "mode":
+    if (!argExpr) {
+      dbg("mode() missing arg");
+      break;
+    }
+
+    if (argExpr === "scroll") {
+      dbg("→ Switching to scroll mode");
+
+      const ps = window.pageState;
+      const container = document.getElementById("singlePage-container");
+      const content = document.getElementById("singlePage-content");
+
+      if (container && content) {
+        // fade out and hide the overlay
+        container.style.transition = "opacity 0.5s ease";
+        container.style.opacity = "0";
+        setTimeout(() => {
+          container.style.display = "none";
+          content.innerHTML = "";
+          if (window._activePageButtons) {
+            window._activePageButtons.forEach(btn => btn._destroyCueButton?.());
+            window._activePageButtons = [];
+          }
+          if (ps) {
+            ps.mode = "scroll";
+            ps.current = null;
+          }
+          window.resumeScrollScore?.();
+          dbg("✅ Returned to scroll mode");
+        }, 500);
+      } else {
+        dbg("⚠️ No container found; forcing resumeScrollScore()");
+        window.resumeScrollScore?.();
+        if (ps) ps.mode = "scroll";
+      }
+    }
+
+  else if (argExpr === "page") {
+    dbg("→ Switching to page mode placeholder (future)");
+    // optionally: trigger cuePage(...) manually if desired
+  }
+
+  else {
+    console.warn("[cueNav] Unknown mode argument:", argExpr);
+  }
+  break;
+  
 
     default:
       console.warn("[cueNav] Unknown action:", action, "arg:", argExpr);
@@ -3860,8 +3932,8 @@ function parseCueSeqList(str) {
       steps.push({ type: "wait", value: val });
     } else if (/^choose\[/i.test(raw)) {
       const inner = raw.replace(/^choose\[/i, "").replace(/\]$/, "");
-      const opts = splitTopLevel(inner, ",").map(s => s.trim());
-      steps.push({ type: "choose", options: opts });
+      const style = splitTopLevel(inner, ",").map(s => s.trim());
+      steps.push({ type: "choose", options: style });
     } else {
       // Regular cue reference, possibly with offset (:N)
       const match = raw.match(/^(#?[A-Za-z0-9_\-]+)(?::([+\-]?\d+(\.\d+)?))?$/);

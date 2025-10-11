@@ -22,8 +22,8 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="0.59"
-     inkscape:cx="1066.1017"
-     inkscape:cy="533.05085"
+     inkscape:cx="1032.2034"
+     inkscape:cy="536.44068"
      inkscape:window-width="1854"
      inkscape:window-height="1011"
      inkscape:window-x="0"
@@ -131,104 +131,272 @@
        y="313.47986" /></text>
   <text
      xml:space="preserve"
-     style="font-weight:bold;font-size:34.4061px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000;stroke-width:2.15038"
-     x="7.5527205"
-     y="29.01298"
-     id="cueButton(cueNav(stopAndTrigger(cuePage(page0)_wait(1))),140x48,#a00,&quot;Home&quot;)"><tspan
-       sodipodi:role="line"
-       id="tspan79023"
-       x="7.5527205"
-       y="29.01298"
-       style="font-size:34.4061px;stroke-width:2.15038">home</tspan></text>
-  <text
-     xml:space="preserve"
-     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';white-space:pre;inline-size:275.946;display:inline;fill:#000000"
-     x="22360.326"
-     y="698.08252"
-     id="cueButton(cuePage(loop(page3:1,rand(page0:2,page1:2,page2:2),page2:3)),166x100,green, _class(myBtn),_broadcast(1),_conductor(0),_repeatable(1),_scroll(0),_uid(random score loop))"
-     transform="translate(-22352.326,-616.72426)"><tspan
-       x="22360.326"
-       y="698.08252"
-       id="tspan252124">cueButton(cuePage(loop(page3</tspan><tspan
-       x="22360.326"
-       y="718.08253"
-       id="tspan252126">:1,rand(page0:2,page1:2,page</tspan><tspan
-       x="22360.326"
-       y="738.08253"
-       id="tspan252128">2:2),page2:3)),</tspan><tspan
-       x="22360.326"
-       y="758.08253"
-       id="tspan252130">166x100,green,
-</tspan><tspan
-       x="22360.326"
-       y="778.08253"
-       id="tspan252132">_class(myBtn),_broadcast(1),</tspan><tspan
-       x="22360.326"
-       y="798.08253"
-       id="tspan252134">_conductor(0),_repeatable(1)</tspan><tspan
-       x="22360.326"
-       y="818.08253"
-       id="tspan252136">,_scroll(0),_uid(random </tspan><tspan
-       x="22360.326"
-       y="838.08253"
-       id="tspan252138">score loop))
-</tspan></text>
-  <text
-     xml:space="preserve"
      style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000;stroke-width:1.75042"
-     x="449.67563"
-     y="969.79614"
-     id="cueButton(cueNav(goto(page0)),120x50,#008,&quot;Go to Page 0&quot;)"
+     x="400.83667"
+     y="889.42017"
+     id="cueButton(cueNav(goto(page0))_style(size:&quot;120x50&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 0&quot;))
+"
      transform="scale(0.99191568,1.0081502)"><tspan
        sodipodi:role="line"
        id="tspan79197"
-       x="449.67563"
-       y="969.79614"
+       x="400.83667"
+       y="889.42017"
        style="stroke-width:1.75042">p0</tspan></text>
   <text
      xml:space="preserve"
-     style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000;stroke-width:1.75042"
-     x="628.43829"
-     y="969.79614"
-     id="cueButton(cueNav(goto(page1)),120x50,#008,&quot;Go to Page 1&quot;)-3"
-     transform="scale(0.99191568,1.0081502)"><tspan
-       sodipodi:role="line"
-       id="tspan79197-6"
-       x="628.43829"
-       y="969.79614"
-       style="stroke-width:1.75042">p1</tspan></text>
+     style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';white-space:pre;inline-size:40.8619;display:inline;fill:#000000;stroke-width:1.75042"
+     x="575.57843"
+     y="925.75702"
+     id="cueButton(cueNav(goto(page1))_style(size:&quot;120x50&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 1&quot;)) "
+     transform="matrix(0.99191568,0,0,1.0081502,18.485169,-35.666049)"><tspan
+       x="575.57843"
+       y="925.75702"
+       id="tspan183734">p1</tspan></text>
   <text
      xml:space="preserve"
-     style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000;stroke-width:1.75042"
-     x="807.20087"
-     y="969.79614"
-     id="cueButton(cueNav(goto(page2)),120x50,#008,&quot;Go to Page 2&quot;)-3-7"
-     transform="scale(0.99191568,1.0081502)"><tspan
+     style="font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
+     x="1178.6613"
+     y="888.31909"
+     id="cueButton(cueNav(mode(scroll)))_style(
+  label:&quot;Exit Page Mode&quot;,
+  color:&quot;crimson&quot;,
+  fontsize:20,
+  font:&quot;Arial Black&quot;,
+  radius:12
+)"><tspan
        sodipodi:role="line"
-       id="tspan79197-6-5"
-       x="807.20087"
-       y="969.79614"
-       style="stroke-width:1.75042">p2</tspan></text>
+       id="tspan181966"
+       x="1178.6613"
+       y="888.31909"
+       style="font-size:16px">cueButton(cueNav(mode(scroll)))_style(</tspan><tspan
+       sodipodi:role="line"
+       x="1178.6613"
+       y="908.31909"
+       id="tspan181970"
+       style="font-size:16px">  label:&quot;Exit Page Mode&quot;,</tspan><tspan
+       sodipodi:role="line"
+       x="1178.6613"
+       y="928.31909"
+       id="tspan181972"
+       style="font-size:16px">  color:&quot;crimson&quot;,</tspan><tspan
+       sodipodi:role="line"
+       x="1178.6613"
+       y="948.31909"
+       id="tspan181974"
+       style="font-size:16px">  fontsize:20,</tspan><tspan
+       sodipodi:role="line"
+       x="1178.6613"
+       y="968.31909"
+       id="tspan181976"
+       style="font-size:16px">  font:&quot;Arial Black&quot;,</tspan><tspan
+       sodipodi:role="line"
+       x="1178.6613"
+       y="988.31909"
+       id="tspan181978"
+       style="font-size:16px">  radius:12</tspan><tspan
+       sodipodi:role="line"
+       x="1178.6613"
+       y="1008.3191"
+       id="tspan181980"
+       style="font-size:16px">)</tspan></text>
   <text
      xml:space="preserve"
-     style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000;stroke-width:1.75042"
-     x="985.96338"
-     y="969.79614"
-     id="cueButton(cueNav(goto(page3)),120x50,#008,&quot;Go to Page 3&quot;)-3-7-3"
-     transform="scale(0.99191568,1.0081502)"><tspan
+     style="font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
+     x="228.11838"
+     y="75.079453"
+     id="cueButton(
+  cuePage(
+    loop(
+      page3:1,
+      rand(page0:2, page1:2, page2:2),
+      page2:3
+    )
+  )
+  _broadcast(1)
+  _conductor(0)
+  _repeatable(1)
+  _scroll(0)
+  _style(
+    size:&quot;166x100&quot;,
+    color:&quot;green&quot;,
+    class:&quot;myBtn&quot;,
+    label:&quot;Random Score Loop&quot;
+  )
+  _uid(random-score-loop)
+)
+"><tspan
        sodipodi:role="line"
-       id="tspan79197-6-5-5"
-       x="985.96338"
-       y="969.79614"
-       style="stroke-width:1.75042">p3</tspan></text>
+       x="228.11838"
+       y="75.079453"
+       id="tspan182732">cueButton(</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="95.079453"
+       id="tspan183219">  cuePage(</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="115.07945"
+       id="tspan183221">    loop(</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="135.07945"
+       id="tspan183223">      page3:1,</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="155.07945"
+       id="tspan183225">      rand(page0:2, page1:2, page2:2),</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="175.07945"
+       id="tspan183227">      page2:3</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="195.07945"
+       id="tspan183229">    )</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="215.07945"
+       id="tspan183231">  )</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="235.07945"
+       id="tspan183233">  _broadcast(1)</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="255.07945"
+       id="tspan183235">  _conductor(0)</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="275.07947"
+       id="tspan183237">  _repeatable(1)</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="295.07947"
+       id="tspan183239">  _scroll(0)</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="315.07947"
+       id="tspan183241">  _style(</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="335.07947"
+       id="tspan183243">    size:&quot;166x100&quot;,</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="355.07947"
+       id="tspan183245">    color:&quot;green&quot;,</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="375.07947"
+       id="tspan183247">    class:&quot;myBtn&quot;,</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="395.07947"
+       id="tspan183249">    label:&quot;Random Score Loop&quot;</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="415.07947"
+       id="tspan183251">  )</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="435.07947"
+       id="tspan183253">  _uid(random-score-loop)</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="455.07947"
+       id="tspan183255">)</tspan><tspan
+       sodipodi:role="line"
+       x="228.11838"
+       y="475.07947"
+       id="tspan183257" /></text>
   <text
      xml:space="preserve"
-     id="cueButton(cueNav(goto(page0)),
-  _opts(size:&quot;220x150&quot;, color:&quot;orange&quot;,
-        label:&quot;Jump into page mode to see examples of cueNav&quot;,
-        font:&quot;Arial Black&quot;, fontsize:20))"
-     style="font-size:32px;font-family:FreeMono;-inkscape-font-specification:FreeMono;white-space:pre;shape-inside:url(#rect252081);fill:#008000"><tspan
-       x="663.24219"
-       y="238.92812"
-       id="tspan252140">goto0</tspan></text>
+     style="font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
+     x="672.6394"
+     y="48.442753"
+     id="text182692-5"><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="48.442753"
+       id="tspan182732-0">cueButton(</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="68.442749"
+       id="tspan183468">  cuePage(</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="88.442749"
+       id="tspan183470">    loop(</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="108.44275"
+       id="tspan183472">      page3:1,</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="128.44275"
+       id="tspan183474">      rand(page0:2, page1:2, page2:2),</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="148.44275"
+       id="tspan183476">      page2:3</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="168.44275"
+       id="tspan183478">    )</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="188.44275"
+       id="tspan183480">  )</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="208.44275"
+       id="tspan183482">  _broadcast(1)</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="228.44275"
+       id="tspan183484">  _conductor(0)</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="248.44275"
+       id="tspan183486">  _repeatable(1)</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="268.44275"
+       id="tspan183488">  _scroll(0)</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="288.44275"
+       id="tspan183490">  _style(</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="308.44275"
+       id="tspan183492">    size:&quot;166x100&quot;,</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="328.44275"
+       id="tspan183494">    color:&quot;green&quot;,</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="348.44275"
+       id="tspan183496">    class:&quot;myBtn&quot;,</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="368.44275"
+       id="tspan183498">    label:&quot;Random Score Loop&quot;</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="388.44275"
+       id="tspan183500">  )</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="408.44275"
+       id="tspan183502">  _uid(random-score-loop)</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="428.44275"
+       id="tspan183504">)</tspan><tspan
+       sodipodi:role="line"
+       x="672.6394"
+       y="448.44275"
+       id="tspan183506" /></text>
 </svg>
