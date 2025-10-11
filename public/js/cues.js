@@ -189,7 +189,7 @@ export function handleCueTrigger(cueId, isRemote = false, force = false) {
         return;
       }
       const animationPath = `animations/${pageName}.svg`;
-      handler(cueId, animationPath, animDuration);
+      handler(cueId, animationPath, animDuration, cueParams);
     }
 
     else if (cueId.startsWith("cueNav(") || cueId.startsWith("cueNavigate(")) {
@@ -1648,14 +1648,24 @@ async function nextStep() {
  *     <div id="singlePage-countdown"></div>
  *   </div>
  */
-export async function handlePageCue(cueId, animationPath, duration) {
-  console.log(`[cuePage] Handling page cue: ${cueId}`);
+export async function handlePageCue(
+  cueId,
+  animationPath,
+  duration,
+  cueParams = {}
+) {  console.log(`[cuePage] Handling page cue: ${cueId}`);
 
   // Always ensure scrolling score is paused before page mode
   if (window.isPlaying) {
     console.log("[cuePage] 🛑 Pausing scrolling score.");
     pauseScrollScore();
   }
+
+// 🧹 Stop all active cueText overlays when entering page mode
+  document.querySelectorAll('[id^="cueText-"]').forEach(el => {
+    el.remove();
+  });
+
 
 
   // -------------------------------------------------------------
@@ -1709,6 +1719,12 @@ export async function handlePageCue(cueId, animationPath, duration) {
   // -------------------------------------------------------------
   // 4️⃣ Load SVG page
   // -------------------------------------------------------------
+  if (cueParams.choice?.trim().startsWith("loop(")) {
+    console.log("[cuePage] Detected playlist expression via cueParams.choice");
+    return handleCuePagePlaylist(cueId, cueParams.choice);
+  }
+
+
   const filePath = animationPath || `animations/${pageName}.svg`;
   try {
     const response = await fetch(filePath);
@@ -1725,13 +1741,36 @@ export async function handlePageCue(cueId, animationPath, duration) {
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
     // Reuse animation init logic
+    console.log(`initialising animations in ${pageName}.svg`);
     window.initializeSVG?.(svg);
+
+
+
+    // 🧩 ensure propagation happens for embedded page SVGs
+    if (typeof window.propagate === "function") {
+      console.log("[cuePage] ⚙️ Calling propagate() for page SVG");
+      window.propagate(svg);
+    }
+
+
+
     window.initializeRotatingObjects?.(svg);
     window.initializeScalingObjects?.(svg);
     window.initializePathFollowers?.(svg);
     window.initializeObserver?.(svg);
 
     console.log(`[cuePage] ✅ Loaded ${pageName}.svg`);
+    startPageAnimations(svg);
+
+    // autostart text animations if they contain autostart flag
+    const autostartCues = svg.querySelectorAll('[id^="cueText"][id*="_autostart(1)"]');
+    autostartCues.forEach(el => {
+      const cueExpr = el.id;
+      console.log("[page] ▶ Auto-starting cue:", cueExpr);
+      handleCueTrigger(cueExpr);
+    });
+
+
     if (window.triggeredCues instanceof Set) {
       console.log("[cuePage] 🔄 Resetting triggeredCues for new page");
       window.triggeredCues.clear();
@@ -1770,7 +1809,8 @@ export async function handlePageCue(cueId, animationPath, duration) {
       timeLeft -= 1;
       countdownElement.textContent = timeLeft;
 
-      if (timeLeft <= 3 && next) {
+      if (timeLeft <= 3 && !next) {
+        // 🔸 Fade only if there is no next page (end of sequence)
         container.style.transition = "opacity 2s ease-in-out";
         container.style.opacity = "0.3";
       }
@@ -1785,6 +1825,46 @@ export async function handlePageCue(cueId, animationPath, duration) {
     console.log("[cuePage] Waiting indefinitely for user trigger or external event.");
   }
 }
+
+
+// Kick all animations inside a standalone page SVG, without observers or scroll
+function startPageAnimations(svg) {
+  console.log("[cuePage] 🚀 startPageAnimations()");
+
+  // 1) Hard-disable observer gating for page overlays
+  const prevDisable = window.disableObserver;
+  window.disableObserver = true;
+
+  try {
+    // 2) Initialize all animation families scoped to THIS svg
+    window.initializeObjectPathPairs?.(svg);   // obj2path pairs
+    window.initializeRotatingObjects?.(svg);   // obj_rotate_* / wrappers
+    window.initializeScalingObjects?.(svg);    // s_* sequences
+
+    // 3) Register Anime.js instances and force them to play now
+    window.detectExistingAnimations?.();       // populate runningAnimations
+    window.startAllVisibleAnimations?.();      // resume()/play() on all visible
+
+    // 4) (Optional) brute-force start for any rotation/scale groups
+    if (typeof window.startRotation === "function") {
+      svg.querySelectorAll('[id*="_rotate_"], [id^="obj_rotate_"]').forEach(el => {
+        try { window.startRotation(el); } catch (_) {}
+      });
+    }
+    if (typeof window.startScale === "function") {
+      svg.querySelectorAll('[id^="s_"]').forEach(el => {
+        try { window.startScale(el); } catch (_) {}
+      });
+    }
+
+    console.log("[cuePage] ✅ Page animations started (observer disabled).");
+  } finally {
+    // leave observers disabled for page life; restore if you prefer:
+    // window.disableObserver = prevDisable ?? false;
+  }
+}
+
+
 
 /**
  * resolvePageTransition()
@@ -1803,20 +1883,40 @@ function resolvePageTransition({ mode, next, ret }) {
 
   // --- Case 1: chain to next page
   if (next) {
-    console.log(`[cuePage] ⏭ Transitioning directly to next page: ${next}`);
+    console.log(`[cuePage] ⏭ Crossfade to next page: ${next}`);
     ps.mode = "transition";
-    container.style.transition = "opacity 0.5s ease";
-    container.style.opacity = "0";
+
+    // 🟣 fade out only the page content, not the container
+    content.style.transition = "opacity 0.6s ease-in-out";
+    content.style.opacity = "0";
+
+    // ⏳ after fade-out, replace content and fade back in
     setTimeout(() => {
-      ps.mode = "page";
-      // 🧹 remove buttons from the previous page
+      // clear current buttons & page visuals
       window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
       window._activePageButtons = [];
       content.innerHTML = "";
+
+      // load next page’s SVG
       handleCueTrigger(`cuePage(${next})`);
-    }, 500);
+
+      // make sure the new page starts invisible for fade-in
+      requestAnimationFrame(() => {
+        const newContent = document.getElementById("singlePage-content");
+        if (newContent) {
+          newContent.style.opacity = "0";
+          newContent.style.transition = "opacity 0.6s ease-in-out";
+          setTimeout(() => {
+            newContent.style.opacity = "1";
+          }, 100);
+        }
+      });
+    }, 600);
+
     return;
   }
+
+
 
   // // --- Case 2: return to scrolling score
   if (!window.isCuePagePlaylistActive && (ret || mode === "popup")) {
@@ -2484,6 +2584,9 @@ export function stopAudioCue(filename, fadeOutSec = 1.5) {
 export async function handleTextCue(cueId, cueParams = {}) {
   console.log("[handleTextCue] called:", cueId, cueParams);
 
+
+
+  
   // Support old (single-param) style just in case
   if (typeof cueId === "object" && !cueParams.choice) {
     cueParams = cueId;
@@ -2508,20 +2611,39 @@ export async function handleTextCue(cueId, cueParams = {}) {
       style = {},
     } = Object.fromEntries(Object.entries(cueParams).map(([k, v]) => [k, clean(v)]));
 
-      // --------------------------------------------------------
-      // 🧱 CREATE / REUSE CONTAINER
+
       // --------------------------------------------------------
       // 🧱 CREATE / REUSE CONTAINER — now unique per cueId
     let container = document.getElementById(`cueText-${cueId}`);
-    if (!container) {
+
+    // 🧩 ensure valid node regardless of weird cueId formatting
+    if (!(container instanceof HTMLElement)) {
       container = document.createElement("div");
-      container.id = `cueText-${cueId}`;
-      document.body.appendChild(container);
+      try {
+        container.id = `cueText-${cueId}`;
+      } catch {
+        // fallback if cueId has invalid characters
+        container.id = "cueText-temp";
+      }
+
+      const ps = window.pageState || {};
+      const pageContainer = document.getElementById("singlePage-content");
+      const inPageMode =
+        (ps.mode === "page" || ps.mode === "playlist") &&
+        pageContainer &&
+        window.getComputedStyle(pageContainer).display !== "none";
+
+      if (inPageMode && pageContainer instanceof HTMLElement) {
+        pageContainer.appendChild(container);
+      } else {
+        document.body.appendChild(container);
+      }
     }
+
 
     Object.assign(container.style, {
       position: "absolute",
-      zIndex: 9999,
+      zIndex: 10000000,
       pointerEvents: "none",
       color: style.color || "black",
       fontFamily: style.font || "sans-serif",
@@ -2983,7 +3105,6 @@ export async function checkCueTriggers() {
     }
   }
 }
-
 export function parseCueParams(cueId) {
   // Extract cue type (e.g. cuePage, cueAudio, etc.)
   const typeMatch = cueId.match(/^([a-zA-Z][a-zA-Z0-9]*)/);
@@ -2993,7 +3114,7 @@ export function parseCueParams(cueId) {
   const cueParams = {};
   let rest = cueId.slice(type.length);
 
-  // --- 🧠 Handle first parenthetical block safely (choice)
+  // --- 🧠 Extract first parenthetical block safely (choice)
   if (rest.startsWith("(")) {
     let depth = 0;
     let endIndex = -1;
@@ -3012,50 +3133,37 @@ export function parseCueParams(cueId) {
     if (endIndex !== -1) {
       const inner = rest.slice(1, endIndex); // everything between ( ... )
       cueParams.choice = isNaN(inner) ? inner.trim() : parseFloat(inner);
-      rest = rest.slice(endIndex + 1); // remaining suffix (e.g. _dur(10)_uid(abc))
+      rest = rest.slice(endIndex + 1); // ✅ keep suffix intact (e.g. _wait(20)_next(page3))
     }
   }
 
-  // --- Parse remaining _key(value) pairs, including nested _style(...)
-  const regex = /_([a-zA-Z0-9]+)\(([\s\S]*?)\)/g; // ✅ [\s\S]*? handles multi-line
+  // --- ✅ Parse all suffixes, multiline-safe
+  const regex = /_([a-zA-Z0-9]+)\(([\s\S]*?)\)/g;
   let match;
   while ((match = regex.exec(rest)) !== null) {
     const [, key, value] = match;
 
-if (key === "style") {
-  const rawStyle = match[2];
-
-  // Match key:value pairs robustly — allows quoted strings, numbers, rgba(), etc.
-  const kvRegex = /([\w-]+)\s*:\s*(("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|rgba?\([^)]*\)|[^,]+))/g;
-  const obj = {};
-  let m;
-
-  while ((m = kvRegex.exec(rawStyle)) !== null) {
-    const kRaw = m[1].trim().toLowerCase();
-    let vRaw = m[2].trim();
-
-    // Strip surrounding quotes
-    vRaw = vRaw.replace(/^["']|["']$/g, "");
-
-    // Convert to number if numeric and not rgba()
-    if (!/^rgba?\(/i.test(vRaw) && !isNaN(vRaw) && vRaw !== "") {
-      vRaw = parseFloat(vRaw);
-    }
-
-    obj[kRaw] = vRaw;
-  }
-
-  cueParams.style = obj;
-}
- else {
+    if (key === "style") {
+      const rawStyle = match[2];
+      const kvRegex = /([\w-]+)\s*:\s*(("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|rgba?\([^)]*\)|[^,]+))/g;
+      const obj = {};
+      let m;
+      while ((m = kvRegex.exec(rawStyle)) !== null) {
+        const kRaw = m[1].trim().toLowerCase();
+        let vRaw = m[2].trim().replace(/^["']|["']$/g, "");
+        if (!/^rgba?\(/i.test(vRaw) && !isNaN(vRaw) && vRaw !== "") vRaw = parseFloat(vRaw);
+        obj[kRaw] = vRaw;
+      }
+      cueParams.style = obj;
+    } else {
+      // 🔧 Handle numbers and strings
       cueParams[key] = isNaN(value) ? value.trim() : parseFloat(value);
     }
   }
 
-
-
   return { type, cueParams, cleanedId: cueId };
 }
+
 
 function parseKeyValueParams(str, cueParams) {
   const regex = /_([a-zA-Z0-9]+)\(([^)]+)\)/g;
@@ -3535,19 +3643,19 @@ console.log("[parseCueButton] styleInner:", styleInner);
     console.warn("[parseCueButton] ⚠️ No _style(...) found in:", cueId);
   }
 
-  // 6️⃣ Label fallback hierarchy: label → UID → cue type
-  if (!opt.label || opt.label.trim() === "") {
-    const type = cueExpr.split("(")[0] || "cue";
-    const uidMatch = cueId.match(/_uid\(([^)]+)\)/);
-    const uid = opt.uid || (uidMatch ? uidMatch[1] : null);
+ const uidMatch =
+  cueExpr.match(/_uid\(([^)]+)\)/) ||
+  cueId.match(/_uid\(([^)]+)\)/);
 
-    if (uid) {
-      opt.label = uid.trim();
-    } else {
-      opt.label = type.replace(/^cue/, "").trim();
-    }
-  }
+const uid = opt._uid || (uidMatch ? uidMatch[1] : null);
 
+if (uid) {
+  opt.label = opt.label || uid.trim();
+  opt._uid = uid.trim(); // ✅ store it explicitly too
+} else {
+  const type = cueExpr.split("(")[0] || "cue";
+  opt.label = opt.label || type.replace(/^cue/, "").trim();
+}
 
   // ✅ Register UID safely here — cueExpr is now guaranteed to exist
   try {
@@ -3593,6 +3701,8 @@ export function parseNavCue(id) {
 
 // ---- handler (instrumented)
 export async function handleNavCue(parsed) {
+  const { cueId, cueParams } = parsed;
+
   if (!parsed) return;
   const { action, argExpr } = parsed;
 
@@ -3645,22 +3755,23 @@ export async function handleNavCue(parsed) {
     return r;
   };
 
-  const gotoPage = (pid) => {
-    // Stop any active playlist so it doesn’t overwrite navigation
-    if (window.isCuePagePlaylistActive) stopPlaylist();
+const gotoPage = (pid, cueParams = {}) => {
+  if (window.isCuePagePlaylistActive) stopPlaylist();
 
-    // Open the target page and hold until user action
-    // (use _wait(1) as a simple “hold” mode; change to _dur if you prefer timed)
-    const target = `cuePage(${pid})_wait(1)`;
-    dbg("goto→trigger:", target);
+  // ✅ Build suffixes dynamically from cueParams
+  const durSuffix = cueParams.dur ? `_dur(${cueParams.dur})` : "_wait(1)";
+  const nextSuffix = cueParams.next ? `_next(${cueParams.next})` : "";
 
-    // Force = true to bypass de-duplication if this cue fired before
-    try {
-      window.handleCueTrigger?.(target, /*isRemote*/ false, /*force*/ true);
-    } catch (e) {
-      console.error("[cueNav] goto trigger failed:", target, e);
-    }
-  };
+  const target = `cuePage(${pid})${durSuffix}${nextSuffix}`;
+  dbg("goto→trigger:", target);
+
+  try {
+    window.handleCueTrigger?.(target, false, true);
+  } catch (e) {
+    console.error("[cueNav] goto trigger failed:", target, e);
+  }
+};
+
 
   const nextPage = () => { dbg("nextPage()"); return window.nextPage?.() || window.pageController?.next?.(); };
   const prevPage = () => { dbg("prevPage()"); return window.prevPage?.() || window.pageController?.prev?.(); };
@@ -3709,10 +3820,31 @@ export async function handleNavCue(parsed) {
       restartPlaylist();
       break;
 
-    case "goto":
-      if (!argExpr) { dbg("goto() missing arg"); break; }
-      gotoPage(argExpr);
-      break;
+case "goto": {
+  if (!argExpr) {
+    dbg("goto() missing arg");
+    break;
+  }
+
+  // ✅ Extract dur / next directly from parsed.cueParams
+  const dur = cueParams?.dur;
+  const next = cueParams?.next;
+
+  // ✅ Use defaults if not provided
+  const durSuffix = dur ? `_dur(${dur})` : "_wait(1)";
+  const nextSuffix = next ? `_next(${next})` : "";
+
+  const target = `cuePage(${argExpr})${durSuffix}${nextSuffix}`;
+  dbg("goto→trigger:", target);
+
+  try {
+    window.handleCueTrigger?.(target, false, true);
+  } catch (e) {
+    console.error("[cueNav] goto trigger failed:", target, e);
+  }
+  break;
+}
+
 
     case "trigger":
       if (!argExpr) { dbg("trigger() missing arg"); break; }

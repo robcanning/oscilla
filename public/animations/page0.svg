@@ -22,8 +22,8 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="0.59"
-     inkscape:cx="1032.2034"
-     inkscape:cy="536.44068"
+     inkscape:cx="979.66102"
+     inkscape:cy="439.83051"
      inkscape:window-width="1854"
      inkscape:window-height="1011"
      inkscape:window-x="0"
@@ -32,6 +32,24 @@
      inkscape:current-layer="svg5125" />
   <defs
      id="defs5129">
+    <rect
+       x="7351.7611"
+       y="161.48702"
+       width="4896.3586"
+       height="66.187765"
+       id="rect340" />
+    <rect
+       x="2032.7529"
+       y="296.61679"
+       width="986.08316"
+       height="84.732521"
+       id="rect226" />
+    <rect
+       x="2856.8194"
+       y="167.29343"
+       width="443.05482"
+       height="73.17267"
+       id="rect220" />
     <rect
        x="663.24153"
        y="209.32865"
@@ -110,15 +128,16 @@
   <!-- Animated Object -->
   <text
      xml:space="preserve"
-     style="font-size:192px;fill:#808000"
+     style="font-size:192px;white-space:pre;inline-size:741.538;display:inline;fill:#808000"
      x="366.70773"
      y="569.79199"
-     id="text300713"><tspan
-       sodipodi:role="line"
-       id="tspan300711"
+     id="text300713"
+     transform="matrix(0.23659034,0,0,0.23659034,-69.542768,-84.140528)"><tspan
        x="366.70773"
        y="569.79199"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono">PAGE 0</tspan></text>
+       id="tspan173915"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173913">PAGE 0</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:192px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#808000"
@@ -134,8 +153,7 @@
      style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000;stroke-width:1.75042"
      x="400.83667"
      y="889.42017"
-     id="cueButton(cueNav(goto(page0))_style(size:&quot;120x50&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 0&quot;))
-"
+     id="cueButton(cueNav(goto(page0))_style(size:&quot;120x50&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 0&quot;)) "
      transform="scale(0.99191568,1.0081502)"><tspan
        sodipodi:role="line"
        id="tspan79197"
@@ -151,19 +169,24 @@
      transform="matrix(0.99191568,0,0,1.0081502,18.485169,-35.666049)"><tspan
        x="575.57843"
        y="925.75702"
-       id="tspan183734">p1</tspan></text>
+       id="tspan173917">p1</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';white-space:pre;inline-size:40.8619;display:inline;fill:#000000;stroke-width:1.75042"
+     x="575.57843"
+     y="925.75702"
+     id="cueButton(cuePage(page2)_dur(20)_next(page3))_style(size:&quot;120x50&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 2&quot;) 
+"
+     transform="matrix(0.99191568,0,0,1.0081502,200.37769,-36.109618)"><tspan
+       x="575.57843"
+       y="925.75702"
+       id="tspan173919">p2</tspan></text>
   <text
      xml:space="preserve"
      style="font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
      x="1178.6613"
      y="888.31909"
-     id="cueButton(cueNav(mode(scroll)))_style(
-  label:&quot;Exit Page Mode&quot;,
-  color:&quot;crimson&quot;,
-  fontsize:20,
-  font:&quot;Arial Black&quot;,
-  radius:12
-)"><tspan
+     id="cueButton(cueNav(mode(scroll)))_style(   label:&quot;Exit Page Mode&quot;,   color:&quot;crimson&quot;,   fontsize:20,   font:&quot;Arial Black&quot;,   radius:12 )"><tspan
        sodipodi:role="line"
        id="tspan181966"
        x="1178.6613"
@@ -202,201 +225,316 @@
   <text
      xml:space="preserve"
      style="font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
-     x="228.11838"
-     y="75.079453"
-     id="cueButton(
-  cuePage(
-    loop(
-      page3:1,
-      rand(page0:2, page1:2, page2:2),
-      page2:3
-    )
-  )
-  _broadcast(1)
-  _conductor(0)
-  _repeatable(1)
-  _scroll(0)
-  _style(
-    size:&quot;166x100&quot;,
-    color:&quot;green&quot;,
-    class:&quot;myBtn&quot;,
-    label:&quot;Random Score Loop&quot;
-  )
-  _uid(random-score-loop)
-)
-"><tspan
+     x="984.72504"
+     y="840.97986"
+     id="dfg456"><tspan
        sodipodi:role="line"
-       x="228.11838"
-       y="75.079453"
-       id="tspan182732">cueButton(</tspan><tspan
+       id="tspan181966-6"
+       x="984.72504"
+       y="840.97986"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000">cueButton(cueNav(mode(scroll)))_style(</tspan><tspan
        sodipodi:role="line"
-       x="228.11838"
-       y="95.079453"
-       id="tspan183219">  cuePage(</tspan><tspan
+       x="984.72504"
+       y="860.97986"
+       id="tspan181970-7"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000">  label:&quot;Exit Page Mode&quot;,</tspan><tspan
        sodipodi:role="line"
-       x="228.11838"
-       y="115.07945"
-       id="tspan183221">    loop(</tspan><tspan
+       x="984.72504"
+       y="880.97986"
+       id="tspan181972-5"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000">  color:&quot;crimson&quot;,</tspan><tspan
        sodipodi:role="line"
-       x="228.11838"
-       y="135.07945"
-       id="tspan183223">      page3:1,</tspan><tspan
+       x="984.72504"
+       y="900.97986"
+       id="tspan181974-3"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000">  fontsize:20,</tspan><tspan
        sodipodi:role="line"
-       x="228.11838"
-       y="155.07945"
-       id="tspan183225">      rand(page0:2, page1:2, page2:2),</tspan><tspan
+       x="984.72504"
+       y="920.97986"
+       id="tspan181976-5"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000">  font:&quot;Arial Black&quot;,</tspan><tspan
        sodipodi:role="line"
-       x="228.11838"
-       y="175.07945"
-       id="tspan183227">      page2:3</tspan><tspan
+       x="984.72504"
+       y="940.97986"
+       id="tspan181978-6"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000">  radius:12</tspan><tspan
        sodipodi:role="line"
-       x="228.11838"
-       y="195.07945"
-       id="tspan183229">    )</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="215.07945"
-       id="tspan183231">  )</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="235.07945"
-       id="tspan183233">  _broadcast(1)</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="255.07945"
-       id="tspan183235">  _conductor(0)</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="275.07947"
-       id="tspan183237">  _repeatable(1)</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="295.07947"
-       id="tspan183239">  _scroll(0)</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="315.07947"
-       id="tspan183241">  _style(</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="335.07947"
-       id="tspan183243">    size:&quot;166x100&quot;,</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="355.07947"
-       id="tspan183245">    color:&quot;green&quot;,</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="375.07947"
-       id="tspan183247">    class:&quot;myBtn&quot;,</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="395.07947"
-       id="tspan183249">    label:&quot;Random Score Loop&quot;</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="415.07947"
-       id="tspan183251">  )</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="435.07947"
-       id="tspan183253">  _uid(random-score-loop)</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="455.07947"
-       id="tspan183255">)</tspan><tspan
-       sodipodi:role="line"
-       x="228.11838"
-       y="475.07947"
-       id="tspan183257" /></text>
+       x="984.72504"
+       y="960.97986"
+       id="tspan181980-2"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000">)</tspan></text>
+  <g
+     id="g740458"
+     transform="matrix(0.82621892,0,0,1.951416,-7658.1787,-1207.4085)"
+     style="display:inline">
+    <path
+       style="opacity:0.755784;fill:#000000;stroke:#000000;stroke-width:0.750783;stroke-dasharray:none;stroke-opacity:1"
+       d="m 9588.4983,895.94785 h 902.0327"
+       id="path203249-2"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="display:inline;opacity:0.755784;fill:#000000;stroke:#000000;stroke-width:0.750783;stroke-dasharray:none;stroke-opacity:1"
+       d="m 9588.9458,902.25961 h 902.0332"
+       id="path203249-9-37"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="display:inline;opacity:0.755784;fill:#000000;stroke:#000000;stroke-width:0.750783;stroke-dasharray:none;stroke-opacity:1"
+       d="m 9589.2862,921.19489 h 902.0328"
+       id="path203249-9-7-59"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="display:inline;opacity:0.755784;fill:#000000;stroke:#000000;stroke-width:0.750783;stroke-dasharray:none;stroke-opacity:1"
+       d="m 9588.6054,908.57137 h 902.0326"
+       id="path203249-6-2"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="display:inline;opacity:0.755784;fill:#000000;stroke:#000000;stroke-width:0.750783;stroke-dasharray:none;stroke-opacity:1"
+       d="m 9588.6054,914.88313 h 902.0326"
+       id="path203249-7-28"
+       sodipodi:nodetypes="cc" />
+  </g>
+  <g
+     id="propagate(s(rnd(10x0.2-1.8x))_mode(loop)_seqdur($1)_ease(step)_uid(123), rnd(1,3.5))"
+     style="display:inline;fill:#000000"
+     transform="translate(-9260.2665,-280.3378)">
+    <ellipse
+       style="fill:#000000"
+       id="path681417"
+       cx="9626.709"
+       cy="834.59204"
+       rx="12.695804"
+       ry="11.746256" />
+    <ellipse
+       style="display:inline;fill:#000000"
+       id="path681417-1"
+       cx="9678.3516"
+       cy="838.57617"
+       rx="12.695804"
+       ry="11.746256" />
+    <ellipse
+       style="display:inline;fill:#000000"
+       id="path681417-8"
+       cx="9716.9365"
+       cy="854.01007"
+       rx="12.695804"
+       ry="11.746256" />
+    <ellipse
+       style="display:inline;fill:#000000"
+       id="path681417-7"
+       cx="9768.3828"
+       cy="848.86542"
+       rx="12.695804"
+       ry="11.746256" />
+    <ellipse
+       style="display:inline;fill:#000000"
+       id="path681417-9"
+       cx="9814.6846"
+       cy="836.00385"
+       rx="12.695804"
+       ry="11.746256" />
+    <ellipse
+       style="display:inline;fill:#000000"
+       id="path681417-2"
+       cx="9854.5557"
+       cy="855.2962"
+       rx="12.695804"
+       ry="11.746256" />
+  </g>
+  <g
+     id="propagate(s(rnd(10x0.2-1.8x))_mode(loop)_seqdur($1)_ease(0)_uid(123), rnd([20,30,40]))"
+     style="display:inline;fill:#000000"
+     transform="translate(-8870.1351,-266.81551)">
+    <ellipse
+       style="fill:#000000"
+       id="path681417-73"
+       cx="9626.709"
+       cy="834.59204"
+       rx="12.695804"
+       ry="11.746256" />
+    <ellipse
+       style="display:inline;fill:#000000"
+       id="path681417-1-6"
+       cx="9678.3516"
+       cy="838.57617"
+       rx="12.695804"
+       ry="11.746256" />
+    <ellipse
+       style="display:inline;fill:#000000"
+       id="path681417-8-1"
+       cx="9716.9365"
+       cy="854.01007"
+       rx="12.695804"
+       ry="11.746256" />
+    <ellipse
+       style="display:inline;fill:#000000"
+       id="path681417-7-2"
+       cx="9768.3828"
+       cy="848.86542"
+       rx="12.695804"
+       ry="11.746256" />
+    <ellipse
+       style="display:inline;fill:#000000"
+       id="path681417-9-9"
+       cx="9814.6846"
+       cy="836.00385"
+       rx="12.695804"
+       ry="11.746256" />
+    <ellipse
+       style="display:inline;fill:#000000"
+       id="path681417-2-3"
+       cx="9854.5557"
+       cy="855.2962"
+       rx="12.695804"
+       ry="11.746256" />
+  </g>
   <text
      xml:space="preserve"
-     style="font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
-     x="672.6394"
-     y="48.442753"
-     id="text182692-5"><tspan
+     style="font-size:21.3333px;white-space:pre;inline-size:1179.2;display:inline;fill:#000000"
+     x="155.13109"
+     y="142.2868"
+     id="text166"
+     transform="translate(-55.29661,31.806144)"><tspan
+       x="155.13109"
+       y="142.2868"
+       id="tspan173923"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173921">The cueNav command provides navigation control within OscillaScore, allowing performers or </tspan></tspan><tspan
+       x="155.13109"
+       y="169.27609"
+       id="tspan173927"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173925">the score itself to jump between pages or switch display modes during playback. A cue like </tspan></tspan><tspan
+       x="155.13109"
+       y="196.26538"
+       id="tspan173931"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173929">cueNav(goto(page1)) directs the system to load a specific page, while cueNav(mode(scroll)) </tspan></tspan><tspan
+       x="155.13109"
+       y="223.25466"
+       id="tspan173935"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173933">exits page mode and returns to the continuous scrolling score view. In addition to simple </tspan></tspan><tspan
+       x="155.13109"
+       y="250.24395"
+       id="tspan173939"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173937">“goto” and “mode” actions, cueNav supports optional parameters such as timed transitions </tspan></tspan><tspan
+       x="155.13109"
+       y="277.23324"
+       id="tspan173943"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173941">(_wait(n)), chained cues (triggering additional actions after navigation), and integration </tspan></tspan><tspan
+       x="155.13109"
+       y="304.22253"
+       id="tspan173947"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173945">with the broader cue system—meaning navigation can be synchronized across clients or linked </tspan></tspan><tspan
+       x="155.13109"
+       y="331.21182"
+       id="tspan173951"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173949">to other events like media playback or repeats. 
+</tspan></tspan><tspan
+       x="155.13109"
+       y="358.20111"
+       id="tspan173955"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173953">
+</tspan></tspan><tspan
+       x="155.13109"
+       y="385.19039"
+       id="tspan173959"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173957">It effectively serves as the bridge between static pages and fluid scrolling navigation, </tspan></tspan><tspan
+       x="155.13109"
+       y="412.17968"
+       id="tspan173963"><tspan
+         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan173961">giving composers precise control over the score’s visual and temporal flow.</tspan></tspan></text>
+  <text
+     xml:space="preserve"
+     id="text218"
+     style="font-size:21.3333px;white-space:pre;shape-inside:url(#rect220);display:inline;fill:#000000" />
+  <text
+     xml:space="preserve"
+     id="text224"
+     style="font-size:21.3333px;white-space:pre;shape-inside:url(#rect226);display:inline;fill:#000000" />
+  <text
+     xml:space="preserve"
+     id="text338"
+     style="font-size:21.3333px;white-space:pre;shape-inside:url(#rect340);display:inline;fill:#000000" />
+  <text
+     xml:space="preserve"
+     style="font-size:16px;white-space:pre;inline-size:333.477;display:inline;fill:#000000"
+     x="242.56488"
+     y="693.58447"
+     id="text415"
+     transform="translate(-36.261918,131.16393)"><tspan
+       x="242.56488"
+       y="693.58447"
+       id="tspan173967"><tspan
+         style="font-weight:bold;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold'"
+         id="tspan173965">cueButton(cueNav(goto(page0))_styl</tspan></tspan><tspan
+       x="242.56488"
+       y="713.82649"
+       id="tspan173971"><tspan
+         style="font-weight:bold;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold'"
+         id="tspan173969">e(size:&quot;120x50&quot;, color:&quot;#008&quot;, </tspan></tspan><tspan
+       x="242.56488"
+       y="734.06849"
+       id="tspan173975"><tspan
+         style="font-weight:bold;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold'"
+         id="tspan173973">label:&quot;Go to Page 0&quot;)) </tspan></tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:48px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
+     x="103.1581"
+     y="117.16101"
+     id="text526"><tspan
        sodipodi:role="line"
-       x="672.6394"
-       y="48.442753"
-       id="tspan182732-0">cueButton(</tspan><tspan
+       id="tspan524"
+       x="103.1581"
+       y="117.16101">Navigating Within Page Mode</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;white-space:pre;inline-size:554.378;display:inline;fill:#000000"
+     x="755.42902"
+     y="766.00238"
+     transform="translate(-102.28417,-133.73279)"
+     id="text18790"><tspan
+       x="755.42902"
+       y="766.00238"
+       id="tspan173977">ueButton(</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;white-space:pre;inline-size:221.711;display:inline;fill:#ff0000"
+     x="755.42902"
+     y="766.00238"
+     transform="translate(-24.066473,-22.609905)"
+     id="text18482"><tspan
+       x="755.42902"
+       y="766.00238"
+       id="tspan173979">ueButton(</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000"
+     x="697.25238"
+     y="711.61279"
+     id="text18796"><tspan
        sodipodi:role="line"
-       x="672.6394"
-       y="68.442749"
-       id="tspan183468">  cuePage(</tspan><tspan
+       x="697.25238"
+       y="711.61279"
+       id="tspan18802">cueButton(</tspan><tspan
        sodipodi:role="line"
-       x="672.6394"
-       y="88.442749"
-       id="tspan183470">    loop(</tspan><tspan
+       x="697.25238"
+       y="731.61279"
+       id="tspan18964">  cueNav(goto(page2))_dur(20)_next(page3)</tspan><tspan
        sodipodi:role="line"
-       x="672.6394"
-       y="108.44275"
-       id="tspan183472">      page3:1,</tspan><tspan
+       x="697.25238"
+       y="751.61279"
+       id="tspan18966">  _style(size:&quot;120x50&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 2&quot;)</tspan><tspan
        sodipodi:role="line"
-       x="672.6394"
-       y="128.44275"
-       id="tspan183474">      rand(page0:2, page1:2, page2:2),</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="148.44275"
-       id="tspan183476">      page2:3</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="168.44275"
-       id="tspan183478">    )</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="188.44275"
-       id="tspan183480">  )</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="208.44275"
-       id="tspan183482">  _broadcast(1)</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="228.44275"
-       id="tspan183484">  _conductor(0)</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="248.44275"
-       id="tspan183486">  _repeatable(1)</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="268.44275"
-       id="tspan183488">  _scroll(0)</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="288.44275"
-       id="tspan183490">  _style(</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="308.44275"
-       id="tspan183492">    size:&quot;166x100&quot;,</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="328.44275"
-       id="tspan183494">    color:&quot;green&quot;,</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="348.44275"
-       id="tspan183496">    class:&quot;myBtn&quot;,</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="368.44275"
-       id="tspan183498">    label:&quot;Random Score Loop&quot;</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="388.44275"
-       id="tspan183500">  )</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="408.44275"
-       id="tspan183502">  _uid(random-score-loop)</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="428.44275"
-       id="tspan183504">)</tspan><tspan
-       sodipodi:role="line"
-       x="672.6394"
-       y="448.44275"
-       id="tspan183506" /></text>
+       x="697.25238"
+       y="771.61279"
+       id="tspan18968">)</tspan></text>
 </svg>

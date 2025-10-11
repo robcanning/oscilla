@@ -1645,6 +1645,9 @@ function propagate(svgRoot) {
   });
 }
 
+window.propagate = propagate;
+
+
 /**
  * evaluateExpr(expr)
  * ------------------------------------------------------------
