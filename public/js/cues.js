@@ -190,7 +190,7 @@ export function handleCueTrigger(cueId, isRemote = false, force = false) {
         console.error(`[CLIENT] cuePage missing page name: ${cueId}`);
         return;
       }
-      const animationPath = `animations/${pageName}.svg`;
+      const animationPath = `scores/pages/${pageName}.svg`;
       handler(cueId, animationPath, animDuration, cueParams);
     }
 
@@ -243,7 +243,7 @@ export function registerCueUid(cueExpr, context = "unknown") {
   const uid = uidMatch[1].trim();
   window.cueRegistry[uid] = cueExpr;
 
-  console.log(`[REGISTRY] ✅ Registered UID "${uid}" (${context}) → ${cueExpr}`);
+  // console.log(`[REGISTRY] ✅ Registered UID "${uid}" (${context}) → ${cueExpr}`);
 }
 
 
@@ -342,7 +342,7 @@ export function handlePauseCue(cueId, duration, showCountdownOverride = null, re
   }
 
   if (window.isSeeking) {
-    console.log(`[DEBUG] Ignoring pause cue '${cueId}' during seeking.`);
+    // console.log(`[DEBUG] Ignoring pause cue '${cueId}' during seeking.`);
     return;
   }
 
@@ -839,24 +839,24 @@ export function handleRestoredRepeatState(repeatStateMap, cues) {
 export function assignCues(svgRoot, cuesArray = []) {
   const cueGroups = svgRoot.querySelectorAll('g[id^="assignCues("]');
   if (!cueGroups.length) {
-    console.log("[assignCues] No assignCues(...) groups found in SVG.");
+    // console.log("[assignCues] No assignCues(...) groups found in SVG.");
   } else {
-    console.log(`[assignCues] Found ${cueGroups.length} cue group(s).`);
+    // console.log(`[assignCues] Found ${cueGroups.length} cue group(s).`);
   }
 
   cueGroups.forEach(group => {
-    console.log(`[assignCues] Raw group ID: '${group.id}'`);
+    // console.log(`[assignCues] Raw group ID: '${group.id}'`);
 
     const baseId = group.id.split('-')[0];
     const match = baseId.match(/^assignCues\((.+)\)$/);
 
     if (!match) {
-      console.warn(`[assignCues] Skipping malformed group ID: ${group.id}`);
+      // console.warn(`[assignCues] Skipping malformed group ID: ${group.id}`);
       return;
     }
 
     const instruction = match[1].trim();
-    console.log(`[assignCues] Processing group: ${group.id} with ${group.children.length} child(ren)`);
+    // console.log(`[assignCues] Processing group: ${group.id} with ${group.children.length} child(ren)`);
 
     // 1. Special case: cueOscSet(param, rnd[...] / ypos[...])
     const setMatch = instruction.match(/^cueOscSet\(([^,]+),\s*(rnd|ypos)\[([\d.]+),([\d.]+)\]\)$/);
@@ -867,7 +867,7 @@ export function assignCues(svgRoot, cuesArray = []) {
       const max = parseFloat(setMatch[4]);
       const bbox = group.getBBox();
 
-      console.log(`[assignCues] → cueOscSet(${param}, ${mode}[${min}, ${max}])`);
+      // console.log(`[assignCues] → cueOscSet(${param}, ${mode}[${min}, ${max}])`);
 
       Array.from(group.children).forEach((child, index) => {
         let value = mode === "rnd"
@@ -890,17 +890,17 @@ export function assignCues(svgRoot, cuesArray = []) {
           x: bbox.x,
           width: bbox.width
         });
-        console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
+        // console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
       });
       return;
     }
 
     // 2. General case: cueOscTrigger(rnd[1,9]), etc.
     const cueMatch = instruction.match(/^([a-zA-Z][a-zA-Z0-9]*)\((rnd|ypos)\[([\d.]+),([\d.]+)\]\)$/);
-    console.log(`[assignCues] cueMatch result:`, cueMatch);
+    // console.log(`[assignCues] cueMatch result:`, cueMatch);
 
     if (!cueMatch) {
-      console.warn(`[assignCues] ❌ Invalid syntax: ${group.id}`);
+      // console.warn(`[assignCues] ❌ Invalid syntax: ${group.id}`);
       return;
     }
 
@@ -910,7 +910,7 @@ export function assignCues(svgRoot, cuesArray = []) {
     const max = parseFloat(cueMatch[4]);
     const bbox = group.getBBox();
 
-    console.log(`[assignCues] → ${cueType}(${mode}[${min}, ${max}])`);
+    // console.log(`[assignCues] → ${cueType}(${mode}[${min}, ${max}])`);
 
     Array.from(group.children).forEach((child, index) => {
       let value = mode === "rnd"
@@ -934,7 +934,7 @@ cuesArray.push({
   width: bbox.width
 });
 
-console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
+// console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
     });
   });
 
@@ -948,9 +948,9 @@ console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
         const parsed = parseCueButton(id);         // ← from the helper we added
         if (parsed) {
           createCueButtonForElement(child, parsed); // ← overlays button, hides SVG cue
-          console.log(`[assignCues] 🟦 Created cueButton: ${id}`);
+          // console.log(`[assignCues] 🟦 Created cueButton: ${id}`);
         } else {
-          console.warn(`[assignCues] ⚠️ Failed to parse cueButton: ${id}`);
+          // console.warn(`[assignCues] ⚠️ Failed to parse cueButton: ${id}`);
         }
         // Do NOT recurse into this child (prevents duplicate handling of its subtree)
         // and do NOT push to cuesArray (buttons are click-driven, not scroll-triggered).
@@ -968,12 +968,12 @@ console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
           triggered: false,
           ...(bbox && { x: bbox.x, width: bbox.width })
         });
-        console.log(`[assignCues] ➕ Added external cue: ${id}`);
+        // console.log(`[assignCues] ➕ Added external cue: ${id}`);
       
         registerCueUid(id, "walk");
 
       } else if (id?.includes("cue") && !id.startsWith("cue")) {
-        console.warn(`[assignCues] ⚠️ Skipped suspicious cue-like ID: ${id}`);
+        // console.warn(`[assignCues] ⚠️ Skipped suspicious cue-like ID: ${id}`);
       }
       walkForCueElements(child); // recurse
     }
@@ -1120,35 +1120,6 @@ export function getSpeedForPosition(xPosition) {
     return 1.0;
   }
 }
-
-
-/**
- * preloadSpeedCues()
- * 
- * Scans the score for all cueSpeed elements and populates window.speedCueMap.
- * Cues must use ID format like `speed_1.2`, `speed_0.75`, etc.
- * Used to enable accurate speed restoration during seek or jump.
- */
-export function preloadSpeedCues() {
-  window.speedCueMap = [];
-
-  const elements = document.querySelectorAll('[id^="cueSpeed("]');
-  elements.forEach(el => {
-    const match = el.id.match(/cueSpeed\((\d+(\.\d+)?)\)/);
-    if (match) {
-      const speed = parseFloat(match[1]);
-      const bbox = el.getBBox();
-      const pos = bbox.x + bbox.width / 2;
-      if (!isNaN(speed)) {
-        window.speedCueMap.push({ position: pos, multiplier: speed });
-      }
-    }
-  });
-
-  window.speedCueMap.sort((a, b) => a.position - b.position);
-  console.log("[DEBUG] Preloaded speed cues:", window.speedCueMap);
-}
-
 
 
 /**
@@ -1326,7 +1297,7 @@ export function handleCueChoice(cueId) {
 
       const svgThumbnail = document.createElement("object");
       svgThumbnail.type = "image/svg+xml";
-      svgThumbnail.data = `animations/${choice}.svg`;
+      svgThumbnail.data = `scores/pages/${choice}.svg`;
       svgThumbnail.classList.add("cue-choice-thumbnail");
 
       svgThumbnail.onload = () => {
@@ -1738,7 +1709,7 @@ export async function handlePageCue(
   }
 
 
-  const filePath = animationPath || `animations/${pageName}.svg`;
+  const filePath = animationPath || `scores/pages/${pageName}.svg`;
   try {
     const response = await fetch(filePath);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -2428,7 +2399,7 @@ export function handleAudioCue(cueId, cueParams) {
     filename = `${filenameBase}.${ext}`;
   }
 
-  const audioPath = `audio/${filename}`;
+  const audioPath = `scores/audio/${filename}`;
   const volume = typeof cueParams.amp === 'number' ? cueParams.amp : 1;
   const loopCount = typeof cueParams.loop === 'number' ? cueParams.loop : 1;
   const shouldLoop = loopCount === 0 ? true : loopCount;
@@ -3647,15 +3618,15 @@ function parseBool(v) {
 
 
 export function parseCueButton(cueId) {
-  console.log("\n[parseCueButton] called with:", cueId);
+  //console.log("\n[parseCueButton] called with:", cueId);
 
   // 1) pull inner of cueButton(...)
   const inner = extractFuncInner(cueId, "cueButton");
   if (!inner) {
-    console.warn("[parseCueButton] ❌ extractFuncInner failed for cueButton()");
+    //console.warn("[parseCueButton] ❌ extractFuncInner failed for cueButton()");
     return null;
   }
-  console.log("[parseCueButton] inner:", inner);
+  //console.log("[parseCueButton] inner:", inner);
   registerCueUid(cueId, "button");
 
 // 2) try to find _style(...) INSIDE inner (preferred form)
@@ -3698,8 +3669,8 @@ if (outerStart !== -1) {
   }
 }
 
-console.log("[parseCueButton] cueExpr:", cueExpr);
-console.log("[parseCueButton] styleInner:", styleInner);
+// console.log("[parseCueButton] cueExpr:", cueExpr);
+// console.log("[parseCueButton] styleInner:", styleInner);
 
 
 
@@ -3714,11 +3685,11 @@ console.log("[parseCueButton] styleInner:", styleInner);
     }
   }
 
-  console.log("[parseCueButton] cueExpr:", cueExpr);
-  console.log("[parseCueButton] styleInner:", styleInner);
+  // console.log("[parseCueButton] cueExpr:", cueExpr);
+  // console.log("[parseCueButton] styleInner:", styleInner);
 
   if (!cueExpr) {
-    console.warn("[parseCueButton] ⚠️ Missing cue expression in:", cueId);
+    // console.warn("[parseCueButton] ⚠️ Missing cue expression in:", cueId);
     return null;
   }
 
@@ -3740,18 +3711,18 @@ console.log("[parseCueButton] styleInner:", styleInner);
     try {
       kvs = splitTopLevel(styleInner, ",");
     } catch (err) {
-      console.error("[parseCueButton] splitTopLevel failed; fallback split:", err);
+      // console.error("[parseCueButton] splitTopLevel failed; fallback split:", err);
       kvs = styleInner.split(/,(?![^()]*\))/);
     }
 
-    console.log("[parseCueButton] splitTopLevel result:", kvs);
+    // console.log("[parseCueButton] splitTopLevel result:", kvs);
 
     kvs.forEach(kvRaw => {
       const kv = kvRaw.trim(); if (!kv) return;
       const ix = kv.indexOf(":"); if (ix < 0) return;
       const key = kv.slice(0, ix).trim().toLowerCase();
       let val = kv.slice(ix + 1).trim().replace(/^["']|["']$/g, "");
-      console.log(`[parseCueButton] kv → key: "${key}" val: "${val}"`);
+      // console.log(`[parseCueButton] kv → key: "${key}" val: "${val}"`);
 
       switch (key) {
         case "size": {
@@ -3788,11 +3759,11 @@ console.log("[parseCueButton] styleInner:", styleInner);
         case "conductor":  opt.conductorOnly = /^(1|true|on|yes)$/i.test(val) ? 1 : 0; break;
         case "scroll":     opt.scrollFollow = /^(1|true|on|yes)$/i.test(val) ? 1 : 0; break;
         default:
-          console.warn("[parseCueButton] ⚠️ Unhandled key:", key, "=", val);
+          // console.warn("[parseCueButton] ⚠️ Unhandled key:", key, "=", val);
       }
     });
   } else {
-    console.warn("[parseCueButton] ⚠️ No _style(...) found in:", cueId);
+    // console.warn("[parseCueButton] ⚠️ No _style(...) found in:", cueId);
   }
 
  const uidMatch =
@@ -3817,11 +3788,11 @@ if (uid) {
 
     registerCueUid(innerCue, "button");
   } catch (err) {
-    console.warn("[parseCueButton] ⚠️ UID registration failed:", err);
+    // console.warn("[parseCueButton] ⚠️ UID registration failed:", err);
   }
 
 
-  console.log("[parseCueButton] ✅ Parsed result:", { cueExpr, opt });
+  // console.log("[parseCueButton] ✅ Parsed result:", { cueExpr, opt });
   return { cueExpr, opt };
 }
 

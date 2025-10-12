@@ -552,7 +552,7 @@ function startScale(object) {
   // --- Parse scale values ---
   const parsed = parseCompactAnimationValues(id, prefix);
   if (!parsed || !parsed.values || parsed.values.length === 0) {
-    console.warn(`[scale] ❌ No valid values parsed for ${id}`);
+    // console.warn(`[scale] ❌ No valid values parsed for ${id}`);
     return;
   }
   const scaleValues = parsed.values;
@@ -787,20 +787,20 @@ const initializeObjectPathPairs = (svgElement, speed = 10.0) => {
       const rawId = object.id;
       const id = object.getAttribute('data-id') || rawId;
 
-      console.log(`[SCAN] Checking ${id}`); // 🔍 add this
+      // console.log(`[SCAN] Checking ${id}`); // 🔍 add this
 
       if (id.startsWith("o2p(")) {
-        console.log(`[MATCH] ID starts with o2p: ${id}`); // 🔍 add this
+        // console.log(`[MATCH] ID starts with o2p: ${id}`); // 🔍 add this
 
         const config = window.parseO2PCompact(id);
         if (!config) {
-          console.warn(`[o2p] ⚠️ Could not parse compact ID: ${id}`);
+          // console.warn(`[o2p] ⚠️ Could not parse compact ID: ${id}`);
           return;
         }
 
         const path = svgElement.getElementById(config.pathId);
         if (!path) {
-          console.warn(`[o2p] ⚠️ No path found with ID: ${config.pathId}`);
+          // console.warn(`[o2p] ⚠️ No path found with ID: ${config.pathId}`);
           return;
         }
 
@@ -989,7 +989,7 @@ function emitOSCFromPathProgress({ path, progress, pathId = null }) {
 
 
 const animateObjToPath = (object, path, duration, animations = [], config = {}) => {
-  console.log("[o2p] Config for", object.id, config);
+  // console.log("[o2p] Config for", object.id, config);
 
     if (!Array.isArray(animations)) {
       console.warn(`[WARN] animations param was not an array. Wrapping it. ID: ${object.id}`);
@@ -1464,12 +1464,12 @@ case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
 
 
 
-  console.warn(`[DEBUG] Case 5 fallback animation active for object ${object.id}`);
+  // console.warn(`[DEBUG] Case 5 fallback animation active for object ${object.id}`);
 
-          console.warn(`[DEBUG] Fallback pingpong animation created for object ${object.id}`);
+          // console.warn(`[DEBUG] Fallback pingpong animation created for object ${object.id}`);
       }
     } catch (error) {
-      console.error(`[DEBUG] Error animating object ${object.id} along path ${path.id}: ${error.message}`);
+      // console.error(`[DEBUG] Error animating object ${object.id} along path ${path.id}: ${error.message}`);
     }
   }
 

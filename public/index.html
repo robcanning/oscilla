@@ -150,9 +150,12 @@
   <div id="waveform-container"></div>
 
   <!-- Score Viewport -->
-  <div id="scoreContainer">
-    <img id="score" src="svg/help.svg" alt="Score">
-  </div>
+  <!-- <div id="scoreContainer">
+    <img id="score" src="scores/help.svg" alt="Score">
+  </div> -->
+
+<div id="scoreContainer"></div>
+
 
   <div id="playzone"></div>
   <div id="playhead">
@@ -237,7 +240,6 @@
 
   <div id="black-overlay"></div>
 
-
   <!-- Score Options Popup -->
   <div id="score-options-popup" class="popup hidden">
     <h2>Score Options</h2>
@@ -246,9 +248,9 @@
     <ul>
       <li><a href="#" onclick="loadAndClose('svg/draft.svg')">"Six Inches to the Mile" for PonySays by Rob Canning
           2025</a></li>
-      <li><a href="#" onclick="loadAndClose('svg/help.svg')"> Basic Help File in Score Format help.svg</a></li>
-      <li><a href="#" onclick="loadAndClose('svg/help.svg')">TODO calibrate.svg placeholder link</a></li>
-      <li><a href="#" onclick="loadAndClose('svg/help.svg')">TODO template.svg placeholder link</a></li>
+      <li><a href="#" onclick="loadAndClose('scores/help.svg')"> Basic Help File in Score Format help.svg</a></li>
+      <li><a href="#" onclick="loadAndClose('scores/help.svg')">TODO calibrate.svg placeholder link</a></li>
+      <li><a href="#" onclick="loadAndClose('scores/help.svg')">TODO template.svg placeholder link</a></li>
     </ul>
 
     <h3>📁 Upload Your Own SVG:</h3>
@@ -302,6 +304,7 @@
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script> -->
   <script src="js/p5.min.js"></script>
   <!-- <script src="js/app.js"></script> -->
+  <script type="module" src="./js/scoreSetup.js"></script>
   <script type="module" src="js/app.js"></script>
   <!-- <script src="js/playback_diagnostics.js"></script> -->
 
