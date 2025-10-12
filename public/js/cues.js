@@ -44,6 +44,8 @@ export const cueHandlers = {
   "c-t": handleTraverseCue,
   cueText: handleTextCue,
   cueSeq: handleSeqCue,
+  cueGroup: handleGroupCue,
+
 
 };
 
@@ -1755,6 +1757,11 @@ export async function handlePageCue(
     console.log(`initialising animations in ${pageName}.svg`);
     window.initializeSVG?.(svg);
 
+    // ✅ Register reusable cue groups for this page
+    if (typeof window.registerSvgGroups === "function") {
+      window.registerSvgGroups(svg);
+    }
+
 
     // 🧩 ensure propagation happens for embedded page SVGs
     if (typeof window.propagate === "function") {
@@ -1790,6 +1797,15 @@ export async function handlePageCue(
     // 🟦 Build cueButtons inside the page overlay
     window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
     window._activePageButtons = assignCueButtonsIn(svg, container);
+
+    // --- after assignCueButtonsIn(svg, container) ---
+    if (typeof window.registerSvgGroups === "function") {
+      window.registerSvgGroups(svg);
+      console.log(`[cuePage] 📦 Registered groups in ${pageName}.svg`);
+    }
+    
+    // remember which SVG is active for cueGroup() injections
+    window._currentPageSvg = svg;
 
   } catch (err) {
     console.error(`[cuePage] Failed to load SVG: ${err.message}`);
@@ -2926,12 +2942,129 @@ function parseWordsSource(input) {
 
 
 
+/**
+ * handleGroupCue(cueId, cueParams)
+ * --------------------------------
+ * Triggered by cueGroup(groupId) cues.
+ *
+ * Purpose:
+ *   Dynamically injects a pre-defined SVG <g> group (e.g. a menu, control panel)
+ *   that was previously registered in window.groupRegistry during SVG load.
+ *   The cloned group’s cueButtons are converted into interactive HTML buttons
+ *   in the overlay layer (so they’re visible and clickable).
+ *
+ * Execution flow:
+ *   1. Extracts groupId from cueGroup(...) expression.
+ *   2. Looks up the original group (<g id="group-something">) from groupRegistry.
+ *   3. Clones it and appends it into the current page’s SVG (#pageSVG).
+ *   4. Adds a unique suffix to each cueButton(...) ID to avoid collisions.
+ *   5. Calls assignCueButtonsIn(currentSvg, overlay) to build visible buttons
+ *      into #singlePage-overlay based on the cloned group’s geometry.
+ *   6. Propagates any animations or observers for the new elements.
+ *
+ * Key dependencies:
+ *   • window.groupRegistry  – holds reusable <g> definitions from all loaded SVGs.
+ *   • window.assignCueButtonsIn – converts <rect>/<text> cueButton placeholders
+ *     into actual HTML overlay buttons (must be exposed globally).
+ *   • window.propagate / window.initializeObserver – restart animations if needed.
+ *
+ * Result:
+ *   Reusable, triggerable UI groups can be summoned anywhere in the score via
+ *   cueButton(cueGroup(mainMenu)_style(...)), without duplicating SVG code.
+ */
 
 
 
+export function handleGroupCue(cueId, cueParams = {}) {
+  // 1️⃣ Extract the group ID
+  let groupId = (cueParams.choice || "").trim();
+  if (!groupId) {
+    const m = cueId.match(/^cueGroup\(\s*([^)]+?)\s*\)/);
+    if (m && m[1]) groupId = m[1].trim();
+  }
 
+  const cut = groupId.indexOf(")_style");
+  if (cut > -1) groupId = groupId.slice(0, cut);
 
+  if (!groupId) {
+    console.warn("[cueGroup] ⚠️ No valid groupId extracted from:", cueId, cueParams);
+    return;
+  }
 
+  // 2️⃣ Look up the registered group
+  const source = window.groupRegistry?.[groupId];
+  if (!source) {
+    console.warn(`[cueGroup] ⚠️ Group "${groupId}" not found in registry.`);
+    return;
+  }
+
+  // 3️⃣ Clone the stored group
+  const clone = source.cloneNode(true);
+
+  // 4️⃣ Find the correct active SVG container
+  const currentSvg =
+    window._currentPageSvg ||
+    document.querySelector('#singlePage-content svg') ||
+    document.querySelector('svg#pageSVG') ||
+    document.querySelector('svg#score');
+
+  if (!currentSvg) {
+    console.warn("[cueGroup] ⚠️ No valid SVG container found for group injection.");
+    return;
+  }
+
+  // 5️⃣ Append and mark group
+  currentSvg.appendChild(clone);
+  clone.classList.add("cueButtonGroup");
+  console.log(`[cueGroup] 🎨 Injected group "${groupId}" into`, currentSvg.id || "(unnamed SVG)");
+
+  // 🪄 Give cloned cueButtons unique IDs
+  const uidSuffix = `-${Date.now()}`;
+  clone.querySelectorAll('[id^="cueButton"]').forEach(el => {
+    el.id = `${el.id}${uidSuffix}`;
+  });
+  console.log(`[cueGroup] 🪄 Renamed cueButtons in "${groupId}" with suffix ${uidSuffix}`);
+
+  // 6️⃣ Temporarily mark this group as active so we can filter later
+  clone.setAttribute("data-cuegroup-active", "1");
+
+  // 🔍 Find the correct overlay container
+  const overlay =
+    document.querySelector('#singlePage-overlay') ||
+    document.querySelector('#singlePage-content');
+
+  // 7️⃣ Build visible cue buttons using the overlay
+  if (typeof window.assignCueButtonsIn === "function") {
+    try {
+      // Assign only for elements within the active group
+      const built = window.assignCueButtonsIn(currentSvg, overlay);
+      const filtered = built?.filter(btn =>
+        btn?.id?.includes(uidSuffix)
+      ) || [];
+
+      console.log(`[cueGroup] 🧩 assignCueButtonsIn() built ${filtered.length} cueButtons for "${groupId}"`);
+      window._activePageButtons = (window._activePageButtons || []).concat(filtered);
+    } catch (err) {
+      console.warn("[cueGroup] ⚠️ assignCueButtonsIn() failed:", err);
+    }
+  } else if (typeof window.assignCues === "function") {
+    try {
+      window.assignCues(clone, window.cues);
+      console.log(`[cueGroup] 🧩 assignCues() applied to "${groupId}"`);
+    } catch (err) {
+      console.warn("[cueGroup] ⚠️ assignCues() failed:", err);
+    }
+  }
+
+  // 8️⃣ Re-initialize observers or animations
+  window.propagate?.(clone);
+  window.initializeObserver?.(clone);
+
+  // 9️⃣ Cleanup temporary flag
+  clone.removeAttribute("data-cuegroup-active");
+
+  console.log(`[cueGroup] ✅ Group "${groupId}" ready and interactive.`);
+}
 
 
 
@@ -3469,6 +3602,7 @@ export function assignCueButtonsIn(rootNode, containerEl) {
   return created;
 }
 
+window.assignCueButtonsIn = assignCueButtonsIn;
 
 
 
@@ -4153,3 +4287,14 @@ export function triggerCueByRef(ref, extraParams = {}) {
 //   // TODO: implement real completion tracking
 //   await delay(1000); // fallback 1s per cue
 // }
+
+
+
+
+
+
+
+
+
+
+

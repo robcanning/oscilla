@@ -6,7 +6,7 @@
    version="1.1"
    id="svg5125"
    sodipodi:docname="page2.svg"
-   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   inkscape:version="1.4.2 (1:1.4.2+202505120737+ebf0e940d0)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -22,14 +22,14 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="0.59"
-     inkscape:cx="839.83051"
+     inkscape:cx="840.67797"
      inkscape:cy="568.64407"
      inkscape:window-width="1854"
      inkscape:window-height="1011"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg5125" />
+     inkscape:current-layer="group-mainMenu" />
   <defs
      id="defs5129">
     <rect
@@ -75,7 +75,8 @@
        linejoin_type="spiro"
        miter_limit="4"
        scale_width="1"
-       end_linecap_type="round" />
+       end_linecap_type="round"
+       message="" />
     <inkscape:path-effect
        effect="simplify"
        id="path-effect49982"
@@ -135,9 +136,9 @@
      transform="matrix(0.23659034,0,0,0.23659034,-69.542768,-84.140528)"><tspan
        x="366.70773"
        y="569.79199"
-       id="tspan18102"><tspan
+       id="tspan2"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan18100">PAGE 2</tspan></tspan></text>
+         id="tspan1">PAGE 2</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:192px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#808000"
@@ -169,7 +170,7 @@
      transform="matrix(0.99191568,0,0,1.0081502,18.485169,-35.666049)"><tspan
        x="575.57843"
        y="925.75702"
-       id="tspan18104">p1</tspan></text>
+       id="tspan3">p1</tspan></text>
   <text
      xml:space="preserve"
      style="font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
@@ -249,19 +250,19 @@
      transform="translate(-13346.878,-119.00124)"><tspan
        x="13743.035"
        y="554.47253"
-       id="tspan18108"><tspan
+       id="tspan5"><tspan
          style="fill:none"
-         id="tspan18106">cueText(&quot;texts/tzara-cutup.txt&quot;)  </tspan></tspan><tspan
+         id="tspan4">cueText(&quot;texts/tzara-cutup.txt&quot;)  </tspan></tspan><tspan
        x="13743.035"
        y="587.80592"
-       id="tspan18112"><tspan
+       id="tspan7"><tspan
          style="fill:none"
-         id="tspan18110">_anim(&quot;fade&quot;)  _dur(2)  _pos(self)  </tspan></tspan><tspan
+         id="tspan6">_anim(&quot;fade&quot;)  _dur(2)  _pos(self)  </tspan></tspan><tspan
        x="13743.035"
        y="621.13929"
-       id="tspan18116"><tspan
+       id="tspan9"><tspan
          style="fill:none"
-         id="tspan18114">_random(1)  _loop(0)  _autostart(1)</tspan></tspan></text>
+         id="tspan8">_random(1)  _loop(0)  _autostart(1)</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-size:29.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#000000"
@@ -273,4 +274,6 @@
        x="112.75152"
        y="-17.16102"
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:29.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold'">there is a hidden object in the middle of this page for the cueText</tspan></text>
+  <g
+     id="group-mainMenu" />
 </svg>

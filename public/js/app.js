@@ -1645,7 +1645,34 @@ function propagate(svgRoot) {
   });
 }
 
+// parse for cuePropagate / propagate()
 window.propagate = propagate;
+
+
+
+/**
+ * Scan and register reusable <g> groups with reserved prefixes.
+ * Stores them in window.groupRegistry for later cueGroup() recall.
+ */
+function registerSvgGroups(svgRoot) {
+  if (!svgRoot) return;
+
+  // Ensure global registry exists
+  window.groupRegistry = window.groupRegistry || {};
+
+  const groupNodes = svgRoot.querySelectorAll('g[id^="group-"], g[id^="menu-"], g[id^="ui-"]');
+
+  groupNodes.forEach((group) => {
+    const groupId = group.id.replace(/^group-|^menu-|^ui-/, '');
+    const clone = group.cloneNode(true);
+
+    // Store deep clone in registry
+    window.groupRegistry[groupId] = clone;
+
+    console.log(`[groupRegistry] Registered group "${groupId}" from`, svgRoot?.baseURI || '(inline)');
+  });
+}
+
 
 
 /**
@@ -1950,11 +1977,24 @@ window.scoreSVG = svgElement;
 // ✅ Assign cues immediately (no delay)
 window.cues = [];
 assignCues(svgElement, window.cues);
+
+// ✅ Register reusable cue groups (menus, UI clusters)
+registerSvgGroups(svgElement);
+
 console.log("[Debug] Total cues:", window.cues.length);
+
+
+
 for (const cue of window.cues) {
   if (!cue.element) {
     console.warn(`[Debug] Cue "${cue.id}" is missing element`);
   }
+}
+
+
+// ✅ Attach globally
+if (typeof window !== 'undefined') {
+  window.registerSvgGroups = registerSvgGroups;
 }
 
 
