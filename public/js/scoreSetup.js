@@ -122,44 +122,44 @@ export  const createRehearsalMarkButtons = () => {
 function scrollToSVGX(x) {
   const svg = document.querySelector("svg");
   if (!svg) {
-    console.warn("[scrollToSVGX] ⚠️ No <svg> element found.");
+    // console.warn("[scrollToSVGX] ⚠️ No <svg> element found.");
     return;
   }
   console.log(`[scrollToSVGX] 🎯 Target SVG x: ${x}`);
 
   const container = window.scoreContainer;
   if (!container) {
-    console.warn("[scrollToSVGX] ⚠️ No scoreContainer found.");
+    // console.warn("[scrollToSVGX] ⚠️ No scoreContainer found.");
     return;
   }
 
   // Get SVG width in viewBox units (absolute SVG coordinate space)
   const svgWidth = svg.viewBox.baseVal.width;
-  console.log(`[scrollToSVGX] 🖼️ SVG viewBox width: ${svgWidth}`);
+  //console.log(`[scrollToSVGX] 🖼️ SVG viewBox width: ${svgWidth}`);
 
   // Get actual scrollable pixel width of the container (DOM pixels)
   const scrollableWidth = container.scrollWidth;
-  console.log(`[scrollToSVGX] 📜 Container scrollWidth: ${scrollableWidth}`);
+//   console.log(`[scrollToSVGX] 📜 Container scrollWidth: ${scrollableWidth}`);
 
   // Calculate scale from SVG units → DOM pixels
   const scale = scrollableWidth / svgWidth;
-  console.log(`[scrollToSVGX] 📏 Calculated scale: ${scale}`);
+//   console.log(`[scrollToSVGX] 📏 Calculated scale: ${scale}`);
 
   // Compute the visible width (to center the target point)
   const visibleWidth = container.clientWidth;
-  console.log(`[scrollToSVGX] 🪟 Container visible width: ${visibleWidth}`);
+//   console.log(`[scrollToSVGX] 🪟 Container visible width: ${visibleWidth}`);
 
   // Calculate the adjusted scrollLeft
   const scrollLeft = x * scale - (visibleWidth / 2);
-  console.log(`[scrollToSVGX] 🔄 Computed scrollLeft: ${scrollLeft}`);
+//   console.log(`[scrollToSVGX] 🔄 Computed scrollLeft: ${scrollLeft}`);
 
   // Apply the scroll position
   container.scrollLeft = scrollLeft;
-  console.log(`[scrollToSVGX] ✅ Applied scrollLeft: ${container.scrollLeft}`);
+//   console.log(`[scrollToSVGX] ✅ Applied scrollLeft: ${container.scrollLeft}`);
 
   // Update internal playhead tracker
   window.playheadX = container.scrollLeft;
-  console.log(`[scrollToSVGX] 🎬 Updated window.playheadX: ${window.playheadX}`);
+//   console.log(`[scrollToSVGX] 🎬 Updated window.playheadX: ${window.playheadX}`);
 }
 
 
@@ -253,7 +253,7 @@ if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
 
 
 
-  
+
   // Set this to true for debugging
   const debugMode = true;
 

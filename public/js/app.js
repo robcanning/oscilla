@@ -9,9 +9,25 @@
  * and environment detection for the OscillaScore client.
  */
 
-import { loadProject, resolveProjectPath, populateProjectMenu } from './projectLoader.js';
-import { setupScore, extractScoreElements } from './scoreSetup.js';
 
+// --- Temporary boot override: disable automatic score initialization ---
+// window.autoLoadDisabled = true;
+// window.addEventListener("DOMContentLoaded", () => {
+//   console.log("[BOOT] 💤 Auto-loading of project disabled — waiting for user selection.");
+// });
+
+
+
+import { loadProject } from './projectLoader.js';
+import { setupScore, extractScoreElements } from './scoreSetup.js';
+import { forward, rewind, rewindToStart,getSpeedForPosition,
+          initializeSpeedControls, adjustSpeed, setSpeed, updateSpeedDisplay, 
+          sendSpeedUpdateToServer,   togglePlay, togglePlayButton, startPlayback,
+  pausePlayback, resumePlayback, jumpToCueId, hideControls,showControls  } from './transport.js';
+
+window.startPlayback = startPlayback;
+window.pausePlayback = pausePlayback;
+window.resumePlayback = resumePlayback;
 
 import {
   startStopwatch,
@@ -21,8 +37,6 @@ import {
   setupStopwatchFullscreenToggle
 } from './stopwatch.js';
 
-import * as SVGPathCommander from "https://cdn.skypack.dev/svg-path-commander";
-console.info("[SVG] ✅ svg-path-commander imported:", SVGPathCommander);
 
 // ===========================
 // 📦 Import Cue Handlers
@@ -34,11 +48,11 @@ import {
   parseCueParams,
   resetTriggeredCues,
   // preloadSpeedCues,
-  getSpeedForPosition,
-  initializeSpeedControls,
-  updateSpeedDisplay,
-  setSpeed,
-  adjustSpeed,
+  // getSpeedForPosition,
+  // initializeSpeedControls,
+  // updateSpeedDisplay,
+  // setSpeed,
+  // adjustSpeed,
   handlePauseCue,
   handleStopCue,
   dismissPauseCountdown,
@@ -83,6 +97,15 @@ import {
 
 
 export const initializeSVG = (svgElement) => {
+
+    // 🧩 Skip global reinit for embedded page overlays
+  if (svgElement?.id === "pageSVG" || svgElement?.classList.contains("oscilla-page")) {
+    console.log("[initializeSVG] ⚠️ Skipping global reset for page overlay SVG.");
+    window.extractScoreElements?.(svgElement);
+    window.propagate?.(svgElement);
+    return;
+  }
+
 
   // 🔍 Ensure we received a valid SVG element before continuing
   if (!svgElement) {
@@ -357,6 +380,7 @@ if (typeof window !== 'undefined') {
         svg.getBoundingClientRect(); // force reflow
         console.log("[initializeSVG] ✅ Applied wide-scroll layout correction.");
       };
+      window.applyWideScrollLayout = applyWideScrollLayout;
 
       // Wait until the SVG is *actually* inserted and painted
       requestAnimationFrame(() => {
@@ -365,11 +389,11 @@ if (typeof window !== 'undefined') {
 
 
       console.log("\n🚀 [DEBUG] Page Loaded - Initial State:");
-      logState("Initial Load");
+      // logState("Initial Load");
 
-      updateSeekBar();
+      // updateSeekBar();
       //updatestopwatch();
-      toggleScoreNotes();
+      window.toggleScoreNotes();
 
       setTimeout(() => {
         // rewindToStart(); // Optional
@@ -398,14 +422,11 @@ if (typeof window !== 'undefined') {
 
 
 
-
-
 window.addEventListener("DOMContentLoaded", () => {
-  populateProjectMenu();
 
   // Wait a bit to ensure initializeSVG and animations are registered
   setTimeout(() => {
-    loadProject("help");
+    // loadProject("help");
   }, 500);
 });
 
@@ -446,33 +467,33 @@ window.duration = 30;
 // 🛠️ Logging Utilities
 // ===========================
 
-const LogLevel = {
-  DEBUG: 0,
-  INFO: 1,
-  WARN: 2,
-  ERROR: 3,
-};
+// const LogLevel = {
+//   DEBUG: 0,
+//   INFO: 1,
+//   WARN: 2,
+//   ERROR: 3,
+// };
 
-let currentLogLevel = LogLevel.WARN;
+// let currentLogLevel = LogLevel.WARN;
 
-const log = (level, ...messages) => {
-  if (level >= currentLogLevel) {
-    if (level === LogLevel.ERROR) {
-      console.error(...messages);
-    } else if (level === LogLevel.WARN) {
-      console.warn(...messages);
-    } else {
-      console.log(...messages);
-    }
-  }
-};
+// const log = (level, ...messages) => {
+//   if (level >= currentLogLevel) {
+//     if (level === LogLevel.ERROR) {
+//       console.error(...messages);
+//     } else if (level === LogLevel.WARN) {
+//       console.warn(...messages);
+//     } else {
+//       console.log(...messages);
+//     }
+//   }
+// };
 
-const setLogLevel = (level) => {
-  currentLogLevel = level;
-};
+// const setLogLevel = (level) => {
+//   currentLogLevel = level;
+// };
 
-// Debug: show sessionStorage keys if needed
-console.log("[DEBUG] sessionStorage keys:", Object.keys(sessionStorage));
+// // Debug: show sessionStorage keys if needed
+// console.log("[DEBUG] sessionStorage keys:", Object.keys(sessionStorage));
 
 // ===========================
 // 📱 Mobile Stylesheet Loader
@@ -485,23 +506,6 @@ if (isMobile) {
   link.href = 'css/tablet.css';
   document.head.appendChild(link);
 }
-
-// ===========================
-// 🎧 Ensure WaveSurfer is Ready
-// ===========================
-
-const loadWaveSurfer = (callback) => {
-  if (typeof WaveSurfer !== "undefined") {
-    callback();
-  } else {
-    console.log("[INFO] Waiting for WaveSurfer.js to load...");
-    setTimeout(() => loadWaveSurfer(callback), 100);
-  }
-};
-
-loadWaveSurfer(() => {
-  console.log("[INFO] WaveSurfer.js is loaded and ready to use.");
-});
 
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("download-template-btn");
@@ -518,7 +522,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  setLogLevel(LogLevel.WARN);
+  // setLogLevel(LogLevel.WARN);
   let pendingRepeatStateMap = null; // stores repeat state from server before cues[] are ready
   console.log('Interactive Scrolling Score Initialized.');
   const splash = document.getElementById('splash');
@@ -528,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.recentlyRecalculatedPlayhead = false;
   const score = document.getElementById('score');
   window.scoreWidth = document.querySelector('svg')?.getAttribute('width') || 40960; // Use SVG's intrinsic width
-  const seekBar = document.getElementById('seek-bar');
+  window.seekBar = document.getElementById('seek-bar');
   const toggleButton = document.getElementById('toggle-button');
   const rewindButton = document.getElementById('rewind-button');
   const forwardButton = document.getElementById('forward-button');
@@ -772,7 +776,7 @@ const { SVGPathData } = SVGPathCommander;
   };
 
   document.getElementById("toggle-notes-button").addEventListener("click", toggleScoreNotes);
-
+  window.toggleScoreNotes = toggleScoreNotes;
 
 
 
@@ -796,16 +800,16 @@ const { SVGPathData } = SVGPathCommander;
 
   setupStopwatchFullscreenToggle();
 
-  /**
-  * Function: Dismiss the Splash Screen
-  */
-  function dismissSplashScreen() {
-    const splashScreen = document.getElementById("main-splash-screen");
-    if (splashScreen) {
-      splashScreen.style.display = "none";
-      console.log("[DEBUG] Splash screen dismissed.");
-    }
-  }
+  // /**
+  // * Function: Dismiss the Splash Screen
+  // */
+  // function dismissSplashScreen() {
+  //   const splashScreen = document.getElementById("main-splash-screen");
+  //   if (splashScreen) {
+  //     splashScreen.style.display = "none";
+  //     console.log("[DEBUG] Splash screen dismissed.");
+  //   }
+  // }
 
   /**
   * Ensure Splash Screen is Visible on Load
@@ -815,14 +819,14 @@ const { SVGPathData } = SVGPathCommander;
     if (splashScreen) splashScreen.style.display = "flex";
   };
 
-  // /**
-  // * Hide Splash Screen and Load Selected Score
-  // */
-  function loadScore(scoreFile) {
-    console.log(`[DEBUG] Loading score: ${scoreFile}`);
-    document.getElementById("main-splash-screen").style.display = "none"; // Hide splash
-    initializeScore(scoreFile); // Existing function to load a score
-  }
+  // // /**
+  // // * Hide Splash Screen and Load Selected Score
+  // // */
+  // function loadScore(scoreFile) {
+  //   // console.log(`[DEBUG] Loading score: ${scoreFile}`);
+  //   // document.getElementById("main-splash-screen").style.display = "none"; // Hide splash
+  //   // initializeScore(scoreFile); // Existing function to load a score
+  // }
 
   const clearPopupsOnInteraction = (event) => {
     // Ensure the event and event.target are valid
@@ -1294,7 +1298,7 @@ const { SVGPathData } = SVGPathCommander;
 
     updatePosition();
     window.recentlyRecalculatedPlayhead = false;
-    updateSeekBar();
+    // updateSeekBar();
 
     if (!isNaN(data.state.speedMultiplier) && data.state.speedMultiplier > 0) {
       if (speedMultiplier !== data.state.speedMultiplier) {
@@ -1620,7 +1624,7 @@ document.getElementById("audio-master-button").addEventListener("click", () => {
       if (svgElement) {
         initializeSVG(svgElement);
       } else {
-        console.warn("[CLIENT] No SVG element found in scoreContainer during splash toggle.");
+        // console.warn("[CLIENT] No SVG element found in scoreContainer during splash toggle.");
       }
     }
   }
@@ -2132,105 +2136,71 @@ window.initializeSVG = initializeSVG;
     });
   });
 
+  
+async function populateProjectSelector() {
+  const grid = document.getElementById("project-grid");
+  const message = document.getElementById("splash-message");
+  const manualEntry = document.getElementById("manual-entry");
 
-  let controlsTimeout; // Timer to hide controls after inactivity
+  try {
+    const response = await fetch("/public/scores/");
+    const html = await response.text();
 
-  const hideControls = () => {
-    const controls = document.getElementById('controls');
-    const topBar = document.getElementById('top-bar'); // ✅ Include top-bar
-
-    controls.classList.add('dismissed');
-    if (topBar) topBar.classList.add('dismissed'); // ✅ Hide top-bar
-
-    console.log('Controls hidden.');
-  };
-
-  const showControls = () => {
-    const controls = document.getElementById('controls');
-    const topBar = document.getElementById('top-bar'); // ✅ Include top-bar
-
-    controls.classList.remove('dismissed');
-    if (topBar) topBar.classList.remove('dismissed'); // ✅ Show top-bar
-  };
-
-
-  document.addEventListener('fullscreenchange', () => {
-
-    if (document.fullscreenElement) {
-      hideControls();
-    } else {
-      showControls();
-      clearTimeout(controlsTimeout);
+    // Extract folder names from directory listing (assuming simple index output)
+    const regex = /href="([^"\/]+)\/"/g;
+    let match;
+    const projects = [];
+    while ((match = regex.exec(html)) !== null) {
+      const name = match[1];
+      if (name !== "audio" && name !== "texts" && name !== "videos") {
+        projects.push(name);
+      }
     }
 
-    // 🔥 Ensurewindow.playheadX is recalculated on fullscreen change
-    // recalculatePlayheadPosition(window.scoreSVG);
-    calculateMaxScrollDistance();
-    // extractScoreElements(svgElement);
+    if (projects.length === 0) throw new Error("No projects found.");
 
-  });
+    message.textContent = "Choose a project to load:";
+    grid.innerHTML = "";
 
-  window.dispatchEvent(new Event("resize"));
-  window.addEventListener('resize', () => {
-    const startTime = performance.now();
-    extractScoreElements(window.scoreSVG);
-    const endTime = performance.now();
-    console.log(`[DEBUG] ⏳ extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
-    console.log("[DEBUG] ✅ Extracted Score Elements. Now Checking Sync...");
+    projects.forEach((proj) => {
+      const card = document.createElement("div");
+      card.className = "project-card";
+      card.textContent = proj;
+      card.addEventListener("click", () => {
+        console.log(`[SPLASH] Loading project: ${proj}`);
+        loadProject(proj);
+        fadeOutSplash();
+      });
+      grid.appendChild(card);
+    });
+  } catch (err) {
+    console.warn("[SPLASH] Could not fetch project list:", err);
+    message.textContent = "⚠️ Automatic listing failed.";
+    manualEntry.style.display = "block";
+
+    document.getElementById("manual-load-btn").addEventListener("click", () => {
+      const projName = document.getElementById("manual-project-input").value.trim();
+      if (projName) {
+        loadProject(projName);
+        fadeOutSplash();
+      }
+    });
+  }
+}
+
+function fadeOutSplash() {
+  const splash = document.getElementById("splash");
+  splash.classList.add("fade-out");
+  setTimeout(() => (splash.style.display = "none"), 800);
+}
+
+// Initialize splash logic
+window.addEventListener("DOMContentLoaded", populateProjectSelector);
 
 
-    console.log("[DEBUG] Resize detected, recalculating maxScrollDistance and aligning playhead...");
-    calculateMaxScrollDistance();
-  });
 
-  //document.addEventListener('fullscreenchange', adjustscoreContainerHeight);
-  // Show controls on user interaction in fullscreen mode
-  let hideControlsTimeout; // Store timeout reference
 
-  document.addEventListener('mousemove', () => {
-    showControls(); // ✅ Show controls on mouse move
 
-    // ✅ Clear any existing timeout before starting a new one
-    clearTimeout(hideControlsTimeout);
-
-    // ✅ Set a new timeout to hide controls after 5 seconds
-    hideControlsTimeout = setTimeout(() => {
-      hideControls();
-    }, 5000);
-
-  });// document.addEventListener('keydown', showControls);   // Show controls on key press
-
-  // Show controls on user interaction in fullscreen mode
-
-  document.addEventListener('mousemove', () => {
-    if (document.fullscreenElement) {
-      showControls(); // ✅ Show controls on mouse move
-
-      // ✅ Clear any existing timeout before starting a new one
-      clearTimeout(hideControlsTimeout);
-
-      // ✅ Set a new timeout to hide controls after 5 seconds
-      hideControlsTimeout = setTimeout(() => {
-        hideControls();
-      }, 5000);
-    }
-  });
-
-  document.addEventListener('keydown', (event) => {
-    // ✅ Ignore arrow keys & spacebar when seeking or pausing
-    if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === " ") {
-      return; // ✅ Do nothing, skip showing controls
-    }
-
-    // ✅ Show controls for other key presses
-    showControls();
-
-    // ✅ Hide controls after 5 seconds
-    setTimeout(() => {
-      hideControls();
-    }, 5000);
-
-  });
 
   // /////// START OF SPEED LOGIC ///////////////////////////////////////////////////
 
@@ -2631,40 +2601,54 @@ window.initializeSVG = initializeSVG;
     }
   };
 
+// --- Transported Playback Loop (app.js or transport.js) ---
 
-  window.lastAnimationFrameTime = null;
+window.lastAnimationFrameTime = null;
 
 window.animate = async (currentTime) => {
-  if (!window.isPlaying || window.isSeeking) {
-    return;
-  }
+  // Stop animation when paused or seeking
+  if (!window.isPlaying || window.isSeeking) return;
 
+  // --- Timing calculations ---
   if (window.lastAnimationFrameTime === null) {
     window.lastAnimationFrameTime = currentTime;
   } else {
     const delta = (currentTime - window.lastAnimationFrameTime) * playbackSpeed;
-    const estimatedIncrement = ((delta * window.speedMultiplier) / window.duration) * window.scoreWidth;
-    window.estimatedPlayheadX = Math.max(0, Math.min(window.playheadX + estimatedIncrement, window.scoreWidth));
-    window.playheadX = window.estimatedPlayheadX;
+
+    const estimatedIncrement =
+      ((delta * window.speedMultiplier) / window.duration) * window.scoreWidth;
+
+    window.playheadX = Math.max(
+      0,
+      Math.min(window.playheadX + estimatedIncrement, window.scoreWidth)
+    );
     window.scoreContainer.scrollLeft = window.playheadX;
   }
 
   window.lastAnimationFrameTime = currentTime;
 
+  // --- Update elapsed time for sync + UI ---
+  if (window.duration && window.scoreWidth) {
+    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+  }
+
+  // --- Periodic visibility optimization ---
   const visibilityCheckInterval = 150;
   window.lastVisibilityCheckTime = window.lastVisibilityCheckTime || 0;
   if (currentTime - window.lastVisibilityCheckTime > visibilityCheckInterval) {
-    window.checkAnimationVisibility();
+    window.checkAnimationVisibility?.();
     window.lastVisibilityCheckTime = currentTime;
   }
 
-  updatePosition();
-  updateSeekBar();
-  await checkCueTriggers(window.elapsedTime);
+  // --- Core updates each frame ---
+  updatePosition?.();    // moves playhead graphics
+  // updateSeekBar?.();     // ✅ updates the seek bar progress
+  await checkCueTriggers?.(window.elapsedTime); // triggers cues
 
-  // ✅ FIX: Track the frame ID
+  // --- Continue animation ---
   window.animationFrameId = requestAnimationFrame(window.animate);
 };
+
 
 
 
@@ -2744,13 +2728,13 @@ window.startAnimation = () => {
   //   //console.log(`Elapsed Time: ${elapsedTime}, TranslateX: ${newLeft}px`);
   // };
 
-  ///////////////////////////////////////
-  // SEEKBAR LOGIC
+  // ///////////////////////////////////////
+  // // SEEKBAR LOGIC
 
-  const updateSeekBar = () => {
-    const progress =  (window.elapsedTime / duration) * 100;
-    seekBar.value = progress;
-  };
+   const updateSeekBar = () => {
+     const progress =  (window.elapsedTime / duration) * 100;
+     seekBar.value = progress;
+   };
 
   // Function to synchronize playback time
   // Updates `elapsedTime` and aligns the score
@@ -2763,55 +2747,55 @@ window.startAnimation = () => {
   };
 
 
-  //// SEEKING LOGIC ///////////////////////////////////////////
+  // //// SEEKING LOGIC ///////////////////////////////////////////
 
-  // Starts seeking mode when the user clicks the seek bar.
-  // Pauses playback to allow smooth scrubbing.
-  seekBar.addEventListener('mousedown', () => {
-    window.isSeeking = true; // ✅ Start seeking mode
-    stopAnimation(); // ✅ Pause playback
-    console.log("[CLIENT] Playback paused for seeking.");
-  });
+  // // Starts seeking mode when the user clicks the seek bar.
+  // // Pauses playback to allow smooth scrubbing.
+  // seekBar.addEventListener('mousedown', () => {
+  //   window.isSeeking = true; // ✅ Start seeking mode
+  //   stopAnimation(); // ✅ Pause playback
+  //   console.log("[CLIENT] Playback paused for seeking.");
+  // });
 
-  // Updates playback time as the user moves the seek bar.
-  // Converts percentage → time → X position for correct alignment.
-  seekBar.addEventListener('input', (event) => {
-    const newTime = (parseInt(event.target.value, 10) / 100) * duration; // ✅ Convert percentage to time
-    setElapsedTime(newTime); // ✅ Adjust playback position
+  // // Updates playback time as the user moves the seek bar.
+  // // Converts percentage → time → X position for correct alignment.
+  // seekBar.addEventListener('input', (event) => {
+  //   const newTime = (parseInt(event.target.value, 10) / 100) * duration; // ✅ Convert percentage to time
+  //   setElapsedTime(newTime); // ✅ Adjust playback position
 
-    // ✅ Real-time UI updates
-    updatePosition(window.playheadX); // ✅ Ensure proper alignment
-    updateSeekBar();
-    //updatestopwatch();
-  });
+  //   // ✅ Real-time UI updates
+  //   updatePosition(window.playheadX); // ✅ Ensure proper alignment
+  //   updateSeekBar();
+  //   //updatestopwatch();
+  // });
 
-  // Ends seeking mode and re-enables cues after debounce.
-  // Sends a WebSocket `jump` message to sync all connected clients.
+  // // Ends seeking mode and re-enables cues after debounce.
+  // // Sends a WebSocket `jump` message to sync all connected clients.
 
-  let seekDebounceTime = 300; // ✅ Adjust debounce as needed
-  let seekingTimeout = null;
+  // let seekDebounceTime = 300; // ✅ Adjust debounce as needed
+  // let seekingTimeout = null;
 
-  seekBar.addEventListener('mouseup', (event) => {
-    window.isSeeking = false; // ✅ Stop seeking mode
-    console.log("[CLIENT] Seeking ended. Applying debounce before re-enabling cues.");
+  // seekBar.addEventListener('mouseup', (event) => {
+  //   window.isSeeking = false; // ✅ Stop seeking mode
+  //   console.log("[CLIENT] Seeking ended. Applying debounce before re-enabling cues.");
 
-    // ✅ Debounce before re-enabling cues
-    if (seekingTimeout) clearTimeout(seekingTimeout);
-    seekingTimeout = setTimeout(() => {
-      console.log("[CLIENT] Cue triggering re-enabled after debounce.");
-       window.isPlaying = true;
-       window.isMusicalPause = false;
-      startStopwatch();
-      startAnimation();
+  //   // ✅ Debounce before re-enabling cues
+  //   if (seekingTimeout) clearTimeout(seekingTimeout);
+  //   seekingTimeout = setTimeout(() => {
+  //     console.log("[CLIENT] Cue triggering re-enabled after debounce.");
+  //      window.isPlaying = true;
+  //      window.isMusicalPause = false;
+  //     startStopwatch();
+  //     startAnimation();
 
-      // ✅ Send WebSocket sync to ensure all clients align
-      if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-        window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-          elapsedTime: window.elapsedTime }));
-        console.log(`[CLIENT] Sent jump message to server after seek. Elapsed Time: ${elapsedTime}`);
-      }
-    }, seekDebounceTime); // ✅ Wait before enabling cues
-  });
+  //     // ✅ Send WebSocket sync to ensure all clients align
+  //     if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+  //       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
+  //         elapsedTime: window.elapsedTime }));
+  //       console.log(`[CLIENT] Sent jump message to server after seek. Elapsed Time: ${elapsedTime}`);
+  //     }
+  //   }, seekDebounceTime); // ✅ Wait before enabling cues
+  // });
 
   // REPEAT BOX COUNTER LOGIC////////
 
@@ -2854,220 +2838,6 @@ window.startAnimation = () => {
       console.warn("[CLIENT] ❌ Gave up on applying repeat state — cues not ready.");
     }
   }
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-      event.preventDefault(); // ✅ Prevents page scrolling
-  
-      // 🟢 Capture whether playback was active before seek
-      const wasPlayingBeforeSeek = window.isPlaying === true;
-  
-      window.isSeeking = true;
-  
-      if (event.key === 'ArrowLeft') {
-        rewind();
-      } else if (event.key === 'ArrowRight') {
-        forward();
-      }
-  
-      if (seekingTimeout) clearTimeout(seekingTimeout);
-  
-      seekingTimeout = setTimeout(() => {
-        window.isSeeking = false;
-        window.allowCues = true;
-        window.cueDisabledUntil = 0;
-  
-        checkCueTriggers();
-  
-        // ✅ Always resume playback if it was running before seek
-        if (wasPlayingBeforeSeek) {
-          window.startPlayback(); // resume
-        }
-  
-      }, seekDebounceTime);
-    }
-  });
-  
-
-
-  // end of seeking logiC ///////////////////////////////////////////////
-
-
-
-  // const //updatestopwatch = () => {
-  //   // Use the accurate elapsed time without re-applying totalPauseDuration unnecessarily
-  //   const effectiveElapsedTime = window.elapsedTime;
-  //   const minutesElapsed = Math.floor(effectiveElapsedTime / 60000);
-  //   const secondsElapsed = Math.floor((effectiveElapsedTime % 60000) / 1000);
-  //   const minutesTotal = Math.floor(duration / 60000);
-  //   const secondsTotal = Math.floor((duration % 60000) / 1000);
-
-
-  //   const formattedElapsed = `${minutesElapsed}:${secondsElapsed.toString().padStart(2, '0')}`;
-  //   const formattedTotal = `${minutesTotal}:${secondsTotal.toString().padStart(2, '0')}`;
-
-  //   // stopwatch.textContent = `${formattedElapsed} / ${formattedTotal}`;
-  //   stopwatch.textContent = `${formattedElapsed}`;
-
-  //   log(LogLevel.INFO, `Stopwatch updated: Elapsed = ${formattedElapsed}, Total = ${formattedTotal}`);
-  // };
-
-  window.isSeeking = false;
-
-  /**
-  * ✅ Rewinds playback to the start of the score.
-  * - Resets `playheadX` to 0 and ensures immediate UI update.
-  * - Prevents unwanted sync overrides from reverting the rewind.
-  * - Clears triggered cues and resets playback state.
-  * - Sends an updated state to the server to sync all clients.
-  */
-
-  let ignoreRewindOnStartup = false; // ✅ Prevents unnecessary resets
-  let suppressSync = false;
-
-  const rewindToStart = () => {
-    console.log("[DEBUG] Rewinding to start.");
-  
-    window.playheadX = 0;
-    window.elapsedTime = 0;
-    resetStopwatch(); // ✅ Reset stopwatch
-  
-    window.scoreContainer.scrollLeft = Math.max(0, window.playheadX);
-    window.speedMultiplier = getSpeedForPosition(window.playheadX);
-    window.updateSpeedDisplay();
-  
-    updatePosition();
-    updateSeekBar();
-  
-    suppressSync = true;
-  
-    if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
-      window.socket.send(JSON.stringify({
-        type: 'jump',
-        playheadX: window.playheadX,
-        elapsedTime: window.elapsedTime
-      }));
-    }
-  
-    setTimeout(() => { suppressSync = false; }, 500);
-  };
-  
-
-
-  /**
-  * ✅ Moves backward by a fixed distance on the score based on `playheadX`.
-  * - Ensures smooth cue retriggering after rewinding.
-  * - Updates UI elements and syncs with the server.
-  */
-
-  const rewind = () => {
-    const REWIND_INCREMENT_X = (1000 / duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
-   window.playheadX = Math.max(window.playheadX - REWIND_INCREMENT_X, 0);
-
-    window.scoreContainer.scrollLeft =window.playheadX;
-     console.log(`[DEBUG] Rewind applied. Newwindow.playheadX: ${window.playheadX}`);
-
-    // ✅ Calculate `elapsedTime` based on `playheadX` for reference
-    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-    // console.log(`[DEBUG] Synced elapsedTime fromwindow.playheadX: ${elapsedTime}`);
-
-    if (triggeredCues) {
-      triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
-      window._cueInsideState?.clear(); 
-      // console.log("[DEBUG] Cleared triggered cues due to rewind.");
-    }
-
-    // ✅ Apply and store correct speed based on the new playhead position
-    window.speedMultiplier = getSpeedForPosition(window.playheadX);
-    // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
-    window.updateSpeedDisplay();
-
-    updatePosition();
-    updateSeekBar();
-    //updatestopwatch();
-
-    if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-        elapsedTime: window.elapsedTime }));
-    }
-
-    /* ✅ Ignore the next sync broadcast — it's our own jump being echoed */
-    window.ignoreNextSync = true;
-
-    /* ✅ Prevent server from overriding our new position for a short window */
-    window.recentlyRecalculatedPlayhead = true;
-    setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
-
-    /* ✅ Ensure local animation keeps running if playback is active */
-    if (window.isPlaying) {
-      console.log("[DEBUG] Freewheel continue after seek");
-      window.animationPaused = false;
-      window.isSeeking = false;
-
-      window.startAnimation?.();
-      window.startStopwatch?.();
-    }
-
-  };
-
-
-  /**
-  * ✅ Moves forward by a fixed distance on the score based on `playheadX`.
-  * - Ensures smooth cue retriggering after advancing.
-  * - Updates UI elements and syncs with the server.
-  */
-
-  const forward = () => {
-    const FORWARD_INCREMENT_X = (1000 / duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
-   window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
-
-    window.scoreContainer.scrollLeft =window.playheadX;
-    console.log(`[DEBUG] Forward applied. Newwindow.playheadX: ${window.playheadX}`);
-
-    // ✅ Calculate `elapsedTime` based on `playheadX` for reference
-    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-    // console.log(`[DEBUG] Synced window.elapsedTime fromwindow.playheadX: ${elapsedTime}`);
-
-    if (triggeredCues) {
-      triggeredCues.clear(); // ✅ Ensure cues retrigger after forward
-      window._cueInsideState?.clear(); 
-      // console.log("[DEBUG] Cleared triggered cues due to forward.");
-    }
-
-    // ✅ Apply and store correct speed based on the new playhead position
-    window.speedMultiplier = getSpeedForPosition(window.playheadX);
-    // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
-    window.updateSpeedDisplay();
-
-
-    updatePosition();
-    updateSeekBar();
-    //updatestopwatch();
-
-
-    if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-        elapsedTime: window.elapsedTime }));
-    }
-
-    /* ✅ Ignore the next sync broadcast — it's our own jump being echoed */
-    window.ignoreNextSync = true;
-
-    /* ✅ Prevent server from overriding our new position for a short window */
-    window.recentlyRecalculatedPlayhead = true;
-    setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
-
-    /* ✅ Ensure local animation keeps running if playback is active */
-    if (window.isPlaying) {
-      console.log("[DEBUG] Freewheel continue after seek");
-      window.animationPaused = false;
-      window.isSeeking = false;
-
-      window.startAnimation?.();
-      window.startStopwatch?.();
-    }
-
-  };
 
 
   const toggleHelp = () => {
@@ -3143,80 +2913,80 @@ window.startAnimation = () => {
   }
 
 
-  const logState = () => {
-    console.log(`[DEBUG] 📏 Screen Width: ${window.innerWidth}`);
-    console.log(`[DEBUG] 🎵window.playheadX: ${window.playheadX}`);
-    console.log(`[DEBUG] 🎯 window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
-    console.log(`[DEBUG] 📏 Max Scroll Distance: ${maxScrollDistance}`);
-    console.log(`[DEBUG] 🖥️ Current SVG Width: ${window.scoreSVG?.getAttribute('width')}`);
-    console.log(`[DEBUG] 🖥️ Current SVG ViewBox: ${window.scoreSVG?.getAttribute('viewBox')}`);
+  // const logState = () => {
+  //   console.log(`[DEBUG] 📏 Screen Width: ${window.innerWidth}`);
+  //   console.log(`[DEBUG] 🎵window.playheadX: ${window.playheadX}`);
+  //   console.log(`[DEBUG] 🎯 window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
+  //   console.log(`[DEBUG] 📏 Max Scroll Distance: ${maxScrollDistance}`);
+  //   console.log(`[DEBUG] 🖥️ Current SVG Width: ${window.scoreSVG?.getAttribute('width')}`);
+  //   console.log(`[DEBUG] 🖥️ Current SVG ViewBox: ${window.scoreSVG?.getAttribute('viewBox')}`);
 
-    // Log the transformation matrix for the SVG elements
-    console.log(`[DEBUG] Transform Matrix of first rehearsal mark: ${getMatrixString(rehearsalMarks["B"])}`);
+  //   // Log the transformation matrix for the SVG elements
+  //   console.log(`[DEBUG] Transform Matrix of first rehearsal mark: ${getMatrixString(rehearsalMarks["B"])}`);
 
-    // Log extracted rehearsal marks' coordinates (B, C, D...)
-    console.log(`[DEBUG] 📍 Rehearsal Marks Coordinates:`);
-    for (const [key, value] of Object.entries(rehearsalMarks)) {
-      // console.log(`[DEBUG]  ${key}: X=${value.x}, Y=${value.y}`);
-    }
+  //   // Log extracted rehearsal marks' coordinates (B, C, D...)
+  //   console.log(`[DEBUG] 📍 Rehearsal Marks Coordinates:`);
+  //   for (const [key, value] of Object.entries(rehearsalMarks)) {
+  //     // console.log(`[DEBUG]  ${key}: X=${value.x}, Y=${value.y}`);
+  //   }
 
-    // Log array of rehearsal marks for debugging
-    // console.log(`[DEBUG] 🎭 Rehearsal Marks Array:`, Object.entries(rehearsalMarks));
+  //   // Log array of rehearsal marks for debugging
+  //   // console.log(`[DEBUG] 🎭 Rehearsal Marks Array:`, Object.entries(rehearsalMarks));
 
-    // Log extracted cue positions
-    // console.log(`[DEBUG] 🔰 Cue Positions:`);
-    cues.forEach(cue => {
-      // console.log(`[DEBUG] Cue ${cue.id}: X=${cue.x}, Width=${cue.width}`);
-    });
+  //   // Log extracted cue positions
+  //   // console.log(`[DEBUG] 🔰 Cue Positions:`);
+  //   cues.forEach(cue => {
+  //     // console.log(`[DEBUG] Cue ${cue.id}: X=${cue.x}, Width=${cue.width}`);
+  //   });
 
-    // Track scaling adjustments
-    // console.log(`[DEBUG] Scaling Factor (scaleX): ${rehearsalMarks["B"]?.scale || 1}`);
-    // console.log(`[DEBUG] Recalculated X for Mark B: ${rehearsalMarks["B"]?.x}window.playheadX: ${window.playheadX} Screen Width: ${window.innerWidth} `);
-    // console.log(`[DEBUG] Recalculated Y for Mark B: ${rehearsalMarks["B"]?.y}`);
+  //   // Track scaling adjustments
+  //   // console.log(`[DEBUG] Scaling Factor (scaleX): ${rehearsalMarks["B"]?.scale || 1}`);
+  //   // console.log(`[DEBUG] Recalculated X for Mark B: ${rehearsalMarks["B"]?.x}window.playheadX: ${window.playheadX} Screen Width: ${window.innerWidth} `);
+  //   // console.log(`[DEBUG] Recalculated Y for Mark B: ${rehearsalMarks["B"]?.y}`);
 
-    // Log the element count for rehearsal marks and cues
-    console.log(`[DEBUG] 🎭 Number of Rehearsal Marks: ${Object.keys(rehearsalMarks).length}`);
-    console.log(`[DEBUG] 🔰 Number of Cues: ${cues.length}`);
+  //   // Log the element count for rehearsal marks and cues
+  //   console.log(`[DEBUG] 🎭 Number of Rehearsal Marks: ${Object.keys(rehearsalMarks).length}`);
+  //   console.log(`[DEBUG] 🔰 Number of Cues: ${cues.length}`);
 
-    // Log state of animation
-    console.log(`[DEBUG] 🔄 Animation state: ${window.isPlaying ? "Playing" : "Paused"}`);
-    console.log(`[DEBUG] 🧮 Elapsed Time: ${elapsedTime}`);
-    console.log(`[DEBUG] 🕰️ Last animation frame time: ${window.lastAnimationFrameTime}`);
+  //   // Log state of animation
+  //   console.log(`[DEBUG] 🔄 Animation state: ${window.isPlaying ? "Playing" : "Paused"}`);
+  //   console.log(`[DEBUG] 🧮 Elapsed Time: ${elapsedTime}`);
+  //   console.log(`[DEBUG] 🕰️ Last animation frame time: ${window.lastAnimationFrameTime}`);
 
-    // Log SVG Element states
-    console.log(`[DEBUG] 🎨 SVG File: ${window.scoreSVG?.id || 'No SVG loaded'}`);
-    console.log(`[DEBUG] 🖥️ SVG Scroll Position (scrollLeft): ${window.scoreContainer.scrollLeft}`);
+  //   // Log SVG Element states
+  //   console.log(`[DEBUG] 🎨 SVG File: ${window.scoreSVG?.id || 'No SVG loaded'}`);
+  //   console.log(`[DEBUG] 🖥️ SVG Scroll Position (scrollLeft): ${window.scoreContainer.scrollLeft}`);
 
-    // Log state of WebSocket
-    console.log(`[DEBUG] 🌐 WebSocket State: ${window.wsEnabled ? 'Enabled' : 'Disabled'}`);
-    console.log(`[DEBUG] 🔗 WebSocket Connection Open: ${socket && socket.readyState === WebSocket.OPEN}`);
+  //   // Log state of WebSocket
+  //   console.log(`[DEBUG] 🌐 WebSocket State: ${window.wsEnabled ? 'Enabled' : 'Disabled'}`);
+  //   console.log(`[DEBUG] 🔗 WebSocket Connection Open: ${socket && socket.readyState === WebSocket.OPEN}`);
 
-    // Log sync related variables
-    console.log(`[DEBUG] 🕹️ Sync State - Elapsed Time: ${elapsedTime}`);
-    console.log(`[DEBUG] 🔄window.playheadX during Sync: ${window.playheadX}`);
+  //   // Log sync related variables
+  //   console.log(`[DEBUG] 🕹️ Sync State - Elapsed Time: ${elapsedTime}`);
+  //   console.log(`[DEBUG] 🔄window.playheadX during Sync: ${window.playheadX}`);
 
-    // Log viewport adjustments
-    console.log(`[DEBUG] 🖥️ Fullscreen Mode: ${document.fullscreenElement ? "Enabled" : "Disabled"}`);
-    console.log(`[DEBUG] 🔍 Current Screen Orientation: ${window.innerWidth > window.innerHeight ? 'Landscape' : 'Portrait'}`);
+  //   // Log viewport adjustments
+  //   console.log(`[DEBUG] 🖥️ Fullscreen Mode: ${document.fullscreenElement ? "Enabled" : "Disabled"}`);
+  //   console.log(`[DEBUG] 🔍 Current Screen Orientation: ${window.innerWidth > window.innerHeight ? 'Landscape' : 'Portrait'}`);
 
-    // Log screen resizing adjustments
-    console.log(`[DEBUG] 🌐 Max Scroll Distance: ${maxScrollDistance}`);
-    console.log(`[DEBUG] 🎯 ScrollLeft after resize: ${window.scoreContainer.scrollLeft}`);
+  //   // Log screen resizing adjustments
+  //   console.log(`[DEBUG] 🌐 Max Scroll Distance: ${maxScrollDistance}`);
+  //   console.log(`[DEBUG] 🎯 ScrollLeft after resize: ${window.scoreContainer.scrollLeft}`);
 
-    // Log status of paused elements
-    console.log(`[DEBUG] 🚦 Is Animation Paused? ${animationPaused ? "Yes" : "No"}`);
-    console.log(`[DEBUG] ⏸️ Animation Frame Id: ${animationFrameId || 'None'}`);
+  //   // Log status of paused elements
+  //   console.log(`[DEBUG] 🚦 Is Animation Paused? ${animationPaused ? "Yes" : "No"}`);
+  //   console.log(`[DEBUG] ⏸️ Animation Frame Id: ${animationFrameId || 'None'}`);
 
-    // Log playback speed
-    console.log(`[DEBUG] 🏃 Playback Speed Multiplier: ${playbackSpeed}`);
+  //   // Log playback speed
+  //   console.log(`[DEBUG] 🏃 Playback Speed Multiplier: ${playbackSpeed}`);
 
-  };
+  // };
 
-  // Utility function to get the matrix string for debugging
-  const getMatrixString = (mark) => {
-    if (!mark || !mark.matrix) return "No matrix data";
-    // return `scaleX: ${mark.matrix.a}, translateX: ${mark.matrix.e}`;
-  };
+  // // Utility function to get the matrix string for debugging
+  // const getMatrixString = (mark) => {
+  //   if (!mark || !mark.matrix) return "No matrix data";
+  //   // return `scaleX: ${mark.matrix.a}, translateX: ${mark.matrix.e}`;
+  // };
 
 
 
@@ -3395,141 +3165,141 @@ window.startAnimation = () => {
 
   //////// END OF REHEARSAL MARK LOGIC ///////////////////////////////////////////
 
-/**
- * ✅ Toggles playback state between play and pause.
- * - Delegates to startPlayback() or pausePlayback() for consistent logic.
- * - Ensures all flags and state updates are handled in one place.
- */
-const togglePlay = () => {
-  if (window.isPlaying) {
-    window.pausePlayback();
-  } else {
-    window.startPlayback();
-  }
-};
+// /**
+//  * ✅ Toggles playback state between play and pause.
+//  * - Delegates to startPlayback() or pausePlayback() for consistent logic.
+//  * - Ensures all flags and state updates are handled in one place.
+//  */
+// const togglePlay = () => {
+//   if (window.isPlaying) {
+//     window.pausePlayback();
+//   } else {
+//     window.startPlayback();
+//   }
+// };
 
-// ✅ Updates the play/pause button UI to match playback state
-const togglePlayButton = () => {
-  const playButton = document.getElementById("toggle-button");
+// // ✅ Updates the play/pause button UI to match playback state
+// const togglePlayButton = () => {
+//   const playButton = document.getElementById("toggle-button");
 
-  if (playButton) {
-    playButton.innerHTML = window.isPlaying
-      ? '<div class="custom-pause"></div>'
-      : "▶";
-  } else {
-    console.error("[ERROR] Play button element not found.");
-  }
-};
+//   if (playButton) {
+//     playButton.innerHTML = window.isPlaying
+//       ? '<div class="custom-pause"></div>'
+//       : "▶";
+//   } else {
+//     console.error("[ERROR] Play button element not found.");
+//   }
+// };
 
-// ✅ Starts playback: sets state, starts animation + stopwatch, syncs with server
-window.startPlayback = function startPlayback() {
-  if (!window.isPlaying) {
-    console.log("[Playback] ▶️ Starting playback");
-    window.isPlaying = true;
-    window.isMusicalPause = false;
-    window.ignoreSyncPlayback = false;
-    window.animationPaused = false;
-    window.isPaused = false;
+// // ✅ Starts playback: sets state, starts animation + stopwatch, syncs with server
+// window.startPlayback = function startPlayback() {
+//   if (!window.isPlaying) {
+//     console.log("[Playback] ▶️ Starting playback");
+//     window.isPlaying = true;
+//     window.isMusicalPause = false;
+//     window.ignoreSyncPlayback = false;
+//     window.animationPaused = false;
+//     window.isPaused = false;
     
 
-    // Set speed multiplier from current playhead position
-    window.speedMultiplier = getSpeedForPosition(window.playheadX);
-    window.updateSpeedDisplay?.();
+//     // Set speed multiplier from current playhead position
+//     window.speedMultiplier = getSpeedForPosition(window.playheadX);
+//     window.updateSpeedDisplay?.();
 
-    // Force start animation loop (even if already partially running)
-    if (typeof window.animate === "function") {
-      cancelAnimationFrame(window.animationFrameId);
-      window.animationFrameId = requestAnimationFrame(window.animate);
-    }
-
-
-    window.startStopwatch?.();
-    window.startAnimation?.();
-    togglePlayButton();
-    hideControls?.();
-
-    // Send play message to server
-    if (window.socket && window.socket.readyState === WebSocket.OPEN) {
-      window.socket.send(JSON.stringify({
-        type: "play",
-        playheadX: window.playheadX,
-        elapsedTime: window.elapsedTime
-      }));
-    }
-
-    updatePosition?.();
-    checkCueTriggers?.();
-  }
-};
-
-// ✅ Pauses playback: sets state, stops animation + stopwatch, syncs with server
-window.pausePlayback = function pausePlayback() {
-  if (window.isPlaying) {
-    console.log("[Playback] ⏸ Pausing playback");
-    window.isPlaying = false;
-    window.isMusicalPause = false;
-    window.animationPaused = true;
-
-    window.stopStopwatch?.();
-    window.stopAnimation?.();
-    togglePlayButton();
-
-    // Send pause message to server
-    if (window.socket && window.socket.readyState === WebSocket.OPEN) {
-      window.socket.send(JSON.stringify({
-        type: "pause",
-        playheadX: window.playheadX,
-        elapsedTime: window.elapsedTime
-      }));
-    }
-  }
-};
-
-// ✅ Resume logic: reuse startPlayback() for consistency
-window.resumePlayback = function resumePlayback() {
-  console.log("[Playback] 🔁 resumePlayback() called");
-  window.startPlayback();
-};
+//     // Force start animation loop (even if already partially running)
+//     if (typeof window.animate === "function") {
+//       cancelAnimationFrame(window.animationFrameId);
+//       window.animationFrameId = requestAnimationFrame(window.animate);
+//     }
 
 
+//     window.startStopwatch?.();
+//     window.startAnimation?.();
+//     togglePlayButton();
+//     hideControls?.();
+
+//     // Send play message to server
+//     if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+//       window.socket.send(JSON.stringify({
+//         type: "play",
+//         playheadX: window.playheadX,
+//         elapsedTime: window.elapsedTime
+//       }));
+//     }
+
+//     updatePosition?.();
+//     checkCueTriggers?.();
+//   }
+// };
+
+// // ✅ Pauses playback: sets state, stops animation + stopwatch, syncs with server
+// window.pausePlayback = function pausePlayback() {
+//   if (window.isPlaying) {
+//     console.log("[Playback] ⏸ Pausing playback");
+//     window.isPlaying = false;
+//     window.isMusicalPause = false;
+//     window.animationPaused = true;
+
+//     window.stopStopwatch?.();
+//     window.stopAnimation?.();
+//     togglePlayButton();
+
+//     // Send pause message to server
+//     if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+//       window.socket.send(JSON.stringify({
+//         type: "pause",
+//         playheadX: window.playheadX,
+//         elapsedTime: window.elapsedTime
+//       }));
+//     }
+//   }
+// };
+
+// // ✅ Resume logic: reuse startPlayback() for consistency
+// window.resumePlayback = function resumePlayback() {
+//   console.log("[Playback] 🔁 resumePlayback() called");
+//   window.startPlayback();
+// };
 
 
-  //////////////////////////////////////////////////
 
-  const jumpToCueId = (id) => {
-    // Try first in cues[]
-    let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"));
 
-    // Fallback to global SVG search if not found in cues[]
-    if (!target) {
-      target = document.getElementById(id);
-    }
+//   //////////////////////////////////////////////////
 
-    if (!target) {
-      console.warn(`[jumpToCueId] Cue not found: ${id}`);
-      return;
-    }
+//   const jumpToCueId = (id) => {
+//     // Try first in cues[]
+//     let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"));
 
-    let targetX = target.x;
-    if (typeof targetX !== 'number') {
-      targetX = parseFloat(target.getAttribute('x')) || 0;
-    }
+//     // Fallback to global SVG search if not found in cues[]
+//     if (!target) {
+//       target = document.getElementById(id);
+//     }
 
-   window.playheadX = targetX - (window.innerWidth / 2);
-    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-    window.scoreContainer.scrollLeft = window.playheadX;
+//     if (!target) {
+//       console.warn(`[jumpToCueId] Cue not found: ${id}`);
+//       return;
+//     }
 
-    console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
+//     let targetX = target.x;
+//     if (typeof targetX !== 'number') {
+//       targetX = parseFloat(target.getAttribute('x')) || 0;
+//     }
 
-    if (window.wsEnabled &&window.socket&& socket.readyState === WebSocket.OPEN) {
-      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-        elapsedTime: window.elapsedTime }));
-    }
+//    window.playheadX = targetX - (window.innerWidth / 2);
+//     window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+//     window.scoreContainer.scrollLeft = window.playheadX;
 
-    updatePosition();
-    updateSeekBar();
-    //updatestopwatch();
-  };
+//     console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
+
+//     if (window.wsEnabled &&window.socket&& socket.readyState === WebSocket.OPEN) {
+//       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
+//         elapsedTime: window.elapsedTime }));
+//     }
+
+//     updatePosition();
+//     updateSeekBar();
+//     //updatestopwatch();
+//   };
 
 
 
@@ -3701,7 +3471,7 @@ window.resumePlayback = function resumePlayback() {
       document.getElementById("score-options-popup").classList.add("hidden");
     });
   } else {
-    console.warn("[DEBUG] Close button not found in DOM.");
+    // console.warn("[DEBUG] Close button not found in DOM.");
   }
 
   // TODO uncomment and fix fixme
@@ -3805,21 +3575,29 @@ window.resumePlayback = function resumePlayback() {
   //   updatePosition();
   // });
 
+
+
+
+
+
   // Detect double-tap to toggle pause/play
-  let lastTap = 0; // Timestamp of the last tap
+  // let lastTap = 0; // Timestamp of the last tap
 
-  document.addEventListener('touchstart', (event) => {
-    const currentTime = Date.now();
-    const timeSinceLastTap = currentTime - lastTap;
+  // document.addEventListener('touchstart', (event) => {
+  //   const currentTime = Date.now();
+  //   const timeSinceLastTap = currentTime - lastTap;
 
-    if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
-      // Double-tap detected
-      console.log("[DEBUG] Double-tap detected. Toggling play/pause.");
-      window.isPlaying ? window.pausePlayback() : window.startPlayback();
-    }
+  //   if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
+  //     // Double-tap detected
+  //     console.log("[DEBUG] Double-tap detected. Toggling play/pause.");
+  //     window.isPlaying ? window.pausePlayback() : window.startPlayback();
+  //   }
 
-    lastTap = currentTime; // Update the lastTap timestamp
-  }, { passive: false });
+  //   lastTap = currentTime; // Update the lastTap timestamp
+  // }, { passive: false });
+
+
+
 
   let startX = 0; // Start X position of the touch
   let isSwiping = false; // Whether a swipe is in progress
@@ -3938,8 +3716,30 @@ window.resumePlayback = function resumePlayback() {
 
 
 
+Object.assign(document.getElementById("splash").style, {
+  position: "fixed",
+  top: "0",
+  left: "0",
+  width: "100vw",
+  height: "100vh",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  textAlign: "center",
+  backgroundColor: "white",
+  color: "black",
+  zIndex: "999999",
+  opacity: "1"
+});
+
 
   console.log('// EOF');
+
+
+
+
+
 
 });
 

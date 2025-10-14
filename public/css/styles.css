@@ -18,35 +18,6 @@ body {
 
 }
 
-/* Splash screen styling */
-#splash {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    background-color: white;
-    color: black;
-    z-index: 1000; /* Base z-index for splash screen */
-}
-
-
-#splash.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-#splash .splash-container {
-  /* align-items: center;
-  max-width: 100%; /* Restrict width for better readability
-  padding: 0px; /* Add padding for spacing */ 
-}
-
 
 /* Font-face for offline Antonio */
 @font-face {
@@ -65,144 +36,9 @@ body {
 }
 
 
-/* Styling for splash screen title section */
-#splash .title-section h1 {
-  font-family: 'Antonio', sans-serif;
-  font-weight: bold;
-  font-size: 10em;
-  margin: 0;
-  margin-bottom: 20px;
-  padding: 0;
-}
 
-#splash .title-section .subtitle {
-  font-family: 'Antonio', sans-serif;
-  font-size: 3em;
-  color: gray;
-  padding: 0;
-  margin-top: -30px;
-  margin-bottom: 00px;
-}
-
-#splash .title-section .author,
-#splash .title-section .forces,
-#splash .title-section .commission {
-  font-family: 'Antonio', sans-serif;
-  margin-top: 10px;
-  font-size: 1.7em;
-  padding: 20px;
-  margin: 20px;
-  font-weight: normal;
-  color: #666;
-}
-
-#splash .title-section .commission {  font-size: 1.5em;}
-
-#splash .title-section .instruction {
-  font-family: 'Antonio', sans-serif;
-  font-size: 1.5em;
-  color: gray;
-  padding: 10;
-  margin: 19;
-}
-
-
-#splash .keybindings {
-  grid-column: span 1;
-  align-self: center;
-  justify-self: start;
-  z-index: 2000; /* Ensure it is above everything else */
-
-}
-
-#splash .keybindings h3 {
-  font-size: 1.5em;
-  margin-bottom: 10px;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-#splash .keybindings p {
-  margin: 5px 0;
-  font-size: 1em;
-}
-
-#splash .svg-loader {
-  grid-column: span 1;
-  align-self: center;
-  justify-self: end;
-  z-index: 2000; /* Ensure it is above everything else */
-
-}
-
-
-/* Hide native file input */
-.custom-file-upload input[type="file"] {
-  display: none;
-}
-
-/* Style the label like a button */
-.custom-file-upload label {
-  display: inline-block;
-  padding: 6px 12px;
-  background-color: #38bdf8; /* sky-400 */
-  color: #fff;
-  font-weight: bold;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-
-#splash .svg-loader h3 {
-  font-size: 1.5em;
-  margin-bottom: 10px;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-#splash .svg-loader input,
-#splash .svg-loader button {
-  margin: 5px 0;
-  padding: 10px;
-  font-size: 1em;
-  box-sizing: border-box;
-}
-
-#splash .svg-loader button {
-  background-color: black;
-  color: white;
-  border: none;
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-#splash .svg-loader button:hover {
-  background-color: gray;
-}
-
-#splash .footer {
-  grid-column: span 2;
-  align-self: end;
-  text-align: center;
-  font-size: 0.9em;
-  color: gray;
-}
-/* Controls container */
-
-.simple-control {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Always hide advanced controls */
-.advanced-control {
-  display: none !important; /* Ensure advanced controls are hidden */
-}
 
 /* Controls Container */
-
-
 /* Ensure the overall controls container occupies the full available height */
 #controls {
   flex-direction: column; /* ✅ Makes seek bar appear above buttons */
@@ -1548,3 +1384,153 @@ padding: 20px;
 .oscilla-cue-button--flash.oscilla-cue-button--active { animation: osc-flash 0.9s ease-in-out infinite; }
 .oscilla-cue-button--pulse.oscilla-cue-button--active { animation: osc-pulse 1.2s ease-in-out infinite; }
 .oscilla-cue-button--fade.oscilla-cue-button--active  { animation: osc-fade 1.2s ease-in-out infinite; }
+
+
+/* Splash Base */
+#splash {
+  position: fixed;
+  inset: 0;
+  background: #0a0a0a;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+
+#splash.fade-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Inner Layout */
+.splash-container {
+  text-align: center;
+  max-width: 700px;
+  width: 90%;
+}
+
+.splash-title {
+  font-family: 'Antonio', sans-serif;
+  font-size: 3em;
+  margin-bottom: 0.3em;
+}
+
+.splash-subtitle {
+  font-weight: 300;
+  margin-bottom: 1.5em;
+  color: #aaa;
+}
+
+.splash-message {
+  font-size: 0.9em;
+  color: #777;
+  margin-bottom: 1.5em;
+}
+
+/* Project Grid */
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1em;
+  justify-items: center;
+}
+
+/* Project Cards */
+.project-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 1em 1.5em;
+  cursor: pointer;
+  font-family: 'Antonio', sans-serif;
+  font-size: 1.1em;
+  color: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 0 rgba(255,255,255,0);
+}
+
+.project-card:hover {
+  background: #222;
+  box-shadow: 0 0 10px rgba(255,255,255,0.2);
+  transform: translateY(-3px);
+}
+
+/* Manual Entry */
+.manual-entry {
+  margin-top: 2em;
+}
+
+.manual-entry input {
+  padding: 0.5em;
+  border: none;
+  border-radius: 5px;
+  margin-right: 0.5em;
+  width: 180px;
+}
+
+.manual-entry button {
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 0.5em 1em;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.manual-entry button:hover {
+  background: #eee;
+}
+
+
+
+/* Splash screen styling */
+#splash {
+     position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background-color: white;
+    color: black;
+     z-index: 999999 !important;
+}
+
+
+#splash.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#splash .splash-container {
+  /* align-items: center;
+  max-width: 100%; /* Restrict width for better readability
+  padding: 0px; /* Add padding for spacing */ 
+}
+
+.project-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75em;
+  justify-content: center;
+}
+
+.project-list button {
+  background: #222;
+  color: #fff;
+  border: none;
+  padding: 0.6em 1.2em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.project-list button:hover {
+  background: #555;
+}

@@ -45,15 +45,27 @@
 
 
 
-<!-- Splash Screen -->
+<!-- Splash / Project Selector -->
 <div id="splash">
   <div class="splash-container">
     <div class="title-section">
-      <h1 style="font-family: 'Antonio', sans-serif;">Oscilla</h1>
-      <h2>System loading...</h2>
-      <p style="margin-top: 1em; font-size: 0.95em; color: #888;">
-        <em>If Oscilla freezes at this point, open your browser’s developer console and check for errors.</em>
+      <h1 class="splash-title">Oscilla</h1>
+      <h2 class="splash-subtitle">Select a Project</h2>
+      <p id="splash-message" class="splash-message">
+        Loading available projects...
       </p>
+    </div>
+
+    <div id="project-grid" class="project-grid"></div>
+
+    <div id="manual-entry" class="manual-entry" style="display: none;">
+      <p>Could not automatically list projects.</p>
+      <input
+        id="manual-project-input"
+        type="text"
+        placeholder="Enter project name manually"
+      />
+      <button id="manual-load-btn">Load Project</button>
     </div>
   </div>
 </div>
@@ -76,16 +88,22 @@
       <sl-dropdown>
         <sl-button id="hamburger-menu" slot="trigger">☰</sl-button>
         <sl-menu>
-          <sl-menu-item value="settings">Settings</sl-menu-item>
+          <!-- <sl-menu-item value="settings">Settings</sl-menu-item> -->
           <sl-menu-item value="load">Load Score</sl-menu-item>
-          <sl-menu-item value="save">Save State</sl-menu-item>
+          <!-- <sl-menu-item value="save">Save State</sl-menu-item> -->
           <sl-divider></sl-divider>
-          <sl-menu-item value="quit">Quit</sl-menu-item>
+          <!-- <sl-menu-item value="quit">Quit</sl-menu-item> -->
         </sl-menu>
       </sl-dropdown>
     </div>
   </div>
   
+
+<!-- 🔸 Project list modal (hidden by default) -->
+<sl-dialog id="project-dialog" label="Load Score">
+  <div id="project-list" class="project-list"></div>
+</sl-dialog>
+
 
   <!-- Controls -->
   <div id="controls">
@@ -298,12 +316,14 @@
   </script>
 
 
-  <script src="js/wavesurfer.min.js"></script>
+  <!-- <script src="js/wavesurfer.min.js"></script> -->
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js" crossorigin="anonymous"></script> -->
   <script src="js/anime.min.js"></script>
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script> -->
   <script src="js/p5.min.js"></script>
   <!-- <script src="js/app.js"></script> -->
+   <script src="js/svg-path-commander.js"></script>
+
   <script type="module" src="./js/scoreSetup.js"></script>
   <script type="module" src="js/app.js"></script>
   <!-- <script src="js/playback_diagnostics.js"></script> -->

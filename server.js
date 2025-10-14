@@ -18,6 +18,7 @@ const argv = yargs(hideBin(process.argv)).argv;
 const WebSocket = require('ws');
 const express = require('express');
 const osc = require('osc');
+const fs = require('fs');
 
 // ---------------------------------------------
 // Express App Setup
@@ -71,6 +72,22 @@ app.get('/config', (req, res) => {
 
 
 app.use(express.static('public'));
+app.use('/public/scores', express.static('public/scores', { extensions: ['svg'] }));
+// NEW: directory listing endpoint
+app.get('/public/scores/', (req, res) => {
+  const dir = path.join(process.cwd(), 'public/scores');
+  try {
+    const folders = fs.readdirSync(dir, { withFileTypes: true })
+      .filter(f => f.isDirectory())
+      .map(f => f.name);
+    res.send(
+      `<html><body>${folders.map(f => `<a href="${f}/">${f}</a><br>`).join('')}</body></html>`
+    );
+  } catch (e) {
+    res.status(500).send(e.message);
+  }
+});
+
 // app.use(express.static('dist'));
 
 // serve the docs ////////////////////////

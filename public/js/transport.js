@@ -1,4 +1,8 @@
-  
+
+
+
+
+
   window.seekDebounceTime = 300;
   window.seekingTimeout = null;
 
@@ -601,3 +605,85 @@ export function startPlayback() {
       };
     
     
+
+
+
+
+
+  document.addEventListener('fullscreenchange', () => {
+
+    if (document.fullscreenElement) {
+      hideControls();
+    } else {
+      showControls();
+      clearTimeout(controlsTimeout);
+    }
+
+    // 🔥 Ensurewindow.playheadX is recalculated on fullscreen change
+    // recalculatePlayheadPosition(window.scoreSVG);
+    calculateMaxScrollDistance();
+    // extractScoreElements(svgElement);
+
+  });
+
+  window.dispatchEvent(new Event("resize"));
+  window.addEventListener('resize', () => {
+    const startTime = performance.now();
+    extractScoreElements(window.scoreSVG);
+    const endTime = performance.now();
+    console.log(`[DEBUG] ⏳ extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
+    console.log("[DEBUG] ✅ Extracted Score Elements. Now Checking Sync...");
+
+
+    console.log("[DEBUG] Resize detected, recalculating maxScrollDistance and aligning playhead...");
+    calculateMaxScrollDistance();
+  });
+
+  //document.addEventListener('fullscreenchange', adjustscoreContainerHeight);
+  // Show controls on user interaction in fullscreen mode
+  let hideControlsTimeout; // Store timeout reference
+
+  document.addEventListener('mousemove', () => {
+    showControls(); // ✅ Show controls on mouse move
+
+    // ✅ Clear any existing timeout before starting a new one
+    clearTimeout(hideControlsTimeout);
+
+    // ✅ Set a new timeout to hide controls after 5 seconds
+    hideControlsTimeout = setTimeout(() => {
+      hideControls();
+    }, 5000);
+
+  });// document.addEventListener('keydown', showControls);   // Show controls on key press
+
+  // Show controls on user interaction in fullscreen mode
+
+  document.addEventListener('mousemove', () => {
+    if (document.fullscreenElement) {
+      showControls(); // ✅ Show controls on mouse move
+
+      // ✅ Clear any existing timeout before starting a new one
+      clearTimeout(hideControlsTimeout);
+
+      // ✅ Set a new timeout to hide controls after 5 seconds
+      hideControlsTimeout = setTimeout(() => {
+        hideControls();
+      }, 5000);
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    // ✅ Ignore arrow keys & spacebar when seeking or pausing
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === " ") {
+      return; // ✅ Do nothing, skip showing controls
+    }
+
+    // ✅ Show controls for other key presses
+    showControls();
+
+    // ✅ Hide controls after 5 seconds
+    setTimeout(() => {
+      hideControls();
+    }, 5000);
+
+  });

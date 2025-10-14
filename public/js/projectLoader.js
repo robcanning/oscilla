@@ -20,21 +20,12 @@ export async function loadProject(projectName) {
     window.videoDir = `${window.projectBase}videos/`;
     window.sharedDir = `scores/shared/`;
 
-    // 2️⃣ Load optional config.json
-    try {
-      const cfg = await fetch(`${window.projectBase}config.json`);
-      window.projectConfig = cfg.ok ? await cfg.json() : {};
-      console.log(`[loadProject] ✅ Config loaded`);
-    } catch {
-      console.warn(`[loadProject] ⚠️ No config.json found — using defaults.`);
-      window.projectConfig = {};
-    }
 
     // 3️⃣ Preload shared + project-specific groups
     const preloadList = [
-      `${window.sharedDir}ui-defaults.svg`,
-      `${window.sharedDir}menus.svg`,
-      `${window.pagesDir}page-elements.svg`
+      // `${window.sharedDir}ui-defaults.svg`,
+      // `${window.sharedDir}menus.svg`,
+      // `${window.pagesDir}page-elements.svg`
     ];
     await preloadSvgGroups(preloadList);
 
@@ -137,28 +128,89 @@ export function resolveProjectPath(type, filename) {
   }
 }
 
-export async function populateProjectMenu() {
-  const listEl = document.getElementById("score-list");
-  if (!listEl) return;
-  try {
-    const res = await fetch("scores/manifest.json");
-    const { projects } = await res.json();
-    listEl.innerHTML = "";
-    for (const name of projects) {
-      const btn = document.createElement("button");
-      btn.textContent = `🎼 ${name}`;
-      btn.onclick = () => loadProject(name);
-      listEl.appendChild(btn);
+// --- Hamburger menu behaviour ---
+document.addEventListener("DOMContentLoaded", () => {
+  const menu = document.querySelector("#hamburger-container sl-menu");
+  const dialog = document.getElementById("project-dialog");
+  const projectList = document.getElementById("project-list");
+
+  if (!menu || !dialog || !projectList) return;
+
+  menu.addEventListener("sl-select", async (event) => {
+    const value = event.detail.item.value;
+    console.log("[MENU] Selected:", value);
+
+    switch (value) {
+      case "load":
+        await showProjectList();
+        break;
+
+      case "settings":
+        alert("⚙️ Settings coming soon.");
+        break;
+
+      case "save":
+        alert("💾 Save State — not implemented yet.");
+        break;
+
+      case "quit":
+        window.close?.(); // may not work in browsers
+        break;
     }
-    console.log("[populateProjectMenu] ✅ Loaded project list.");
-  } catch (err) {
-    console.warn("[populateProjectMenu] ⚠️ manifest.json missing or invalid.");
-    const fallback = document.createElement("li");
-    fallback.innerHTML = `<button onclick="loadProject('help')">🎼 Load Default</button>`;
-    listEl.appendChild(fallback);
+  });
+
+  async function showProjectList() {
+    projectList.innerHTML = "<p>Loading projects...</p>";
+    dialog.show();
+
+    try {
+      const res = await fetch("/public/scores/");
+      const text = await res.text();
+
+      // crude directory listing parser: extract subfolder names
+      const projects = [...text.matchAll(/href="([^"/]+)\/"/g)].map((m) => m[1]);
+      if (!projects.length) throw new Error("No projects found.");
+
+      projectList.innerHTML = "";
+      projects.forEach((name) => {
+        const btn = document.createElement("button");
+        btn.textContent = name;
+        btn.addEventListener("click", () => {
+          dialog.hide();
+          console.log(`[MENU] Loading project '${name}'`);
+          loadProject(name);
+        });
+        projectList.appendChild(btn);
+      });
+    } catch (err) {
+      console.warn("[MENU] Failed to list projects:", err);
+      projectList.innerHTML = `<p style="color:red">⚠️ Could not load project list.</p>`;
+    }
   }
-}
+});
+
 
 window.loadProject = loadProject;
-window.resolveProjectPath = resolveProjectPath;
-window.populateProjectMenu = populateProjectMenu;
+
+// --- Simple auto-load by URL (wait for DOM) ---
+window.addEventListener("DOMContentLoaded", () => {
+  const url = new URL(window.location.href);
+  const projectArg =
+    url.searchParams.get("project") || url.pathname.split("/").filter(Boolean)[0];
+
+  if (projectArg) {
+    console.log("[BOOT] Auto-loading project:", projectArg);
+    loadProject(projectArg);
+
+    const splash = document.getElementById("splash");
+    if (splash) {
+      splash.style.opacity = 0;
+      setTimeout(() => (splash.style.display = "none"), 600);
+    }
+  }
+});
+
+
+
+
+// window.resolveProjectPath = resolveProjectPath;

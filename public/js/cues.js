@@ -29,7 +29,7 @@ export const cueHandlers = {
   cuePage: handlePageCue,
   cueNav: handleNavCue,  
   cueAudio: handleAudioCue,
-  cueAudioStop: handleAudioStopCue,
+  // cueAudioStop: handleAudioStopCue,
   cueVideo: handleVideoCue,
   cueP5: handleP5Cue,
   cueOsc: handleOscCue,
@@ -89,16 +89,6 @@ function waitForCueComplete(targetId, timeout = 60000) {
   });
 }
 
-
-// export function resetAllCueTriggers() {
-//   if (window.cuesTriggered) {
-//     // window.cuesTriggered.clear();
-//     triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
-//     window._cueInsideState?.clear(); 
-
-//     console.log("[cueReset] ♻️ Cleared all triggered cues (global reset)");
-//   }
-// }
 
 // 🔁 Main dispatcher function for cue triggers
 export function handleCueTrigger(cueId, isRemote = false, force = false) {
@@ -459,7 +449,7 @@ export function resumePlayback(receivedFromServer = false) {
 
   // ✅ Refresh UI state
   window.updatePosition?.();
-  window.updateSeekBar?.();
+// window.updateSeekBar?.();
   window.updateStopwatch?.();
 
   // ✅ Reset animation clock baseline to avoid delta jumps
@@ -1087,117 +1077,6 @@ export function handleSpeedCue(cueId, newMultiplier) {
 
 
 
-/**
- * getSpeedForPosition(xPosition)
- * 
- * Determines the correct speed multiplier based on the nearest previous cueSpeed.
- * Used when seeking, rewinding, or jumping to a new location in the score.
- * Defaults to 1.0x if no matching cue is found.
- * 
- * @param {number} xPosition - The scroll/playhead X position
- * @returns {number} speedMultiplier
- */
-export function getSpeedForPosition(xPosition) {
-  const viewportOffset = window.scoreContainer?.offsetWidth / 2 || 0; // Center of the screen
-  const adjustedPlayheadX = xPosition + viewportOffset;
-
-  if (!window.speedCueMap || window.speedCueMap.length === 0) {
-    console.warn("[WARNING] No speed cues exist. Defaulting to 1.0x speed.");
-    return 1.0;
-  }
-
-  const lastSpeedCue = window.speedCueMap
-    .filter(cue => cue.position <= adjustedPlayheadX)
-    .slice(-1)[0];
-
-  if (lastSpeedCue) {
-    // console.log(`[DEBUG] ✅ Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
-    window.speedMultiplier = lastSpeedCue.multiplier;
-    window.updateSpeedDisplay?.();
-    return window.speedMultiplier;
-  } else {
-    console.log("[DEBUG] ❗ No previous speed cue found, defaulting to 1.0");
-    return 1.0;
-  }
-}
-
-
-/**
- * cueSpeedControls.js — Keyboard & UI Speed Multiplier Control
- * Handles +/- keyboard keys and optional buttons for adjusting playback speed.
- * Syncs changes with server via WebSocket and updates on-screen display.
- */
-
-export function initializeSpeedControls() {
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "+" || event.key === "=") {
-      adjustSpeed(0.1);
-    } else if (event.key === "-") {
-      adjustSpeed(-0.1);
-    }
-  });
-
-  const incBtn = document.getElementById("increaseSpeed");
-  const decBtn = document.getElementById("decreaseSpeed");
-  const resetBtn = document.getElementById("resetSpeed");
-
-  if (incBtn) incBtn.addEventListener("click", () => adjustSpeed(0.1));
-  if (decBtn) decBtn.addEventListener("click", () => adjustSpeed(-0.1));
-  if (resetBtn) resetBtn.addEventListener("click", () => setSpeed(1.0));
-}
-
-/**
- * Adjusts the global speed multiplier and updates the display.
- * @param {number} delta - Amount to increase/decrease (e.g. 0.1 or -0.1)
- */
-export function adjustSpeed(delta) {
-  const newSpeed = Math.max(0.5, Math.min(3.0, (window.speedMultiplier || 1) + delta));
-  setSpeed(newSpeed);
-}
-
-/**
- * Sets the speed multiplier and syncs it.
- * @param {number} newSpeed - The new speed multiplier
- */
-export function setSpeed(newSpeed) {
-  window.speedMultiplier = parseFloat(newSpeed.toFixed(1));
-  updateSpeedDisplay();
-  sendSpeedUpdateToServer(window.speedMultiplier);
-}
-
-/**
- * Updates the on-screen speed display.
- */
-export function updateSpeedDisplay() {
-  const display = document.getElementById("speedDisplay");
-  if (display) display.textContent = `${window.speedMultiplier.toFixed(1)}×`;
-}
-
-/**
- * Sends the speed to the server via WebSocket.
- * Uses `set_speed_multiplier` to match server expectations.
- */
-export function sendSpeedUpdateToServer(speed) {
-  if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
-    console.warn("[speedControl] WebSocket not ready — skipping update.");
-    return;
-  }
-
-  const message = {
-    type: "set_speed_multiplier",
-    multiplier: speed,
-    timestamp: Date.now(),
-  };
-
-  window.socket.send(JSON.stringify(message));
-  console.log("[speedControl] Sent speed update:", message);
-}
-
-
-window.updateSpeedDisplay = updateSpeedDisplay;
-window.setSpeed = setSpeed;
-window.adjustSpeed = adjustSpeed;
-
 
 
 export function handleStopCue(cueId = "cueStop") {
@@ -1627,6 +1506,7 @@ async function nextStep() {
  *     <div id="singlePage-countdown"></div>
  *   </div>
  */
+
 export async function handlePageCue(
   cueId,
   animationPath,
@@ -1969,78 +1849,38 @@ function pauseScrollScore() {
     );
   }
 }
-
 function resumeScrollScore() {
   console.log("[cuePage] ▶ Resuming scrolling score...");
 
   window.ignoreNextSync = true;   
-
-  // Reset playback state flags
   window.isPlaying = true;
   window.isMusicalPause = false;
 
-  // ✅ Restart the scrolling timeline / playhead motion
-  if (typeof window.startPlayback === "function") {
-    
-    window.isPlaying = false;      // ✅ trick: clear guard
-    window.startPlayback(true);
-
-  } else if (typeof window.startAnimation === "function") {
-    // fallback if your app uses startAnimation internally
-    window.startAnimation();
-  } else {
-    console.warn("[cuePage] ⚠️ No playback start function found.");
+  // ✅ Restore playhead and resume instead of reinitializing
+  if (typeof window.resumePlayback === "function") {
+    window.resumePlayback();
+  } else if (typeof window.startPlayback === "function") {
+    // Fallback if resume not found
+    window.startPlayback();
   }
 
-  // ✅ Resume stopwatch / elapsed-time logic if available
-  if (typeof window.startStopwatch === "function") {
-    window.startStopwatch();
-  }
+  // ✅ Resume stopwatch
+  window.startStopwatch?.();
 
-  // ✅ Reset timing baseline for smooth interpolation
   window.lastSyncTime = performance.now();
   window.lastElapsedTime = window.elapsedTime ?? 0;
 
-  // ✅ Notify server
   const socket = window.socket;
-  if (window.wsEnabled && socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(
-      JSON.stringify({
-        type: "play",
-        playheadX: window.playheadX,
-        elapsedTime: window.elapsedTime,
-      })
-    );
+  if (window.wsEnabled && socket?.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: "play",
+      playheadX: window.playheadX,
+      elapsedTime: window.elapsedTime,
+    }));
   }
 
   console.log("[cuePage] ▶ Scroll resume complete.");
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2305,21 +2145,192 @@ export function handleMediaCue(cueId, cueParams) {
 // 🎧 Audio Cue Support
 // ===================
 
-export const activeAudioCues = new Map();
-export const maxAudioInstances = 5;
+/**
+ * Stops audio cues (specific file or all)
+ * Supports optional fadeOut and always clears triggeredCues + _cueInsideState.
+ * @param {string} cueId - e.g. "cueAudioStop(noise.wav)" or "cueAudioStop()"
+ * @param {object} cueParams - e.g. { choice: "noise.wav", fadeOut: 200 }
+ */
+export async function handleAudioStopCue(cueId, cueParams = {}) {
+  const fadeOutMs = cueParams.fadeOut ?? 120;
+  const choice = cueParams.choice || cueId.match(/\(([^)]+)\)/)?.[1];
 
-// 🔇 Stop all currently playing audio cues
-export function stopAllAudio() {
-  console.log("[INFO] Stopping all active audio cues.");
-  // emitCueComplete(filename, "cueAudio"); // not sure this is good here as it might trigger more stuff and this is a kinda killall event
-  activeAudioCues.forEach(({ wavesurfer }) => wavesurfer.destroy());
-  activeAudioCues.clear();
+  try {
+    if (choice) {
+      // Stop a single file
+      stopAudioCue(choice, fadeOutMs);
+      console.log(`[AUDIO] 🔻 cueAudioStop → ${choice}`);
+    } else {
+      // Stop all if no filename provided
+      stopAllAudio(fadeOutMs);
+      console.log(`[AUDIO] 🛑 cueAudioStop → all`);
+    }
+
+    // Optional OSC broadcast
+    sendOSC('/cueAudio/stop', { filename: choice || 'all', fadeOutMs });
+  } catch (err) {
+    console.warn(`[AUDIO] ❌ Error in handleAudioStopCue:`, err);
+  } finally {
+    // ✅ Always clear triggered cue state
+    if (typeof triggeredCues !== 'undefined') triggeredCues.clear();
+    if (window._cueInsideState) window._cueInsideState.clear();
+  }
 }
 
+
+
+// =========================================================
+// 🌐 Globals
+// =========================================================
+const audioDebounce = new Map();
+const maxAudioInstances = 10;
+
+
+// Shared AudioContext (singleton)
+export const sharedAudioCtx =
+  window.sharedAudioCtx ||
+  (window.sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
+
+// Cache + state
+export const audioBufferCache = window.audioBufferCache || new Map();
+export const audioLastHit = window.audioLastHit || new Map();
+export let activeAudioCues = window.activeAudioCues || new Set();
+
+// --- Optional OSC stub (replace with your WebSocket / OSC sender) ---
+export function sendOSC(address, args) {
+  console.log(`[OSC] → ${address}`, args);
+}
+
+// --- Utility: generate fallback sine buffer (for offline testing) ---
+export function generateToneBuffer(ctx, freq = 440, dur = 0.3, amp = 0.3) {
+  const rate = ctx.sampleRate;
+  const len = rate * dur;
+  const buf = ctx.createBuffer(1, len, rate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = Math.sin((2 * Math.PI * freq * i) / rate) * amp;
+  return buf;
+}
+
+
+
+// =========================================================
+// 🎧 handleAudioCue() — fully instrumented
+// =========================================================
+// ------------------------------------------------------------
+// cueAudio(): play sound natively (Web Audio API)
+// ------------------------------------------------------------
+export async function handleAudioCue(cueId, cueParams = {}) {
+  try {
+    // --- Shared AudioContext ---
+    const ctx =
+      window.sharedAudioCtx ||
+      (window.sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
+    if (ctx.state === "suspended") await ctx.resume();
+
+    // --- Extract filename + params ---
+    const choice = cueParams.choice || cueId.match(/\(([^)]+)\)/)?.[1];
+    if (!choice) return console.warn("[AUDIO] No filename in cueAudio()");
+    const filename = /\.wav$|\.mp3$/i.test(choice) ? choice : `${choice}.wav`;
+    const url = `scores/audio/${filename}`;
+    const amp = cueParams.amp ?? 1;
+    const fadeInMs = cueParams.fadeIn ?? 0;
+
+    // --- Load / decode ---
+    const res = await fetch(url);
+    const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+
+    // --- Create source + gain ---
+    const src = ctx.createBufferSource();
+    const gainNode = ctx.createGain();
+    src.buffer = buf;
+    src.connect(gainNode).connect(ctx.destination);
+
+    // --- Fade-in ---
+    const now = ctx.currentTime;
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(amp, now + fadeInMs / 1000);
+
+    // --- Start + register ---
+    src.start();
+    window.activeAudioCues = window.activeAudioCues || new Set();
+    const voice = { src, gainNode, filename };
+    window.activeAudioCues.add(voice);
+
+    console.log(`[AUDIO] ▶️ Playing ${filename}`);
+
+    // --- UI + OSC start ---
+    window.dispatchEvent(new CustomEvent("oscilla:audio", { detail: { file: filename, state: "play" } }));
+    if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+      const msg = {
+        type: "osc_audio_trigger",
+        filename,
+        volume: amp,
+        loop: 0,
+        timestamp: Date.now(),
+      };
+      console.log("[STEP 10] Sending OSC message:", msg);
+      window.socket.send(JSON.stringify(msg));
+    }
+
+    // --- When finished ---
+    src.onended = () => {
+      window.activeAudioCues.delete(voice);
+      window.dispatchEvent(new CustomEvent("oscilla:audio", { detail: { file: filename, state: "stop" } }));
+    };
+  } catch (err) {
+    console.error("[AUDIO] ❌ handleAudioCue error:", err);
+  } finally {
+    triggeredCues?.clear?.();
+    window._cueInsideState?.clear?.();
+  }
+}
+
+
+
+
+
+
+// ========================================================
+// 🛑 Stop / fade-out by filename (all instances)
+// ========================================================
+export function stopAllAudio(filename, fadeOutSec = 1.5) {
+  const ctx = sharedAudioCtx;
+  const now = ctx.currentTime;
+
+  for (const [id, entry] of activeAudioCues.entries()) {
+    if (entry.filename !== filename) continue;
+
+    const { source, gainNode } = entry;
+    const current = gainNode.gain.value;
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(current, now);
+    gainNode.gain.linearRampToValueAtTime(0, now + fadeOutSec);
+
+    setTimeout(() => {
+      try { source.stop(); } catch {}
+      activeAudioCues.delete(id);
+
+      const ev = new CustomEvent("oscilla:audio", {
+        detail: { file: filename, state: "stop" },
+      });
+      window.dispatchEvent(ev);
+      sendAudioOscTrigger({
+        cueId: `cueAudioStop(${filename})`,
+        filename,
+        volume: 0,
+        loop: 0,
+      });
+      console.log(`[AUDIO] ✅ Stopped ${filename} (${id})`);
+    }, fadeOutSec * 1000);
+  }
+}
+
+// ========================================================
 // 🌐 Send OSC audio trigger via WebSocket
+// ========================================================
 export function sendAudioOscTrigger({ cueId, filename, volume = 1, loop = 1 }) {
   if (!window.wsEnabled || !window.socket || window.socket.readyState !== WebSocket.OPEN) {
-    console.error(`[ERROR] WebSocket not connected. Could not send OSC audio cue: ${cueId}`);
+    console.warn("[AUDIO] OSC send skipped (socket not open)");
     return;
   }
 
@@ -2331,252 +2342,58 @@ export function sendAudioOscTrigger({ cueId, filename, volume = 1, loop = 1 }) {
     timestamp: Date.now(),
   };
 
-  console.log(`[OSC] 🎧 Sending audio cue:`, message);
+  console.log("[OSC] 🎧 Sending audio cue:", message);
   window.socket.send(JSON.stringify(message));
 }
-
-// 🌫 Fade-out audio toward end of clip
-export function startFadeOutBeforeEnd(wavesurfer, fadeOutSec, filename = "") {
-  const duration = wavesurfer.getDuration();
-  const remaining = duration - wavesurfer.getCurrentTime();
-  const logLabel = filename ? ` [${filename}]` : "";
-
-  if (fadeOutSec > remaining) {
-    console.warn(`[AUDIO] Fade-out${logLabel} requested too late (only ${remaining.toFixed(2)}s left).`);
-    fadeOutSec = remaining;
-  }
-
-  const targetTime = duration - fadeOutSec;
-  const intervalMs = 100;
-  const steps = Math.ceil((fadeOutSec * 1000) / intervalMs);
-  const stepVolume = wavesurfer.getVolume() / steps;
-
-  console.log(`[AUDIO] Starting fade-out${logLabel} over ${fadeOutSec}s`);
-
-  const fadeInterval = setInterval(() => {
-    const currentTime = wavesurfer.getCurrentTime();
-    const vol = wavesurfer.getVolume();
-
-    if (currentTime >= targetTime && vol > 0) {
-      const newVol = Math.max(0, vol - stepVolume);
-      wavesurfer.setVolume(newVol);
-    }
-
-    if (vol <= 0 || currentTime >= duration) {
-      clearInterval(fadeInterval);
-      console.log(`[AUDIO] Fade-out complete${logLabel}`);
-    }
-  }, intervalMs);
-}
-
-// 🎧 Main cue handler for audio playback
-export function handleAudioCue(cueId, cueParams) {
-  console.log(`[DEBUG] Handling audio cue: ${cueId}`);
-
-  if (!window.isAudioMaster) {
-    console.log(`[INFO] Skipping local audio playback: not the designated playback master.`);
-    return;
-  }
-
-  const supportedFormats = ['wav', 'flac', 'mp3', 'ogg', 'aac', 'm4a', 'webm'];
-  const filenameBase = cueParams.file || cueParams.choice;
-  if (!filenameBase) {
-    console.error(`[ERROR] cueAudio requires a 'file' or 'choice' param: ${cueId}`);
-    return;
-  }
-
-  let ext = cueParams.ext || 'wav';
-  if (!supportedFormats.includes(ext)) {
-    console.warn(`[WARNING] Unsupported extension '${ext}', falling back to 'wav'.`);
-    ext = 'wav';
-  }
-
-  let filename;
-  if (filenameBase.includes('.')) {
-    filename = filenameBase;
-    ext = filename.split('.').pop();
-  } else {
-    filename = `${filenameBase}.${ext}`;
-  }
-
-  const audioPath = `scores/audio/${filename}`;
-  const volume = typeof cueParams.amp === 'number' ? cueParams.amp : 1;
-  const loopCount = typeof cueParams.loop === 'number' ? cueParams.loop : 1;
-  const shouldLoop = loopCount === 0 ? true : loopCount;
-  const fadeIn = typeof cueParams.fadein === 'number' ? cueParams.fadein : 0;
-  const fadeOut = typeof cueParams.fadeout === 'number' ? cueParams.fadeout : 0;
-
-  if (activeAudioCues.has(filename)) {
-    console.log(`[INFO] Stopping existing instance of ${filename}`);
-    activeAudioCues.get(filename).wavesurfer.destroy();
-    activeAudioCues.delete(filename);
-  }
-
-  if (activeAudioCues.size >= maxAudioInstances) {
-    console.warn(`[WARNING] Max audio instances reached. Skipping cue: ${filename}`);
-    return;
-  }
-
-  const wavesurfer = WaveSurfer.create({
-    container: "#waveform-container",
-    waveColor: 'blue',
-    progressColor: 'darkblue',
-    backend: 'WebAudio',
-    height: 50,
-  });
-
-  wavesurfer.load(audioPath);
-
-  wavesurfer.on('ready', () => {
-    console.log(`[INFO] Playing ${filename} @ vol ${volume}, loop: ${loopCount}, fade-in: ${fadeIn}s`);
-    wavesurfer.setVolume(0);
-    wavesurfer.play();
-
-    if (fadeIn > 0) {
-      const fadeStep = volume / (fadeIn * 10);
-      const fadeInterval = setInterval(() => {
-        const current = wavesurfer.getVolume();
-        if (current + fadeStep >= volume) {
-          wavesurfer.setVolume(volume);
-          clearInterval(fadeInterval);
-        } else {
-          wavesurfer.setVolume(current + fadeStep);
-        }
-      }, 100);
-    } else {
-      wavesurfer.setVolume(volume);
-    }
-  });
-
-  let playCount = 1;
-  wavesurfer.on('finish', () => {
-    if (shouldLoop === true || playCount < shouldLoop) {
-      console.log(`[INFO] Looping ${filename} (${playCount}/${shouldLoop === true ? '∞' : shouldLoop})`);
-
-      if (playCount === shouldLoop - 1 && fadeOut > 0) {
-        console.log(`[INFO] Preparing fade-out for ${filename}`);
-        startFadeOutBeforeEnd(wavesurfer, fadeOut, filename);
-      }
-
-      playCount++;
-      wavesurfer.play();
-    } else {
-
-    console.log(`[INFO] Done looping ${filename}`);
-
-    // 🔹 Tell the UI and remote peers that playback has ended
-    const ev = new CustomEvent("oscilla:audio", {
-      detail: { file: filename, state: "stop" },
-    });
-    window.dispatchEvent(ev);
-
-    // 🔹 Mark cue complete (for sequencing etc.)
-    emitCueComplete(filename, "cueAudio");
-    resetCueTrigger(filename);
-
-    // 🔹 Cleanup
-    activeAudioCues.delete(filename);
-    wavesurfer.destroy();
-    }
-  });
-
-  activeAudioCues.set(filename, { wavesurfer, volume });
-  sendAudioOscTrigger({ cueId, filename, volume, loop: loopCount });
-}
-window.sendAudioOscTrigger = sendAudioOscTrigger;
-
-document.getElementById("stop-audio-button").addEventListener("click", () => {
+document.getElementById("stop-audio-button").addEventListener("click", async () => {
   console.log("[AUDIO] 🔇 Hard audio stop triggered");
 
-  if (activeAudioCues && activeAudioCues.size > 0) {
-    for (const [filename, { wavesurfer }] of activeAudioCues.entries()) {
-      try {
-        console.log(`[AUDIO] 🔻 Stopping: ${filename}`);
-        wavesurfer.pause();
-        wavesurfer.stop();
-        emitCueComplete(filename, "cueAudio"); 
-        resetCueTrigger(filename);
-  
+  const ctx = window.sharedAudioCtx;
+  const active = window.activeAudioCues;
 
-        wavesurfer.destroy();
-      } catch (err) {
-        console.warn(`[AUDIO] ❌ Error stopping ${filename}:`, err);
-      }
-    }
-
-    activeAudioCues.clear();
-    console.log("[AUDIO] ✅ All audio cues cleared.");
-  } else {
-    console.warn("[AUDIO] ⚠️ No active audio cues to stop.");
-  }
-});
-
-// 🎧 Handle cueAudioStop(filename)
-export function handleAudioStopCue(cueId, cueParams = {}) {
-  // Extract the filename argument from cueId if not in params
-  let match = cueId.match(/^cueAudioStop\(([^)]+)\)/);
-  const filename = (match?.[1] || cueParams.file || "").trim();
-
-  if (!filename) {
-    console.warn(`[AUDIO] cueAudioStop missing filename: ${cueId}`);
+  if (!ctx || !active || active.size === 0) {
+    console.warn("[AUDIO] ⚠️ No active Web Audio cues to stop.");
     return;
   }
 
-  console.log(`[AUDIO] 🔻 cueAudioStop: ${filename}`);
-  stopAudioCue(filename);
-
-  // Optional: inform UI and other clients
-  const ev = new CustomEvent("oscilla:audio", { detail: { file: filename, state: "stop" } });
-  window.dispatchEvent(ev);
-}
-
-
-// Stop a specific audio cue by filename, with optional fade-out
-export function stopAudioCue(filename, fadeOutSec = 1.5) {
-  if (!activeAudioCues.has(filename)) return;
-
-  const { wavesurfer } = activeAudioCues.get(filename);
-  if (!wavesurfer) return;
-
-  console.log(`[AUDIO] 🔻 Stopping single cue: ${filename} (fade-out: ${fadeOutSec}s)`);
-
-  try {
-    const initialVol = wavesurfer.getVolume();
-    const steps = 20; // how many volume steps
-    const intervalMs = (fadeOutSec * 1000) / steps;
-    const stepVol = initialVol / steps;
-
-    let currentStep = 0;
-    const fadeInterval = setInterval(() => {
-      const newVol = Math.max(0, initialVol - stepVol * currentStep);
-      wavesurfer.setVolume(newVol);
-      currentStep++;
-
-      if (currentStep >= steps) {
-        clearInterval(fadeInterval);
-        wavesurfer.pause();
-        wavesurfer.stop();
-        emitCueComplete(filename, "cueAudio"); 
-        resetCueTrigger(filename);
-
-        wavesurfer.destroy();
-        activeAudioCues.delete(filename);
-        console.log(`[AUDIO] ✅ Fade-out complete and stopped: ${filename}`);
+  const now = ctx.currentTime;
+  for (const voice of Array.from(active)) {
+    const { src, gainNode, filename } = voice;
+    try {
+      // --- Smooth 100 ms fade-out ---
+      if (gainNode) {
+        gainNode.gain.cancelScheduledValues(now);
+        const current = gainNode.gain.value;
+        gainNode.gain.setValueAtTime(current, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
       }
-    }, intervalMs);
+      src.stop(now + 0.1);
 
-    emitCueComplete(filename, "cueAudio"); 
-    const ev = new CustomEvent("oscilla:audio", { detail: { file: filename, state: "stop" } });
-    window.dispatchEvent(ev);
-
-  } catch (err) {
-    console.warn(`[AUDIO] ❌ Error fading/stopping ${filename}:`, err);
-    try { wavesurfer.destroy(); } catch {}
-    activeAudioCues.delete(filename);
+      // --- UI + cue cleanup ---
+      window.dispatchEvent(new CustomEvent("oscilla:audio", { detail: { file: filename, state: "stop" } }));
+      window.emitCueComplete?.(filename, "cueAudio");
+      window.resetCueTrigger?.(filename);
+      console.log(`[AUDIO] 🔻 Stopped ${filename}`);
+    } catch (err) {
+      console.warn(`[AUDIO] ❌ Error stopping ${filename}:`, err);
+    }
+    active.delete(voice);
   }
-}
 
-//////////////////////////////////////////////////////////////////////
+  // --- OSC broadcast: stopAll ---
+  if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+    const msg = { type: "osc_audio_stopAll", timestamp: Date.now() };
+    window.socket.send(JSON.stringify(msg));
+    console.log("[STEP 10] Sent OSC stopAll:", msg);
+  }
+
+  console.log("[AUDIO] ✅ All Web Audio cues cleared.");
+});
+
+
+
+
+
 
 
 // import anime from "animejs";
@@ -3421,7 +3238,6 @@ function extractCueButtonInner(id) {
 
 //   return { cueExpr, width, height, color, label: finalLabel, opt };
 // }
-
 export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window.scoreContainer) {
   if (!cueSvgEl || !parsed || !containerEl) return null;
   const { cueExpr, opt } = parsed;
@@ -3436,9 +3252,12 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window
   btn.className = "oscilla-cue-button";
   if (opt.className) btn.classList.add(opt.className);
 
-  // Keep document-level popup clearers from stealing the click
-  btn.addEventListener("mousedown", e => e.preventDefault());
-  btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); });
+  // 🛑 Prevent bubbling or document-level handlers (double-tap toggle, etc.)
+  btn.addEventListener("mousedown", (e) => e.preventDefault());
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation(); // ✅ stops global playback toggle or page click detectors
+  });
 
   // Style
   Object.assign(btn.style, {
@@ -3450,7 +3269,9 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window
     borderRadius: `${opt.radius}px`,
     padding: "6px 10px",
     fontWeight: opt.fontWeight || "600",
-    fontSize: (opt.fontSize != null) ? (Number.isFinite(opt.fontSize) ? `${opt.fontSize}px` : String(opt.fontSize)) : "14px",
+    fontSize: (opt.fontSize != null)
+      ? (Number.isFinite(opt.fontSize) ? `${opt.fontSize}px` : String(opt.fontSize))
+      : "14px",
     fontFamily: opt.fontFamily || "system-ui, sans-serif",
     color: opt.textColor || "",
     zIndex: "2000",
@@ -3465,72 +3286,99 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window
     const r = cueSvgEl.getBoundingClientRect();
     const c = containerEl.getBoundingClientRect();
     const left = r.left - c.left + (opt.offsetX || 0);
-    const top  = r.top  - c.top  + (opt.offsetY || 0);
+    const top = r.top - c.top + (opt.offsetY || 0);
     btn.style.left = `${Math.round(left)}px`;
-    btn.style.top  = `${Math.round(top)}px`;
+    btn.style.top = `${Math.round(top)}px`;
   };
   place();
 
   // Follow (optional)
   let rafId = null;
-  const tick = () => { place(); rafId = requestAnimationFrame(tick); };
+  const tick = () => {
+    place();
+    rafId = requestAnimationFrame(tick);
+  };
   if (opt.scrollFollow) rafId = requestAnimationFrame(tick);
   const onResize = () => place();
   window.addEventListener("resize", onResize);
 
   // Toggle logic (good for audio cues)
-  const audioMatch = /^cueAudio\(\s*([^)]+)\s*\)/i.exec(cueExpr);
-  const audioFile  = audioMatch?.[1]?.trim() || null;
-  const stopCue    = audioFile ? `cueAudioStop(${audioFile})` : null;
+  // --- 🔊 Audio cue detection
+const audioMatch = /^cueAudio\(\s*([^)]+)\s*\)/i.exec(cueExpr);
+const audioFile = audioMatch?.[1]?.trim() || null;
+const stopCue = audioFile ? `cueAudioStop(${audioFile})` : null;
 
-  let isActive = false;
-  const setActive = (on) => {
-    isActive = !!on;
-    btn.classList.toggle("oscilla-cue-button--active", isActive);
-    btn.classList.remove("oscilla-cue-button--flash","oscilla-cue-button--pulse","oscilla-cue-button--fade");
-    if (isActive) {
-      if (opt.activeStyle === "flash") btn.classList.add("oscilla-cue-button--flash");
-      else if (opt.activeStyle === "pulse") btn.classList.add("oscilla-cue-button--pulse");
-      else if (opt.activeStyle === "fade") btn.classList.add("oscilla-cue-button--fade");
+// --- 💡 Active visual feedback (pulsing, flashing, etc.)
+let isVisuallyActive = false;
+const setVisualActive = (on) => {
+  isVisuallyActive = !!on;
+  btn.classList.toggle("oscilla-cue-button--active", isVisuallyActive);
+  btn.classList.remove(
+    "oscilla-cue-button--flash",
+    "oscilla-cue-button--pulse",
+    "oscilla-cue-button--fade"
+  );
+  if (isVisuallyActive) {
+    if (opt.activeStyle === "flash") btn.classList.add("oscilla-cue-button--flash");
+    else if (opt.activeStyle === "pulse") btn.classList.add("oscilla-cue-button--pulse");
+    else if (opt.activeStyle === "fade") btn.classList.add("oscilla-cue-button--fade");
+  }
+};
+
+// --- 🕒 Debounce
+let lastClick = 0;
+
+// --- 🎛️ Click handler (polyphonic-safe)
+btn.addEventListener("click", async () => {
+  const now = performance.now();
+  if (now - lastClick < (opt.debounceMs || 100)) return;
+  lastClick = now;
+
+  // Restrict if conductor-only
+  if (opt.conductorOnly && !window.isConductor) return;
+
+  // ✅ Ensure AudioContext is resumed
+  const ac =
+    window.sharedAudioCtx ||
+    window.WaveSurfer?.instances?.[0]?.backend?.ac ||
+    null;
+  if (ac && ac.state === "suspended") {
+    console.warn("[AUDIO] ⚡ AudioContext suspended — resuming.");
+    try {
+      await ac.resume();
+      console.log("[AUDIO] ✅ AudioContext resumed.");
+    } catch (err) {
+      console.error("[AUDIO] ❌ Resume failed:", err);
     }
-  };
+  }
 
-  // Debounce
-  let lastClick = 0;
+  // 🟢 Fire cue immediately (polyphony allowed)
+  window.handleCueTrigger?.(cueExpr, false, true);
+  if (audioFile) setVisualActive(true);
 
-  btn.addEventListener("click", () => {
-    const now = performance.now();
-    if (now - lastClick < (opt.debounceMs || 300)) return;
-    lastClick = now;
+  // 🟣 Broadcast (optional)
+  if (opt.broadcast && window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+    window.socket.send(
+      JSON.stringify({
+        type: "cue_button_click",
+        cueExpr,
+        uid: opt.uid || null,
+        timestamp: Date.now(),
+      })
+    );
+  }
+});
 
-    // Conductor-only?
-    if (opt.conductorOnly && !window.isConductor) return;
+// --- 🔁 Audio engine sync (maintain visual while playing)
+const onAudio = (ev) => {
+  if (!audioFile) return;
+  const d = ev.detail || {};
+  if (d.file !== audioFile) return;
+  if (d.state === "play") setVisualActive(true);
+  if (d.state === "stop") setVisualActive(false);
+};
+window.addEventListener("oscilla:audio", onAudio);
 
-    // Toggle stop
-    if (opt.toggle && isActive && stopCue) {
-      window.handleCueTrigger?.(stopCue, false, true);
-      setActive(false);
-      return;
-    }
-
-    // Fire main cue
-    window.handleCueTrigger?.(cueExpr, false, true);
-    if (audioFile) setActive(true); // immediate visual for audio
-    // Broadcast click intent (optional)
-    if (opt.broadcast && window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-      window.socket.send(JSON.stringify({ type: "cue_button_click", cueExpr, uid: opt.uid || null, timestamp: Date.now() }));
-    }
-  });
-
-  // Sync with audio engine (local/remote)
-  const onAudio = (ev) => {
-    if (!audioFile) return;
-    const d = ev.detail || {};
-    if (d.file !== audioFile) return;
-    if (d.state === "play") setActive(true);
-    if (d.state === "stop") setActive(false);
-  };
-  window.addEventListener("oscilla:audio", onAudio);
 
   // Cleanup
   btn._destroyCueButton = () => {
@@ -3618,6 +3466,9 @@ function parseBool(v) {
 
 
 export function parseCueButton(cueId) {
+
+
+  
   //console.log("\n[parseCueButton] called with:", cueId);
 
   // 1) pull inner of cueButton(...)
