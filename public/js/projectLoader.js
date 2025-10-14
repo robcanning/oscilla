@@ -21,6 +21,9 @@ export async function loadProject(projectName) {
     window.sharedDir = `scores/shared/`;
 
 
+
+    
+
     // 3️⃣ Preload shared + project-specific groups
     const preloadList = [
       // `${window.sharedDir}ui-defaults.svg`,

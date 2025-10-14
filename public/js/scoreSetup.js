@@ -599,6 +599,43 @@ export function preloadSpeedCues() {
 window.preloadSpeedCues = preloadSpeedCues;
 
 
+
+/**
+ * Preload all reusable SVG groups (group-, menu-, ui-) from every page SVG
+ * in the active project's pagesDir.
+ */
+
+async function preloadAllSvgGroups() {
+  window.groupRegistry = {};
+  const baseDir = window.pagesDir || "scores/pages/";
+  const files = [];
+  for (let i = 0; i < 10; i++) files.push(`${baseDir}page${i}.svg`);
+
+  for (const file of files) {
+    try {
+      const res = await fetch(file);
+      if (!res.ok) continue;
+      const text = await res.text();
+      const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+      const groups = doc.querySelectorAll('g[id^="group-"]');
+      groups.forEach(g => {
+        const id = g.id.replace(/^group-/, "").trim();
+        window.groupRegistry[id] = g.cloneNode(true);
+        console.log(`[groupRegistry] ✅ Registered "${id}" from ${file}`);
+      });
+    } catch (err) {
+      console.warn(`[groupRegistry] ⚠️ Skipped ${file}`, err);
+    }
+  }
+
+  console.log(`[groupRegistry] ✅ Total groups: ${Object.keys(window.groupRegistry).length}`);
+}
+
+
+
+
+
+
 export function setupScore(svgElement) {
   if (!svgElement) {
     console.error("[scoreSetup] ❌ setupScore called without valid SVG element");
@@ -627,7 +664,17 @@ export function setupScore(svgElement) {
 
   propagate(svgElement);
   preloadSpeedCues();
+
+
+  // 🟢 Preload all reusable group definitions from pages/
+  preloadAllSvgGroups();
+  console.log("[setupScore] ✅ All group definitions preloaded.");
+
+
   console.groupEnd();
 }
 
 window.setupScore = setupScore;
+
+
+

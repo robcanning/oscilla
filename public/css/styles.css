@@ -365,18 +365,7 @@ button:active {
 
 
 
-/* Splash Screen Styling */
-#splash {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  display: grid;
-  z-index: 30000; /* Ensure it is above everything else */
-  background-color: white;
-  color: black;
-}
+
 
 #scoreContainer {
 
@@ -1385,152 +1374,98 @@ padding: 20px;
 .oscilla-cue-button--pulse.oscilla-cue-button--active { animation: osc-pulse 1.2s ease-in-out infinite; }
 .oscilla-cue-button--fade.oscilla-cue-button--active  { animation: osc-fade 1.2s ease-in-out infinite; }
 
-
-/* Splash Base */
+/* 
 #splash {
   position: fixed;
   inset: 0;
-  background: #0a0a0a;
-  color: #fff;
   display: flex;
-  align-items: center;
   justify-content: center;
-  z-index: 9999;
-  transition: opacity 0.8s ease, visibility 0.8s ease;
-}
+  align-items: center;
+  background: #000;
+  color: #fff;
+  z-index: 999999 !important;
+  font-family: "Antonio", sans-serif;
+  pointer-events: all;
 
-#splash.fade-out {
-  opacity: 0;
-  visibility: hidden;
-}
+} */
 
-/* Inner Layout */
 .splash-container {
   text-align: center;
   max-width: 700px;
-  width: 90%;
+}
+
+.logo {
+  width: 100px;
+  height: auto;
+  margin-bottom: 1em;
+  opacity: 0.9;
 }
 
 .splash-title {
-  font-family: 'Antonio', sans-serif;
-  font-size: 3em;
-  margin-bottom: 0.3em;
+  font-size: 2.6em;
+  margin: 0;
 }
 
 .splash-subtitle {
-  font-weight: 300;
-  margin-bottom: 1.5em;
-  color: #aaa;
+  font-size: 1.1em;
+  color: #bbb;
+  margin-bottom: 0.8em;
 }
 
 .splash-message {
-  font-size: 0.9em;
-  color: #777;
-  margin-bottom: 1.5em;
+  font-size: 0.95em;
+  color: #888;
 }
 
-/* Project Grid */
 .project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1em;
-  justify-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 1.5em 0;
 }
 
-/* Project Cards */
-.project-card {
-  background: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 10px;
-  padding: 1em 1.5em;
-  cursor: pointer;
-  font-family: 'Antonio', sans-serif;
-  font-size: 1.1em;
+.project-grid button {
+  background: none;
+  border: none;
   color: #fff;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 0 rgba(255,255,255,0);
+  font-size: 1.3em;
+  margin: 0.3em 0;
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+}
+.project-grid button:hover {
+  color: #7df9ff;
+  transform: scale(1.05);
 }
 
-.project-card:hover {
-  background: #222;
-  box-shadow: 0 0 10px rgba(255,255,255,0.2);
-  transform: translateY(-3px);
-}
-
-/* Manual Entry */
 .manual-entry {
-  margin-top: 2em;
+  margin-top: 1.5em;
 }
-
 .manual-entry input {
   padding: 0.5em;
-  border: none;
-  border-radius: 5px;
-  margin-right: 0.5em;
-  width: 180px;
+  font-size: 1em;
 }
-
 .manual-entry button {
-  background: #fff;
-  color: #000;
-  border: none;
+  margin-left: 0.5em;
   padding: 0.5em 1em;
-  border-radius: 5px;
-  cursor: pointer;
+  font-size: 1em;
 }
 
-.manual-entry button:hover {
-  background: #eee;
+.meta-section {
+  margin-top: 2em;
+  font-size: 0.9em;
+  color: #aaa;
+  line-height: 1.4em;
 }
-
-
-
-/* Splash screen styling */
-#splash {
-     position: fixed !important;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    background-color: white;
-    color: black;
-     z-index: 999999 !important;
+.meta-line a {
+  color: #7df9ff;
+  text-decoration: none;
 }
-
-
-#splash.hidden {
-  opacity: 0;
-  pointer-events: none;
+.meta-line a:hover {
+  text-decoration: underline;
 }
-
-#splash .splash-container {
-  /* align-items: center;
-  max-width: 100%; /* Restrict width for better readability
-  padding: 0px; /* Add padding for spacing */ 
-}
-
-.project-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75em;
-  justify-content: center;
-}
-
-.project-list button {
-  background: #222;
-  color: #fff;
-  border: none;
-  padding: 0.6em 1.2em;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.project-list button:hover {
-  background: #555;
+.meta-line.small {
+  font-size: 0.8em;
+  color: #777;
+  margin-top: 0.5em;
 }

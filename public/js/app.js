@@ -1590,11 +1590,11 @@ document.getElementById("audio-master-button").addEventListener("click", () => {
     console.log('[DEBUG] Fade-to-black triggered.');
   };
 
-  splash.addEventListener('click', (event) => {
-    event.stopPropagation(); // Prevent clicks on child elements from blocking
-    console.log("[CLIENT] Splash screen clicked.");
-    toggleSplashScreen();
-  });
+  // splash.addEventListener('click', (event) => {
+  //   event.stopPropagation(); // Prevent clicks on child elements from blocking
+  //   console.log("[CLIENT] Splash screen clicked.");
+  //   toggleSplashScreen();
+  // });
 
   function toggleSplashScreen() {
     console.log("[CLIENT] toggleSplashScreen() called.");

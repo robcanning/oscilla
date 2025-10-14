@@ -43,21 +43,23 @@
     <input type="file" id="upload-score" accept=".svg" />
   </div>
 
-
-
 <!-- Splash / Project Selector -->
 <div id="splash">
   <div class="splash-container">
+    <!-- 🔹 Title & subtitle -->
     <div class="title-section">
-      <h1 class="splash-title">Oscilla</h1>
-      <h2 class="splash-subtitle">Select a Project</h2>
+      <img src="assets/logo.svg" alt="Oscilla Logo" class="logo" />
+      <h1 id="splash-title" class="splash-title">Oscilla</h1>
+        <h2>Interactive Graphic Score System</h2>
       <p id="splash-message" class="splash-message">
         Loading available projects...
       </p>
     </div>
 
+    <!-- 🔹 Dynamic project list (same ID for JS) -->
     <div id="project-grid" class="project-grid"></div>
 
+    <!-- 🔹 Manual entry fallback -->
     <div id="manual-entry" class="manual-entry" style="display: none;">
       <p>Could not automatically list projects.</p>
       <input
@@ -67,8 +69,27 @@
       />
       <button id="manual-load-btn">Load Project</button>
     </div>
+
+    <!-- 🔹 Meta info section -->
+    <div class="meta-section">
+      <p class="meta-line">
+        <strong>Version:</strong> 1.2.4 &nbsp; | &nbsp;
+        <strong>Author:</strong> Rob Canning
+      </p>
+      <p class="meta-line">
+        © 2018–2025 <strong>Zavod Rizoma</strong>  
+        &nbsp;|&nbsp;
+        <a href="https://github.com/robcanning/oscilla" target="_blank">
+          github.com/robcanning/oscilla
+        </a>
+      </p>
+      <p class="meta-line small">
+        Built with Node.js, Anime.js & WebSockets — Open Source (GPL-3.0)
+      </p>
+    </div>
   </div>
 </div>
+
 
 
 

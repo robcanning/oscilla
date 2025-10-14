@@ -712,6 +712,20 @@ export function startPlayback() {
  *  Debug Output:
  *    Logs every phase of touch detection to identify false triggers.
  * --------------------------------------------------------------------------- */
+// ⏳ Hide controls a few seconds after showing them
+function hideControlsLater(delay = 4000) {
+  clearTimeout(window._hideControlsTimer);
+  window._hideControlsTimer = setTimeout(() => {
+    hideControls();
+    console.log("[TAP] ⏳ Hiding controls (timeout expired)");
+  }, delay);
+}
+
+// 🟢 Show controls immediately and restart hide timer
+function showControlsAndAutoHide() {
+  showControls();
+  hideControlsLater();
+}
 
 (() => {
   // Track timing & motion state
@@ -720,7 +734,7 @@ export function startPlayback() {
   let touchMoved = false;    // did the finger move more than threshold?
   let hideTimeout = null;    // timeout to hide controls after showing
 
-  const DOUBLE_TAP_WINDOW = 150; // ms between taps to count as double
+  const DOUBLE_TAP_WINDOW = 200; // ms between taps to count as double
   const MOVE_THRESHOLD = 10;     // px movement allowed before it's treated as scroll
   const SHOW_DURATION = 4000;    // ms controls stay visible
 
@@ -735,62 +749,48 @@ export function startPlayback() {
     }, SHOW_DURATION);
   }
 
-  // -------------------------------------------------------------------------
-  //  TOUCHSTART — finger touches screen
-  // -------------------------------------------------------------------------
-  document.addEventListener("touchstart", (e) => {
-    if (e.touches.length > 1) {
-      console.log("[TAP] 🧤 Ignored multi-touch");
-      return;
-    }
 
-    touchMoved = false;
-    touchStartY = e.touches[0].clientY;
-    console.log("[TAP] 🟢 touchstart at", touchStartY);
-  });
 
-  // -------------------------------------------------------------------------
-  //  TOUCHMOVE — finger moves across screen
-  // -------------------------------------------------------------------------
-  document.addEventListener("touchmove", (e) => {
-    const moveY = e.touches[0].clientY;
-    const delta = Math.abs(moveY - touchStartY);
 
-    if (delta > MOVE_THRESHOLD) {
-      touchMoved = true;
-      console.log("[TAP] 🚫 Movement detected (", delta, "px ) → treat as scroll");
-    }
-  });
+let lastTapTime = 0;
+let tapTimeout;
+const DOUBLE_TAP_MIN = 150;   // ignore ultra-fast taps
+const DOUBLE_TAP_MAX = 500;   // require second tap within 0.5 s
+const MOVE_TOLERANCE = 20;    // px
 
-  // -------------------------------------------------------------------------
-  //  TOUCHEND — finger lifts off
-  // -------------------------------------------------------------------------
-  document.addEventListener(
-    "touchend",
-    (e) => {
-      // 1️⃣ ignore if finger moved too much (likely a scroll)
-      if (touchMoved) {
-        console.log("[TAP] 🌀 touchend ignored — user was scrolling");
-        return;
-      }
+let startX = 0, startY = 0;
 
-      const now = Date.now();
-      const delta = now - lastTap;
-      console.log("[TAP] ✋ touchend detected — time since last:", delta, "ms");
+document.addEventListener("touchstart", (e) => {
+  const t = e.touches[0];
+  startX = t.clientX;
+  startY = t.clientY;
+});
 
-      // 2️⃣ detect double tap
-      if (delta > 0 && delta < DOUBLE_TAP_WINDOW) {
-        console.log("[TAP] ✅ Confirmed DOUBLE TAP (", delta, "ms apart)");
-        revealControlsTemporarily();
-        lastTap = 0; // reset
-      } else {
-        // 3️⃣ not a double-tap — record this as first tap
-        lastTap = now;
-        console.log("[TAP] 🕐 First tap stored (waiting for second)");
-      }
-    },
-    { passive: true } // allow natural scroll, avoids [Intervention] warnings
-  );
+document.addEventListener("touchend", (e) => {
+  const t = e.changedTouches[0];
+  const dx = Math.abs(t.clientX - startX);
+  const dy = Math.abs(t.clientY - startY);
+  if (dx > MOVE_TOLERANCE || dy > MOVE_TOLERANCE) return; // it’s a scroll
+
+  const now = Date.now();
+  const delta = now - lastTapTime;
+
+  clearTimeout(tapTimeout);
+
+  if (delta >= DOUBLE_TAP_MIN && delta <= DOUBLE_TAP_MAX) {
+    console.log("[TAP] ✅ Confirmed DOUBLE TAP");
+    showControls();
+    hideControlsLater();
+    lastTapTime = 0; // reset
+  } else {
+    lastTapTime = now;
+    // optional: single-tap fallback
+    tapTimeout = setTimeout(() => {
+      lastTapTime = 0;
+    }, DOUBLE_TAP_MAX + 50);
+  }
+});
+
 
   // -------------------------------------------------------------------------
   //  DESKTOP DOUBLE CLICK SUPPORT

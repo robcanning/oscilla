@@ -1506,13 +1506,12 @@ async function nextStep() {
  *     <div id="singlePage-countdown"></div>
  *   </div>
  */
-
 export async function handlePageCue(
   cueId,
-  animationPath,
   duration,
   cueParams = {}
-) {  console.log(`[cuePage] Handling page cue: ${cueId}`);
+) {
+  console.log(`[cuePage] Handling page cue: ${cueId}`);
 
   // Always ensure scrolling score is paused before page mode
   if (window.isPlaying) {
@@ -1520,12 +1519,8 @@ export async function handlePageCue(
     pauseScrollScore();
   }
 
-// 🧹 Stop all active cueText overlays when entering page mode
-  document.querySelectorAll('[id^="cueText-"]').forEach(el => {
-    el.remove();
-  });
-
-
+  // 🧹 Stop all active cueText overlays when entering page mode
+  document.querySelectorAll('[id^="cueText-"]').forEach(el => el.remove());
 
   // -------------------------------------------------------------
   // 0️⃣ Parse parameters (self-contained)
@@ -1554,12 +1549,7 @@ export async function handlePageCue(
     pauseScrollScore();
   }
 
-  // 🧩 ensure consistent transition behavior for loops
-  if (ps.mode === "scroll" && mode === "loop") {
-    ps.mode = "page";
-  }
-
-  // Update state
+  if (ps.mode === "scroll" && mode === "loop") ps.mode = "page";
   ps.mode = "page";
   ps.current = pageName;
   ps.next = next || null;
@@ -1581,144 +1571,178 @@ export async function handlePageCue(
   content.innerHTML = "";
 
   // -------------------------------------------------------------
-  // 4️⃣ Load SVG page
+  // 4️⃣ Load SVG page (project-first, fallback to shared)
   // -------------------------------------------------------------
   if (cueParams.choice?.trim().startsWith("loop(")) {
     console.log("[cuePage] Detected playlist expression via cueParams.choice");
     return handleCuePagePlaylist(cueId, cueParams.choice);
   }
 
-
-  const filePath = animationPath || `scores/pages/${pageName}.svg`;
-  try {
-    const response = await fetch(filePath);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const svgText = await response.text();
-    content.innerHTML = svgText;
-    const svg = content.querySelector("svg");
-    if (!svg) throw new Error("No <svg> in loaded page.");
-
-    svg.id = "pageSVG";
-    svg.classList.add("oscilla-page");
-    svg.setAttribute("width", "100vw");
-    svg.setAttribute("height", "100vh");
-    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-
-    // Reuse animation init logic
-    console.log(`initialising animations in ${pageName}.svg`);
-    window.initializeSVG?.(svg);
-
-    // ✅ Register reusable cue groups for this page
-    if (typeof window.registerSvgGroups === "function") {
-      window.registerSvgGroups(svg);
-    }
-
-
-    // 🧩 ensure propagation happens for embedded page SVGs
-    if (typeof window.propagate === "function") {
-      console.log("[cuePage] ⚙️ Calling propagate() for page SVG");
-      window.propagate(svg);
-    }
-
-
-
-    window.initializeRotatingObjects?.(svg);
-    window.initializeScalingObjects?.(svg);
-    window.initializePathFollowers?.(svg);
-    window.initializeObserver?.(svg);
-
-    console.log(`[cuePage] ✅ Loaded ${pageName}.svg`);
-    startPageAnimations(svg);
-
-    // autostart text animations if they contain autostart flag
-    const autostartCues = svg.querySelectorAll('[id^="cueText"][id*="_autostart(1)"]');
-    autostartCues.forEach(el => {
-      const cueExpr = el.id;
-      console.log("[page] ▶ Auto-starting cue:", cueExpr);
-      handleCueTrigger(cueExpr);
-    });
-
-
-    if (window.triggeredCues instanceof Set) {
-      console.log("[cuePage] 🔄 Resetting triggeredCues for new page");
-      window.triggeredCues.clear();
-    }
-
-
-    // 🟦 Build cueButtons inside the page overlay
-    window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
-    window._activePageButtons = assignCueButtonsIn(svg, container);
-
-    // --- after assignCueButtonsIn(svg, container) ---
-    if (typeof window.registerSvgGroups === "function") {
-      window.registerSvgGroups(svg);
-      console.log(`[cuePage] 📦 Registered groups in ${pageName}.svg`);
-    }
-    
-    // remember which SVG is active for cueGroup() injections
-    window._currentPageSvg = svg;
-
-  } catch (err) {
-    console.error(`[cuePage] Failed to load SVG: ${err.message}`);
+  if (!window.pagesDir || !window.sharedDir) {
+    console.error("[cuePage] ❌ Missing directory globals — run loadProject() first.");
     return;
   }
 
-  // -------------------------------------------------------------
-  // 5️⃣ Countdown and transition logic
-  // -------------------------------------------------------------
+  
+  const projectPath = `${window.pagesDir}${pageName}.svg`;
+  const sharedPath  = `${window.sharedDir}pages/${pageName}.svg`;
 
+  async function fetchSvgOrThrow(path) {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(`HTTP ${res.status} at ${path}`);
+    return res.text();
+  }
+
+  let svgText;
+  try {
+    // 1️⃣ Try project-specific SVG
+    svgText = await fetchSvgOrThrow(projectPath);
+    console.log(`[cuePage] ✅ Loaded project page: ${projectPath}`);
+  } catch (err1) {
+    console.warn(`[cuePage] ⚠️ Project page not found (${err1.message}). Trying shared path: ${sharedPath}`);
+    try {
+      svgText = await fetchSvgOrThrow(sharedPath);
+      console.log(`[cuePage] ✅ Loaded shared page: ${sharedPath}`);
+    } catch (err2) {
+      console.error(`[cuePage] ❌ Failed to load both project and shared pages:
+        Project: ${projectPath}
+        Shared:  ${sharedPath}
+        Error: ${err2.message}`);
+      return;
+    }
+  }
+
+  // -------------------------------------------------------------
+  // 5️⃣ Inject SVG and initialize
+  // -------------------------------------------------------------
+  content.innerHTML = svgText;
+  const svg = content.querySelector("svg");
+  if (!svg) {
+    console.error("[cuePage] ❌ No <svg> in loaded page.");
+    return;
+  }
+
+  svg.id = "pageSVG";
+  svg.classList.add("oscilla-page");
+  svg.setAttribute("width", "100vw");
+  svg.setAttribute("height", "100vh");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+  console.log(`initialising animations in ${pageName}.svg`);
+  window.initializeSVG?.(svg);
+
+  if (typeof window.registerSvgGroups === "function") {
+    window.registerSvgGroups(svg);
+    console.log(`[cuePage] 📦 Registered groups in ${pageName}.svg`);
+  }
+
+  if (typeof window.propagate === "function") {
+    console.log("[cuePage] ⚙️ Calling propagate() for page SVG");
+    window.propagate(svg);
+  }
+
+  window.initializeRotatingObjects?.(svg);
+  window.initializeScalingObjects?.(svg);
+  window.initializePathFollowers?.(svg);
+  window.initializeObserver?.(svg);
+
+  console.log(`[cuePage] ✅ Loaded ${pageName}.svg`);
+  startPageAnimations(svg);
+
+  // autostart cueText with _autostart(1)
+  const autostartCues = svg.querySelectorAll('[id^="cueText"][id*="_autostart(1)"]');
+  autostartCues.forEach(el => {
+    const cueExpr = el.id;
+    console.log("[page] ▶ Auto-starting cue:", cueExpr);
+    handleCueTrigger(cueExpr);
+  });
+
+  if (window.triggeredCues instanceof Set) {
+    console.log("[cuePage] 🔄 Resetting triggeredCues for new page");
+    window.triggeredCues.clear();
+  }
+
+  window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
+  window._activePageButtons = assignCueButtonsIn(svg, container);
+
+  window._currentPageSvg = svg;
+
+
+
+
+
+
+// 🟢 Auto-inject globally registered UI groups on page load
+if (window.groupRegistry) {
+  const defaultGroups = ["mainMenu"]; // you can list others here later
+
+  for (const groupId of defaultGroups) {
+    if (window.groupRegistry[groupId]) {
+      console.log(`[cueGroup] 🚀 Auto-injecting group "${groupId}" on page load`);
+      try {
+        handleGroupCue(`cueGroup(${groupId})`, { choice: groupId });
+      } catch (err) {
+        console.warn(`[cueGroup] ⚠️ Auto-inject failed for "${groupId}":`, err);
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+  // -------------------------------------------------------------
+  // 6️⃣ Countdown and transition logic
+  // -------------------------------------------------------------
   clearInterval(ps.countdown);
   countdownElement.style.display = "block";
 
-  // If no duration is specified or _wait(1) is active, show a pause symbol
   if (wait || !durationSec || durationSec <= 0) {
-    countdownElement.textContent = "⏸"; // visually indicate "paused / indefinite"
+    countdownElement.textContent = "⏸";
     countdownElement.style.opacity = "0.7";
     console.log("[cuePage] ⏸ No duration set — showing pause symbol.");
   } else {
     countdownElement.textContent = durationSec;
   }
 
+  if (!wait && durationSec > 0) {
+    let timeLeft = durationSec;
+    ps.countdown = setInterval(() => {
+      timeLeft -= 1;
+      countdownElement.textContent = timeLeft;
 
-if (!wait && durationSec > 0) {
-  let timeLeft = durationSec;
-  ps.countdown = setInterval(() => {
-    timeLeft -= 1;
-    countdownElement.textContent = timeLeft;
-
-    // 🔹 No fades or transitions — just jump instantly when time runs out
-    if (timeLeft <= 0) {
-      clearInterval(ps.countdown);
-      ps.countdown = null;
-      resolvePageTransition({ mode, next, ret });
-    }
-  }, 1000);
-}
- else {
+      if (timeLeft <= 0) {
+        clearInterval(ps.countdown);
+        ps.countdown = null;
+        resolvePageTransition({ mode, next, ret });
+      }
+    }, 1000);
+  } else {
     console.log("[cuePage] Waiting indefinitely for user trigger or external event.");
   }
 }
 
-
-// Kick all animations inside a standalone page SVG, without observers or scroll
+// -------------------------------------------------------------
+// 🚀 Kick all animations inside a standalone page SVG
+// -------------------------------------------------------------
 function startPageAnimations(svg) {
   console.log("[cuePage] 🚀 startPageAnimations()");
-
-  // 1) Hard-disable observer gating for page overlays
   const prevDisable = window.disableObserver;
   window.disableObserver = true;
 
   try {
-    // 2) Initialize all animation families scoped to THIS svg
-    window.initializeObjectPathPairs?.(svg);   // obj2path pairs
-    window.initializeRotatingObjects?.(svg);   // obj_rotate_* / wrappers
-    window.initializeScalingObjects?.(svg);    // s_* sequences
+    window.initializeObjectPathPairs?.(svg);
+    window.initializeRotatingObjects?.(svg);
+    window.initializeScalingObjects?.(svg);
+    window.detectExistingAnimations?.();
+    window.startAllVisibleAnimations?.();
 
-    // 3) Register Anime.js instances and force them to play now
-    window.detectExistingAnimations?.();       // populate runningAnimations
-    window.startAllVisibleAnimations?.();      // resume()/play() on all visible
-
-    // 4) (Optional) brute-force start for any rotation/scale groups
     if (typeof window.startRotation === "function") {
       svg.querySelectorAll('[id*="_rotate_"], [id^="obj_rotate_"]').forEach(el => {
         try { window.startRotation(el); } catch (_) {}
@@ -1732,10 +1756,11 @@ function startPageAnimations(svg) {
 
     console.log("[cuePage] ✅ Page animations started (observer disabled).");
   } finally {
-    // leave observers disabled for page life; restore if you prefer:
+    // keep observers disabled during page mode
     // window.disableObserver = prevDisable ?? false;
   }
 }
+
 
 
 function resolvePageTransition({ mode, next, ret }) {
@@ -2231,7 +2256,7 @@ export async function handleAudioCue(cueId, cueParams = {}) {
     const choice = cueParams.choice || cueId.match(/\(([^)]+)\)/)?.[1];
     if (!choice) return console.warn("[AUDIO] No filename in cueAudio()");
     const filename = /\.wav$|\.mp3$/i.test(choice) ? choice : `${choice}.wav`;
-    const url = `scores/audio/${filename}`;
+    const url = `${window.audioDir}${filename}`;
     const amp = cueParams.amp ?? 1;
     const fadeInMs = cueParams.fadeIn ?? 0;
 
@@ -2406,8 +2431,6 @@ document.getElementById("stop-audio-button").addEventListener("click", async () 
 export async function handleTextCue(cueId, cueParams = {}) {
   console.log("[handleTextCue] called:", cueId, cueParams);
 
-
-
   
   // Support old (single-param) style just in case
   if (typeof cueId === "object" && !cueParams.choice) {
@@ -2538,11 +2561,13 @@ export async function handleTextCue(cueId, cueParams = {}) {
       if (Array.isArray(choice)) {
         entries = choice.map(t => ({ text: t, dur: null }));
       } 
+      
       else if (typeof choice === "string" && choice.endsWith(".txt")) {
         const res = await fetch(choice);
         const text = await res.text();
         entries = text.split(/\r?\n/).filter(Boolean).map(line => ({ text: line, dur: null }));
       } 
+
       else if (typeof choice === "string" && choice.includes("words[")) {
         console.log("[cueText DEBUG] raw choice:", choice);
         console.log("[cueText DEBUG] typeof choice:", typeof choice);
