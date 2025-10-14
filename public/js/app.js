@@ -2136,7 +2136,7 @@ window.initializeSVG = initializeSVG;
     });
   });
 
-  
+
 async function populateProjectSelector() {
   const grid = document.getElementById("project-grid");
   const message = document.getElementById("splash-message");
@@ -3580,74 +3580,74 @@ window.startAnimation = () => {
 
 
 
-  // Detect double-tap to toggle pause/play
-  // let lastTap = 0; // Timestamp of the last tap
+  // // Detect double-tap to toggle pause/play
+  // // let lastTap = 0; // Timestamp of the last tap
 
-  // document.addEventListener('touchstart', (event) => {
-  //   const currentTime = Date.now();
-  //   const timeSinceLastTap = currentTime - lastTap;
+  // // document.addEventListener('touchstart', (event) => {
+  // //   const currentTime = Date.now();
+  // //   const timeSinceLastTap = currentTime - lastTap;
 
-  //   if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
-  //     // Double-tap detected
-  //     console.log("[DEBUG] Double-tap detected. Toggling play/pause.");
-  //     window.isPlaying ? window.pausePlayback() : window.startPlayback();
+  // //   if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
+  // //     // Double-tap detected
+  // //     console.log("[DEBUG] Double-tap detected. Toggling play/pause.");
+  // //     window.isPlaying ? window.pausePlayback() : window.startPlayback();
+  // //   }
+
+  // //   lastTap = currentTime; // Update the lastTap timestamp
+  // // }, { passive: false });
+
+
+
+
+  // let startX = 0; // Start X position of the touch
+  // let isSwiping = false; // Whether a swipe is in progress
+  // let holdInterval = null; // Interval for swipe-and-hold
+
+  // const SWIPE_THRESHOLD = 50; // Minimum swipe distance to detect as a gesture
+
+  // const startMoving = (direction) => {
+  //   if (direction === 'left') {
+  //     rewind(); // Move left
+  //   } else if (direction === 'right') {
+  //     forward(); // Move right
   //   }
+  // };
 
-  //   lastTap = currentTime; // Update the lastTap timestamp
-  // }, { passive: false });
+  // const stopMoving = () => {
+  //   clearInterval(holdInterval); // Stop the continuous movement
+  //   holdInterval = null;
+  // };
 
+  // // Attach touch event listeners
+  // const scoreArea = document.getElementById('scoreContainer'); // Replace with your element ID
 
+  // scoreArea.addEventListener('touchstart', (event) => {
+  //   startX = event.touches[0].clientX; // Record the starting X position
+  //   isSwiping = true; // Indicate a swipe is in progress
+  //   stopMoving(); // Stop any existing swipe-and-hold action
+  // });
 
+  // scoreArea.addEventListener('touchmove', (event) => {
+  //   if (!isSwiping) return;
 
-  let startX = 0; // Start X position of the touch
-  let isSwiping = false; // Whether a swipe is in progress
-  let holdInterval = null; // Interval for swipe-and-hold
+  //   const currentX = event.touches[0].clientX;
+  //   const deltaX = currentX - startX;
 
-  const SWIPE_THRESHOLD = 50; // Minimum swipe distance to detect as a gesture
+  //   if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+  //     const direction = deltaX > 0 ? 'left' : 'right';
+  //     //  console.log(Swipe detected: ${direction});
 
-  const startMoving = (direction) => {
-    if (direction === 'left') {
-      rewind(); // Move left
-    } else if (direction === 'right') {
-      forward(); // Move right
-    }
-  };
+  //     // Start swipe-and-hold behavior
+  //     if (!holdInterval) {
+  //       holdInterval = setInterval(() => startMoving(direction), 100); // Adjust interval speed as needed
+  //     }
+  //   }
+  // });
 
-  const stopMoving = () => {
-    clearInterval(holdInterval); // Stop the continuous movement
-    holdInterval = null;
-  };
-
-  // Attach touch event listeners
-  const scoreArea = document.getElementById('scoreContainer'); // Replace with your element ID
-
-  scoreArea.addEventListener('touchstart', (event) => {
-    startX = event.touches[0].clientX; // Record the starting X position
-    isSwiping = true; // Indicate a swipe is in progress
-    stopMoving(); // Stop any existing swipe-and-hold action
-  });
-
-  scoreArea.addEventListener('touchmove', (event) => {
-    if (!isSwiping) return;
-
-    const currentX = event.touches[0].clientX;
-    const deltaX = currentX - startX;
-
-    if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
-      const direction = deltaX > 0 ? 'left' : 'right';
-      //  console.log(Swipe detected: ${direction});
-
-      // Start swipe-and-hold behavior
-      if (!holdInterval) {
-        holdInterval = setInterval(() => startMoving(direction), 100); // Adjust interval speed as needed
-      }
-    }
-  });
-
-  scoreArea.addEventListener('touchend', () => {
-    isSwiping = false; // Reset swipe state
-    stopMoving(); // Stop swipe-and-hold action
-  });
+  // scoreArea.addEventListener('touchend', () => {
+  //   isSwiping = false; // Reset swipe state
+  //   stopMoving(); // Stop swipe-and-hold action
+  // });
 
 
   // disable enable network elements //////////////////////////////////////////////////////

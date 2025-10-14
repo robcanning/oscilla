@@ -100,6 +100,9 @@
         playheadX: window.playheadX,
         elapsedTime: window.elapsedTime
       }));
+      
+      console.log("[DEBUG] Rewinding to start.");
+
     }
   
     setTimeout(() => { suppressSync = false; }, 500);
@@ -488,6 +491,10 @@ import { checkCueTriggers } from "./cues.js";
 export function startPlayback() {
   if (window.isPlaying) return;
 
+  if (window.userScrolling) {
+    console.warn("[Playback] ⏳ Ignored start — user still scrolling");
+    return;
+  }
   console.log("[Playback] ▶️ Starting playback");
 
   // --- State setup ---
@@ -640,50 +647,279 @@ export function startPlayback() {
   });
 
   //document.addEventListener('fullscreenchange', adjustscoreContainerHeight);
-  // Show controls on user interaction in fullscreen mode
-  let hideControlsTimeout; // Store timeout reference
 
-  document.addEventListener('mousemove', () => {
-    showControls(); // ✅ Show controls on mouse move
+  // // Show controls on user interaction in fullscreen mode
+  // let hideControlsTimeout; // Store timeout reference
 
-    // ✅ Clear any existing timeout before starting a new one
-    clearTimeout(hideControlsTimeout);
+  // document.addEventListener('mousemove', () => {
+  //   showControls(); // ✅ Show controls on mouse move
 
-    // ✅ Set a new timeout to hide controls after 5 seconds
-    hideControlsTimeout = setTimeout(() => {
-      hideControls();
-    }, 5000);
+  //   // ✅ Clear any existing timeout before starting a new one
+  //   clearTimeout(hideControlsTimeout);
 
-  });// document.addEventListener('keydown', showControls);   // Show controls on key press
+  //   // ✅ Set a new timeout to hide controls after 5 seconds
+  //   hideControlsTimeout = setTimeout(() => {
+  //     hideControls();
+  //   }, 5000);
 
-  // Show controls on user interaction in fullscreen mode
+  // });// document.addEventListener('keydown', showControls);   // Show controls on key press
 
-  document.addEventListener('mousemove', () => {
-    if (document.fullscreenElement) {
-      showControls(); // ✅ Show controls on mouse move
+  // // Show controls on user interaction in fullscreen mode
 
-      // ✅ Clear any existing timeout before starting a new one
-      clearTimeout(hideControlsTimeout);
+  // document.addEventListener('mousemove', () => {
+  //   if (document.fullscreenElement) {
+  //     showControls(); // ✅ Show controls on mouse move
 
-      // ✅ Set a new timeout to hide controls after 5 seconds
-      hideControlsTimeout = setTimeout(() => {
-        hideControls();
-      }, 5000);
-    }
-  });
+  //     // ✅ Clear any existing timeout before starting a new one
+  //     clearTimeout(hideControlsTimeout);
 
-  document.addEventListener('keydown', (event) => {
-    // ✅ Ignore arrow keys & spacebar when seeking or pausing
-    if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === " ") {
-      return; // ✅ Do nothing, skip showing controls
-    }
+  //     // ✅ Set a new timeout to hide controls after 5 seconds
+  //     hideControlsTimeout = setTimeout(() => {
+  //       hideControls();
+  //     }, 5000);
+  //   }
+  // // });
 
-    // ✅ Show controls for other key presses
+  // document.addEventListener('keydown', (event) => {
+  //   // ✅ Ignore arrow keys & spacebar when seeking or pausing
+  //   if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === " ") {
+  //     return; // ✅ Do nothing, skip showing controls
+  //   }
+
+  //   // ✅ Show controls for other key presses
+  //   showControls();
+
+  //   // ✅ Hide controls after 5 seconds
+  //   setTimeout(() => {
+  //     hideControls();
+  //   }, 5000);
+
+  // });
+
+
+
+
+
+  /* ---------------------------------------------------------------------------
+ *  DOUBLE-TAP / DOUBLE-CLICK CONTROL TOGGLE (VERBOSE DEBUG VERSION)
+ *  ---------------------------------------------------------------------------
+ *  Purpose:
+ *    • Shows playback controls only after a confirmed double-tap (mobile)
+ *      or double-click (desktop).
+ *    • Ignores single taps and scroll gestures.
+ *    • Avoids browser [Intervention] warnings by not preventing native scroll.
+ *
+ *  Debug Output:
+ *    Logs every phase of touch detection to identify false triggers.
+ * --------------------------------------------------------------------------- */
+
+(() => {
+  // Track timing & motion state
+  let lastTap = 0;           // timestamp of previous tap
+  let touchStartY = 0;       // Y position when touch starts
+  let touchMoved = false;    // did the finger move more than threshold?
+  let hideTimeout = null;    // timeout to hide controls after showing
+
+  const DOUBLE_TAP_WINDOW = 150; // ms between taps to count as double
+  const MOVE_THRESHOLD = 10;     // px movement allowed before it's treated as scroll
+  const SHOW_DURATION = 4000;    // ms controls stay visible
+
+  function revealControlsTemporarily() {
+    console.log("[TAP] 🎛️ Showing controls (via double tap)");
     showControls();
 
-    // ✅ Hide controls after 5 seconds
-    setTimeout(() => {
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(() => {
+      console.log("[TAP] ⏳ Hiding controls (timeout expired)");
       hideControls();
-    }, 5000);
+    }, SHOW_DURATION);
+  }
 
+  // -------------------------------------------------------------------------
+  //  TOUCHSTART — finger touches screen
+  // -------------------------------------------------------------------------
+  document.addEventListener("touchstart", (e) => {
+    if (e.touches.length > 1) {
+      console.log("[TAP] 🧤 Ignored multi-touch");
+      return;
+    }
+
+    touchMoved = false;
+    touchStartY = e.touches[0].clientY;
+    console.log("[TAP] 🟢 touchstart at", touchStartY);
   });
+
+  // -------------------------------------------------------------------------
+  //  TOUCHMOVE — finger moves across screen
+  // -------------------------------------------------------------------------
+  document.addEventListener("touchmove", (e) => {
+    const moveY = e.touches[0].clientY;
+    const delta = Math.abs(moveY - touchStartY);
+
+    if (delta > MOVE_THRESHOLD) {
+      touchMoved = true;
+      console.log("[TAP] 🚫 Movement detected (", delta, "px ) → treat as scroll");
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  //  TOUCHEND — finger lifts off
+  // -------------------------------------------------------------------------
+  document.addEventListener(
+    "touchend",
+    (e) => {
+      // 1️⃣ ignore if finger moved too much (likely a scroll)
+      if (touchMoved) {
+        console.log("[TAP] 🌀 touchend ignored — user was scrolling");
+        return;
+      }
+
+      const now = Date.now();
+      const delta = now - lastTap;
+      console.log("[TAP] ✋ touchend detected — time since last:", delta, "ms");
+
+      // 2️⃣ detect double tap
+      if (delta > 0 && delta < DOUBLE_TAP_WINDOW) {
+        console.log("[TAP] ✅ Confirmed DOUBLE TAP (", delta, "ms apart)");
+        revealControlsTemporarily();
+        lastTap = 0; // reset
+      } else {
+        // 3️⃣ not a double-tap — record this as first tap
+        lastTap = now;
+        console.log("[TAP] 🕐 First tap stored (waiting for second)");
+      }
+    },
+    { passive: true } // allow natural scroll, avoids [Intervention] warnings
+  );
+
+  // -------------------------------------------------------------------------
+  //  DESKTOP DOUBLE CLICK SUPPORT
+  // -------------------------------------------------------------------------
+  document.addEventListener("dblclick", (e) => {
+    console.log("[CLICK] 🖱️ Double-click detected at", e.clientX, e.clientY);
+    revealControlsTemporarily();
+  });
+
+  console.log("[UI] 🎛️ Verbose double-tap/double-click toggle initialized.");
+})();
+
+
+  /* ---------------------------------------------------------------------------
+ *  HYBRID SCROLL HANDLER + PLAYBACK GESTURE CONTROL
+ *  ---------------------------------------------------------------------------
+ *  • Sends throttled "jump" WS messages while user scrolls.
+ *  • Sends one final "jump" on scroll end.
+ *  • If playback is running when scroll starts, it pauses automatically.
+ *  • When scroll finishes, playback resumes only if it was playing before.
+ * --------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------------
+ *  HYBRID SCROLL + GESTURE PLAYBACK CONTROL  (debounced + safe resume)
+ * --------------------------------------------------------------------------- */
+(() => {
+  const scoreArea = document.getElementById("scoreContainer");
+  if (!scoreArea) return;
+
+  const SEND_INTERVAL = 80;
+  const SCROLL_THRESHOLD = 6;
+  const SCROLL_END_DELAY = 80; // wait after final scroll before resume
+
+  let lastSent = 0;
+  let lastScrollPos = scoreArea.scrollLeft;
+  let scrollEndTimer = null;
+  let resumeTimer = null;
+  let wasPlayingBeforeScroll = false;
+
+  scoreArea.addEventListener("scroll", () => {
+    if (window.programmaticScroll) return;
+
+    const pos = scoreArea.scrollLeft;
+    const delta = Math.abs(pos - lastScrollPos);
+    lastScrollPos = pos;
+
+    if (delta < SCROLL_THRESHOLD) return;
+
+    // Pause playback when swipe begins
+    if (!window.userScrolling) {
+      window.userScrolling = true;
+      if (window.isPlaying) {
+        wasPlayingBeforeScroll = true;
+        console.log("[GESTURE] 🖐️ Swipe detected — pausing playback");
+        window.pausePlayback?.();
+      } else {
+        wasPlayingBeforeScroll = false;
+      }
+    }
+
+    window.ignoreSyncPlayback = true;
+
+    // Throttled WS jump while scrolling
+    const now = performance.now();
+    if (now - lastSent > SEND_INTERVAL) {
+      lastSent = now;
+      const scrollMax = scoreArea.scrollWidth - scoreArea.clientWidth;
+      const elapsed =
+        scrollMax > 0 ? (pos / scrollMax) * (window.totalDuration || 1) : 0;
+      window.playheadX = pos;
+      window.elapsedTime = elapsed;
+      if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+        window.socket.send(
+          JSON.stringify({
+            type: "jump",
+            playheadX: pos,
+            elapsedTime: elapsed,
+            source: "scroll",
+          })
+        );
+      }
+    }
+
+    // Reset scroll-end timer
+    clearTimeout(scrollEndTimer);
+    scrollEndTimer = setTimeout(() => {
+      if (window.programmaticScroll) return;
+
+      const scrollMax = scoreArea.scrollWidth - scoreArea.clientWidth;
+      const elapsed =
+        scrollMax > 0 ? (pos / scrollMax) * (window.totalDuration || 1) : 0;
+      window.playheadX = pos;
+      window.elapsedTime = elapsed;
+
+      if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+        window.socket.send(
+          JSON.stringify({
+            type: "jump",
+            playheadX: pos,
+            elapsedTime: elapsed,
+            source: "scrollend",
+          })
+        );
+        console.log("[SCROLL] 🛰️ Final jump broadcast:", pos);
+      }
+
+      // Mark scroll ended
+      window.userScrolling = false;
+      window.ignoreSyncPlayback = false;
+
+      // Debounce: cancel any existing resume attempts
+      clearTimeout(resumeTimer);
+
+      if (wasPlayingBeforeScroll) {
+        console.log("[GESTURE] ⏳ Scroll finished — scheduling resume…");
+        resumeTimer = setTimeout(() => {
+          // Check again: no further scroll since we scheduled this
+          if (!window.userScrolling) {
+            console.log("[GESTURE] ▶️ Resuming playback after settle delay");
+            window.startPlayback?.();
+            wasPlayingBeforeScroll = false;
+          } else {
+            console.log("[GESTURE] 🚫 Resume canceled — still scrolling");
+          }
+        }, SCROLL_END_DELAY);
+      } else {
+        console.log("[GESTURE] ⏸️ Scroll finished — staying paused");
+      }
+    }, SCROLL_END_DELAY);
+  });
+
+  console.log("[SCROLL] ✅ Debounced scroll/gesture-playback control active");
+})();
