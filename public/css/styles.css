@@ -1374,20 +1374,21 @@ padding: 20px;
 .oscilla-cue-button--pulse.oscilla-cue-button--active { animation: osc-pulse 1.2s ease-in-out infinite; }
 .oscilla-cue-button--fade.oscilla-cue-button--active  { animation: osc-fade 1.2s ease-in-out infinite; }
 
-/* 
+
+
 #splash {
   position: fixed;
   inset: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #000;
-  color: #fff;
+  background: #fff;
+  color: #000;
   z-index: 999999 !important;
   font-family: "Antonio", sans-serif;
   pointer-events: all;
 
-} */
+}
 
 .splash-container {
   text-align: center;
@@ -1402,18 +1403,18 @@ padding: 20px;
 }
 
 .splash-title {
-  font-size: 2.6em;
+  font-size: 6.6em;
   margin: 0;
 }
 
 .splash-subtitle {
-  font-size: 1.1em;
+  font-size: 2.5em;
   color: #bbb;
   margin-bottom: 0.8em;
 }
 
 .splash-message {
-  font-size: 0.95em;
+  font-size: 1.3em;
   color: #888;
 }
 
@@ -1427,15 +1428,18 @@ padding: 20px;
 .project-grid button {
   background: none;
   border: none;
-  color: #fff;
+  color: #6e1f1f;
   font-size: 1.3em;
   margin: 0.3em 0;
   cursor: pointer;
   transition: color 0.2s, transform 0.2s;
+
 }
 .project-grid button:hover {
   color: #7df9ff;
   transform: scale(1.05);
+    background-color: gray;
+
 }
 
 .manual-entry {
@@ -1453,19 +1457,89 @@ padding: 20px;
 
 .meta-section {
   margin-top: 2em;
-  font-size: 0.9em;
+  font-size: 1.2em;
   color: #aaa;
   line-height: 1.4em;
 }
 .meta-line a {
-  color: #7df9ff;
+  color: #000000;
   text-decoration: none;
 }
 .meta-line a:hover {
   text-decoration: underline;
 }
 .meta-line.small {
-  font-size: 0.8em;
+  font-size: 1em;
   color: #777;
   margin-top: 0.5em;
+}
+
+
+/* --- Project Card Styling --- */
+.project-card {
+  font-family: "Fira Code", "JetBrains Mono", monospace;
+  font-size: 0.95em;
+  letter-spacing: 0.03em;
+  background-color: gray;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #140101;
+
+  display: inline-block;
+  border-radius: 8px;
+  min-width: 120px;
+  text-align: center;
+  cursor: pointer;
+
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.12s ease,
+    box-shadow 0.25s ease;
+}
+
+.project-card:hover {
+  background-color: rgba(90, 140, 255, 0.25);
+  border-color: rgba(120, 170, 255, 0.5);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 0 12px rgba(120, 170, 255, 0.3);
+}
+
+.project-card:active {
+  transform: scale(0.98);
+  background-color: rgba(90, 140, 255, 0.35);
+}
+
+/* --- Project Grid Container --- */
+.project-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6em;
+
+  height: 100px;                 /* fixed height */
+  overflow-y: auto;              /* vertical scroll if needed */
+  overflow-x: hidden;            /* avoid sideways scrollbars */
+  padding: 0.5em 0.3em;
+
+  scrollbar-width: thin;         /* Firefox */
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+
+/* Optional: WebKit scrollbar styling for consistent dark theme */
+.project-grid::-webkit-scrollbar {
+  width: 6px;
+}
+.project-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.project-grid::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.25);
+  border-radius: 3px;
+}
+.project-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.4);
 }

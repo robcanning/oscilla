@@ -19,6 +19,7 @@ const WebSocket = require('ws');
 const express = require('express');
 const osc = require('osc');
 const fs = require('fs');
+const path = require('path');
 
 // ---------------------------------------------
 // Express App Setup
@@ -70,28 +71,50 @@ app.get('/config', (req, res) => {
 // Server Launch 
 // ---------------------------------------------
 
+// --- Static file serving ---
+app.use(express.static('public')); // root public assets
+app.use('/scores', express.static(path.join(process.cwd(), 'public/scores')));
+app.use('/shared', express.static(path.join(process.cwd(), 'public/shared')));
 
-app.use(express.static('public'));
-app.use('/public/scores', express.static('public/scores', { extensions: ['svg'] }));
-// NEW: directory listing endpoint
-app.get('/public/scores/', (req, res) => {
-  const dir = path.join(process.cwd(), 'public/scores');
+// --- Simple HTML directory lister ---
+function listDirectory(dirPath, webPath) {
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+  const links = entries.map(e => {
+    const name = e.name + (e.isDirectory() ? '/' : '');
+    return `<a href="${webPath}${name}">${name}</a><br>`;
+  });
+  return `<html><body>${links.join('')}</body></html>`;
+}
+
+// --- Directory listing for /scores/... ---
+app.get('/scores/*', (req, res, next) => {
+  const subPath = req.params[0] || '';
+  const dir = path.join(process.cwd(), 'public/scores', subPath);
   try {
-    const folders = fs.readdirSync(dir, { withFileTypes: true })
-      .filter(f => f.isDirectory())
-      .map(f => f.name);
-    res.send(
-      `<html><body>${folders.map(f => `<a href="${f}/">${f}</a><br>`).join('')}</body></html>`
-    );
-  } catch (e) {
-    res.status(500).send(e.message);
+    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+      res.type('html').send(listDirectory(dir, req.path.endsWith('/') ? req.path : req.path + '/'));
+    } else next();
+  } catch (err) {
+    next();
+  }
+});
+
+// --- Directory listing for /shared/... (outside public) ---
+app.get('/shared/*', (req, res, next) => {
+  const subPath = req.params[0] || '';
+  const dir = path.join(process.cwd(), 'public/shared', subPath);
+  try {
+    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+      res.type('html').send(listDirectory(dir, req.path.endsWith('/') ? req.path : req.path + '/'));
+    } else next();
+  } catch (err) {
+    next();
   }
 });
 
 // app.use(express.static('dist'));
 
 // serve the docs ////////////////////////
-const path = require('path');
 app.use('/webdocs', express.static(path.join(__dirname, 'webdocs/site')));
 
 const server = app.listen(port, () => {

@@ -971,6 +971,12 @@ cuesArray.push({
 
   walkForCueElements(svgRoot);
 
+
+
+  console.timeEnd("[initializeSVG] total");
+  console.groupEnd();
+
+
   console.log(`[assignCues] ✅ Total cues assigned: ${cuesArray.length}`);
 }
 
@@ -1583,7 +1589,7 @@ export async function handlePageCue(
     return;
   }
 
-  
+
   const projectPath = `${window.pagesDir}${pageName}.svg`;
   const sharedPath  = `${window.sharedDir}pages/${pageName}.svg`;
 
@@ -3306,6 +3312,10 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window
 
   containerEl.appendChild(btn);
 
+console.log(`[createCueButtonforelement] ${cueSvgEl.id} rect=`, cueSvgEl.getBoundingClientRect(), 
+            `→ left=${btn.style.left}, top=${btn.style.top}`);
+
+
   // Positioning relative to container
   const place = () => {
     const r = cueSvgEl.getBoundingClientRect();
@@ -3420,6 +3430,8 @@ window.addEventListener("oscilla:audio", onAudio);
 
 
 export function assignCueButtonsIn(rootNode, containerEl) {
+  console.log(`[assignCueButtonsIn] executing for ${rootNode.querySelectorAll('[id^="cueButton("]').length} elements`);
+
   if (!rootNode || !containerEl) return [];
   const created = [];
 

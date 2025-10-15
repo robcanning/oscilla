@@ -43,23 +43,28 @@
     <input type="file" id="upload-score" accept=".svg" />
   </div>
 
+
+
+
+
 <!-- Splash / Project Selector -->
 <div id="splash">
   <div class="splash-container">
-    <!-- 🔹 Title & subtitle -->
+    <!-- 🔹 Title & Subtitle -->
     <div class="title-section">
-      <img src="assets/logo.svg" alt="Oscilla Logo" class="logo" />
       <h1 id="splash-title" class="splash-title">Oscilla</h1>
-        <h2>Interactive Graphic Score System</h2>
+      <h2 class="splash-subtitle" id="splash-subtitle" >Interactive Graphic Score System</h2>
+      <img src="assets/logo.svg" alt="Oscilla Logo" class="logo" />
+
       <p id="splash-message" class="splash-message">
         Loading available projects...
       </p>
     </div>
 
-    <!-- 🔹 Dynamic project list (same ID for JS) -->
+    <!-- 🔹 Dynamic Project List -->
     <div id="project-grid" class="project-grid"></div>
 
-    <!-- 🔹 Manual entry fallback -->
+    <!-- 🔹 Manual Entry Fallback -->
     <div id="manual-entry" class="manual-entry" style="display: none;">
       <p>Could not automatically list projects.</p>
       <input
@@ -70,17 +75,26 @@
       <button id="manual-load-btn">Load Project</button>
     </div>
 
-    <!-- 🔹 Meta info section -->
+    <!-- 🔹 Help & Documentation Section -->
+    <div class="help-section">
+      <h3>Help & Documentation</h3>
+            <button class="project-card" id="load-help-btn">Load Demo / Help Score</button>
+            <br>
+            <br>
+
+              <a class="project-card" href="https://github.com/robcanning/oscilla/wiki" target="_blank">Online Documentation</a>
+    </div>
+
+    <!-- 🔹 Meta / Credits Section -->
     <div class="meta-section">
+      <hr class="meta-divider" />
       <p class="meta-line">
-        <strong>Version:</strong> 1.2.4 &nbsp; | &nbsp;
-        <strong>Author:</strong> Rob Canning
+        <strong>Version:</strong> 0.2.4 &nbsp; | &nbsp;
+        <strong>Author:</strong> Rob Canning © 2024–2025
       </p>
       <p class="meta-line">
-        © 2018–2025 <strong>Zavod Rizoma</strong>  
-        &nbsp;|&nbsp;
-        <a href="https://github.com/robcanning/oscilla" target="_blank">
-          github.com/robcanning/oscilla
+        <a href="https://robcanning.github.io/oscilla/" target="_blank">
+          https://robcanning.github.io/oscilla/
         </a>
       </p>
       <p class="meta-line small">
@@ -89,6 +103,7 @@
     </div>
   </div>
 </div>
+
 
 
 

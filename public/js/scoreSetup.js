@@ -163,7 +163,6 @@ function scrollToSVGX(x) {
 }
 
 
-
 const jumpToRehearsalMark = (mark) => {
   if (!rehearsalMarks[mark]) {
     console.error(`[ERROR] Rehearsal Mark "${mark}" not found.`);
@@ -186,32 +185,6 @@ if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
   // updateSeekBar();
 };
 
-
-  /**
-  * ✅ Keyboard Navigation for Rehearsal Marks.
-  */
-  // document.addEventListener('keydown', (event) => {
-  //     if (sortedMarks.length === 0) {
-  //         console.warn("[WARNING] No rehearsal marks available for navigation.");
-  //         return;
-  //     }
-  //
-  //     let currentIndex = Object.keys(rehearsalMarks).findIndex(mark => rehearsalMarks[mark].x >=window.playheadX);
-  //
-  //     if (event.key === "ArrowUp") {
-  //         if (currentIndex < sortedMarks.length - 1) {
-  //             jumpToRehearsalMark(sortedMarks[currentIndex + 1]);
-  //         } else {
-  //             console.log("[DEBUG] Already at the last rehearsal mark.");
-  //         }
-  //     } else if (event.key === "ArrowDown") {
-  //         if (currentIndex > 0) {
-  //             jumpToRehearsalMark(sortedMarks[currentIndex - 1]);
-  //         } else {
-  //             console.log("[DEBUG] Already at the first rehearsal mark.");
-  //         }
-  //     }
-  // });
 
 
   let currentIndex = 0; // Track the current rehearsal mark index
@@ -249,6 +222,78 @@ if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
 
     console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
   });
+
+
+
+
+
+  /**
+  * ✅ Fast-forward & Rewind Buttons (Now using the fixed index approach)
+  */
+
+  document.getElementById('fast-forward-button').addEventListener('click', () => {
+    if (sortedMarks.length === 0) {
+      console.warn("[WARNING] No rehearsal marks available for navigation.");
+      return;
+    }
+
+    console.log(`\n[DEBUG] Fast Forward Clicked`);
+    console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
+
+    // Move up in the index directly
+    if (currentIndex < sortedMarks.length - 1) {
+      currentIndex++;
+    } else {
+      console.log("[DEBUG] Already at the last rehearsal mark.");
+      return;
+    }
+
+    let nextMark = sortedMarks[currentIndex];
+
+    console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
+    console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
+
+    // Updatewindow.playheadX properly to prevent snapping issues
+   window.playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent looping
+    jumpToRehearsalMark(nextMark);
+
+    console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
+  });
+
+  document.getElementById('fast-rewind-button').addEventListener('click', () => {
+    if (sortedMarks.length === 0) {
+      console.warn("[WARNING] No rehearsal marks available for navigation.");
+      return;
+    }
+
+    console.log(`\n[DEBUG] Fast Rewind Clicked`);
+    console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
+
+    // Move down in the index directly
+    if (currentIndex > 0) {
+      currentIndex--;
+    } else {
+      console.log("[DEBUG] Already at the first rehearsal mark.");
+      return;
+    }
+
+    let nextMark = sortedMarks[currentIndex];
+
+    console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
+    console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
+
+    // Updatewindow.playheadX properly
+   window.playheadX = rehearsalMarks[nextMark].x + 1;
+    jumpToRehearsalMark(nextMark);
+
+    console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
+  });
+
+  //////// END OF REHEARSAL MARK LOGIC ///////////////////////////////////////////
+
+// window.rehearsalMarks = rehearsalMarks;
+
+
 
 
 
@@ -600,35 +645,73 @@ window.preloadSpeedCues = preloadSpeedCues;
 
 
 
-/**
- * Preload all reusable SVG groups (group-, menu-, ui-) from every page SVG
- * in the active project's pagesDir.
- */
-
+// /**
+//  * Preload all reusable SVG groups (group-, menu-, ui-) from every page SVG
+//  * in the active project's pagesDir.
+//  */
 async function preloadAllSvgGroups() {
   window.groupRegistry = {};
   const baseDir = window.pagesDir || "scores/pages/";
   const files = [];
-  for (let i = 0; i < 10; i++) files.push(`${baseDir}page${i}.svg`);
 
+ try {
+  // 1️⃣ Request the directory listing
+  const res = await fetch(baseDir);
+  if (!res.ok) throw new Error(`Cannot list directory: ${baseDir}`);
+
+  const html = await res.text();
+
+  // 2️⃣ Extract all .svg links — supports relative or full hrefs
+  const regex = /href=["']([^"']+\.svg)["']/g;
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    let href = match[1].trim();
+
+    // Normalize: if href already contains the full baseDir path, don't prepend it again
+    if (href.startsWith(baseDir) || href.startsWith("/" + baseDir)) {
+      files.push(href);
+    } else if (href.startsWith("shared/") || href.startsWith("/shared/")) {
+      files.push(href); // for shared/help pages
+    } else if (!href.startsWith("http") && !href.startsWith("/")) {
+      files.push(`${baseDir}${href}`);
+    } else {
+      files.push(href); // fallback for any other case
+    }
+  }
+
+  console.log(`[groupRegistry] 📂 Found ${files.length} SVG pages in ${baseDir}`);
+} catch (err) {
+  console.warn(`[groupRegistry] ⚠️ Directory listing failed for ${baseDir}:`, err);
+}
+
+
+  // 3️⃣ Fallback — if no listing, assume at least one page
+  if (files.length === 0) {
+    files.push(`${baseDir}page0.svg`);
+    console.warn(`[groupRegistry] ⚠️ Fallback to ${files[0]}`);
+  }
+
+  // 4️⃣ Fetch and parse each discovered SVG
   for (const file of files) {
     try {
       const res = await fetch(file);
       if (!res.ok) continue;
+
       const text = await res.text();
       const doc = new DOMParser().parseFromString(text, "image/svg+xml");
-      const groups = doc.querySelectorAll('g[id^="group-"]');
+
+      const groups = doc.querySelectorAll('g[id^="group-"], g[id^="menu-"], g[id^="ui-"]');
       groups.forEach(g => {
-        const id = g.id.replace(/^group-/, "").trim();
+        const id = g.id.replace(/^group-|^menu-|^ui-/, "").trim();
         window.groupRegistry[id] = g.cloneNode(true);
         console.log(`[groupRegistry] ✅ Registered "${id}" from ${file}`);
       });
     } catch (err) {
-      console.warn(`[groupRegistry] ⚠️ Skipped ${file}`, err);
+      console.warn(`[groupRegistry] ⚠️ Skipped ${file}:`, err);
     }
   }
 
-  console.log(`[groupRegistry] ✅ Total groups: ${Object.keys(window.groupRegistry).length}`);
+  console.log(`[groupRegistry] ✅ Total reusable groups: ${Object.keys(window.groupRegistry).length}`);
 }
 
 
@@ -662,11 +745,12 @@ export function setupScore(svgElement) {
     window.pendingRepeatStateMap = null;
   }
 
-  propagate(svgElement);
   preloadSpeedCues();
 
+  
 
   // 🟢 Preload all reusable group definitions from pages/
+// preloadSvgGroups();
   preloadAllSvgGroups();
   console.log("[setupScore] ✅ All group definitions preloaded.");
 

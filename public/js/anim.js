@@ -787,20 +787,20 @@ const initializeObjectPathPairs = (svgElement, speed = 10.0) => {
       const rawId = object.id;
       const id = object.getAttribute('data-id') || rawId;
 
-      // console.log(`[SCAN] Checking ${id}`); // 🔍 add this
+       console.log(`[SCAN] Checking ${id}`); // 🔍 add this
 
       if (id.startsWith("o2p(")) {
-        // console.log(`[MATCH] ID starts with o2p: ${id}`); // 🔍 add this
+         console.log(`[MATCH] ID starts with o2p: ${id}`); // 🔍 add this
 
         const config = window.parseO2PCompact(id);
         if (!config) {
-          // console.warn(`[o2p] ⚠️ Could not parse compact ID: ${id}`);
+           console.warn(`[o2p] ⚠️ Could not parse compact ID: ${id}`);
           return;
         }
 
         const path = svgElement.getElementById(config.pathId);
         if (!path) {
-          // console.warn(`[o2p] ⚠️ No path found with ID: ${config.pathId}`);
+           console.warn(`[o2p] ⚠️ No path found with ID: ${config.pathId}`);
           return;
         }
 
@@ -883,22 +883,33 @@ const initializeObjectPathPairs = (svgElement, speed = 10.0) => {
  * @returns {object|null} Parsed config object or null if invalid.
  */
 function parseO2PCompact(id) {
+  console.groupCollapsed(`[o2p] 🧩 Parsing O2P ID: ${id}`);
+
   const match = id.match(/^o2p\(([^)]+)\)/);
-  if (!match) return null;
+  if (!match) {
+    console.warn("[o2p] ❌ No valid 'o2p(...)' pattern found.");
+    console.groupEnd();
+    return null;
+  }
+
+  const pathId = match[1];
+  console.log("[o2p] → pathId:", pathId);
 
   const config = {
-    pathId: match[1],
+    pathId,
     direction: parseInt(extractTagValue(id, "dir", "0")),
-    duration: parseFloat(extractTagValue(id, "dur", "0")),  // in seconds
+    duration: parseFloat(extractTagValue(id, "dur", "0")),  // seconds
     speed: parseFloat(extractTagValue(id, "speed", "1")),   // fallback if no duration
-    osc: extractTagValue(id, "osc", "0") === 1,
+    osc: extractTagValue(id, "osc", "0") === "1" || extractTagValue(id, "osc", "0") === 1,
     throttle: parseInt(extractTagValue(id, "throttle", "20")),
-    rotate: extractTagValue(id, "rotate", "1") !== 0,
-    easing: extractTagValue(id, "ease", 3), // 3 = easeInOutSine, default fallback
-    quant: extractTagValue(id, "quant", "0") === 1,
+    rotate: extractTagValue(id, "rotate", "1") !== "0" && extractTagValue(id, "rotate", "1") !== 0,
+    easing: parseInt(extractTagValue(id, "ease", "3")), // 3 = easeInOutSine default
+    quant: extractTagValue(id, "quant", "0") === "1" || extractTagValue(id, "quant", "0") === 1,
     trigger: id.includes("_t(1)")
   };
 
+  console.table(config);
+  console.groupEnd();
   return config;
 }
 
@@ -1321,7 +1332,11 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
           controller4.jump();
           break;
         }
+
+
+        
 case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
+
 
   const originalPathID = path.id;
   const basePathIDMatch = originalPathID.match(/^(path-\d+)/);
@@ -1329,6 +1344,7 @@ case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
 
   const case5Paths = [...(window.pathVariantsMap[basePathID] || [])];
   if (!case5Paths.some(p => p.id === originalPathID)) {
+    console.log("[o2p Case5] Paths found:", case5Paths.map(p => p.id));
     case5Paths.unshift(path);
   }
 
@@ -1374,6 +1390,11 @@ case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
   countdownText.setAttribute("font-size", "56");
   countdownText.setAttribute("text-anchor", "middle");
   window.scoreSVG.appendChild(countdownText);
+
+
+    console.groupCollapsed(`[o2p Case5] ⚡ Starting Case 5 for ${object.id} → ${path.id}`);
+    console.log("[o2p Case5] Parsed ID:", id);
+
 
   const Case5Controller = {
     object,
@@ -1458,18 +1479,19 @@ case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
   observer.observe(object);
   observer.observe(ghostObject);
 
+  console.groupEnd();
 
 
 
 
 
-
-  // console.warn(`[DEBUG] Case 5 fallback animation active for object ${object.id}`);
+  console.warn(`[DEBUG] Case 5 fallback animation active for object ${object.id}`);
 
           // console.warn(`[DEBUG] Fallback pingpong animation created for object ${object.id}`);
       }
+
     } catch (error) {
-      // console.error(`[DEBUG] Error animating object ${object.id} along path ${path.id}: ${error.message}`);
+       console.error(`[DEBUG] Error animating object ${object.id} along path ${path.id}: ${error.message}`);
     }
   }
 

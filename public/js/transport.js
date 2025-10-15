@@ -83,7 +83,7 @@
   
     window.playheadX = 0;
     window.elapsedTime = 0;
-    resetStopwatch(); // ✅ Reset stopwatch
+    // resetStopwatch(); // ✅ Reset stopwatch
   
     window.scoreContainer.scrollLeft = Math.max(0, window.playheadX);
     window.speedMultiplier = getSpeedForPosition(window.playheadX);
@@ -923,3 +923,10 @@ document.addEventListener("touchend", (e) => {
 
   console.log("[SCROLL] ✅ Debounced scroll/gesture-playback control active");
 })();
+
+
+
+
+
+
+

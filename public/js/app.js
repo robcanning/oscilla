@@ -19,7 +19,7 @@
 
 
 import { loadProject } from './projectLoader.js';
-import { setupScore, extractScoreElements } from './scoreSetup.js';
+import { setupScore, extractScoreElements, propagate } from './scoreSetup.js';
 import { forward, rewind, rewindToStart,getSpeedForPosition,
           initializeSpeedControls, adjustSpeed, setSpeed, updateSpeedDisplay, 
           sendSpeedUpdateToServer,   togglePlay, togglePlayButton, startPlayback,
@@ -97,6 +97,13 @@ import {
 
 
 export const initializeSVG = (svgElement) => {
+
+
+  console.group("[initializeSVG]");
+  console.time("[initializeSVG] total");
+  console.log("SVG element:", svgElement);
+  console.log("Bounding box:", svgElement.getBoundingClientRect());
+
 
     // 🧩 Skip global reinit for embedded page overlays
   if (svgElement?.id === "pageSVG" || svgElement?.classList.contains("oscilla-page")) {
@@ -194,6 +201,7 @@ window.scoreSVG = svgElement;
 window.cues = [];
 assignCues(svgElement, window.cues);
 
+
 /**
  * Scan and register reusable <g> groups with reserved prefixes.
  * Stores them in window.groupRegistry for later cueGroup() recall.
@@ -234,12 +242,10 @@ if (typeof window !== 'undefined') {
 }
 
 
+// 🧩 Build pathVariantsMap for o2p Case 5 animations —
+// groups related path IDs (e.g. path-9997-1,-2,…) so multi-path ghost motion works
 
-
-
-
-
-
+window.storePathVariants(svgElement)
 
 
 // preloadSpeedCues();
@@ -316,10 +322,11 @@ if (typeof window !== 'undefined') {
 
       });
 
+      propagate(svgElement);
+
       initializeRotatingObjects(svgElement);
       initializeScalingObjects(svgElement);
       initializeObserver();
-
 
       console.log("[DEBUG] Animation setup complete. Running detection and observer.");
       detectExistingAnimations();
@@ -1601,14 +1608,14 @@ document.getElementById("audio-master-button").addEventListener("click", () => {
 
     const splash = document.getElementById('splash');
     // const scoreContainer = document.getElementById('scoreContainer');
-    const controls = document.getElementById('controls');
+    // const controls = document.getElementById('controls');
 
     if (splash.style.display === 'none' || splash.classList.contains('hidden')) {
       console.log("[CLIENT] Showing splash screen.");
       splash.style.display = 'flex';
       splash.classList.remove('hidden');
       window.scoreContainer.style.display = 'none'; // Hide the score window.scoreContainer
-      controls.style.display = 'none'; // Hide controls
+      // controls.style.display = 'none'; // Hide controls
     } else {
       console.log("[CLIENT] Hiding splash screen.");
       splash.style.display = 'none';
@@ -1945,18 +1952,94 @@ document.getElementById("audio-master-button").addEventListener("click", () => {
   //     });
   // };
 
-  const storePathVariants = (svgElement) => {
-    window.pathVariantsMap = {};
-    const allPaths = svgElement.querySelectorAll("path");
-    allPaths.forEach(path => {
-      const id = path.id;
-      if (id && id.match(/^path-\d+-\d+$/)) {
-        const baseID = id.replace(/-\d+$/, '');
-        if (!window.pathVariantsMap[baseID]) window.pathVariantsMap[baseID] = [];
-        window.pathVariantsMap[baseID].push(path);
-      }
-    });
-  };
+
+
+
+/**
+ * 🧭 storePathVariants(svgElement)
+ * ---------------------------------------------------------
+ * Builds and populates `window.pathVariantsMap`, which groups
+ * all <path> elements in the loaded SVG that share a common base ID
+ * (e.g. path-9997, path-9997-1, path-9997-2, ...).
+ *
+ * This registry is required by the Case 5 branch of the o2p (object-to-path)
+ * animation system.  Case 5 lets a single animated object move between
+ * multiple “variant” paths that represent alternate trajectories.
+ * The function must therefore run once for every newly loaded or replaced
+ * SVG so that all variant relationships are known before any o2p
+ * animations start.
+ *
+ * Example:
+ *   path-9997       → base path
+ *   path-9997-1     → variant #1
+ *   path-9997-2     → variant #2
+ *
+ * These will be stored as:
+ *   window.pathVariantsMap["path-9997"] = [ path-9997, path-9997-1, path-9997-2 ];
+ *
+ * If this mapping is missing or empty, Case 5 will exit early because it
+ * cannot locate alternate paths for the ghost follower animation.
+ *
+ * Call timing:
+ *   - Immediately after the SVG is loaded and attached to the DOM
+ *     (typically inside initializeSVG or setupScore)
+ *   - Optionally again when cuePage or cueGroup injects new SVG content
+ */
+
+
+const storePathVariants = (svgElement) => {
+  console.groupCollapsed("[storePathVariants] 🧩 Building pathVariantsMap");
+  window.pathVariantsMap = {};
+
+  if (!svgElement) {
+    console.warn("[storePathVariants] ⚠️ No SVG element provided.");
+    console.groupEnd();
+    return;
+  }
+
+  const allPaths = svgElement.querySelectorAll("path");
+  console.log(`[storePathVariants] Found ${allPaths.length} total <path> elements in SVG.`);
+
+  allPaths.forEach(path => {
+    const id = path.id || "(no id)";
+    if (!id) {
+      console.warn("[storePathVariants] ⚠️ Path without ID skipped.");
+      return;
+    }
+
+    // Only match IDs like path-123-4 (baseID + variant)
+    const match = id.match(/^path-(\d+)-(\d+)$/);
+    if (!match) {
+      // Non-variant paths (e.g. just "path-9997") will be ignored
+      console.log(`[storePathVariants] Skipped non-variant path: ${id}`);
+      return;
+    }
+
+    const baseID = id.replace(/-\d+$/, '');
+    if (!window.pathVariantsMap[baseID]) window.pathVariantsMap[baseID] = [];
+    window.pathVariantsMap[baseID].push(path);
+
+    console.log(`[storePathVariants] ✅ Registered variant ${id} → base group "${baseID}"`);
+  });
+
+  const totalGroups = Object.keys(window.pathVariantsMap).length;
+  console.log(`[storePathVariants] ✅ Completed. ${totalGroups} base groups created.`);
+  console.table(
+    Object.entries(window.pathVariantsMap).map(([base, paths]) => ({
+      baseID: base,
+      variants: paths.map(p => p.id).join(", "),
+      count: paths.length,
+    }))
+  );
+
+  console.groupEnd();
+};
+
+window.storePathVariants = storePathVariants;
+
+
+
+
 
   // // [svgpersist] Initialize score from sessionStorage on load
   // const initializeScore = () => {
@@ -2143,11 +2226,11 @@ async function populateProjectSelector() {
   const manualEntry = document.getElementById("manual-entry");
 
   try {
-    const response = await fetch("/public/scores/");
+    const response = await fetch("/scores/");
     const html = await response.text();
 
     // Extract folder names from directory listing (assuming simple index output)
-    const regex = /href="([^"\/]+)\/"/g;
+    const regex = /href=["'](?:\.\/|\/?scores\/)?([^"'/]+)\/["']/g;
     let match;
     const projects = [];
     while ((match = regex.exec(html)) !== null) {
@@ -3100,71 +3183,6 @@ window.startAnimation = () => {
 
 
 
-
-  /**
-  * ✅ Fast-forward & Rewind Buttons (Now using the fixed index approach)
-  */
-
-  document.getElementById('fast-forward-button').addEventListener('click', () => {
-    if (sortedMarks.length === 0) {
-      console.warn("[WARNING] No rehearsal marks available for navigation.");
-      return;
-    }
-
-    console.log(`\n[DEBUG] Fast Forward Clicked`);
-    console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
-
-    // Move up in the index directly
-    if (currentIndex < sortedMarks.length - 1) {
-      currentIndex++;
-    } else {
-      console.log("[DEBUG] Already at the last rehearsal mark.");
-      return;
-    }
-
-    let nextMark = sortedMarks[currentIndex];
-
-    console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
-    console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
-
-    // Updatewindow.playheadX properly to prevent snapping issues
-   window.playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent looping
-    jumpToRehearsalMark(nextMark);
-
-    console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
-  });
-
-  document.getElementById('fast-rewind-button').addEventListener('click', () => {
-    if (sortedMarks.length === 0) {
-      console.warn("[WARNING] No rehearsal marks available for navigation.");
-      return;
-    }
-
-    console.log(`\n[DEBUG] Fast Rewind Clicked`);
-    console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
-
-    // Move down in the index directly
-    if (currentIndex > 0) {
-      currentIndex--;
-    } else {
-      console.log("[DEBUG] Already at the first rehearsal mark.");
-      return;
-    }
-
-    let nextMark = sortedMarks[currentIndex];
-
-    console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
-    console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
-
-    // Updatewindow.playheadX properly
-   window.playheadX = rehearsalMarks[nextMark].x + 1;
-    jumpToRehearsalMark(nextMark);
-
-    console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
-  });
-
-  //////// END OF REHEARSAL MARK LOGIC ///////////////////////////////////////////
-
 // /**
 //  * ✅ Toggles playback state between play and pause.
 //  * - Delegates to startPlayback() or pausePlayback() for consistent logic.
@@ -3715,26 +3733,9 @@ window.startAnimation = () => {
   window.updatePosition = updatePosition; // Expose updatePosition globally
 
 
+toggleSplashScreen();
 
-Object.assign(document.getElementById("splash").style, {
-  position: "fixed",
-  top: "0",
-  left: "0",
-  width: "100vw",
-  height: "100vh",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-  alignItems: "center",
-  textAlign: "center",
-  backgroundColor: "white",
-  color: "black",
-  zIndex: "999999",
-  opacity: "1"
-});
-
-
-  console.log('// EOF');
+console.log('// EOF');
 
 
 
