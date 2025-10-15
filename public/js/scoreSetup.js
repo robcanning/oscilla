@@ -407,10 +407,21 @@ export const extractScoreElements = (svgElement) => {
       console.log("[DEBUG] Final sorted speed cues:", speedCueMap);
     }
 
-    // ✅ Call button creation only if rehearsal marks exist
-    if (Object.keys(rehearsalMarks).length > 0) {
-      createRehearsalMarkButtons();
-    }
+
+
+
+
+// ✅ Defer button creation until the SVG layout is fully ready
+if (Object.keys(rehearsalMarks).length > 0) {
+  console.log("[extractScoreElements] ⏳ Deferring rehearsal mark button creation until next paint frame...");
+  requestAnimationFrame(() => {
+
+    createRehearsalMarkButtons();
+    console.log("[extractScoreElements] ✅ Rehearsal mark buttons created after layout stabilization.");
+  });
+}
+      // extractScoreElements(svgElement);
+
 
     const newCueIds = new Set(newCues.map(c => c.id));
 
@@ -719,14 +730,17 @@ async function preloadAllSvgGroups() {
 
 
 
-export function setupScore(svgElement) {
+export async function setupScore(svgElement) {
+  
   if (!svgElement) {
     console.error("[scoreSetup] ❌ setupScore called without valid SVG element");
     return;
   }
 
   console.group("[scoreSetup] 🚀 Setting up score");
-
+  
+  
+  await new Promise(r => requestAnimationFrame(r)); // 🕐 ensure final paint
   const startTime = performance.now();
   extractScoreElements(svgElement);
   const endTime = performance.now();
