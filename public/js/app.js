@@ -96,7 +96,7 @@ import {
 
 
 
-export const initializeSVG = (svgElement) => {
+export  const initializeSVG = async (svgElement) => {
 
 
   console.group("[initializeSVG]");
@@ -197,9 +197,11 @@ window.scoreSVG = svgElement;
 
 // ✅ Replace <use> elements (already done here)
 
-// ✅ Assign cues immediately (no delay)
-window.cues = [];
+  window.cues = [];
+
 assignCues(svgElement, window.cues);
+
+
 
 
 /**
@@ -334,23 +336,37 @@ window.storePathVariants(svgElement)
 
 
 
-            // ✅ Run setupScore after the browser has fully painted the SVG
-      requestAnimationFrame(() => {
-        // Wait an extra frame to ensure paint/layout is complete
-        requestAnimationFrame(() => {
-          const svgReady = svgElement || document.querySelector("#scoreContainer svg");
-          if (!svgReady) {
-            console.warn("[initializeSVG] ⚠️ setupScore(): SVG still not found after paint.");
-            return;
-          }
-          console.log("[initializeSVG] ✅ Running setupScore with:", svgReady);
-          if (window.setupScore) {
-            window.setupScore(svgReady);
-          } else {
-            console.warn("[initializeSVG] ⚠️ setupScore() not available yet.");
-          }
-        });
-      });
+  // ✅ Run setupScore and cue assignment after the SVG has fully painted
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    const svgReady = svgElement || document.querySelector("#scoreContainer svg");
+    if (!svgReady) {
+      console.warn("[initializeSVG] ⚠️ setupScore(): SVG still not found after paint.");
+      return;
+    }
+
+    console.group("[initializeSVG] ✅ Final SVG paint phase");
+    console.time("[initializeSVG] cue+setup total");
+
+    // 🧩 Always ensure window.cues exists before assigning
+    if (!window.cues) window.cues = [];
+
+    console.log("[initializeSVG] Assigning cues after layout is fully ready...");
+    assignCues(svgReady, window.cues);
+
+    if (typeof window.setupScore === "function") {
+      console.log("[initializeSVG] Running setupScore...");
+      window.setupScore(svgReady);
+    } else {
+      console.warn("[initializeSVG] ⚠️ setupScore() not available yet.");
+    }
+
+    console.timeEnd("[initializeSVG] cue+setup total");
+    console.groupEnd();
+  });
+});
+
+
 
 
 

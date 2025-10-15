@@ -3316,15 +3316,39 @@ console.log(`[createCueButtonforelement] ${cueSvgEl.id} rect=`, cueSvgEl.getBoun
             `→ left=${btn.style.left}, top=${btn.style.top}`);
 
 
-  // Positioning relative to container
-  const place = () => {
-    const r = cueSvgEl.getBoundingClientRect();
-    const c = containerEl.getBoundingClientRect();
-    const left = r.left - c.left + (opt.offsetX || 0);
-    const top = r.top - c.top + (opt.offsetY || 0);
-    btn.style.left = `${Math.round(left)}px`;
-    btn.style.top = `${Math.round(top)}px`;
-  };
+const place = () => {
+  let r = cueSvgEl.getBoundingClientRect();
+
+  // 🕒 Check if the SVG element has real layout metrics yet
+  if (r.width === 0 && r.height === 0) {
+    console.warn(`[cueButton] ⚠️ ${cueSvgEl.id} not yet laid out — deferring placement.`);
+
+    // Wait one more animation frame, then retry once
+    requestAnimationFrame(() => {
+      const r2 = cueSvgEl.getBoundingClientRect();
+      if (r2.width > 0 || r2.height > 0) {
+        const c = containerEl.getBoundingClientRect();
+        const left = r2.left - c.left + (opt.offsetX || 0);
+        const top = r2.top - c.top + (opt.offsetY || 0);
+        btn.style.left = `${Math.round(left)}px`;
+        btn.style.top = `${Math.round(top)}px`;
+        console.log(`[cueButton] ✅ ${cueSvgEl.id} now ready (${left}, ${top})`);
+      } else {
+        console.warn(`[cueButton] ❌ ${cueSvgEl.id} still 0×0 after retry — skipping placement.`);
+      }
+    });
+
+    return; // prevent premature placement at (0,0)
+  }
+
+  // 🧭 Normal placement once geometry exists
+  const c = containerEl.getBoundingClientRect();
+  const left = r.left - c.left + (opt.offsetX || 0);
+  const top = r.top - c.top + (opt.offsetY || 0);
+  btn.style.left = `${Math.round(left)}px`;
+  btn.style.top = `${Math.round(top)}px`;
+};
+
   place();
 
   // Follow (optional)
