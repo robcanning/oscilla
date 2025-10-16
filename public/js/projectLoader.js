@@ -28,9 +28,9 @@ export async function loadProject(projectName) {
       window.projectBase = `scores/${projectName}/`;
     }
 
-    window.svgDir   = `${window.projectBase}`;
+    window.svgDir = `${window.projectBase}`;
     window.audioDir = `${window.projectBase}audio/`;
-    window.textDir  = `${window.projectBase}texts/`;
+    window.textDir = `${window.projectBase}texts/`;
     window.pagesDir = `${window.projectBase}pages/`;
     window.videoDir = `${window.projectBase}videos/`;
     window.sharedDir = `shared/`; // ⬅️ note: no "scores/" prefix here
@@ -56,56 +56,31 @@ export async function loadProject(projectName) {
     const svgElement = doc.querySelector("svg");
     if (!svgElement) throw new Error("No <svg> root found in loaded file");
 
-    // // 🧭 Set dimensions
-    // svgElement.removeAttribute("width");
-    // svgElement.removeAttribute("height");
-    // Object.assign(svgElement.style, {
-    //   display: "inline-block",
-    //   height: "100vh",
-    //   width: "auto",
-    //   maxWidth: "none",
-    //   maxHeight: "100%",
-    //   verticalAlign: "top",
-    // });
+    // --- inside loadProject(projectName) before initializeSVG() ---
+    console.group("[loadProject] Cleanup before new project");
+    const oldButtons = document.querySelectorAll(".oscilla-cue-button");
+    oldButtons.forEach(btn => btn.remove());
+    console.log(`🧹 Removed ${oldButtons.length} cue buttons.`);
 
-    // // 🧩 Prepare scroll container
-    // Object.assign(container.style, {
-    //   width: "100vw",
-    //   height: "100vh",
-    //   overflowX: "auto",
-    //   overflowY: "hidden",
-    //   whiteSpace: "nowrap",
-    //   display: "block",
-    //   position: "relative",
-    // });
+    const oldTexts = document.querySelectorAll("[id^='cueText-']");
+    oldTexts.forEach(el => el.remove());
+    console.log(`🧹 Removed ${oldTexts.length} cueText overlays.`);
+    console.groupEnd();
 
+    // --- now append new SVG ---
+    container.innerHTML = "";
+    container.appendChild(svgElement);
 
+    // 🕓 ensure browser has painted SVG before measuring positions
+    await new Promise(r => requestAnimationFrame(r));
+    console.log("[loadProject] ✅ SVG rendered — safe to initialize.");
 
-  // --- inside loadProject(projectName) before initializeSVG() ---
-console.group("[loadProject] Cleanup before new project");
-const oldButtons = document.querySelectorAll(".oscilla-cue-button");
-oldButtons.forEach(btn => btn.remove());
-console.log(`🧹 Removed ${oldButtons.length} cue buttons.`);
-
-const oldTexts = document.querySelectorAll("[id^='cueText-']");
-oldTexts.forEach(el => el.remove());
-console.log(`🧹 Removed ${oldTexts.length} cueText overlays.`);
-console.groupEnd();
-
-// --- now append new SVG ---
-container.innerHTML = "";
-container.appendChild(svgElement);
-
-// 🕓 ensure browser has painted SVG before measuring positions
-await new Promise(r => requestAnimationFrame(r));
-console.log("[loadProject] ✅ SVG rendered — safe to initialize.");
-
-// --- finally ---
-if (typeof initializeSVG === "function") {
-  initializeSVG(svgElement);
-} else {
-  console.warn("[loadProject] ⚠️ initializeSVG() not defined yet.");
-}
+    // --- finally ---
+    if (typeof initializeSVG === "function") {
+      initializeSVG(svgElement);
+    } else {
+      console.warn("[loadProject] ⚠️ initializeSVG() not defined yet.");
+    }
 
 
     console.log(`[loadProject] ✅ Project "${projectName}" fully loaded.`);
@@ -125,86 +100,21 @@ function hideSplash() {
 
 
 
-
-// /**
-//  * preloadSvgGroups(list)
-//  * ------------------------------------------
-//  */
-// export async function preloadAllSvgGroups() {
-//   window.groupRegistry = {};
-//   const baseDir = window.pagesDir || "scores/pages/";
-//   const files = [];
-
-//   try {
-//     // 🔍 Try to list the actual files in the directory
-//     const res = await fetch(baseDir);
-//     if (res.ok) {
-//       const text = await res.text();
-
-//       // Match any href="filename.svg"
-//       const matches = [...text.matchAll(/href="([^"]+\.svg)"/g)];
-
-//       // Keep only SVGs not starting with a dot
-//       matches.forEach(m => {
-//         const file = m[1];
-//         if (!file.startsWith(".")) files.push(`${baseDir}${file}`);
-//       });
-
-//       console.log(`[groupRegistry] 📄 Found ${files.length} page SVGs in ${baseDir}`);
-//     } else {
-//       console.warn(`[groupRegistry] ⚠️ Cannot list directory: ${baseDir}`);
-//     }
-//   } catch (err) {
-//     console.warn(`[groupRegistry] ⚠️ Directory scan failed for ${baseDir}:`, err);
-//   }
-
-//   // Fallback: at least try the main score page if directory listing not supported
-//   if (files.length === 0) {
-//     files.push(`${baseDir}page0.svg`);
-//     console.warn(`[groupRegistry] ⚠️ Falling back to default page0.svg`);
-//   }
-
-//   // 🧩 Load group definitions from each discovered file
-//   for (const file of files) {
-//     try {
-//       const res = await fetch(file);
-//       if (!res.ok) continue;
-//       const text = await res.text();
-//       const doc = new DOMParser().parseFromString(text, "image/svg+xml");
-//       const groups = doc.querySelectorAll('g[id^="group-"], g[id^="menu-"], g[id^="ui-"]');
-//       groups.forEach(g => {
-//         const id = g.id.replace(/^group-|^menu-|^ui-/, "").trim();
-//         window.groupRegistry[id] = g.cloneNode(true);
-//         console.log(`[groupRegistry] ✅ Registered "${id}" from ${file}`);
-//       });
-//     } catch (err) {
-//       console.warn(`[groupRegistry] ⚠️ Failed to parse ${file}:`, err);
-//     }
-//   }
-
-//   console.log(`[groupRegistry] ✅ Total reusable groups: ${Object.keys(window.groupRegistry).length}`);
-// }
-
-
-
-
-
-
-
 /**
  * resolveProjectPath(), populateProjectMenu()
- * (unchanged)
  */
 export function resolveProjectPath(type, filename) {
   if (!filename) return "";
   switch (type) {
     case "audio": return `${window.audioDir}${filename}`;
-    case "text":  return `${window.textDir}${filename}`;
+    case "text": return `${window.textDir}${filename}`;
     case "video": return `${window.videoDir}${filename}`;
-    case "page":  return `${window.pagesDir}${filename}`;
-    default:      return `${window.projectBase}${filename}`;
+    case "page": return `${window.pagesDir}${filename}`;
+    default: return `${window.projectBase}${filename}`;
   }
 }
+
+window.resolveProjectPath = resolveProjectPath;
 
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -249,96 +159,96 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-menu.addEventListener("sl-select", async (event) => {
-  const value = event.detail.item.value;
-  console.log("[MENU] Selected:", value);
+  menu.addEventListener("sl-select", async (event) => {
+    const value = event.detail.item.value;
+    console.log("[MENU] Selected:", value);
 
-  switch (value) {
-    case "load":
-      console.log("[MENU] Opening project selector (splash).");
-      showSplash();
-      await showProjectList();
-      break;
+    switch (value) {
+      case "load":
+        console.log("[MENU] Opening project selector (splash).");
+        showSplash();
+        await showProjectList();
+        break;
 
-    case "settings":
-      alert("⚙️ Settings coming soon.");
-      break;
+      case "settings":
+        alert("⚙️ Settings coming soon.");
+        break;
 
-    case "save":
-      alert("💾 Save State — not implemented yet.");
-      break;
+      case "save":
+        alert("💾 Save State — not implemented yet.");
+        break;
 
-    case "quit":
-      console.log("[MENU] Quit requested.");
-      window.close?.();
-      break;
+      case "quit":
+        console.log("[MENU] Quit requested.");
+        window.close?.();
+        break;
 
-    default:
-      console.warn("[MENU] Unknown menu option:", value);
-  }
-});
-
-async function showProjectList() {
-  const splash = document.getElementById("splash");
-  const projectList = document.querySelector("#splash #project-grid"); // scoped lookup
-  const splashMsg = document.querySelector("#splash #splash-message");
-
-  if (!splash || !projectList) {
-    console.warn("[MENU] ⚠️ Splash or project grid missing in DOM.");
-    return;
-  }
-
-  splash.style.display = "flex";
-  if (!projectList) {
-    console.warn("[MENU] ⚠️ No project grid found in DOM.");
-    return;
-  }
-
-  // Always re-show splash before populating
-  if (splash) showSplash();
-
-  projectList.innerHTML = "<p>Loading projects...</p>";
-  // if (splashMsg) splashMsg.textContent = "Loading available projects...";
-
-  try {
-    // 🔹 Fetch project directories
-    const res = await fetch("/scores/");
-    if (!res.ok) throw new Error("Failed to fetch scores directory listing");
-    const text = await res.text();
-
-    // Extract folder names
-    const allProjects = [...text.matchAll(/href="([^"/]+)\/"/g)].map(m => m[1]);
-    const userProjects = allProjects.filter(name => !/^help$/i.test(name));
-
-    // Populate project list
-    projectList.innerHTML = "";
-    // const projectHeader = document.createElement("h3");
-    // projectHeader.textContent = "Projects";
-    // projectList.appendChild(projectHeader);
-
-    userProjects.forEach(name => {
-  const card = document.createElement("div"); // or "button"
-  card.classList.add("project-card");
-  card.textContent = name;
-  card.addEventListener("click", () => {
-    hideSplash();
-    loadProject(name);
+      default:
+        console.warn("[MENU] Unknown menu option:", value);
+    }
   });
-  projectList.appendChild(card);
-});
+
+  async function showProjectList() {
+    const splash = document.getElementById("splash");
+    const projectList = document.querySelector("#splash #project-grid"); // scoped lookup
+    const splashMsg = document.querySelector("#splash #splash-message");
+
+    if (!splash || !projectList) {
+      console.warn("[MENU] ⚠️ Splash or project grid missing in DOM.");
+      return;
+    }
+
+    splash.style.display = "flex";
+    if (!projectList) {
+      console.warn("[MENU] ⚠️ No project grid found in DOM.");
+      return;
+    }
+
+    // Always re-show splash before populating
+    if (splash) showSplash();
+
+    projectList.innerHTML = "<p>Loading projects...</p>";
+    // if (splashMsg) splashMsg.textContent = "Loading available projects...";
+
+    try {
+      // 🔹 Fetch project directories
+      const res = await fetch("/scores/");
+      if (!res.ok) throw new Error("Failed to fetch scores directory listing");
+      const text = await res.text();
+
+      // Extract folder names
+      const allProjects = [...text.matchAll(/href="([^"/]+)\/"/g)].map(m => m[1]);
+      const userProjects = allProjects.filter(name => !/^help$/i.test(name));
+
+      // Populate project list
+      projectList.innerHTML = "";
+      // const projectHeader = document.createElement("h3");
+      // projectHeader.textContent = "Projects";
+      // projectList.appendChild(projectHeader);
+
+      userProjects.forEach(name => {
+        const card = document.createElement("div"); // or "button"
+        card.classList.add("project-card");
+        card.textContent = name;
+        card.addEventListener("click", () => {
+          hideSplash();
+          loadProject(name);
+        });
+        projectList.appendChild(card);
+      });
 
 
-    console.log(`[MENU] ✅ Loaded ${userProjects.length} projects.`);
+      console.log(`[MENU] ✅ Loaded ${userProjects.length} projects.`);
 
-  } catch (err) {
-    console.error("[MENU] ❌ Failed to list projects:", err);
-    projectList.innerHTML = `
+    } catch (err) {
+      console.error("[MENU] ❌ Failed to list projects:", err);
+      projectList.innerHTML = `
       <p style="color:red">⚠️ Could not load project list.</p>
       <p>You can still <a href="https://github.com/robcanning/oscilla/wiki" target="_blank">
       read the online documentation</a>.</p>
     `;
+    }
   }
-}
 
 
 
@@ -372,4 +282,4 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
 
-// window.resolveProjectPath = resolveProjectPath;
+

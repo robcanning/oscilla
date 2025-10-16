@@ -27,7 +27,7 @@ export const cueHandlers = {
   cueStop: handleStopCue,
   cueChoice: handleCueChoice,
   cuePage: handlePageCue,
-  cueNav: handleNavCue,  
+  cueNav: handleNavCue,
   cueAudio: handleAudioCue,
   // cueAudioStop: handleAudioStopCue,
   cueVideo: handleVideoCue,
@@ -591,7 +591,7 @@ export function resumePlayback(receivedFromServer = false) {
 
   // ✅ Refresh UI state
   window.updatePosition?.();
-// window.updateSeekBar?.();
+  // window.updateSeekBar?.();
   window.updateStopwatch?.();
 
   // ✅ Reset animation clock baseline to avoid delta jumps
@@ -1005,10 +1005,10 @@ export function assignCues(svgRoot, cuesArray = []) {
         let value = mode === "rnd"
           ? Math.random() * (max - min) + min
           : (() => {
-              const cy = child.getBBox().y + child.getBBox().height / 2;
-              const normY = (cy - bbox.y) / bbox.height;
-              return min + normY * (max - min);
-            })();
+            const cy = child.getBBox().y + child.getBBox().height / 2;
+            const normY = (cy - bbox.y) / bbox.height;
+            return min + normY * (max - min);
+          })();
 
         const formattedValue = Math.round(value);
         const cueId = `cueOscSet(${param},${formattedValue})`;
@@ -1048,25 +1048,25 @@ export function assignCues(svgRoot, cuesArray = []) {
       let value = mode === "rnd"
         ? Math.random() * (max - min) + min
         : (() => {
-            const cy = child.getBBox().y + child.getBBox().height / 2;
-            const normY = (cy - bbox.y) / bbox.height;
-            return min + normY * (max - min);
-          })();
+          const cy = child.getBBox().y + child.getBBox().height / 2;
+          const normY = (cy - bbox.y) / bbox.height;
+          return min + normY * (max - min);
+        })();
 
       const formattedValue = Number.isInteger(value) ? value : value.toFixed(3);
       const cueId = `${cueType}(${formattedValue})`;
       child.id = cueId;
 
-const bbox = child.getBBox();
-cuesArray.push({
-  id: cueId,
-  element: child,
-  triggered: false,
-  x: bbox.x,
-  width: bbox.width
-});
+      const bbox = child.getBBox();
+      cuesArray.push({
+        id: cueId,
+        element: child,
+        triggered: false,
+        x: bbox.x,
+        width: bbox.width
+      });
 
-// console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
+      // console.log(`[assignCues] [${index}] → ${child.tagName} → ${cueId}`);
     });
   });
 
@@ -1090,7 +1090,7 @@ cuesArray.push({
       }
 
 
-    // ✅ Normal cue element handling
+      // ✅ Normal cue element handling
 
       if (id?.startsWith("cue") && !cuesArray.some(c => c.id === id && c.element)) {
         const bbox = child.getBBox?.();
@@ -1101,7 +1101,7 @@ cuesArray.push({
           ...(bbox && { x: bbox.x, width: bbox.width })
         });
         // console.log(`[assignCues] ➕ Added external cue: ${id}`);
-      
+
         registerCueUid(id, "walk");
 
       } else if (id?.includes("cue") && !id.startsWith("cue")) {
@@ -1534,72 +1534,72 @@ async function runCuePagePlaylist({ mode, items, waitFlag = false, returnFlag = 
 
 
 
-async function nextStep() {
-  // 🧹 Safety check: playlist stopped or popup closed
-  if (!window.isCuePagePlaylistActive) {
-    console.log("[cuePage] 🛑 Playlist aborted before next step.");
-    clearTimeout(window.cuePagePlaylistTimer);
-    window.cuePagePlaylistTimer = null;
-    return;
-  }
-
-  // 🧩 Select current item
-  const item = items[index];
-  if (!item) {
-    console.warn("[cuePage] ⚠️ Missing playlist item, stopping.");
-    stopPlaylist();
-    return;
-  }
-
-  // 🧠 Resolve which page to load
-  let nextPage = null;
-  let dur = item.dur && item.dur > 0 ? item.dur : 10;
-
-  if (item.page) {
-    // normal page
-    nextPage = item.page;
-  } else if (item.rand && item.rand.length) {
-    // random page selection
-    const randChoice = item.rand[Math.floor(Math.random() * item.rand.length)];
-    if (typeof randChoice === "string") {
-      nextPage = randChoice;
-    } else if (typeof randChoice === "object" && randChoice.page) {
-      nextPage = randChoice.page;
-      if (randChoice.dur && !isNaN(randChoice.dur)) dur = randChoice.dur;
-    } else {
-      console.warn("[cuePage] ⚠️ Invalid rand() entry:", randChoice);
+  async function nextStep() {
+    // 🧹 Safety check: playlist stopped or popup closed
+    if (!window.isCuePagePlaylistActive) {
+      console.log("[cuePage] 🛑 Playlist aborted before next step.");
+      clearTimeout(window.cuePagePlaylistTimer);
+      window.cuePagePlaylistTimer = null;
+      return;
     }
-    console.log(`[cuePage] 🎲 Random choice: ${nextPage} (${dur}s)`);
-  } else {
-    console.warn("[cuePage] ⚠️ Empty playlist entry skipped:", item);
+
+    // 🧩 Select current item
+    const item = items[index];
+    if (!item) {
+      console.warn("[cuePage] ⚠️ Missing playlist item, stopping.");
+      stopPlaylist();
+      return;
+    }
+
+    // 🧠 Resolve which page to load
+    let nextPage = null;
+    let dur = item.dur && item.dur > 0 ? item.dur : 10;
+
+    if (item.page) {
+      // normal page
+      nextPage = item.page;
+    } else if (item.rand && item.rand.length) {
+      // random page selection
+      const randChoice = item.rand[Math.floor(Math.random() * item.rand.length)];
+      if (typeof randChoice === "string") {
+        nextPage = randChoice;
+      } else if (typeof randChoice === "object" && randChoice.page) {
+        nextPage = randChoice.page;
+        if (randChoice.dur && !isNaN(randChoice.dur)) dur = randChoice.dur;
+      } else {
+        console.warn("[cuePage] ⚠️ Invalid rand() entry:", randChoice);
+      }
+      console.log(`[cuePage] 🎲 Random choice: ${nextPage} (${dur}s)`);
+    } else {
+      console.warn("[cuePage] ⚠️ Empty playlist entry skipped:", item);
+      advanceIndex();
+      return nextStep();
+    }
+
+    if (!nextPage) {
+      console.warn("[cuePage] ⚠️ No valid next page; skipping.");
+      advanceIndex();
+      return nextStep();
+    }
+
+    console.log(`[cuePage] ▶ ${nextPage} (${dur}s) [${mode}]`);
+    handleCueTrigger(`cuePage(${nextPage})_dur(${dur})`, false, true);
+
     advanceIndex();
-    return nextStep();
+
+    // ⏳ Schedule next step unless waiting or stopped
+    if (!window.isCuePagePlaylistActive) return;
+
+    if (waitFlag) {
+      console.log("[cuePage] ⏸ Waiting indefinitely (wait=1).");
+      return; // don't schedule next step
+    }
+
+    window.cuePagePlaylistTimer = setTimeout(() => {
+      if (window.isCuePagePlaylistActive) nextStep();
+      else stopPlaylist();
+    }, dur * 1000);
   }
-
-  if (!nextPage) {
-    console.warn("[cuePage] ⚠️ No valid next page; skipping.");
-    advanceIndex();
-    return nextStep();
-  }
-
-  console.log(`[cuePage] ▶ ${nextPage} (${dur}s) [${mode}]`);
-  handleCueTrigger(`cuePage(${nextPage})_dur(${dur})`, false, true);
-
-  advanceIndex();
-
-  // ⏳ Schedule next step unless waiting or stopped
-  if (!window.isCuePagePlaylistActive) return;
-
-  if (waitFlag) {
-    console.log("[cuePage] ⏸ Waiting indefinitely (wait=1).");
-    return; // don't schedule next step
-  }
-
-  window.cuePagePlaylistTimer = setTimeout(() => {
-    if (window.isCuePagePlaylistActive) nextStep();
-    else stopPlaylist();
-  }, dur * 1000);
-}
 
 
   function advanceIndex() {
@@ -1679,33 +1679,33 @@ export async function handlePageCue(cueId, duration, cueParams = {}) {
 
   if (pageName) {
     const compact = pageName.replace(/\s+/g, "");
-// 🧩 Detect and guard against single-item loops
-if (compact.startsWith("loop(")) {
-  // Normalize whitespace but preserve commas and colons
-  const normalized = compact
-    .replace(/\s*,\s*/g, ",")  // clean spaces around commas
-    .replace(/\s*:\s*/g, ":")  // clean spaces around colons
-    .trim();
+    // 🧩 Detect and guard against single-item loops
+    if (compact.startsWith("loop(")) {
+      // Normalize whitespace but preserve commas and colons
+      const normalized = compact
+        .replace(/\s*,\s*/g, ",")  // clean spaces around commas
+        .replace(/\s*:\s*/g, ":")  // clean spaces around colons
+        .trim();
 
-  // Extract inside of parentheses, even multiline
-  const inner = normalized.match(/\(([\s\S]*?)\)\s*$/)?.[1];
-  const innerPages = inner
-    ?.split(",")
-    .map(p => p.trim())
-    .filter(p => p.length > 0);
+      // Extract inside of parentheses, even multiline
+      const inner = normalized.match(/\(([\s\S]*?)\)\s*$/)?.[1];
+      const innerPages = inner
+        ?.split(",")
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
 
-  console.log("[cuePage] 🔍 Parsed inner loop pages:", innerPages);
+      console.log("[cuePage] 🔍 Parsed inner loop pages:", innerPages);
 
-  if (!innerPages || innerPages.length <= 1) {
-    console.warn(
-      `[cuePage] ⚠️ Ignoring single-item loop to avoid infinite recursion: ${pageName}`
-    );
-    return;
-  }
+      if (!innerPages || innerPages.length <= 1) {
+        console.warn(
+          `[cuePage] ⚠️ Ignoring single-item loop to avoid infinite recursion: ${pageName}`
+        );
+        return;
+      }
 
-  console.log("[cuePage] 🎬 Detected loop expression from pageName:", normalized);
-  return handleCuePagePlaylist(cueId, normalized);
-}
+      console.log("[cuePage] 🎬 Detected loop expression from pageName:", normalized);
+      return handleCuePagePlaylist(cueId, normalized);
+    }
 
 
 
@@ -1721,7 +1721,7 @@ if (compact.startsWith("loop(")) {
   const dur = cueId.match(/_dur\(([^)]+)\)/)?.[1];
   const next = cueId.match(/_next\(([^)]+)\)/)?.[1];
   const mode = cueId.match(/_mode\(([^)]+)\)/)?.[1]?.toLowerCase() || "popup";
-  const ret  = cueId.match(/_return\(([^)]+)\)/)?.[1] === "1";
+  const ret = cueId.match(/_return\(([^)]+)\)/)?.[1] === "1";
   const wait = cueId.match(/_wait\(([^)]+)\)/)?.[1] === "1";
   const durationSec = dur ? Number(dur) : duration || 0;
 
@@ -1787,7 +1787,7 @@ if (compact.startsWith("loop(")) {
 
 
   const projectPath = `${window.pagesDir}${pageName}.svg`;
-  const sharedPath  = `${window.sharedDir}pages/${pageName}.svg`;
+  const sharedPath = `${window.sharedDir}pages/${pageName}.svg`;
 
   async function fetchSvgOrThrow(path) {
     const res = await fetch(path);
@@ -1874,80 +1874,80 @@ if (compact.startsWith("loop(")) {
 
 
 
-// 🟢 Auto-inject globally registered UI groups on page load
-if (window.groupRegistry) {
-  const defaultGroups = ["mainMenu"]; // you can list others here later
+  // 🟢 Auto-inject globally registered UI groups on page load
+  if (window.groupRegistry) {
+    const defaultGroups = ["mainMenu"]; // you can list others here later
 
-  for (const groupId of defaultGroups) {
-    if (window.groupRegistry[groupId]) {
-      console.log(`[cueGroup] 🚀 Auto-injecting group "${groupId}" on page load`);
-      try {
-        handleGroupCue(`cueGroup(${groupId})`, { choice: groupId });
-      } catch (err) {
-        console.warn(`[cueGroup] ⚠️ Auto-inject failed for "${groupId}":`, err);
+    for (const groupId of defaultGroups) {
+      if (window.groupRegistry[groupId]) {
+        console.log(`[cueGroup] 🚀 Auto-injecting group "${groupId}" on page load`);
+        try {
+          handleGroupCue(`cueGroup(${groupId})`, { choice: groupId });
+        } catch (err) {
+          console.warn(`[cueGroup] ⚠️ Auto-inject failed for "${groupId}":`, err);
+        }
       }
     }
   }
-}
 
-// -------------------------------------------------------------
-// 6️⃣ Countdown and transition logic
-// -------------------------------------------------------------
+  // -------------------------------------------------------------
+  // 6️⃣ Countdown and transition logic
+  // -------------------------------------------------------------
 
-// For sequenced or loop pages, we’ll return a promise that resolves
-// when this countdown finishes.
-let pageDoneResolve = null;
-let pageDonePromise = null;
-if (cueParams?.suppressTransition || cueParams?.fromLoop) {
-  pageDonePromise = new Promise((res) => (pageDoneResolve = res));
-}
+  // For sequenced or loop pages, we’ll return a promise that resolves
+  // when this countdown finishes.
+  let pageDoneResolve = null;
+  let pageDonePromise = null;
+  if (cueParams?.suppressTransition || cueParams?.fromLoop) {
+    pageDonePromise = new Promise((res) => (pageDoneResolve = res));
+  }
 
-// Stop any old countdown immediately when starting a new page
-if (ps.countdown) {
-  clearInterval(ps.countdown);
-  ps.countdown = null;
-}
+  // Stop any old countdown immediately when starting a new page
+  if (ps.countdown) {
+    clearInterval(ps.countdown);
+    ps.countdown = null;
+  }
 
-countdownElement.style.display = "block";
+  countdownElement.style.display = "block";
 
-if (wait || !durationSec || durationSec <= 0) {
-  countdownElement.style.display = "none";
+  if (wait || !durationSec || durationSec <= 0) {
+    countdownElement.style.display = "none";
 
-  // countdownElement.textContent = "▶"; // visually indicate "ready / play"
-  // countdownElement.style.opacity = "0.7";
-  console.log("[cuePage] ⏸ No duration set — showing pause symbol.");
-} else {
-  countdownElement.style.opacity = "1";
-  countdownElement.textContent = durationSec;
-}
+    // countdownElement.textContent = "▶"; // visually indicate "ready / play"
+    // countdownElement.style.opacity = "0.7";
+    console.log("[cuePage] ⏸ No duration set — showing pause symbol.");
+  } else {
+    countdownElement.style.opacity = "1";
+    countdownElement.textContent = durationSec;
+  }
 
-if (!wait && durationSec > 0) {
-  let timeLeft = durationSec;
-  ps.countdown = setInterval(() => {
-    timeLeft -= 1;
-    countdownElement.textContent = timeLeft;
+  if (!wait && durationSec > 0) {
+    let timeLeft = durationSec;
+    ps.countdown = setInterval(() => {
+      timeLeft -= 1;
+      countdownElement.textContent = timeLeft;
 
-    if (timeLeft <= 0) {
-      clearInterval(ps.countdown);
-      ps.countdown = null;
+      if (timeLeft <= 0) {
+        clearInterval(ps.countdown);
+        ps.countdown = null;
 
-      // ✅ For sequenced/looped pages: finish without transition
-      if (cueParams?.suppressTransition || cueParams?.fromLoop) {
-        console.log("[cuePage] ✅ Page countdown finished (sequenced) — returning control.");
-        if (pageDoneResolve) pageDoneResolve();
-        return;
+        // ✅ For sequenced/looped pages: finish without transition
+        if (cueParams?.suppressTransition || cueParams?.fromLoop) {
+          console.log("[cuePage] ✅ Page countdown finished (sequenced) — returning control.");
+          if (pageDoneResolve) pageDoneResolve();
+          return;
+        }
+
+        // Normal single-page behaviour
+        resolvePageTransition({ mode, next, ret });
       }
+    }, 1000);
+  } else {
+    console.log("[cuePage] Waiting indefinitely for user trigger or external event.");
+  }
 
-      // Normal single-page behaviour
-      resolvePageTransition({ mode, next, ret });
-    }
-  }, 1000);
-} else {
-  console.log("[cuePage] Waiting indefinitely for user trigger or external event.");
-}
-
-// If part of a sequence or loop, return the promise so driver can await
-return pageDonePromise;
+  // If part of a sequence or loop, return the promise so driver can await
+  return pageDonePromise;
 
 
 }
@@ -2011,15 +2011,15 @@ export async function handlePageCueFromAST(ast) {
   console.log("[CueDSL] 🚀 Handling cue:page AST", ast);
 
   const playbackItems = ast.args.filter(a => ["page", "loop", "choose", "rand"].includes(a.type));
-  const controlItems  = ast.args.filter(a => a.type === "control");
+  const controlItems = ast.args.filter(a => a.type === "control");
 
   const wait = ms => new Promise(r => setTimeout(r, ms));
 
   // Helper to check for interruption (optional, for safety)
 
   //  (only cancel mid-sequence, not before start)
-const isCancelled = () =>
-  window._cuePageRunning && window.pageState?.mode === "scroll";
+  const isCancelled = () =>
+    window._cuePageRunning && window.pageState?.mode === "scroll";
 
   // 1️⃣ Sequentially process all playback items
   for (const item of playbackItems) {
@@ -2046,49 +2046,56 @@ const isCancelled = () =>
       // if (item.dur && item.dur > 0) await wait(item.dur * 1000);
     }
     // --- Randomized sequence: rand(page1:...,page2:...){x:N} ---
-else if (item.type === "rand") {
-  console.log(`[CueDSL] 🎲 Random sequence (${item.repeat || 1}x)`);
+    else if (item.type === "rand") {
+      console.log(`[CueDSL] 🎲 Random sequence (${item.repeat || 1}x)`);
 
-  const repeatCount = item.repeat || 1;
-  for (let i = 0; i < repeatCount; i++) {
-    // choose a random page each time
-    const pick = item.pages[Math.floor(Math.random() * item.pages.length)];
-    const cue = `cuePage(${pick.name})_dur(${pick.dur || 0})`;
-    console.log(`[CueDSL] 🔀 Random pick ${i + 1}/${repeatCount} → ${cue}`);
+      const repeatCount = item.repeat || 1;
+      for (let i = 0; i < repeatCount; i++) {
+        // choose a random page each time
+        const pick = item.pages[Math.floor(Math.random() * item.pages.length)];
+        const cue = `cuePage(${pick.name})_dur(${pick.dur || 0})`;
+        console.log(`[CueDSL] 🔀 Random pick ${i + 1}/${repeatCount} → ${cue}`);
 
-    // trigger and await the page
-    await handlePageCue(cue, pick.dur, { fromLoop: true, suppressTransition: true });
-  }
-}
+        // trigger and await the page
+        await handlePageCue(cue, pick.dur, { fromLoop: true, suppressTransition: true });
+      }
+    }
 
 
     // --- Loop block ---
- else if (item.type === "loop") {
-  console.log(`[CueDSL] 🔁 Looping sequence x${item.repeat || 1}`);
-  const repeatCount = item.repeat || 1;
-  for (let i = 0; i < repeatCount; i++) {
-    console.log(`[CueDSL] 🔁 Loop iteration ${i + 1}/${repeatCount}`);
-    for (const pg of item.pages) {
-      if (isCancelled()) return console.log("[CueDSL] ⏹️ Interrupted during loop.");
-      const cue = `cuePage(${pg.name})_dur(${pg.dur || 0})`;
-      console.log(`[CueDSL] ↻ Loop page → ${cue}`);
+    else if (item.type === "loop") {
+      console.log(`[CueDSL] 🔁 Looping sequence x${item.repeat || 1}`);
+      const repeatCount = item.repeat || 1;
+      for (let i = 0; i < repeatCount; i++) {
+        console.log(`[CueDSL] 🔁 Loop iteration ${i + 1}/${repeatCount}`);
+        for (const pg of item.pages) {
+          if (isCancelled()) return console.log("[CueDSL] ⏹️ Interrupted during loop.");
+          const cue = `cuePage(${pg.name})_dur(${pg.dur || 0})`;
+          console.log(`[CueDSL] ↻ Loop page → ${cue}`);
 
-      // 🟢 Wait for this page’s own countdown to finish (promise from handlePageCue)
-      await handlePageCue(cue, pg.dur, { fromLoop: true, suppressTransition: true });
+          // 🟢 Wait for this page’s own countdown to finish (promise from handlePageCue)
+          await handlePageCue(cue, pg.dur, { fromLoop: true, suppressTransition: true });
+        }
+      }
     }
-  }
-}
 
   }
 
- // 2️⃣ Now process control items (after playback)
-for (const ctrl of controlItems) {
-  if (ctrl.name === "mode") {
-    console.log(`[CueDSL] ⚙️ Switching mode → ${ctrl.value}`);
-    handleCueTrigger(`cueNav(mode(${ctrl.value}))`);
-  }
+  // 2️⃣ Now process control items (after playback)
+  for (const ctrl of controlItems) {
+    if (ctrl.name === "mode") {
+      if (ctrl.value === "scroll" && ctrl.target) {
+        console.log(`[CueDSL] ⚙️ Exiting to scroll mode at rehearsal mark: ${ctrl.target}`);
+        handleCueTrigger(`cueNav(mode(scroll))`);
+        jumpToRehearsalMark(ctrl.target); // new targeted navigation
+        startPlayback();
+      } else {
+        console.log(`[CueDSL] ⚙️ Switching mode → ${ctrl.value}`);
+        handleCueTrigger(`cueNav(mode(${ctrl.value}))`);
+      }
+    }
 
- else {
+    else {
       console.warn(`[CueDSL] ⚠️ Unknown control:`, ctrl);
     }
   }
@@ -2126,12 +2133,12 @@ function startPageAnimations(svg) {
 
     if (typeof window.startRotation === "function") {
       svg.querySelectorAll('[id*="_rotate_"], [id^="obj_rotate_"]').forEach(el => {
-        try { window.startRotation(el); } catch (_) {}
+        try { window.startRotation(el); } catch (_) { }
       });
     }
     if (typeof window.startScale === "function") {
       svg.querySelectorAll('[id^="s_"]').forEach(el => {
-        try { window.startScale(el); } catch (_) {}
+        try { window.startScale(el); } catch (_) { }
       });
     }
 
@@ -2265,7 +2272,7 @@ function pauseScrollScore() {
 function resumeScrollScore() {
   console.log("[cuePage] ▶ Resuming scrolling score...");
 
-  window.ignoreNextSync = true;   
+  window.ignoreNextSync = true;
   window.isPlaying = true;
   window.isMusicalPause = false;
 
@@ -2632,6 +2639,7 @@ export function generateToneBuffer(ctx, freq = 440, dur = 0.3, amp = 0.3) {
 // ------------------------------------------------------------
 // cueAudio(): play sound natively (Web Audio API)
 // ------------------------------------------------------------
+
 export async function handleAudioCue(cueId, cueParams = {}) {
   try {
     // --- Shared AudioContext ---
@@ -2643,8 +2651,31 @@ export async function handleAudioCue(cueId, cueParams = {}) {
     // --- Extract filename + params ---
     const choice = cueParams.choice || cueId.match(/\(([^)]+)\)/)?.[1];
     if (!choice) return console.warn("[AUDIO] No filename in cueAudio()");
-    const filename = /\.wav$|\.mp3$/i.test(choice) ? choice : `${choice}.wav`;
-    const url = `${window.audioDir}${filename}`;
+
+
+    const filenameBase = cueParams.choice?.replace(/['"]/g, "") || "";
+    const filename = filenameBase.endsWith(".wav") ? filenameBase : `${filenameBase}.wav`;
+
+    // 🔊 Load audio from project audio folder first, then fall back to shared/audio.
+    // Uses `${window.audioDir}` and `${window.sharedDir}audio/` for consistent path resolution.
+    const projectPath = resolveProjectPath("audio", filename);
+    const sharedPath = `${window.sharedDir}audio/${filename}`;
+
+    let url;
+    try {
+      const res = await fetch(projectPath, { method: "HEAD" });
+      if (res.ok) {
+        url = projectPath;
+        console.log(`[cueAudio] ✅ Using project audio: ${url}`);
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
+    } catch {
+      console.warn(`[cueAudio] ⚠️ Project audio not found, trying shared: ${sharedPath}`);
+      url = sharedPath;
+    }
+
+
     const amp = cueParams.amp ?? 1;
     const fadeInMs = cueParams.fadeIn ?? 0;
 
@@ -2699,10 +2730,6 @@ export async function handleAudioCue(cueId, cueParams = {}) {
 }
 
 
-
-
-
-
 // ========================================================
 // 🛑 Stop / fade-out by filename (all instances)
 // ========================================================
@@ -2720,7 +2747,7 @@ export function stopAllAudio(filename, fadeOutSec = 1.5) {
     gainNode.gain.linearRampToValueAtTime(0, now + fadeOutSec);
 
     setTimeout(() => {
-      try { source.stop(); } catch {}
+      try { source.stop(); } catch { }
       activeAudioCues.delete(id);
 
       const ev = new CustomEvent("oscilla:audio", {
@@ -2819,7 +2846,7 @@ document.getElementById("stop-audio-button").addEventListener("click", async () 
 export async function handleTextCue(cueId, cueParams = {}) {
   console.log("[handleTextCue] called:", cueId, cueParams);
 
-  
+
   // Support old (single-param) style just in case
   if (typeof cueId === "object" && !cueParams.choice) {
     cueParams = cueId;
@@ -2845,8 +2872,8 @@ export async function handleTextCue(cueId, cueParams = {}) {
     } = Object.fromEntries(Object.entries(cueParams).map(([k, v]) => [k, clean(v)]));
 
 
-      // --------------------------------------------------------
-      // 🧱 CREATE / REUSE CONTAINER — now unique per cueId
+    // --------------------------------------------------------
+    // 🧱 CREATE / REUSE CONTAINER — now unique per cueId
     let container = document.getElementById(`cueText-${cueId}`);
 
     // 🧩 ensure valid node regardless of weird cueId formatting
@@ -2942,151 +2969,183 @@ export async function handleTextCue(cueId, cueParams = {}) {
     Object.assign(container.style, { left, top, transform });
 
 
-      // --------------------------------------------------------
-      // 🧾 PARSE SOURCE (file, inline, or words[...])
-      // --------------------------------------------------------
-      let entries = [];
-      if (Array.isArray(choice)) {
-        entries = choice.map(t => ({ text: t, dur: null }));
-      } 
-      
-      else if (typeof choice === "string" && choice.endsWith(".txt")) {
-        const res = await fetch(choice);
-        const text = await res.text();
-        entries = text.split(/\r?\n/).filter(Boolean).map(line => ({ text: line, dur: null }));
-      } 
-
-      else if (typeof choice === "string" && choice.includes("words[")) {
-        console.log("[cueText DEBUG] raw choice:", choice);
-        console.log("[cueText DEBUG] typeof choice:", typeof choice);
-        console.log("[cueText DEBUG] choice literal chars:", Array.from(choice).join("|"));
-        entries = parseWordsSource(choice.trim());
-      }
-      else if (typeof choice === "string") {
-        entries = [{ text: choice, dur: null }];
-      }
-      
-      console.log("[cueText] parsed entries:", entries);
-
-      if (!entries.length) {
-        console.warn("[cueText] No text content found.");
-        return;
-      }
-
-      // --------------------------------------------------------
-      // 🎲 RANDOMIZE ORDER if requested (_random(1))
-      // --------------------------------------------------------
-      if (cueParams.random && Array.isArray(entries) && entries.length > 1) {
-        console.log("[cueText] 🎲 Randomizing line order");
-        entries.sort(() => Math.random() - 0.5);
-      }
-
-      // --------------------------------------------------------
-      // ⏱️ COMPUTE DURATIONS
-      // --------------------------------------------------------
-      const baseDur = 1 / speed;
-      const avgLen = entries.reduce((a, b) => a + b.text.length, 0) / entries.length;
-
-      // uniform _dur from cue parameters (seconds per word)
-      const uniformDur = cueParams.dur ? Number(cueParams.dur) : null;
-
-      entries.forEach(e => {
-        if (uniformDur) {
-          e.dur = uniformDur;
-        } else if (e.dur) {
-          // keep explicit per-word duration
-          return;
-        } else {
-          // default: length-weighted based on speed
-          const lenFactor = e.text.length / avgLen;
-          const weight = 1 + (lenFactor - 1) * deviation;
-          e.dur = baseDur * weight;
-        }
-      });
-
-
-      // --------------------------------------------------------
-      // 🎬 ANIMATION LOOP
-      // --------------------------------------------------------
-      let loopCount = 0;
-      let running = true;
-
-      while (running) {
-        for (let i = 0; i < entries.length; i++) {
-          const { text, dur } = entries[i];
-          const ms = dur * 1000;
-
-          // 💤 handle rests
-          if (text === "rest" || text === "r") {
-            container.textContent = "";
-            await delay(ms);
-            continue;
-          }
-
-          // 🎭 ANIMATION MODES
-          if (anim === "fade") {
-            // total cycle = dur exactly
-            const fadeTime = Math.min(ms * 0.25, 400); // fade in/out = 25% each, max 400 ms
-            const holdTime = Math.max(0, ms - 2 * fadeTime);
-
-            container.style.opacity = 0;
-            container.textContent = text;
-
-            // fade in
-            await anime({
-              targets: container,
-              opacity: [0, 1],
-              duration: fadeTime,
-              easing: "easeOutQuad"
-            }).finished;
-
-            // hold visible
-            await delay(holdTime);
-
-            // fade out
-            await anime({
-              targets: container,
-              opacity: [1, 0],
-              duration: fadeTime,
-              easing: "easeInQuad"
-            }).finished;
-          }
-
-          else if (anim === "typewriter") {
-            // ensure full text renders exactly within dur
-            const perChar = ms / text.length;
-            container.textContent = "";
-
-            for (let j = 0; j < text.length; j++) {
-              container.textContent += text[j];
-              await delay(perChar);
-            }
-
-            // small pause before next word (so total ≈ dur)
-            // optional: await delay(perChar * 2);
-          }
-
-          else {
-            // plain
-            container.textContent = text;
-            await delay(ms);
-          }
-        }
-
-        loopCount++;
-        if (loop > 0 && loopCount >= loop) running = false;
-      }
-
-
-      // --------------------------------------------------------
-      // 🧹 END ACTIONS
-      // --------------------------------------------------------
-      container.textContent = "";
-      if (next) triggerCueById(next);
-
-    } catch (err) {
-      console.error("[cueText] Error:", err);
+    // --------------------------------------------------------
+    // 🧾 PARSE SOURCE (file, inline, or words[...])
+    // --------------------------------------------------------
+    let entries = [];
+    if (Array.isArray(choice)) {
+      entries = choice.map(t => ({ text: t, dur: null }));
     }
+
+
+    // 🔍 Load text from project texts folder first, then fall back to shared/texts.
+    // Uses `${window.textDir}` and `${window.sharedDir}texts/` for consistent path resolution.
+
+    else if (typeof choice === "string" && choice.endsWith(".txt")) {
+      // Prefer resolveProjectPath for consistency with cuePage and cueAudio
+      const projectPath = resolveProjectPath("text", choice);
+      const sharedPath = `${window.sharedDir}texts/${choice}`;
+
+      let res, text;
+      try {
+        res = await fetch(projectPath);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        text = await res.text();
+        console.log(`[cueText] ✅ Loaded text from project: ${projectPath}`);
+      } catch (err1) {
+        console.warn(`[cueText] ⚠️ Project text not found, trying shared: ${sharedPath}`);
+        try {
+          res = await fetch(sharedPath);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          text = await res.text();
+          console.log(`[cueText] ✅ Loaded text from shared: ${sharedPath}`);
+        } catch (err2) {
+          console.error(`[cueText] ❌ Failed to load both project and shared text files:
+            Project: ${projectPath}
+            Shared:  ${sharedPath}
+            Error: ${err2.message}`);
+          return;
+        }
+      }
+
+      entries = text.split(/\r?\n/).filter(Boolean).map(line => ({ text: line, dur: null }));
+    }
+
+    // 🧩 Handle inline word lists like words["a","b","c"] or single-line text strings.
+    // Parses embedded word arrays into entries or wraps plain strings as single entries.
+    // Ensures cueText supports both structured and literal inline text definitions.
+
+    else if (typeof choice === "string" && choice.includes("words[")) {
+      console.log("[cueText DEBUG] raw choice:", choice);
+      console.log("[cueText DEBUG] typeof choice:", typeof choice);
+      console.log("[cueText DEBUG] choice literal chars:", Array.from(choice).join("|"));
+      entries = parseWordsSource(choice.trim());
+    }
+    else if (typeof choice === "string") {
+      entries = [{ text: choice, dur: null }];
+    }
+
+    console.log("[cueText] parsed entries:", entries);
+
+    if (!entries.length) {
+      console.warn("[cueText] No text content found.");
+      return;
+    }
+
+    // --------------------------------------------------------
+    // 🎲 RANDOMIZE ORDER if requested (_random(1))
+    // --------------------------------------------------------
+    if (cueParams.random && Array.isArray(entries) && entries.length > 1) {
+      console.log("[cueText] 🎲 Randomizing line order");
+      entries.sort(() => Math.random() - 0.5);
+    }
+
+    // --------------------------------------------------------
+    // ⏱️ COMPUTE DURATIONS
+    // --------------------------------------------------------
+    const baseDur = 1 / speed;
+    const avgLen = entries.reduce((a, b) => a + b.text.length, 0) / entries.length;
+
+    // uniform _dur from cue parameters (seconds per word)
+    const uniformDur = cueParams.dur ? Number(cueParams.dur) : null;
+
+    entries.forEach(e => {
+      if (uniformDur) {
+        e.dur = uniformDur;
+      } else if (e.dur) {
+        // keep explicit per-word duration
+        return;
+      } else {
+        // default: length-weighted based on speed
+        const lenFactor = e.text.length / avgLen;
+        const weight = 1 + (lenFactor - 1) * deviation;
+        e.dur = baseDur * weight;
+      }
+    });
+
+
+    // --------------------------------------------------------
+    // 🎬 ANIMATION LOOP
+    // --------------------------------------------------------
+    let loopCount = 0;
+    let running = true;
+
+    while (running) {
+      for (let i = 0; i < entries.length; i++) {
+        const { text, dur } = entries[i];
+        const ms = dur * 1000;
+
+        // 💤 handle rests
+        if (text === "rest" || text === "r") {
+          container.textContent = "";
+          await delay(ms);
+          continue;
+        }
+
+        // 🎭 ANIMATION MODES
+        if (anim === "fade") {
+          // total cycle = dur exactly
+          const fadeTime = Math.min(ms * 0.25, 400); // fade in/out = 25% each, max 400 ms
+          const holdTime = Math.max(0, ms - 2 * fadeTime);
+
+          container.style.opacity = 0;
+          container.textContent = text;
+
+          // fade in
+          await anime({
+            targets: container,
+            opacity: [0, 1],
+            duration: fadeTime,
+            easing: "easeOutQuad"
+          }).finished;
+
+          // hold visible
+          await delay(holdTime);
+
+          // fade out
+          await anime({
+            targets: container,
+            opacity: [1, 0],
+            duration: fadeTime,
+            easing: "easeInQuad"
+          }).finished;
+        }
+
+        else if (anim === "typewriter") {
+          // ensure full text renders exactly within dur
+          const perChar = ms / text.length;
+          container.textContent = "";
+
+          for (let j = 0; j < text.length; j++) {
+            container.textContent += text[j];
+            await delay(perChar);
+          }
+
+          // small pause before next word (so total ≈ dur)
+          // optional: await delay(perChar * 2);
+        }
+
+        else {
+          // plain
+          container.textContent = text;
+          await delay(ms);
+        }
+      }
+
+      loopCount++;
+      if (loop > 0 && loopCount >= loop) running = false;
+    }
+
+
+    // --------------------------------------------------------
+    // 🧹 END ACTIONS
+    // --------------------------------------------------------
+    container.textContent = "";
+    if (next) triggerCueById(next);
+
+  } catch (err) {
+    console.error("[cueText] Error:", err);
+  }
 }
 
 
@@ -3293,9 +3352,9 @@ export function handleVideoCue(cueId, cueParams) {
 }
 
 export function resetTriggeredCues() {
-  if (window.triggeredCues) 
-    window.triggeredCues.clear(); 
-    window._cueInsideState?.clear();
+  if (window.triggeredCues)
+    window.triggeredCues.clear();
+  window._cueInsideState?.clear();
 }
 
 
@@ -3536,10 +3595,10 @@ function parseKeyValueParams(str, cueParams) {
 }
 
 
-  if (window.triggeredCues) 
-    window.triggeredCues.clear();
-    window._cueInsideState?.clear();
-    
+if (window.triggeredCues)
+  window.triggeredCues.clear();
+window._cueInsideState?.clear();
+
 // Robustly extract cueButton(...) inner content even if the ID has suffixes like -uid...
 function extractCueButtonInner(id) {
   const key = "cueButton(";
@@ -3693,8 +3752,8 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window
   // Style
   Object.assign(btn.style, {
     position: "absolute",
-    width: `${opt.width}px`,
-    height: `${opt.height}px`,
+    width: (opt.width ? `${opt.width}px` : "100px"),
+    height: (opt.height ? `${opt.height}px` : "40px"),
     background: opt.color,
     border: "1px solid rgba(0,0,0,.2)",
     borderRadius: `${opt.radius}px`,
@@ -3712,42 +3771,42 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window
 
   containerEl.appendChild(btn);
 
-console.log(`[createCueButtonforelement] ${cueSvgEl.id} rect=`, cueSvgEl.getBoundingClientRect(), 
-            `→ left=${btn.style.left}, top=${btn.style.top}`);
+  // console.log(`[createCueButtonforelement] ${cueSvgEl.id} rect=`, cueSvgEl.getBoundingClientRect(),
+  //   `→ left=${btn.style.left}, top=${btn.style.top}`);
 
 
-const place = () => {
-  let r = cueSvgEl.getBoundingClientRect();
+  const place = () => {
+    let r = cueSvgEl.getBoundingClientRect();
 
-  // 🕒 Check if the SVG element has real layout metrics yet
-  if (r.width === 0 && r.height === 0) {
-    console.warn(`[cueButton] ⚠️ ${cueSvgEl.id} not yet laid out — deferring placement.`);
+    // 🕒 Check if the SVG element has real layout metrics yet
+    if (r.width === 0 && r.height === 0) {
+      // console.warn(`[cueButton] ⚠️ ${cueSvgEl.id} not yet laid out — deferring placement.`);
 
-    // Wait one more animation frame, then retry once
-    requestAnimationFrame(() => {
-      const r2 = cueSvgEl.getBoundingClientRect();
-      if (r2.width > 0 || r2.height > 0) {
-        const c = containerEl.getBoundingClientRect();
-        const left = r2.left - c.left + (opt.offsetX || 0);
-        const top = r2.top - c.top + (opt.offsetY || 0);
-        btn.style.left = `${Math.round(left)}px`;
-        btn.style.top = `${Math.round(top)}px`;
-        console.log(`[cueButton] ✅ ${cueSvgEl.id} now ready (${left}, ${top})`);
-      } else {
-        console.warn(`[cueButton] ❌ ${cueSvgEl.id} still 0×0 after retry — skipping placement.`);
-      }
-    });
+      // Wait one more animation frame, then retry once
+      requestAnimationFrame(() => {
+        const r2 = cueSvgEl.getBoundingClientRect();
+        if (r2.width > 0 || r2.height > 0) {
+          const c = containerEl.getBoundingClientRect();
+          const left = r2.left - c.left + (opt.offsetX || 0);
+          const top = r2.top - c.top + (opt.offsetY || 0);
+          btn.style.left = `${Math.round(left)}px`;
+          btn.style.top = `${Math.round(top)}px`;
+          // console.log(`[cueButton] ✅ ${cueSvgEl.id} now ready (${left}, ${top})`);
+        } else {
+          // console.warn(`[cueButton] ❌ ${cueSvgEl.id} still 0×0 after retry — skipping placement.`);
+        }
+      });
 
-    return; // prevent premature placement at (0,0)
-  }
+      return; // prevent premature placement at (0,0)
+    }
 
-  // 🧭 Normal placement once geometry exists
-  const c = containerEl.getBoundingClientRect();
-  const left = r.left - c.left + (opt.offsetX || 0);
-  const top = r.top - c.top + (opt.offsetY || 0);
-  btn.style.left = `${Math.round(left)}px`;
-  btn.style.top = `${Math.round(top)}px`;
-};
+    // 🧭 Normal placement once geometry exists
+    const c = containerEl.getBoundingClientRect();
+    const left = r.left - c.left + (opt.offsetX || 0);
+    const top = r.top - c.top + (opt.offsetY || 0);
+    btn.style.left = `${Math.round(left)}px`;
+    btn.style.top = `${Math.round(top)}px`;
+  };
 
   place();
 
@@ -3763,80 +3822,80 @@ const place = () => {
 
   // Toggle logic (good for audio cues)
   // --- 🔊 Audio cue detection
-const audioMatch = /^cueAudio\(\s*([^)]+)\s*\)/i.exec(cueExpr);
-const audioFile = audioMatch?.[1]?.trim() || null;
-const stopCue = audioFile ? `cueAudioStop(${audioFile})` : null;
+  const audioMatch = /^cueAudio\(\s*([^)]+)\s*\)/i.exec(cueExpr);
+  const audioFile = audioMatch?.[1]?.trim() || null;
+  const stopCue = audioFile ? `cueAudioStop(${audioFile})` : null;
 
-// --- 💡 Active visual feedback (pulsing, flashing, etc.)
-let isVisuallyActive = false;
-const setVisualActive = (on) => {
-  isVisuallyActive = !!on;
-  btn.classList.toggle("oscilla-cue-button--active", isVisuallyActive);
-  btn.classList.remove(
-    "oscilla-cue-button--flash",
-    "oscilla-cue-button--pulse",
-    "oscilla-cue-button--fade"
-  );
-  if (isVisuallyActive) {
-    if (opt.activeStyle === "flash") btn.classList.add("oscilla-cue-button--flash");
-    else if (opt.activeStyle === "pulse") btn.classList.add("oscilla-cue-button--pulse");
-    else if (opt.activeStyle === "fade") btn.classList.add("oscilla-cue-button--fade");
-  }
-};
-
-// --- 🕒 Debounce
-let lastClick = 0;
-
-// --- 🎛️ Click handler (polyphonic-safe)
-btn.addEventListener("click", async () => {
-  const now = performance.now();
-  if (now - lastClick < (opt.debounceMs || 100)) return;
-  lastClick = now;
-
-  // Restrict if conductor-only
-  if (opt.conductorOnly && !window.isConductor) return;
-
-  // ✅ Ensure AudioContext is resumed
-  const ac =
-    window.sharedAudioCtx ||
-    window.WaveSurfer?.instances?.[0]?.backend?.ac ||
-    null;
-  if (ac && ac.state === "suspended") {
-    console.warn("[AUDIO] ⚡ AudioContext suspended — resuming.");
-    try {
-      await ac.resume();
-      console.log("[AUDIO] ✅ AudioContext resumed.");
-    } catch (err) {
-      console.error("[AUDIO] ❌ Resume failed:", err);
-    }
-  }
-
-  // 🟢 Fire cue immediately (polyphony allowed)
-  window.handleCueTrigger?.(cueExpr, false, true);
-  if (audioFile) setVisualActive(true);
-
-  // 🟣 Broadcast (optional)
-  if (opt.broadcast && window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-    window.socket.send(
-      JSON.stringify({
-        type: "cue_button_click",
-        cueExpr,
-        uid: opt.uid || null,
-        timestamp: Date.now(),
-      })
+  // --- 💡 Active visual feedback (pulsing, flashing, etc.)
+  let isVisuallyActive = false;
+  const setVisualActive = (on) => {
+    isVisuallyActive = !!on;
+    btn.classList.toggle("oscilla-cue-button--active", isVisuallyActive);
+    btn.classList.remove(
+      "oscilla-cue-button--flash",
+      "oscilla-cue-button--pulse",
+      "oscilla-cue-button--fade"
     );
-  }
-});
+    if (isVisuallyActive) {
+      if (opt.activeStyle === "flash") btn.classList.add("oscilla-cue-button--flash");
+      else if (opt.activeStyle === "pulse") btn.classList.add("oscilla-cue-button--pulse");
+      else if (opt.activeStyle === "fade") btn.classList.add("oscilla-cue-button--fade");
+    }
+  };
 
-// --- 🔁 Audio engine sync (maintain visual while playing)
-const onAudio = (ev) => {
-  if (!audioFile) return;
-  const d = ev.detail || {};
-  if (d.file !== audioFile) return;
-  if (d.state === "play") setVisualActive(true);
-  if (d.state === "stop") setVisualActive(false);
-};
-window.addEventListener("oscilla:audio", onAudio);
+  // --- 🕒 Debounce
+  let lastClick = 0;
+
+  // --- 🎛️ Click handler (polyphonic-safe)
+  btn.addEventListener("click", async () => {
+    const now = performance.now();
+    if (now - lastClick < (opt.debounceMs || 100)) return;
+    lastClick = now;
+
+    // Restrict if conductor-only
+    if (opt.conductorOnly && !window.isConductor) return;
+
+    // ✅ Ensure AudioContext is resumed
+    const ac =
+      window.sharedAudioCtx ||
+      window.WaveSurfer?.instances?.[0]?.backend?.ac ||
+      null;
+    if (ac && ac.state === "suspended") {
+      console.warn("[AUDIO] ⚡ AudioContext suspended — resuming.");
+      try {
+        await ac.resume();
+        console.log("[AUDIO] ✅ AudioContext resumed.");
+      } catch (err) {
+        console.error("[AUDIO] ❌ Resume failed:", err);
+      }
+    }
+
+    // 🟢 Fire cue immediately (polyphony allowed)
+    window.handleCueTrigger?.(cueExpr, false, true);
+    if (audioFile) setVisualActive(true);
+
+    // 🟣 Broadcast (optional)
+    if (opt.broadcast && window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+      window.socket.send(
+        JSON.stringify({
+          type: "cue_button_click",
+          cueExpr,
+          uid: opt.uid || null,
+          timestamp: Date.now(),
+        })
+      );
+    }
+  });
+
+  // --- 🔁 Audio engine sync (maintain visual while playing)
+  const onAudio = (ev) => {
+    if (!audioFile) return;
+    const d = ev.detail || {};
+    if (d.file !== audioFile) return;
+    if (d.state === "play") setVisualActive(true);
+    if (d.state === "stop") setVisualActive(false);
+  };
+  window.addEventListener("oscilla:audio", onAudio);
 
 
   // Cleanup
@@ -3896,7 +3955,7 @@ export function installCueButtonSocketReceiver() {
         // Prevent echo storms (optional: compare client IDs if you have them)
         window.handleCueTrigger?.(data.cueExpr);
       }
-    } catch (e) {}
+    } catch (e) { }
   });
 }
 
@@ -3929,7 +3988,7 @@ function parseBool(v) {
 export function parseCueButton(cueId) {
 
 
-  
+
   //console.log("\n[parseCueButton] called with:", cueId);
 
   // 1) pull inner of cueButton(...)
@@ -3941,48 +4000,48 @@ export function parseCueButton(cueId) {
   //console.log("[parseCueButton] inner:", inner);
   registerCueUid(cueId, "button");
 
-// 2) try to find _style(...) INSIDE inner (preferred form)
-let cueExpr = inner.trim();
-let styleInner = null;
+  // 2) try to find _style(...) INSIDE inner (preferred form)
+  let cueExpr = inner.trim();
+  let styleInner = null;
 
-// PASS 1 — Detect inner cue _style(...) (like inside cueText)
-const lastInnerStyle = inner.lastIndexOf("_style(");
-if (lastInnerStyle !== -1) {
-  // find closing parenthesis for this _style(
-  let depth = 0, endIndex = -1;
-  for (let i = lastInnerStyle; i < inner.length; i++) {
-    const ch = inner[i];
-    if (ch === "(") depth++;
-    else if (ch === ")") {
-      depth--;
-      if (depth === 0) {
-        endIndex = i;
-        break;
+  // PASS 1 — Detect inner cue _style(...) (like inside cueText)
+  const lastInnerStyle = inner.lastIndexOf("_style(");
+  if (lastInnerStyle !== -1) {
+    // find closing parenthesis for this _style(
+    let depth = 0, endIndex = -1;
+    for (let i = lastInnerStyle; i < inner.length; i++) {
+      const ch = inner[i];
+      if (ch === "(") depth++;
+      else if (ch === ")") {
+        depth--;
+        if (depth === 0) {
+          endIndex = i;
+          break;
+        }
       }
+    }
+
+    // if the _style ends BEFORE the final parenthesis of the cueButton(...)
+    // treat it as inner cue _style — leave intact
+    const lastParen = inner.lastIndexOf(")");
+    if (endIndex !== -1 && endIndex < lastParen) {
+      cueExpr = inner.trim(); // keep cue intact
     }
   }
 
-  // if the _style ends BEFORE the final parenthesis of the cueButton(...)
-  // treat it as inner cue _style — leave intact
-  const lastParen = inner.lastIndexOf(")");
-  if (endIndex !== -1 && endIndex < lastParen) {
-    cueExpr = inner.trim(); // keep cue intact
+  // PASS 2 — Detect outer button _style(...) (after cueText(...))
+  const outerStart = cueId.lastIndexOf("_style(");
+  if (outerStart !== -1) {
+    const sub = cueId.slice(outerStart);
+    styleInner = extractFuncInner(sub, "_style");
+    if (outerStart > cueId.lastIndexOf(")")) {
+      // cleanly remove outer style from cueExpr
+      cueExpr = cueId.slice(0, outerStart).trim();
+    }
   }
-}
 
-// PASS 2 — Detect outer button _style(...) (after cueText(...))
-const outerStart = cueId.lastIndexOf("_style(");
-if (outerStart !== -1) {
-  const sub = cueId.slice(outerStart);
-  styleInner = extractFuncInner(sub, "_style");
-  if (outerStart > cueId.lastIndexOf(")")) {
-    // cleanly remove outer style from cueExpr
-    cueExpr = cueId.slice(0, outerStart).trim();
-  }
-}
-
-// console.log("[parseCueButton] cueExpr:", cueExpr);
-// console.log("[parseCueButton] styleInner:", styleInner);
+  // console.log("[parseCueButton] cueExpr:", cueExpr);
+  // console.log("[parseCueButton] styleInner:", styleInner);
 
 
 
@@ -4007,7 +4066,7 @@ if (outerStart !== -1) {
 
   // 4) defaults
   const opt = {
-    width: 100, height: 100,
+    width: 100, height: 50,
     color: "#222", textColor: null,
     label: null, fontFamily: null, fontSize: null, fontWeight: null,
     radius: 8, offsetX: 0, offsetY: 0,
@@ -4049,48 +4108,48 @@ if (outerStart !== -1) {
           }
           break;
         }
-        case "color":      opt.color = val; break;
-        case "textcolor":  opt.textColor = val; break;
-        case "label":      opt.label = val; break;
-        case "font":       opt.fontFamily = val; break;
-        case "fontsize":   opt.fontSize = /^\d+(\.\d+)?$/.test(val) ? Number(val) : val; break;
+        case "color": opt.color = val; break;
+        case "textcolor": opt.textColor = val; break;
+        case "label": opt.label = val; break;
+        case "font": opt.fontFamily = val; break;
+        case "fontsize": opt.fontSize = /^\d+(\.\d+)?$/.test(val) ? Number(val) : val; break;
         case "fontweight": opt.fontWeight = val; break;
-        case "radius":     if (!isNaN(+val)) opt.radius = +val; break;
+        case "radius": if (!isNaN(+val)) opt.radius = +val; break;
         case "offset": {
           const [x, y] = val.split(/[, ]+/);
           if (!isNaN(+x)) opt.offsetX = +x;
           if (!isNaN(+y)) opt.offsetY = +y;
           break;
         }
-        case "debounce":   if (!isNaN(+val)) opt.debounceMs = +val; break;
-        case "toggle":     opt.toggle = /^(1|true|on|yes)$/i.test(val); break;
-        case "active":     opt.activeStyle = val.toLowerCase(); break;
-        case "class":      opt.className = val; break;
-        case "uid":        opt.uid = val; break;
-        case "broadcast":  opt.broadcast = /^(1|true|on|yes)$/i.test(val) ? 1 : 0; break;
-        case "conductor":  opt.conductorOnly = /^(1|true|on|yes)$/i.test(val) ? 1 : 0; break;
-        case "scroll":     opt.scrollFollow = /^(1|true|on|yes)$/i.test(val) ? 1 : 0; break;
+        case "debounce": if (!isNaN(+val)) opt.debounceMs = +val; break;
+        case "toggle": opt.toggle = /^(1|true|on|yes)$/i.test(val); break;
+        case "active": opt.activeStyle = val.toLowerCase(); break;
+        case "class": opt.className = val; break;
+        case "uid": opt.uid = val; break;
+        case "broadcast": opt.broadcast = /^(1|true|on|yes)$/i.test(val) ? 1 : 0; break;
+        case "conductor": opt.conductorOnly = /^(1|true|on|yes)$/i.test(val) ? 1 : 0; break;
+        case "scroll": opt.scrollFollow = /^(1|true|on|yes)$/i.test(val) ? 1 : 0; break;
         default:
-          // console.warn("[parseCueButton] ⚠️ Unhandled key:", key, "=", val);
+        // console.warn("[parseCueButton] ⚠️ Unhandled key:", key, "=", val);
       }
     });
   } else {
     // console.warn("[parseCueButton] ⚠️ No _style(...) found in:", cueId);
   }
 
- const uidMatch =
-  cueExpr.match(/_uid\(([^)]+)\)/) ||
-  cueId.match(/_uid\(([^)]+)\)/);
+  const uidMatch =
+    cueExpr.match(/_uid\(([^)]+)\)/) ||
+    cueId.match(/_uid\(([^)]+)\)/);
 
-const uid = opt._uid || (uidMatch ? uidMatch[1] : null);
+  const uid = opt._uid || (uidMatch ? uidMatch[1] : null);
 
-if (uid) {
-  opt.label = opt.label || uid.trim();
-  opt._uid = uid.trim(); // ✅ store it explicitly too
-} else {
-  const type = cueExpr.split("(")[0] || "cue";
-  opt.label = opt.label || type.replace(/^cue/, "").trim();
-}
+  if (uid) {
+    opt.label = opt.label || uid.trim();
+    opt._uid = uid.trim(); // ✅ store it explicitly too
+  } else {
+    const type = cueExpr.split("(")[0] || "cue";
+    opt.label = opt.label || type.replace(/^cue/, "").trim();
+  }
 
   // ✅ Register UID safely here — cueExpr is now guaranteed to exist
   try {
@@ -4182,37 +4241,37 @@ export async function handleNavCue(parsed) {
 
     // NEW: clear any other guards your scheduler may check
     window.cuePageCountdownActive = false;
-    window.cuePageTransitioning  = false;
-    window.cuePageHold           = false;   // if you track waits/holds explicitly
-    window.cuePageNextDue        = 0;       // if you compare times for next hop
+    window.cuePageTransitioning = false;
+    window.cuePageHold = false;   // if you track waits/holds explicitly
+    window.cuePageNextDue = 0;       // if you compare times for next hop
 
     dbg("stopPlaylist() done");
     return r;
   };
 
-const gotoPage = (pid, cueParams = {}) => {
-  if (window.isCuePagePlaylistActive) stopPlaylist();
+  const gotoPage = (pid, cueParams = {}) => {
+    if (window.isCuePagePlaylistActive) stopPlaylist();
 
-  // ✅ Build suffixes dynamically from cueParams
-  const durSuffix = cueParams.dur ? `_dur(${cueParams.dur})` : "_wait(1)";
-  const nextSuffix = cueParams.next ? `_next(${cueParams.next})` : "";
+    // ✅ Build suffixes dynamically from cueParams
+    const durSuffix = cueParams.dur ? `_dur(${cueParams.dur})` : "_wait(1)";
+    const nextSuffix = cueParams.next ? `_next(${cueParams.next})` : "";
 
-  const target = `cuePage(${pid})${durSuffix}${nextSuffix}`;
-  dbg("goto→trigger:", target);
+    const target = `cuePage(${pid})${durSuffix}${nextSuffix}`;
+    dbg("goto→trigger:", target);
 
-  try {
-    window.handleCueTrigger?.(target, false, true);
-  } catch (e) {
-    console.error("[cueNav] goto trigger failed:", target, e);
-  }
-};
+    try {
+      window.handleCueTrigger?.(target, false, true);
+    } catch (e) {
+      console.error("[cueNav] goto trigger failed:", target, e);
+    }
+  };
 
 
   const nextPage = () => { dbg("nextPage()"); return window.nextPage?.() || window.pageController?.next?.(); };
   const prevPage = () => { dbg("prevPage()"); return window.prevPage?.() || window.pageController?.prev?.(); };
   const restartPlaylist = () => { dbg("restartPlaylist()"); return window.restartCuePagePlaylist?.() || window.pageController?.restart?.(); };
 
-  const triggerCueExpr = (expr, label="trigger") => {
+  const triggerCueExpr = (expr, label = "trigger") => {
     dbg(`${label}:`, expr);
     try {
       window.handleCueTrigger?.(expr);
@@ -4222,10 +4281,10 @@ const gotoPage = (pid, cueParams = {}) => {
   };
 
   // small delay helper to avoid race conditions switching modes
-  const afterTick = (fn, label="afterTick") => {
+  const afterTick = (fn, label = "afterTick") => {
     const t = now();
     dbg(`${label} scheduled (+30ms)`);
-    setTimeout(() => { dbg(`${label} firing (~${now()-t}ms)`); fn(); }, 30);
+    setTimeout(() => { dbg(`${label} firing (~${now() - t}ms)`); fn(); }, 30);
   };
 
   dbg("→ action:", action, "arg:", argExpr, {
@@ -4255,30 +4314,30 @@ const gotoPage = (pid, cueParams = {}) => {
       restartPlaylist();
       break;
 
-case "goto": {
-  if (!argExpr) {
-    dbg("goto() missing arg");
-    break;
-  }
+    case "goto": {
+      if (!argExpr) {
+        dbg("goto() missing arg");
+        break;
+      }
 
-  // ✅ Extract dur / next directly from parsed.cueParams
-  const dur = cueParams?.dur;
-  const next = cueParams?.next;
+      // ✅ Extract dur / next directly from parsed.cueParams
+      const dur = cueParams?.dur;
+      const next = cueParams?.next;
 
-  // ✅ Use defaults if not provided
-  const durSuffix = dur ? `_dur(${dur})` : "_wait(1)";
-  const nextSuffix = next ? `_next(${next})` : "";
+      // ✅ Use defaults if not provided
+      const durSuffix = dur ? `_dur(${dur})` : "_wait(1)";
+      const nextSuffix = next ? `_next(${next})` : "";
 
-  const target = `cuePage(${argExpr})${durSuffix}${nextSuffix}`;
-  dbg("goto→trigger:", target);
+      const target = `cuePage(${argExpr})${durSuffix}${nextSuffix}`;
+      dbg("goto→trigger:", target);
 
-  try {
-    window.handleCueTrigger?.(target, false, true);
-  } catch (e) {
-    console.error("[cueNav] goto trigger failed:", target, e);
-  }
-  break;
-}
+      try {
+        window.handleCueTrigger?.(target, false, true);
+      } catch (e) {
+        console.error("[cueNav] goto trigger failed:", target, e);
+      }
+      break;
+    }
 
 
     case "trigger":
@@ -4304,53 +4363,53 @@ case "goto": {
 
 
     case "mode":
-    if (!argExpr) {
-      dbg("mode() missing arg");
-      break;
-    }
-
-    if (argExpr === "scroll") {
-      dbg("→ Switching to scroll mode");
-
-      const ps = window.pageState;
-      const container = document.getElementById("singlePage-container");
-      const content = document.getElementById("singlePage-content");
-
-      if (container && content) {
-        // fade out and hide the overlay
-        container.style.transition = "opacity 0.5s ease";
-        container.style.opacity = "0";
-        setTimeout(() => {
-          container.style.display = "none";
-          content.innerHTML = "";
-          if (window._activePageButtons) {
-            window._activePageButtons.forEach(btn => btn._destroyCueButton?.());
-            window._activePageButtons = [];
-          }
-          if (ps) {
-            ps.mode = "scroll";
-            ps.current = null;
-          }
-          window.resumeScrollScore?.();
-          dbg("✅ Returned to scroll mode");
-        }, 500);
-      } else {
-        dbg("⚠️ No container found; forcing resumeScrollScore()");
-        window.resumeScrollScore?.();
-        if (ps) ps.mode = "scroll";
+      if (!argExpr) {
+        dbg("mode() missing arg");
+        break;
       }
-    }
 
-  else if (argExpr === "page") {
-    dbg("→ Switching to page mode placeholder (future)");
-    // optionally: trigger cuePage(...) manually if desired
-  }
+      if (argExpr === "scroll") {
+        dbg("→ Switching to scroll mode");
 
-  else {
-    console.warn("[cueNav] Unknown mode argument:", argExpr);
-  }
-  break;
-  
+        const ps = window.pageState;
+        const container = document.getElementById("singlePage-container");
+        const content = document.getElementById("singlePage-content");
+
+        if (container && content) {
+          // fade out and hide the overlay
+          container.style.transition = "opacity 0.5s ease";
+          container.style.opacity = "0";
+          setTimeout(() => {
+            container.style.display = "none";
+            content.innerHTML = "";
+            if (window._activePageButtons) {
+              window._activePageButtons.forEach(btn => btn._destroyCueButton?.());
+              window._activePageButtons = [];
+            }
+            if (ps) {
+              ps.mode = "scroll";
+              ps.current = null;
+            }
+            window.resumeScrollScore?.();
+            dbg("✅ Returned to scroll mode");
+          }, 500);
+        } else {
+          dbg("⚠️ No container found; forcing resumeScrollScore()");
+          window.resumeScrollScore?.();
+          if (ps) ps.mode = "scroll";
+        }
+      }
+
+      else if (argExpr === "page") {
+        dbg("→ Switching to page mode placeholder (future)");
+        // optionally: trigger cuePage(...) manually if desired
+      }
+
+      else {
+        console.warn("[cueNav] Unknown mode argument:", argExpr);
+      }
+      break;
+
 
     default:
       console.warn("[cueNav] Unknown action:", action, "arg:", argExpr);

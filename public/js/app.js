@@ -20,10 +20,12 @@
 
 import { loadProject } from './projectLoader.js';
 import { setupScore, extractScoreElements, propagate } from './scoreSetup.js';
-import { forward, rewind, rewindToStart,getSpeedForPosition,
-          initializeSpeedControls, adjustSpeed, setSpeed, updateSpeedDisplay, 
-          sendSpeedUpdateToServer,   togglePlay, togglePlayButton, startPlayback,
-  pausePlayback, resumePlayback, jumpToCueId, hideControls,showControls  } from './transport.js';
+import {
+  forward, rewind, rewindToStart, getSpeedForPosition,
+  initializeSpeedControls, adjustSpeed, setSpeed, updateSpeedDisplay,
+  sendSpeedUpdateToServer, togglePlay, togglePlayButton, startPlayback,
+  pausePlayback, resumePlayback, jumpToCueId, hideControls, showControls
+} from './transport.js';
 
 window.startPlayback = startPlayback;
 window.pausePlayback = pausePlayback;
@@ -96,7 +98,7 @@ import {
 
 
 
-export  const initializeSVG = async (svgElement) => {
+export const initializeSVG = async (svgElement) => {
 
 
   console.group("[initializeSVG]");
@@ -105,7 +107,7 @@ export  const initializeSVG = async (svgElement) => {
   console.log("Bounding box:", svgElement.getBoundingClientRect());
 
 
-    // 🧩 Skip global reinit for embedded page overlays
+  // 🧩 Skip global reinit for embedded page overlays
   if (svgElement?.id === "pageSVG" || svgElement?.classList.contains("oscilla-page")) {
     console.log("[initializeSVG] ⚠️ Skipping global reset for page overlay SVG.");
     window.extractScoreElements?.(svgElement);
@@ -120,310 +122,311 @@ export  const initializeSVG = async (svgElement) => {
     return;
   }
 
-    const flattenPathTranslate = (path, dx, dy) => {
-      const d = path.getAttribute('d');
-      if (!d) {
-        //console.warn(`[TRANSFORM-FIX] Skipped path with no 'd': ${path.id}`);
-        return;
-      }
-
-      if (typeof SVGPathCommander === 'undefined') {
-        //console.error("[TRANSFORM-FIX] ❌ SVGPathCommander not loaded. Please include it via CDN.");
-        return;
-      }
-
-      try {
-        const shape = new SVGPathCommander(d);
-        shape.transform({ translate: [dx, dy] });
-        const newD = shape.toString();
-        path.setAttribute('d', newD);
-
-      } catch (err) {
-        // console.warn(`[TRANSFORM-FIX] ❌ Failed to translate path ${path.id}`, err);
-      }
-    };
-
-    const applyTranslationToShape = (el, dx, dy) => {
-      const tag = el.tagName.toLowerCase();
-
-      if (tag === 'path') {
-        flattenPathTranslate(el, dx, dy);
-      } else if (tag === 'rect' || tag === 'use') {
-        const x = parseFloat(el.getAttribute('x') || 0);
-        const y = parseFloat(el.getAttribute('y') || 0);
-        el.setAttribute('x', x + dx);
-        el.setAttribute('y', y + dy);
-        // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''} to (${x + dx}, ${y + dy})`);
-      } else if (tag === 'circle' || tag === 'ellipse') {
-        const cx = parseFloat(el.getAttribute('cx') || 0);
-        const cy = parseFloat(el.getAttribute('cy') || 0);
-        el.setAttribute('cx', cx + dx);
-        el.setAttribute('cy', cy + dy);
-        // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''} to (${cx + dx}, ${cy + dy})`);
-      } else if (tag === 'line') {
-        ['x1', 'y1', 'x2', 'y2'].forEach(attr => {
-          const val = parseFloat(el.getAttribute(attr) || 0);
-          el.setAttribute(attr, val + (attr.startsWith('x') ? dx : dy));
-        });
-        // console.debug(`[TRANSFORM-FIX] Moved <line> ${el.id || ''}`);
-      } else if (tag === 'polyline' || tag === 'polygon') {
-        const points = el.getAttribute('points') || '';
-        const newPoints = points
-          .trim()
-          .split(/\s+/)
-          .map(pair => {
-            const [px, py] = pair.split(',').map(Number);
-            return `${px + dx},${py + dy}`;
-          })
-          .join(' ');
-        el.setAttribute('points', newPoints);
-        // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''}`);
-      } else if (tag === 'g') {
-        Array.from(el.children).forEach(child => applyTranslationToShape(child, dx, dy));
-      } else {
-        // console.debug(`[TRANSFORM-FIX] Skipped unsupported element: <${tag}> ${el.id || ''}`);
-      }
-    };
-
-
-// ✅ Apply transforms first (flatten <use> and group transforms)
-// applyInkscapeTransforms(svgElement);
-
-// 📦 Store global reference to the SVG for later use
-window.scoreSVG = svgElement;
-
-// ✅ Flatten transforms (already done here)
-// svgElement.querySelectorAll('g[transform]').forEach(flattenGroupTransform);
-
-// ✅ Replace <use> elements (already done here)
-
-  window.cues = [];
-
-assignCues(svgElement, window.cues);
-
-
-
-
-/**
- * Scan and register reusable <g> groups with reserved prefixes.
- * Stores them in window.groupRegistry for later cueGroup() recall.
- */
-function registerSvgGroups(svgRoot) {
-  if (!svgRoot) return;
-
-  // Ensure global registry exists
-  window.groupRegistry = window.groupRegistry || {};
-
-  const groupNodes = svgRoot.querySelectorAll('g[id^="group-"], g[id^="menu-"], g[id^="ui-"]');
-
-  groupNodes.forEach((group) => {
-    const groupId = group.id.replace(/^group-|^menu-|^ui-/, '');
-    const clone = group.cloneNode(true);
-
-    // Store deep clone in registry
-    window.groupRegistry[groupId] = clone;
-
-    console.log(`[groupRegistry] Registered group "${groupId}" from`, svgRoot?.baseURI || '(inline)');
-  });
-}
-
-
-// ✅ Register reusable cue groups (menus, UI clusters)
-registerSvgGroups(svgElement);
-console.log("[Debug] Total cues:", window.cues.length);
-
-for (const cue of window.cues) {
-  if (!cue.element) {
-    console.warn(`[Debug] Cue "${cue.id}" is missing element`);
-  }
-}
-
-// ✅ Attach globally
-if (typeof window !== 'undefined') {
-  window.registerSvgGroups = registerSvgGroups;
-}
-
-
-// 🧩 Build pathVariantsMap for o2p Case 5 animations —
-// groups related path IDs (e.g. path-9997-1,-2,…) so multi-path ghost motion works
-
-window.storePathVariants(svgElement)
-
-
-// preloadSpeedCues();
-
-
-
-    // Handle all <use> clones
-    const useElements = svgElement.querySelectorAll('use');
-
-
-    useElements.forEach(clone => {
-      // Skip <use> if it is already inside a <g id^="obj_rotate_">
-      if (clone.closest('[id^="obj_rotate_"]')) {
-        // console.log(`[SKIP] Skipping <use id="${clone.id}"> because it's already wrapped`);
-        return;
-      }
-
-      const href = clone.getAttribute('xlink:href') || clone.getAttribute('href');
-      if (!href) return;
-
-      const refId = href.replace(/^#/, '');
-      const original = svgElement.querySelector(`#${CSS.escape(refId)}`);
-      if (!original) return;
-
-      // Clone the original
-      const deepClone = original.cloneNode(true);
-      deepClone.removeAttribute("transform"); // prevent double-transform
-
-      // Generate a unique obj_rotate_* ID
-      const uidMatch = clone.id.match(/uid(\d+)/);
-      const uid = uidMatch ? uidMatch[1] : Math.floor(Math.random() * 10000);
-      const rpm = (Math.random() * 2 + 0.5).toFixed(2);
-      const dir = Math.random() > 0.5 ? 1 : -1;
-      const rotateId = `obj_rotate_rpm_${rpm}_dir_${dir}_ease_easeInOutSine-${uid}`;
-
-      //  Wrap the cloned content in a new rotation group
-      const rotateWrapper = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      rotateWrapper.setAttribute("id", rotateId);
-      rotateWrapper.appendChild(deepClone);
-
-      //  Wrap the rotator in a group with the original <use>'s ID (for s_seq animation)
-      const animatedGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      animatedGroup.setAttribute("id", clone.id);
-      animatedGroup.appendChild(rotateWrapper);
-
-      //  Wrap everything in a positioned group using <use>'s transform
-      const positionedGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      const transform = clone.getAttribute("transform");
-      if (transform) {
-        positionedGroup.setAttribute("transform", transform);
-      }
-      positionedGroup.appendChild(animatedGroup);
-
-      //  Replace the <use> with the real structure
-      clone.parentNode.insertBefore(positionedGroup, clone);
-      clone.remove();
-
-    });
-
-    // 🚀 Continue with full original animation setup
-    console.log("[DEBUG] Initializing SVG element:", svgElement);
-
-    requestAnimationFrame(() => {
-     window.playheadX = 0;
-      window.elapsedTime = 0;
-      window.scoreContainer.scrollLeft =window.playheadX;
-      console.log(`[DEBUG] Initial scrollLeft set to: ${window.scoreContainer.scrollLeft}`);
-
-
-      requestAnimationFrame(() => {
-        window.ensureWindowPlayheadX(); // 💡 ensure valid center before any jumping logic
-        initializeObjectPathPairs(svgElement);
-        initializeObserver();
-
-      });
-
-      propagate(svgElement);
-
-      initializeRotatingObjects(svgElement);
-      initializeScalingObjects(svgElement);
-      initializeObserver();
-
-      console.log("[DEBUG] Animation setup complete. Running detection and observer.");
-      detectExistingAnimations();
-      observeAnimations();
-
-
-
-  // ✅ Run setupScore and cue assignment after the SVG has fully painted
-requestAnimationFrame(() => {
-  requestAnimationFrame(() => {
-    const svgReady = svgElement || document.querySelector("#scoreContainer svg");
-    if (!svgReady) {
-      console.warn("[initializeSVG] ⚠️ setupScore(): SVG still not found after paint.");
+  const flattenPathTranslate = (path, dx, dy) => {
+    const d = path.getAttribute('d');
+    if (!d) {
+      //console.warn(`[TRANSFORM-FIX] Skipped path with no 'd': ${path.id}`);
       return;
     }
 
-    console.group("[initializeSVG] ✅ Final SVG paint phase");
-    console.time("[initializeSVG] cue+setup total");
-
-    // 🧩 Always ensure window.cues exists before assigning
-    if (!window.cues) window.cues = [];
-
-    console.log("[initializeSVG] Assigning cues after layout is fully ready...");
-    assignCues(svgReady, window.cues);
-
-    if (typeof window.setupScore === "function") {
-      console.log("[initializeSVG] Running setupScore...");
-      window.setupScore(svgReady);
-    } else {
-      console.warn("[initializeSVG] ⚠️ setupScore() not available yet.");
+    if (typeof SVGPathCommander === 'undefined') {
+      //console.error("[TRANSFORM-FIX] ❌ SVGPathCommander not loaded. Please include it via CDN.");
+      return;
     }
 
-    console.timeEnd("[initializeSVG] cue+setup total");
-    console.groupEnd();
-  });
-});
+    try {
+      const shape = new SVGPathCommander(d);
+      shape.transform({ translate: [dx, dy] });
+      const newD = shape.toString();
+      path.setAttribute('d', newD);
 
+    } catch (err) {
+      // console.warn(`[TRANSFORM-FIX] ❌ Failed to translate path ${path.id}`, err);
+    }
+  };
 
+  const applyTranslationToShape = (el, dx, dy) => {
+    const tag = el.tagName.toLowerCase();
 
-
-
-
-
-
-      // --- Wide-scroll layout correction ---
-      const applyWideScrollLayout = () => {
-        const cont = document.getElementById("scoreContainer");
-        const svg = svgElement;
-        if (!svg || !cont) return;
-
-        Object.assign(cont.style, {
-          width: "100vw",
-          height: "100vh",
-          overflowX: "auto",
-          overflowY: "hidden",
-          whiteSpace: "nowrap",
-          display: "block",
-          position: "relative"
-        });
-
-        svg.removeAttribute("width");
-        svg.removeAttribute("height");
-        Object.assign(svg.style, {
-          display: "inline-block",
-          height: "100%",
-          width: "auto",
-          maxWidth: "none",
-          maxHeight: "100%",
-          verticalAlign: "top"
-        });
-
-        svg.getBoundingClientRect(); // force reflow
-        console.log("[initializeSVG] ✅ Applied wide-scroll layout correction.");
-      };
-      window.applyWideScrollLayout = applyWideScrollLayout;
-
-      // Wait until the SVG is *actually* inserted and painted
-      requestAnimationFrame(() => {
-        requestAnimationFrame(applyWideScrollLayout);
+    if (tag === 'path') {
+      flattenPathTranslate(el, dx, dy);
+    } else if (tag === 'rect' || tag === 'use') {
+      const x = parseFloat(el.getAttribute('x') || 0);
+      const y = parseFloat(el.getAttribute('y') || 0);
+      el.setAttribute('x', x + dx);
+      el.setAttribute('y', y + dy);
+      // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''} to (${x + dx}, ${y + dy})`);
+    } else if (tag === 'circle' || tag === 'ellipse') {
+      const cx = parseFloat(el.getAttribute('cx') || 0);
+      const cy = parseFloat(el.getAttribute('cy') || 0);
+      el.setAttribute('cx', cx + dx);
+      el.setAttribute('cy', cy + dy);
+      // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''} to (${cx + dx}, ${cy + dy})`);
+    } else if (tag === 'line') {
+      ['x1', 'y1', 'x2', 'y2'].forEach(attr => {
+        const val = parseFloat(el.getAttribute(attr) || 0);
+        el.setAttribute(attr, val + (attr.startsWith('x') ? dx : dy));
       });
+      // console.debug(`[TRANSFORM-FIX] Moved <line> ${el.id || ''}`);
+    } else if (tag === 'polyline' || tag === 'polygon') {
+      const points = el.getAttribute('points') || '';
+      const newPoints = points
+        .trim()
+        .split(/\s+/)
+        .map(pair => {
+          const [px, py] = pair.split(',').map(Number);
+          return `${px + dx},${py + dy}`;
+        })
+        .join(' ');
+      el.setAttribute('points', newPoints);
+      // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''}`);
+    } else if (tag === 'g') {
+      Array.from(el.children).forEach(child => applyTranslationToShape(child, dx, dy));
+    } else {
+      // console.debug(`[TRANSFORM-FIX] Skipped unsupported element: <${tag}> ${el.id || ''}`);
+    }
+  };
 
 
-      console.log("\n🚀 [DEBUG] Page Loaded - Initial State:");
-      // logState("Initial Load");
+  // ✅ Apply transforms first (flatten <use> and group transforms)
+  // applyInkscapeTransforms(svgElement);
 
-      // updateSeekBar();
-      //updatestopwatch();
-      window.toggleScoreNotes();
+  // 📦 Store global reference to the SVG for later use
+  window.scoreSVG = svgElement;
 
-      setTimeout(() => {
-        // rewindToStart(); // Optional
-      }, 100);
+  // ✅ Flatten transforms (already done here)
+  // svgElement.querySelectorAll('g[transform]').forEach(flattenGroupTransform);
+
+  // ✅ Replace <use> elements (already done here)
+
+  window.cues = [];
+
+  assignCues(svgElement, window.cues);
+
+
+
+
+  /**
+   * Scan and register reusable <g> groups with reserved prefixes.
+   * Stores them in window.groupRegistry for later cueGroup() recall.
+   */
+  function registerSvgGroups(svgRoot) {
+    if (!svgRoot) return;
+
+    // Ensure global registry exists
+    window.groupRegistry = window.groupRegistry || {};
+
+    const groupNodes = svgRoot.querySelectorAll('g[id^="group-"], g[id^="menu-"], g[id^="ui-"]');
+
+    groupNodes.forEach((group) => {
+      const groupId = group.id.replace(/^group-|^menu-|^ui-/, '');
+      const clone = group.cloneNode(true);
+
+      // Store deep clone in registry
+      window.groupRegistry[groupId] = clone;
+
+      console.log(`[groupRegistry] Registered group "${groupId}" from`, svgRoot?.baseURI || '(inline)');
+    });
+  }
+
+
+  // ✅ Register reusable cue groups (menus, UI clusters)
+  registerSvgGroups(svgElement);
+  console.log("[Debug] Total cues:", window.cues.length);
+
+  for (const cue of window.cues) {
+    if (!cue.element) {
+      console.warn(`[Debug] Cue "${cue.id}" is missing element`);
+    }
+  }
+
+  // ✅ Attach globally
+  if (typeof window !== 'undefined') {
+    window.registerSvgGroups = registerSvgGroups;
+  }
+
+
+  // 🧩 Build pathVariantsMap for o2p Case 5 animations —
+  // groups related path IDs (e.g. path-9997-1,-2,…) so multi-path ghost motion works
+
+  window.storePathVariants(svgElement)
+
+
+  // preloadSpeedCues();
+
+
+
+  // Handle all <use> clones
+  const useElements = svgElement.querySelectorAll('use');
+
+
+  useElements.forEach(clone => {
+    // Skip <use> if it is already inside a <g id^="obj_rotate_">
+    if (clone.closest('[id^="obj_rotate_"]')) {
+      // console.log(`[SKIP] Skipping <use id="${clone.id}"> because it's already wrapped`);
+      return;
+    }
+
+    const href = clone.getAttribute('xlink:href') || clone.getAttribute('href');
+    if (!href) return;
+
+    const refId = href.replace(/^#/, '');
+    const original = svgElement.querySelector(`#${CSS.escape(refId)}`);
+    if (!original) return;
+
+    // Clone the original
+    const deepClone = original.cloneNode(true);
+    deepClone.removeAttribute("transform"); // prevent double-transform
+
+    // Generate a unique obj_rotate_* ID
+    const uidMatch = clone.id.match(/uid(\d+)/);
+    const uid = uidMatch ? uidMatch[1] : Math.floor(Math.random() * 10000);
+    const rpm = (Math.random() * 2 + 0.5).toFixed(2);
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    const rotateId = `obj_rotate_rpm_${rpm}_dir_${dir}_ease_easeInOutSine-${uid}`;
+
+    //  Wrap the cloned content in a new rotation group
+    const rotateWrapper = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    rotateWrapper.setAttribute("id", rotateId);
+    rotateWrapper.appendChild(deepClone);
+
+    //  Wrap the rotator in a group with the original <use>'s ID (for s_seq animation)
+    const animatedGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    animatedGroup.setAttribute("id", clone.id);
+    animatedGroup.appendChild(rotateWrapper);
+
+    //  Wrap everything in a positioned group using <use>'s transform
+    const positionedGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    const transform = clone.getAttribute("transform");
+    if (transform) {
+      positionedGroup.setAttribute("transform", transform);
+    }
+    positionedGroup.appendChild(animatedGroup);
+
+    //  Replace the <use> with the real structure
+    clone.parentNode.insertBefore(positionedGroup, clone);
+    clone.remove();
+
+  });
+
+  // 🚀 Continue with full original animation setup
+  console.log("[DEBUG] Initializing SVG element:", svgElement);
+
+  requestAnimationFrame(() => {
+    window.playheadX = 0;
+    window.elapsedTime = 0;
+    window.scoreContainer.scrollLeft = window.playheadX;
+    console.log(`[DEBUG] Initial scrollLeft set to: ${window.scoreContainer.scrollLeft}`);
+
+
+    requestAnimationFrame(() => {
+      window.ensureWindowPlayheadX(); // 💡 ensure valid center before any jumping logic
+      initializeObjectPathPairs(svgElement);
+      initializeObserver();
+
     });
 
-  };
+    propagate(svgElement);
+    initializeRotatingObjects(svgElement);
+    initializeScalingObjects(svgElement);
+    initializeObserver();
+
+
+
+    console.log("[DEBUG] Animation setup complete. Running detection and observer.");
+    detectExistingAnimations();
+    observeAnimations();
+
+
+
+    // ✅ Run setupScore and cue assignment after the SVG has fully painted
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const svgReady = svgElement || document.querySelector("#scoreContainer svg");
+        if (!svgReady) {
+          console.warn("[initializeSVG] ⚠️ setupScore(): SVG still not found after paint.");
+          return;
+        }
+
+        console.group("[initializeSVG] ✅ Final SVG paint phase");
+        console.time("[initializeSVG] cue+setup total");
+
+        // 🧩 Always ensure window.cues exists before assigning
+        if (!window.cues) window.cues = [];
+
+        console.log("[initializeSVG] Assigning cues after layout is fully ready...");
+        assignCues(svgReady, window.cues);
+
+        if (typeof window.setupScore === "function") {
+          console.log("[initializeSVG] Running setupScore...");
+          window.setupScore(svgReady);
+        } else {
+          console.warn("[initializeSVG] ⚠️ setupScore() not available yet.");
+        }
+
+        console.timeEnd("[initializeSVG] cue+setup total");
+        console.groupEnd();
+      });
+    });
+
+
+
+
+
+
+
+
+    // --- Wide-scroll layout correction ---
+    const applyWideScrollLayout = () => {
+      const cont = document.getElementById("scoreContainer");
+      const svg = svgElement;
+      if (!svg || !cont) return;
+
+      Object.assign(cont.style, {
+        width: "100vw",
+        height: "100vh",
+        overflowX: "auto",
+        overflowY: "hidden",
+        whiteSpace: "nowrap",
+        display: "block",
+        position: "relative"
+      });
+
+      svg.removeAttribute("width");
+      svg.removeAttribute("height");
+      Object.assign(svg.style, {
+        display: "inline-block",
+        height: "100%",
+        width: "auto",
+        maxWidth: "none",
+        maxHeight: "100%",
+        verticalAlign: "top"
+      });
+
+      svg.getBoundingClientRect(); // force reflow
+      console.log("[initializeSVG] ✅ Applied wide-scroll layout correction.");
+    };
+    window.applyWideScrollLayout = applyWideScrollLayout;
+
+    // Wait until the SVG is *actually* inserted and painted
+    requestAnimationFrame(() => {
+      requestAnimationFrame(applyWideScrollLayout);
+    });
+
+
+    console.log("\n🚀 [DEBUG] Page Loaded - Initial State:");
+    // logState("Initial Load");
+
+    // updateSeekBar();
+    //updatestopwatch();
+    window.toggleScoreNotes();
+
+    setTimeout(() => {
+      // rewindToStart(); // Optional
+    }, 100);
+  });
+
+};
 
 
 
@@ -597,7 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let resumeTimeOffset = null; // Tracks the time offset when resuming playback
   let pauseOffset = 0; // Tracks elapsed pause duration
 
-///////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////
 
   const adjustscoreContainerHeight = () => {
     const controls = document.getElementById('controls');
@@ -610,162 +613,162 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-///////////////////////////////////////////////////////////////
-// let SVGPathData = null;
-const { SVGPathData } = SVGPathCommander;
-// const flattenGroupTransform = (group, inherited = '') => {
-//   const localTransform = group.getAttribute('transform') || '';
-//   const combinedTransform = [inherited, localTransform].filter(Boolean).join(' ').trim();
+  ///////////////////////////////////////////////////////////////
+  // let SVGPathData = null;
+  const { SVGPathData } = SVGPathCommander;
+  // const flattenGroupTransform = (group, inherited = '') => {
+  //   const localTransform = group.getAttribute('transform') || '';
+  //   const combinedTransform = [inherited, localTransform].filter(Boolean).join(' ').trim();
 
-//   console.groupCollapsed(`[flattenGroupTransform] ▶️ Group: ${group.id || '(no id)'} transform="${localTransform}"`);
+  //   console.groupCollapsed(`[flattenGroupTransform] ▶️ Group: ${group.id || '(no id)'} transform="${localTransform}"`);
 
-//   Array.from(group.children).forEach(child => {
-//     const tag = child.tagName?.toLowerCase();
+  //   Array.from(group.children).forEach(child => {
+  //     const tag = child.tagName?.toLowerCase();
 
-//     // Recurse into nested groups
-//     if (tag === 'g') {
-//       console.log(`↪️ Nested group: ${child.id || '(no id)'}`);
-//       flattenGroupTransform(child, combinedTransform);
-//       return;
-//     }
+  //     // Recurse into nested groups
+  //     if (tag === 'g') {
+  //       console.log(`↪️ Nested group: ${child.id || '(no id)'}`);
+  //       flattenGroupTransform(child, combinedTransform);
+  //       return;
+  //     }
 
-//     if (tag !== 'path') {
-//       console.log(`⏭️ Skipping non-path <${tag}>`, child.id);
-//       return;
-//     }
+  //     if (tag !== 'path') {
+  //       console.log(`⏭️ Skipping non-path <${tag}>`, child.id);
+  //       return;
+  //     }
 
-//     const d = child.getAttribute('d');
-//     const id = child.id || '(no id)';
-//     console.groupCollapsed(`[flattenGroupTransform] 🧩 Path: ${id}`);
-//     console.log('Original d:', d?.slice(0, 120) + (d?.length > 120 ? '...' : ''));
-//     console.log('Combined transform:', combinedTransform);
+  //     const d = child.getAttribute('d');
+  //     const id = child.id || '(no id)';
+  //     console.groupCollapsed(`[flattenGroupTransform] 🧩 Path: ${id}`);
+  //     console.log('Original d:', d?.slice(0, 120) + (d?.length > 120 ? '...' : ''));
+  //     console.log('Combined transform:', combinedTransform);
 
-//     if (!d || !d.trim()) {
-//       console.warn(`⚠️ Skipping '${id}' — no valid path data.`);
-//       console.groupEnd();
-//       return;
-//     }
+  //     if (!d || !d.trim()) {
+  //       console.warn(`⚠️ Skipping '${id}' — no valid path data.`);
+  //       console.groupEnd();
+  //       return;
+  //     }
 
-//     if (!combinedTransform) {
-//       console.info(`ℹ️ No transform for '${id}' — nothing to flatten.`);
-//       console.groupEnd();
-//       return;
-//     }
+  //     if (!combinedTransform) {
+  //       console.info(`ℹ️ No transform for '${id}' — nothing to flatten.`);
+  //       console.groupEnd();
+  //       return;
+  //     }
 
-//     try {
-//       // Step 1: Normalize shorthand/relative commands
-//       let normalized = d;
-//       if (typeof SVGPathCommander.normalizePathData === 'function') {
-//         try {
-//           normalized = SVGPathCommander.normalizePathData(d);
-//           console.log('✅ normalizePathData succeeded');
-//         } catch (errNorm) {
-//           console.warn(`⚠️ normalizePathData failed for '${id}':`, errNorm.message);
-//         }
-//       }
+  //     try {
+  //       // Step 1: Normalize shorthand/relative commands
+  //       let normalized = d;
+  //       if (typeof SVGPathCommander.normalizePathData === 'function') {
+  //         try {
+  //           normalized = SVGPathCommander.normalizePathData(d);
+  //           console.log('✅ normalizePathData succeeded');
+  //         } catch (errNorm) {
+  //           console.warn(`⚠️ normalizePathData failed for '${id}':`, errNorm.message);
+  //         }
+  //       }
 
-//       // Step 2: Try to apply transform
-//       let newD;
-//       try {
-//         newD = SVGPathCommander.transformPath(normalized, combinedTransform);
-//         console.log('✅ transformPath succeeded');
-//       } catch (innerErr) {
-//         console.error(`❌ transformPath() failed for '${id}':`, innerErr.message);
-//         console.groupEnd();
-//         return;
-//       }
+  //       // Step 2: Try to apply transform
+  //       let newD;
+  //       try {
+  //         newD = SVGPathCommander.transformPath(normalized, combinedTransform);
+  //         console.log('✅ transformPath succeeded');
+  //       } catch (innerErr) {
+  //         console.error(`❌ transformPath() failed for '${id}':`, innerErr.message);
+  //         console.groupEnd();
+  //         return;
+  //       }
 
-//       // Step 3: Validate and replace
-//       if (typeof newD === 'string' && newD.includes(' ')) {
-//         child.setAttribute('d', newD);
-//         child.removeAttribute('transform');
-//         console.log('✅ Path flattened successfully.');
-//       } else {
-//         console.warn(`⚠️ Invalid transform output for '${id}':`, newD);
-//       }
-//     } catch (err) {
-//       console.error(`[flattenGroupTransform] ❌ Failed to flatten '${id}':`, err.message);
-//     }
+  //       // Step 3: Validate and replace
+  //       if (typeof newD === 'string' && newD.includes(' ')) {
+  //         child.setAttribute('d', newD);
+  //         child.removeAttribute('transform');
+  //         console.log('✅ Path flattened successfully.');
+  //       } else {
+  //         console.warn(`⚠️ Invalid transform output for '${id}':`, newD);
+  //       }
+  //     } catch (err) {
+  //       console.error(`[flattenGroupTransform] ❌ Failed to flatten '${id}':`, err.message);
+  //     }
 
-//     console.groupEnd();
-//   });
+  //     console.groupEnd();
+  //   });
 
-//   if (localTransform) {
-//     console.log(`🧹 Removing transform from group ${group.id || '(no id)'}`);
-//     group.removeAttribute('transform');
-//   }
+  //   if (localTransform) {
+  //     console.log(`🧹 Removing transform from group ${group.id || '(no id)'}`);
+  //     group.removeAttribute('transform');
+  //   }
 
-//   console.groupEnd();
-// };
-
-
+  //   console.groupEnd();
+  // };
 
 
 
-/**
- * flattenTransforms(svgRoot)
- * -------------------------------------------
- * Flattens all SVG `transform` attributes into actual geometry
- * using svg-path-commander where applicable.
- * Supports: <path>, <rect>, <circle>, <ellipse>, <line>, <polygon>, <polyline>.
- * Skips <text> (preserved as-is) and logs warnings for Inkscape-specific elements
- * like sodipodi:star or spiral.
- */
-// const { SVGPathData } = SVGPathCommander;
 
 
-// function flattenTransforms(svgRoot) {
+  /**
+   * flattenTransforms(svgRoot)
+   * -------------------------------------------
+   * Flattens all SVG `transform` attributes into actual geometry
+   * using svg-path-commander where applicable.
+   * Supports: <path>, <rect>, <circle>, <ellipse>, <line>, <polygon>, <polyline>.
+   * Skips <text> (preserved as-is) and logs warnings for Inkscape-specific elements
+   * like sodipodi:star or spiral.
+   */
+  // const { SVGPathData } = SVGPathCommander;
 
-//   const transformed = svgRoot.querySelectorAll('[transform]');
 
-//   transformed.forEach((el) => {
-//     const transform = el.getAttribute('transform');
-//     if (!transform) return;
+  // function flattenTransforms(svgRoot) {
 
-//     const tag = el.tagName.toLowerCase();
+  //   const transformed = svgRoot.querySelectorAll('[transform]');
 
-//     // Skip unsupported or Inkscape-specific shapes
-//     if (el.hasAttribute('sodipodi:type')) {
-//       console.warn(`[flatten] ⚠️ Skipping Inkscape-specific shape <${tag}> with sodipodi:type`, el);
-//       return;
-//     }
+  //   transformed.forEach((el) => {
+  //     const transform = el.getAttribute('transform');
+  //     if (!transform) return;
 
-//     if (tag === 'path') {
-//       try {
-//         const path = new SVGPathData(el.getAttribute('d')).transform(transform);
-//         el.setAttribute('d', path.encode());
-//         el.removeAttribute('transform');
-//       } catch (err) {
-//         console.warn(`[flatten] ⚠️ Failed to transform path:`, el, err);
-//       }
-//     } else if (['rect', 'circle', 'ellipse', 'line', 'polygon', 'polyline'].includes(tag)) {
-//       try {
-//         const tempPath = SVGPathData.fromElement(el); // this uses svg-path-commander
-//         const transformedPath = new SVGPathData(tempPath).transform(transform);
-//         const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-//         newPath.setAttribute('d', transformedPath.encode());
-//         newPath.setAttribute('id', el.id);
-//         newPath.setAttribute('class', el.getAttribute('class'));
-//         el.replaceWith(newPath);
-//       } catch (err) {
-//         console.warn(`[flatten] ⚠️ Failed to convert <${tag}> to path:`, el, err);
-//       }
-//     } else if (tag === 'text') {
-//       console.info(`[flatten] ℹ️ Preserving <text> element with transform:`, el);
-//     } else if (tag === 'g') {
-//   try {
-//     console.info(`[flatten] 🌀 Flattening group <${tag}> with transform:`, transform);
-//     flattenGroupTransform(el); // call your recursive function
-//   } catch (err) {
-//     console.warn(`[flatten] ⚠️ Failed to flatten group <${tag}>:`, err);
-//   }
-// }
-    
-//     else {
-//       console.warn(`[flatten] ⚠️ Unsupported tag <${tag}> — transform not flattened`, el);
-//     }
-//   });
-// }
+  //     const tag = el.tagName.toLowerCase();
+
+  //     // Skip unsupported or Inkscape-specific shapes
+  //     if (el.hasAttribute('sodipodi:type')) {
+  //       console.warn(`[flatten] ⚠️ Skipping Inkscape-specific shape <${tag}> with sodipodi:type`, el);
+  //       return;
+  //     }
+
+  //     if (tag === 'path') {
+  //       try {
+  //         const path = new SVGPathData(el.getAttribute('d')).transform(transform);
+  //         el.setAttribute('d', path.encode());
+  //         el.removeAttribute('transform');
+  //       } catch (err) {
+  //         console.warn(`[flatten] ⚠️ Failed to transform path:`, el, err);
+  //       }
+  //     } else if (['rect', 'circle', 'ellipse', 'line', 'polygon', 'polyline'].includes(tag)) {
+  //       try {
+  //         const tempPath = SVGPathData.fromElement(el); // this uses svg-path-commander
+  //         const transformedPath = new SVGPathData(tempPath).transform(transform);
+  //         const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  //         newPath.setAttribute('d', transformedPath.encode());
+  //         newPath.setAttribute('id', el.id);
+  //         newPath.setAttribute('class', el.getAttribute('class'));
+  //         el.replaceWith(newPath);
+  //       } catch (err) {
+  //         console.warn(`[flatten] ⚠️ Failed to convert <${tag}> to path:`, el, err);
+  //       }
+  //     } else if (tag === 'text') {
+  //       console.info(`[flatten] ℹ️ Preserving <text> element with transform:`, el);
+  //     } else if (tag === 'g') {
+  //   try {
+  //     console.info(`[flatten] 🌀 Flattening group <${tag}> with transform:`, transform);
+  //     flattenGroupTransform(el); // call your recursive function
+  //   } catch (err) {
+  //     console.warn(`[flatten] ⚠️ Failed to flatten group <${tag}>:`, err);
+  //   }
+  // }
+
+  //     else {
+  //       console.warn(`[flatten] ⚠️ Unsupported tag <${tag}> — transform not flattened`, el);
+  //     }
+  //   });
+  // }
 
 
 
@@ -819,7 +822,7 @@ const { SVGPathData } = SVGPathCommander;
     }
   });
 
- ///////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////
 
   setupStopwatchFullscreenToggle();
 
@@ -929,9 +932,9 @@ const { SVGPathData } = SVGPathCommander;
 
       // Resume playback only if the score was playing before the popup appeared
       if (!window.isPlaying) {
-         window.isPlaying = true;
-         window.isMusicalPause = false;
-         startStopwatch();
+        window.isPlaying = true;
+        window.isMusicalPause = false;
+        startStopwatch();
         animationPaused = false; // Ensure animations are not paused
         startAnimation(); // Resume the animation loop
         console.log('[CLIENT] Resuming playback after popup dismissal.');
@@ -1059,7 +1062,7 @@ const { SVGPathData } = SVGPathCommander;
       return;
     }
 
-    if (window.socket&& window.socket.readyState === WebSocket.OPEN) {
+    if (window.socket && window.socket.readyState === WebSocket.OPEN) {
       console.warn('[CLIENT] WebSocket is already connected.');
       return; // ✅ Prevent duplicate connections
     }
@@ -1081,7 +1084,7 @@ const { SVGPathData } = SVGPathCommander;
 
       window.socket.addEventListener("open", () => {
         console.log("[CLIENT] 🌐 WebSocket connected — requesting repeat state...");
-        window.wsEnabled = true;  
+        window.wsEnabled = true;
 
         window.socket.send(JSON.stringify({ type: "get_repeat_state" }));
       });
@@ -1146,7 +1149,7 @@ const { SVGPathData } = SVGPathCommander;
               console.log(`[DEBUG] Processing pause request.window.playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
 
               if (!isNaN(data.playheadX) && data.playheadX >= 0) {
-               window.playheadX = data.playheadX;
+                window.playheadX = data.playheadX;
                 console.log(`[DEBUG] Applied server-providedwindow.playheadX: ${window.playheadX}`);
               } else {
                 console.error(`[ERROR] Invalidwindow.playheadX received. Keeping last known value.`);
@@ -1159,8 +1162,8 @@ const { SVGPathData } = SVGPathCommander;
                 return;
               }
 
-               window.isPlaying = false;
-               window.isMusicalPause = false;
+              window.isPlaying = false;
+              window.isMusicalPause = false;
               // stopStopwatch();
               stopAnimation(); // ✅ Stop playhead movement
               togglePlayButton(); // ✅ Update UI play button
@@ -1170,34 +1173,34 @@ const { SVGPathData } = SVGPathCommander;
             /** ✅ Resume Playback After Pause */
             case "resume_after_pause":
               console.log(`[DEBUG] Processing resume_after_pause. window.playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
-            
+
               if (!isNaN(data.playheadX) && data.playheadX >= 0) {
                 window.playheadX = data.playheadX;
                 console.log(`[DEBUG] Applied server-provided playheadX: ${window.playheadX}`);
               } else {
                 console.error(`[ERROR] Invalid playheadX received. Keeping last known value.`);
               }
-            
+
               if (!isNaN(data.elapsedTime) && data.elapsedTime >= 0) {
                 window.elapsedTime = data.elapsedTime;
               } else {
                 console.error(`[ERROR] Invalid elapsedTime received: ${data.elapsedTime}`);
                 return;
               }
-            
+
               // ✅ Prevent unwanted resume if pause logic is still active
               if (window.isMusicalPause) {
                 console.warn("[DEBUG] Ignoring resume_after_pause because isMusicalPause is still true.");
                 return;
               }
-            
+
               window.isPlaying = true;
               startStopwatch();
               togglePlayButton();
               startAnimation();
               console.log("[DEBUG] Playback resumed successfully.");
               break;
-            
+
 
             /** ✅ Dismiss Pause Countdown */
             case "dismiss_pause_countdown":
@@ -1217,7 +1220,7 @@ const { SVGPathData } = SVGPathCommander;
 
               // ✅ Apply server-provided values BEFORE sending ack or triggering pause
               if (!isNaN(data.playheadX)) {
-               window.playheadX = data.playheadX;
+                window.playheadX = data.playheadX;
                 // console.log(`[CLIENT] Syncedwindow.playheadX from cuePause: ${window.playheadX}`);
               }
 
@@ -1227,8 +1230,8 @@ const { SVGPathData } = SVGPathCommander;
               }
 
               stopAnimation();
-               window.isPlaying = false;
-               window.isMusicalPause = false;
+              window.isPlaying = false;
+              window.isMusicalPause = false;
               // stopStopwatch();
 
               animationPaused = true;
@@ -1237,7 +1240,7 @@ const { SVGPathData } = SVGPathCommander;
               if (window.wsEnabled && window.socket) {
                 window.socket.send(JSON.stringify({
                   type: "cuePause_ack",
-                  playheadX:window.playheadX ?? -1,
+                  playheadX: window.playheadX ?? -1,
                   elapsedTime: window.elapsedTime ?? -1
                 }));
                 console.log(`[CLIENT] Sent cuePause_ack to server.window.playheadX=${window.playheadX}, window.elapsedTime=${elapsedTime}`);
@@ -1285,61 +1288,61 @@ const { SVGPathData } = SVGPathCommander;
               handleAudioCue(data.cueId);
               break;
 
-  /** ✅ Synchronize Playback State */
-  case "sync":
-     if (window.ignoreNextSync) {
-    console.log("[SYNC] ⏭ Ignoring first sync after resume.");
-    window.ignoreNextSync = false;
-    break;
-  }
+            /** ✅ Synchronize Playback State */
+            case "sync":
+              if (window.ignoreNextSync) {
+                console.log("[SYNC] ⏭ Ignoring first sync after resume.");
+                window.ignoreNextSync = false;
+                break;
+              }
 
-    if (suppressSync) {
-      console.warn(`[WARNING] Ignoring sync message to prevent overriding rewind.`);
-      return;
-    }
+              if (suppressSync) {
+                console.warn(`[WARNING] Ignoring sync message to prevent overriding rewind.`);
+                return;
+              }
 
-    if (data.playheadX) {
-      console.warn(`[WARNING] WebSocket message modifying window.playheadX: ${data.playheadX}`);
-    }
+              if (data.playheadX) {
+                console.warn(`[WARNING] WebSocket message modifying window.playheadX: ${data.playheadX}`);
+              }
 
-    const wasPlaying = window.isPlaying;
+              const wasPlaying = window.isPlaying;
 
-    window.elapsedTime = data.state.elapsedTime;
+              window.elapsedTime = data.state.elapsedTime;
 
-    if (!window.ignoreSyncPlayback) {
-      window.isPlaying = data.state.isPlaying;
-    } else {
-      console.log("[SYNC] Ignoring isPlaying update due to local enforced pause.");
-    }
+              if (!window.ignoreSyncPlayback) {
+                window.isPlaying = data.state.isPlaying;
+              } else {
+                console.log("[SYNC] Ignoring isPlaying update due to local enforced pause.");
+              }
 
-    if (!window.recentlyRecalculatedPlayhead) {
-      window.playheadX = data.state.playheadX;
-      window.scoreContainer.scrollLeft = window.playheadX;
-    } else {
-      console.log(`[DEBUG] 🔄 Ignoring server window.playheadX update to prevent override.`);
-    }
+              if (!window.recentlyRecalculatedPlayhead) {
+                window.playheadX = data.state.playheadX;
+                window.scoreContainer.scrollLeft = window.playheadX;
+              } else {
+                console.log(`[DEBUG] 🔄 Ignoring server window.playheadX update to prevent override.`);
+              }
 
-    updatePosition();
-    window.recentlyRecalculatedPlayhead = false;
-    // updateSeekBar();
+              updatePosition();
+              window.recentlyRecalculatedPlayhead = false;
+              // updateSeekBar();
 
-    if (!isNaN(data.state.speedMultiplier) && data.state.speedMultiplier > 0) {
-      if (speedMultiplier !== data.state.speedMultiplier) {
-        window.speedMultiplier = data.state.speedMultiplier;
-      }
-    }
+              if (!isNaN(data.state.speedMultiplier) && data.state.speedMultiplier > 0) {
+                if (speedMultiplier !== data.state.speedMultiplier) {
+                  window.speedMultiplier = data.state.speedMultiplier;
+                }
+              }
 
-    // ✅ Only start animation if transitioning from not playing → playing
-    if (window.isPlaying && !wasPlaying) {
-      console.log("[SYNC] ▶️ Starting playback due to sync message.");
-      window.startAnimation?.();
-    } else if (!window.isPlaying && wasPlaying) {
-      console.log("[SYNC] ⏸ Stopping playback due to sync message.");
-      window.stopAnimation?.();
-    }
+              // ✅ Only start animation if transitioning from not playing → playing
+              if (window.isPlaying && !wasPlaying) {
+                console.log("[SYNC] ▶️ Starting playback due to sync message.");
+                window.startAnimation?.();
+              } else if (!window.isPlaying && wasPlaying) {
+                console.log("[SYNC] ⏸ Stopping playback due to sync message.");
+                window.stopAnimation?.();
+              }
 
-    ignoreRewindOnStartup = true;
-    break;
+              ignoreRewindOnStartup = true;
+              break;
 
 
 
@@ -1421,19 +1424,19 @@ const { SVGPathData } = SVGPathCommander;
             }
 
 
- /** ✅ Jump to Rehearsal Mark */
-case "jump":
-  const now = Date.now();
-  if (now - lastJumpTime < 1000) return;
+            /** ✅ Jump to Rehearsal Mark */
+            case "jump":
+              const now = Date.now();
+              if (now - lastJumpTime < 1000) return;
 
-  const visibleWidth = window.scoreContainer.getBoundingClientRect().width;
-  window.playheadX = data.playheadX;
+              const visibleWidth = window.scoreContainer.getBoundingClientRect().width;
+              window.playheadX = data.playheadX;
 
-  // 🔁 Locally center the scroll view based on received absolute playheadX
-  window.scoreContainer.scrollLeft = window.playheadX ;//- (visibleWidth / 2);
+              // 🔁 Locally center the scroll view based on received absolute playheadX
+              window.scoreContainer.scrollLeft = window.playheadX;//- (visibleWidth / 2);
 
-  lastJumpTime = now;
-  break;
+              lastJumpTime = now;
+              break;
 
 
             // case "sync":
@@ -1525,7 +1528,7 @@ case "jump":
   const updateClientList = (clientArray) => {
     window.clients = clientArray; // ✅ Store globally
     const clientListElement = document.getElementById("client-list");
-  
+
     if (clientListElement) {
       const formattedNames = clientArray
         .map((name, index) => {
@@ -1535,11 +1538,11 @@ case "jump":
           return `<span class="${cssClass}">${name}${separator}</span>`;
         })
         .join('');
-  
+
       clientListElement.innerHTML = `<strong>Online: </strong> ${formattedNames}`;
       clientListElement.style.whiteSpace = "normal";
       clientListElement.style.wordWrap = "break-word";
-       
+
       if (clientArray.length === 1 && clientArray[0] === window.localClientName) {
         isAudioMaster = true;
         updateAudioMasterUI();
@@ -1550,12 +1553,12 @@ case "jump":
         isAudioMaster = false;
         updateAudioMasterUI();
       }
-  
+
     } else {
       console.error("[CLIENT] Client list container not found.");
     }
   };
-  
+
   /**
   * ✅ Sends stored client name to the server upon connection.
   * - Ensures the stored name is sent right after connecting.
@@ -1567,36 +1570,36 @@ case "jump":
     console.log(`[CLIENT] Connected as: ${window.localClientName}`);
 
     // ✅ If a stored name exists, send it to the server
-    if (window.wsEnabled &&window.socket&& localClientName) {
+    if (window.wsEnabled && window.socket && localClientName) {
       window.socket.send(JSON.stringify({ type: "update_client_name", name: window.localClientName }));
     }
   };
 
   // end of client management /////////////////////////////////////////////////
 
-// AUDIO MASTER LOGIC 
+  // AUDIO MASTER LOGIC 
 
-let isAudioMaster = false;
+  let isAudioMaster = false;
 
-Object.defineProperty(window, 'isAudioMaster', {
-  get: () => isAudioMaster,
-  configurable: true
-});
+  Object.defineProperty(window, 'isAudioMaster', {
+    get: () => isAudioMaster,
+    configurable: true
+  });
 
-function updateAudioMasterUI() {
-  const button = document.getElementById("audio-master-button");
-  if (isAudioMaster) {
-    button.classList.add("active");
-  } else {
-    button.classList.remove("active");
+  function updateAudioMasterUI() {
+    const button = document.getElementById("audio-master-button");
+    if (isAudioMaster) {
+      button.classList.add("active");
+    } else {
+      button.classList.remove("active");
+    }
   }
-}
 
-document.getElementById("audio-master-button").addEventListener("click", () => {
-  isAudioMaster = !isAudioMaster;
-  updateAudioMasterUI();
-  console.log(`[AudioMaster] Audio Master is now: ${isAudioMaster}`);
-});
+  document.getElementById("audio-master-button").addEventListener("click", () => {
+    isAudioMaster = !isAudioMaster;
+    updateAudioMasterUI();
+    console.log(`[AudioMaster] Audio Master is now: ${isAudioMaster}`);
+  });
 
 
 
@@ -1971,87 +1974,87 @@ document.getElementById("audio-master-button").addEventListener("click", () => {
 
 
 
-/**
- * 🧭 storePathVariants(svgElement)
- * ---------------------------------------------------------
- * Builds and populates `window.pathVariantsMap`, which groups
- * all <path> elements in the loaded SVG that share a common base ID
- * (e.g. path-9997, path-9997-1, path-9997-2, ...).
- *
- * This registry is required by the Case 5 branch of the o2p (object-to-path)
- * animation system.  Case 5 lets a single animated object move between
- * multiple “variant” paths that represent alternate trajectories.
- * The function must therefore run once for every newly loaded or replaced
- * SVG so that all variant relationships are known before any o2p
- * animations start.
- *
- * Example:
- *   path-9997       → base path
- *   path-9997-1     → variant #1
- *   path-9997-2     → variant #2
- *
- * These will be stored as:
- *   window.pathVariantsMap["path-9997"] = [ path-9997, path-9997-1, path-9997-2 ];
- *
- * If this mapping is missing or empty, Case 5 will exit early because it
- * cannot locate alternate paths for the ghost follower animation.
- *
- * Call timing:
- *   - Immediately after the SVG is loaded and attached to the DOM
- *     (typically inside initializeSVG or setupScore)
- *   - Optionally again when cuePage or cueGroup injects new SVG content
- */
+  /**
+   * 🧭 storePathVariants(svgElement)
+   * ---------------------------------------------------------
+   * Builds and populates `window.pathVariantsMap`, which groups
+   * all <path> elements in the loaded SVG that share a common base ID
+   * (e.g. path-9997, path-9997-1, path-9997-2, ...).
+   *
+   * This registry is required by the Case 5 branch of the o2p (object-to-path)
+   * animation system.  Case 5 lets a single animated object move between
+   * multiple “variant” paths that represent alternate trajectories.
+   * The function must therefore run once for every newly loaded or replaced
+   * SVG so that all variant relationships are known before any o2p
+   * animations start.
+   *
+   * Example:
+   *   path-9997       → base path
+   *   path-9997-1     → variant #1
+   *   path-9997-2     → variant #2
+   *
+   * These will be stored as:
+   *   window.pathVariantsMap["path-9997"] = [ path-9997, path-9997-1, path-9997-2 ];
+   *
+   * If this mapping is missing or empty, Case 5 will exit early because it
+   * cannot locate alternate paths for the ghost follower animation.
+   *
+   * Call timing:
+   *   - Immediately after the SVG is loaded and attached to the DOM
+   *     (typically inside initializeSVG or setupScore)
+   *   - Optionally again when cuePage or cueGroup injects new SVG content
+   */
 
 
-const storePathVariants = (svgElement) => {
-  console.groupCollapsed("[storePathVariants] 🧩 Building pathVariantsMap");
-  window.pathVariantsMap = {};
+  const storePathVariants = (svgElement) => {
+    console.groupCollapsed("[storePathVariants] 🧩 Building pathVariantsMap");
+    window.pathVariantsMap = {};
 
-  if (!svgElement) {
-    console.warn("[storePathVariants] ⚠️ No SVG element provided.");
+    if (!svgElement) {
+      console.warn("[storePathVariants] ⚠️ No SVG element provided.");
+      console.groupEnd();
+      return;
+    }
+
+    const allPaths = svgElement.querySelectorAll("path");
+    console.log(`[storePathVariants] Found ${allPaths.length} total <path> elements in SVG.`);
+
+    allPaths.forEach(path => {
+      const id = path.id || "(no id)";
+      if (!id) {
+        console.warn("[storePathVariants] ⚠️ Path without ID skipped.");
+        return;
+      }
+
+      // Only match IDs like path-123-4 (baseID + variant)
+      const match = id.match(/^path-(\d+)-(\d+)$/);
+      if (!match) {
+        // Non-variant paths (e.g. just "path-9997") will be ignored
+        console.log(`[storePathVariants] Skipped non-variant path: ${id}`);
+        return;
+      }
+
+      const baseID = id.replace(/-\d+$/, '');
+      if (!window.pathVariantsMap[baseID]) window.pathVariantsMap[baseID] = [];
+      window.pathVariantsMap[baseID].push(path);
+
+      console.log(`[storePathVariants] ✅ Registered variant ${id} → base group "${baseID}"`);
+    });
+
+    const totalGroups = Object.keys(window.pathVariantsMap).length;
+    console.log(`[storePathVariants] ✅ Completed. ${totalGroups} base groups created.`);
+    console.table(
+      Object.entries(window.pathVariantsMap).map(([base, paths]) => ({
+        baseID: base,
+        variants: paths.map(p => p.id).join(", "),
+        count: paths.length,
+      }))
+    );
+
     console.groupEnd();
-    return;
-  }
+  };
 
-  const allPaths = svgElement.querySelectorAll("path");
-  console.log(`[storePathVariants] Found ${allPaths.length} total <path> elements in SVG.`);
-
-  allPaths.forEach(path => {
-    const id = path.id || "(no id)";
-    if (!id) {
-      console.warn("[storePathVariants] ⚠️ Path without ID skipped.");
-      return;
-    }
-
-    // Only match IDs like path-123-4 (baseID + variant)
-    const match = id.match(/^path-(\d+)-(\d+)$/);
-    if (!match) {
-      // Non-variant paths (e.g. just "path-9997") will be ignored
-      console.log(`[storePathVariants] Skipped non-variant path: ${id}`);
-      return;
-    }
-
-    const baseID = id.replace(/-\d+$/, '');
-    if (!window.pathVariantsMap[baseID]) window.pathVariantsMap[baseID] = [];
-    window.pathVariantsMap[baseID].push(path);
-
-    console.log(`[storePathVariants] ✅ Registered variant ${id} → base group "${baseID}"`);
-  });
-
-  const totalGroups = Object.keys(window.pathVariantsMap).length;
-  console.log(`[storePathVariants] ✅ Completed. ${totalGroups} base groups created.`);
-  console.table(
-    Object.entries(window.pathVariantsMap).map(([base, paths]) => ({
-      baseID: base,
-      variants: paths.map(p => p.id).join(", "),
-      count: paths.length,
-    }))
-  );
-
-  console.groupEnd();
-};
-
-window.storePathVariants = storePathVariants;
+  window.storePathVariants = storePathVariants;
 
 
 
@@ -2070,9 +2073,9 @@ window.storePathVariants = storePathVariants;
   //   }
   // };
 
-  
+
   // initializeScore(); // ⬅️ Make sure this runs outside any event listener
-  
+
   // // [svgpersist] Upload and persist new SVG to sessionStorage
   // document.getElementById("upload-score").addEventListener("change", (event) => {
   //   const file = event.target.files[0];
@@ -2089,22 +2092,22 @@ window.storePathVariants = storePathVariants;
   // });
 
 
-/**
- * initializeSVG(svgElement)
- * --------------------------
- * This function initializes all interactive behaviors for a loaded SVG score.
- * It performs cue assignment, transforms flattening, animation setup, and 
- * preloads timing cues like `cueSpeed(...)`. It must be called after the 
- * SVG is appended to the DOM to ensure that all elements are present and measurable.
- *
- * @param {SVGElement} svgElement - The <svg> element representing the musical score.
- */
+  /**
+   * initializeSVG(svgElement)
+   * --------------------------
+   * This function initializes all interactive behaviors for a loaded SVG score.
+   * It performs cue assignment, transforms flattening, animation setup, and 
+   * preloads timing cues like `cueSpeed(...)`. It must be called after the 
+   * SVG is appended to the DOM to ensure that all elements are present and measurable.
+   *
+   * @param {SVGElement} svgElement - The <svg> element representing the musical score.
+   */
 
 
 
 
 
-window.initializeSVG = initializeSVG;
+  window.initializeSVG = initializeSVG;
 
 
 
@@ -2152,7 +2155,7 @@ window.initializeSVG = initializeSVG;
 
   const handleSvgPopupClick = (event) => {
     // console.log(`[DEBUG] SVG Click Detected on: ${event.target.tagName}, ID: ${event.target.id}`);
-  
+
     // ✅ Skip handling if click is inside Shoelace menu or dropdown
     if (
       event.target.closest('sl-dropdown') ||
@@ -2162,11 +2165,11 @@ window.initializeSVG = initializeSVG;
       console.log('[DEBUG] Click inside Shoelace dropdown, ignoring popup dismissal.');
       return;  // Don't dismiss popups
     }
-  
+
     // Identify the popup to dismiss
     const popups = document.querySelectorAll('.popup');
     let popupDismissed = false;
-  
+
     popups.forEach((popup) => {
       if (popup.classList.contains('active')) {
         console.log(`[DEBUG] Popup dismissed: ${popup.id}`);
@@ -2175,26 +2178,26 @@ window.initializeSVG = initializeSVG;
         popupDismissed = true;
       }
     });
-  
+
     if (popupDismissed) {
       console.log('[CLIENT] Resuming playback or animation after popup dismissal.');
-       window.isPlaying = true;
-       window.isMusicalPause = false;
+      window.isPlaying = true;
+      window.isMusicalPause = false;
       startStopwatch();
       animationPaused = false;
-  
+
       document.body.querySelectorAll('.blur-background').forEach((element) => {
         element.classList.remove('blur-background');
       });
-  
+
       startAnimation();
     } else {
       // console.log('[DEBUG] No active popups found to dismiss.');
     }
-  
+
     event.stopPropagation();
   };
-  
+
 
 
 
@@ -2236,65 +2239,65 @@ window.initializeSVG = initializeSVG;
   });
 
 
-async function populateProjectSelector() {
-  const grid = document.getElementById("project-grid");
-  const message = document.getElementById("splash-message");
-  const manualEntry = document.getElementById("manual-entry");
+  async function populateProjectSelector() {
+    const grid = document.getElementById("project-grid");
+    const message = document.getElementById("splash-message");
+    const manualEntry = document.getElementById("manual-entry");
 
-  try {
-    const response = await fetch("/scores/");
-    const html = await response.text();
+    try {
+      const response = await fetch("/scores/");
+      const html = await response.text();
 
-    // Extract folder names from directory listing (assuming simple index output)
-    const regex = /href=["'](?:\.\/|\/?scores\/)?([^"'/]+)\/["']/g;
-    let match;
-    const projects = [];
-    while ((match = regex.exec(html)) !== null) {
-      const name = match[1];
-      if (name !== "audio" && name !== "texts" && name !== "videos") {
-        projects.push(name);
+      // Extract folder names from directory listing (assuming simple index output)
+      const regex = /href=["'](?:\.\/|\/?scores\/)?([^"'/]+)\/["']/g;
+      let match;
+      const projects = [];
+      while ((match = regex.exec(html)) !== null) {
+        const name = match[1];
+        if (name !== "audio" && name !== "texts" && name !== "videos") {
+          projects.push(name);
+        }
       }
-    }
 
-    if (projects.length === 0) throw new Error("No projects found.");
+      if (projects.length === 0) throw new Error("No projects found.");
 
-    message.textContent = "Choose a project to load:";
-    grid.innerHTML = "";
+      message.textContent = "Choose a project to load:";
+      grid.innerHTML = "";
 
-    projects.forEach((proj) => {
-      const card = document.createElement("div");
-      card.className = "project-card";
-      card.textContent = proj;
-      card.addEventListener("click", () => {
-        console.log(`[SPLASH] Loading project: ${proj}`);
-        loadProject(proj);
-        fadeOutSplash();
+      projects.forEach((proj) => {
+        const card = document.createElement("div");
+        card.className = "project-card";
+        card.textContent = proj;
+        card.addEventListener("click", () => {
+          console.log(`[SPLASH] Loading project: ${proj}`);
+          loadProject(proj);
+          fadeOutSplash();
+        });
+        grid.appendChild(card);
       });
-      grid.appendChild(card);
-    });
-  } catch (err) {
-    console.warn("[SPLASH] Could not fetch project list:", err);
-    message.textContent = "⚠️ Automatic listing failed.";
-    manualEntry.style.display = "block";
+    } catch (err) {
+      console.warn("[SPLASH] Could not fetch project list:", err);
+      message.textContent = "⚠️ Automatic listing failed.";
+      manualEntry.style.display = "block";
 
-    document.getElementById("manual-load-btn").addEventListener("click", () => {
-      const projName = document.getElementById("manual-project-input").value.trim();
-      if (projName) {
-        loadProject(projName);
-        fadeOutSplash();
-      }
-    });
+      document.getElementById("manual-load-btn").addEventListener("click", () => {
+        const projName = document.getElementById("manual-project-input").value.trim();
+        if (projName) {
+          loadProject(projName);
+          fadeOutSplash();
+        }
+      });
+    }
   }
-}
 
-function fadeOutSplash() {
-  const splash = document.getElementById("splash");
-  splash.classList.add("fade-out");
-  setTimeout(() => (splash.style.display = "none"), 800);
-}
+  function fadeOutSplash() {
+    const splash = document.getElementById("splash");
+    splash.classList.add("fade-out");
+    setTimeout(() => (splash.style.display = "none"), 800);
+  }
 
-// Initialize splash logic
-window.addEventListener("DOMContentLoaded", populateProjectSelector);
+  // Initialize splash logic
+  window.addEventListener("DOMContentLoaded", populateProjectSelector);
 
 
 
@@ -2546,8 +2549,8 @@ window.addEventListener("DOMContentLoaded", populateProjectSelector);
 
     // Adjustwindow.playheadX using proportional scaling
     if (previousMaxScrollDistance !== null && previousMaxScrollDistance > 0) {
-      let playheadPercentage =window.playheadX / previousMaxScrollDistance;
-     window.playheadX = playheadPercentage * maxScrollDistance;
+      let playheadPercentage = window.playheadX / previousMaxScrollDistance;
+      window.playheadX = playheadPercentage * maxScrollDistance;
       console.log(`[DEBUG] 🔄 Recalculatedwindow.playheadX: ${window.playheadX}`);
     }
 
@@ -2555,7 +2558,7 @@ window.addEventListener("DOMContentLoaded", populateProjectSelector);
     previousMaxScrollDistance = maxScrollDistance;
     previousViewportWidth = newScoreContainerWidth;
 
-    window.scoreContainer.scrollLeft =window.playheadX;
+    window.scoreContainer.scrollLeft = window.playheadX;
     console.log(`[DEBUG] 🎯 Updated window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
   };
 
@@ -2606,8 +2609,8 @@ window.addEventListener("DOMContentLoaded", populateProjectSelector);
       }
     }
 
-     window.isPlaying = state.isPlaying;
-     window.isPlaying ? startAnimation() : stopAnimation();
+    window.isPlaying = state.isPlaying;
+    window.isPlaying ? startAnimation() : stopAnimation();
 
     if (window.wsEnabled && window.socket) {
       window.socket.send(JSON.stringify({
@@ -2617,7 +2620,7 @@ window.addEventListener("DOMContentLoaded", populateProjectSelector);
           elapsedTime: window.elapsedTime
         }
       }));
-            console.log(`[CLIENT] Sent sync update after state change: window.playheadX=${window.playheadX}, window.elapsedTime=${elapsedTime}`);
+      console.log(`[CLIENT] Sent sync update after state change: window.playheadX=${window.playheadX}, window.elapsedTime=${elapsedTime}`);
     }
   };
 
@@ -2649,7 +2652,7 @@ window.addEventListener("DOMContentLoaded", populateProjectSelector);
 
     // ✅ Ensure window.playheadX stays within valid bounds
     if (window.estimatedPlayheadX > window.scoreWidth) window.estimatedPlayhe4adX = window.scoreWidth;
-    window.playheadX =window.estimatedPlayheadX;
+    window.playheadX = window.estimatedPlayheadX;
     window.scoreContainer.scrollLeft = window.playheadX;
 
     // ✅ Auto-correct small desyncs based on server sync updates
@@ -2700,53 +2703,53 @@ window.addEventListener("DOMContentLoaded", populateProjectSelector);
     }
   };
 
-// --- Transported Playback Loop (app.js or transport.js) ---
+  // --- Transported Playback Loop (app.js or transport.js) ---
 
-window.lastAnimationFrameTime = null;
+  window.lastAnimationFrameTime = null;
 
-window.animate = async (currentTime) => {
-  // Stop animation when paused or seeking
-  if (!window.isPlaying || window.isSeeking) return;
+  window.animate = async (currentTime) => {
+    // Stop animation when paused or seeking
+    if (!window.isPlaying || window.isSeeking) return;
 
-  // --- Timing calculations ---
-  if (window.lastAnimationFrameTime === null) {
+    // --- Timing calculations ---
+    if (window.lastAnimationFrameTime === null) {
+      window.lastAnimationFrameTime = currentTime;
+    } else {
+      const delta = (currentTime - window.lastAnimationFrameTime) * playbackSpeed;
+
+      const estimatedIncrement =
+        ((delta * window.speedMultiplier) / window.duration) * window.scoreWidth;
+
+      window.playheadX = Math.max(
+        0,
+        Math.min(window.playheadX + estimatedIncrement, window.scoreWidth)
+      );
+      window.scoreContainer.scrollLeft = window.playheadX;
+    }
+
     window.lastAnimationFrameTime = currentTime;
-  } else {
-    const delta = (currentTime - window.lastAnimationFrameTime) * playbackSpeed;
 
-    const estimatedIncrement =
-      ((delta * window.speedMultiplier) / window.duration) * window.scoreWidth;
+    // --- Update elapsed time for sync + UI ---
+    if (window.duration && window.scoreWidth) {
+      window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+    }
 
-    window.playheadX = Math.max(
-      0,
-      Math.min(window.playheadX + estimatedIncrement, window.scoreWidth)
-    );
-    window.scoreContainer.scrollLeft = window.playheadX;
-  }
+    // --- Periodic visibility optimization ---
+    const visibilityCheckInterval = 150;
+    window.lastVisibilityCheckTime = window.lastVisibilityCheckTime || 0;
+    if (currentTime - window.lastVisibilityCheckTime > visibilityCheckInterval) {
+      window.checkAnimationVisibility?.();
+      window.lastVisibilityCheckTime = currentTime;
+    }
 
-  window.lastAnimationFrameTime = currentTime;
+    // --- Core updates each frame ---
+    updatePosition?.();    // moves playhead graphics
+    // updateSeekBar?.();     // ✅ updates the seek bar progress
+    await checkCueTriggers?.(window.elapsedTime); // triggers cues
 
-  // --- Update elapsed time for sync + UI ---
-  if (window.duration && window.scoreWidth) {
-    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-  }
-
-  // --- Periodic visibility optimization ---
-  const visibilityCheckInterval = 150;
-  window.lastVisibilityCheckTime = window.lastVisibilityCheckTime || 0;
-  if (currentTime - window.lastVisibilityCheckTime > visibilityCheckInterval) {
-    window.checkAnimationVisibility?.();
-    window.lastVisibilityCheckTime = currentTime;
-  }
-
-  // --- Core updates each frame ---
-  updatePosition?.();    // moves playhead graphics
-  // updateSeekBar?.();     // ✅ updates the seek bar progress
-  await checkCueTriggers?.(window.elapsedTime); // triggers cues
-
-  // --- Continue animation ---
-  window.animationFrameId = requestAnimationFrame(window.animate);
-};
+    // --- Continue animation ---
+    window.animationFrameId = requestAnimationFrame(window.animate);
+  };
 
 
 
@@ -2756,39 +2759,39 @@ window.animate = async (currentTime) => {
   // Prevents unnecessary updates when paused, seeking, or stopped to optimize performance.
   // stopAnimation() cancels the loop when playback stops, preventing redundant frame updates.
 
-window.startAnimation = () => {
+  window.startAnimation = () => {
 
-  console.log("[DEBUG] startAnimation check:",
-  "animationPaused=", window.animationPaused,
-  "animationStopped=", window.animationStopped,
-  "isSeeking=", window.isSeeking);
+    console.log("[DEBUG] startAnimation check:",
+      "animationPaused=", window.animationPaused,
+      "animationStopped=", window.animationStopped,
+      "isSeeking=", window.isSeeking);
 
-  if (!window.isPlaying || window.animationPaused || window.isSeeking) {
-    console.log("[DEBUG] Animation paused, stopped, or seeking, skipping start.");
-    return;
-  }
+    if (!window.isPlaying || window.animationPaused || window.isSeeking) {
+      console.log("[DEBUG] Animation paused, stopped, or seeking, skipping start.");
+      return;
+    }
 
-  if (window.animationFrameId === null) {
-    requestAnimationFrame((time) => {
-      window.lastAnimationFrameTime = time;
-      window.animationFrameId = requestAnimationFrame(window.animate); // Track it from the start
-    });
-  }
-};
+    if (window.animationFrameId === null) {
+      requestAnimationFrame((time) => {
+        window.lastAnimationFrameTime = time;
+        window.animationFrameId = requestAnimationFrame(window.animate); // Track it from the start
+      });
+    }
+  };
 
-  
+
   window.stopAnimation = () => {
     if (window.animationFrameId !== null) {
       cancelAnimationFrame(window.animationFrameId);
       window.animationFrameId = null;
       console.log("[DEBUG] Animation frame canceled.");
     }
-  
+
     window.isPlaying = false;
     window.isMusicalPause = false;
     // stopStopwatch();
   };
-  
+
 
 
 
@@ -2830,10 +2833,10 @@ window.startAnimation = () => {
   // ///////////////////////////////////////
   // // SEEKBAR LOGIC
 
-   const updateSeekBar = () => {
-     const progress =  (window.elapsedTime / duration) * 100;
-     seekBar.value = progress;
-   };
+  const updateSeekBar = () => {
+    const progress = (window.elapsedTime / duration) * 100;
+    seekBar.value = progress;
+  };
 
   // Function to synchronize playback time
   // Updates `elapsedTime` and aligns the score
@@ -2961,11 +2964,11 @@ window.startAnimation = () => {
     console.log(`[CLIENT] WebSocket is now ${window.wsEnabled ? 'enabled' : 'disabled'}.`);
 
     if (!window.wsEnabled && window.socket) {
-  window.socket.close();
-  window.socket = null;
-} else if (window.wsEnabled) {
-  connectWebSocket();
-}
+      window.socket.close();
+      window.socket = null;
+    } else if (window.wsEnabled) {
+      connectWebSocket();
+    }
   }
 
   wsToggleButton.textContent = window.wsEnabled ? '🌐' : '❌';
@@ -3145,7 +3148,7 @@ window.startAnimation = () => {
   ////////  END OF UTIL //////////////////////////////////////////////
 
 
-///
+  ///
 
   /**
   * ✅ updatePosition
@@ -3185,8 +3188,8 @@ window.startAnimation = () => {
     }
 
     // Direct snap to playhead when not seeking
-    if (Math.abs(window.scoreContainer.scrollLeft -window.playheadX) > 1) {
-      window.scoreContainer.scrollLeft =window.playheadX;
+    if (Math.abs(window.scoreContainer.scrollLeft - window.playheadX) > 1) {
+      window.scoreContainer.scrollLeft = window.playheadX;
 
       // ✅ Throttled animation update during jump or resume
       // if (now - lastTriggerTime > 250) {
@@ -3199,141 +3202,141 @@ window.startAnimation = () => {
 
 
 
-// /**
-//  * ✅ Toggles playback state between play and pause.
-//  * - Delegates to startPlayback() or pausePlayback() for consistent logic.
-//  * - Ensures all flags and state updates are handled in one place.
-//  */
-// const togglePlay = () => {
-//   if (window.isPlaying) {
-//     window.pausePlayback();
-//   } else {
-//     window.startPlayback();
-//   }
-// };
+  // /**
+  //  * ✅ Toggles playback state between play and pause.
+  //  * - Delegates to startPlayback() or pausePlayback() for consistent logic.
+  //  * - Ensures all flags and state updates are handled in one place.
+  //  */
+  // const togglePlay = () => {
+  //   if (window.isPlaying) {
+  //     window.pausePlayback();
+  //   } else {
+  //     window.startPlayback();
+  //   }
+  // };
 
-// // ✅ Updates the play/pause button UI to match playback state
-// const togglePlayButton = () => {
-//   const playButton = document.getElementById("toggle-button");
+  // // ✅ Updates the play/pause button UI to match playback state
+  // const togglePlayButton = () => {
+  //   const playButton = document.getElementById("toggle-button");
 
-//   if (playButton) {
-//     playButton.innerHTML = window.isPlaying
-//       ? '<div class="custom-pause"></div>'
-//       : "▶";
-//   } else {
-//     console.error("[ERROR] Play button element not found.");
-//   }
-// };
+  //   if (playButton) {
+  //     playButton.innerHTML = window.isPlaying
+  //       ? '<div class="custom-pause"></div>'
+  //       : "▶";
+  //   } else {
+  //     console.error("[ERROR] Play button element not found.");
+  //   }
+  // };
 
-// // ✅ Starts playback: sets state, starts animation + stopwatch, syncs with server
-// window.startPlayback = function startPlayback() {
-//   if (!window.isPlaying) {
-//     console.log("[Playback] ▶️ Starting playback");
-//     window.isPlaying = true;
-//     window.isMusicalPause = false;
-//     window.ignoreSyncPlayback = false;
-//     window.animationPaused = false;
-//     window.isPaused = false;
-    
-
-//     // Set speed multiplier from current playhead position
-//     window.speedMultiplier = getSpeedForPosition(window.playheadX);
-//     window.updateSpeedDisplay?.();
-
-//     // Force start animation loop (even if already partially running)
-//     if (typeof window.animate === "function") {
-//       cancelAnimationFrame(window.animationFrameId);
-//       window.animationFrameId = requestAnimationFrame(window.animate);
-//     }
+  // // ✅ Starts playback: sets state, starts animation + stopwatch, syncs with server
+  // window.startPlayback = function startPlayback() {
+  //   if (!window.isPlaying) {
+  //     console.log("[Playback] ▶️ Starting playback");
+  //     window.isPlaying = true;
+  //     window.isMusicalPause = false;
+  //     window.ignoreSyncPlayback = false;
+  //     window.animationPaused = false;
+  //     window.isPaused = false;
 
 
-//     window.startStopwatch?.();
-//     window.startAnimation?.();
-//     togglePlayButton();
-//     hideControls?.();
+  //     // Set speed multiplier from current playhead position
+  //     window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  //     window.updateSpeedDisplay?.();
 
-//     // Send play message to server
-//     if (window.socket && window.socket.readyState === WebSocket.OPEN) {
-//       window.socket.send(JSON.stringify({
-//         type: "play",
-//         playheadX: window.playheadX,
-//         elapsedTime: window.elapsedTime
-//       }));
-//     }
-
-//     updatePosition?.();
-//     checkCueTriggers?.();
-//   }
-// };
-
-// // ✅ Pauses playback: sets state, stops animation + stopwatch, syncs with server
-// window.pausePlayback = function pausePlayback() {
-//   if (window.isPlaying) {
-//     console.log("[Playback] ⏸ Pausing playback");
-//     window.isPlaying = false;
-//     window.isMusicalPause = false;
-//     window.animationPaused = true;
-
-//     window.stopStopwatch?.();
-//     window.stopAnimation?.();
-//     togglePlayButton();
-
-//     // Send pause message to server
-//     if (window.socket && window.socket.readyState === WebSocket.OPEN) {
-//       window.socket.send(JSON.stringify({
-//         type: "pause",
-//         playheadX: window.playheadX,
-//         elapsedTime: window.elapsedTime
-//       }));
-//     }
-//   }
-// };
-
-// // ✅ Resume logic: reuse startPlayback() for consistency
-// window.resumePlayback = function resumePlayback() {
-//   console.log("[Playback] 🔁 resumePlayback() called");
-//   window.startPlayback();
-// };
+  //     // Force start animation loop (even if already partially running)
+  //     if (typeof window.animate === "function") {
+  //       cancelAnimationFrame(window.animationFrameId);
+  //       window.animationFrameId = requestAnimationFrame(window.animate);
+  //     }
 
 
+  //     window.startStopwatch?.();
+  //     window.startAnimation?.();
+  //     togglePlayButton();
+  //     hideControls?.();
+
+  //     // Send play message to server
+  //     if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+  //       window.socket.send(JSON.stringify({
+  //         type: "play",
+  //         playheadX: window.playheadX,
+  //         elapsedTime: window.elapsedTime
+  //       }));
+  //     }
+
+  //     updatePosition?.();
+  //     checkCueTriggers?.();
+  //   }
+  // };
+
+  // // ✅ Pauses playback: sets state, stops animation + stopwatch, syncs with server
+  // window.pausePlayback = function pausePlayback() {
+  //   if (window.isPlaying) {
+  //     console.log("[Playback] ⏸ Pausing playback");
+  //     window.isPlaying = false;
+  //     window.isMusicalPause = false;
+  //     window.animationPaused = true;
+
+  //     window.stopStopwatch?.();
+  //     window.stopAnimation?.();
+  //     togglePlayButton();
+
+  //     // Send pause message to server
+  //     if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+  //       window.socket.send(JSON.stringify({
+  //         type: "pause",
+  //         playheadX: window.playheadX,
+  //         elapsedTime: window.elapsedTime
+  //       }));
+  //     }
+  //   }
+  // };
+
+  // // ✅ Resume logic: reuse startPlayback() for consistency
+  // window.resumePlayback = function resumePlayback() {
+  //   console.log("[Playback] 🔁 resumePlayback() called");
+  //   window.startPlayback();
+  // };
 
 
-//   //////////////////////////////////////////////////
 
-//   const jumpToCueId = (id) => {
-//     // Try first in cues[]
-//     let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"));
 
-//     // Fallback to global SVG search if not found in cues[]
-//     if (!target) {
-//       target = document.getElementById(id);
-//     }
+  //   //////////////////////////////////////////////////
 
-//     if (!target) {
-//       console.warn(`[jumpToCueId] Cue not found: ${id}`);
-//       return;
-//     }
+  //   const jumpToCueId = (id) => {
+  //     // Try first in cues[]
+  //     let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"));
 
-//     let targetX = target.x;
-//     if (typeof targetX !== 'number') {
-//       targetX = parseFloat(target.getAttribute('x')) || 0;
-//     }
+  //     // Fallback to global SVG search if not found in cues[]
+  //     if (!target) {
+  //       target = document.getElementById(id);
+  //     }
 
-//    window.playheadX = targetX - (window.innerWidth / 2);
-//     window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-//     window.scoreContainer.scrollLeft = window.playheadX;
+  //     if (!target) {
+  //       console.warn(`[jumpToCueId] Cue not found: ${id}`);
+  //       return;
+  //     }
 
-//     console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
+  //     let targetX = target.x;
+  //     if (typeof targetX !== 'number') {
+  //       targetX = parseFloat(target.getAttribute('x')) || 0;
+  //     }
 
-//     if (window.wsEnabled &&window.socket&& socket.readyState === WebSocket.OPEN) {
-//       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-//         elapsedTime: window.elapsedTime }));
-//     }
+  //    window.playheadX = targetX - (window.innerWidth / 2);
+  //     window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+  //     window.scoreContainer.scrollLeft = window.playheadX;
 
-//     updatePosition();
-//     updateSeekBar();
-//     //updatestopwatch();
-//   };
+  //     console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
+
+  //     if (window.wsEnabled &&window.socket&& socket.readyState === WebSocket.OPEN) {
+  //       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
+  //         elapsedTime: window.elapsedTime }));
+  //     }
+
+  //     updatePosition();
+  //     updateSeekBar();
+  //     //updatestopwatch();
+  //   };
 
 
 
@@ -3472,8 +3475,8 @@ window.startAnimation = () => {
 
   // ✅ Set default duration after durationInput is defined
   window.duration = durationInput
-  ? parseInt(durationInput.value, 10) * 60 * 1000
-  : 30 * 60 * 1000;
+    ? parseInt(durationInput.value, 10) * 60 * 1000
+    : 30 * 60 * 1000;
 
   if (scoreOptionsPopup) {
     scoreOptionsPopup.addEventListener("click", (event) => {
@@ -3592,7 +3595,7 @@ window.startAnimation = () => {
     } else if (event.key === ' ') {
       event.preventDefault(); // Prevent default browser behavior for space key
       window.isPlaying ? window.pausePlayback() : window.startPlayback();
-     // Play/Pause score
+      // Play/Pause score
       // } else if (event.key === 'r' || event.key === 'R') {
       //     rewindToStart(); // Rewind to start
     } else if (event.key === 'p' || event.key === 'P') {
@@ -3695,7 +3698,7 @@ window.startAnimation = () => {
       // Disable WebSocket
       if (window.socket) {
         window.socket.close();
-        window.socket= null;
+        window.socket = null;
       }
       console.log('WebSocket and OSC messages are disabled.');
     } else {
@@ -3749,9 +3752,9 @@ window.startAnimation = () => {
   window.updatePosition = updatePosition; // Expose updatePosition globally
 
 
-toggleSplashScreen();
+  toggleSplashScreen();
 
-console.log('// EOF');
+  console.log('// EOF');
 
 
 

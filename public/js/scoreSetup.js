@@ -1,121 +1,121 @@
 
-  // Rehearsal mark logic ////////////////////////////////////////////////////////
+// Rehearsal mark logic ////////////////////////////////////////////////////////
 
-  /**
-  * ✅ Dynamically generates and updates rehearsal mark buttons.
-  * - Clears existing buttons before creating new ones to prevent duplication.
-  * - Sorts rehearsal marks by position to maintain correct order in the UI.
-  * - Ensures buttons correctly trigger `jumpToRehearsalMark()` when clicked.
-  */
-  // Global variables
-  //  let rehearsalMarks = {};
-   let sortedMarks = []; // ✅ Now globally available sorted marks
-  //  let cues = [];
+/**
+* ✅ Dynamically generates and updates rehearsal mark buttons.
+* - Clears existing buttons before creating new ones to prevent duplication.
+* - Sorts rehearsal marks by position to maintain correct order in the UI.
+* - Ensures buttons correctly trigger `jumpToRehearsalMark()` when clicked.
+*/
+// Global variables
+//  let rehearsalMarks = {};
+let sortedMarks = []; // ✅ Now globally available sorted marks
+//  let cues = [];
 
-  /**
-  * ✅ Dynamically generates and updates rehearsal mark buttons.
-  */
-  // Global variables
+/**
+* ✅ Dynamically generates and updates rehearsal mark buttons.
+*/
+// Global variables
 
-  /**
-  * ✅ Dynamically generates and updates rehearsal mark buttons.
-  */
-  let lastRenderedMarks = "";
+/**
+* ✅ Dynamically generates and updates rehearsal mark buttons.
+*/
+let lastRenderedMarks = "";
 
-export  const createRehearsalMarkButtons = () => {
-    console.log("[DEBUG] Creating rehearsal mark buttons...");
+export const createRehearsalMarkButtons = () => {
+  console.log("[DEBUG] Creating rehearsal mark buttons...");
 
-    const container = document.getElementById("rehearsal-mark-container");
-    if (!container) {
-      console.error("[ERROR] Rehearsal mark container not found.");
-      return;
+  const container = document.getElementById("rehearsal-mark-container");
+  if (!container) {
+    console.error("[ERROR] Rehearsal mark container not found.");
+    return;
+  }
+
+  const markEntries = Object.entries(rehearsalMarks);
+  if (markEntries.length === 0) {
+    console.warn("[WARNING] No rehearsal marks found.");
+    return;
+  }
+
+  // ✅ Convert rehearsalMarks to a string for comparison
+  const currentMarks = JSON.stringify(markEntries);
+  if (currentMarks === lastRenderedMarks) {
+    console.log("[DEBUG] No changes in rehearsal marks. Skipping re-render.");
+    return;
+  }
+
+  // ✅ Save the current state to prevent unnecessary re-renders
+  lastRenderedMarks = currentMarks;
+
+  container.innerHTML = ""; // ✅ Clear existing buttons only when needed
+
+  // ✅ Sort marks by X position **(Global Update)**
+  markEntries.sort((a, b) => a[1].x - b[1].x);
+  sortedMarks = markEntries.map(([mark]) => mark); // ✅ Store globally
+
+  console.log("[DEBUG] 🎭 Final Sorted Rehearsal Marks:", sortedMarks);
+
+  let rowContainer = null;
+  const buttonsPerRow = 4;
+
+  markEntries.forEach(([mark, position], index) => {
+    if (index % buttonsPerRow === 0) {
+      rowContainer = document.createElement("div");
+      rowContainer.classList.add("rehearsal-row");
+      container.appendChild(rowContainer);
     }
 
-    const markEntries = Object.entries(rehearsalMarks);
-    if (markEntries.length === 0) {
-      console.warn("[WARNING] No rehearsal marks found.");
-      return;
-    }
+    const button = document.createElement("button");
+    button.textContent = mark;
+    button.classList.add("rehearsal-button");
+    button.addEventListener("click", () => jumpToRehearsalMark(mark));
 
-    // ✅ Convert rehearsalMarks to a string for comparison
-    const currentMarks = JSON.stringify(markEntries);
-    if (currentMarks === lastRenderedMarks) {
-      console.log("[DEBUG] No changes in rehearsal marks. Skipping re-render.");
-      return;
-    }
-
-    // ✅ Save the current state to prevent unnecessary re-renders
-    lastRenderedMarks = currentMarks;
-
-    container.innerHTML = ""; // ✅ Clear existing buttons only when needed
-
-    // ✅ Sort marks by X position **(Global Update)**
-    markEntries.sort((a, b) => a[1].x - b[1].x);
-    sortedMarks = markEntries.map(([mark]) => mark); // ✅ Store globally
-
-    console.log("[DEBUG] 🎭 Final Sorted Rehearsal Marks:", sortedMarks);
-
-    let rowContainer = null;
-    const buttonsPerRow = 4;
-
-    markEntries.forEach(([mark, position], index) => {
-      if (index % buttonsPerRow === 0) {
-        rowContainer = document.createElement("div");
-        rowContainer.classList.add("rehearsal-row");
-        container.appendChild(rowContainer);
-      }
-
-      const button = document.createElement("button");
-      button.textContent = mark;
-      button.classList.add("rehearsal-button");
-      button.addEventListener("click", () => jumpToRehearsalMark(mark));
-
-      rowContainer.appendChild(button);
-    });
-
-    console.log("[DEBUG] ✅ Rehearsal mark buttons created successfully.");
-  };
-
-  /**
-  * ✅ Opens the rehearsal mark popup.
-  */
-  const openRehearsalPopup = () => {
-    console.log("[DEBUG] Opening rehearsal mark popup...");
-
-    const popup = document.getElementById("rehearsal-popup");
-
-    if (!popup) {
-      console.error("[ERROR] Rehearsal popup not found.");
-      return;
-    }
-
-    if (sortedMarks.length === 0) {
-      console.warn("[DEBUG] No rehearsal marks found. Popup will not be shown.");
-      return;
-    }
-
-    popup.classList.remove("hidden");
-    popup.style.display = "flex";
-
-    console.log("[DEBUG] ✅ Rehearsal mark popup opened.");
-  };
-
-  /**
-  * ✅ Close popup function.
-  */
-  const closeRehearsalPopup = () => {
-    document.getElementById("rehearsal-popup").classList.add("hidden");
-  };
-
-  // ✅ Make it globally accessible
-  window.closeRehearsalPopup = closeRehearsalPopup;
-
-  // ✅ Allow opening with "R" key
-  document.addEventListener("keydown", (event) => {
-    if (event.key.toUpperCase() === "R") {
-      openRehearsalPopup();
-    }
+    rowContainer.appendChild(button);
   });
+
+  console.log("[DEBUG] ✅ Rehearsal mark buttons created successfully.");
+};
+
+/**
+* ✅ Opens the rehearsal mark popup.
+*/
+const openRehearsalPopup = () => {
+  console.log("[DEBUG] Opening rehearsal mark popup...");
+
+  const popup = document.getElementById("rehearsal-popup");
+
+  if (!popup) {
+    console.error("[ERROR] Rehearsal popup not found.");
+    return;
+  }
+
+  if (sortedMarks.length === 0) {
+    console.warn("[DEBUG] No rehearsal marks found. Popup will not be shown.");
+    return;
+  }
+
+  popup.classList.remove("hidden");
+  popup.style.display = "flex";
+
+  console.log("[DEBUG] ✅ Rehearsal mark popup opened.");
+};
+
+/**
+* ✅ Close popup function.
+*/
+const closeRehearsalPopup = () => {
+  document.getElementById("rehearsal-popup").classList.add("hidden");
+};
+
+// ✅ Make it globally accessible
+window.closeRehearsalPopup = closeRehearsalPopup;
+
+// ✅ Allow opening with "R" key
+document.addEventListener("keydown", (event) => {
+  if (event.key.toUpperCase() === "R") {
+    openRehearsalPopup();
+  }
+});
 
 
 
@@ -139,27 +139,27 @@ function scrollToSVGX(x) {
 
   // Get actual scrollable pixel width of the container (DOM pixels)
   const scrollableWidth = container.scrollWidth;
-//   console.log(`[scrollToSVGX] 📜 Container scrollWidth: ${scrollableWidth}`);
+  //   console.log(`[scrollToSVGX] 📜 Container scrollWidth: ${scrollableWidth}`);
 
   // Calculate scale from SVG units → DOM pixels
   const scale = scrollableWidth / svgWidth;
-//   console.log(`[scrollToSVGX] 📏 Calculated scale: ${scale}`);
+  //   console.log(`[scrollToSVGX] 📏 Calculated scale: ${scale}`);
 
   // Compute the visible width (to center the target point)
   const visibleWidth = container.clientWidth;
-//   console.log(`[scrollToSVGX] 🪟 Container visible width: ${visibleWidth}`);
+  //   console.log(`[scrollToSVGX] 🪟 Container visible width: ${visibleWidth}`);
 
   // Calculate the adjusted scrollLeft
   const scrollLeft = x * scale - (visibleWidth / 2);
-//   console.log(`[scrollToSVGX] 🔄 Computed scrollLeft: ${scrollLeft}`);
+  //   console.log(`[scrollToSVGX] 🔄 Computed scrollLeft: ${scrollLeft}`);
 
   // Apply the scroll position
   container.scrollLeft = scrollLeft;
-//   console.log(`[scrollToSVGX] ✅ Applied scrollLeft: ${container.scrollLeft}`);
+  //   console.log(`[scrollToSVGX] ✅ Applied scrollLeft: ${container.scrollLeft}`);
 
   // Update internal playhead tracker
   window.playheadX = container.scrollLeft;
-//   console.log(`[scrollToSVGX] 🎬 Updated window.playheadX: ${window.playheadX}`);
+  //   console.log(`[scrollToSVGX] 🎬 Updated window.playheadX: ${window.playheadX}`);
 }
 
 
@@ -168,128 +168,129 @@ const jumpToRehearsalMark = (mark) => {
     console.error(`[ERROR] Rehearsal Mark "${mark}" not found.`);
     return;
   }
-  
+
   const x = rehearsalMarks[mark].x;
 
   scrollToSVGX(rehearsalMarks[mark].x);
 
-// Send the **absolute scrollLeft** to other clients
-if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
-  window.socket.send(JSON.stringify({
-    type: 'jump',
-    playheadX: x
-  }));
-}
+  // Send the **absolute scrollLeft** to other clients
+  if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
+    window.socket.send(JSON.stringify({
+      type: 'jump',
+      playheadX: x
+    }));
+  }
 
   // updatePosition();
   // updateSeekBar();
 };
 
+window.jumpToRehearsalMark = jumpToRehearsalMark;
 
 
-  let currentIndex = 0; // Track the current rehearsal mark index
+let currentIndex = 0; // Track the current rehearsal mark index
 
-  document.addEventListener('keydown', (event) => {
-    if (!["ArrowUp", "ArrowDown"].includes(event.key)) return; // Only handle up/down keys
+document.addEventListener('keydown', (event) => {
+  if (!["ArrowUp", "ArrowDown"].includes(event.key)) return; // Only handle up/down keys
 
-    if (sortedMarks.length === 0) {
-      console.warn("[WARNING] No rehearsal marks available for navigation.");
-      return;
-    }
+  if (sortedMarks.length === 0) {
+    console.warn("[WARNING] No rehearsal marks available for navigation.");
+    return;
+  }
 
-    // console.log(`\n[DEBUG] Key Pressed: ${event.key}`);
-    // console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
-    // console.log(`[DEBUG] Currentwindow.playheadX: ${window.playheadX}`);
+  // console.log(`\n[DEBUG] Key Pressed: ${event.key}`);
+  // console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
+  // console.log(`[DEBUG] Currentwindow.playheadX: ${window.playheadX}`);
 
-    // 🔹 Move Up or Down in the Index Directly
-    if (event.key === "ArrowUp" && currentIndex < sortedMarks.length - 1) {
-      currentIndex++;
-    } else if (event.key === "ArrowDown" && currentIndex > 0) {
-      currentIndex--;
-    } else {
-      console.log("[DEBUG] Already at the first or last rehearsal mark.");
-      return;
-    }
+  // 🔹 Move Up or Down in the Index Directly
+  if (event.key === "ArrowUp" && currentIndex < sortedMarks.length - 1) {
+    currentIndex++;
+  } else if (event.key === "ArrowDown" && currentIndex > 0) {
+    currentIndex--;
+  } else {
+    console.log("[DEBUG] Already at the first or last rehearsal mark.");
+    return;
+  }
 
-    let nextMark = sortedMarks[currentIndex];
+  let nextMark = sortedMarks[currentIndex];
 
-    console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
-    // console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
+  console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
+  // console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
 
-    // 🔹 Ensurewindow.playheadX Updates Properly
-   window.playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent snapping back
-    jumpToRehearsalMark(nextMark);
+  // 🔹 Ensurewindow.playheadX Updates Properly
+  window.playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent snapping back
+  jumpToRehearsalMark(nextMark);
 
-    console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
-  });
-
-
+  console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
+});
 
 
 
-  /**
-  * ✅ Fast-forward & Rewind Buttons (Now using the fixed index approach)
-  */
 
-  document.getElementById('fast-forward-button').addEventListener('click', () => {
-    if (sortedMarks.length === 0) {
-      console.warn("[WARNING] No rehearsal marks available for navigation.");
-      return;
-    }
 
-    console.log(`\n[DEBUG] Fast Forward Clicked`);
-    console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
+/**
+* ✅ Fast-forward & Rewind Buttons (Now using the fixed index approach)
+*/
 
-    // Move up in the index directly
-    if (currentIndex < sortedMarks.length - 1) {
-      currentIndex++;
-    } else {
-      console.log("[DEBUG] Already at the last rehearsal mark.");
-      return;
-    }
+document.getElementById('fast-forward-button').addEventListener('click', () => {
+  if (sortedMarks.length === 0) {
+    console.warn("[WARNING] No rehearsal marks available for navigation.");
+    return;
+  }
 
-    let nextMark = sortedMarks[currentIndex];
+  console.log(`\n[DEBUG] Fast Forward Clicked`);
+  console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
 
-    console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
-    console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
+  // Move up in the index directly
+  if (currentIndex < sortedMarks.length - 1) {
+    currentIndex++;
+  } else {
+    console.log("[DEBUG] Already at the last rehearsal mark.");
+    return;
+  }
 
-    // Updatewindow.playheadX properly to prevent snapping issues
-   window.playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent looping
-    jumpToRehearsalMark(nextMark);
+  let nextMark = sortedMarks[currentIndex];
 
-    console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
-  });
+  console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
+  console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
 
-  document.getElementById('fast-rewind-button').addEventListener('click', () => {
-    if (sortedMarks.length === 0) {
-      console.warn("[WARNING] No rehearsal marks available for navigation.");
-      return;
-    }
+  // Updatewindow.playheadX properly to prevent snapping issues
+  window.playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent looping
+  jumpToRehearsalMark(nextMark);
 
-    console.log(`\n[DEBUG] Fast Rewind Clicked`);
-    console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
+  console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
+});
 
-    // Move down in the index directly
-    if (currentIndex > 0) {
-      currentIndex--;
-    } else {
-      console.log("[DEBUG] Already at the first rehearsal mark.");
-      return;
-    }
+document.getElementById('fast-rewind-button').addEventListener('click', () => {
+  if (sortedMarks.length === 0) {
+    console.warn("[WARNING] No rehearsal marks available for navigation.");
+    return;
+  }
 
-    let nextMark = sortedMarks[currentIndex];
+  console.log(`\n[DEBUG] Fast Rewind Clicked`);
+  console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
 
-    console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
-    console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
+  // Move down in the index directly
+  if (currentIndex > 0) {
+    currentIndex--;
+  } else {
+    console.log("[DEBUG] Already at the first rehearsal mark.");
+    return;
+  }
 
-    // Updatewindow.playheadX properly
-   window.playheadX = rehearsalMarks[nextMark].x + 1;
-    jumpToRehearsalMark(nextMark);
+  let nextMark = sortedMarks[currentIndex];
 
-    console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
-  });
+  console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
+  console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
 
-  //////// END OF REHEARSAL MARK LOGIC ///////////////////////////////////////////
+  // Updatewindow.playheadX properly
+  window.playheadX = rehearsalMarks[nextMark].x + 1;
+  jumpToRehearsalMark(nextMark);
+
+  console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
+});
+
+//////// END OF REHEARSAL MARK LOGIC ///////////////////////////////////////////
 
 // window.rehearsalMarks = rehearsalMarks;
 
@@ -299,149 +300,149 @@ if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
 
 
 
-  // Set this to true for debugging
-  const debugMode = true;
+// Set this to true for debugging
+const debugMode = true;
 
-  /**
-  * Extracts rehearsal marks and cue positions from the score SVG.
-  * Converts their positions to absolute coordinates for accurate playback control.
-  * Calls `preloadSpeedCues()` to ensure speed cues are available from the start.
-  * Logs detailed debug information for troubleshooting position and scaling issues.
-  */
+/**
+* Extracts rehearsal marks and cue positions from the score SVG.
+* Converts their positions to absolute coordinates for accurate playback control.
+* Calls `preloadSpeedCues()` to ensure speed cues are available from the start.
+* Logs detailed debug information for troubleshooting position and scaling issues.
+*/
 
-  // Global variables to store the extracted positions
-  let rehearsalMarks = {};
-  let cues = [];
-  let speedCueMap = []; // ✅ Ensures speed cues are tracked globally
+// Global variables to store the extracted positions
+let rehearsalMarks = {};
+let cues = [];
+let speedCueMap = []; // ✅ Ensures speed cues are tracked globally
 
 export const extractScoreElements = (svgElement) => {
-    if (!svgElement) {
-      console.error("[ERROR] extractScoreElements called without a valid SVG element.");
-      return;
+  if (!svgElement) {
+    console.error("[ERROR] extractScoreElements called without a valid SVG element.");
+    return;
+  }
+
+  console.log("[DEBUG] 🔍 Extracting rehearsal marks and cues from SVG.");
+
+  let newRehearsalMarks = {}; // ✅ Store new extracted marks to prevent unnecessary resets
+  let newCues = [];
+
+  // ✅ Select all relevant elements
+  const elements = svgElement.querySelectorAll(
+    "[id^='rehearsal_'], [id^='cue'], [id^='anchor-'], [id^='label-']"
+  );
+  if (elements.length === 0) {
+    console.warn("[WARNING] No rehearsal marks or cues found in SVG.");
+    return;
+  }
+
+  elements.forEach((element) => {
+    const bbox = element.getBBox();
+    const matrix = element.getCTM();
+    let absoluteX = bbox.x;
+    if (matrix) {
+      absoluteX += matrix.e;
     }
 
-    console.log("[DEBUG] 🔍 Extracting rehearsal marks and cues from SVG.");
-
-    let newRehearsalMarks = {}; // ✅ Store new extracted marks to prevent unnecessary resets
-    let newCues = [];
-
-    // ✅ Select all relevant elements
-    const elements = svgElement.querySelectorAll(
-      "[id^='rehearsal_'], [id^='cue'], [id^='anchor-'], [id^='label-']"
-    );
-    if (elements.length === 0) {
-      console.warn("[WARNING] No rehearsal marks or cues found in SVG.");
-      return;
+    if (element.id.startsWith("rehearsal_")) {
+      const id = element.id.replace("rehearsal_", "");
+      newRehearsalMarks[id] = { x: absoluteX };
+      // console.log(`[DEBUG] 🎯 Rehearsal Mark Stored: ${id}, Position: (${absoluteX})`);
+    } else if (element.id.startsWith("cue") || element.id.startsWith("s_") || element.id.startsWith("anchor-")) {
+      // console.log(`[DEBUG] Processing cue: ${element.id}`);
+      newCues.push({ id: element.id, x: absoluteX, width: bbox.width });
+      // console.log(`[DEBUG] 🎯 Cue Stored: ${element.id}, X: ${absoluteX}, Width: ${bbox.width}`);
     }
+  });
+
+  // ✅ Update global variables only if new marks are found
+  if (Object.keys(newRehearsalMarks).length > 0) {
+    rehearsalMarks = newRehearsalMarks;
+    // console.log("[DEBUG] ✅ Rehearsal marks updated.");
+    // ✅ Store sorted rehearsal marks globally for all handlers to use
+
+    if (Object.keys(newRehearsalMarks).length > 0) {
+      rehearsalMarks = Object.fromEntries(
+        Object.entries(newRehearsalMarks).sort((a, b) => a[1].x - b[1].x)
+      );
+
+      // console.log("[DEBUG] ✅ Global `rehearsalMarks` sorted:", rehearsalMarks);
+    }
+
+    window.sortedMarks = Object.entries(rehearsalMarks)
+      .sort((a, b) => a[1].x - b[1].x)
+      .map(([mark]) => mark);
+
+    // console.log("[DEBUG] 🎭 Final sorted rehearsal marks:", sortedMarks);
+
+  }
+
+  if (newCues.length > 0) {
+    cues = newCues;
+    console.log("[DEBUG] ✅ Cues updated.");
+  }
+
+  // ✅ Only set `speedCueMap` if it's empty (first-time loading)
+  if (speedCueMap.length === 0) {
+    console.log("[DEBUG] Loading speed cues for the first time.");
 
     elements.forEach((element) => {
-      const bbox = element.getBBox();
-      const matrix = element.getCTM();
-      let absoluteX = bbox.x;
-      if (matrix) {
-        absoluteX += matrix.e;
-      }
+      if (element.id.startsWith("cueSpeed_")) {
+        const bbox = element.getBBox();
+        const matrix = element.getCTM();
+        let absoluteX = bbox.x;
+        if (matrix) {
+          absoluteX += matrix.e;
+        }
 
-      if (element.id.startsWith("rehearsal_")) {
-        const id = element.id.replace("rehearsal_", "");
-        newRehearsalMarks[id] = { x: absoluteX };
-        // console.log(`[DEBUG] 🎯 Rehearsal Mark Stored: ${id}, Position: (${absoluteX})`);
-      } else if (element.id.startsWith("cue") || element.id.startsWith("s_") || element.id.startsWith("anchor-")) {
-        // console.log(`[DEBUG] Processing cue: ${element.id}`);
-        newCues.push({ id: element.id, x: absoluteX, width: bbox.width });
-        // console.log(`[DEBUG] 🎯 Cue Stored: ${element.id}, X: ${absoluteX}, Width: ${bbox.width}`);
+        const match = element.id.match(/cueSpeed_([\d.]+)/);
+        if (match) {
+          const speedValue = parseFloat(match[1]);
+          speedCueMap.push({ position: absoluteX, multiplier: speedValue });
+          // console.log(`[DEBUG] Stored speed cue -> Position: ${absoluteX}, Speed: ${speedValue}`);
+        }
       }
     });
 
-    // ✅ Update global variables only if new marks are found
-    if (Object.keys(newRehearsalMarks).length > 0) {
-      rehearsalMarks = newRehearsalMarks;
-      // console.log("[DEBUG] ✅ Rehearsal marks updated.");
-      // ✅ Store sorted rehearsal marks globally for all handlers to use
-
-      if (Object.keys(newRehearsalMarks).length > 0) {
-        rehearsalMarks = Object.fromEntries(
-          Object.entries(newRehearsalMarks).sort((a, b) => a[1].x - b[1].x)
-        );
-
-        // console.log("[DEBUG] ✅ Global `rehearsalMarks` sorted:", rehearsalMarks);
-      }
-
-      window.sortedMarks = Object.entries(rehearsalMarks)
-        .sort((a, b) => a[1].x - b[1].x)
-        .map(([mark]) => mark);
-
-      // console.log("[DEBUG] 🎭 Final sorted rehearsal marks:", sortedMarks);
-
-    }
-
-    if (newCues.length > 0) {
-      cues = newCues;
-      console.log("[DEBUG] ✅ Cues updated.");
-    }
-
-    // ✅ Only set `speedCueMap` if it's empty (first-time loading)
-    if (speedCueMap.length === 0) {
-      console.log("[DEBUG] Loading speed cues for the first time.");
-
-      elements.forEach((element) => {
-        if (element.id.startsWith("cueSpeed_")) {
-          const bbox = element.getBBox();
-          const matrix = element.getCTM();
-          let absoluteX = bbox.x;
-          if (matrix) {
-            absoluteX += matrix.e;
-          }
-
-          const match = element.id.match(/cueSpeed_([\d.]+)/);
-          if (match) {
-            const speedValue = parseFloat(match[1]);
-            speedCueMap.push({ position: absoluteX, multiplier: speedValue });
-            // console.log(`[DEBUG] Stored speed cue -> Position: ${absoluteX}, Speed: ${speedValue}`);
-          }
-        }
-      });
-
-      // ✅ Ensure `speedCueMap` is always sorted for correct lookups
-      speedCueMap.sort((a, b) => a.position - b.position);
-      console.log("[DEBUG] Final sorted speed cues:", speedCueMap);
-    }
+    // ✅ Ensure `speedCueMap` is always sorted for correct lookups
+    speedCueMap.sort((a, b) => a.position - b.position);
+    console.log("[DEBUG] Final sorted speed cues:", speedCueMap);
+  }
 
 
 
 
 
-// ✅ Defer button creation until the SVG layout is fully ready
-if (Object.keys(rehearsalMarks).length > 0) {
-  console.log("[extractScoreElements] ⏳ Deferring rehearsal mark button creation until next paint frame...");
-  requestAnimationFrame(() => {
+  // ✅ Defer button creation until the SVG layout is fully ready
+  if (Object.keys(rehearsalMarks).length > 0) {
+    console.log("[extractScoreElements] ⏳ Deferring rehearsal mark button creation until next paint frame...");
+    requestAnimationFrame(() => {
 
-    createRehearsalMarkButtons();
-    console.log("[extractScoreElements] ✅ Rehearsal mark buttons created after layout stabilization.");
-  });
-}
-      // extractScoreElements(svgElement);
-
-
-    const newCueIds = new Set(newCues.map(c => c.id));
-
-    for (const existingCue of window.cues) {
-      newCueIds.delete(existingCue.id); // Keep only truly new cues
-    }
-
-    const filteredNewCues = newCues.filter(c => newCueIds.has(c.id) && c.element);
-    if (filteredNewCues.length < newCues.length) {
-      console.warn(`[extractScoreElements] ⚠️ Skipped ${newCues.length - filteredNewCues.length} newCues without element`);
-    }
-
-    window.cues.push(...filteredNewCues);
+      createRehearsalMarkButtons();
+      console.log("[extractScoreElements] ✅ Rehearsal mark buttons created after layout stabilization.");
+    });
+  }
+  // extractScoreElements(svgElement);
 
 
-      };
+  const newCueIds = new Set(newCues.map(c => c.id));
 
-  //////  end of extract score elements  //////////////////////////////////////
+  for (const existingCue of window.cues) {
+    newCueIds.delete(existingCue.id); // Keep only truly new cues
+  }
 
-  export async function preloadSvgGroups() {
+  const filteredNewCues = newCues.filter(c => newCueIds.has(c.id) && c.element);
+  if (filteredNewCues.length < newCues.length) {
+    console.warn(`[extractScoreElements] ⚠️ Skipped ${newCues.length - filteredNewCues.length} newCues without element`);
+  }
+
+  window.cues.push(...filteredNewCues);
+
+
+};
+
+//////  end of extract score elements  //////////////////////////////////////
+
+export async function preloadSvgGroups() {
   window.groupRegistry = window.groupRegistry || {};
 
   const svgFiles = window.allSvgFiles || []; // ← populated by your page manifest or directory scan
@@ -665,35 +666,35 @@ async function preloadAllSvgGroups() {
   const baseDir = window.pagesDir || "scores/pages/";
   const files = [];
 
- try {
-  // 1️⃣ Request the directory listing
-  const res = await fetch(baseDir);
-  if (!res.ok) throw new Error(`Cannot list directory: ${baseDir}`);
+  try {
+    // 1️⃣ Request the directory listing
+    const res = await fetch(baseDir);
+    if (!res.ok) throw new Error(`Cannot list directory: ${baseDir}`);
 
-  const html = await res.text();
+    const html = await res.text();
 
-  // 2️⃣ Extract all .svg links — supports relative or full hrefs
-  const regex = /href=["']([^"']+\.svg)["']/g;
-  let match;
-  while ((match = regex.exec(html)) !== null) {
-    let href = match[1].trim();
+    // 2️⃣ Extract all .svg links — supports relative or full hrefs
+    const regex = /href=["']([^"']+\.svg)["']/g;
+    let match;
+    while ((match = regex.exec(html)) !== null) {
+      let href = match[1].trim();
 
-    // Normalize: if href already contains the full baseDir path, don't prepend it again
-    if (href.startsWith(baseDir) || href.startsWith("/" + baseDir)) {
-      files.push(href);
-    } else if (href.startsWith("shared/") || href.startsWith("/shared/")) {
-      files.push(href); // for shared/help pages
-    } else if (!href.startsWith("http") && !href.startsWith("/")) {
-      files.push(`${baseDir}${href}`);
-    } else {
-      files.push(href); // fallback for any other case
+      // Normalize: if href already contains the full baseDir path, don't prepend it again
+      if (href.startsWith(baseDir) || href.startsWith("/" + baseDir)) {
+        files.push(href);
+      } else if (href.startsWith("shared/") || href.startsWith("/shared/")) {
+        files.push(href); // for shared/help pages
+      } else if (!href.startsWith("http") && !href.startsWith("/")) {
+        files.push(`${baseDir}${href}`);
+      } else {
+        files.push(href); // fallback for any other case
+      }
     }
-  }
 
-  console.log(`[groupRegistry] 📂 Found ${files.length} SVG pages in ${baseDir}`);
-} catch (err) {
-  console.warn(`[groupRegistry] ⚠️ Directory listing failed for ${baseDir}:`, err);
-}
+    console.log(`[groupRegistry] 📂 Found ${files.length} SVG pages in ${baseDir}`);
+  } catch (err) {
+    console.warn(`[groupRegistry] ⚠️ Directory listing failed for ${baseDir}:`, err);
+  }
 
 
   // 3️⃣ Fallback — if no listing, assume at least one page
@@ -732,15 +733,15 @@ async function preloadAllSvgGroups() {
 
 
 export async function setupScore(svgElement) {
-  
+
   if (!svgElement) {
     console.error("[scoreSetup] ❌ setupScore called without valid SVG element");
     return;
   }
 
   console.group("[scoreSetup] 🚀 Setting up score");
-  
-  
+
+
   await new Promise(r => requestAnimationFrame(r)); // 🕐 ensure final paint
   const startTime = performance.now();
   extractScoreElements(svgElement);
@@ -762,10 +763,10 @@ export async function setupScore(svgElement) {
 
   preloadSpeedCues();
 
-  
+
 
   // 🟢 Preload all reusable group definitions from pages/
-// preloadSvgGroups();
+  // preloadSvgGroups();
   preloadAllSvgGroups();
   console.log("[setupScore] ✅ All group definitions preloaded.");
 

@@ -22,16 +22,28 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="0.59"
-     inkscape:cx="840.67797"
-     inkscape:cy="568.64407"
+     inkscape:cx="841.52542"
+     inkscape:cy="569.49153"
      inkscape:window-width="1854"
      inkscape:window-height="1011"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="group-mainMenu" />
+     inkscape:current-layer="svg5125" />
   <defs
      id="defs5129">
+    <rect
+       x="662.71186"
+       y="903.38983"
+       width="54.237288"
+       height="30.508475"
+       id="rect10" />
+    <rect
+       x="559.32203"
+       y="845.76271"
+       width="69.491525"
+       height="50.847458"
+       id="rect1" />
     <rect
        x="7351.7611"
        y="161.48702"
@@ -136,9 +148,9 @@
      transform="matrix(0.23659034,0,0,0.23659034,-69.542768,-84.140528)"><tspan
        x="366.70773"
        y="569.79199"
-       id="tspan2"><tspan
+       id="tspan12"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan1">PAGE 2</tspan></tspan></text>
+         id="tspan3">PAGE 2</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:192px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#808000"
@@ -149,69 +161,6 @@
        id="tspan300833"
        x="835.15625"
        y="313.47986" /></text>
-  <text
-     xml:space="preserve"
-     style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';fill:#000000;stroke-width:1.75042"
-     x="400.83667"
-     y="889.42017"
-     id="cueButton(cueNav(goto(page0))_style(size:&quot;120x50&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 0&quot;)) "
-     transform="scale(0.99191568,1.0081502)"><tspan
-       sodipodi:role="line"
-       id="tspan79197"
-       x="400.83667"
-       y="889.42017"
-       style="stroke-width:1.75042">p0</tspan></text>
-  <text
-     xml:space="preserve"
-     style="font-weight:bold;font-size:28.0069px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';white-space:pre;inline-size:40.8619;display:inline;fill:#000000;stroke-width:1.75042"
-     x="575.57843"
-     y="925.75702"
-     id="cueButton(cueNav(goto(page1))_style(size:&quot;120x50&quot;, color:&quot;#008&quot;, label:&quot;Go to Page 1&quot;)) "
-     transform="matrix(0.99191568,0,0,1.0081502,18.485169,-35.666049)"><tspan
-       x="575.57843"
-       y="925.75702"
-       id="tspan3">p1</tspan></text>
-  <text
-     xml:space="preserve"
-     style="font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
-     x="1178.6613"
-     y="888.31909"
-     id="cueButton(cueNav(mode(scroll)))_style(   label:&quot;Exit Page Mode&quot;,   color:&quot;crimson&quot;,   fontsize:20,   font:&quot;Arial Black&quot;,   radius:12 )"><tspan
-       sodipodi:role="line"
-       id="tspan181966"
-       x="1178.6613"
-       y="888.31909"
-       style="font-size:16px">cueButton(cueNav(mode(scroll)))_style(</tspan><tspan
-       sodipodi:role="line"
-       x="1178.6613"
-       y="908.31909"
-       id="tspan181970"
-       style="font-size:16px">  label:&quot;Exit Page Mode&quot;,</tspan><tspan
-       sodipodi:role="line"
-       x="1178.6613"
-       y="928.31909"
-       id="tspan181972"
-       style="font-size:16px">  color:&quot;crimson&quot;,</tspan><tspan
-       sodipodi:role="line"
-       x="1178.6613"
-       y="948.31909"
-       id="tspan181974"
-       style="font-size:16px">  fontsize:20,</tspan><tspan
-       sodipodi:role="line"
-       x="1178.6613"
-       y="968.31909"
-       id="tspan181976"
-       style="font-size:16px">  font:&quot;Arial Black&quot;,</tspan><tspan
-       sodipodi:role="line"
-       x="1178.6613"
-       y="988.31909"
-       id="tspan181978"
-       style="font-size:16px">  radius:12</tspan><tspan
-       sodipodi:role="line"
-       x="1178.6613"
-       y="1008.3191"
-       id="tspan181980"
-       style="font-size:16px">)</tspan></text>
   <text
      xml:space="preserve"
      style="font-size:21.3333px;white-space:pre;inline-size:1179.2;display:inline;fill:#000000"
@@ -233,36 +182,26 @@
      style="font-size:21.3333px;white-space:pre;shape-inside:url(#rect340);display:inline;fill:#000000" />
   <text
      xml:space="preserve"
-     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:48px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000"
-     x="103.1581"
-     y="117.16101"
-     id="text526"><tspan
-       sodipodi:role="line"
-       id="tspan524"
-       x="103.1581"
-       y="117.16101">Navig</tspan></text>
-  <text
-     xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:26.6667px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';white-space:pre;inline-size:574.535;display:inline;fill:#000000"
      x="13743.035"
      y="554.47253"
-     id="cueText(&quot;texts/tzara-cutup.txt&quot;)  _anim(&quot;fade&quot;)  _dur(2)  _pos(self)  _random(1)  _loop(0)  _autostart(1)_style(fontsize:99)"
+     id="cueText(&quot;tzara-cutup.txt&quot;)  _anim(&quot;fade&quot;)  _dur(2)  _pos(self)  _random(1)  _loop(0)  _autostart(1)_style(fontsize:99)"
      transform="translate(-13346.878,-119.00124)"><tspan
        x="13743.035"
        y="554.47253"
-       id="tspan5"><tspan
+       id="tspan14"><tspan
          style="fill:none"
-         id="tspan4">cueText(&quot;texts/tzara-cutup.txt&quot;)  </tspan></tspan><tspan
+         id="tspan13">cueText(&quot;texts/tzara-cutup.txt&quot;)  </tspan></tspan><tspan
        x="13743.035"
        y="587.80592"
-       id="tspan7"><tspan
+       id="tspan16"><tspan
          style="fill:none"
-         id="tspan6">_anim(&quot;fade&quot;)  _dur(2)  _pos(self)  </tspan></tspan><tspan
+         id="tspan15">_anim(&quot;fade&quot;)  _dur(2)  _pos(self)  </tspan></tspan><tspan
        x="13743.035"
        y="621.13929"
-       id="tspan9"><tspan
+       id="tspan18"><tspan
          style="fill:none"
-         id="tspan8">_random(1)  _loop(0)  _autostart(1)</tspan></tspan></text>
+         id="tspan17">_random(1)  _loop(0)  _autostart(1)</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-size:29.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#000000"
@@ -276,4 +215,12 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:29.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold'">there is a hidden object in the middle of this page for the cueText</tspan></text>
   <g
      id="group-mainMenu" />
+  <text
+     xml:space="preserve"
+     id="text1"
+     style="font-weight:bold;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect1);display:inline;fill:#000000" />
+  <text
+     xml:space="preserve"
+     id="text10"
+     style="font-weight:bold;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect10);display:inline;fill:#000000" />
 </svg>

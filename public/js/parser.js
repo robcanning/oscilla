@@ -126,23 +126,24 @@ export function printCST(node, depth = 0) {
 // ------------------------------------------------------------
 
 // Keywords
-const Cue    = createToken({ name: "Cue",    pattern: /cue/ });
-const Seq    = createToken({ name: "Seq",    pattern: /seq/ });
-const Loop   = createToken({ name: "Loop",   pattern: /loop/ });
-const Rand   = createToken({ name: "Rand",   pattern: /rand/ });
+const Cue = createToken({ name: "Cue", pattern: /cue/ });
+const Seq = createToken({ name: "Seq", pattern: /seq/ });
+const Loop = createToken({ name: "Loop", pattern: /loop/ });
+const Rand = createToken({ name: "Rand", pattern: /rand/ });
 const Choose = createToken({ name: "Choose", pattern: /choose/ });
-const Mode   = createToken({ name: "Mode",   pattern: /mode/ });
+const Mode = createToken({ name: "Mode", pattern: /mode/ });
 
 // Symbols
-const LParen  = createToken({ name: "LParen",  pattern: /\(/ });
-const RParen  = createToken({ name: "RParen",  pattern: /\)/ });
-const LBrace  = createToken({ name: "LBrace",  pattern: /\{/ });
-const RBrace  = createToken({ name: "RBrace",  pattern: /\}/ });
-const Colon   = createToken({ name: "Colon",   pattern: /:/ });
-const Comma   = createToken({ name: "Comma",   pattern: /,/ });
+const LParen = createToken({ name: "LParen", pattern: /\(/ });
+const RParen = createToken({ name: "RParen", pattern: /\)/ });
+const LBrace = createToken({ name: "LBrace", pattern: /\{/ });
+const RBrace = createToken({ name: "RBrace", pattern: /\}/ });
+const Colon = createToken({ name: "Colon", pattern: /:/ });
+const Comma = createToken({ name: "Comma", pattern: /,/ });
+const At = createToken({ name: "At", pattern: /@/ });
 
 // Parameters like x:2 inside braces
-const XParam  = createToken({ name: "XParam", pattern: /x/ });
+const XParam = createToken({ name: "XParam", pattern: /x/ });
 
 // Literals and identifiers
 const NumberLiteral = createToken({
@@ -163,7 +164,7 @@ const WS = createToken({
 const allTokens = [
   Cue, Seq, Loop, Rand, Choose, Mode,
   LParen, RParen, LBrace, RBrace, Colon, Comma,
-  XParam, NumberLiteral, Identifier, WS
+  XParam, NumberLiteral, Identifier, WS, At
 ];
 
 export const CueLexer = new Lexer(allTokens);
@@ -177,13 +178,13 @@ export class CueParser extends CstParser {
     const $ = this;
 
     // ---- pageItem ----
-   $.RULE("pageItem", () => {
-  $.CONSUME(Identifier, { LABEL: "page" });   // e.g. "page1"
-  $.OPTION(() => {
-    $.CONSUME(Colon);
-    $.CONSUME(NumberLiteral, { LABEL: "dur" });  // optional duration (seconds)
-  });
-});
+    $.RULE("pageItem", () => {
+      $.CONSUME(Identifier, { LABEL: "page" });   // e.g. "page1"
+      $.OPTION(() => {
+        $.CONSUME(Colon);
+        $.CONSUME(NumberLiteral, { LABEL: "dur" });  // optional duration (seconds)
+      });
+    });
 
 
     // ---- loopItem ----
@@ -238,11 +239,21 @@ export class CueParser extends CstParser {
     });
 
     // ---- controlItem ----
-    $.RULE("controlItem", () => {
-      $.CONSUME(Mode);
-      $.CONSUME(Colon);
-      $.CONSUME(Identifier, { LABEL: "value" });
+    this.RULE("controlItem", () => {
+      this.CONSUME(Mode);
+      this.CONSUME(Colon);
+      // First Identifier → mode type (e.g. "scroll")
+      this.CONSUME1(Identifier, { LABEL: "modeType" });
+
+      // Optional target with "@"
+      this.OPTION(() => {
+        this.CONSUME(At);
+        // Second Identifier → target UID (e.g. "mark42")
+        this.CONSUME2(Identifier, { LABEL: "targetUid" });
+      });
     });
+
+
 
     // ---- playlistItem ----
     $.RULE("playlistItem", () => {
@@ -265,25 +276,25 @@ export class CueParser extends CstParser {
       });
     });
 
-// ------------------------------------------------------------
-// cue:page(...) — supports both simple and sequenced page calls
-// ------------------------------------------------------------
-$.RULE("cuePage", () => {
-  $.CONSUME(Cue);                                   // "cue"
-  $.CONSUME(Colon);                                 // ":"
-  $.CONSUME(Identifier, { LABEL: "pageKeyword" });  // "page"
-  $.CONSUME(LParen);
+    // ------------------------------------------------------------
+    // cue:page(...) — supports both simple and sequenced page calls
+    // ------------------------------------------------------------
+    $.RULE("cuePage", () => {
+      $.CONSUME(Cue);                                   // "cue"
+      $.CONSUME(Colon);                                 // ":"
+      $.CONSUME(Identifier, { LABEL: "pageKeyword" });  // "page"
+      $.CONSUME(LParen);
 
-  // Allow either full seq: syntax or single bare page
-  $.OPTION(() => {
-    $.OR([
-      { ALT: () => $.SUBRULE($.playlist) },  // seq: page1:4, loop(...), mode:scroll
-      { ALT: () => $.SUBRULE($.pageItem) }   // bare page form: cue:page(page1)
-    ]);
-  });
+      // Allow either full seq: syntax or single bare page
+      $.OPTION(() => {
+        $.OR([
+          { ALT: () => $.SUBRULE($.playlist) },  // seq: page1:4, loop(...), mode:scroll
+          { ALT: () => $.SUBRULE($.pageItem) }   // bare page form: cue:page(page1)
+        ]);
+      });
 
-  $.CONSUME(RParen);
-});
+      $.CONSUME(RParen);
+    });
 
 
     this.performSelfAnalysis();
@@ -370,10 +381,12 @@ export function cstToAst(cst) {
     if (c.controlItem) {
       const ch = c.controlItem[0].children;
       const name = "mode";
-      const value = ch.value?.[0]?.image;
-      ast.args.push({ type: "control", name, value });
+      const value = ch.modeType?.[0]?.image;    // Identifier #1
+      const target = ch.targetUid?.[0]?.image || null; // Identifier #2
+      ast.args.push({ type: "control", name, value, target });
       continue;
     }
+
   }
 
   // 2) Fallback: bare form cue:page(page1) or cue:page(page1:4)
@@ -405,7 +418,7 @@ export function parseCueToAST(input) {
   }
 
   console.log("✅ Parsed CST structure ↓↓↓");
-  printCST(cst);  
+  printCST(cst);
 
   const ast = cstToAst(cst);
   console.log("[CueDSL] ✅ Parsed CST:", cst);

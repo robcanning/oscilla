@@ -4,7 +4,7 @@
 /* @import url('https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap'); */
 
 html {
-    scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: stable both-edges;
 }
 
 body {
@@ -41,7 +41,8 @@ body {
 /* Controls Container */
 /* Ensure the overall controls container occupies the full available height */
 #controls {
-  flex-direction: column; /* ✅ Makes seek bar appear above buttons */
+  flex-direction: column;
+  /* ✅ Makes seek bar appear above buttons */
   position: fixed;
   bottom: 20px;
   left: 0;
@@ -53,8 +54,10 @@ body {
 
   display: flex;
   flex-direction: column;
-  height: 12%; /* or use a fixed height / 100vh as needed */
-  z-index: 10000; /* Ensure it's on top */
+  height: 12%;
+  /* or use a fixed height / 100vh as needed */
+  z-index: 10000;
+  /* Ensure it's on top */
 
   transition: transform 0.3s ease, opacity 0.3s ease;
   transform: translateY(0);
@@ -71,7 +74,7 @@ body {
 #controls button {
   font-size: 45px;
   background-color: rgba(0, 0, 0, 0.7);
-  border-radius:10px;
+  border-radius: 10px;
 
 }
 
@@ -81,7 +84,8 @@ body {
 #button-container {
   display: flex;
   justify-content: space-between;
-  align-items: stretch; /* all child containers take full height */
+  align-items: stretch;
+  /* all child containers take full height */
   height: 100%;
   margin-right: 30px;
 }
@@ -101,7 +105,8 @@ body {
 #speedControls button,
 #left-controls button,
 #right-controls button {
-  flex: 1; /* Allow it to grow and fill available space */
+  flex: 1;
+  /* Allow it to grow and fill available space */
   font-size: 1.5rem !important;
   justify-content: center !important;
   align-items: center !important;
@@ -113,13 +118,16 @@ body {
 
 /* Center seek controls: vertically centered and occupying full height */
 #seek-controls {
-  flex: 1; /* Allow it to grow and fill available space */
+  flex: 1;
+  /* Allow it to grow and fill available space */
   display: flex;
-  flex-direction: row; /* Arrange buttons horizontally */
+  flex-direction: row;
+  /* Arrange buttons horizontally */
   justify-content: center;
   align-items: center;
   height: 100%;
-  gap: 0.5rem; /* Optional spacing between buttons */
+  gap: 0.5rem;
+  /* Optional spacing between buttons */
   padding-left: 4vw;
   padding-right: 4vw;
 
@@ -128,7 +136,7 @@ body {
 /* Optional: style buttons for consistent sizing */
 #seek-controls button {
   font-size: 2.5rem !important;
-  border-radius:20px !important;
+  border-radius: 20px !important;
 
 }
 
@@ -137,15 +145,19 @@ body {
 #button-container button {
   padding: 0.5rem;
   /* display: flex; */
-align-items: stretch; /* Ensure children take full height */
-height: 100% !important; /* Or a fixed height / 100vh */
+  align-items: stretch;
+  /* Ensure children take full height */
+  height: 100% !important;
+  /* Or a fixed height / 100vh */
 
 }
 
 #controls.hidden {
   pointer-events: none;
-  transform: translate(-50%, 100%); /* Slide down out of the screen */
-  opacity: 0; /* Fade out */
+  transform: translate(-50%, 100%);
+  /* Slide down out of the screen */
+  opacity: 0;
+  /* Fade out */
 }
 
 
@@ -153,24 +165,29 @@ height: 100% !important; /* Or a fixed height / 100vh */
 
 /* 🔹 Hide Scrollbars Everywhere */
 ::-webkit-scrollbar {
-    display: none !important; /* ✅ Hides scrollbar in WebKit browsers */
+  display: none !important;
+  /* ✅ Hides scrollbar in WebKit browsers */
 }
 
 * {
-    scrollbar-width: none !important; /* ✅ Hides scrollbar in Firefox */
-    -ms-overflow-style: none !important; /* ✅ Hides scrollbar in IE/Edge */
+  scrollbar-width: none !important;
+  /* ✅ Hides scrollbar in Firefox */
+  -ms-overflow-style: none !important;
+  /* ✅ Hides scrollbar in IE/Edge */
 }
 
 /* Seek Bar (Now Inside Controls, Above Buttons) */
 #seek-bar {
-    width: 100%; /* Full width inside controls */
-    height: 10px;
-    background: #ccc;
-    border-radius: 5px;
-    outline: none;
-    cursor: pointer;
-    margin-bottom: 20px; /* Adds spacing between seek bar and buttons */
-    align-self: center;
+  width: 100%;
+  /* Full width inside controls */
+  height: 10px;
+  background: #ccc;
+  border-radius: 5px;
+  outline: none;
+  cursor: pointer;
+  margin-bottom: 20px;
+  /* Adds spacing between seek bar and buttons */
+  align-self: center;
 }
 
 #seek-bar::-webkit-slider-thumb {
@@ -195,146 +212,173 @@ height: 100% !important; /* Or a fixed height / 100vh */
 
 /* ✅ Buttons Always Stay in One Row Below the Seek Bar */
 #button-container {
-    display: flex;
-    flex-direction: row; /* ✅ Ensures buttons are always in a row */
-    justify-content: space-between;
-    width: 100%;
-    padding: 0;
+  display: flex;
+  flex-direction: row;
+  /* ✅ Ensures buttons are always in a row */
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
 }
 
 /* ✅ Buttons Should Distribute Evenly */
 #button-container button {
-    flex: 1; /* ✅ Ensures buttons fill space evenly */ 
-    text-align: center;
-    padding: 0px;
+  flex: 1;
+  /* ✅ Ensures buttons fill space evenly */
+  text-align: center;
+  padding: 0px;
 }
 
 
 
 /* Center Playback Buttons */
 #main-controls {
-    display: flex;
-    justify-content: center;
-    flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  flex-grow: 1;
 }
 
 #rehearsal-marks-button,
 #stop-audio-button {
-    flex: 0 0 auto; /* Prevents resizing */
-    min-width: 40px; /* ✅ Ensures button is not too small */
-    max-width: 100px; /* ✅ Prevents it from growing too large */
-    font-size: 1.8vw !important; /* ✅ Adjusts size dynamically based on scoreContainer width */
-    text-align: center;
-    padding: 10px;
-    white-space: nowrap; /* ✅ Prevents text from wrapping */
-    overflow: hidden; /* ✅ Ensures no overflow */
-    text-overflow: ellipsis; /* ✅ Adds "..." if text overflows */
+  flex: 0 0 auto;
+  /* Prevents resizing */
+  min-width: 40px;
+  /* ✅ Ensures button is not too small */
+  max-width: 100px;
+  /* ✅ Prevents it from growing too large */
+  font-size: 1.8vw !important;
+  /* ✅ Adjusts size dynamically based on scoreContainer width */
+  text-align: center;
+  padding: 10px;
+  white-space: nowrap;
+  /* ✅ Prevents text from wrapping */
+  overflow: hidden;
+  /* ✅ Ensures no overflow */
+  text-overflow: ellipsis;
+  /* ✅ Adds "..." if text overflows */
 }
 
 #rehearsal-marks-button,
 #stop-audio-button {
-    height: 50px; /* ✅ Keeps all buttons uniform */
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  height: 50px;
+  /* ✅ Keeps all buttons uniform */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 @media (max-width: 768px) {
-    #rehearsal-marks-button,
-    #stop-audio-button {
-        font-size: 3vw; /* ✅ Increases readability on small screens */
-        min-width: 40px;
-        max-width: 100px;
-    }
+
+  #rehearsal-marks-button,
+  #stop-audio-button {
+    font-size: 3vw;
+    /* ✅ Increases readability on small screens */
+    min-width: 40px;
+    max-width: 100px;
+  }
 }
 
 
 #toggle-notes-button {
-    font-size: 30px !important; /* Adjust the size as needed */
-    min-width: 40px; /* ✅ Ensures button is not too small */
-    max-width: 100px; /* ✅ Prevents it from growing too large */
-  }
+  font-size: 30px !important;
+  /* Adjust the size as needed */
+  min-width: 40px;
+  /* ✅ Ensures button is not too small */
+  max-width: 100px;
+  /* ✅ Prevents it from growing too large */
+}
 
-  #audio-master-button {
-    border: 2px solid red;
-    background: black;
-    color: white;
-    font-size: 20px;
-    padding: 5px 10px;
-    margin-left: 5px;
-    border-radius: 4px;
-  }
-  
-  #audio-master-button.active {
-    border-color: limegreen;
-  }
-  
+#audio-master-button {
+  border: 2px solid red;
+  background: black;
+  color: white;
+  font-size: 20px;
+  padding: 5px 10px;
+  margin-left: 5px;
+  border-radius: 4px;
+}
+
+#audio-master-button.active {
+  border-color: limegreen;
+}
+
 
 #rehearsal-marks-button {
-    font-size: 30px !important; /* Adjust the size as needed */
-    min-width: 40px; /* ✅ Ensures button is not too small */
-    max-width: 100px; /* ✅ Prevents it from growing too large */
+  font-size: 30px !important;
+  /* Adjust the size as needed */
+  min-width: 40px;
+  /* ✅ Ensures button is not too small */
+  max-width: 100px;
+  /* ✅ Prevents it from growing too large */
 }
 
 #rehearsal-close-button {
-padding: 10px;
-margin-top: 20px;
-background-color: gray;
+  padding: 10px;
+  margin-top: 20px;
+  background-color: gray;
 }
 
 .rehearsal-button {
   font-family: Antonio, 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  font-size: 30px !important; /* Adjust the size as needed */
+  font-size: 30px !important;
+  /* Adjust the size as needed */
 
 }
 
 #help-button {
-    font-size: 30px !important; /* Adjust the size as needed */
-    min-width: 40px; /* ✅ Ensures button is not too small */
-    max-width: 100px; /* ✅ Prevents it from growing too large */
+  font-size: 30px !important;
+  /* Adjust the size as needed */
+  min-width: 40px;
+  /* ✅ Ensures button is not too small */
+  max-width: 100px;
+  /* ✅ Prevents it from growing too large */
 }
 
 #rewind-to-zero-button {
-    font-size: 30px !important; /* Adjust the size as needed */
-    min-width: 40px; /* ✅ Ensures button is not too small */
-    max-width: 100px; /* ✅ Prevents it from growing too large */
+  font-size: 30px !important;
+  /* Adjust the size as needed */
+  min-width: 40px;
+  /* ✅ Ensures button is not too small */
+  max-width: 100px;
+  /* ✅ Prevents it from growing too large */
 }
 
 #fullscreen-button {
   line-height: 20px;
-  min-width: 40px; /* ✅ Ensures button is not too small */
-  max-width: 100px; /* ✅ Prevents it from growing too large */
+  min-width: 40px;
+  /* ✅ Ensures button is not too small */
+  max-width: 100px;
+  /* ✅ Prevents it from growing too large */
 }
 
 #speedControls {
-       display: flex;
-       align-items: center;
-       gap: 0px;
-       padding: 0px;
-       border-radius: 4px;
-       padding-left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 0px;
+  padding: 0px;
+  border-radius: 4px;
+  padding-left: 20px;
 
-   }
+}
 
-   #speedControls button {
-       /* width: 50px; */
-       font-size: 36px;
-       color: white;
-       border: none;
-       border-radius: 3px;
-       cursor: pointer;
-   }
+#speedControls button {
+  /* width: 50px; */
+  font-size: 36px;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
 
-   #speedControls button:hover {
-       background: #666;
-   }
+#speedControls button:hover {
+  background: #666;
+}
 
-   #speedDisplay {
-       min-width: 40px;
-       text-align: center;
-       color: white;
-       font-size: 33px;
-   }
+#speedDisplay {
+  min-width: 40px;
+  text-align: center;
+  color: white;
+  font-size: 33px;
+}
 
 
 
@@ -369,34 +413,46 @@ button:active {
 
 #scoreContainer {
 
-  transform: translateZ(0);  /* Forces GPU acceleration */
-  will-change: transform;    /* Optimizes rendering */
-  backface-visibility: hidden; /* Helps prevent flickering */
+  transform: translateZ(0);
+  /* Forces GPU acceleration */
+  will-change: transform;
+  /* Optimizes rendering */
+  backface-visibility: hidden;
+  /* Helps prevent flickering */
 
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh; /* ✅ Full height of the viewport */
-    overflow: hidden;
-    display: flex;
-    justify-content: center; /* ✅ Centers horizontally */
-    align-items: center; /* ✅ Centers vertically */
-    background-color: white;
-    white-space: normal !important; /* ✅ Allows resizing */
-    pointer-events: auto;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  /* ✅ Full height of the viewport */
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  /* ✅ Centers horizontally */
+  align-items: center;
+  /* ✅ Centers vertically */
+  background-color: white;
+  white-space: normal !important;
+  /* ✅ Allows resizing */
+  pointer-events: auto;
 }
 
 /* ✅ Forces the SVG to use the full height while maintaining aspect ratio */
 
- #scoreContainer svg {
-    height: 100vh; /* ✅ SVG always takes the full viewport height */
-    width: auto; /* ✅ Keeps aspect ratio */
-    max-width: none; /* ✅ Prevents width restrictions */
-    max-height: 100vh; /* ✅ Ensures it doesn’t exceed viewport height */
-    object-fit: contain; /* ✅ Keeps the aspect ratio intact */
-    overflow-y: hidden !important;
-    pointer-events: auto;
+#scoreContainer svg {
+  height: 100vh;
+  /* ✅ SVG always takes the full viewport height */
+  width: auto;
+  /* ✅ Keeps aspect ratio */
+  max-width: none;
+  /* ✅ Prevents width restrictions */
+  max-height: 100vh;
+  /* ✅ Ensures it doesn’t exceed viewport height */
+  object-fit: contain;
+  /* ✅ Keeps the aspect ratio intact */
+  overflow-y: hidden !important;
+  pointer-events: auto;
 }
 
 
@@ -407,13 +463,17 @@ button:active {
 #playzone {
   position: fixed;
   top: 0;
-  left: 32.5%; /* Center the playzone horizontally (50% - half the width) */
+  left: 32.5%;
+  /* Center the playzone horizontally (50% - half the width) */
   width: 40%;
-  height: 100%; /* Full height of the scoreContainer */
+  height: 100%;
+  /* Full height of the scoreContainer */
   background-color: green;
   opacity: 0.1;
-  pointer-events: none; /* Prevent interactions with the playzone */
-  z-index: 19; /* Ensure it is on the correct layer */
+  pointer-events: none;
+  /* Prevent interactions with the playzone */
+  z-index: 19;
+  /* Ensure it is on the correct layer */
 }
 
 /* Playhead styling */
@@ -432,11 +492,13 @@ button:active {
 
 /* Highlight the playhead when in repeat mode */
 #playhead.repeat-active {
-  background-color: red; /* or any other color to indicate repeating */
+  background-color: red;
+  /* or any other color to indicate repeating */
 }
 
 #playhead.repeating {
-  background-color: #ff3b3b !important; /* Or any color you like */
+  background-color: #ff3b3b !important;
+  /* Or any color you like */
 }
 
 /* Small overhanging box near the bottom-right of the playhead */
@@ -455,7 +517,8 @@ button:active {
   border-radius: 3px;
   border: 1px solid #fff;
   content: "1";
-  pointer-events: auto; /* IMPORTANT! Allow it to receive clicks */
+  pointer-events: auto;
+  /* IMPORTANT! Allow it to receive clicks */
   z-index: 900000;
 
 }
@@ -483,10 +546,12 @@ button:active {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.15);
     opacity: 0.8;
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
@@ -521,14 +586,16 @@ button:active {
 #score-options-popup {
   background: rgba(0, 0, 0, 0.9) !important;
   color: white !important;
-  line-height: 1s.4; /* ✅ Adjusts vertical spacing for better readability */
+  line-height: 1s.4;
+  /* ✅ Adjusts vertical spacing for better readability */
 
 
-  z-index: 20000; /* Ensure it is above the score and playhead */
+  z-index: 20000;
+  /* Ensure it is above the score and playhead */
 }
 
 .hidden {
-    display: none;
+  display: none;
 }
 
 
@@ -542,7 +609,8 @@ button:active {
 /* Style the score option links */
 #score-options-popup ul li a {
   text-decoration: none;
-  color: #7dd3fc; /* sky-300 */
+  color: #7dd3fc;
+  /* sky-300 */
   font-family: 'Courier New', monospace;
   font-weight: bold;
   display: inline-block;
@@ -551,7 +619,8 @@ button:active {
 
 /* Optional: hover effect for better UX */
 #score-options-popup ul li a:hover {
-  color: #38bdf8; /* sky-400 */
+  color: #38bdf8;
+  /* sky-400 */
   text-decoration: underline;
 }
 
@@ -576,21 +645,27 @@ button:active {
 
 
 
-svg, svg * {
-    pointer-events: all; /* Ensure clicks pass through to elements */
+svg,
+svg * {
+  pointer-events: all;
+  /* Ensure clicks pass through to elements */
 }
 
 #black-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: black;
-    opacity: 0; /* Hidden initially */
-    pointer-events: none; /* Ignore interactions */
-    transition: opacity 2s ease; /* Smooth fade effect */
-    z-index: 9999; /* Ensure it overlays everything */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: black;
+  opacity: 0;
+  /* Hidden initially */
+  pointer-events: none;
+  /* Ignore interactions */
+  transition: opacity 2s ease;
+  /* Smooth fade effect */
+  z-index: 9999;
+  /* Ensure it overlays everything */
 }
 
 
@@ -604,28 +679,34 @@ body.inverted #score {
   position: absolute;
   top: 0;
   left: 0;
-  transition: transform 0.3s ease-in-out; /* ✅ Smooth movement */
+  transition: transform 0.3s ease-in-out;
+  /* ✅ Smooth movement */
 }
 
 
 /* Fullscreen mode for the score clock */
 #stopwatch.fullscreen {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    height: 100vh;
-    width: 100vw;
-    color:green;
-    font-size: 300px; /* ✅ Make it much larger */
-    background: rgba(0, 0, 0, 0.9); /* ✅ Semi-transparent */
-    padding: 40px 60px;
-    z-index: 10001;
-    /* ✅ Ensure text is centered */
-    display: flex;
-    justify-content: center; /* ✅ Centers text horizontally */
-    align-items: center; /* ✅ Centers text vertically */
-    text-align: center; /* ✅ Ensures multi-line text is centered */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 100vh;
+  width: 100vw;
+  color: green;
+  font-size: 300px;
+  /* ✅ Make it much larger */
+  background: rgba(0, 0, 0, 0.9);
+  /* ✅ Semi-transparent */
+  padding: 40px 60px;
+  z-index: 10001;
+  /* ✅ Ensure text is centered */
+  display: flex;
+  justify-content: center;
+  /* ✅ Centers text horizontally */
+  align-items: center;
+  /* ✅ Centers text vertically */
+  text-align: center;
+  /* ✅ Ensures multi-line text is centered */
 
 }
 
@@ -670,13 +751,15 @@ body.inverted #stopwatch {
   background: black;
   color: white;
 }
+
 .hidden {
   display: none !important;
 }
 
 #keybindings-popup,
 #score-options-popup {
-  display: block; /* Flex or grid if needed */
+  display: block;
+  /* Flex or grid if needed */
   position: fixed;
   top: 50%;
   left: 50%;
@@ -693,78 +776,88 @@ body.inverted #stopwatch {
 }
 
 #ws-toggle-button {
-    border: 4px solid; /* Define a border */
-    border-radius: 5px; /* Optional: Rounded corners */
-    padding: 5px 10px; /* Optional: Padding for better appearance */
-    font-size: 16px; /* Optional: Adjust font size */
-    cursor: pointer; /* Indicate it's clickable */
-    background-color: gray;
+  border: 4px solid;
+  /* Define a border */
+  border-radius: 5px;
+  /* Optional: Rounded corners */
+  padding: 5px 10px;
+  /* Optional: Padding for better appearance */
+  font-size: 16px;
+  /* Optional: Adjust font size */
+  cursor: pointer;
+  /* Indicate it's clickable */
+  background-color: gray;
 }
 
 #ws-toggle-button.enabled {
-    border-color: green; /* Green for enabled state */
-    color: green; /* Optional: Change text color too */
+  border-color: green;
+  /* Green for enabled state */
+  color: green;
+  /* Optional: Change text color too */
 }
 
 #ws-toggle-button.disabled {
-    border-color: red; /* Red for disabled state */
-    color: red; /* Optional: Change text color too */
+  border-color: red;
+  /* Red for disabled state */
+  color: red;
+  /* Optional: Change text color too */
 }
 
 .popup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: #fff;
-    border: 2px solid #000;
-    border-radius: 10px;
-    padding: 0px;
-    z-index: 2000;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-    width: 400px;
-    max-width: 100%;
-    cursor: pointer;
-    pointer-events: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  border: 2px solid #000;
+  border-radius: 10px;
+  padding: 0px;
+  z-index: 2000;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  width: 400px;
+  max-width: 100%;
+  cursor: pointer;
+  pointer-events: none;
 
 }
 
 .popup.hidden {
-    display: none;
+  display: none;
 }
 
-.popup h2, .popup h3 {
-    margin: 0 0 10px 0;
-    font-size: 1.5em;
+.popup h2,
+.popup h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.5em;
 }
 
 .popup ul {
-    margin: 0;
-    padding: 0;
-    list-style-type: disc;
-    padding-left: 20px;
+  margin: 0;
+  padding: 0;
+  list-style-type: disc;
+  padding-left: 20px;
 }
 
 .popup hr {
-    border: none;
-    border-top: 1px solid #ccc;
-    margin: 20px 0;
+  border: none;
+  border-top: 1px solid #ccc;
+  margin: 20px 0;
 }
 
 .popup button {
-    display: block;
-    margin: 10px auto 0 auto;
-    padding: 10px 20px;
-    background-color: gray;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    font-size: 1em;
-    cursor: pointer;
+  display: block;
+  margin: 10px auto 0 auto;
+  padding: 10px 20px;
+  background-color: gray;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 1em;
+  cursor: pointer;
 }
 
 .popup button:hover {
-    background-color: #0056b3;
+  background-color: #0056b3;
 }
 
 
@@ -795,21 +888,26 @@ body.inverted #stopwatch {
   align-items: center;
   z-index: 1000;
   pointer-events: all;
-  overflow: hidden; /* Ensures the SVG is contained within the popup */
+  overflow: hidden;
+  /* Ensures the SVG is contained within the popup */
 }
 
 #animation-content {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Maintains aspect ratio while fitting within the container */
-  pointer-events: none; /* Prevent interaction if not required */
+  object-fit: contain;
+  /* Maintains aspect ratio while fitting within the container */
+  pointer-events: none;
+  /* Prevent interaction if not required */
 }
 
 #animation-popup svg {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Ensure the SVG scales properly */
-  pointer-events: all; /* Enable interaction with SVG elements */
+  object-fit: contain;
+  /* Ensure the SVG scales properly */
+  pointer-events: all;
+  /* Enable interaction with SVG elements */
 }
 
 
@@ -819,41 +917,49 @@ body.inverted #stopwatch {
 
 /* -------------------------------------  */
 #singlePage-container {
-    display: none; /* Hide by default */
-    justify-content: center;
-    align-items: center;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(255, 255, 255, 1);
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 29999;
-    opacity: 0;
-    transition: opacity 1s ease-in-out;
-    /* pointer-events: auto; ✅ Allows clicking */
-    /* cursor: pointer !important; */
+  display: none;
+  /* Hide by default */
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 1);
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 29999;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+  /* pointer-events: auto; ✅ Allows clicking */
+  /* cursor: pointer !important; */
 }
 
 
 /* ✅ Make visible when active */
 #singlePage-container.active {
   display: flex !important;
-    opacity: 1;
+  opacity: 1;
 }
 
 
 #singlePage-content {
-    display: block; /* Ensure it's visible */
-    width: 100vw;  /* Keep the original SVG width */
-    height: 100vh; /* Keep the original SVG height */
-    max-width: 100%; /* Prevent it from overflowing */
-    max-height: 100%; /* Ensure it fits inside the container */
-    object-fit: contain; /* Maintain aspect ratio */
-    pointer-events: auto;
+  display: block;
+  /* Ensure it's visible */
+  width: 100vw;
+  /* Keep the original SVG width */
+  height: 100vh;
+  /* Keep the original SVG height */
+  max-width: 100%;
+  /* Prevent it from overflowing */
+  max-height: 100%;
+  /* Ensure it fits inside the container */
+  object-fit: contain;
+  /* Maintain aspect ratio */
+  pointer-events: auto;
 
 }
+
 .oscilla-cue-button {
   pointer-events: auto;
   z-index: 100001;
@@ -861,71 +967,79 @@ body.inverted #stopwatch {
 
 /* 🔹 Countdown styling */
 #singlePage-countdown {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    font-size: 48px;
-    font-weight: bold;
-    color: white;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 10px 20px;
-    border-radius: 10px;
-    z-index: 100000;
-    display: none; /* ✅ Hidden by default */
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 48px;
+  font-weight: bold;
+  color: white;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px 20px;
+  border-radius: 10px;
+  z-index: 100000;
+  display: none;
+  /* ✅ Hidden by default */
 }
 
 /* 🔹 Ensure the animation container fills the screen */
 #singlePage-container object {
-    width: auto;
-    height: auto;
+  width: auto;
+  height: auto;
 }
 
 /* 🔹 Prevent interactions with background when the popup is active */
 #singlePage-container::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 9998;
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9998;
 }
 
 .singlePage-close-button {
-    position: absolute !important;
-    top: 10px !important;
-    right: 10px !important;
-    font-size: 48px !important;
-    padding: 35px !important;
-    background: yellow !important;
-    color: black !important;
-    border: none !important;
-    cursor: pointer !important;
-    z-index: 10000 !important;
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  font-size: 48px !important;
+  padding: 35px !important;
+  background: yellow !important;
+  color: black !important;
+  border: none !important;
+  cursor: pointer !important;
+  z-index: 10000 !important;
 }
 
 
 .singlePage-close-button:hover {
-    background: darkred;
+  background: darkred;
 }
 
 #close-keybindings {
-    position: relative; /* ✅ Ensures it stays above any overlapping elements */
-    z-index: 5000; /* ✅ Ensure it's above other elements */
-    pointer-events: auto; /* ✅ Allows clicking */
+  position: relative;
+  /* ✅ Ensures it stays above any overlapping elements */
+  z-index: 5000;
+  /* ✅ Ensure it's above other elements */
+  pointer-events: auto;
+  /* ✅ Allows clicking */
 }
 
 
 
 #media-popup {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.85);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
 }
+
 #media-popup.hidden {
   display: none;
 }
@@ -965,163 +1079,191 @@ body.inverted #stopwatch {
 
 
 #pause-countdown:hover {
-  z-index: 9999 !important; /* ✅ Ensure it's above everything */
+  z-index: 9999 !important;
+  /* ✅ Ensure it's above everything */
 
-    background: white !important; /* Invert background */
-    color: black !important; /* Invert text color */
-    border: 2px solid black !important; /* Ensure visibility */
+  background: white !important;
+  /* Invert background */
+  color: black !important;
+  /* Invert text color */
+  border: 2px solid black !important;
+  /* Ensure visibility */
 }
 
 .pause-header {
-    font-size: 12px; /* ✅ Smaller font size for header */
-    font-weight: normal;
-    margin-bottom: 5px; /* ✅ Adds space between header and countdown */
+  font-size: 12px;
+  /* ✅ Smaller font size for header */
+  font-weight: normal;
+  margin-bottom: 5px;
+  /* ✅ Adds space between header and countdown */
 }
 
 
 
-#video-popup, #p5-popup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.8);
-    z-index: 1000;
-    padding: 20px;
-    border-radius: 10px;
+#video-popup,
+#p5-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  padding: 20px;
+  border-radius: 10px;
 }
 
 #video-content {
-    width: 600px;
-    height: 400px;
+  width: 600px;
+  height: 400px;
 }
 
 #p5-container {
-    width: 600px;
-    height: 400px;
+  width: 600px;
+  height: 400px;
 }
 
 
 
 /* ✅ Main container for cue choices */
 #cue-choice-container {
-    position: fixed;
-    width: 100vw;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    /* width: auto; */
-    height: auto;
-    /* background: rgba(0, 0, 0, 0.9); */
-    padding: 2px;
-    border-radius: 10px;
-    display: flex; /* ✅ Flexbox for horizontal layout */
-    flex-wrap: wrap; /* ✅ Allows choices to wrap if too many */
-    justify-content: center; /* ✅ Center items in the container */
-    align-items: flex-start; /* ✅ Align items at the top */
-    gap: 5px; /* ✅ Space between choices */
-    z-index: 10002;
+  position: fixed;
+  width: 100vw;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* width: auto; */
+  height: auto;
+  /* background: rgba(0, 0, 0, 0.9); */
+  padding: 2px;
+  border-radius: 10px;
+  display: flex;
+  /* ✅ Flexbox for horizontal layout */
+  flex-wrap: wrap;
+  /* ✅ Allows choices to wrap if too many */
+  justify-content: center;
+  /* ✅ Center items in the container */
+  align-items: flex-start;
+  /* ✅ Align items at the top */
+  gap: 5px;
+  /* ✅ Space between choices */
+  z-index: 10002;
 }
 
 #cue-choice-container.hidden {
-    display: none !important; /* ✅ Ensures it's hidden properly */
+  display: none !important;
+  /* ✅ Ensures it's hidden properly */
 }
 
 #cue-choice-header {
-    width: 100%;
-    text-align: center; /* ✅ Centers the text */
-    font-size: 16px; /* ✅ Adjust size as needed */
-    font-weight: bold;
-    margin-bottom: 10px; /* ✅ Adds spacing between header and choices */
+  width: 100%;
+  text-align: center;
+  /* ✅ Centers the text */
+  font-size: 16px;
+  /* ✅ Adjust size as needed */
+  font-weight: bold;
+  margin-bottom: 10px;
+  /* ✅ Adds spacing between header and choices */
 }
 
 
 /* ✅ Styling for each cue choice item */
 .cue-choice-item {
-    display: flex;
-    flex-direction: column; /* ✅ Ensures SVG is stacked above text */
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    background: white;
-    border-radius: 5px;
-    cursor: pointer;
-    text-align: center;
-    width: 28vw;  /* ✅ Adjust thumbnail width */
-    height: 28vw; /* ✅ Adjust thumbnail height */
-    overflow: hidden;
-    border: 2px solid #000;
-    position: relative; /* ✅ Allows text to position properly */
+  display: flex;
+  flex-direction: column;
+  /* ✅ Ensures SVG is stacked above text */
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: white;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: center;
+  width: 28vw;
+  /* ✅ Adjust thumbnail width */
+  height: 28vw;
+  /* ✅ Adjust thumbnail height */
+  overflow: hidden;
+  border: 2px solid #000;
+  position: relative;
+  /* ✅ Allows text to position properly */
 }
 
 /* ✅ Style for the SVG thumbnail */
 .cue-choice-thumbnail {
-    width: 100%;
-    height: 150px; /* ✅ Adjusted for correct aspect ratio */
-    object-fit: contain; /* ✅ Keep aspect ratio */
-    pointer-events: none; /* ✅ Prevents interference with clicks */
+  width: 100%;
+  height: 150px;
+  /* ✅ Adjusted for correct aspect ratio */
+  object-fit: contain;
+  /* ✅ Keep aspect ratio */
+  pointer-events: none;
+  /* ✅ Prevents interference with clicks */
 }
 
 /* ✅ Style for the text label below the SVG */
 .cue-choice-text {
-    font-size: 14px;
-    color: black;
-    margin-top: 5px; /* ✅ Space between SVG and text */
-    text-align: center;
+  font-size: 14px;
+  color: black;
+  margin-top: 5px;
+  /* ✅ Space between SVG and text */
+  text-align: center;
 }
 
 /* ✅ Hover effect */
 .cue-choice-item:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* ✅ Ensures text overlay is properly positioned */
 .cue-choice-item div {
-    font-size: 14px;
-    color: black;
-    background: rgba(255, 255, 255, 0.8);
-    padding: 5px 10px;
-    border: 1px solid black;
-    pointer-events: none; /* ✅ Prevents blocking clicks */
+  font-size: 14px;
+  color: black;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 5px 10px;
+  border: 1px solid black;
+  pointer-events: none;
+  /* ✅ Prevents blocking clicks */
 }
 
 /* ✅ Fix redundant pointer-events */
-.cue-choice-item > * {
-    pointer-events: none; /* ✅ Ensures children do not interfere */
+.cue-choice-item>* {
+  pointer-events: none;
+  /* ✅ Ensures children do not interfere */
 }
 
 
 
 
 .blur-background {
-    transition: filter 2s ease-in-out;
-    filter: blur(25px);
-    pointer-events: none; /* Prevent interaction with blurred content */
-    user-select: none; /* Prevent text selection on blurred content */
+  transition: filter 2s ease-in-out;
+  filter: blur(25px);
+  pointer-events: none;
+  /* Prevent interaction with blurred content */
+  user-select: none;
+  /* Prevent text selection on blurred content */
 }
 
 .unblur-background {
-    transition: filter 2s ease-in-out;
-    filter: blur(0px);
+  transition: filter 2s ease-in-out;
+  filter: blur(0px);
 }
 
 
 .fade-in {
-    opacity: 0;
-    transition: opacity 1.5s ease-in-out;
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
 }
 
 .fade-in.active {
-    opacity: 1;
+  opacity: 1;
 }
 
 .fade-out {
-    opacity: 1;
-    transition: opacity 1.5s ease-in-out;
+  opacity: 1;
+  transition: opacity 1.5s ease-in-out;
 }
 
 .fade-out.hidden {
-    opacity: 0;
+  opacity: 0;
 }
 
 
@@ -1139,52 +1281,53 @@ body.inverted #stopwatch {
   z-index: 10002;
   display: none;
   align-items: center;
-  background: rgba(0, 0, 0, 0.9); /* Dark background for visibility */
-padding: 20px;
+  background: rgba(0, 0, 0, 0.9);
+  /* Dark background for visibility */
+  padding: 20px;
 
   /* Let height be determined by content */
 }
 
 #rehearsal-popup.hidden {
-    display: none !important;
+  display: none !important;
 }
 
 #rehearsal-grid {
-    display: flex;
-    flex-direction: column;
-    /* gap: 8px; */
-    /* max-width: 35vw; */
+  display: flex;
+  flex-direction: column;
+  /* gap: 8px; */
+  /* max-width: 35vw; */
 
 }
 
 .rehearsal-row {
-    display: flex;
-    gap: 2px;
-    justify-content: center;
-    /* max-width: 15vw; */
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+  /* max-width: 15vw; */
 
 }
 
 .rehearsal-button {
-  /* font-size: 1.5vw;  /* Adjust based on desired scaling */ 
+  /* font-size: 1.5vw;  /* Adjust based on desired scaling */
 
-    /* width: 3vw; /* Adjust size as needed */ 
-    /* height: 60px; */
-    /* font-size: 30px; */
-    color: black;
-    text-align: center;
-    background: white;
-    border: 5px solid black;
-    cursor: pointer;
-    border-radius: 5px;
-    padding: 1px;
-    margin: 1px;
+  /* width: 3vw; /* Adjust size as needed */
+  /* height: 60px; */
+  /* font-size: 30px; */
+  color: black;
+  text-align: center;
+  background: white;
+  border: 5px solid black;
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 1px;
+  margin: 1px;
 
 }
 
 /* ✅ Button hover effect */
 .rehearsal-button:hover {
-    background: #ddd;
+  background: #ddd;
 }
 
 
@@ -1193,26 +1336,27 @@ padding: 20px;
 
 /* ✅ Ensure buttons have a uniform size */
 .rehearsal-button {
-    width: 60px; /* Adjust size as needed */
-    height: 60px;
-    font-size: 20px;
-    color: black;
-    text-align: center;
-    background: white;
-    border: 2px solid black;
-    cursor: pointer;
-    border-radius: 5px;
+  width: 60px;
+  /* Adjust size as needed */
+  height: 60px;
+  font-size: 20px;
+  color: black;
+  text-align: center;
+  background: white;
+  border: 2px solid black;
+  cursor: pointer;
+  border-radius: 5px;
 }
 
 /* ✅ Button hover effect */
 .rehearsal-button:hover {
-    background: #ddd;
+  background: #ddd;
 }
 
 #rehearsal-header {
-    color: white;
-    font-size: 18px;
-    margin-bottom: 10px;
+  color: white;
+  font-size: 18px;
+  margin-bottom: 10px;
 }
 
 /* 🔹 Top Bar Styling (Floats Above Everything) */
@@ -1226,7 +1370,8 @@ padding: 20px;
   color: white;
   display: flex;
   align-items: center;
-  justify-content: space-between; /* ✅ Add this line */
+  justify-content: space-between;
+  /* ✅ Add this line */
   padding: 0 15px;
   font-size: 1rem;
   z-index: 2000;
@@ -1251,93 +1396,105 @@ padding: 20px;
 
 /* 🔹 Client List (Ensures Two Clients Per Line) */
 #client-list {
-    font-size: 1rem;
-    display: flex;
-    flex-wrap: wrap;
-    max-width: 240px; /* ✅ Adjust width to control wrapping */
-    overflow: hidden;
-    white-space: normal;
-    line-height: 1.2;
-    user-select: none; /* ✅ Prevents accidental text selection */
-    cursor: pointer; /* ✅ Indicates interactivity */
+  font-size: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 240px;
+  /* ✅ Adjust width to control wrapping */
+  overflow: hidden;
+  white-space: normal;
+  line-height: 1.2;
+  user-select: none;
+  /* ✅ Prevents accidental text selection */
+  cursor: pointer;
+  /* ✅ Indicates interactivity */
 }
 
 /* 🔹 Individual Client Names */
 .client-name {
-    display: inline-block; /* ✅ Allows proper wrapping */
-    width: 45%; /* ✅ Ensures two clients per line */
-    text-align: left;
-    white-space: nowrap; /* ✅ Prevents names from breaking */
-    margin-right: 5px; /* ✅ Adds spacing */
+  display: inline-block;
+  /* ✅ Allows proper wrapping */
+  width: 45%;
+  /* ✅ Ensures two clients per line */
+  text-align: left;
+  white-space: nowrap;
+  /* ✅ Prevents names from breaking */
+  margin-right: 5px;
+  /* ✅ Adds spacing */
 }
 
 /* 🔹 Waveform Container (Centered between client list & stopwatch) */
 #waveform-container {
-    width: 200px;
-    height: 2.5rem;
-    /* background: rgba(0, 0, 0, 0.7); */
-    border-radius: 5px;
-    margin-left: 40px;
+  width: 200px;
+  height: 2.5rem;
+  /* background: rgba(0, 0, 0, 0.7); */
+  border-radius: 5px;
+  margin-left: 40px;
 }
 
 /* 🔹 Stopwatch (Centered Over Playhead) */
 #stopwatch {
-    font-size: 1.5rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 10px;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-60%); /* ✅ Centers it */
-    /* background: rgba(0, 0, 0, 0.7); */
+  font-size: 1.5rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-60%);
+  /* ✅ Centers it */
+  /* background: rgba(0, 0, 0, 0.7); */
 
 }
 
 /* 🔹 Stopwatch Icon */
 #stopwatch::before {
-    content: "⏱"; /* Stopwatch Icon */
-    font-size: 1.4rem;
+  content: "⏱";
+  /* Stopwatch Icon */
+  font-size: 1.4rem;
 }
 
 /* 🔹 Cue Info (Placed to the right of the stopwatch) */
 #cue-info {
-    font-size: 0.75rem;
-    font-weight: bold;
-    color: white;
-    white-space: nowrap;
-    position: absolute;
-    left: calc(50% + 120px); /* ✅ Places it to the right of stopwatch */
-    /* background: rgba(0, 0, 0, 0.7); */
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: white;
+  white-space: nowrap;
+  position: absolute;
+  left: calc(50% + 120px);
+  /* ✅ Places it to the right of stopwatch */
+  /* background: rgba(0, 0, 0, 0.7); */
 
 }
 
 /* 🔹 Hamburger Menu Button (Fixed on the Right) */
 #hamburger-menu {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 2rem;
-    cursor: pointer;
-    padding: 5px 15px;
-    outline: none;
-    margin-left: auto; /* ✅ Ensures it stays on the right */
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 5px 15px;
+  outline: none;
+  margin-left: auto;
+  /* ✅ Ensures it stays on the right */
 }
 
 /* 🔹 Hover effect for hamburger */
 #hamburger-menu:hover {
-    color: #f0a500;
+  color: #f0a500;
 }
 
 .local-client {
-    font-weight: bold;
-    color: #facc15; /* Optional: Highlight color */
+  font-weight: bold;
+  color: #facc15;
+  /* Optional: Highlight color */
 }
 
 .remote-client {
-    font-weight: normal;
-    color: #fff;
+  font-weight: normal;
+  color: #fff;
 }
 
 /* custom style for button as android makes the unicode one orange yuck */
@@ -1348,31 +1505,77 @@ padding: 20px;
   position: relative;
   color: white;
 }
+
 .custom-pause::before,
 .custom-pause::after {
   content: "";
   position: absolute;
   width: 8px;
   height: 100%;
-  background: white; /* Set desired color here */
+  background: white;
+  /* Set desired color here */
   border-radius: 2px;
 }
+
 .custom-pause::before {
   left: 4px;
 }
+
 .custom-pause::after {
   right: 4px;
 }
 
-.oscilla-cue-button--active { outline: 2px solid #e33; }
+.oscilla-cue-button--active {
+  outline: 2px solid #e33;
+}
 
-@keyframes osc-flash { 0%,100% { filter: none; } 50% { filter: brightness(1.6); } }
-@keyframes osc-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-@keyframes osc-fade  { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
+@keyframes osc-flash {
 
-.oscilla-cue-button--flash.oscilla-cue-button--active { animation: osc-flash 0.9s ease-in-out infinite; }
-.oscilla-cue-button--pulse.oscilla-cue-button--active { animation: osc-pulse 1.2s ease-in-out infinite; }
-.oscilla-cue-button--fade.oscilla-cue-button--active  { animation: osc-fade 1.2s ease-in-out infinite; }
+  0%,
+  100% {
+    filter: none;
+  }
+
+  50% {
+    filter: brightness(1.6);
+  }
+}
+
+@keyframes osc-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes osc-fade {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: .6;
+  }
+}
+
+.oscilla-cue-button--flash.oscilla-cue-button--active {
+  animation: osc-flash 0.9s ease-in-out infinite;
+}
+
+.oscilla-cue-button--pulse.oscilla-cue-button--active {
+  animation: osc-pulse 1.2s ease-in-out infinite;
+}
+
+.oscilla-cue-button--fade.oscilla-cue-button--active {
+  animation: osc-fade 1.2s ease-in-out infinite;
+}
 
 
 
@@ -1435,20 +1638,23 @@ padding: 20px;
   transition: color 0.2s, transform 0.2s;
 
 }
+
 .project-grid button:hover {
   color: #7df9ff;
   transform: scale(1.05);
-    background-color: gray;
+  background-color: gray;
 
 }
 
 .manual-entry {
   margin-top: 1.5em;
 }
+
 .manual-entry input {
   padding: 0.5em;
   font-size: 1em;
 }
+
 .manual-entry button {
   margin-left: 0.5em;
   padding: 0.5em 1em;
@@ -1461,13 +1667,16 @@ padding: 20px;
   color: #aaa;
   line-height: 1.4em;
 }
+
 .meta-line a {
   color: #000000;
   text-decoration: none;
 }
+
 .meta-line a:hover {
   text-decoration: underline;
 }
+
 .meta-line.small {
   font-size: 1em;
   color: #777;
@@ -1520,26 +1729,33 @@ padding: 20px;
   justify-content: center;
   gap: 0.6em;
 
-  height: 100px;                 /* fixed height */
-  overflow-y: auto;              /* vertical scroll if needed */
-  overflow-x: hidden;            /* avoid sideways scrollbars */
+  height: 100px;
+  /* fixed height */
+  overflow-y: auto;
+  /* vertical scroll if needed */
+  overflow-x: hidden;
+  /* avoid sideways scrollbars */
   padding: 0.5em 0.3em;
 
-  scrollbar-width: thin;         /* Firefox */
-  scrollbar-color: rgba(255,255,255,0.2) transparent;
+  scrollbar-width: thin;
+  /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 /* Optional: WebKit scrollbar styling for consistent dark theme */
 .project-grid::-webkit-scrollbar {
   width: 6px;
 }
+
 .project-grid::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .project-grid::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.25);
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 3px;
 }
+
 .project-grid::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.4);
+  background: rgba(255, 255, 255, 0.4);
 }

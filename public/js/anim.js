@@ -75,7 +75,7 @@ const sendRotationOsc = (angle, object) => {
 
   window.socket.send(JSON.stringify(message));
 };
- 
+
 
 function getStepDurations(id) {
   const dur = extractTagValue(id, 'dur', null);
@@ -155,16 +155,16 @@ function startRotate(object) {
 
   const easing = getEasingFromId(id);
 
-    const quantized = extractTagValue(id, 'quant', false);
-    const bpmClock = window.oscillaQuantBPM || 120;
-    const beatMs = 60000 / bpmClock;
-    const now = performance.now();
-    const quantDelay = quantized ? (beatMs - (now % beatMs)) : 0;
+  const quantized = extractTagValue(id, 'quant', false);
+  const bpmClock = window.oscillaQuantBPM || 120;
+  const beatMs = 60000 / bpmClock;
+  const now = performance.now();
+  const quantDelay = quantized ? (beatMs - (now % beatMs)) : 0;
 
   const oscEnabled = extractTagValue(id, "osc", false);
   const throttleRate = extractTagValue(id, "throttle", window.oscRotationThrottleRate || 20);
 
-  
+
 
   // const applyTransformOrigin = () => {
   //   let target = object;
@@ -183,192 +183,192 @@ function startRotate(object) {
   const rMatch = id.match(/^r\(([^)]+)\)/);
   const mode = rMatch ? rMatch[1] : null;
   if (!mode) return;
-  
-  
 
 
-// SEQ
-// -------------------------------------------
-// Executes a sequence of absolute rotation angles.
-// Example: r(seq([0,90,180]))_dur(3)_tween(1.2)_ease(2)_x(3)
-// Each angle is visited in order with:
-//   - `tweenDuration` controlling the rotation time
-//   - `holdDuration` controlling pause after arrival
-//   - Optional repeat via `_x(N)` where N = number of loops (0 = infinite)
-// Notes:
-//   - Accepts any angle list (e.g. [0,90,0,120] for gestures or patterns)
-//   - Replaces the older deg[...] mode for general use
-//   - Uses helper functions:
-//     - getStepDurations(id): extracts dur/speed/tween/hold
-//     - addRotationStep(...): applies rotation, hold, and OSC
-// -------------------------------------------
-
-const seqMatch = mode.match(/^seq\[([^\]]+)\]/);
-if (seqMatch) {
-  const angles = seqMatch[1]
-    .split(',')
-    .map((v) => parseFloat(v.trim()))
-    .filter((v) => !isNaN(v));
-
-  if (!angles.length) {
-    console.warn("[rotate] ⚠️ Invalid or empty seq[...]");
-    return;
-  }
-
-  const repeatRaw = extractTagValue(id, 'x', null);
-  const repeatCount = repeatRaw === null ? 1 : parseInt(repeatRaw); // default = 1, x(0) = infinite
-
-  const { tweenDuration, holdDuration } = getStepDurations(id);
 
 
-  
-  const playSequence = () => {
-    const timeline = anime.timeline({ autoplay: true, delay: quantDelay });
+  // SEQ
+  // -------------------------------------------
+  // Executes a sequence of absolute rotation angles.
+  // Example: r(seq([0,90,180]))_dur(3)_tween(1.2)_ease(2)_x(3)
+  // Each angle is visited in order with:
+  //   - `tweenDuration` controlling the rotation time
+  //   - `holdDuration` controlling pause after arrival
+  //   - Optional repeat via `_x(N)` where N = number of loops (0 = infinite)
+  // Notes:
+  //   - Accepts any angle list (e.g. [0,90,0,120] for gestures or patterns)
+  //   - Replaces the older deg[...] mode for general use
+  //   - Uses helper functions:
+  //     - getStepDurations(id): extracts dur/speed/tween/hold
+  //     - addRotationStep(...): applies rotation, hold, and OSC
+  // -------------------------------------------
 
-    angles.forEach((angle) => {
-      addRotationStep(timeline, object, angle, tweenDuration, holdDuration, easing, oscEnabled);
-    });
+  const seqMatch = mode.match(/^seq\[([^\]]+)\]/);
+  if (seqMatch) {
+    const angles = seqMatch[1]
+      .split(',')
+      .map((v) => parseFloat(v.trim()))
+      .filter((v) => !isNaN(v));
 
-    if (repeatCount === 0) {
-      timeline.finished.then(playSequence);
-    } else if (repeatCount > 1) {
-      timeline.finished.then(() => {
-        currentRepeat++;
-        if (currentRepeat < repeatCount) playSequence();
-      });
-    }
-  };
-
-  let currentRepeat = 0;
-  playSequence();
-  return;
-}
-
-// RND
-// -------------------------------------------
-// Generates a new randomized sequence of angles on each cycle.
-// Example: r(rnd[6x,45,90])_dur(3)_tween(1.2)_ease(2)
-// - 6x: regenerate 6 random angles each time the sequence repeats
-// - [min,max]: range of random angle values
-//
-// Features:
-//   - Runtime randomness: values are regenerated per loop
-//   - Looping via `x(...)` supported (e.g. _x(0) = infinite)
-//   - Uses same tween + hold logic as seq[…]
-//
-// Notes:
-//   - Functionally similar to seq[…], but dynamic
-//   - Best for generative and non-deterministic rotation behavior
-//   - Internally uses the same timeline structure as seq[…]
-// -------------------------------------------
-
-const rndMatch = mode.match(/^rnd\[(\d+)(x)?(?:,(\d+))?(?:,(\d+))?\]$/);
-if (rndMatch) {
-  const count = parseInt(rndMatch[1]);
-  const looped = rndMatch[2] === 'x';
-  const min = rndMatch[4] ? parseFloat(rndMatch[3]) : 0;
-  const max = rndMatch[4] ? parseFloat(rndMatch[4]) : (rndMatch[3] ? parseFloat(rndMatch[3]) : 359);
-
-  const { tweenDuration, holdDuration } = getStepDurations(id);
-
-  const values = () => {
-    return Array.from({ length: count }, () => min + Math.random() * (max - min));
-  };
-
-  const playRandomCycle = () => {
-    const angles = values();
     if (!angles.length) {
-      console.warn("[rotate] ⚠️ No angles generated in rnd[...]");
+      console.warn("[rotate] ⚠️ Invalid or empty seq[...]");
       return;
     }
 
-    const timeline = anime.timeline({ autoplay: true, delay: quantDelay });
+    const repeatRaw = extractTagValue(id, 'x', null);
+    const repeatCount = repeatRaw === null ? 1 : parseInt(repeatRaw); // default = 1, x(0) = infinite
 
-    angles.forEach((angle) => {
-      addRotationStep(timeline, object, angle, tweenDuration, holdDuration, easing, oscEnabled);
+    const { tweenDuration, holdDuration } = getStepDurations(id);
+
+
+
+    const playSequence = () => {
+      const timeline = anime.timeline({ autoplay: true, delay: quantDelay });
+
+      angles.forEach((angle) => {
+        addRotationStep(timeline, object, angle, tweenDuration, holdDuration, easing, oscEnabled);
+      });
+
+      if (repeatCount === 0) {
+        timeline.finished.then(playSequence);
+      } else if (repeatCount > 1) {
+        timeline.finished.then(() => {
+          currentRepeat++;
+          if (currentRepeat < repeatCount) playSequence();
+        });
+      }
+    };
+
+    let currentRepeat = 0;
+    playSequence();
+    return;
+  }
+
+  // RND
+  // -------------------------------------------
+  // Generates a new randomized sequence of angles on each cycle.
+  // Example: r(rnd[6x,45,90])_dur(3)_tween(1.2)_ease(2)
+  // - 6x: regenerate 6 random angles each time the sequence repeats
+  // - [min,max]: range of random angle values
+  //
+  // Features:
+  //   - Runtime randomness: values are regenerated per loop
+  //   - Looping via `x(...)` supported (e.g. _x(0) = infinite)
+  //   - Uses same tween + hold logic as seq[…]
+  //
+  // Notes:
+  //   - Functionally similar to seq[…], but dynamic
+  //   - Best for generative and non-deterministic rotation behavior
+  //   - Internally uses the same timeline structure as seq[…]
+  // -------------------------------------------
+
+  const rndMatch = mode.match(/^rnd\[(\d+)(x)?(?:,(\d+))?(?:,(\d+))?\]$/);
+  if (rndMatch) {
+    const count = parseInt(rndMatch[1]);
+    const looped = rndMatch[2] === 'x';
+    const min = rndMatch[4] ? parseFloat(rndMatch[3]) : 0;
+    const max = rndMatch[4] ? parseFloat(rndMatch[4]) : (rndMatch[3] ? parseFloat(rndMatch[3]) : 359);
+
+    const { tweenDuration, holdDuration } = getStepDurations(id);
+
+    const values = () => {
+      return Array.from({ length: count }, () => min + Math.random() * (max - min));
+    };
+
+    const playRandomCycle = () => {
+      const angles = values();
+      if (!angles.length) {
+        console.warn("[rotate] ⚠️ No angles generated in rnd[...]");
+        return;
+      }
+
+      const timeline = anime.timeline({ autoplay: true, delay: quantDelay });
+
+      angles.forEach((angle) => {
+        addRotationStep(timeline, object, angle, tweenDuration, holdDuration, easing, oscEnabled);
+      });
+
+      if (looped) {
+        timeline.finished.then(() => playRandomCycle());
+      }
+    };
+
+    playRandomCycle();
+    return;
+  }
+
+
+  // ALT
+  // -------------------------------------------
+  // Creates continuous alternating rotation between two angles.
+  // Example: r(alt[0,180])_tween(1.5)_ease(3)
+  // Internally uses Anime.js `direction: "alternate"` for smooth back-and-forth motion.
+  //
+  // Notes:
+  //   - Equivalent behavior can be replicated with:
+  //       r(seq([0,180]))_tween(1.5)_x(0)
+  //   - However, `alt[...]` is more efficient for pure alternation,
+  //     requires less logic, and serves as convenient shorthand.
+  //   - Does not support pause/hold at endpoints — use `seq[...]` for that.
+  // -------------------------------------------
+
+  const altMatch = mode.match(/^alt\[([^\]]+)\]/);
+  if (altMatch) {
+    const [min, max] = altMatch[1].split(',').map(Number);
+    const { stepDuration, tweenDuration } = getStepDurations(id);
+
+    const anim = anime({
+      targets: object,
+      rotate: [min, max],
+      duration: tweenDuration,
+      easing,
+      direction: "alternate",
+      loop: true,
+      autoplay: true,
+      update: () => {
+        // Fallback to extracting from style if anime.get fails
+        let angle = anime.get(object, 'rotate');
+
+        if (typeof angle !== 'number') {
+          const match = object.style.transform?.match(/rotate\(([-\d.]+)deg\)/);
+          angle = match ? parseFloat(match[1]) : NaN;
+        }
+
+        if (typeof angle === 'number' && !isNaN(angle)) {
+          // console.log(`[ALT] angle = ${angle.toFixed(2)} deg`);
+          if (oscEnabled) {
+            sendRotationOsc((angle + 90) % 360, object);
+          }
+        } else {
+          console.warn(`[ALT] ⚠️ Unable to retrieve valid angle`);
+        }
+      }
     });
 
-    if (looped) {
-      timeline.finished.then(() => playRandomCycle());
-    }
-  };
-
-  playRandomCycle();
-  return;
-}
+    return;
+  }
 
 
-// ALT
-// -------------------------------------------
-// Creates continuous alternating rotation between two angles.
-// Example: r(alt[0,180])_tween(1.5)_ease(3)
-// Internally uses Anime.js `direction: "alternate"` for smooth back-and-forth motion.
-//
-// Notes:
-//   - Equivalent behavior can be replicated with:
-//       r(seq([0,180]))_tween(1.5)_x(0)
-//   - However, `alt[...]` is more efficient for pure alternation,
-//     requires less logic, and serves as convenient shorthand.
-//   - Does not support pause/hold at endpoints — use `seq[...]` for that.
-// -------------------------------------------
-
-const altMatch = mode.match(/^alt\[([^\]]+)\]/);
-if (altMatch) {
-  const [min, max] = altMatch[1].split(',').map(Number);
-  const { stepDuration, tweenDuration } = getStepDurations(id);
-
-  const anim = anime({
-    targets: object,
-    rotate: [min, max],
-    duration: tweenDuration,
-    easing,
-    direction: "alternate",
-    loop: true,
-    autoplay: true,
-    update: () => {
-      // Fallback to extracting from style if anime.get fails
-      let angle = anime.get(object, 'rotate');
-
-      if (typeof angle !== 'number') {
-        const match = object.style.transform?.match(/rotate\(([-\d.]+)deg\)/);
-        angle = match ? parseFloat(match[1]) : NaN;
-      }
-
-      if (typeof angle === 'number' && !isNaN(angle)) {
-        // console.log(`[ALT] angle = ${angle.toFixed(2)} deg`);
-        if (oscEnabled) {
-          sendRotationOsc((angle + 90) % 360, object);
-        }
-      } else {
-        console.warn(`[ALT] ⚠️ Unable to retrieve valid angle`);
-      }
-    }
-  });
-
-  return;
-}
-
-
-// CONTINUOUS
-// -------------------------------------------
-// Applies infinite continuous rotation using the compact r(...) syntax.
-// Example: r(rpm(2.5))_dir(1)_ease(3)_osc(1)
-// - rpm: rotations per minute (e.g. 2.5 = 2.5 full rotations per minute)
-// - bpm: alternative to rpm (interpreted as bpm / 4)
-// - dir: 1 = clockwise, -1 = counterclockwise
-// - ease: Anime.js easing function
-// - osc: if set to 1, sends OSC rotation data continuously
-//
-// Features:
-//   - Continuous smooth spin in either direction
-//   - Optional easing and OSC output
-//   - Uses Anime.js looped rotation via +=360 or -=360
-//
-// Notes:
-//   - Not cue-based: starts and runs indefinitely once triggered
-//   - Use seq[…] or alt[…] if you need stepwise or reversible control
-//   - Compatible only with modern compact r(...) rotation syntax
-// -------------------------------------------
+  // CONTINUOUS
+  // -------------------------------------------
+  // Applies infinite continuous rotation using the compact r(...) syntax.
+  // Example: r(rpm(2.5))_dir(1)_ease(3)_osc(1)
+  // - rpm: rotations per minute (e.g. 2.5 = 2.5 full rotations per minute)
+  // - bpm: alternative to rpm (interpreted as bpm / 4)
+  // - dir: 1 = clockwise, -1 = counterclockwise
+  // - ease: Anime.js easing function
+  // - osc: if set to 1, sends OSC rotation data continuously
+  //
+  // Features:
+  //   - Continuous smooth spin in either direction
+  //   - Optional easing and OSC output
+  //   - Uses Anime.js looped rotation via +=360 or -=360
+  //
+  // Notes:
+  //   - Not cue-based: starts and runs indefinitely once triggered
+  //   - Use seq[…] or alt[…] if you need stepwise or reversible control
+  //   - Compatible only with modern compact r(...) rotation syntax
+  // -------------------------------------------
 
   const rpm = extractTagValue(id, 'rpm', null);
   const bpm = extractTagValue(id, 'bpm', null);
@@ -410,96 +410,96 @@ if (altMatch) {
 
 const startRotation = (object) => {
 
-    console.warn("[rotate] Using legacy startRotation(). Prefer startRotate() with compact syntax.");
+  console.warn("[rotate] Using legacy startRotation(). Prefer startRotate() with compact syntax.");
 
-    if (!object || !object.id) return;
-    const rawId = object.id;
-    const dataId = object.getAttribute('data-id');
-    const id = dataId || rawId;  // Use data-id if present, otherwise fallback to regular id
+  if (!object || !object.id) return;
+  const rawId = object.id;
+  const dataId = object.getAttribute('data-id');
+  const id = dataId || rawId;  // Use data-id if present, otherwise fallback to regular id
 
-    // 🕹 Check for triggerable mode
-    if (id.includes('_t(1)')) {
-      if (!window.pendingRotationAnimations) {
-        window.pendingRotationAnimations = new Map();
-      }
-      console.log(`[rotate] ⏸ Deferred rotation for ${id}`);
-      pendingRotationAnimations.set(id, () => startRotation(object));
-      return;
+  // 🕹 Check for triggerable mode
+  if (id.includes('_t(1)')) {
+    if (!window.pendingRotationAnimations) {
+      window.pendingRotationAnimations = new Map();
     }
-
-    // 🔍 Parse ID parameters
-    const rpmMatch = id.match(/_rpm_([\d.]+)/);
-    const rpm = rpmMatch ? parseFloat(rpmMatch[1]) : 1.0;
-
-    const directionMatch = id.match(/_dir_(-?\d+)/);
-    const direction = directionMatch ? parseInt(directionMatch[1], 10) : 1;
-
-    const pivotXMatch = id.match(/_pivot_x_(-?\d+(\.\d+)?)/);
-    const pivotYMatch = id.match(/_pivot_y_(-?\d+(\.\d+)?)/);
-    const pivotX = pivotXMatch ? parseFloat(pivotXMatch[1]) : null;
-    const pivotY = pivotYMatch ? parseFloat(pivotYMatch[1]) : null;
-
-    const easingMatch = id.match(/_ease_([a-zA-Z0-9_]+)/);
-    const easing = easingMatch ? easingMatch[1].replace(/_/g, '-') : 'linear';
-
-    const alternateMatch = id.match(/_alternate_deg_([\d.]+)/);
-
-    // 🎯 Determine transform origin
-    if (pivotX !== null && pivotY !== null) {
-      object.style.transformOrigin = `${pivotX}px ${pivotY}px`;
-    } else {
-      const bbox = object.getBBox();
-      const centerX = bbox.x + bbox.width / 2;
-      const centerY = bbox.y + bbox.height / 2;
-      object.style.transformOrigin = `${centerX}px ${centerY}px`;
-    }
-
-    const duration = (60 / rpm) * 1000;
-
-    let animeInstance;
-
-    // ↔️ Alternate (pingpong) rotation
-    if (alternateMatch) {
-      const deg = parseFloat(alternateMatch[1]);
-      const start = direction === 0 ? deg : -deg;
-      const end = -start;
-
-      animeInstance = anime({
-        targets: object,
-        keyframes: [
-          { rotate: start },
-          { rotate: end }
-        ],
-        duration: duration,
-        easing: easing || 'easeInOutSine',
-        direction: 'alternate',
-        loop: true,
-        autoplay: false // Deferred start
-      });
-    } else {
-      // 🔁 Standard continuous rotation
-      animeInstance = anime({
-        targets: object,
-        rotate: direction === 1 ? '+=360' : '-=360',
-        duration: duration,
-        easing: easing || 'easeInOutSine',
-        loop: true,
-        autoplay: false // Deferred start
-      });
-    }
-
-    animeInstance.play();
-
-    // 📦 Register in global runningAnimations map for pause/resume
-    window.runningAnimations[object.id] = {
-      play: () => animeInstance.play(),
-      pause: () => animeInstance.pause(),
-      resume: () => animeInstance.play(),
-      wasPaused: false
-    };
-
-    // console.log(`[DEBUG] Started rotation for ${id}`);
+    console.log(`[rotate] ⏸ Deferred rotation for ${id}`);
+    pendingRotationAnimations.set(id, () => startRotation(object));
+    return;
   }
+
+  // 🔍 Parse ID parameters
+  const rpmMatch = id.match(/_rpm_([\d.]+)/);
+  const rpm = rpmMatch ? parseFloat(rpmMatch[1]) : 1.0;
+
+  const directionMatch = id.match(/_dir_(-?\d+)/);
+  const direction = directionMatch ? parseInt(directionMatch[1], 10) : 1;
+
+  const pivotXMatch = id.match(/_pivot_x_(-?\d+(\.\d+)?)/);
+  const pivotYMatch = id.match(/_pivot_y_(-?\d+(\.\d+)?)/);
+  const pivotX = pivotXMatch ? parseFloat(pivotXMatch[1]) : null;
+  const pivotY = pivotYMatch ? parseFloat(pivotYMatch[1]) : null;
+
+  const easingMatch = id.match(/_ease_([a-zA-Z0-9_]+)/);
+  const easing = easingMatch ? easingMatch[1].replace(/_/g, '-') : 'linear';
+
+  const alternateMatch = id.match(/_alternate_deg_([\d.]+)/);
+
+  // 🎯 Determine transform origin
+  if (pivotX !== null && pivotY !== null) {
+    object.style.transformOrigin = `${pivotX}px ${pivotY}px`;
+  } else {
+    const bbox = object.getBBox();
+    const centerX = bbox.x + bbox.width / 2;
+    const centerY = bbox.y + bbox.height / 2;
+    object.style.transformOrigin = `${centerX}px ${centerY}px`;
+  }
+
+  const duration = (60 / rpm) * 1000;
+
+  let animeInstance;
+
+  // ↔️ Alternate (pingpong) rotation
+  if (alternateMatch) {
+    const deg = parseFloat(alternateMatch[1]);
+    const start = direction === 0 ? deg : -deg;
+    const end = -start;
+
+    animeInstance = anime({
+      targets: object,
+      keyframes: [
+        { rotate: start },
+        { rotate: end }
+      ],
+      duration: duration,
+      easing: easing || 'easeInOutSine',
+      direction: 'alternate',
+      loop: true,
+      autoplay: false // Deferred start
+    });
+  } else {
+    // 🔁 Standard continuous rotation
+    animeInstance = anime({
+      targets: object,
+      rotate: direction === 1 ? '+=360' : '-=360',
+      duration: duration,
+      easing: easing || 'easeInOutSine',
+      loop: true,
+      autoplay: false // Deferred start
+    });
+  }
+
+  animeInstance.play();
+
+  // 📦 Register in global runningAnimations map for pause/resume
+  window.runningAnimations[object.id] = {
+    play: () => animeInstance.play(),
+    pause: () => animeInstance.pause(),
+    resume: () => animeInstance.play(),
+    wasPaused: false
+  };
+
+  // console.log(`[DEBUG] Started rotation for ${id}`);
+}
 /**
  * startScale(object)
  *
@@ -559,19 +559,19 @@ function startScale(object) {
   const regenerate = parsed.regenerate;
   const steps = scaleValues.length;
 
-// --- Initial scale setup to avoid double-scaling ---
-if (steps > 0) {
-  const firstVal = scaleValues[0];
-  const scaleX0 = Array.isArray(firstVal) ? firstVal[0] : firstVal;
-  const scaleY0 = Array.isArray(firstVal) ? firstVal[1] : firstVal;
+  // --- Initial scale setup to avoid double-scaling ---
+  if (steps > 0) {
+    const firstVal = scaleValues[0];
+    const scaleX0 = Array.isArray(firstVal) ? firstVal[0] : firstVal;
+    const scaleY0 = Array.isArray(firstVal) ? firstVal[1] : firstVal;
 
-  object.style.transformBox = "fill-box";
-  object.style.transformOrigin = "center";
+    object.style.transformBox = "fill-box";
+    object.style.transformOrigin = "center";
 
-  // ✅ Reset transform so Anime.js has full control
-  object.style.transform = "scale(1,1)";
-  anime.set(object, { scaleX: scaleX0, scaleY: scaleY0 });
-}
+    // ✅ Reset transform so Anime.js has full control
+    object.style.transform = "scale(1,1)";
+    anime.set(object, { scaleX: scaleX0, scaleY: scaleY0 });
+  }
 
   // --- OSC setup ---
   const oscEnabled = extractTagValue(id, 'osc', false);
@@ -743,6 +743,7 @@ function initializeRotatingObjects(svgElement) {
     if (id.includes('_t(1)')) {
       window.pendingRotationAnimations = window.pendingRotationAnimations || new Map();
       window.pendingRotationAnimations.set(id, () => {
+        
         startRotate(object);
       });
       console.log(`[rotate] ⏸ Deferred rotation stored for ${id}`);
@@ -750,6 +751,8 @@ function initializeRotatingObjects(svgElement) {
     }
 
     // Start immediately
+    console.log(`[rotate] starting  ${id}`);
+
     startRotate(object);
   });
 }
@@ -775,85 +778,85 @@ function initializeScalingObjects(svgElement) {
 
 
 const initializeObjectPathPairs = (svgElement, speed = 10.0) => {
-    const objects = Array.from(svgElement.querySelectorAll(
-      '[id^="obj2path-"], [id^="o2p-"], [id^="o2p("],' +
-      '[data-id^="obj2path-"], [data-id^="o2p-"], [data-id^="o2p("]'
-    ));
-    if (objects.length === 0) return;
+  const objects = Array.from(svgElement.querySelectorAll(
+    '[id^="obj2path-"], [id^="o2p-"], [id^="o2p("],' +
+    '[data-id^="obj2path-"], [data-id^="o2p-"], [data-id^="o2p("]'
+  ));
+  if (objects.length === 0) return;
 
-    const animations = [];
+  const animations = [];
 
-    objects.forEach((object) => {
-      const rawId = object.id;
-      const id = object.getAttribute('data-id') || rawId;
+  objects.forEach((object) => {
+    const rawId = object.id;
+    const id = object.getAttribute('data-id') || rawId;
 
-       console.log(`[SCAN] Checking ${id}`); // 🔍 add this
+    // console.log(`[SCAN] Checking ${id}`); // 🔍 add this
 
-      if (id.startsWith("o2p(")) {
-         console.log(`[MATCH] ID starts with o2p: ${id}`); // 🔍 add this
+    if (id.startsWith("o2p(")) {
+      // console.log(`[MATCH] ID starts with o2p: ${id}`); // 🔍 add this
 
-        const config = window.parseO2PCompact(id);
-        if (!config) {
-           console.warn(`[o2p] ⚠️ Could not parse compact ID: ${id}`);
-          return;
-        }
-
-        const path = svgElement.getElementById(config.pathId);
-        if (!path) {
-           console.warn(`[o2p] ⚠️ No path found with ID: ${config.pathId}`);
-          return;
-        }
-
-        const easing = typeof config.ease === "string"
-          ? config.ease
-          : {
-            0: 'linear', 1: 'easeInSine', 2: 'easeOutSine', 3: 'easeInOutSine',
-            4: 'easeInBack', 5: 'easeOutBack', 6: 'easeInOutBack',
-            7: 'easeInElastic', 8: 'easeOutElastic', 9: 'easeInOutElastic'
-          }[config.ease] || 'easeInOutSine';
-
-          const playAnimation = () => {
-            animateObjToPath(object, path, config.speed, animations, config);
-          };
-
-        if (id.includes('_t(1)')) {
-          if (!window.pendingPathAnimations) window.pendingPathAnimations = new Map();
-          pendingPathAnimations.set(object.id, playAnimation);
-          console.log(`[o2p] ⏸️ Deferred animation registered for ${object.id}`);
-        } else {
-          playAnimation();
-        }
-
-        return; // skip legacy logic
+      const config = window.parseO2PCompact(id);
+      if (!config) {
+        console.warn(`[o2p] ⚠️ Could not parse compact ID: ${id}`);
+        return;
       }
 
+      const path = svgElement.getElementById(config.pathId);
+      if (!path) {
+        console.warn(`[o2p] ⚠️ No path found with ID: ${config.pathId}`);
+        return;
+      }
 
-      // 🧱 Legacy obj2path/o2p- fallback
-      const pathId = rawId
-        .replace(/_(speed|spd|s)_\d+(\.\d+)?/, '')
-        .replace(/_(direction|dir|d)_\d+/, '')
-        .replace(/_(ease|easing|e)_\d+/, '')
-        .replace(/^obj2path-/, 'path-')
-        .replace(/^o2p-/, 'path-');
-
-      const path = svgElement.getElementById(pathId);
-      if (!path) return;
+      const easing = typeof config.ease === "string"
+        ? config.ease
+        : {
+          0: 'linear', 1: 'easeInSine', 2: 'easeOutSine', 3: 'easeInOutSine',
+          4: 'easeInBack', 5: 'easeOutBack', 6: 'easeInOutBack',
+          7: 'easeInElastic', 8: 'easeOutElastic', 9: 'easeInOutElastic'
+        }[config.ease] || 'easeInOutSine';
 
       const playAnimation = () => {
-        animateObjToPath(object, path, parseFloat(speed), animations);
+        animateObjToPath(object, path, config.speed, animations, config);
       };
 
       if (id.includes('_t(1)')) {
         if (!window.pendingPathAnimations) window.pendingPathAnimations = new Map();
         pendingPathAnimations.set(object.id, playAnimation);
-        console.log(`[obj2path] 🔁 Deferred path animation registered for ${object.id}`);
+        console.log(`[o2p] ⏸️ Deferred animation registered for ${object.id}`);
       } else {
-        playAnimation(); // Immediate start
+        playAnimation();
       }
-    });
 
-    return animations;
-  }
+      return; // skip legacy logic
+    }
+
+
+    // 🧱 Legacy obj2path/o2p- fallback
+    const pathId = rawId
+      .replace(/_(speed|spd|s)_\d+(\.\d+)?/, '')
+      .replace(/_(direction|dir|d)_\d+/, '')
+      .replace(/_(ease|easing|e)_\d+/, '')
+      .replace(/^obj2path-/, 'path-')
+      .replace(/^o2p-/, 'path-');
+
+    const path = svgElement.getElementById(pathId);
+    if (!path) return;
+
+    const playAnimation = () => {
+      animateObjToPath(object, path, parseFloat(speed), animations);
+    };
+
+    if (id.includes('_t(1)')) {
+      if (!window.pendingPathAnimations) window.pendingPathAnimations = new Map();
+      pendingPathAnimations.set(object.id, playAnimation);
+      console.log(`[obj2path] 🔁 Deferred path animation registered for ${object.id}`);
+    } else {
+      playAnimation(); // Immediate start
+    }
+  });
+
+  return animations;
+}
 
 /**
  * ✅ parseO2PCompact
@@ -933,7 +936,7 @@ const oscLastSent = new Map();
  * @param {number} angle - Heading angle in degrees
  */
 function sendObj2PathOsc(pathId, normX, normY, angle = 0) {
- 
+
   if (!window.OSC_ENABLED) return;
 
   const now = performance.now();
@@ -1002,83 +1005,83 @@ function emitOSCFromPathProgress({ path, progress, pathId = null }) {
 const animateObjToPath = (object, path, duration, animations = [], config = {}) => {
   // console.log("[o2p] Config for", object.id, config);
 
-    if (!Array.isArray(animations)) {
-      console.warn(`[WARN] animations param was not an array. Wrapping it. ID: ${object.id}`);
-      animations = [];
+  if (!Array.isArray(animations)) {
+    console.warn(`[WARN] animations param was not an array. Wrapping it. ID: ${object.id}`);
+    animations = [];
+  }
+
+  const effectiveId = object.getAttribute('data-id') || object.id;
+
+  const oscEnabled = /_(?:osc|o)\(1\)/.test(effectiveId);
+
+  try {
+    const pathMotion = anime.path(path);
+    const startPoint = path.getPointAtLength(0);
+    const boundingRect = path.getBBox();
+    const adjustedX = startPoint.x - boundingRect.x;
+    const adjustedY = startPoint.y - boundingRect.y;
+
+    if (['circle', 'ellipse'].includes(object.tagName)) {
+      object.setAttribute('cx', adjustedX);
+      object.setAttribute('cy', adjustedY);
+    } else if (object.tagName === 'rect') {
+      const w = object.getBBox().width, h = object.getBBox().height;
+      object.setAttribute('x', adjustedX - w / 2);
+      object.setAttribute('y', adjustedY - h / 2);
     }
-    
-    const effectiveId = object.getAttribute('data-id') || object.id;
-    
-    const oscEnabled = /_(?:osc|o)\(1\)/.test(effectiveId);
 
-    try {
-      const pathMotion = anime.path(path);
-      const startPoint = path.getPointAtLength(0);
-      const boundingRect = path.getBBox();
-      const adjustedX = startPoint.x - boundingRect.x;
-      const adjustedY = startPoint.y - boundingRect.y;
+    object.style.transformOrigin = `${adjustedX}px ${adjustedY}px`;
 
-      if (['circle', 'ellipse'].includes(object.tagName)) {
-        object.setAttribute('cx', adjustedX);
-        object.setAttribute('cy', adjustedY);
-      } else if (object.tagName === 'rect') {
-        const w = object.getBBox().width, h = object.getBBox().height;
-        object.setAttribute('x', adjustedX - w / 2);
-        object.setAttribute('y', adjustedY - h / 2);
-      }
+    const speedMatch = effectiveId.match(/_(?:speed|spd|s)_(\d+(\.\d+)?)/);
+    let animationSpeed = 1000; // fallback
 
-      object.style.transformOrigin = `${adjustedX}px ${adjustedY}px`;
+    if (config && typeof config.duration === 'number' && config.duration > 0) {
+      animationSpeed = config.duration * 1000;
+    } else if (config && typeof config.speed === 'number' && config.speed > 0) {
+      animationSpeed = config.speed * 1000;
+    } else if (typeof duration === 'number' && duration > 0) {
+      animationSpeed = duration * 1000;
+    } else {
+      console.warn(`[o2p] ❌ No valid duration/speed for ${object.id}, using fallback 1s`);
+    }
 
-      const speedMatch = effectiveId.match(/_(?:speed|spd|s)_(\d+(\.\d+)?)/);
-      let animationSpeed = 1000; // fallback
 
-      if (config && typeof config.duration === 'number' && config.duration > 0) {
-        animationSpeed = config.duration * 1000;
-      } else if (config && typeof config.speed === 'number' && config.speed > 0) {
-        animationSpeed = config.speed * 1000;
-      } else if (typeof duration === 'number' && duration > 0) {
-        animationSpeed = duration * 1000;
+    let direction = Number.isInteger(config.direction) ? config.direction : 0;
+
+    const rotate = config.rotate === true;
+
+    // TODO THIS DOESNT SEEM TO BE WORKING AS EXPECTED
+
+    const easingMap = {
+      0: 'linear', 1: 'easeInSine', 2: 'easeOutSine', 3: 'easeInOutSine',
+      4: 'easeInBack', 5: 'easeOutBack', 6: 'easeInOutBack',
+      7: 'easeInElastic', 8: 'easeOutElastic', 9: 'easeInOutElastic'
+    };
+
+    function parseEasingSequence(effectiveId) {
+      const match = effectiveId.match(/_(?:ease|easing|e)\(((?:[^\(\)]|\[[^\]]*\])*)\)/);
+      if (!match) return ['easeInOutSine'];
+
+      const raw = match[1].trim();
+
+      if (raw.startsWith('r[') && raw.endsWith(']')) {
+        const items = raw.slice(2, -1).split(',').map(s => s.trim());
+        const chosen = items[Math.floor(Math.random() * items.length)];
+        return [/^\d+$/.test(chosen) ? easingMap[+chosen] || 'easeInOutSine' : chosen];
+
+      } else if (raw.startsWith('[') && raw.endsWith(']')) {
+        return raw.slice(1, -1).split(',').map(s => {
+          s = s.trim();
+          return /^\d+$/.test(s) ? easingMap[+s] || 'easeInOutSine' : s;
+        });
+
+      } else if (/^\d+$/.test(raw)) {
+        return [easingMap[+raw] || 'easeInOutSine'];
+
       } else {
-        console.warn(`[o2p] ❌ No valid duration/speed for ${object.id}, using fallback 1s`);
+        return [raw];
       }
-      
-
-      let direction = Number.isInteger(config.direction) ? config.direction : 0;
-
-      const rotate = config.rotate === true;
-   
-   // TODO THIS DOESNT SEEM TO BE WORKING AS EXPECTED
-
-      const easingMap = {
-        0: 'linear', 1: 'easeInSine', 2: 'easeOutSine', 3: 'easeInOutSine',
-        4: 'easeInBack', 5: 'easeOutBack', 6: 'easeInOutBack',
-        7: 'easeInElastic', 8: 'easeOutElastic', 9: 'easeInOutElastic'
-      };
-
-      function parseEasingSequence(effectiveId) {
-        const match = effectiveId.match(/_(?:ease|easing|e)\(((?:[^\(\)]|\[[^\]]*\])*)\)/);
-        if (!match) return ['easeInOutSine'];
-
-        const raw = match[1].trim();
-
-        if (raw.startsWith('r[') && raw.endsWith(']')) {
-          const items = raw.slice(2, -1).split(',').map(s => s.trim());
-          const chosen = items[Math.floor(Math.random() * items.length)];
-          return [ /^\d+$/.test(chosen) ? easingMap[+chosen] || 'easeInOutSine' : chosen ];
-
-        } else if (raw.startsWith('[') && raw.endsWith(']')) {
-          return raw.slice(1, -1).split(',').map(s => {
-            s = s.trim();
-            return /^\d+$/.test(s) ? easingMap[+s] || 'easeInOutSine' : s;
-          });
-
-        } else if (/^\d+$/.test(raw)) {
-          return [ easingMap[+raw] || 'easeInOutSine' ];
-
-        } else {
-          return [ raw ];
-        }
-      }
+    }
 
     const easingSequence = parseEasingSequence(effectiveId);
     let cycleCount = 0;
@@ -1128,432 +1131,436 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
         break;
 
 
-              }
+      }
 
-        case 1: {
-          const anim1 = anime({ targets: object, translateX: pathMotion('x'), 
-            translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, 
-            duration: animationSpeed, easing: defaultEasing,
- loop: true });
-          window.runningAnimations[object.id] = { play: () => anim1.play(), pause: () => anim1.pause(), resume: () => anim1.play(), wasPaused: false };
-          animations.push(anim1);
-          break;
-        }
+      case 1: {
+        const anim1 = anime({
+          targets: object, translateX: pathMotion('x'),
+          translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0,
+          duration: animationSpeed, easing: defaultEasing,
+          loop: true
+        });
+        window.runningAnimations[object.id] = { play: () => anim1.play(), pause: () => anim1.pause(), resume: () => anim1.play(), wasPaused: false };
+        animations.push(anim1);
+        break;
+      }
 
-        case 2: {
-          const anim2 = anime({ targets: object, translateX: pathMotion('x'), 
-            translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, duration: animationSpeed, easing: defaultEasing,
- loop: true, direction: 'reverse' });
-          window.runningAnimations[object.id] = { play: () => anim2.play(), pause: () => anim2.pause(), resume: () => anim2.play(), wasPaused: false };
-          animations.push(anim2);
-          break;
-        }
-        /**
-         * 🎯 Case 3 — Random Jump Animation Within Visible Path Segment
-         * -------------------------------------------------------------
-         * - Animates objects (typically circles or groups) by jumping to a random point
-         *   along the visible portion of an assigned path.
-         * - Uses Anime.js to animate position via `cx/cy` or `translateX/translateY`.
-         * - Each jump occurs after a short animation and continues in a loop.
-         * - Objects pause/resume when scrolled off/on screen using IntersectionObserver.
-         *
-         * ✅ Features:
-         * - Initial placement at path start
-         * - Visibility-aware sampling of points (SVG-to-screen space conversion)
-         * - Integration with observer system (play/pause/resume)
-         * - Object can be an <ellipse>, <circle>, or a <g> group wrapper
-         *
-         * 🧪 Known Issues:
-         * - When multiple Case 3 objects are active simultaneously, their animations
-         *   interfere, causing erratic jumping or layout glitches.
-         * - Positioning via `cx/cy` works reliably when only one object is active.
-         * - Using `translateX/Y` avoids some layout bugs but causes object to jump offscreen.
-         * - Transform origin logic has been validated and works for other cases.
-         *
-         * ❌ NOT the Cause:
-         * - Not due to observer logic (was disabled and glitch persisted)
-         * - Not due to SVG geometry (verified shapes, r/cx/cy set correctly)
-         * - Not due to DOM visibility or style (verified display/opacity/transform)
-         * - Not due to case logic conflicts (case 5 and 3 operate independently)
-         *
-         * 📝 TODO:
-         * - Investigate **multi-object transform side effects**, especially with groups.
-         * - Try dedicated inner wrapper for positioning if in <g>.
-         * - Isolate minimal reproducible test with 2 animated objects on same path.
-         */
-        case 3: {
+      case 2: {
+        const anim2 = anime({
+          targets: object, translateX: pathMotion('x'),
+          translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, duration: animationSpeed, easing: defaultEasing,
+          loop: true, direction: 'reverse'
+        });
+        window.runningAnimations[object.id] = { play: () => anim2.play(), pause: () => anim2.pause(), resume: () => anim2.play(), wasPaused: false };
+        animations.push(anim2);
+        break;
+      }
+      /**
+       * 🎯 Case 3 — Random Jump Animation Within Visible Path Segment
+       * -------------------------------------------------------------
+       * - Animates objects (typically circles or groups) by jumping to a random point
+       *   along the visible portion of an assigned path.
+       * - Uses Anime.js to animate position via `cx/cy` or `translateX/translateY`.
+       * - Each jump occurs after a short animation and continues in a loop.
+       * - Objects pause/resume when scrolled off/on screen using IntersectionObserver.
+       *
+       * ✅ Features:
+       * - Initial placement at path start
+       * - Visibility-aware sampling of points (SVG-to-screen space conversion)
+       * - Integration with observer system (play/pause/resume)
+       * - Object can be an <ellipse>, <circle>, or a <g> group wrapper
+       *
+       * 🧪 Known Issues:
+       * - When multiple Case 3 objects are active simultaneously, their animations
+       *   interfere, causing erratic jumping or layout glitches.
+       * - Positioning via `cx/cy` works reliably when only one object is active.
+       * - Using `translateX/Y` avoids some layout bugs but causes object to jump offscreen.
+       * - Transform origin logic has been validated and works for other cases.
+       *
+       * ❌ NOT the Cause:
+       * - Not due to observer logic (was disabled and glitch persisted)
+       * - Not due to SVG geometry (verified shapes, r/cx/cy set correctly)
+       * - Not due to DOM visibility or style (verified display/opacity/transform)
+       * - Not due to case logic conflicts (case 5 and 3 operate independently)
+       *
+       * 📝 TODO:
+       * - Investigate **multi-object transform side effects**, especially with groups.
+       * - Try dedicated inner wrapper for positioning if in <g>.
+       * - Isolate minimal reproducible test with 2 animated objects on same path.
+       */
+      case 3: {
 
-          // console.warn(`[case3][${object.id}] 🚫 Temporarily disabled`);
-          return;
+        // console.warn(`[case3][${object.id}] 🚫 Temporarily disabled`);
+        return;
 
-          const pathLength = path.getTotalLength();
-          const sampleStep = 10;
+        const pathLength = path.getTotalLength();
+        const sampleStep = 10;
 
-          const getVisibleTarget = () => {
-            const svg = document.querySelector("svg");
-            const screenCTM = svg?.getScreenCTM();
-            if (!svg || !screenCTM) {
-              console.warn(`[case3][${object.id}] ⚠️ SVG or CTM missing`);
-              return null;
-            }
+        const getVisibleTarget = () => {
+          const svg = document.querySelector("svg");
+          const screenCTM = svg?.getScreenCTM();
+          if (!svg || !screenCTM) {
+            console.warn(`[case3][${object.id}] ⚠️ SVG or CTM missing`);
+            return null;
+          }
 
-            const visible = [];
-            const pt = svg.createSVGPoint();
-            for (let len = 0; len < pathLength; len += sampleStep) {
-              const p = path.getPointAtLength(len);
-              pt.x = p.x;
-              pt.y = p.y;
-              const screenX = pt.matrixTransform(screenCTM).x;
-              if (screenX >= 0 && screenX <= window.innerWidth) visible.push(len);
-            }
+          const visible = [];
+          const pt = svg.createSVGPoint();
+          for (let len = 0; len < pathLength; len += sampleStep) {
+            const p = path.getPointAtLength(len);
+            pt.x = p.x;
+            pt.y = p.y;
+            const screenX = pt.matrixTransform(screenCTM).x;
+            if (screenX >= 0 && screenX <= window.innerWidth) visible.push(len);
+          }
 
-            if (visible.length === 0) return null;
-            const chosen = visible[Math.floor(Math.random() * visible.length)];
-            return path.getPointAtLength(chosen);
-          };
+          if (visible.length === 0) return null;
+          const chosen = visible[Math.floor(Math.random() * visible.length)];
+          return path.getPointAtLength(chosen);
+        };
 
-          const JumpController = {
-            running: true,
-            currentAnim: null,
+        const JumpController = {
+          running: true,
+          currentAnim: null,
 
-            placeAtStart() {
-              const start = path.getPointAtLength(0);
-              const bbox = object.getBBox();
-              const centerX = bbox.x + bbox.width / 2;
-              const centerY = bbox.y + bbox.height / 2;
+          placeAtStart() {
+            const start = path.getPointAtLength(0);
+            const bbox = object.getBBox();
+            const centerX = bbox.x + bbox.width / 2;
+            const centerY = bbox.y + bbox.height / 2;
 
-              object.removeAttribute("transform");
-              object.style.transform = "";
-              object.style.transformOrigin = `${centerX}px ${centerY}px`;
+            object.removeAttribute("transform");
+            object.style.transform = "";
+            object.style.transformOrigin = `${centerX}px ${centerY}px`;
 
-              anime.set(object, {
-                translateX: start.x - centerX,
-                translateY: start.y - centerY
-              });
+            anime.set(object, {
+              translateX: start.x - centerX,
+              translateY: start.y - centerY
+            });
 
-              console.log(`[case3][${object.id}] 🧭 Init at (${start.x.toFixed(1)}, ${start.y.toFixed(1)})`);
-            },
+            console.log(`[case3][${object.id}] 🧭 Init at (${start.x.toFixed(1)}, ${start.y.toFixed(1)})`);
+          },
 
-            loop() {
-              if (!this.running) return;
+          loop() {
+            if (!this.running) return;
 
-              const target = getVisibleTarget();
-              if (!target) {
-                console.warn(`[case3][${object.id}] ❌ No visible point`);
-                this.running = false;
-                return;
-              }
-
-              const bbox = object.getBBox();
-              const centerX = bbox.x + bbox.width / 2;
-              const centerY = bbox.y + bbox.height / 2;
-
-              object.style.transformOrigin = `${centerX}px ${centerY}px`;
-
-              this.currentAnim = anime({
-                targets: object,
-                translateX: target.x - centerX,
-                translateY: target.y - centerY,
-                duration: 1000,
-                easing: defaultEasing,
-                loop: false,
-                complete: () => {
-                  if (this.running) this.loop();
-                }
-              });
-
-              console.log(`[case3][${object.id}] 🚀 Jumping to (${target.x.toFixed(1)}, ${target.y.toFixed(1)})`);
-            },
-
-            start() {
-              console.log(`[case3][${object.id}] ▶️ Starting`);
-              this.running = true;
-              this.placeAtStart();
-              this.loop();
-            },
-
-            pause() {
+            const target = getVisibleTarget();
+            if (!target) {
+              console.warn(`[case3][${object.id}] ❌ No visible point`);
               this.running = false;
-              if (this.currentAnim) this.currentAnim.pause();
-            },
-
-            resume() {
-              if (!this.running) {
-                this.running = true;
-                this.loop();
-              }
+              return;
             }
-          };
 
-          JumpController.start();
+            const bbox = object.getBBox();
+            const centerX = bbox.x + bbox.width / 2;
+            const centerY = bbox.y + bbox.height / 2;
 
-          window.runningAnimations[object.id] = {
-            play: () => JumpController.resume(),
-            pause: () => JumpController.pause(),
-            resume: () => JumpController.resume(),
-            wasPaused: true,
-            autoStart: true
-          };
+            object.style.transformOrigin = `${centerX}px ${centerY}px`;
 
-          observer.observe(object);
-          break;
+            this.currentAnim = anime({
+              targets: object,
+              translateX: target.x - centerX,
+              translateY: target.y - centerY,
+              duration: 1000,
+              easing: defaultEasing,
+              loop: false,
+              complete: () => {
+                if (this.running) this.loop();
+              }
+            });
+
+            console.log(`[case3][${object.id}] 🚀 Jumping to (${target.x.toFixed(1)}, ${target.y.toFixed(1)})`);
+          },
+
+          start() {
+            console.log(`[case3][${object.id}] ▶️ Starting`);
+            this.running = true;
+            this.placeAtStart();
+            this.loop();
+          },
+
+          pause() {
+            this.running = false;
+            if (this.currentAnim) this.currentAnim.pause();
+          },
+
+          resume() {
+            if (!this.running) {
+              this.running = true;
+              this.loop();
+            }
+          }
+        };
+
+        JumpController.start();
+
+        window.runningAnimations[object.id] = {
+          play: () => JumpController.resume(),
+          pause: () => JumpController.pause(),
+          resume: () => JumpController.resume(),
+          wasPaused: true,
+          autoStart: true
+        };
+
+        observer.observe(object);
+        break;
+      }
+
+
+      case 4: {
+        const pathLen = path.getTotalLength();
+        const fixedNodes = Array.from({ length: 5 }, (_, i) => path.getPointAtLength((i / 4) * pathLen));
+        const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
+
+        const controller4 = {
+          running: true,
+          timer: null,
+          jump() {
+            if (!this.running) return;
+            const point = getRandom(fixedNodes);
+            const anim4 = anime({
+              targets: object,
+              translateX: point.x,
+              translateY: point.y,
+              rotate: rotate ? pathMotion('angle') : 0,
+              duration: getRandom([2000, 3000, 5000, 8000, 13000]),
+              easing: defaultEasing,
+              autoplay: false,
+              complete: () => this.timer = setTimeout(() => this.jump(), getRandom([1000, 2000, 3000, 4000]))
+            });
+            window.runningAnimations[object.id] = { play: () => anim4.play(), pause: () => anim4.pause(), resume: () => anim4.play(), wasPaused: false };
+            observer.observe(object);
+            anim4.play();
+          },
+          pause() { this.running = false; clearTimeout(this.timer); },
+          resume() { if (!this.running) { this.running = true; this.jump(); } }
+        };
+
+        controller4.jump();
+        break;
+      }
+
+
+
+      case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
+
+
+        const originalPathID = path.id;
+        const basePathIDMatch = originalPathID.match(/^(path-\d+)/);
+        const basePathID = basePathIDMatch ? basePathIDMatch[1] : originalPathID;
+
+        const case5Paths = [...(window.pathVariantsMap[basePathID] || [])];
+        if (!case5Paths.some(p => p.id === originalPathID)) {
+          console.log("[o2p Case5] Paths found:", case5Paths.map(p => p.id));
+          case5Paths.unshift(path);
         }
 
+        if (case5Paths.length < 2) break;
 
-        case 4: {
-          const pathLen = path.getTotalLength();
-          const fixedNodes = Array.from({ length: 5 }, (_, i) => path.getPointAtLength((i / 4) * pathLen));
-          const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
+        const case5StartPositions = case5Paths.map(p => p.getPointAtLength(0));
+        const animationDuration = 2000;
+        let nextTargetPosition = null;
 
-          const controller4 = {
-            running: true,
-            timer: null,
-            jump() {
-              if (!this.running) return;
-              const point = getRandom(fixedNodes);
-              const anim4 = anime({
-                targets: object,
-                translateX: point.x,
-                translateY: point.y,
-                rotate: rotate ? pathMotion('angle') : 0,
-                duration: getRandom([2000, 3000, 5000, 8000, 13000]),
-                easing: defaultEasing,
-                autoplay: false,
-                complete: () => this.timer = setTimeout(() => this.jump(), getRandom([1000, 2000, 3000, 4000]))
-              });
-              window.runningAnimations[object.id] = { play: () => anim4.play(), pause: () => anim4.pause(), resume: () => anim4.play(), wasPaused: false };
-              observer.observe(object);
-              anim4.play();
-            },
-            pause() { this.running = false; clearTimeout(this.timer); },
-            resume() { if (!this.running) { this.running = true; this.jump(); } }
-          };
+        // ✅ Parse duration from object ID
+        const id = object.getAttribute("id") || object.id;
+        const durationParsed = parseCompactAnimationValues(id, "dur");
+        const case5PauseDurations = durationParsed?.values?.length ? durationParsed.values.map(v => v * 1000) : [3000, 5000, 8000, 13000, 21000, 34000];
 
-          controller4.jump();
-          break;
+        // ✅ Find ghost using ghost(path-XXXX) pattern
+        const pathMatch = id.match(/o2p\(path-(\d+)\)/);
+        const ghostID = pathMatch ? `ghost(path-${pathMatch[1]})` : null;
+        let ghostObject = ghostID ? document.getElementById(ghostID) : null;
+
+        if (!ghostObject) break;
+        ghostObject.removeAttribute("transform");
+
+        const ghostTag = ghostObject.tagName.toLowerCase();
+        const first = case5StartPositions[0];
+
+        if (ghostTag === "circle" || ghostTag === "ellipse") {
+          if (!ghostObject.hasAttribute("cx")) ghostObject.setAttribute("cx", "0");
+          if (!ghostObject.hasAttribute("cy")) ghostObject.setAttribute("cy", "0");
+          ghostObject.setAttribute("cx", first.x);
+          ghostObject.setAttribute("cy", first.y);
+        } else if (ghostTag === "rect") {
+          const width = parseFloat(ghostObject.getAttribute("width")) || 0;
+          const height = parseFloat(ghostObject.getAttribute("height")) || 0;
+          ghostObject.setAttribute("x", first.x - width / 2);
+          ghostObject.setAttribute("y", first.y - height / 2);
         }
 
-
-        
-case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
-
-
-  const originalPathID = path.id;
-  const basePathIDMatch = originalPathID.match(/^(path-\d+)/);
-  const basePathID = basePathIDMatch ? basePathIDMatch[1] : originalPathID;
-
-  const case5Paths = [...(window.pathVariantsMap[basePathID] || [])];
-  if (!case5Paths.some(p => p.id === originalPathID)) {
-    console.log("[o2p Case5] Paths found:", case5Paths.map(p => p.id));
-    case5Paths.unshift(path);
-  }
-
-  if (case5Paths.length < 2) break;
-
-  const case5StartPositions = case5Paths.map(p => p.getPointAtLength(0));
-  const animationDuration = 2000;
-  let nextTargetPosition = null;
-
-  // ✅ Parse duration from object ID
-  const id = object.getAttribute("id") || object.id;
-  const durationParsed = parseCompactAnimationValues(id, "dur");
-  const case5PauseDurations = durationParsed?.values?.length ? durationParsed.values.map(v => v * 1000) : [3000, 5000, 8000, 13000, 21000, 34000];
-
-  // ✅ Find ghost using ghost(path-XXXX) pattern
-  const pathMatch = id.match(/o2p\(path-(\d+)\)/);
-  const ghostID = pathMatch ? `ghost(path-${pathMatch[1]})` : null;
-  let ghostObject = ghostID ? document.getElementById(ghostID) : null;
-
-  if (!ghostObject) break;
-  ghostObject.removeAttribute("transform");
-
-  const ghostTag = ghostObject.tagName.toLowerCase();
-  const first = case5StartPositions[0];
-
-  if (ghostTag === "circle" || ghostTag === "ellipse") {
-    if (!ghostObject.hasAttribute("cx")) ghostObject.setAttribute("cx", "0");
-    if (!ghostObject.hasAttribute("cy")) ghostObject.setAttribute("cy", "0");
-    ghostObject.setAttribute("cx", first.x);
-    ghostObject.setAttribute("cy", first.y);
-  } else if (ghostTag === "rect") {
-    const width = parseFloat(ghostObject.getAttribute("width")) || 0;
-    const height = parseFloat(ghostObject.getAttribute("height")) || 0;
-    ghostObject.setAttribute("x", first.x - width / 2);
-    ghostObject.setAttribute("y", first.y - height / 2);
-  }
-
-  let countdownText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  countdownText.setAttribute("id", `${ghostID}-countdown`);
-  countdownText.setAttribute("fill", "red");
-  countdownText.setAttribute("stroke", "red");
-  countdownText.setAttribute("stroke-width", "1");
-  countdownText.setAttribute("font-size", "56");
-  countdownText.setAttribute("text-anchor", "middle");
-  window.scoreSVG.appendChild(countdownText);
+        let countdownText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        countdownText.setAttribute("id", `${ghostID}-countdown`);
+        countdownText.setAttribute("fill", "red");
+        countdownText.setAttribute("stroke", "red");
+        countdownText.setAttribute("stroke-width", "1");
+        countdownText.setAttribute("font-size", "56");
+        countdownText.setAttribute("text-anchor", "middle");
+        window.scoreSVG.appendChild(countdownText);
 
 
-    console.groupCollapsed(`[o2p Case5] ⚡ Starting Case 5 for ${object.id} → ${path.id}`);
-    console.log("[o2p Case5] Parsed ID:", id);
+        console.groupCollapsed(`[o2p Case5] ⚡ Starting Case 5 for ${object.id} → ${path.id}`);
+        console.log("[o2p Case5] Parsed ID:", id);
 
 
-  const Case5Controller = {
-    object,
-    ghost: ghostObject,
-    countdown: countdownText,
-    initialized: false,
-    running: true,
-    loopTimeout: null,
-    countdownInterval: null,
-    pauseIndex: 0,
+        const Case5Controller = {
+          object,
+          ghost: ghostObject,
+          countdown: countdownText,
+          initialized: false,
+          running: true,
+          loopTimeout: null,
+          countdownInterval: null,
+          pauseIndex: 0,
 
-    loop() {
-      if (!this.running) return;
+          loop() {
+            if (!this.running) return;
 
-      nextTargetPosition = case5StartPositions[Math.floor(Math.random() * case5StartPositions.length)];
+            nextTargetPosition = case5StartPositions[Math.floor(Math.random() * case5StartPositions.length)];
 
-      // 🔁 Select pause duration
-      let case5PauseDuration;
-      if (durationParsed?.regenerate && typeof durationParsed.generate === 'function') {
-        case5PauseDurations.splice(0, case5PauseDurations.length, ...durationParsed.generate().map(v => v * 1000));
-      }
-      if (durationParsed?.order === 'sequential') {
-        case5PauseDuration = case5PauseDurations[this.pauseIndex % case5PauseDurations.length];
-        this.pauseIndex++;
-      } else {
-        case5PauseDuration = case5PauseDurations[Math.floor(Math.random() * case5PauseDurations.length)];
-      }
+            // 🔁 Select pause duration
+            let case5PauseDuration;
+            if (durationParsed?.regenerate && typeof durationParsed.generate === 'function') {
+              case5PauseDurations.splice(0, case5PauseDurations.length, ...durationParsed.generate().map(v => v * 1000));
+            }
+            if (durationParsed?.order === 'sequential') {
+              case5PauseDuration = case5PauseDurations[this.pauseIndex % case5PauseDurations.length];
+              this.pauseIndex++;
+            } else {
+              case5PauseDuration = case5PauseDurations[Math.floor(Math.random() * case5PauseDurations.length)];
+            }
 
-      const case5PauseSeconds = Math.round(case5PauseDuration / 1000);
+            const case5PauseSeconds = Math.round(case5PauseDuration / 1000);
 
-      if (ghostTag === "circle" || ghostTag === "ellipse") {
-        anime({ targets: this.ghost, cx: nextTargetPosition.x, cy: nextTargetPosition.y, duration: animationDuration, easing: defaultEasing });
-      } else if (ghostTag === "rect") {
-        const width = parseFloat(this.ghost.getAttribute("width")) || 0;
-        const height = parseFloat(this.ghost.getAttribute("height")) || 0;
-        anime({ targets: this.ghost, x: nextTargetPosition.x - width / 2, y: nextTargetPosition.y - height / 2, duration: animationDuration, easing: defaultEasing });
-      }
+            if (ghostTag === "circle" || ghostTag === "ellipse") {
+              anime({ targets: this.ghost, cx: nextTargetPosition.x, cy: nextTargetPosition.y, duration: animationDuration, easing: defaultEasing });
+            } else if (ghostTag === "rect") {
+              const width = parseFloat(this.ghost.getAttribute("width")) || 0;
+              const height = parseFloat(this.ghost.getAttribute("height")) || 0;
+              anime({ targets: this.ghost, x: nextTargetPosition.x - width / 2, y: nextTargetPosition.y - height / 2, duration: animationDuration, easing: defaultEasing });
+            }
 
-      if (!this.initialized) {
-        anime({ targets: this.object, translateX: nextTargetPosition.x, translateY: nextTargetPosition.y, duration: 1, easing: 'linear' });
-        this.initialized = true;
-      }
+            if (!this.initialized) {
+              anime({ targets: this.object, translateX: nextTargetPosition.x, translateY: nextTargetPosition.y, duration: 1, easing: 'linear' });
+              this.initialized = true;
+            }
 
-      this.countdown.setAttribute("x", nextTargetPosition.x);
-      this.countdown.setAttribute("y", nextTargetPosition.y - 75);
-      this.countdown.textContent = `${case5PauseSeconds}`;
+            this.countdown.setAttribute("x", nextTargetPosition.x);
+            this.countdown.setAttribute("y", nextTargetPosition.y - 75);
+            this.countdown.textContent = `${case5PauseSeconds}`;
 
-      let remainingTime = case5PauseDuration / 1000;
-      this.countdownInterval = setInterval(() => {
-        remainingTime -= 1;
-        this.countdown.textContent = `${remainingTime}`;
-        if (remainingTime <= 0) {
-          clearInterval(this.countdownInterval);
-          this.countdown.textContent = "";
-        }
-      }, 1000);
+            let remainingTime = case5PauseDuration / 1000;
+            this.countdownInterval = setInterval(() => {
+              remainingTime -= 1;
+              this.countdown.textContent = `${remainingTime}`;
+              if (remainingTime <= 0) {
+                clearInterval(this.countdownInterval);
+                this.countdown.textContent = "";
+              }
+            }, 1000);
 
-      this.loopTimeout = setTimeout(() => {
-        anime({ targets: this.object, translateX: nextTargetPosition.x, translateY: nextTargetPosition.y, duration: animationDuration, easing: defaultEasing, complete: () => { if (this.running) this.loop(); } });
-        anime({ targets: this.countdown, x: nextTargetPosition.x, y: nextTargetPosition.y - 75, duration: animationDuration, easing: defaultEasing });
-      }, case5PauseDuration);
-    },
+            this.loopTimeout = setTimeout(() => {
+              anime({ targets: this.object, translateX: nextTargetPosition.x, translateY: nextTargetPosition.y, duration: animationDuration, easing: defaultEasing, complete: () => { if (this.running) this.loop(); } });
+              anime({ targets: this.countdown, x: nextTargetPosition.x, y: nextTargetPosition.y - 75, duration: animationDuration, easing: defaultEasing });
+            }, case5PauseDuration);
+          },
 
-    pause() {
-      this.running = false;
-      clearTimeout(this.loopTimeout);
-      clearInterval(this.countdownInterval);
-    },
+          pause() {
+            this.running = false;
+            clearTimeout(this.loopTimeout);
+            clearInterval(this.countdownInterval);
+          },
 
-    resume() {
-      if (!this.running) {
-        this.running = true;
-        this.loop();
-      }
+          resume() {
+            if (!this.running) {
+              this.running = true;
+              this.loop();
+            }
+          }
+        };
+
+        Case5Controller.loop();
+        window.runningAnimations[object.id] = Case5Controller;
+        window.runningAnimations[ghostID] = { play: () => { if (!Case5Controller.running) Case5Controller.resume(); }, pause: () => { if (Case5Controller.running) Case5Controller.pause(); }, wasPaused: false };
+        window.runningAnimations[`${ghostID}-countdown`] = { play: () => { }, pause: () => { }, wasPaused: false };
+        observer.observe(object);
+        observer.observe(ghostObject);
+
+        console.groupEnd();
+
+
+
+
+
+        console.warn(`[DEBUG] Case 5 fallback animation active for object ${object.id}`);
+
+      // console.warn(`[DEBUG] Fallback pingpong animation created for object ${object.id}`);
     }
-  };
 
-  Case5Controller.loop();
-  window.runningAnimations[object.id] = Case5Controller;
-  window.runningAnimations[ghostID] = { play: () => { if (!Case5Controller.running) Case5Controller.resume(); }, pause: () => { if (Case5Controller.running) Case5Controller.pause(); }, wasPaused: false };
-  window.runningAnimations[`${ghostID}-countdown`] = { play: () => {}, pause: () => {}, wasPaused: false };
-  observer.observe(object);
-  observer.observe(ghostObject);
-
-  console.groupEnd();
-
-
-
-
-
-  console.warn(`[DEBUG] Case 5 fallback animation active for object ${object.id}`);
-
-          // console.warn(`[DEBUG] Fallback pingpong animation created for object ${object.id}`);
-      }
-
-    } catch (error) {
-       console.error(`[DEBUG] Error animating object ${object.id} along path ${path.id}: ${error.message}`);
-    }
+  } catch (error) {
+    console.error(`[DEBUG] Error animating object ${object.id} along path ${path.id}: ${error.message}`);
   }
+}
 
 function extractTagValue(id, tag, fallback = null) {
-    const parenMatch = id.match(new RegExp(`${tag}\\(([^)]+)\\)`));
-    const underscoreMatch = id.match(new RegExp(`${tag}_(\\d+(\\.\\d+)?)`));
+  const parenMatch = id.match(new RegExp(`${tag}\\(([^)]+)\\)`));
+  const underscoreMatch = id.match(new RegExp(`${tag}_(\\d+(\\.\\d+)?)`));
 
-    if (parenMatch) return isNaN(Number(parenMatch[1])) ? parenMatch[1] : parseFloat(parenMatch[1]);
-    if (underscoreMatch) return isNaN(Number(underscoreMatch[1])) ? underscoreMatch[1] : parseFloat(underscoreMatch[1]);
+  if (parenMatch) return isNaN(Number(parenMatch[1])) ? parenMatch[1] : parseFloat(parenMatch[1]);
+  if (underscoreMatch) return isNaN(Number(underscoreMatch[1])) ? underscoreMatch[1] : parseFloat(underscoreMatch[1]);
 
-    return fallback;
-  }
+  return fallback;
+}
 
 function getEasingFromId(id) {
-    const easeMap = {
-      '0': 'linear', '1': 'easeInSine', '2': 'easeOutSine', '3': 'easeInOutSine',
-      '4': 'easeInBack', '5': 'easeOutBack', '6': 'easeInOutBack',
-      '7': 'easeInElastic', '8': 'easeOutElastic', '9': 'easeInOutElastic'
-    };
+  const easeMap = {
+    '0': 'linear', '1': 'easeInSine', '2': 'easeOutSine', '3': 'easeInOutSine',
+    '4': 'easeInBack', '5': 'easeOutBack', '6': 'easeInOutBack',
+    '7': 'easeInElastic', '8': 'easeOutElastic', '9': 'easeInOutElastic'
+  };
 
-    const easeListMatch = id.match(/ease\[(.*?)\]/);
-    const easeParenMatch = id.match(/ease\((\d+)\)/);
-    const easeUnderscoreMatch = id.match(/_ease_(\d+)/);
+  const easeListMatch = id.match(/ease\[(.*?)\]/);
+  const easeParenMatch = id.match(/ease\((\d+)\)/);
+  const easeUnderscoreMatch = id.match(/_ease_(\d+)/);
 
-    if (easeListMatch) {
-      const options = easeListMatch[1].split(',').map(v => easeMap[v.trim()]).filter(Boolean);
-      if (options.length) return () => options[Math.floor(Math.random() * options.length)];
-    }
-    const code = easeParenMatch?.[1] || easeUnderscoreMatch?.[1];
-    return easeMap[code] || 'linear';
+  if (easeListMatch) {
+    const options = easeListMatch[1].split(',').map(v => easeMap[v.trim()]).filter(Boolean);
+    if (options.length) return () => options[Math.floor(Math.random() * options.length)];
+  }
+  const code = easeParenMatch?.[1] || easeUnderscoreMatch?.[1];
+  return easeMap[code] || 'linear';
+}
+
+function applyPivotFromId(object, id) {
+  const bbox = object.getBBox();
+  const pivotMatch = id.match(/pivot\(([^,]+),([^)]+)\)/);
+  const pxRaw = extractTagValue(id, 'pivot_x', null);
+  const pyRaw = extractTagValue(id, 'pivot_y', null);
+
+  let px = pivotMatch ? parseFloat(pivotMatch[1].trim()) : pxRaw;
+  let py = pivotMatch ? parseFloat(pivotMatch[2].trim()) : pyRaw;
+
+  if (px === null || py === null || isNaN(px) || isNaN(py)) {
+    setTransformOriginToCenter(object);
+    return;
   }
 
-  function applyPivotFromId(object, id) {
-    const bbox = object.getBBox();
-    const pivotMatch = id.match(/pivot\(([^,]+),([^)]+)\)/);
-    const pxRaw = extractTagValue(id, 'pivot_x', null);
-    const pyRaw = extractTagValue(id, 'pivot_y', null);
-  
-    let px = pivotMatch ? parseFloat(pivotMatch[1].trim()) : pxRaw;
-    let py = pivotMatch ? parseFloat(pivotMatch[2].trim()) : pyRaw;
-  
-    if (px === null || py === null || isNaN(px) || isNaN(py)) {
-      setTransformOriginToCenter(object);
-      return;
-    }
-  
-    const centerX = bbox.x + bbox.width / 2;
-    const centerY = bbox.y + bbox.height / 2;
-  
-    const finalX = centerX + px;
-    const finalY = centerY + py;
-  
-    object.style.transformOrigin = `${finalX}px ${finalY}px`;
-  }
-  
+  const centerX = bbox.x + bbox.width / 2;
+  const centerY = bbox.y + bbox.height / 2;
+
+  const finalX = centerX + px;
+  const finalY = centerY + py;
+
+  object.style.transformOrigin = `${finalX}px ${finalY}px`;
+}
+
 
 function setTransformOriginToCenter(element) {
-    const bbox = element.getBBox();
-    const cx = bbox.x + bbox.width / 2;
-    const cy = bbox.y + bbox.height / 2;
-    element.style.transformOrigin = `${cx}px ${cy}px`;
-  }
+  const bbox = element.getBBox();
+  const cx = bbox.x + bbox.width / 2;
+  const cy = bbox.y + bbox.height / 2;
+  element.style.transformOrigin = `${cx}px ${cy}px`;
+}
 
 
 
@@ -1616,28 +1623,28 @@ function parseCompactAnimationValues(id, prefix = 's') {
     return { values: generate(), regenerate: true, generate, order };
   }
 
-    // ✅ JSON-style or plain comma-separated values: [1,2,1] or 1,2
-    try {
-      let parsed;
+  // ✅ JSON-style or plain comma-separated values: [1,2,1] or 1,2
+  try {
+    let parsed;
 
-      // If square brackets are present → parse as JSON
-      if (raw.startsWith('[') && raw.endsWith(']')) {
-        parsed = JSON.parse(raw);
-      } else if (raw.includes(',')) {
-        // If comma-separated values without brackets → split manually
-        parsed = raw.split(',').map(v => parseFloat(v.trim())).filter(n => !isNaN(n));
-      } else {
-        // Single numeric value
-        const num = parseFloat(raw);
-        parsed = !isNaN(num) ? [num] : [];
-      }
-
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return { values: parsed, regenerate: false, order };
-      }
-    } catch (e) {
-      console.warn(`[parseCompact] ⚠️ Parse error in ${prefix}(...) for ${raw}`, e);
+    // If square brackets are present → parse as JSON
+    if (raw.startsWith('[') && raw.endsWith(']')) {
+      parsed = JSON.parse(raw);
+    } else if (raw.includes(',')) {
+      // If comma-separated values without brackets → split manually
+      parsed = raw.split(',').map(v => parseFloat(v.trim())).filter(n => !isNaN(n));
+    } else {
+      // Single numeric value
+      const num = parseFloat(raw);
+      parsed = !isNaN(num) ? [num] : [];
     }
+
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return { values: parsed, regenerate: false, order };
+    }
+  } catch (e) {
+    console.warn(`[parseCompact] ⚠️ Parse error in ${prefix}(...) for ${raw}`, e);
+  }
 
 
   // ✅ Fallback: single numeric value

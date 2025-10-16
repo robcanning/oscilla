@@ -13,12 +13,12 @@
   <!-- <script src="https://cdn.jsdelivr.net/npm/svg-path-commander"></script> -->
   <!-- <script src="https://cdn.jsdelivr.net/npm/svg-path-commander@6.1.0/dist/svg-path-commander.umd.min.js"></script> -->
 
-  
-<!-- Shoelace JS + CSS -->
-<script type="module">
-  import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.0/cdn/shoelace.js';
-</script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.0/dist/themes/light.css" />
+
+  <!-- Shoelace JS + CSS -->
+  <script type="module">
+    import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.0/cdn/shoelace.js';
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.0/dist/themes/light.css" />
 
 
 
@@ -47,69 +47,66 @@
 
 
 
-<!-- Splash / Project Selector -->
-<div id="splash">
-  <div class="splash-container">
-    <!-- 🔹 Title & Subtitle -->
-    <div class="title-section">
-      <h1 id="splash-title" class="splash-title">Oscilla</h1>
-      <h2 class="splash-subtitle" id="splash-subtitle" >Interactive Graphic Score System</h2>
-      <img src="assets/logo.svg" alt="Oscilla Logo" class="logo" />
+  <!-- Splash / Project Selector -->
+  <div id="splash">
+    <div class="splash-container">
+      <!-- 🔹 Title & Subtitle -->
+      <div class="title-section">
+        <h1 id="splash-title" class="splash-title">Oscilla</h1>
+        <h2 class="splash-subtitle" id="splash-subtitle">Interactive Graphic Score System</h2>
+        <img src="assets/logo.svg" alt="Oscilla Logo" class="logo" />
 
-      <p id="splash-message" class="splash-message">
-        Loading available projects...
-      </p>
-    </div>
+        <p id="splash-message" class="splash-message">
+          Loading available projects...
+        </p>
+      </div>
 
-    <!-- 🔹 Dynamic Project List -->
-    <div id="project-grid" class="project-grid"></div>
+      <!-- 🔹 Dynamic Project List -->
+      <div id="project-grid" class="project-grid"></div>
 
-    <!-- 🔹 Manual Entry Fallback -->
-    <div id="manual-entry" class="manual-entry" style="display: none;">
-      <p>Could not automatically list projects.</p>
-      <input
-        id="manual-project-input"
-        type="text"
-        placeholder="Enter project name manually"
-      />
-      <button id="manual-load-btn">Load Project</button>
-    </div>
+      <!-- 🔹 Manual Entry Fallback -->
+      <div id="manual-entry" class="manual-entry" style="display: none;">
+        <p>Could not automatically list projects.</p>
+        <input id="manual-project-input" type="text" placeholder="Enter project name manually" />
+        <button id="manual-load-btn">Load Project</button>
+      </div>
 
-    <!-- 🔹 Help & Documentation Section -->
-    <div class="help-section">
-      <h3>Help & Documentation</h3>
-            <button class="project-card" id="load-help-btn">Load Demo / Help Score</button>
-            <br>
-            <br>
+      <!-- 🔹 Help & Documentation Section -->
+      <div class="help-section">
+        <h3>Help & Documentation</h3>
+        <button class="project-card" id="load-help-btn">Load Demo / Help Score</button>
+        <br>
+        <br>
 
-              <a class="project-card" href="https://github.com/robcanning/oscilla/wiki" target="_blank">Online Documentation</a>
-    </div>
+        <a class="project-card" href="https://github.com/robcanning/oscilla/wiki" target="_blank">Online
+          Documentation</a>
+      </div>
 
-    <!-- 🔹 Meta / Credits Section -->
-    <div class="meta-section">
-      <hr class="meta-divider" />
-      <p class="meta-line">
-        <strong>Version:</strong> 0.2.4 &nbsp; | &nbsp;
-        <strong>Author:</strong> Rob Canning © 2024–2025
-      </p>
-      <p class="meta-line">
-        <a href="https://robcanning.github.io/oscilla/" target="_blank">
-          https://robcanning.github.io/oscilla/
-        </a>
-      </p>
-      <p class="meta-line small">
-        Built with Node.js, Anime.js & WebSockets — Open Source (GPL-3.0)
-      </p>
+      <!-- 🔹 Meta / Credits Section -->
+      <div class="meta-section">
+        <hr class="meta-divider" />
+        <p class="meta-line">
+          <strong>Version:</strong> 0.2.4 &nbsp; | &nbsp;
+          <strong>Author:</strong> Rob Canning © 2024–2025
+        </p>
+        <p class="meta-line">
+          <a href="https://robcanning.github.io/oscilla/" target="_blank">
+            https://robcanning.github.io/oscilla/
+          </a>
+        </p>
+        <p class="meta-line small">
+          Built with Node.js, Anime.js & WebSockets — Open Source (GPL-3.0)
+        </p>
+      </div>
     </div>
   </div>
-</div>
 
 
 
 
 
 
-    </div>
+  </div>
   </div>
 
   <!-- 🔹 Top Bar Container -->
@@ -118,7 +115,7 @@
     <div id="stopwatch">00:00</div>
     <div id="waveform-container"></div>
     <div id="cue-info">OSC:</div>
-  
+
     <!-- 🔹 Right-aligned container for the dropdown -->
     <div id="hamburger-container">
       <sl-dropdown>
@@ -133,12 +130,12 @@
       </sl-dropdown>
     </div>
   </div>
-  
 
-<!-- 🔸 Project list modal (hidden by default) -->
-<sl-dialog id="project-dialog" label="Load Score">
-  <div id="project-list" class="project-list"></div>
-</sl-dialog>
+
+  <!-- 🔸 Project list modal (hidden by default) -->
+  <sl-dialog id="project-dialog" label="Load Score">
+    <div id="project-list" class="project-list"></div>
+  </sl-dialog>
 
 
   <!-- Controls -->
@@ -162,31 +159,31 @@
         <button id="fast-rewind-button" title="Fast Rewind (Jump to previous mark)">
           &#x276E; <!-- ❮ -->
         </button>
-        
+
         <button id="rewind-button" title="Slow Rewind">
           &#x23EE; <!-- ⏮ -->
         </button>
-        
+
         <button id="toggle-button" title="Play/Pause">
           &#x25B6; <!-- ▶ -->
         </button>
-        
+
         <button id="forward-button" title="Slow Forward">
           &#x23ED; <!-- ⏭ -->
         </button>
-        
+
         <button id="fast-forward-button" title="Fast Forward (Jump to next mark)">
           &#x276F; <!-- ❯ -->
         </button>
-        
-            <button id="fullscreen-button">⛶</button>
 
-            <div id="speedControls">
-              <button id="decreaseSpeed">−</button>
-              <span id="speedDisplay">1.0×</span>
-              <button id="increaseSpeed">+</button>
-              <button id="resetSpeed">↻</button>
-            </div>
+        <button id="fullscreen-button">⛶</button>
+
+        <div id="speedControls">
+          <button id="decreaseSpeed">−</button>
+          <span id="speedDisplay">1.0×</span>
+          <button id="increaseSpeed">+</button>
+          <button id="resetSpeed">↻</button>
+        </div>
       </div>
 
       <div id="right-controls">
@@ -208,7 +205,7 @@
     <img id="score" src="scores/help.svg" alt="Score">
   </div> -->
 
-<div id="scoreContainer"></div>
+  <div id="scoreContainer"></div>
 
 
   <div id="playzone"></div>
@@ -222,28 +219,28 @@
   <div id="keybindings-popup" class="popup hidden">
     <h2>Keybindings</h2>
     <p><strong>Space:</strong> PLAY/PAUSE</p>
-    <p><strong>Arrow Left:</strong> SEEK &#x276E;&#x276E;</p>   <!-- ❮❮ -->
+    <p><strong>Arrow Left:</strong> SEEK &#x276E;&#x276E;</p> <!-- ❮❮ -->
     <p><strong>Arrow Right:</strong> SEEK &#x276F;&#x276F;</p> <!-- ❯❯ -->
-    
-        <p><strong>Arrow Up:</strong> Jump to Previous Rehearsal Mark</p>
-        <p><strong>Arrow Down:</strong> Jump to Next Rehearsal Mark</p>
-        <p><strong>+</strong> Increase Speed</p>
-        <p><strong>-</strong> Decrease Speed</p>
-        <p><strong>R</strong> Rehearsal Marks</p>
-        <p><strong>0</strong> Rewind to Start</p>
-        <p><strong>N</strong> Toggle Score Annotations</p>
-        <p><strong>S:</strong> Show/Hide SCORE LOADER Options</p>
-        <p><strong>H:</strong> Show/Hide HELP</p>
-        <p><strong>T:</strong> Show/Hide TITLE PAGE</p>
-        <p><strong>Esc:</strong> Enable/Disable Network Sync</p>
-        <hr> <!-- Divider between keybindings and touch gestures -->
 
-        <h3>Touch Gestures</h3>
-        <p><strong>Double Tap:</strong> Play/Pause</p>
-        <p><strong>Swipe Left:</strong> Move score left</p>
-        <p><strong>Swipe Right:</strong> Move score right</p>
-        <p><strong>Swipe and Hold:</strong> Continuously seek </p>
-        <button id="close-keybindings">Close</button>
+    <p><strong>Arrow Up:</strong> Jump to Previous Rehearsal Mark</p>
+    <p><strong>Arrow Down:</strong> Jump to Next Rehearsal Mark</p>
+    <p><strong>+</strong> Increase Speed</p>
+    <p><strong>-</strong> Decrease Speed</p>
+    <p><strong>R</strong> Rehearsal Marks</p>
+    <p><strong>0</strong> Rewind to Start</p>
+    <p><strong>N</strong> Toggle Score Annotations</p>
+    <p><strong>S:</strong> Show/Hide SCORE LOADER Options</p>
+    <p><strong>H:</strong> Show/Hide HELP</p>
+    <p><strong>T:</strong> Show/Hide TITLE PAGE</p>
+    <p><strong>Esc:</strong> Enable/Disable Network Sync</p>
+    <hr> <!-- Divider between keybindings and touch gestures -->
+
+    <h3>Touch Gestures</h3>
+    <p><strong>Double Tap:</strong> Play/Pause</p>
+    <p><strong>Swipe Left:</strong> Move score left</p>
+    <p><strong>Swipe Right:</strong> Move score right</p>
+    <p><strong>Swipe and Hold:</strong> Continuously seek </p>
+    <button id="close-keybindings">Close</button>
   </div>
 
   <div id="animation-popup" class="popup interaction-popup hidden">
@@ -318,7 +315,7 @@
     <input type="number" id="duration-input" value="20" min="1">
     <br>
     <h3>⬇️ Download the Template:</h3>
-     <button id="download-template-btn">Download template.svg</button>
+    <button id="download-template-btn">Download template.svg</button>
 
   </div>
 
@@ -326,7 +323,7 @@
   <div id="programme-popup" class="popup hidden">
     <h2>Programme Note</h2>
     <p>
-      
+
     </p>
     <button onclick="toggleProgrammeNotePopup()">Close</button>
   </div>
@@ -358,13 +355,13 @@
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script> -->
   <script src="js/p5.min.js"></script>
   <!-- <script src="js/app.js"></script> -->
-   <script src="js/svg-path-commander.js"></script>
+  <script src="js/svg-path-commander.js"></script>
 
   <script type="module" src="./js/scoreSetup.js"></script>
   <script type="module" src="js/app.js"></script>
   <!-- <script src="js/playback_diagnostics.js"></script> -->
 
-<!-- TODO modularise this using modules and the cuehandlers.js -->
+  <!-- TODO modularise this using modules and the cuehandlers.js -->
 </body>
 
 </html>
