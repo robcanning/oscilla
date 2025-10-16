@@ -8,6 +8,7 @@
     "gui": "electron server-gui.js"
   },
   "dependencies": {
+    "chevrotain": "^11.0.3",
     "express": "^4.21.2",
     "fs": "^0.0.1-security",
     "osc": "^2.4.5",
