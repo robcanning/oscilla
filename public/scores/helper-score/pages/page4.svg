@@ -22,8 +22,8 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="0.834386"
-     inkscape:cx="1012.1215"
-     inkscape:cy="1155.3406"
+     inkscape:cx="614.82335"
+     inkscape:cy="971.9722"
      inkscape:window-width="1854"
      inkscape:window-height="1011"
      inkscape:window-x="0"
@@ -235,21 +235,21 @@
          id="tspan43">::: oscilla  - interactive graphic score ::: https://robcanning.github.io/oscilla :::</tspan></text>
     <rect
        style="fill:#000000"
-       id="cueButton(cuePage(page0)_style(size:&quot;50x25&quot;,color:&quot;#4477dd&quot;,label:&quot;A&quot;))"
+       id="cueButton(cue:page(page0))_style(size:&quot;50x25&quot;,color:&quot;#4477dd&quot;,label:&quot;A&quot;)&#10;"
        width="50"
        height="25"
        x="104.2185"
        y="536.24506" />
     <rect
        style="fill:#000000"
-       id="cueButton(cuePage(page1)_style(size:&quot;50x25&quot;,color:&quot;#44bb77&quot;,label:&quot;B&quot;))"
+       id="cueButton(cue:page(page1))_style(size:&quot;50x25&quot;,color:&quot;#4477dd&quot;,label:&quot;1&quot;)"
        width="50"
        height="25"
        x="172.63094"
        y="536.24506" />
     <rect
        style="fill:#000000"
-       id="cueButton(cuePage(page2)_style(size:&quot;50x25&quot;,color:&quot;#cc6644&quot;,label:&quot;C&quot;))"
+       id="cueButton(cue:page(page2))_style(size:&quot;50x25&quot;,color:&quot;#4477dd&quot;,label:&quot;2&quot;)"
        width="50"
        height="25"
        x="241.04335"
@@ -270,10 +270,10 @@
        y="536.24506" />
     <rect
        style="fill:#000000"
-       id="cueButton(cuePage(page3)_style(size:&quot;50x25&quot;,color:&quot;#888&quot;, label:&quot;exit&quot;))"
+       id="cueButton(cue:page(seq: mode:scroll))_style(size:&quot;100x25&quot;,color:&quot;#888&quot;, label:&quot;exit page mode&quot;)"
        width="50"
        height="25"
-       x="1380.3702"
+       x="1338.3702"
        y="536.24506" />
   </g>
   <text

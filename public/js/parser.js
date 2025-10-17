@@ -277,6 +277,7 @@ export class CueParser extends CstParser {
     });
 
     // ------------------------------------------------------------
+    // ------------------------------------------------------------
     // cue:page(...) — supports both simple and sequenced page calls
     // ------------------------------------------------------------
     $.RULE("cuePage", () => {
@@ -285,11 +286,12 @@ export class CueParser extends CstParser {
       $.CONSUME(Identifier, { LABEL: "pageKeyword" });  // "page"
       $.CONSUME(LParen);
 
-      // Allow either full seq: syntax or single bare page
+      // Allow full seq:, single page, or control forms
       $.OPTION(() => {
         $.OR([
-          { ALT: () => $.SUBRULE($.playlist) },  // seq: page1:4, loop(...), mode:scroll
-          { ALT: () => $.SUBRULE($.pageItem) }   // bare page form: cue:page(page1)
+          { ALT: () => $.SUBRULE($.playlist) },    // seq: page1:4, loop(...), etc.
+          { ALT: () => $.SUBRULE($.pageItem) },    // bare page form: cue:page(page1)
+          { ALT: () => $.SUBRULE($.controlItem) }  // control form: cue:page(mode:scroll)
         ]);
       });
 

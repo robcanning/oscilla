@@ -1771,48 +1771,44 @@ export async function handlePageCue(cueId, duration, cueParams = {}) {
   container.style.opacity = "1";
   content.innerHTML = "";
 
+  
+// -------------------------------------------------------------
+// 4️⃣ Load SVG page (project-local only)
+// -------------------------------------------------------------
+if (!window.pagesDir) {
+  console.error("[cuePage] ❌ Missing window.pagesDir — run loadProject() first.");
+  return;
+}
 
-  // -------------------------------------------------------------
-  // 4️⃣ Load SVG page (project-first, fallback to shared)
-  // -------------------------------------------------------------
-  if (cueParams.choice?.trim().startsWith("loop(")) {
-    console.log("[cuePage] Detected playlist expression via cueParams.choice");
-    return handleCuePagePlaylist(cueId, cueParams.choice);
-  }
+const projectPath = `${window.pagesDir}${pageName}.svg`;
 
-  if (!window.pagesDir || !window.sharedDir) {
-    console.error("[cuePage] ❌ Missing directory globals — run loadProject() first.");
-    return;
-  }
+console.groupCollapsed(`[cuePage] 📄 Loading page: "${pageName}"`);
+console.log("🌍 Current project:", window.currentProject);
+console.log("📂 Base directory:", window.projectBase);
+console.log("📁 Pages directory:", window.pagesDir);
+console.log("📜 Full SVG path:", projectPath);
 
+async function fetchSvgOrThrow(path) {
+  console.log(`[cuePage] 🔍 Fetching SVG from: ${path}`);
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`HTTP ${res.status} at ${path}`);
+  const text = await res.text();
+  console.log(`[cuePage] ✅ Successfully fetched SVG (${text.length} chars)`);
+  return text;
+}
 
-  const projectPath = `${window.pagesDir}${pageName}.svg`;
-  const sharedPath = `${window.sharedDir}pages/${pageName}.svg`;
+let svgText;
+try {
+  svgText = await fetchSvgOrThrow(projectPath);
+  console.log(`[cuePage] ✅ Page loaded successfully: ${projectPath}`);
+} catch (err) {
+  console.error(`[cuePage] ❌ Failed to load page "${pageName}" from: ${projectPath}`);
+  console.error("Error details:", err.message);
+  console.groupEnd();
+  return;
+}
 
-  async function fetchSvgOrThrow(path) {
-    const res = await fetch(path);
-    if (!res.ok) throw new Error(`HTTP ${res.status} at ${path}`);
-    return res.text();
-  }
-
-  let svgText;
-  try {
-    // 1️⃣ Try project-specific SVG
-    svgText = await fetchSvgOrThrow(projectPath);
-    console.log(`[cuePage] ✅ Loaded project page: ${projectPath}`);
-  } catch (err1) {
-    console.warn(`[cuePage] ⚠️ Project page not found (${err1.message}). Trying shared path: ${sharedPath}`);
-    try {
-      svgText = await fetchSvgOrThrow(sharedPath);
-      console.log(`[cuePage] ✅ Loaded shared page: ${sharedPath}`);
-    } catch (err2) {
-      console.error(`[cuePage] ❌ Failed to load both project and shared pages:
-        Project: ${projectPath}
-        Shared:  ${sharedPath}
-        Error: ${err2.message}`);
-      return;
-    }
-  }
+console.groupEnd();
 
   // -------------------------------------------------------------
   // 5️⃣ Inject SVG and initialize
@@ -2032,8 +2028,8 @@ export async function handlePageCueFromAST(ast) {
     if (item.type === "page") {
       const cue = `cuePage(${item.name})_dur(${item.dur || 0})`;
       console.log(`[CueDSL] ▶ Page → ${cue}`);
-      await handlePageCue(cue, item.dur, commonParams);
-      // if (item.dur && item.dur > 0) await wait(item.dur * 1000);
+const durNum = Number(item.dur) || 0;
+await handlePageCue(cue, durNum, commonParams);      // if (item.dur && item.dur > 0) await wait(item.dur * 1000);
     }
 
     // --- Random choice ---
@@ -2041,8 +2037,8 @@ export async function handlePageCueFromAST(ast) {
       const pick = item.options[Math.floor(Math.random() * item.options.length)];
       const cue = `cuePage(${pick})_dur(${item.dur || 0})`;
       console.log(`[CueDSL] 🎲 Randomly chosen page: ${pick}`);
-      await handlePageCue(cue, item.dur, commonParams);
-
+const durNum = Number(item.dur) || 0;
+await handlePageCue(cue, durNum, commonParams);
       // if (item.dur && item.dur > 0) await wait(item.dur * 1000);
     }
     // --- Randomized sequence: rand(page1:...,page2:...){x:N} ---

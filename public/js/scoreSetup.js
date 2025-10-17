@@ -715,9 +715,16 @@ async function preloadAllSvgGroups() {
       const groups = doc.querySelectorAll('g[id^="group-"], g[id^="menu-"], g[id^="ui-"]');
       groups.forEach(g => {
         const id = g.id.replace(/^group-|^menu-|^ui-/, "").trim();
-        window.groupRegistry[id] = g.cloneNode(true);
-        console.log(`[groupRegistry] ✅ Registered "${id}" from ${file}`);
+        const src = file.split("/").slice(-1)[0]; // short filename
+        if (window.groupRegistry[id]) {
+          console.warn(`[groupRegistry] ⚠️ Duplicate ID "${id}" (was in ${window.groupRegistry[id]._source}, now in ${src})`);
+        }
+        const clone = g.cloneNode(true);
+        clone._source = src; // track origin for debugging
+        window.groupRegistry[id] = clone;
+        console.log(`[groupRegistry] ✅ Registered "${id}" from ${src}`);
       });
+
     } catch (err) {
       console.warn(`[groupRegistry] ⚠️ Skipped ${file}:`, err);
     }

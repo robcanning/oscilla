@@ -148,9 +148,9 @@
      transform="matrix(0.23659034,0,0,0.23659034,-69.542768,-84.140528)"><tspan
        x="366.70773"
        y="569.79199"
-       id="tspan12"><tspan
+       id="tspan2"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan3">PAGE 2</tspan></tspan></text>
+         id="tspan1">PAGE 2</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:192px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#808000"
@@ -189,32 +189,30 @@
      transform="translate(-13346.878,-119.00124)"><tspan
        x="13743.035"
        y="554.47253"
-       id="tspan14"><tspan
+       id="tspan4"><tspan
          style="fill:none"
-         id="tspan13">cueText(&quot;texts/tzara-cutup.txt&quot;)  </tspan></tspan><tspan
+         id="tspan3">cueText(&quot;texts/tzara-cutup.txt&quot;)  </tspan></tspan><tspan
        x="13743.035"
        y="587.80592"
-       id="tspan16"><tspan
+       id="tspan6"><tspan
          style="fill:none"
-         id="tspan15">_anim(&quot;fade&quot;)  _dur(2)  _pos(self)  </tspan></tspan><tspan
+         id="tspan5">_anim(&quot;fade&quot;)  _dur(2)  _pos(self)  </tspan></tspan><tspan
        x="13743.035"
        y="621.13929"
-       id="tspan18"><tspan
+       id="tspan8"><tspan
          style="fill:none"
-         id="tspan17">_random(1)  _loop(0)  _autostart(1)</tspan></tspan></text>
+         id="tspan7">_random(1)  _loop(0)  _autostart(1)</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-size:29.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#000000"
-     x="112.75152"
-     y="-17.16102"
+     x="134.78542"
+     y="348.94067"
      id="text17928"><tspan
        sodipodi:role="line"
        id="tspan17926"
-       x="112.75152"
-       y="-17.16102"
+       x="134.78542"
+       y="348.94067"
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:29.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold'">there is a hidden object in the middle of this page for the cueText</tspan></text>
-  <g
-     id="group-mainMenu" />
   <text
      xml:space="preserve"
      id="text1"
@@ -223,4 +221,21 @@
      xml:space="preserve"
      id="text10"
      style="font-weight:bold;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect10);display:inline;fill:#000000" />
+  <text
+     xml:space="preserve"
+     style="font-weight:bold;font-size:33.6148px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:1.80078"
+     x="44.801617"
+     y="618.61902"
+     id="cueGroup(mainMenu)"
+     transform="scale(0.56973739,1.7551946)"><tspan
+       sodipodi:role="line"
+       id="tspan1-7"
+       x="44.801617"
+       y="618.61902"
+       style="stroke-width:1.80078">cueGroup(mainMenu)</tspan><tspan
+       sodipodi:role="line"
+       x="44.801617"
+       y="660.63751"
+       id="tspan2-5"
+       style="stroke-width:1.80078" /></text>
 </svg>

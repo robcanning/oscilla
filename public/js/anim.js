@@ -867,7 +867,7 @@ const initializeObjectPathPairs = (svgElement, speed = 10.0) => {
         pendingPathAnimations.set(object.id, playAnimation);
         console.log(`[o2p] ⏸️ Deferred animation registered for ${object.id}`);
       } else {
-        playAnimation();
+        requestAnimationFrame(() => playAnimation());
       }
 
       return; // skip legacy logic
@@ -1130,8 +1130,12 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
     let cycleCount = 0;
     const defaultEasing = easingSequence[0];
 
+    const totalLen = path.getTotalLength();
+
     switch (direction) {
       case 0: {
+        console.log("[o2p] starting case", direction, "for", object.id);
+
         const easingSequence = parseEasingSequence(effectiveId);
         let cycleCount = 0;
 
@@ -1152,14 +1156,43 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
           },
 
           update: (anim) => {
-            if (oscEnabled) {
-              emitOSCFromPathProgress({
-                path,
-                progress: anim.progress,
-                pathId: path.id
-              });
-            }
-          }
+  // throttle logs to ~2 per second
+  anim.__dbgFrame = (anim.__dbgFrame || 0) + 1;
+  const throttle = (anim.__dbgFrame % 30) === 0;
+
+  // Anime progress is 0..100
+  const prog = anim.progress / 100;
+  const len  = prog * totalLen;
+
+  // sample path point (SVG units)
+  const p = path.getPointAtLength(len);
+
+  // build SVG transform string
+  let t = `translate(${p.x},${p.y})`;
+
+  if (rotate) {
+    const delta = 0.1; // small look-ahead for tangent
+    const p2 = path.getPointAtLength(Math.min(totalLen, len + delta));
+    const angle = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
+    t += ` rotate(${angle})`;
+    if (throttle) console.log("[o2p][case0]", object.id, "prog", prog.toFixed(3), "len", len.toFixed(1), "pt", {x:p.x, y:p.y}, "angle", angle.toFixed(1));
+  } else {
+    if (throttle) console.log("[o2p][case0]", object.id, "prog", prog.toFixed(3), "len", len.toFixed(1), "pt", {x:p.x, y:p.y});
+  }
+
+  // ✅ apply SVG-space transform; clear CSS to avoid double transforms
+  object.setAttribute("transform", t);
+  if (object.style.transform) {
+    object.style.transform = "";
+    if (throttle) console.log("[o2p][case0]", object.id, "cleared CSS transform");
+  }
+
+  if (oscEnabled) {
+    emitOSCFromPathProgress({ path, progress: prog, pathId: path.id });
+  }
+}
+
+
 
         });
 
@@ -1171,12 +1204,16 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
         };
 
         animations.push(anim0);
+        object.style.transform = "";
+
         break;
 
 
       }
 
       case 1: {
+        console.log("[o2p] starting case", direction, "for", object.id);
+
         const anim1 = anime({
           targets: object, translateX: pathMotion('x'),
           translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0,
@@ -1189,6 +1226,8 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
       }
 
       case 2: {
+        console.log("[o2p] starting case", direction, "for", object.id);
+
         const anim2 = anime({
           targets: object, translateX: pathMotion('x'),
           translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, duration: animationSpeed, easing: defaultEasing,
@@ -1232,6 +1271,8 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
        * - Isolate minimal reproducible test with 2 animated objects on same path.
        */
       case 3: {
+        console.log("[o2p] starting case", direction, "for", object.id);
+
 
         // console.warn(`[case3][${object.id}] 🚫 Temporarily disabled`);
         return;
@@ -1351,6 +1392,8 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
 
 
       case 4: {
+        console.log("[o2p] starting case", direction, "for", object.id);
+
         const pathLen = path.getTotalLength();
         const fixedNodes = Array.from({ length: 5 }, (_, i) => path.getPointAtLength((i / 4) * pathLen));
         const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -1387,6 +1430,7 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
 
       case 5: // Smoothly Animate Between Path Start Points with Ghost Leading
 
+        console.log("[o2p] starting case", direction, "for", object.id);
 
         const originalPathID = path.id;
         const basePathIDMatch = originalPathID.match(/^(path-\d+)/);

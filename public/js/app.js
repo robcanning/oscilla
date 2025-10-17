@@ -327,6 +327,8 @@ export const initializeSVG = async (svgElement) => {
     console.log(`[DEBUG] Initial scrollLeft set to: ${window.scoreContainer.scrollLeft}`);
 
 
+    
+
     requestAnimationFrame(() => {
       window.ensureWindowPlayheadX(); // 💡 ensure valid center before any jumping logic
       initializeObjectPathPairs(svgElement);
