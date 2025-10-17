@@ -72,7 +72,8 @@ export async function loadProject(projectName) {
     container.appendChild(svgElement);
 
     // 🕓 ensure browser has painted SVG before measuring positions
-    await new Promise(r => requestAnimationFrame(r));
+    await new Promise(requestAnimationFrame);
+    await new Promise(r => setTimeout(r, 30));
     console.log("[loadProject] ✅ SVG rendered — safe to initialize.");
 
     // --- finally ---

@@ -726,7 +726,7 @@ async function preloadAllSvgGroups() {
   console.log(`[groupRegistry] ✅ Total reusable groups: ${Object.keys(window.groupRegistry).length}`);
 }
 
-
+window.preloadAllSvgGroups = preloadAllSvgGroups;
 
 //////////////////////////////////////////////////
 //////////////////////////////////////////////////

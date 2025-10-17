@@ -97,6 +97,7 @@ import {
 
 
 
+import { ensureRotationCSSGuard } from './anim.js';
 
 export const initializeSVG = async (svgElement) => {
 
@@ -106,7 +107,13 @@ export const initializeSVG = async (svgElement) => {
   console.log("SVG element:", svgElement);
   console.log("Bounding box:", svgElement.getBoundingClientRect());
 
+ // 🛡️ Ensure r(...) rotations use correct transform origin
+     console.log("[initializeSVG]  ensureRotationCSSGuard called .");
 
+  ensureRotationCSSGuard(svgElement);
+
+
+  
   // 🧩 Skip global reinit for embedded page overlays
   if (svgElement?.id === "pageSVG" || svgElement?.classList.contains("oscilla-page")) {
     console.log("[initializeSVG] ⚠️ Skipping global reset for page overlay SVG.");
@@ -308,6 +315,7 @@ export const initializeSVG = async (svgElement) => {
     clone.remove();
 
   });
+
 
   // 🚀 Continue with full original animation setup
   console.log("[DEBUG] Initializing SVG element:", svgElement);
@@ -1648,6 +1656,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Reinitialize SVG to ensure proper scaling
       const svgElement = document.querySelector('svg');
       if (svgElement) {
+        
         initializeSVG(svgElement);
       } else {
         // console.warn("[CLIENT] No SVG element found in scoreContainer during splash toggle.");

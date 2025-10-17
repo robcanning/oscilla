@@ -125,6 +125,49 @@ function addRotationStep(timeline, object, angle, tweenDuration, holdDuration, e
 
 
 
+/**
+ * 🌀 ensureRotationCSSGuard(svgRoot)
+ * -----------------------------------
+ * Ensures all rotation elements using the new compact syntax (r(...))
+ * rotate around their own geometric centers instead of the SVG viewport origin.
+ *
+ * Why:
+ * - SVG elements with CSS transforms default to transform-box:view-box and origin:0 0,
+ *   which causes "orbiting" or "stretching" when rotating.
+ * - This guard forces the browser to treat each element's own bounding box as the reference.
+ *
+ * Use:
+ *   import { ensureRotationCSSGuard } from './anim.js';
+ *   ...
+ *   ensureRotationCSSGuard(svgElement);
+ *
+ * @param {SVGSVGElement} svgRoot - the root <svg> element of the loaded score
+ */
+export function ensureRotationCSSGuard(svgRoot) {
+  // Avoid injecting multiple times
+  if (!svgRoot || svgRoot.querySelector("style[data-oscilla-rotation-guard]")) return;
+
+  // Create an inline <style> block scoped to this SVG
+  const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+  style.dataset.oscillaRotationGuard = "true";
+  style.textContent = `
+    /* Universal guard for compact rotation syntax (r(...)) */
+    [id^="r("],
+    [id^="r_"],
+    [id^="r-rpm("],
+    g[id^="r("],
+    g[id^="r_"],
+    g[id^="r-rpm("] {
+      transform-box: fill-box !important;
+      transform-origin: 50% 50% !important;
+    }
+  `;
+
+  // Insert at the top of the SVG so it applies immediately
+  svgRoot.insertBefore(style, svgRoot.firstChild);
+  console.log("[ANIM] 🛡️ Rotation CSS guard applied for r() elements.");
+}
+
 
 
 /**
