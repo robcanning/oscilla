@@ -47,12 +47,12 @@ export async function loadProject(projectName) {
     svgElement.id = "score";
 
 
-    // 🧭 Pre-size it correctly *before* appending (fixes button placement timing)
+    // // 🧭 Pre-size it correctly *before* appending (fixes button placement timing)
     svgElement.removeAttribute("width");
     svgElement.removeAttribute("height");
     Object.assign(svgElement.style, {
       display: "inline-block",
-      height: "95vh",
+      height: "100vh",
       width: "auto",
       maxWidth: "none",
       maxHeight: "100%",
@@ -62,7 +62,7 @@ export async function loadProject(projectName) {
     // Prepare container for scroll mode
     Object.assign(container.style, {
       width: "100vw",
-      height: "95vh",
+      height: "100vh",
       overflowX: "auto",
       overflowY: "hidden",
       whiteSpace: "nowrap",
@@ -74,18 +74,15 @@ export async function loadProject(projectName) {
     container.innerHTML = "";
     container.appendChild(svgElement);
 
-
     // After: container.appendChild(svgElement);
     svgElement.removeAttribute("width");
     svgElement.removeAttribute("height");
     Object.assign(svgElement.style, {
-      height: "95vh",
+      height: "100vh",
       width: "auto",
       display: "inline-block",
       verticalAlign: "top",
     });
-
-
 
 
     // 5️⃣ Initialize cues, animations, observers immediately — layout is already correct

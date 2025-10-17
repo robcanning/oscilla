@@ -141,18 +141,6 @@
   <!-- Animated Object -->
   <text
      xml:space="preserve"
-     style="font-size:192px;white-space:pre;inline-size:741.538;display:inline;fill:#808000"
-     x="366.70773"
-     y="569.79199"
-     id="text300713"
-     transform="matrix(0.23659034,0,0,0.23659034,-69.542768,-84.140528)"><tspan
-       x="366.70773"
-       y="569.79199"
-       id="tspan2"><tspan
-         style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan1">PAGE 2</tspan></tspan></text>
-  <text
-     xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:192px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#808000"
      x="835.15625"
      y="313.47986"
@@ -189,30 +177,19 @@
      transform="translate(-13346.878,-119.00124)"><tspan
        x="13743.035"
        y="554.47253"
-       id="tspan4"><tspan
+       id="tspan2"><tspan
          style="fill:none"
-         id="tspan3">cueText(&quot;texts/tzara-cutup.txt&quot;)  </tspan></tspan><tspan
+         id="tspan1">cueText(&quot;texts/tzara-cutup.txt&quot;)  </tspan></tspan><tspan
        x="13743.035"
        y="587.80592"
-       id="tspan6"><tspan
+       id="tspan10"><tspan
          style="fill:none"
-         id="tspan5">_anim(&quot;fade&quot;)  _dur(2)  _pos(self)  </tspan></tspan><tspan
+         id="tspan9">_anim(&quot;fade&quot;)  _dur(2)  _pos(self)  </tspan></tspan><tspan
        x="13743.035"
        y="621.13929"
-       id="tspan8"><tspan
+       id="tspan12"><tspan
          style="fill:none"
-         id="tspan7">_random(1)  _loop(0)  _autostart(1)</tspan></tspan></text>
-  <text
-     xml:space="preserve"
-     style="font-size:29.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#000000"
-     x="134.78542"
-     y="348.94067"
-     id="text17928"><tspan
-       sodipodi:role="line"
-       id="tspan17926"
-       x="134.78542"
-       y="348.94067"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:29.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold'">there is a hidden object in the middle of this page for the cueText</tspan></text>
+         id="tspan11">_random(1)  _loop(0)  _autostart(1)</tspan></tspan></text>
   <text
      xml:space="preserve"
      id="text1"

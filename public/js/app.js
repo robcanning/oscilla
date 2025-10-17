@@ -107,6 +107,57 @@ export const initializeSVG = async (svgElement) => {
   console.log("SVG element:", svgElement);
   console.log("Bounding box:", svgElement.getBoundingClientRect());
 
+
+
+
+
+
+
+
+
+
+
+window.DEBUG_COORDS = true;
+
+function getSVG(){ return document.querySelector("#score"); }
+function getCTM(){ const s=getSVG(); return s ? s.getScreenCTM() : null; }
+
+function svgToClientX(svgX){
+  const s=getSVG(), c=getCTM(); if(!s||!c) return null;
+  const pt=s.createSVGPoint(); pt.x=svgX; pt.y=0; return pt.matrixTransform(c).x;
+}
+function clientToSvgX(clientX){
+  const s=getSVG(), c=getCTM(); if(!s||!c) return null;
+  const inv=c.inverse(); const pt=s.createSVGPoint(); pt.x=clientX; pt.y=0;
+  return pt.matrixTransform(inv).x;
+}
+function logCoord(tag, obj={}){ if(window.DEBUG_COORDS) console.log(`[COORD] ${tag}`, obj); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  // 🛡️ Ensure r(...) rotations use correct transform origin
      console.log("[initializeSVG]  ensureRotationCSSGuard called .");
 
@@ -384,12 +435,10 @@ export const initializeSVG = async (svgElement) => {
     });
 
 
-
-
-
-
-
-
+    // TODO CSS IN SCROLL MODE - HEIGHT NEEDS TO BE 95% OR SOMETHING
+    // BUT THEN THE JUMP2X ETC SYNC BREAKS . NEED TO SORT ORDER OF EX
+    // PROJECT LOADER ALSO DOES CSS STUFF LIKE THIS - WHAT IS REDUNDANT?
+    // 
     // --- Wide-scroll layout correction ---
     const applyWideScrollLayout = () => {
       const cont = document.getElementById("scoreContainer");
@@ -398,7 +447,7 @@ export const initializeSVG = async (svgElement) => {
 
       Object.assign(cont.style, {
         width: "100vw",
-        height: "95vh",
+        height: "100vh",
         overflowX: "auto",
         overflowY: "hidden",
         whiteSpace: "nowrap",
@@ -410,7 +459,7 @@ export const initializeSVG = async (svgElement) => {
       svg.removeAttribute("height");
       Object.assign(svg.style, {
         display: "inline-block",
-        height: "95vh",
+        height: "100vh",
         width: "auto",
         maxWidth: "none",
         maxHeight: "100%",

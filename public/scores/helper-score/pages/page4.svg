@@ -23,13 +23,13 @@
      showgrid="false"
      inkscape:zoom="0.834386"
      inkscape:cx="614.22411"
-     inkscape:cy="971.9722"
+     inkscape:cy="684.33555"
      inkscape:window-width="1854"
      inkscape:window-height="1011"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="group-mainMenu" />
+     inkscape:current-layer="svg5125" />
   <defs
      id="defs5129">
     <rect
@@ -118,9 +118,9 @@
      transform="translate(-284.74576,-145.76271)"><tspan
        x="315.86029"
        y="200.30046"
-       id="tspan8"><tspan
+       id="tspan41"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan7">PAGE 4</tspan></tspan></text>
+         id="tspan40">PAGE 4</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:192px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#000000"
@@ -239,52 +239,52 @@
      transform="translate(0,-45.762712)"><tspan
        x="139.83051"
        y="229.66103"
-       id="tspan20"><tspan
+       id="tspan43"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan9">cueGroup() — Reusable SVG Group Injection
+         id="tspan42">cueGroup() — Reusable SVG Group Injection
 </tspan></tspan><tspan
        x="139.83051"
        y="256.32765"
-       id="tspan24"><tspan
+       id="tspan45"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan23">cueGroup() allows reusable clusters of cue elements, such as menus or control </tspan></tspan><tspan
+         id="tspan44">cueGroup() allows reusable clusters of cue elements, such as menus or control </tspan></tspan><tspan
        x="139.83051"
        y="282.99426"
-       id="tspan26"><tspan
+       id="tspan47"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan25">panels, to be defined once in an SVG and recalled anywhere in the score.
+         id="tspan46">panels, to be defined once in an SVG and recalled anywhere in the score.
 </tspan></tspan><tspan
        x="139.83051"
        y="309.66088"
-       id="tspan28"><tspan
+       id="tspan49"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan27">Any &lt;g&gt; element whose ID begins with group- is automatically registered when the </tspan></tspan><tspan
+         id="tspan48">Any &lt;g&gt; element whose ID begins with group- is automatically registered when the </tspan></tspan><tspan
        x="139.83051"
        y="336.32751"
-       id="tspan30"><tspan
+       id="tspan51"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan29">SVG loads. Triggering a cue like cueGroup(mainMenu) clones the corresponding </tspan></tspan><tspan
+         id="tspan50">SVG loads. Triggering a cue like cueGroup(mainMenu) clones the corresponding </tspan></tspan><tspan
        x="139.83051"
        y="362.99414"
-       id="tspan32"><tspan
+       id="tspan53"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan31">group and injects it into the current page. All contained cueButton() elements </tspan></tspan><tspan
+         id="tspan52">group and injects it into the current page. All contained cueButton() elements </tspan></tspan><tspan
        x="139.83051"
        y="389.66076"
-       id="tspan34"><tspan
+       id="tspan55"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan33">are converted into visible, clickable buttons in the overlay.
+         id="tspan54">are converted into visible, clickable buttons in the overlay.
 </tspan></tspan><tspan
        x="139.83051"
        y="416.32739"
-       id="tspan36"><tspan
+       id="tspan57"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan35">Groups retain their layout, styling, and cue behaviour, making it easy to design </tspan></tspan><tspan
+         id="tspan56">Groups retain their layout, styling, and cue behaviour, making it easy to design </tspan></tspan><tspan
        x="139.83051"
        y="442.99401"
-       id="tspan38"><tspan
+       id="tspan59"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan37">reusable interface blocks directly in Inkscape without duplicating code.</tspan></tspan></text>
+         id="tspan58">reusable interface blocks directly in Inkscape without duplicating code.</tspan></tspan></text>
   <text
      xml:space="preserve"
      id="text40"
@@ -296,61 +296,61 @@
     <rect
        style="fill:#e3e2db"
        id="rect1"
-       width="1339.9075"
-       height="44.343994"
-       x="100.67283"
-       y="534.98236" />
+       width="1366.2742"
+       height="53.931885"
+       x="79.100082"
+       y="492.98236" />
     <text
        xml:space="preserve"
        style="font-weight:bold;font-size:13.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:1076.43;display:inline;fill:#000000"
        x="546.50964"
        y="1004.3314"
        id="text8"
-       transform="translate(-55.144973,-443.6379)"><tspan
+       transform="translate(-55.144973,-481.6379)"><tspan
          x="546.50964"
          y="1004.3314"
-         id="tspan39">::: oscilla  - interactive graphic score system ::: https://robcanning.github.io/oscilla :::</tspan></text>
+         id="tspan60">::: oscilla  - interactive graphic score system ::: https://robcanning.github.io/oscilla :::</tspan></text>
     <rect
        style="fill:#000000"
        id="cueButton(cue:page(page0))_style(size:&quot;50x25&quot;,label:&quot;0&quot;)&#10;"
        width="50"
        height="25"
        x="122.19579"
-       y="537.84052" />
+       y="503.84052" />
     <rect
        style="fill:#000000"
        id="cueButton(cue:page(page1))_style(size:&quot;50x25&quot;,label:&quot;1&quot;)"
        width="50"
        height="25"
        x="190.60823"
-       y="537.84052" />
+       y="503.84052" />
     <rect
        style="fill:#000000"
        id="cueButton(cue:page(page2))_style(size:&quot;50x25&quot;,label:&quot;2&quot;)"
        width="50"
        height="25"
        x="259.02063"
-       y="537.84052" />
+       y="503.84052" />
     <rect
        style="fill:#000000"
        id="cueButton(cue:page(page3))_style(size:&quot;50x25&quot;,label:&quot;3&quot;)-6"
        width="50"
        height="25"
        x="320.97729"
-       y="537.84052" />
+       y="503.84052" />
     <rect
        style="fill:#000000"
        id="cueButton(cue:page(page4))_style(size:&quot;50x25&quot;,label:&quot;4&quot;)-5"
        width="50"
        height="25"
        x="386.97729"
-       y="537.84052" />
+       y="503.84052" />
     <rect
        style="fill:#000000"
        id="cueButton(cue:page(seq: mode:scroll))_style(size:&quot;100x25&quot;,color:&quot;#888&quot;, label:&quot;exit page mode&quot;)"
        width="50"
        height="25"
        x="1322.3702"
-       y="536.24506" />
+       y="502.24506" />
   </g>
 </svg>
