@@ -1771,7 +1771,7 @@ export async function handlePageCue(cueId, duration, cueParams = {}) {
   container.style.opacity = "1";
   content.innerHTML = "";
 
-  
+
 // -------------------------------------------------------------
 // 4️⃣ Load SVG page (project-local only)
 // -------------------------------------------------------------
@@ -1871,20 +1871,30 @@ console.groupEnd();
 
 
   // 🟢 Auto-inject globally registered UI groups on page load
-  if (window.groupRegistry) {
-    const defaultGroups = ["mainMenu"]; // you can list others here later
 
-    for (const groupId of defaultGroups) {
+  if (window.groupRegistry) {
+  console.log(`[cueGroup] 🔍 Checking if page "${pageName}" requests any groups...`);
+
+  // Look inside the loaded SVG for cueGroup(...) references
+  const groupUses = [...svg.querySelectorAll('[id^="cueGroup("]')].map(el =>
+    el.id.match(/cueGroup\(([^)]+)\)/)?.[1]
+  ).filter(Boolean);
+
+  if (groupUses.length === 0) {
+    console.log(`[cueGroup] 🚫 No cueGroup() references found in "${pageName}"`);
+  } else {
+    console.log(`[cueGroup] 📋 Found cueGroup() references:`, groupUses);
+    for (const groupId of groupUses) {
       if (window.groupRegistry[groupId]) {
-        console.log(`[cueGroup] 🚀 Auto-injecting group "${groupId}" on page load`);
-        try {
-          handleGroupCue(`cueGroup(${groupId})`, { choice: groupId });
-        } catch (err) {
-          console.warn(`[cueGroup] ⚠️ Auto-inject failed for "${groupId}":`, err);
-        }
+        console.log(`[cueGroup] 🚀 Injecting requested group "${groupId}" on page "${pageName}"`);
+        handleGroupCue(`cueGroup(${groupId})`, { choice: groupId });
+      } else {
+        console.warn(`[cueGroup] ⚠️ Group "${groupId}" referenced in "${pageName}" not found in registry.`);
       }
     }
   }
+}
+
 
   // -------------------------------------------------------------
   // 6️⃣ Countdown and transition logic
@@ -3230,8 +3240,10 @@ function parseWordsSource(input) {
  */
 
 
-
 export function handleGroupCue(cueId, cueParams = {}) {
+  console.groupCollapsed(`[cueGroup] 🧩 handleGroupCue START → ${cueId}`);
+  console.log("• cueParams:", cueParams);
+
   // 1️⃣ Extract the group ID
   let groupId = (cueParams.choice || "").trim();
   if (!groupId) {
@@ -3239,47 +3251,77 @@ export function handleGroupCue(cueId, cueParams = {}) {
     if (m && m[1]) groupId = m[1].trim();
   }
 
+  // Handle any trailing style block
   const cut = groupId.indexOf(")_style");
-  if (cut > -1) groupId = groupId.slice(0, cut);
+  if (cut > -1) {
+    console.log(`[cueGroup] ✂️ Trimming _style(...) suffix from groupId "${groupId}"`);
+    groupId = groupId.slice(0, cut);
+  }
 
   if (!groupId) {
     console.warn("[cueGroup] ⚠️ No valid groupId extracted from:", cueId, cueParams);
+    console.groupEnd();
     return;
   }
 
+  console.log(`[cueGroup] 🎯 Extracted groupId = "${groupId}"`);
+
   // 2️⃣ Look up the registered group
+  const allGroups = Object.keys(window.groupRegistry || {});
+  console.log("[cueGroup] 🗂 Registry contents:", allGroups);
+
   const source = window.groupRegistry?.[groupId];
   if (!source) {
     console.warn(`[cueGroup] ⚠️ Group "${groupId}" not found in registry.`);
+    console.groupEnd();
     return;
   }
+  console.log(`[cueGroup] ✅ Found group "${groupId}" in registry.`);
 
   // 3️⃣ Clone the stored group
   const clone = source.cloneNode(true);
+  console.log(`[cueGroup] 🧬 Cloned group node (child count: ${clone.children.length})`);
 
   // 4️⃣ Find the correct active SVG container
-  const currentSvg =
-    window._currentPageSvg ||
-    document.querySelector('#singlePage-content svg') ||
-    document.querySelector('svg#pageSVG') ||
-    document.querySelector('svg#score');
+  // 4️⃣ Find the correct active SVG container
+const currentSvg =
+  window._currentPageSvg ||
+  document.querySelector('#singlePage-content svg') ||
+  document.querySelector('svg#pageSVG') ||
+  document.querySelector('svg#score') ||
+  document.querySelector('#scoreContainer svg'); // ✅ fallback for scroll mode
 
-  if (!currentSvg) {
-    console.warn("[cueGroup] ⚠️ No valid SVG container found for group injection.");
-    return;
-  }
+if (!currentSvg) {
+  console.warn("[cueGroup] ⚠️ No valid SVG container found for group injection.");
+  return;
+}
+
+console.log("[cueGroup] 🎯 Found target SVG for injection:", currentSvg.id || "(unnamed)");
+
 
   // 5️⃣ Append and mark group
   currentSvg.appendChild(clone);
+// 🔎 Verify the clone actually landed in the live DOM
+const liveCheck = currentSvg.querySelector(`#${clone.id}`) || document.querySelector(`#${clone.id}`);
+if (liveCheck) {
+  console.log(`[cueGroup] ✅ Verified "${groupId}" now exists in DOM under ${currentSvg.id}`);
+} else {
+  console.warn(`[cueGroup] ⚠️ "${groupId}" clone not found after append — possible timing or replacement issue.`);
+}
+
+
   clone.classList.add("cueButtonGroup");
-  console.log(`[cueGroup] 🎨 Injected group "${groupId}" into`, currentSvg.id || "(unnamed SVG)");
+  console.log(`[cueGroup] ✅ Appended group "${groupId}" → ${currentSvg.id}`);
 
   // 🪄 Give cloned cueButtons unique IDs
   const uidSuffix = `-${Date.now()}`;
-  clone.querySelectorAll('[id^="cueButton"]').forEach(el => {
+  const buttons = clone.querySelectorAll('[id^="cueButton"]');
+  buttons.forEach(el => {
+    const oldId = el.id;
     el.id = `${el.id}${uidSuffix}`;
+    console.log(`   🪄 Renamed cueButton: ${oldId} → ${el.id}`);
   });
-  console.log(`[cueGroup] 🪄 Renamed cueButtons in "${groupId}" with suffix ${uidSuffix}`);
+  console.log(`[cueGroup] 🪄 Applied suffix ${uidSuffix} to ${buttons.length} cueButtons`);
 
   // 6️⃣ Temporarily mark this group as active so we can filter later
   clone.setAttribute("data-cuegroup-active", "1");
@@ -3289,30 +3331,33 @@ export function handleGroupCue(cueId, cueParams = {}) {
     document.querySelector('#singlePage-overlay') ||
     document.querySelector('#singlePage-content');
 
+  console.log("[cueGroup] 🧱 Overlay container:", overlay?.id || "(none)");
+
   // 7️⃣ Build visible cue buttons using the overlay
   if (typeof window.assignCueButtonsIn === "function") {
+    console.log("[cueGroup] ⚙️ Using assignCueButtonsIn()");
     try {
-      // Assign only for elements within the active group
       const built = window.assignCueButtonsIn(currentSvg, overlay);
-      const filtered = built?.filter(btn =>
-        btn?.id?.includes(uidSuffix)
-      ) || [];
-
-      console.log(`[cueGroup] 🧩 assignCueButtonsIn() built ${filtered.length} cueButtons for "${groupId}"`);
+      const filtered = built?.filter(btn => btn?.id?.includes(uidSuffix)) || [];
+      console.log(`[cueGroup] 🧩 assignCueButtonsIn() built ${built?.length || 0}, filtered ${filtered.length} for "${groupId}"`);
       window._activePageButtons = (window._activePageButtons || []).concat(filtered);
     } catch (err) {
-      console.warn("[cueGroup] ⚠️ assignCueButtonsIn() failed:", err);
+      console.warn("[cueGroup] ❌ assignCueButtonsIn() failed:", err);
     }
   } else if (typeof window.assignCues === "function") {
+    console.log("[cueGroup] ⚙️ Using legacy assignCues()");
     try {
       window.assignCues(clone, window.cues);
       console.log(`[cueGroup] 🧩 assignCues() applied to "${groupId}"`);
     } catch (err) {
-      console.warn("[cueGroup] ⚠️ assignCues() failed:", err);
+      console.warn("[cueGroup] ❌ assignCues() failed:", err);
     }
+  } else {
+    console.warn("[cueGroup] ⚠️ No cue assignment function found (assignCueButtonsIn / assignCues)");
   }
 
   // 8️⃣ Re-initialize observers or animations
+  console.log("[cueGroup] 🔄 Re-initializing observers and propagate()");
   window.propagate?.(clone);
   window.initializeObserver?.(clone);
 
@@ -3320,7 +3365,12 @@ export function handleGroupCue(cueId, cueParams = {}) {
   clone.removeAttribute("data-cuegroup-active");
 
   console.log(`[cueGroup] ✅ Group "${groupId}" ready and interactive.`);
+  console.groupEnd();
 }
+
+window.handleGroupCue = handleGroupCue;
+
+
 
 
 
@@ -3753,11 +3803,11 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window
     background: opt.color,
     border: "1px solid rgba(0,0,0,.2)",
     borderRadius: `${opt.radius}px`,
-    padding: "6px 10px",
+    padding: "2px 2px",
     fontWeight: opt.fontWeight || "600",
     fontSize: (opt.fontSize != null)
       ? (Number.isFinite(opt.fontSize) ? `${opt.fontSize}px` : String(opt.fontSize))
-      : "14px",
+      : "12px",
     fontFamily: opt.fontFamily || "system-ui, sans-serif",
     color: opt.textColor || "",
     zIndex: "2000",

@@ -22,7 +22,7 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="0.834386"
-     inkscape:cx="614.82335"
+     inkscape:cx="614.22411"
      inkscape:cy="971.9722"
      inkscape:window-width="1854"
      inkscape:window-height="1011"
@@ -118,9 +118,9 @@
      transform="translate(-284.74576,-145.76271)"><tspan
        x="315.86029"
        y="200.30046"
-       id="tspan42"><tspan
+       id="tspan8"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan41">PAGE 4</tspan></tspan></text>
+         id="tspan7">PAGE 4</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:192px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#000000"
@@ -219,63 +219,6 @@
        y="861.62482"
        id="tspan12"
        style="font-size:21.3333px" /></text>
-  <g
-     id="group-mainMenu"
-     transform="translate(-84,448.23727)"
-     style="fill:#000000">
-    <text
-       xml:space="preserve"
-       style="font-weight:bold;font-size:16px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:1076.43;display:inline;fill:#000000"
-       x="546.50964"
-       y="1004.3314"
-       id="text8"
-       transform="translate(-55.144973,-443.6379)"><tspan
-         x="546.50964"
-         y="1004.3314"
-         id="tspan43">::: oscilla  - interactive graphic score ::: https://robcanning.github.io/oscilla :::</tspan></text>
-    <rect
-       style="fill:#000000"
-       id="cueButton(cue:page(page0))_style(size:&quot;50x25&quot;,color:&quot;#4477dd&quot;,label:&quot;A&quot;)&#10;"
-       width="50"
-       height="25"
-       x="104.2185"
-       y="536.24506" />
-    <rect
-       style="fill:#000000"
-       id="cueButton(cue:page(page1))_style(size:&quot;50x25&quot;,color:&quot;#4477dd&quot;,label:&quot;1&quot;)"
-       width="50"
-       height="25"
-       x="172.63094"
-       y="536.24506" />
-    <rect
-       style="fill:#000000"
-       id="cueButton(cue:page(page2))_style(size:&quot;50x25&quot;,color:&quot;#4477dd&quot;,label:&quot;2&quot;)"
-       width="50"
-       height="25"
-       x="241.04335"
-       y="536.24506" />
-    <rect
-       style="fill:#000000"
-       id="cueButton(cuePage(page3)_style(size:&quot;50x25&quot;,color:&quot;#888&quot;,label:&quot;D&quot;))"
-       width="50"
-       height="25"
-       x="309.45575"
-       y="536.24506" />
-    <rect
-       style="fill:#000000"
-       id="cueButton(cuePage(page3)_style(size:&quot;50x25&quot;,color:&quot;#ffff00&quot;,label:&quot;D&quot;))-23"
-       width="50"
-       height="25"
-       x="383.25146"
-       y="536.24506" />
-    <rect
-       style="fill:#000000"
-       id="cueButton(cue:page(seq: mode:scroll))_style(size:&quot;100x25&quot;,color:&quot;#888&quot;, label:&quot;exit page mode&quot;)"
-       width="50"
-       height="25"
-       x="1338.3702"
-       y="536.24506" />
-  </g>
   <text
      xml:space="preserve"
      style="font-weight:bold;font-size:64px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000"
@@ -296,54 +239,118 @@
      transform="translate(0,-45.762712)"><tspan
        x="139.83051"
        y="229.66103"
-       id="tspan45"><tspan
+       id="tspan20"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan44">cueGroup() — Reusable SVG Group Injection
+         id="tspan9">cueGroup() — Reusable SVG Group Injection
 </tspan></tspan><tspan
        x="139.83051"
        y="256.32765"
-       id="tspan47"><tspan
+       id="tspan24"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan46">cueGroup() allows reusable clusters of cue elements, such as menus or control </tspan></tspan><tspan
+         id="tspan23">cueGroup() allows reusable clusters of cue elements, such as menus or control </tspan></tspan><tspan
        x="139.83051"
        y="282.99426"
-       id="tspan49"><tspan
+       id="tspan26"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan48">panels, to be defined once in an SVG and recalled anywhere in the score.
+         id="tspan25">panels, to be defined once in an SVG and recalled anywhere in the score.
 </tspan></tspan><tspan
        x="139.83051"
        y="309.66088"
-       id="tspan51"><tspan
+       id="tspan28"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan50">Any &lt;g&gt; element whose ID begins with group- is automatically registered when the </tspan></tspan><tspan
+         id="tspan27">Any &lt;g&gt; element whose ID begins with group- is automatically registered when the </tspan></tspan><tspan
        x="139.83051"
        y="336.32751"
-       id="tspan53"><tspan
+       id="tspan30"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan52">SVG loads. Triggering a cue like cueGroup(mainMenu) clones the corresponding </tspan></tspan><tspan
+         id="tspan29">SVG loads. Triggering a cue like cueGroup(mainMenu) clones the corresponding </tspan></tspan><tspan
        x="139.83051"
        y="362.99414"
-       id="tspan55"><tspan
+       id="tspan32"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan54">group and injects it into the current page. All contained cueButton() elements </tspan></tspan><tspan
+         id="tspan31">group and injects it into the current page. All contained cueButton() elements </tspan></tspan><tspan
        x="139.83051"
        y="389.66076"
-       id="tspan57"><tspan
+       id="tspan34"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan56">are converted into visible, clickable buttons in the overlay.
+         id="tspan33">are converted into visible, clickable buttons in the overlay.
 </tspan></tspan><tspan
        x="139.83051"
        y="416.32739"
-       id="tspan59"><tspan
+       id="tspan36"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan58">Groups retain their layout, styling, and cue behaviour, making it easy to design </tspan></tspan><tspan
+         id="tspan35">Groups retain their layout, styling, and cue behaviour, making it easy to design </tspan></tspan><tspan
        x="139.83051"
        y="442.99401"
-       id="tspan61"><tspan
+       id="tspan38"><tspan
          style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan60">reusable interface blocks directly in Inkscape without duplicating code.</tspan></tspan></text>
+         id="tspan37">reusable interface blocks directly in Inkscape without duplicating code.</tspan></tspan></text>
   <text
      xml:space="preserve"
      id="text40"
      style="font-weight:bold;font-size:12px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect40);display:inline;fill:#000000" />
+  <g
+     id="group-mainMenu"
+     transform="translate(-79.14367,436.56402)"
+     style="fill:#000000">
+    <rect
+       style="fill:#e3e2db"
+       id="rect1"
+       width="1339.9075"
+       height="44.343994"
+       x="100.67283"
+       y="534.98236" />
+    <text
+       xml:space="preserve"
+       style="font-weight:bold;font-size:13.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:1076.43;display:inline;fill:#000000"
+       x="546.50964"
+       y="1004.3314"
+       id="text8"
+       transform="translate(-55.144973,-443.6379)"><tspan
+         x="546.50964"
+         y="1004.3314"
+         id="tspan39">::: oscilla  - interactive graphic score system ::: https://robcanning.github.io/oscilla :::</tspan></text>
+    <rect
+       style="fill:#000000"
+       id="cueButton(cue:page(page0))_style(size:&quot;50x25&quot;,label:&quot;0&quot;)&#10;"
+       width="50"
+       height="25"
+       x="122.19579"
+       y="537.84052" />
+    <rect
+       style="fill:#000000"
+       id="cueButton(cue:page(page1))_style(size:&quot;50x25&quot;,label:&quot;1&quot;)"
+       width="50"
+       height="25"
+       x="190.60823"
+       y="537.84052" />
+    <rect
+       style="fill:#000000"
+       id="cueButton(cue:page(page2))_style(size:&quot;50x25&quot;,label:&quot;2&quot;)"
+       width="50"
+       height="25"
+       x="259.02063"
+       y="537.84052" />
+    <rect
+       style="fill:#000000"
+       id="cueButton(cue:page(page3))_style(size:&quot;50x25&quot;,label:&quot;3&quot;)-6"
+       width="50"
+       height="25"
+       x="320.97729"
+       y="537.84052" />
+    <rect
+       style="fill:#000000"
+       id="cueButton(cue:page(page4))_style(size:&quot;50x25&quot;,label:&quot;4&quot;)-5"
+       width="50"
+       height="25"
+       x="386.97729"
+       y="537.84052" />
+    <rect
+       style="fill:#000000"
+       id="cueButton(cue:page(seq: mode:scroll))_style(size:&quot;100x25&quot;,color:&quot;#888&quot;, label:&quot;exit page mode&quot;)"
+       width="50"
+       height="25"
+       x="1322.3702"
+       y="536.24506" />
+  </g>
 </svg>

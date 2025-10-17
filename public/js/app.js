@@ -19,7 +19,7 @@
 
 
 import { loadProject } from './projectLoader.js';
-import { setupScore, extractScoreElements, propagate } from './scoreSetup.js';
+import { setupScore, extractScoreElements, propagate, autoInjectGroupsInScroll } from './scoreSetup.js';
 import {
   forward, rewind, rewindToStart, getSpeedForPosition,
   initializeSpeedControls, adjustSpeed, setSpeed, updateSpeedDisplay,
@@ -317,8 +317,13 @@ export const initializeSVG = async (svgElement) => {
   });
 
 
+
+
   // 🚀 Continue with full original animation setup
   console.log("[DEBUG] Initializing SVG element:", svgElement);
+
+
+
 
   requestAnimationFrame(() => {
     window.playheadX = 0;
@@ -328,7 +333,6 @@ export const initializeSVG = async (svgElement) => {
 
 
     
-
     requestAnimationFrame(() => {
       window.ensureWindowPlayheadX(); // 💡 ensure valid center before any jumping logic
       initializeObjectPathPairs(svgElement);
@@ -394,7 +398,7 @@ export const initializeSVG = async (svgElement) => {
 
       Object.assign(cont.style, {
         width: "100vw",
-        height: "100vh",
+        height: "95vh",
         overflowX: "auto",
         overflowY: "hidden",
         whiteSpace: "nowrap",
@@ -406,7 +410,7 @@ export const initializeSVG = async (svgElement) => {
       svg.removeAttribute("height");
       Object.assign(svg.style, {
         display: "inline-block",
-        height: "100%",
+        height: "95vh",
         width: "auto",
         maxWidth: "none",
         maxHeight: "100%",
@@ -451,14 +455,11 @@ export const initializeSVG = async (svgElement) => {
 
 
 
-
-
-
-
-
-
-
 window.addEventListener("DOMContentLoaded", () => {
+
+
+
+
 
   // Wait a bit to ensure initializeSVG and animations are registered
   setTimeout(() => {

@@ -300,6 +300,7 @@ document.getElementById('fast-rewind-button').addEventListener('click', () => {
 
 
 
+
 // Set this to true for debugging
 const debugMode = true;
 
@@ -739,6 +740,39 @@ window.preloadAllSvgGroups = preloadAllSvgGroups;
 //////////////////////////////////////////////////
 
 
+  // 🧩 Detect and inject cueGroup(...) elements present in scroll view
+export async function autoInjectGroupsInScroll(svgElement) {
+  if (!window.groupRegistry) {
+    console.warn("[cueGroup] ⚠️ groupRegistry not ready yet");
+    return;
+  }
+
+  const found = [...svgElement.querySelectorAll('[id^="cueGroup("]')];
+  if (found.length === 0) {
+    console.log("[cueGroup] ℹ️ No cueGroup() references found in scroll SVG");
+    return;
+  }
+
+  console.log(`[cueGroup] 📋 Found ${found.length} cueGroup() elements in main score`);
+  found.forEach(el => {
+    const m = el.id.match(/cueGroup\(([^)]+)\)/);
+    const groupName = m?.[1]?.trim();
+    if (!groupName) return;
+
+    if (window.groupRegistry[groupName]) {
+      console.log(`[cueGroup] 🚀 Injecting group "${groupName}" in scroll mode`);
+      handleGroupCue(`cueGroup(${groupName})`, { choice: groupName });
+    } else {
+      console.warn(`[cueGroup] ⚠️ Group "${groupName}" not found in registry`);
+    }
+  });
+}
+
+window.autoInjectGroupsInScroll = autoInjectGroupsInScroll;
+
+
+
+
 export async function setupScore(svgElement) {
 
   if (!svgElement) {
@@ -774,8 +808,23 @@ export async function setupScore(svgElement) {
 
   // 🟢 Preload all reusable group definitions from pages/
   // preloadSvgGroups();
-  preloadAllSvgGroups();
+  await preloadAllSvgGroups();
   console.log("[setupScore] ✅ All group definitions preloaded.");
+
+
+
+  if (typeof window.autoInjectGroupsInScroll === "function") {
+  console.log("[cueGroup] 🧩 Running autoInjectGroupsInScroll() after group registry ready");
+  const svgElement = document.querySelector("#scoreContainer svg");
+  if (svgElement) window.autoInjectGroupsInScroll(svgElement);
+}
+
+
+
+
+
+
+
 
 
   console.groupEnd();

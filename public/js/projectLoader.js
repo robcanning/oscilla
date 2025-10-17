@@ -44,13 +44,15 @@ export async function loadProject(projectName) {
     const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
     const svgElement = doc.querySelector("svg");
     if (!svgElement) throw new Error("No <svg> root found in loaded file");
+    svgElement.id = "score";
+
 
     // 🧭 Pre-size it correctly *before* appending (fixes button placement timing)
     svgElement.removeAttribute("width");
     svgElement.removeAttribute("height");
     Object.assign(svgElement.style, {
       display: "inline-block",
-      height: "100vh",
+      height: "95vh",
       width: "auto",
       maxWidth: "none",
       maxHeight: "100%",
@@ -60,7 +62,7 @@ export async function loadProject(projectName) {
     // Prepare container for scroll mode
     Object.assign(container.style, {
       width: "100vw",
-      height: "100vh",
+      height: "95vh",
       overflowX: "auto",
       overflowY: "hidden",
       whiteSpace: "nowrap",
@@ -72,10 +74,25 @@ export async function loadProject(projectName) {
     container.innerHTML = "";
     container.appendChild(svgElement);
 
+
+    // After: container.appendChild(svgElement);
+    svgElement.removeAttribute("width");
+    svgElement.removeAttribute("height");
+    Object.assign(svgElement.style, {
+      height: "95vh",
+      width: "auto",
+      display: "inline-block",
+      verticalAlign: "top",
+    });
+
+
+
+
     // 5️⃣ Initialize cues, animations, observers immediately — layout is already correct
     console.log("[loadProject] 🔧 Initializing SVG logic...");
     if (typeof initializeSVG === "function") {
       initializeSVG(svgElement);
+
     } else {
       console.warn("[loadProject] ⚠️ initializeSVG() not defined yet.");
     }
