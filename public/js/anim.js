@@ -25,6 +25,7 @@
 
 
 window.OSC_ENABLED = true; // master global OSC mute
+
 const rotationLastSent = new Map();
 
 /**
@@ -786,7 +787,7 @@ function initializeRotatingObjects(svgElement) {
     if (id.includes('_t(1)')) {
       window.pendingRotationAnimations = window.pendingRotationAnimations || new Map();
       window.pendingRotationAnimations.set(id, () => {
-        
+
         startRotate(object);
       });
       console.log(`[rotate] ⏸ Deferred rotation stored for ${id}`);
@@ -1061,19 +1062,33 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
     const pathMotion = anime.path(path);
     const startPoint = path.getPointAtLength(0);
     const boundingRect = path.getBBox();
-    const adjustedX = startPoint.x - boundingRect.x;
-    const adjustedY = startPoint.y - boundingRect.y;
 
-    if (['circle', 'ellipse'].includes(object.tagName)) {
-      object.setAttribute('cx', adjustedX);
-      object.setAttribute('cy', adjustedY);
-    } else if (object.tagName === 'rect') {
-      const w = object.getBBox().width, h = object.getBBox().height;
-      object.setAttribute('x', adjustedX - w / 2);
-      object.setAttribute('y', adjustedY - h / 2);
+    // Optional debug only
+    console.log("[o2p] Path alignment check:", {
+      startX: startPoint.x,
+      startY: startPoint.y,
+      bboxX: boundingRect.x,
+      bboxY: boundingRect.y,
+      diffX: startPoint.x - boundingRect.x,
+      diffY: startPoint.y - boundingRect.y
+    });
+
+    // 🟣 Position the object at the path’s start origin (0,0)
+    if (["circle", "ellipse"].includes(object.tagName)) {
+      object.setAttribute("cx", 0);
+      object.setAttribute("cy", 0);
+    } else if (object.tagName === "rect") {
+      const { width: w, height: h } = object.getBBox();
+      object.setAttribute("x", -w / 2);
+      object.setAttribute("y", -h / 2);
     }
 
-    object.style.transformOrigin = `${adjustedX}px ${adjustedY}px`;
+    // 🪄 Ensure transforms operate in SVG coordinate space
+    object.style.transformBox = "fill-box";
+    object.style.transformOrigin = "center";
+
+
+    // object.style.transformOrigin = `${adjustedX}px ${adjustedY}px`;
 
     const speedMatch = effectiveId.match(/_(?:speed|spd|s)_(\d+(\.\d+)?)/);
     let animationSpeed = 1000; // fallback
@@ -1132,111 +1147,201 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
 
     const totalLen = path.getTotalLength();
 
+
+    /**
+     * makeO2PAnimation (v1)
+     * Drives an object along an SVG path with Anime.js and emits OSC updates.
+     * Supports:
+     *  - Linear and closed (circular/orbital) paths
+     *  - Angular OSC progress for orbits (corrected for SVG Y-down)
+     *  - Adjustable OSC rate via oscThrottleMs
+     *  - Optional rotation along tangent
+     */
+    function makeO2PAnimation({
+      object,
+      path,
+      pathMotion,
+      rotate = false,
+      animationSpeed = 1000,
+      defaultEasing = "linear",
+      directionMode = "normal", // "normal" | "reverse" | "alternate"
+      oscEnabled = false,
+      oscThrottleMs = 30
+    }) {
+      const totalLen = path.getTotalLength();
+      let lastOscSent = 0;
+
+      // 🧮 Detect closed path (start ≈ end)
+      const first = path.getPointAtLength(0);
+      const last = path.getPointAtLength(totalLen);
+      const isClosed =
+        Math.abs(first.x - last.x) < 0.001 && Math.abs(first.y - last.y) < 0.001;
+
+      // 📍 Compute geometric center (used for angular progress)
+      const bbox = path.getBBox();
+      const cx = bbox.x + bbox.width / 2;
+      const cy = bbox.y + bbox.height / 2;
+
+      console.log(`[o2p] ✅ Path ${path.id} totalLen=${totalLen.toFixed(2)} closed=${isClosed}`);
+
+      const anim = anime({
+        targets: object,
+        translateX: pathMotion("x"),
+        translateY: pathMotion("y"),
+        rotate: rotate ? pathMotion("angle") : 0,
+        duration: animationSpeed,
+        easing: defaultEasing,
+        loop: true,
+        direction: directionMode,
+
+        update: (anim) => {
+          const now = performance.now();
+          const prog = anim.progress / 100;
+          const len = prog * totalLen;
+          const p = path.getPointAtLength(len);
+
+          // 🎯 Move object in SVG coordinate space
+          let t = `translate(${p.x},${p.y})`;
+          if (rotate) {
+            const delta = 0.1;
+            const p2 = path.getPointAtLength(Math.min(totalLen, len + delta));
+            const angle = (Math.atan2(p2.y - p.y, p2.x - p.x) * 180) / Math.PI;
+            t += ` rotate(${angle})`;
+          }
+
+          object.setAttribute("transform", t);
+          if (object.style.transform) object.style.transform = "";
+
+          // 🛰️ Send OSC data at controlled rate
+          if (oscEnabled && now - lastOscSent > oscThrottleMs) {
+            lastOscSent = now;
+
+            if (isClosed) {
+              // 🔁 Angular progress for closed/orbital paths
+              const dx = p.x - cx; // horizontal vector from center to point
+              const dy = p.y - cy; // vertical vector from center to point (SVG Y-down)
+
+              // Convert to polar angle (invert Y for SVG coordinates)
+              let angleRad = Math.atan2(-dy, dx);
+
+              // Shift zero-angle from 3 o’clock → 12 o’clock
+              angleRad -= Math.PI / 2;
+
+              // Mirror so angles increase clockwise (SVG visual orientation)
+              angleRad = 2 * Math.PI - angleRad;
+
+              // Wrap back into [0 … 2π)
+              angleRad = ((angleRad % (2 * Math.PI)) + (2 * Math.PI)) % (2 * Math.PI);
+
+              // Normalized 0 – 1 progress and degrees
+              const angleNorm = angleRad / (2 * Math.PI);
+              const angleDeg = angleRad * 180 / Math.PI;
+
+
+              const msg = {
+                pathId: path.id,
+                type: "closed",
+                progress: angleNorm,
+                xNorm: dx / (bbox.width / 2),   // normalized -1..1 horizontal offset
+                yNorm: dy / (bbox.height / 2),  // normalized -1..1 vertical offset
+                angleDeg: (angleRad * 180) / Math.PI // degrees 0° = top, CW positive
+              };
+
+              console.log(
+                `[o2p][closed] ${path.id} → progress:${angleNorm.toFixed(3)} angle:${msg.angleDeg.toFixed(1)}° x:${msg.xNorm.toFixed(3)} y:${msg.yNorm.toFixed(3)}`
+              );
+
+              emitOSCFromPathProgress(msg);
+
+            } else {
+              // ⏩ Linear progress for open paths
+              const msg = {
+                pathId: path.id,
+                type: "linear",
+                progress: prog,
+                x: p.x,
+                y: p.y
+              };
+
+              console.log(
+                `[o2p][linear] ${path.id} → progress:${prog.toFixed(3)} x:${p.x.toFixed(1)} y:${p.y.toFixed(1)}`
+              );
+
+              emitOSCFromPathProgress(msg);
+            }
+          }
+        }
+      });
+
+      // 🧩 Register animation for pause/resume control
+      window.runningAnimations[object.id] = {
+        play: () => anim.play(),
+        pause: () => anim.pause(),
+        resume: () => anim.play(),
+        wasPaused: false
+      };
+
+      return anim;
+    }
+
+
+
+
+
+
     switch (direction) {
       case 0: {
         console.log("[o2p] starting case", direction, "for", object.id);
-
-        const easingSequence = parseEasingSequence(effectiveId);
-        let cycleCount = 0;
-
-        const anim0 = anime({
-          targets: object,
-          translateX: pathMotion('x'),
-          translateY: pathMotion('y'),
-          rotate: rotate ? pathMotion('angle') : 0,
-          duration: animationSpeed,
-          easing: defaultEasing,
-          loop: true,
-          direction: 'alternate',
-
-          begin: (anim) => {
-            const easing = easingSequence[cycleCount % easingSequence.length];
-            anim.animations.forEach(a => a.easing = easing);
-            cycleCount++;
-          },
-
-          update: (anim) => {
-  // throttle logs to ~2 per second
-  anim.__dbgFrame = (anim.__dbgFrame || 0) + 1;
-  const throttle = (anim.__dbgFrame % 30) === 0;
-
-  // Anime progress is 0..100
-  const prog = anim.progress / 100;
-  const len  = prog * totalLen;
-
-  // sample path point (SVG units)
-  const p = path.getPointAtLength(len);
-
-  // build SVG transform string
-  let t = `translate(${p.x},${p.y})`;
-
-  if (rotate) {
-    const delta = 0.1; // small look-ahead for tangent
-    const p2 = path.getPointAtLength(Math.min(totalLen, len + delta));
-    const angle = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
-    t += ` rotate(${angle})`;
-    if (throttle) console.log("[o2p][case0]", object.id, "prog", prog.toFixed(3), "len", len.toFixed(1), "pt", {x:p.x, y:p.y}, "angle", angle.toFixed(1));
-  } else {
-    if (throttle) console.log("[o2p][case0]", object.id, "prog", prog.toFixed(3), "len", len.toFixed(1), "pt", {x:p.x, y:p.y});
-  }
-
-  // ✅ apply SVG-space transform; clear CSS to avoid double transforms
-  object.setAttribute("transform", t);
-  if (object.style.transform) {
-    object.style.transform = "";
-    if (throttle) console.log("[o2p][case0]", object.id, "cleared CSS transform");
-  }
-
-  if (oscEnabled) {
-    emitOSCFromPathProgress({ path, progress: prog, pathId: path.id });
-  }
-}
-
-
-
+        const anim = makeO2PAnimation({
+          object,
+          path,
+          pathMotion,
+          rotate,
+          animationSpeed,
+          defaultEasing,
+          directionMode: "alternate",
+          oscEnabled
         });
-
-        window.runningAnimations[object.id] = {
-          play: () => anim0.play(),
-          pause: () => anim0.pause(),
-          resume: () => anim0.play(),
-          wasPaused: false
-        };
-
-        animations.push(anim0);
-        object.style.transform = "";
-
+        window.runningAnimations[object.id] = { play: () => anim.play(), pause: () => anim.pause(), resume: () => anim.play(), wasPaused: false };
+        animations.push(anim);
         break;
-
-
       }
 
       case 1: {
         console.log("[o2p] starting case", direction, "for", object.id);
-
-        const anim1 = anime({
-          targets: object, translateX: pathMotion('x'),
-          translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0,
-          duration: animationSpeed, easing: defaultEasing,
-          loop: true
+        const anim = makeO2PAnimation({
+          object,
+          path,
+          pathMotion,
+          rotate,
+          animationSpeed,
+          defaultEasing,
+          directionMode: "normal",
+          oscEnabled
         });
-        window.runningAnimations[object.id] = { play: () => anim1.play(), pause: () => anim1.pause(), resume: () => anim1.play(), wasPaused: false };
-        animations.push(anim1);
+        window.runningAnimations[object.id] = { play: () => anim.play(), pause: () => anim.pause(), resume: () => anim.play(), wasPaused: false };
+        animations.push(anim);
         break;
       }
 
       case 2: {
         console.log("[o2p] starting case", direction, "for", object.id);
-
-        const anim2 = anime({
-          targets: object, translateX: pathMotion('x'),
-          translateY: pathMotion('y'), rotate: rotate ? pathMotion('angle') : 0, duration: animationSpeed, easing: defaultEasing,
-          loop: true, direction: 'reverse'
+        const anim = makeO2PAnimation({
+          object,
+          path,
+          pathMotion,
+          rotate,
+          animationSpeed,
+          defaultEasing,
+          directionMode: "reverse",
+          oscEnabled
         });
-        window.runningAnimations[object.id] = { play: () => anim2.play(), pause: () => anim2.pause(), resume: () => anim2.play(), wasPaused: false };
-        animations.push(anim2);
+        window.runningAnimations[object.id] = { play: () => anim.play(), pause: () => anim.pause(), resume: () => anim.play(), wasPaused: false };
+        animations.push(anim);
         break;
       }
+
+
       /**
        * 🎯 Case 3 — Random Jump Animation Within Visible Path Segment
        * -------------------------------------------------------------
