@@ -1198,6 +1198,7 @@ export function startTraverseAnimation(config) {
  * Main cue handler for cueTraverse (c-t) cues.
  * @param {string} cueId - Full cue ID from score
  */
+
 export async function handleTraverseCue(cueId) {
   const config = parseTraverseCueId(cueId);
   if (!config) return;
@@ -1222,9 +1223,6 @@ export function handleSpeedCue(cueId, newMultiplier) {
     window.socket.send(JSON.stringify(msg));
   }
 }
-
-
-
 
 
 export function handleStopCue(cueId = "cueStop") {

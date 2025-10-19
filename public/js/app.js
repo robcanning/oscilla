@@ -868,6 +868,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
   ///////////////////////////////////////////////////////////////
   // Handle Rehearsal Marks Navigation Popup
+
+
+
+  /**
+  * ✅ Opens the rehearsal mark popup.
+  */
+  const openRehearsalPopup = () => {
+    console.log("[DEBUG] Opening rehearsal mark popup...");
+
+    const popup = document.getElementById("rehearsal-popup");
+
+    if (!popup) {
+      console.error("[ERROR] Rehearsal popup not found.");
+      return;
+    }
+
+    if (sortedMarks.length === 0) {
+      console.warn("[DEBUG] No rehearsal marks found. Popup will not be shown.");
+      return;
+    }
+
+    popup.classList.remove("hidden");
+    popup.style.display = "flex";
+
+    console.log("[DEBUG] ✅ Rehearsal mark popup opened.");
+  };
+
+  /**
+  * ✅ Close popup function.
+  */
+  const closeRehearsalPopup = () => {
+    document.getElementById("rehearsal-popup").classList.add("hidden");
+  };
+
+  // ✅ Make it globally accessible
+  window.closeRehearsalPopup = closeRehearsalPopup;
+
+  // ✅ Allow opening with "R" key
+  document.addEventListener("keydown", (event) => {
+    if (event.key.toUpperCase() === "R") {
+      openRehearsalPopup();
+    }
+  });
+
+
+
+
   rehearsalMarksButton.addEventListener('click', () => {
     console.log("[DEBUG] Rehearsal Marks button clicked.");
     const popup = document.getElementById("rehearsal-popup");
@@ -3263,144 +3310,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // /**
-  //  * ✅ Toggles playback state between play and pause.
-  //  * - Delegates to startPlayback() or pausePlayback() for consistent logic.
-  //  * - Ensures all flags and state updates are handled in one place.
-  //  */
-  // const togglePlay = () => {
-  //   if (window.isPlaying) {
-  //     window.pausePlayback();
-  //   } else {
-  //     window.startPlayback();
-  //   }
-  // };
-
-  // // ✅ Updates the play/pause button UI to match playback state
-  // const togglePlayButton = () => {
-  //   const playButton = document.getElementById("toggle-button");
-
-  //   if (playButton) {
-  //     playButton.innerHTML = window.isPlaying
-  //       ? '<div class="custom-pause"></div>'
-  //       : "▶";
-  //   } else {
-  //     console.error("[ERROR] Play button element not found.");
-  //   }
-  // };
-
-  // // ✅ Starts playback: sets state, starts animation + stopwatch, syncs with server
-  // window.startPlayback = function startPlayback() {
-  //   if (!window.isPlaying) {
-  //     console.log("[Playback] ▶️ Starting playback");
-  //     window.isPlaying = true;
-  //     window.isMusicalPause = false;
-  //     window.ignoreSyncPlayback = false;
-  //     window.animationPaused = false;
-  //     window.isPaused = false;
-
-
-  //     // Set speed multiplier from current playhead position
-  //     window.speedMultiplier = getSpeedForPosition(window.playheadX);
-  //     window.updateSpeedDisplay?.();
-
-  //     // Force start animation loop (even if already partially running)
-  //     if (typeof window.animate === "function") {
-  //       cancelAnimationFrame(window.animationFrameId);
-  //       window.animationFrameId = requestAnimationFrame(window.animate);
-  //     }
-
-
-  //     window.startStopwatch?.();
-  //     window.startAnimation?.();
-  //     togglePlayButton();
-  //     hideControls?.();
-
-  //     // Send play message to server
-  //     if (window.socket && window.socket.readyState === WebSocket.OPEN) {
-  //       window.socket.send(JSON.stringify({
-  //         type: "play",
-  //         playheadX: window.playheadX,
-  //         elapsedTime: window.elapsedTime
-  //       }));
-  //     }
-
-  //     updatePosition?.();
-  //     checkCueTriggers?.();
-  //   }
-  // };
-
-  // // ✅ Pauses playback: sets state, stops animation + stopwatch, syncs with server
-  // window.pausePlayback = function pausePlayback() {
-  //   if (window.isPlaying) {
-  //     console.log("[Playback] ⏸ Pausing playback");
-  //     window.isPlaying = false;
-  //     window.isMusicalPause = false;
-  //     window.animationPaused = true;
-
-  //     window.stopStopwatch?.();
-  //     window.stopAnimation?.();
-  //     togglePlayButton();
-
-  //     // Send pause message to server
-  //     if (window.socket && window.socket.readyState === WebSocket.OPEN) {
-  //       window.socket.send(JSON.stringify({
-  //         type: "pause",
-  //         playheadX: window.playheadX,
-  //         elapsedTime: window.elapsedTime
-  //       }));
-  //     }
-  //   }
-  // };
-
-  // // ✅ Resume logic: reuse startPlayback() for consistency
-  // window.resumePlayback = function resumePlayback() {
-  //   console.log("[Playback] 🔁 resumePlayback() called");
-  //   window.startPlayback();
-  // };
-
-
-
-
-  //   //////////////////////////////////////////////////
-
-  //   const jumpToCueId = (id) => {
-  //     // Try first in cues[]
-  //     let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"));
-
-  //     // Fallback to global SVG search if not found in cues[]
-  //     if (!target) {
-  //       target = document.getElementById(id);
-  //     }
-
-  //     if (!target) {
-  //       console.warn(`[jumpToCueId] Cue not found: ${id}`);
-  //       return;
-  //     }
-
-  //     let targetX = target.x;
-  //     if (typeof targetX !== 'number') {
-  //       targetX = parseFloat(target.getAttribute('x')) || 0;
-  //     }
-
-  //    window.playheadX = targetX - (window.innerWidth / 2);
-  //     window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-  //     window.scoreContainer.scrollLeft = window.playheadX;
-
-  //     console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
-
-  //     if (window.wsEnabled &&window.socket&& socket.readyState === WebSocket.OPEN) {
-  //       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-  //         elapsedTime: window.elapsedTime }));
-  //     }
-
-  //     updatePosition();
-  //     updateSeekBar();
-  //     //updatestopwatch();
-  //   };
-
-
-
   // ANIMATION POPUP LOGIC
   // -----------------------------------------------
   // todo maybe all make obsolete by animejs
@@ -3598,7 +3507,6 @@ document.addEventListener('DOMContentLoaded', () => {
     resetTriggeredCues(); // Clear triggered cues
     rewindToStart(); // Existing function to reset playback to the start
     resetStopwatch();
-
   });
 
   fullscreenButton.addEventListener('click', toggleFullscreen);
@@ -3668,86 +3576,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // window.addEventListener('resize', () => {
-  //   calculateMaxScrollDistance();
-  //   updatePosition();
-  // });
 
-
-
-
-
-
-  // // Detect double-tap to toggle pause/play
-  // // let lastTap = 0; // Timestamp of the last tap
-
-  // // document.addEventListener('touchstart', (event) => {
-  // //   const currentTime = Date.now();
-  // //   const timeSinceLastTap = currentTime - lastTap;
-
-  // //   if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
-  // //     // Double-tap detected
-  // //     console.log("[DEBUG] Double-tap detected. Toggling play/pause.");
-  // //     window.isPlaying ? window.pausePlayback() : window.startPlayback();
-  // //   }
-
-  // //   lastTap = currentTime; // Update the lastTap timestamp
-  // // }, { passive: false });
-
-
-
-
-  // let startX = 0; // Start X position of the touch
-  // let isSwiping = false; // Whether a swipe is in progress
-  // let holdInterval = null; // Interval for swipe-and-hold
-
-  // const SWIPE_THRESHOLD = 50; // Minimum swipe distance to detect as a gesture
-
-  // const startMoving = (direction) => {
-  //   if (direction === 'left') {
-  //     rewind(); // Move left
-  //   } else if (direction === 'right') {
-  //     forward(); // Move right
-  //   }
-  // };
-
-  // const stopMoving = () => {
-  //   clearInterval(holdInterval); // Stop the continuous movement
-  //   holdInterval = null;
-  // };
-
-  // // Attach touch event listeners
-  // const scoreArea = document.getElementById('scoreContainer'); // Replace with your element ID
-
-  // scoreArea.addEventListener('touchstart', (event) => {
-  //   startX = event.touches[0].clientX; // Record the starting X position
-  //   isSwiping = true; // Indicate a swipe is in progress
-  //   stopMoving(); // Stop any existing swipe-and-hold action
-  // });
-
-  // scoreArea.addEventListener('touchmove', (event) => {
-  //   if (!isSwiping) return;
-
-  //   const currentX = event.touches[0].clientX;
-  //   const deltaX = currentX - startX;
-
-  //   if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
-  //     const direction = deltaX > 0 ? 'left' : 'right';
-  //     //  console.log(Swipe detected: ${direction});
-
-  //     // Start swipe-and-hold behavior
-  //     if (!holdInterval) {
-  //       holdInterval = setInterval(() => startMoving(direction), 100); // Adjust interval speed as needed
-  //     }
-  //   }
-  // });
-
-  // scoreArea.addEventListener('touchend', () => {
-  //   isSwiping = false; // Reset swipe state
-  //   stopMoving(); // Stop swipe-and-hold action
-  // });
-
-
+  
   // disable enable network elements //////////////////////////////////////////////////////
 
   let isCommunicationEnabled = true; // Track the state of WebSocket and OSC communication

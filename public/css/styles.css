@@ -420,7 +420,7 @@ button:active {
   backface-visibility: hidden;
   /* Helps prevent flickering */
 
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
@@ -436,6 +436,7 @@ button:active {
   white-space: normal !important;
   /* ✅ Allows resizing */
   pointer-events: auto;
+  z-index: 0;
 }
 
 /* ✅ Forces the SVG to use the full height while maintaining aspect ratio */
@@ -482,8 +483,8 @@ button:active {
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 4px;
-  background: rgba(0, 255, 0, 0.9);
+  width: 1px;
+  background: rgba(0, 255, 179, 0.9);
   transform: translateX(-50%);
   pointer-events: none;
   z-index: 1;
@@ -1423,14 +1424,6 @@ body.inverted #stopwatch {
   /* ✅ Adds spacing */
 }
 
-/* 🔹 Waveform Container (Centered between client list & stopwatch) */
-#waveform-container {
-  width: 200px;
-  height: 2.5rem;
-  /* background: rgba(0, 0, 0, 0.7); */
-  border-radius: 5px;
-  margin-left: 40px;
-}
 
 /* 🔹 Stopwatch (Centered Over Playhead) */
 #stopwatch {

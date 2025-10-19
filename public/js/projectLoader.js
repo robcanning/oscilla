@@ -5,6 +5,7 @@
  */
 
 import { initializeSVG } from './app.js';
+import { setSpeed } from './transport.js';
 
 export async function loadProject(projectName) {
   try {
@@ -89,6 +90,7 @@ export async function loadProject(projectName) {
     console.log("[loadProject] 🔧 Initializing SVG logic...");
     if (typeof initializeSVG === "function") {
       initializeSVG(svgElement);
+      setSpeed(1);
 
     } else {
       console.warn("[loadProject] ⚠️ initializeSVG() not defined yet.");

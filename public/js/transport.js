@@ -3,385 +3,395 @@
 
 
 
-  window.seekDebounceTime = 300;
-  window.seekingTimeout = null;
+window.seekDebounceTime = 300;
+window.seekingTimeout = null;
 
 
 
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-      event.preventDefault(); // ✅ Prevents page scrolling
-  
-      // 🟢 Capture whether playback was active before seek
-      const wasPlayingBeforeSeek = window.isPlaying === true;
-  
-      window.isSeeking = true;
-  
-      if (event.key === 'ArrowLeft') {
-        rewind();
-      } else if (event.key === 'ArrowRight') {
-        forward();
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    event.preventDefault(); // ✅ Prevents page scrolling
+
+    // 🟢 Capture whether playback was active before seek
+    const wasPlayingBeforeSeek = window.isPlaying === true;
+
+    window.isSeeking = true;
+
+    if (event.key === 'ArrowLeft') {
+      rewind();
+    } else if (event.key === 'ArrowRight') {
+      forward();
+    }
+
+    if (seekingTimeout) clearTimeout(seekingTimeout);
+
+    seekingTimeout = setTimeout(() => {
+      window.isSeeking = false;
+      window.allowCues = true;
+      window.cueDisabledUntil = 0;
+
+      checkCueTriggers();
+
+      // ✅ Always resume playback if it was running before seek
+      if (wasPlayingBeforeSeek) {
+        window.startPlayback(); // resume
       }
-  
-      if (seekingTimeout) clearTimeout(seekingTimeout);
-  
-      seekingTimeout = setTimeout(() => {
-        window.isSeeking = false;
-        window.allowCues = true;
-        window.cueDisabledUntil = 0;
-  
-        checkCueTriggers();
-  
-        // ✅ Always resume playback if it was running before seek
-        if (wasPlayingBeforeSeek) {
-          window.startPlayback(); // resume
-        }
-  
-      }, seekDebounceTime);
+
+    }, seekDebounceTime);
+  }
+});
+
+
+
+// end of seeking logiC ///////////////////////////////////////////////
+
+
+
+// const //updatestopwatch = () => {
+//   // Use the accurate elapsed time without re-applying totalPauseDuration unnecessarily
+//   const effectiveElapsedTime = window.elapsedTime;
+//   const minutesElapsed = Math.floor(effectiveElapsedTime / 60000);
+//   const secondsElapsed = Math.floor((effectiveElapsedTime % 60000) / 1000);
+//   const minutesTotal = Math.floor(duration / 60000);
+//   const secondsTotal = Math.floor((duration % 60000) / 1000);
+
+
+//   const formattedElapsed = `${minutesElapsed}:${secondsElapsed.toString().padStart(2, '0')}`;
+//   const formattedTotal = `${minutesTotal}:${secondsTotal.toString().padStart(2, '0')}`;
+
+//   // stopwatch.textContent = `${formattedElapsed} / ${formattedTotal}`;
+//   stopwatch.textContent = `${formattedElapsed}`;
+
+//   log(LogLevel.INFO, `Stopwatch updated: Elapsed = ${formattedElapsed}, Total = ${formattedTotal}`);
+// };
+
+window.isSeeking = false;
+
+/**
+* ✅ Rewinds playback to the start of the score.
+* - Resets `playheadX` to 0 and ensures immediate UI update.
+* - Prevents unwanted sync overrides from reverting the rewind.
+* - Clears triggered cues and resets playback state.
+* - Sends an updated state to the server to sync all clients.
+*/
+
+window.ignoreRewindOnStartup = false; // ✅ Prevents unnecessary resets
+window.suppressSync = false;
+
+export const rewindToStart = () => {
+  console.log("[DEBUG] Rewinding to start.");
+
+  window.playheadX = 0;
+  window.elapsedTime = 0;
+  // resetStopwatch(); // ✅ Reset stopwatch
+
+  window.scoreContainer.scrollLeft = Math.max(0, window.playheadX);
+  window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  window.updateSpeedDisplay();
+
+  updatePosition();
+  // updateSeekBar();
+
+  if (triggeredCues) {
+    triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
+    window._cueInsideState?.clear();
+    // console.log("[DEBUG] Cleared triggered cues due to rewind.");
+  }
+
+  suppressSync = true;
+
+  if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
+    window.socket.send(JSON.stringify({
+      type: 'jump',
+      playheadX: window.playheadX,
+      elapsedTime: window.elapsedTime
+    }));
+
+    console.log("[DEBUG] Rewinding to start.");
+
+  }
+
+  setTimeout(() => { suppressSync = false; }, 500);
+};
+
+
+
+/**
+* ✅ Moves backward by a fixed distance on the score based on `playheadX`.
+* - Ensures smooth cue retriggering after rewinding.
+* - Updates UI elements and syncs with the server.
+*/
+
+export const rewind = () => {
+  const REWIND_INCREMENT_X = (1000 / duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
+  window.playheadX = Math.max(window.playheadX - REWIND_INCREMENT_X, 0);
+
+  window.scoreContainer.scrollLeft = window.playheadX;
+  // console.log(`[DEBUG] Rewind applied. Newwindow.playheadX: ${window.playheadX}`);
+
+  // ✅ Calculate `elapsedTime` based on `playheadX` for reference
+  window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+  // console.log(`[DEBUG] Synced elapsedTime fromwindow.playheadX: ${elapsedTime}`);
+
+  if (triggeredCues) {
+    triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
+    window._cueInsideState?.clear();
+    // console.log("[DEBUG] Cleared triggered cues due to rewind.");
+  }
+
+  // ✅ Apply and store correct speed based on the new playhead position
+  window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
+  window.updateSpeedDisplay();
+
+  updatePosition();
+  // updateSeekBar();
+  //updatestopwatch();
+
+  if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+    window.socket?.send(JSON.stringify({
+      type: 'jump', playheadX: window.playheadX,
+      elapsedTime: window.elapsedTime
+    }));
+  }
+
+  /* ✅ Ignore the next sync broadcast — it's our own jump being echoed */
+  window.ignoreNextSync = true;
+
+  /* ✅ Prevent server from overriding our new position for a short window */
+  window.recentlyRecalculatedPlayhead = true;
+  setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
+
+  /* ✅ Ensure local animation keeps running if playback is active */
+  if (window.isPlaying) {
+    console.log("[DEBUG] Freewheel continue after seek");
+    window.animationPaused = false;
+    window.isSeeking = false;
+
+    window.startAnimation?.();
+    window.startStopwatch?.();
+  }
+
+};
+
+
+/**
+* ✅ Moves forward by a fixed distance on the score based on `playheadX`.
+* - Ensures smooth cue retriggering after advancing.
+* - Updates UI elements and syncs with the server.
+*/
+
+export const forward = () => {
+  const FORWARD_INCREMENT_X = (1000 / duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
+  window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
+
+  window.scoreContainer.scrollLeft = window.playheadX;
+  // console.log(`[DEBUG] Forward applied. Newwindow.playheadX: ${window.playheadX}`);
+
+  // ✅ Calculate `elapsedTime` based on `playheadX` for reference
+  window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+  // console.log(`[DEBUG] Synced window.elapsedTime fromwindow.playheadX: ${elapsedTime}`);
+
+  if (triggeredCues) {
+    triggeredCues.clear(); // ✅ Ensure cues retrigger after forward
+    window._cueInsideState?.clear();
+    // console.log("[DEBUG] Cleared triggered cues due to forward.");
+  }
+
+  // ✅ Apply and store correct speed based on the new playhead position
+  window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
+  window.updateSpeedDisplay();
+
+
+  updatePosition();
+  // updateSeekBar();
+  //updatestopwatch();
+
+
+  if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+    window.socket?.send(JSON.stringify({
+      type: 'jump', playheadX: window.playheadX,
+      elapsedTime: window.elapsedTime
+    }));
+  }
+
+  /* ✅ Ignore the next sync broadcast — it's our own jump being echoed */
+  window.ignoreNextSync = true;
+
+  /* ✅ Prevent server from overriding our new position for a short window */
+  window.recentlyRecalculatedPlayhead = true;
+  setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
+
+  /* ✅ Ensure local animation keeps running if playback is active */
+  if (window.isPlaying) {
+    console.log("[DEBUG] Freewheel continue after seek");
+    window.animationPaused = false;
+    window.isSeeking = false;
+
+    window.startAnimation?.();
+    window.startStopwatch?.();
+  }
+
+};
+
+
+
+/**
+ * getSpeedForPosition(xPosition)
+ * 
+ * Determines the correct speed multiplier based on the nearest previous cueSpeed.
+ * Used when seeking, rewinding, or jumping to a new location in the score.
+ * Defaults to 1.0x if no matching cue is found.
+ * 
+ * @param {number} xPosition - The scroll/playhead X position
+ * @returns {number} speedMultiplier
+ */
+export function getSpeedForPosition(xPosition) {
+  const viewportOffset = window.scoreContainer?.offsetWidth / 2 || 0; // Center of the screen
+  const adjustedPlayheadX = xPosition + viewportOffset;
+
+  if (!window.speedCueMap || window.speedCueMap.length === 0) {
+    console.warn("[WARNING] No speed cues exist. Defaulting to 1.0x speed.");
+    return 1.0;
+  }
+
+  const lastSpeedCue = window.speedCueMap
+    .filter(cue => cue.position <= adjustedPlayheadX)
+    .slice(-1)[0];
+
+  if (lastSpeedCue) {
+    // console.log(`[DEBUG] ✅ Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
+    window.speedMultiplier = lastSpeedCue.multiplier;
+    window.updateSpeedDisplay?.();
+    return window.speedMultiplier;
+  } else {
+    console.log("[DEBUG] ❗ No previous speed cue found, defaulting to 1.0");
+    return 1.0;
+  }
+}
+
+
+/**
+ *  Keyboard & UI Speed Multiplier Control
+ * Handles +/- keyboard keys and optional buttons for adjusting playback speed.
+ * Syncs changes with server via WebSocket and updates on-screen display.
+ */
+
+export function initializeSpeedControls() {
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "+" || event.key === "=") {
+      adjustSpeed(0.1);
+    } else if (event.key === "-") {
+      adjustSpeed(-0.1);
     }
   });
-  
 
+  const incBtn = document.getElementById("increaseSpeed");
+  const decBtn = document.getElementById("decreaseSpeed");
+  const resetBtn = document.getElementById("resetSpeed");
 
-  // end of seeking logiC ///////////////////////////////////////////////
+  if (incBtn) incBtn.addEventListener("click", () => adjustSpeed(0.1));
+  if (decBtn) decBtn.addEventListener("click", () => adjustSpeed(-0.1));
+  if (resetBtn) resetBtn.addEventListener("click", () => setSpeed(1.0));
+}
 
+/**
+ * Adjusts the global speed multiplier and updates the display.
+ * @param {number} delta - Amount to increase/decrease (e.g. 0.1 or -0.1)
+ */
+export function adjustSpeed(delta) {
+  const newSpeed = Math.max(0.5, Math.min(3.0, (window.speedMultiplier || 1) + delta));
+  setSpeed(newSpeed);
+}
 
+/**
+ * Sets the speed multiplier and syncs it.
+ * @param {number} newSpeed - The new speed multiplier
+ */
+export function setSpeed(newSpeed) {
+  window.speedMultiplier = parseFloat(newSpeed.toFixed(1));
+  updateSpeedDisplay();
+  sendSpeedUpdateToServer(window.speedMultiplier);
+}
 
-  // const //updatestopwatch = () => {
-  //   // Use the accurate elapsed time without re-applying totalPauseDuration unnecessarily
-  //   const effectiveElapsedTime = window.elapsedTime;
-  //   const minutesElapsed = Math.floor(effectiveElapsedTime / 60000);
-  //   const secondsElapsed = Math.floor((effectiveElapsedTime % 60000) / 1000);
-  //   const minutesTotal = Math.floor(duration / 60000);
-  //   const secondsTotal = Math.floor((duration % 60000) / 1000);
+/**
+ * Updates the on-screen speed display.
+ */
+export function updateSpeedDisplay() {
+  const display = document.getElementById("speedDisplay");
+  if (display) display.textContent = `${window.speedMultiplier.toFixed(1)}×`;
+}
 
+/**
+ * Sends the speed to the server via WebSocket.
+ * Uses `set_speed_multiplier` to match server expectations.
+ */
+export function sendSpeedUpdateToServer(speed) {
+  if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
+    console.warn("[speedControl] WebSocket not ready — skipping update.");
+    return;
+  }
 
-  //   const formattedElapsed = `${minutesElapsed}:${secondsElapsed.toString().padStart(2, '0')}`;
-  //   const formattedTotal = `${minutesTotal}:${secondsTotal.toString().padStart(2, '0')}`;
-
-  //   // stopwatch.textContent = `${formattedElapsed} / ${formattedTotal}`;
-  //   stopwatch.textContent = `${formattedElapsed}`;
-
-  //   log(LogLevel.INFO, `Stopwatch updated: Elapsed = ${formattedElapsed}, Total = ${formattedTotal}`);
-  // };
-
-  window.isSeeking = false;
-
-  /**
-  * ✅ Rewinds playback to the start of the score.
-  * - Resets `playheadX` to 0 and ensures immediate UI update.
-  * - Prevents unwanted sync overrides from reverting the rewind.
-  * - Clears triggered cues and resets playback state.
-  * - Sends an updated state to the server to sync all clients.
-  */
-
-  window.ignoreRewindOnStartup = false; // ✅ Prevents unnecessary resets
-  window.suppressSync = false;
-
-  export const rewindToStart = () => {
-    console.log("[DEBUG] Rewinding to start.");
-  
-    window.playheadX = 0;
-    window.elapsedTime = 0;
-    // resetStopwatch(); // ✅ Reset stopwatch
-  
-    window.scoreContainer.scrollLeft = Math.max(0, window.playheadX);
-    window.speedMultiplier = getSpeedForPosition(window.playheadX);
-    window.updateSpeedDisplay();
-  
-    updatePosition();
-    // updateSeekBar();
-  
-    suppressSync = true;
-  
-    if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
-      window.socket.send(JSON.stringify({
-        type: 'jump',
-        playheadX: window.playheadX,
-        elapsedTime: window.elapsedTime
-      }));
-      
-      console.log("[DEBUG] Rewinding to start.");
-
-    }
-  
-    setTimeout(() => { suppressSync = false; }, 500);
-  };
-  
-
-
-  /**
-  * ✅ Moves backward by a fixed distance on the score based on `playheadX`.
-  * - Ensures smooth cue retriggering after rewinding.
-  * - Updates UI elements and syncs with the server.
-  */
-
-  export const rewind = () => {
-    const REWIND_INCREMENT_X = (1000 / duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
-    window.playheadX = Math.max(window.playheadX - REWIND_INCREMENT_X, 0);
-
-    window.scoreContainer.scrollLeft =window.playheadX;
-    // console.log(`[DEBUG] Rewind applied. Newwindow.playheadX: ${window.playheadX}`);
-
-    // ✅ Calculate `elapsedTime` based on `playheadX` for reference
-    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-    // console.log(`[DEBUG] Synced elapsedTime fromwindow.playheadX: ${elapsedTime}`);
-
-    if (triggeredCues) {
-      triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
-      window._cueInsideState?.clear(); 
-      // console.log("[DEBUG] Cleared triggered cues due to rewind.");
-    }
-
-    // ✅ Apply and store correct speed based on the new playhead position
-    window.speedMultiplier = getSpeedForPosition(window.playheadX);
-    // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
-    window.updateSpeedDisplay();
-
-    updatePosition();
-    // updateSeekBar();
-    //updatestopwatch();
-
-    if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-        elapsedTime: window.elapsedTime }));
-    }
-
-    /* ✅ Ignore the next sync broadcast — it's our own jump being echoed */
-    window.ignoreNextSync = true;
-
-    /* ✅ Prevent server from overriding our new position for a short window */
-    window.recentlyRecalculatedPlayhead = true;
-    setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
-
-    /* ✅ Ensure local animation keeps running if playback is active */
-    if (window.isPlaying) {
-      console.log("[DEBUG] Freewheel continue after seek");
-      window.animationPaused = false;
-      window.isSeeking = false;
-
-      window.startAnimation?.();
-      window.startStopwatch?.();
-    }
-
+  const message = {
+    type: "set_speed_multiplier",
+    multiplier: speed,
+    timestamp: Date.now(),
   };
 
-
-  /**
-  * ✅ Moves forward by a fixed distance on the score based on `playheadX`.
-  * - Ensures smooth cue retriggering after advancing.
-  * - Updates UI elements and syncs with the server.
-  */
-
-  export const forward = () => {
-    const FORWARD_INCREMENT_X = (1000 / duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
-   window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
-
-    window.scoreContainer.scrollLeft =window.playheadX;
-    // console.log(`[DEBUG] Forward applied. Newwindow.playheadX: ${window.playheadX}`);
-
-    // ✅ Calculate `elapsedTime` based on `playheadX` for reference
-    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-    // console.log(`[DEBUG] Synced window.elapsedTime fromwindow.playheadX: ${elapsedTime}`);
-
-    if (triggeredCues) {
-      triggeredCues.clear(); // ✅ Ensure cues retrigger after forward
-      window._cueInsideState?.clear(); 
-      // console.log("[DEBUG] Cleared triggered cues due to forward.");
-    }
-
-    // ✅ Apply and store correct speed based on the new playhead position
-    window.speedMultiplier = getSpeedForPosition(window.playheadX);
-    // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
-    window.updateSpeedDisplay();
+  window.socket.send(JSON.stringify(message));
+  console.log("[speedControl] Sent speed update:", message);
+}
 
 
-    updatePosition();
-    // updateSeekBar();
-    //updatestopwatch();
-
-
-    if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-      window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-        elapsedTime: window.elapsedTime }));
-    }
-
-    /* ✅ Ignore the next sync broadcast — it's our own jump being echoed */
-    window.ignoreNextSync = true;
-
-    /* ✅ Prevent server from overriding our new position for a short window */
-    window.recentlyRecalculatedPlayhead = true;
-    setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
-
-    /* ✅ Ensure local animation keeps running if playback is active */
-    if (window.isPlaying) {
-      console.log("[DEBUG] Freewheel continue after seek");
-      window.animationPaused = false;
-      window.isSeeking = false;
-
-      window.startAnimation?.();
-      window.startStopwatch?.();
-    }
-
-  };
+window.updateSpeedDisplay = updateSpeedDisplay;
+window.setSpeed = setSpeed;
+window.adjustSpeed = adjustSpeed;
 
 
 
-  /**
-   * getSpeedForPosition(xPosition)
-   * 
-   * Determines the correct speed multiplier based on the nearest previous cueSpeed.
-   * Used when seeking, rewinding, or jumping to a new location in the score.
-   * Defaults to 1.0x if no matching cue is found.
-   * 
-   * @param {number} xPosition - The scroll/playhead X position
-   * @returns {number} speedMultiplier
-   */
-  export function getSpeedForPosition(xPosition) {
-    const viewportOffset = window.scoreContainer?.offsetWidth / 2 || 0; // Center of the screen
-    const adjustedPlayheadX = xPosition + viewportOffset;
-  
-    if (!window.speedCueMap || window.speedCueMap.length === 0) {
-      console.warn("[WARNING] No speed cues exist. Defaulting to 1.0x speed.");
-      return 1.0;
-    }
-  
-    const lastSpeedCue = window.speedCueMap
-      .filter(cue => cue.position <= adjustedPlayheadX)
-      .slice(-1)[0];
-  
-    if (lastSpeedCue) {
-      // console.log(`[DEBUG] ✅ Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
-      window.speedMultiplier = lastSpeedCue.multiplier;
-      window.updateSpeedDisplay?.();
-      return window.speedMultiplier;
-    } else {
-      console.log("[DEBUG] ❗ No previous speed cue found, defaulting to 1.0");
-      return 1.0;
-    }
-  }
-  
-  
-  /**
-   *  Keyboard & UI Speed Multiplier Control
-   * Handles +/- keyboard keys and optional buttons for adjusting playback speed.
-   * Syncs changes with server via WebSocket and updates on-screen display.
-   */
-  
-  export function initializeSpeedControls() {
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "+" || event.key === "=") {
-        adjustSpeed(0.1);
-      } else if (event.key === "-") {
-        adjustSpeed(-0.1);
-      }
-    });
-  
-    const incBtn = document.getElementById("increaseSpeed");
-    const decBtn = document.getElementById("decreaseSpeed");
-    const resetBtn = document.getElementById("resetSpeed");
-  
-    if (incBtn) incBtn.addEventListener("click", () => adjustSpeed(0.1));
-    if (decBtn) decBtn.addEventListener("click", () => adjustSpeed(-0.1));
-    if (resetBtn) resetBtn.addEventListener("click", () => setSpeed(1.0));
-  }
-  
-  /**
-   * Adjusts the global speed multiplier and updates the display.
-   * @param {number} delta - Amount to increase/decrease (e.g. 0.1 or -0.1)
-   */
-  export function adjustSpeed(delta) {
-    const newSpeed = Math.max(0.5, Math.min(3.0, (window.speedMultiplier || 1) + delta));
-    setSpeed(newSpeed);
-  }
-  
-  /**
-   * Sets the speed multiplier and syncs it.
-   * @param {number} newSpeed - The new speed multiplier
-   */
-  export function setSpeed(newSpeed) {
-    window.speedMultiplier = parseFloat(newSpeed.toFixed(1));
-    updateSpeedDisplay();
-    sendSpeedUpdateToServer(window.speedMultiplier);
-  }
-  
-  /**
-   * Updates the on-screen speed display.
-   */
-  export function updateSpeedDisplay() {
-    const display = document.getElementById("speedDisplay");
-    if (display) display.textContent = `${window.speedMultiplier.toFixed(1)}×`;
-  }
-  
-  /**
-   * Sends the speed to the server via WebSocket.
-   * Uses `set_speed_multiplier` to match server expectations.
-   */
-  export function sendSpeedUpdateToServer(speed) {
-    if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
-      console.warn("[speedControl] WebSocket not ready — skipping update.");
-      return;
-    }
-  
-    const message = {
-      type: "set_speed_multiplier",
-      multiplier: speed,
-      timestamp: Date.now(),
-    };
-  
-    window.socket.send(JSON.stringify(message));
-    console.log("[speedControl] Sent speed update:", message);
-  }
-  
-  
-  window.updateSpeedDisplay = updateSpeedDisplay;
-  window.setSpeed = setSpeed;
-  window.adjustSpeed = adjustSpeed;
-  
+///////////////////////////////////////
+// SEEKBAR LOGIC
+// export  const updateSeekBar = () => {
+//   const progress =  (window.elapsedTime / window.duration) * 100;
+//   seekBar.value = progress;
+// };
 
 
-  ///////////////////////////////////////
-    // SEEKBAR LOGIC
-  // export  const updateSeekBar = () => {
-  //   const progress =  (window.elapsedTime / window.duration) * 100;
-  //   seekBar.value = progress;
-  // };
+let controlsTimeout; // Timer to hide controls after inactivity
 
+export const hideControls = () => {
+  const controls = document.getElementById('controls');
+  const topBar = document.getElementById('top-bar'); // ✅ Include top-bar
 
-  let controlsTimeout; // Timer to hide controls after inactivity
+  controls.classList.add('dismissed');
+  if (topBar) topBar.classList.add('dismissed'); // ✅ Hide top-bar
 
-  export const hideControls = () => {
-    const controls = document.getElementById('controls');
-    const topBar = document.getElementById('top-bar'); // ✅ Include top-bar
+  console.log('Controls hidden.');
+};
 
-    controls.classList.add('dismissed');
-    if (topBar) topBar.classList.add('dismissed'); // ✅ Hide top-bar
+export const showControls = () => {
+  const controls = document.getElementById('controls');
+  const topBar = document.getElementById('top-bar'); // ✅ Include top-bar
 
-    console.log('Controls hidden.');
-  };
-
-  export const showControls = () => {
-    const controls = document.getElementById('controls');
-    const topBar = document.getElementById('top-bar'); // ✅ Include top-bar
-
-    controls.classList.remove('dismissed');
-    if (topBar) topBar.classList.remove('dismissed'); // ✅ Show top-bar
-  };
+  controls.classList.remove('dismissed');
+  if (topBar) topBar.classList.remove('dismissed'); // ✅ Show top-bar
+};
 
 
 
-  
-    // Function to synchronize playback time
-    // Updates `elapsedTime` and aligns the score
-    // Ensures correct positioning and checks for active cues.
-    export const setElapsedTime = (newTime) => {
-      window.elapsedTime = newTime; // ✅ Update playback time
-      updatePosition(window.playheadX); // ✅ Use the correct playhead position
-  
-      checkCueTriggers(window.elapsedTime); // ✅ Recheck cues
-    };
-  
-  // transport.js
+
+// Function to synchronize playback time
+// Updates `elapsedTime` and aligns the score
+// Ensures correct positioning and checks for active cues.
+export const setElapsedTime = (newTime) => {
+  window.elapsedTime = newTime; // ✅ Update playback time
+  updatePosition(window.playheadX); // ✅ Use the correct playhead position
+
+  checkCueTriggers(window.elapsedTime); // ✅ Recheck cues
+};
+
+// transport.js
 export function initSeekBarListeners() {
   const seekBar = window.seekBar || document.getElementById("seek-bar");
 
@@ -449,32 +459,32 @@ export function initSeekBarListeners() {
 
 
 
-    /**
-     * ✅ Toggles playback state between play and pause.
-     * - Delegates to startPlayback() or pausePlayback() for consistent logic.
-     * - Ensures all flags and state updates are handled in one place.
-     */
-    export const togglePlay = () => {
-      if (window.isPlaying) {
-        window.pausePlayback();
-      } else {
-        window.startPlayback();
-      }
-    };
-    
-    // ✅ Updates the play/pause button UI to match playback state
-    export const togglePlayButton = () => {
-      const playButton = document.getElementById("toggle-button");
-    
-      if (playButton) {
-        playButton.innerHTML = window.isPlaying
-          ? '<div class="custom-pause"></div>'
-          : "▶";
-      } else {
-        console.error("[ERROR] Play button element not found.");
-      }
-    };
-    
+/**
+ * ✅ Toggles playback state between play and pause.
+ * - Delegates to startPlayback() or pausePlayback() for consistent logic.
+ * - Ensures all flags and state updates are handled in one place.
+ */
+export const togglePlay = () => {
+  if (window.isPlaying) {
+    window.pausePlayback();
+  } else {
+    window.startPlayback();
+  }
+};
+
+// ✅ Updates the play/pause button UI to match playback state
+export const togglePlayButton = () => {
+  const playButton = document.getElementById("toggle-button");
+
+  if (playButton) {
+    playButton.innerHTML = window.isPlaying
+      ? '<div class="custom-pause"></div>'
+      : "▶";
+  } else {
+    console.error("[ERROR] Play button element not found.");
+  }
+};
+
 // import { getSpeedForPosition, updateSpeedDisplay } from "./cues.js";
 // import { updateSeekBar } from "./transport.js"; // safe circular import; only function refs used
 // import { togglePlayButton } from "./ui.js"; // if you have a UI helper
@@ -542,176 +552,178 @@ export function startPlayback() {
   console.log("[Playback] ✅ Playback initialized");
 }
 
-    // ✅ Pauses playback: sets state, stops animation + stopwatch, syncs with server
-   export  function pausePlayback() {
-      if (window.isPlaying) {
-        console.log("[Playback] ⏸ Pausing playback");
-        window.isPlaying = false;
-        window.isMusicalPause = false;
-        window.animationPaused = true;
-    
-        window.stopStopwatch?.();
-        window.stopAnimation?.();
-        togglePlayButton();
-    
-        // Send pause message to server
-        if (window.socket && window.socket.readyState === WebSocket.OPEN) {
-          window.socket.send(JSON.stringify({
-            type: "pause",
-            playheadX: window.playheadX,
-            elapsedTime: window.elapsedTime
-          }));
-        }
-      }
-    };
-    
-    // ✅ Resume logic: reuse startPlayback() for consistency
-    export function resumePlayback() {
-      console.log("[Playback] 🔁 resumePlayback() called");
-      window.startPlayback();
-    };
-    
-    
-    
-    
-      //////////////////////////////////////////////////
-    
-      export const jumpToCueId = (id) => {
-        // Try first in cues[]
-        let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"));
-    
-        // Fallback to global SVG search if not found in cues[]
-        if (!target) {
-          target = document.getElementById(id);
-        }
-    
-        if (!target) {
-          console.warn(`[jumpToCueId] Cue not found: ${id}`);
-          return;
-        }
-    
-        let targetX = target.x;
-        if (typeof targetX !== 'number') {
-          targetX = parseFloat(target.getAttribute('x')) || 0;
-        }
-    
-       window.playheadX = targetX - (window.innerWidth / 2);
-        window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-        window.scoreContainer.scrollLeft = window.playheadX;
-    
-        console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
-    
-        if (window.wsEnabled &&window.socket&& socket.readyState === WebSocket.OPEN) {
-          window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-            elapsedTime: window.elapsedTime }));
-        }
-    
-        updatePosition();
-        // updateSeekBar();
-        //updatestopwatch();
-      };
-    
-    
+// ✅ Pauses playback: sets state, stops animation + stopwatch, syncs with server
+export function pausePlayback() {
+  if (window.isPlaying) {
+    console.log("[Playback] ⏸ Pausing playback");
+    window.isPlaying = false;
+    window.isMusicalPause = false;
+    window.animationPaused = true;
 
+    window.stopStopwatch?.();
+    window.stopAnimation?.();
+    togglePlayButton();
 
-
-
-
-  document.addEventListener('fullscreenchange', () => {
-
-    if (document.fullscreenElement) {
-      hideControls();
-    } else {
-      showControls();
-      clearTimeout(controlsTimeout);
+    // Send pause message to server
+    if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+      window.socket.send(JSON.stringify({
+        type: "pause",
+        playheadX: window.playheadX,
+        elapsedTime: window.elapsedTime
+      }));
     }
+  }
+};
 
-    // 🔥 Ensurewindow.playheadX is recalculated on fullscreen change
-    // recalculatePlayheadPosition(window.scoreSVG);
-    calculateMaxScrollDistance();
-    // extractScoreElements(svgElement);
-
-  });
-
-  window.dispatchEvent(new Event("resize"));
-  window.addEventListener('resize', () => {
-    const startTime = performance.now();
-    extractScoreElements(window.scoreSVG);
-    const endTime = performance.now();
-    console.log(`[DEBUG] ⏳ extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
-    console.log("[DEBUG] ✅ Extracted Score Elements. Now Checking Sync...");
+// ✅ Resume logic: reuse startPlayback() for consistency
+export function resumePlayback() {
+  console.log("[Playback] 🔁 resumePlayback() called");
+  window.startPlayback();
+};
 
 
-    console.log("[DEBUG] Resize detected, recalculating maxScrollDistance and aligning playhead...");
-    calculateMaxScrollDistance();
-  });
 
-  //document.addEventListener('fullscreenchange', adjustscoreContainerHeight);
 
-  // // Show controls on user interaction in fullscreen mode
-  // let hideControlsTimeout; // Store timeout reference
+//////////////////////////////////////////////////
 
-  // document.addEventListener('mousemove', () => {
-  //   showControls(); // ✅ Show controls on mouse move
+export const jumpToCueId = (id) => {
+  // Try first in cues[]
+  let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"));
 
-  //   // ✅ Clear any existing timeout before starting a new one
-  //   clearTimeout(hideControlsTimeout);
+  // Fallback to global SVG search if not found in cues[]
+  if (!target) {
+    target = document.getElementById(id);
+  }
 
-  //   // ✅ Set a new timeout to hide controls after 5 seconds
-  //   hideControlsTimeout = setTimeout(() => {
-  //     hideControls();
-  //   }, 5000);
+  if (!target) {
+    console.warn(`[jumpToCueId] Cue not found: ${id}`);
+    return;
+  }
 
-  // });// document.addEventListener('keydown', showControls);   // Show controls on key press
+  let targetX = target.x;
+  if (typeof targetX !== 'number') {
+    targetX = parseFloat(target.getAttribute('x')) || 0;
+  }
 
-  // // Show controls on user interaction in fullscreen mode
+  window.playheadX = targetX - (window.innerWidth / 2);
+  window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+  window.scoreContainer.scrollLeft = window.playheadX;
 
-  // document.addEventListener('mousemove', () => {
-  //   if (document.fullscreenElement) {
-  //     showControls(); // ✅ Show controls on mouse move
+  console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
 
-  //     // ✅ Clear any existing timeout before starting a new one
-  //     clearTimeout(hideControlsTimeout);
+  if (window.wsEnabled && window.socket && socket.readyState === WebSocket.OPEN) {
+    window.socket?.send(JSON.stringify({
+      type: 'jump', playheadX: window.playheadX,
+      elapsedTime: window.elapsedTime
+    }));
+  }
 
-  //     // ✅ Set a new timeout to hide controls after 5 seconds
-  //     hideControlsTimeout = setTimeout(() => {
-  //       hideControls();
-  //     }, 5000);
-  //   }
-  // // });
-
-  // document.addEventListener('keydown', (event) => {
-  //   // ✅ Ignore arrow keys & spacebar when seeking or pausing
-  //   if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === " ") {
-  //     return; // ✅ Do nothing, skip showing controls
-  //   }
-
-  //   // ✅ Show controls for other key presses
-  //   showControls();
-
-  //   // ✅ Hide controls after 5 seconds
-  //   setTimeout(() => {
-  //     hideControls();
-  //   }, 5000);
-
-  // });
+  updatePosition();
+  // updateSeekBar();
+  //updatestopwatch();
+};
 
 
 
 
 
-  /* ---------------------------------------------------------------------------
- *  DOUBLE-TAP / DOUBLE-CLICK CONTROL TOGGLE (VERBOSE DEBUG VERSION)
- *  ---------------------------------------------------------------------------
- *  Purpose:
- *    • Shows playback controls only after a confirmed double-tap (mobile)
- *      or double-click (desktop).
- *    • Ignores single taps and scroll gestures.
- *    • Avoids browser [Intervention] warnings by not preventing native scroll.
- *
- *  Debug Output:
- *    Logs every phase of touch detection to identify false triggers.
- * --------------------------------------------------------------------------- */
+
+
+document.addEventListener('fullscreenchange', () => {
+
+  if (document.fullscreenElement) {
+    hideControls();
+  } else {
+    showControls();
+    clearTimeout(controlsTimeout);
+  }
+
+  // 🔥 Ensurewindow.playheadX is recalculated on fullscreen change
+  // recalculatePlayheadPosition(window.scoreSVG);
+  calculateMaxScrollDistance();
+  // extractScoreElements(svgElement);
+
+});
+
+window.dispatchEvent(new Event("resize"));
+window.addEventListener('resize', () => {
+  const startTime = performance.now();
+  extractScoreElements(window.scoreSVG);
+  const endTime = performance.now();
+  console.log(`[DEBUG] ⏳ extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
+  console.log("[DEBUG] ✅ Extracted Score Elements. Now Checking Sync...");
+
+
+  console.log("[DEBUG] Resize detected, recalculating maxScrollDistance and aligning playhead...");
+  calculateMaxScrollDistance();
+});
+
+//document.addEventListener('fullscreenchange', adjustscoreContainerHeight);
+
+// // Show controls on user interaction in fullscreen mode
+// let hideControlsTimeout; // Store timeout reference
+
+// document.addEventListener('mousemove', () => {
+//   showControls(); // ✅ Show controls on mouse move
+
+//   // ✅ Clear any existing timeout before starting a new one
+//   clearTimeout(hideControlsTimeout);
+
+//   // ✅ Set a new timeout to hide controls after 5 seconds
+//   hideControlsTimeout = setTimeout(() => {
+//     hideControls();
+//   }, 5000);
+
+// });// document.addEventListener('keydown', showControls);   // Show controls on key press
+
+// // Show controls on user interaction in fullscreen mode
+
+// document.addEventListener('mousemove', () => {
+//   if (document.fullscreenElement) {
+//     showControls(); // ✅ Show controls on mouse move
+
+//     // ✅ Clear any existing timeout before starting a new one
+//     clearTimeout(hideControlsTimeout);
+
+//     // ✅ Set a new timeout to hide controls after 5 seconds
+//     hideControlsTimeout = setTimeout(() => {
+//       hideControls();
+//     }, 5000);
+//   }
+// // });
+
+// document.addEventListener('keydown', (event) => {
+//   // ✅ Ignore arrow keys & spacebar when seeking or pausing
+//   if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === " ") {
+//     return; // ✅ Do nothing, skip showing controls
+//   }
+
+//   // ✅ Show controls for other key presses
+//   showControls();
+
+//   // ✅ Hide controls after 5 seconds
+//   setTimeout(() => {
+//     hideControls();
+//   }, 5000);
+
+// });
+
+
+
+
+
+/* ---------------------------------------------------------------------------
+*  DOUBLE-TAP / DOUBLE-CLICK CONTROL TOGGLE (VERBOSE DEBUG VERSION)
+*  ---------------------------------------------------------------------------
+*  Purpose:
+*    • Shows playback controls only after a confirmed double-tap (mobile)
+*      or double-click (desktop).
+*    • Ignores single taps and scroll gestures.
+*    • Avoids browser [Intervention] warnings by not preventing native scroll.
+*
+*  Debug Output:
+*    Logs every phase of touch detection to identify false triggers.
+* --------------------------------------------------------------------------- */
 // ⏳ Hide controls a few seconds after showing them
 function hideControlsLater(delay = 4000) {
   clearTimeout(window._hideControlsTimer);
@@ -752,44 +764,44 @@ function showControlsAndAutoHide() {
 
 
 
-let lastTapTime = 0;
-let tapTimeout;
-const DOUBLE_TAP_MIN = 150;   // ignore ultra-fast taps
-const DOUBLE_TAP_MAX = 500;   // require second tap within 0.5 s
-const MOVE_TOLERANCE = 20;    // px
+  let lastTapTime = 0;
+  let tapTimeout;
+  const DOUBLE_TAP_MIN = 150;   // ignore ultra-fast taps
+  const DOUBLE_TAP_MAX = 500;   // require second tap within 0.5 s
+  const MOVE_TOLERANCE = 20;    // px
 
-let startX = 0, startY = 0;
+  let startX = 0, startY = 0;
 
-document.addEventListener("touchstart", (e) => {
-  const t = e.touches[0];
-  startX = t.clientX;
-  startY = t.clientY;
-});
+  document.addEventListener("touchstart", (e) => {
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+  });
 
-document.addEventListener("touchend", (e) => {
-  const t = e.changedTouches[0];
-  const dx = Math.abs(t.clientX - startX);
-  const dy = Math.abs(t.clientY - startY);
-  if (dx > MOVE_TOLERANCE || dy > MOVE_TOLERANCE) return; // it’s a scroll
+  document.addEventListener("touchend", (e) => {
+    const t = e.changedTouches[0];
+    const dx = Math.abs(t.clientX - startX);
+    const dy = Math.abs(t.clientY - startY);
+    if (dx > MOVE_TOLERANCE || dy > MOVE_TOLERANCE) return; // it’s a scroll
 
-  const now = Date.now();
-  const delta = now - lastTapTime;
+    const now = Date.now();
+    const delta = now - lastTapTime;
 
-  clearTimeout(tapTimeout);
+    clearTimeout(tapTimeout);
 
-  if (delta >= DOUBLE_TAP_MIN && delta <= DOUBLE_TAP_MAX) {
-    console.log("[TAP] ✅ Confirmed DOUBLE TAP");
-    showControls();
-    hideControlsLater();
-    lastTapTime = 0; // reset
-  } else {
-    lastTapTime = now;
-    // optional: single-tap fallback
-    tapTimeout = setTimeout(() => {
-      lastTapTime = 0;
-    }, DOUBLE_TAP_MAX + 50);
-  }
-});
+    if (delta >= DOUBLE_TAP_MIN && delta <= DOUBLE_TAP_MAX) {
+      console.log("[TAP] ✅ Confirmed DOUBLE TAP");
+      showControls();
+      hideControlsLater();
+      lastTapTime = 0; // reset
+    } else {
+      lastTapTime = now;
+      // optional: single-tap fallback
+      tapTimeout = setTimeout(() => {
+        lastTapTime = 0;
+      }, DOUBLE_TAP_MAX + 50);
+    }
+  });
 
 
   // -------------------------------------------------------------------------
@@ -804,14 +816,14 @@ document.addEventListener("touchend", (e) => {
 })();
 
 
-  /* ---------------------------------------------------------------------------
- *  HYBRID SCROLL HANDLER + PLAYBACK GESTURE CONTROL
- *  ---------------------------------------------------------------------------
- *  • Sends throttled "jump" WS messages while user scrolls.
- *  • Sends one final "jump" on scroll end.
- *  • If playback is running when scroll starts, it pauses automatically.
- *  • When scroll finishes, playback resumes only if it was playing before.
- * --------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------------
+*  HYBRID SCROLL HANDLER + PLAYBACK GESTURE CONTROL
+*  ---------------------------------------------------------------------------
+*  • Sends throttled "jump" WS messages while user scrolls.
+*  • Sends one final "jump" on scroll end.
+*  • If playback is running when scroll starts, it pauses automatically.
+*  • When scroll finishes, playback resumes only if it was playing before.
+* --------------------------------------------------------------------------- */
 /* ---------------------------------------------------------------------------
  *  HYBRID SCROLL + GESTURE PLAYBACK CONTROL  (debounced + safe resume)
  * --------------------------------------------------------------------------- */
@@ -904,12 +916,23 @@ document.addEventListener("touchend", (e) => {
       clearTimeout(resumeTimer);
 
       if (wasPlayingBeforeScroll) {
+
+        if (triggeredCues) {
+          triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
+          window._cueInsideState?.clear();
+          console.log("[DEBUG] Cleared triggered cues due to rewind.");
+        }
+
         console.log("[GESTURE] ⏳ Scroll finished — scheduling resume…");
+
         resumeTimer = setTimeout(() => {
           // Check again: no further scroll since we scheduled this
           if (!window.userScrolling) {
             console.log("[GESTURE] ▶️ Resuming playback after settle delay");
+
+
             window.startPlayback?.();
+
             wasPlayingBeforeScroll = false;
           } else {
             console.log("[GESTURE] 🚫 Resume canceled — still scrolling");
