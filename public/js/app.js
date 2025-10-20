@@ -17,6 +17,8 @@
 // });
 
 
+import { initializeDarkModeToggle } from "./transport.js";
+
 
 import { loadProject } from './projectLoader.js';
 import { setupScore, extractScoreElements, propagate, autoInjectGroupsInScroll } from './scoreSetup.js';
@@ -3062,10 +3064,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  const invertColors = () => {
-    document.body.classList.toggle('inverted');
-    console.log('Color scheme inverted.');
-  };
+ 
 
   const toggleWebSocket = () => {
     window.wsEnabled = !window.wsEnabled;
@@ -3510,7 +3509,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   fullscreenButton.addEventListener('click', toggleFullscreen);
-  invertButton.addEventListener('click', invertColors);
+  
+  // invertButton.addEventListener('click', invertColors);
+
   wsToggleButton.addEventListener('click', () => {
     toggleCommunication(); // Use the toggle function for WebSocket and OSC messages
     // wsToggleButton.textContent = isCommunicationEnabled ? 'Disable Communication' : 'Enable Communication';
@@ -3549,6 +3550,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.instructions').style.display = 'none';
     document.getElementById('action-buttons').style.display = 'flex';
   }
+
+
+window.addEventListener("DOMContentLoaded", () => {
+  initializeDarkModeToggle();
+});
+
 
   // Single keydown event listener
   document.addEventListener('keydown', (event) => {
@@ -3622,6 +3629,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+
+
+
+
+
   // Initialize
 
   // wsToggleButton.textContent = isCommunicationEnabled ? 'Disable Communication' : 'Enable Communication';
@@ -3644,6 +3656,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   toggleSplashScreen();
+
+
+
+
 
   console.log('// EOF');
 

@@ -950,6 +950,30 @@ function showControlsAndAutoHide() {
 
 
 
+// ------------------------------------------------------------
+//  Dark Mode Toggle — Simple Console-Equivalent
+// ------------------------------------------------------------
+export function initializeDarkModeToggle() {
+  const invertBtn = document.getElementById("invert-button");
+  if (!invertBtn) {
+    console.warn("[DarkMode] ⚠️ No #invert-button found in DOM.");
+    return;
+  }
 
+  invertBtn.addEventListener("click", () => {
+    const html = document.documentElement;
+    const active = html.style.filter.includes("invert");
 
+    if (active) {
+      html.style.filter = "";
+      document.body.style.background = "";
+    } else {
+      html.style.filter = "invert(1) hue-rotate(180deg)";
+      document.body.style.background = "black";
+    }
+  });
 
+  console.log("[DarkMode] 🌗 Simple toggle ready.");
+}
+
+// ------------------------------------------------------------
