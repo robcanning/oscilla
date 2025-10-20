@@ -189,8 +189,10 @@ function capitalize(s) {
 
 
 // 🔁 Main dispatcher function for cue triggers
-export function handleCueTrigger(cueId, isRemote = false, force = false) {
+export function handleCueTrigger(cueId, isRemote = false, force = false, cueElement = null) {
   console.log(`[DEBUG] Attempting to trigger cue: ${cueId}`);
+  console.log("[handleCueTrigger] cueId:", cueId);
+
 
   // ⚡ Allow duplicates if cuePage is inside a playlist
   const isPagePlaylist = cueId.startsWith("cuePage(") && window.isCuePagePlaylistActive;
@@ -224,6 +226,17 @@ export function handleCueTrigger(cueId, isRemote = false, force = false) {
       return handlePageCueFromAST(ast);
     } else {
       console.warn("[CueDSL] ⚠️ No AST found for cue:page — fallback to legacy.");
+    }
+  }
+
+    // 🧠 NEW DSL cue:page(...) syntax via Chevrotain
+  else if (cueId.startsWith("cue:fade")) {
+    console.log("[CueDSL] 🌿 Handling new cue:fade syntax...");
+    if (ast) {
+    const elementId = cueElement?.id || cueElement?.getAttribute("id");
+    return handleFadeCueFromAST(ast, elementId);
+      } else {
+      console.warn("[CueDSL] ⚠️ No AST found for cue:fade — fallback to legacy.");
     }
   }
 
@@ -2084,30 +2097,136 @@ await handlePageCue(cue, durNum, commonParams);
     }
 
   }
+// 2️⃣ Now process control items (after playback)
+for (const ctrl of controlItems) {
+  if (ctrl.name === "mode") {
+    if (ctrl.value === "scroll" && ctrl.target) {
+      console.log(`[CueDSL] ⚙️ Exiting to scroll mode at rehearsal mark: ${ctrl.target}`);
 
-  // 2️⃣ Now process control items (after playback)
-  for (const ctrl of controlItems) {
-    if (ctrl.name === "mode") {
-      if (ctrl.value === "scroll" && ctrl.target) {
-        console.log(`[CueDSL] ⚙️ Exiting to scroll mode at rehearsal mark: ${ctrl.target}`);
-        handleCueTrigger(`cueNav(mode(scroll))`);
-        jumpToRehearsalMark(ctrl.target); // new targeted navigation
-        startPlayback();
-      } else {
-        console.log(`[CueDSL] ⚙️ Switching mode → ${ctrl.value}`);
-        handleCueTrigger(`cueNav(mode(${ctrl.value}))`);
-      }
-    }
+      // Trigger mode switch cue first
+      handleCueTrigger(`cueNav(mode(scroll))`);
 
-    else {
-      console.warn(`[CueDSL] ⚠️ Unknown control:`, ctrl);
+      // 🕒 Defer the actual scroll jump until the main score container is visible
+      requestAnimationFrame(() => {
+        const sc = document.getElementById("scoreContainer");
+        if (sc) {
+          console.log(`[CueDSL] 🎯 Jumping to rehearsal mark after page teardown: ${ctrl.target}`);
+          jumpToRehearsalMark(ctrl.target);
+          startPlayback();
+        } else {
+          console.warn("[CueDSL] ⚠️ scoreContainer not yet ready; retrying...");
+          setTimeout(() => {
+            const sc2 = document.getElementById("scoreContainer");
+            if (sc2) {
+              console.log(`[CueDSL] 🎯 Retried jump to mark: ${ctrl.target}`);
+              jumpToRehearsalMark(ctrl.target);
+              startPlayback();
+            }
+          }, 150);
+        }
+      });
+    } else {
+      console.log(`[CueDSL] ⚙️ Switching mode → ${ctrl.value}`);
+      handleCueTrigger(`cueNav(mode(${ctrl.value}))`);
     }
   }
 
-  console.log("[CueDSL] ✅ cuePage sequence finished or stopped.");
+  else {
+    console.warn(`[CueDSL] ⚠️ Unknown control:`, ctrl);
+  }
+}
+
+console.log("[CueDSL] ✅ cuePage sequence finished or stopped.");
+
 }
 
 
+
+function handleFadeCueFromAST(ast, cueElementId) {
+  console.group("[cueFade] 🎛 Handling fade cue");
+
+  const params = Object.fromEntries(ast.args.map(a => [a.type, a.value]));
+
+  const mode   = params.mode  || "in";
+  const dur    = Number(params.dur   ?? 1);
+  const from   = Number(params.from  ?? (mode === "in" ? 0 : 1));
+  const to     = Number(params.to    ?? (mode === "in" ? 1 : 0));
+  const ease   = params.ease  || "linear";
+  const delay  = Number(params.delay ?? 0);
+  const hold   = Number(params.hold  ?? 0);
+  const targetId = params.target || "self";
+
+  // 🎯 Resolve target: "self" defaults to element containing this cue
+  let target = null;
+
+  if (targetId === "self") {
+    if (typeof cueElementId === "string") {
+      target = document.getElementById(cueElementId);
+    } else if (cueElementId instanceof Element) {
+      target = cueElementId;
+    }
+  } else {
+    target = document.getElementById(targetId);
+  }
+
+  // 💡 Robust fallback chain
+  if (!target) {
+    target =
+      document.querySelector(`[data-id="${ast.type}"]`) ||
+      document.getElementById("scoreContainer") ||
+      document.body;
+  }
+
+  if (!target || !(target instanceof Element)) {
+    console.warn("[cueFade] ⚠️ No valid target found for cueFade, aborting.");
+    console.groupEnd();
+    return;
+  }
+
+  console.log(`[cueFade] mode=${mode}, dur=${dur}s, from=${from}, to=${to}, ease=${ease}, delay=${delay}s`);
+  console.log("[cueFade] Target element:", target);
+
+  anime.remove(target);
+  target.style.opacity = from;
+
+  const commonProps = {
+    targets: target,
+    easing: ease,
+    duration: dur * 1000,
+    delay: delay * 1000,
+    begin: () => console.log("[cueFade] ▶ Fade begin"),
+    complete: () => console.log("[cueFade] ✅ Fade complete"),
+  };
+
+  switch (mode) {
+    case "in":
+    case "out":
+      anime({ ...commonProps, opacity: [from, to] });
+      break;
+
+    case "inout":
+      anime({ ...commonProps, opacity: [from, to], direction: "alternate", loop: 2 });
+      break;
+
+    case "pulseSlow":
+      anime({ ...commonProps, opacity: [from, to], direction: "alternate", loop: true, easing: "easeInOutSine", duration: dur * 2000 });
+      break;
+
+    case "pulseFast":
+      anime({ ...commonProps, opacity: [from, to], direction: "alternate", loop: true, easing: "easeInOutSine", duration: dur * 500 });
+      break;
+
+    case "strobe":
+      anime({ ...commonProps, opacity: [from, to], loop: true, direction: "alternate", duration: dur * 100, easing: "steps(2)" });
+      break;
+
+    default:
+      console.warn(`[cueFade] ⚠️ Unknown fade mode: ${mode}`);
+      break;
+  }
+
+  console.groupEnd();
+}
 
 
 
@@ -3483,7 +3602,7 @@ export async function checkCueTriggers() {
 
     if (crossedLeftEdgeForward && !window.triggeredCues.has(cue.id)) {
       console.log(`[cueTrigger] ✅ Left-edge crossing → ${cue.id}`);
-      window.handleCueTrigger?.(cue.id);
+      window.handleCueTrigger?.(cue.id, false, false, cue.element || cue);
       window.triggeredCues.add(cue.id);
     }
 
