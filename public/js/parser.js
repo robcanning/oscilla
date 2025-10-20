@@ -41,9 +41,26 @@ export function printCST(node, depth = 0) {
 // ============================================================================
 // 1️⃣ TOKEN DEFINITIONS
 // ============================================================================
+
+// Literals
+const NumberLiteral = createToken({
+  name: "NumberLiteral",
+  pattern: /[0-9]+(\.[0-9]+)?/,
+});
+const Identifier = createToken({
+  name: "Identifier",
+  pattern: /[a-zA-Z_][a-zA-Z0-9_-]*/
+});
+
+const WS = createToken({
+  name: "WS",
+  pattern: /\s+/,
+  group: Lexer.SKIPPED,
+});
+
 // Keywords must precede Identifier.
 const Cue    = createToken({ name: "Cue", pattern: /cue/ });
-const Fade   = createToken({ name: "Fade", pattern: /fade/ });
+const Fade   = createToken({ name: "Fade",   pattern: /fade\b/,   longer_alt: Identifier });
 const Page = createToken({ name: "Page", pattern: /\bpage\b/ });
 const Seq    = createToken({ name: "Seq", pattern: /seq/ });
 const Loop   = createToken({ name: "Loop", pattern: /loop/ });
@@ -61,20 +78,7 @@ const Comma  = createToken({ name: "Comma",  pattern: /,/ });
 const At     = createToken({ name: "At",     pattern: /@/ });
 const XParam = createToken({ name: "XParam", pattern: /x/ });
 
-// Literals
-const NumberLiteral = createToken({
-  name: "NumberLiteral",
-  pattern: /[0-9]+(\.[0-9]+)?/,
-});
-const Identifier = createToken({
-  name: "Identifier",
-  pattern: /[a-zA-Z_][a-zA-Z0-9_-]*/,
-});
-const WS = createToken({
-  name: "WS",
-  pattern: /\s+/,
-  group: Lexer.SKIPPED,
-});
+
 
 export const allTokens = [
   Cue, Fade, Page, Seq, Loop, Rand, Choose, Mode,
@@ -393,3 +397,4 @@ export function parseCueToAST(input) {
   console.log("[CueDSL] ✅ Parsed AST:", ast);
   return ast;
 }
+

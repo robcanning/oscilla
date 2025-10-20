@@ -229,13 +229,13 @@ export function handleCueTrigger(cueId, isRemote = false, force = false, cueElem
     }
   }
 
-    // 🧠 NEW DSL cue:page(...) syntax via Chevrotain
+  // 🧠 NEW DSL cue:page(...) syntax via Chevrotain
   else if (cueId.startsWith("cue:fade")) {
     console.log("[CueDSL] 🌿 Handling new cue:fade syntax...");
     if (ast) {
-    const elementId = cueElement?.id || cueElement?.getAttribute("id");
-    return handleFadeCueFromAST(ast, elementId);
-      } else {
+      const elementId = cueElement?.id || cueElement?.getAttribute("id");
+      return handleFadeCueFromAST(ast, elementId);
+    } else {
       console.warn("[CueDSL] ⚠️ No AST found for cue:fade — fallback to legacy.");
     }
   }
@@ -1783,43 +1783,43 @@ export async function handlePageCue(cueId, duration, cueParams = {}) {
   content.innerHTML = "";
 
 
-// -------------------------------------------------------------
-// 4️⃣ Load SVG page (project-local only)
-// -------------------------------------------------------------
-if (!window.pagesDir) {
-  console.error("[cuePage] ❌ Missing window.pagesDir — run loadProject() first.");
-  return;
-}
+  // -------------------------------------------------------------
+  // 4️⃣ Load SVG page (project-local only)
+  // -------------------------------------------------------------
+  if (!window.pagesDir) {
+    console.error("[cuePage] ❌ Missing window.pagesDir — run loadProject() first.");
+    return;
+  }
 
-const projectPath = `${window.pagesDir}${pageName}.svg`;
+  const projectPath = `${window.pagesDir}${pageName}.svg`;
 
-console.groupCollapsed(`[cuePage] 📄 Loading page: "${pageName}"`);
-console.log("🌍 Current project:", window.currentProject);
-console.log("📂 Base directory:", window.projectBase);
-console.log("📁 Pages directory:", window.pagesDir);
-console.log("📜 Full SVG path:", projectPath);
+  console.groupCollapsed(`[cuePage] 📄 Loading page: "${pageName}"`);
+  console.log("🌍 Current project:", window.currentProject);
+  console.log("📂 Base directory:", window.projectBase);
+  console.log("📁 Pages directory:", window.pagesDir);
+  console.log("📜 Full SVG path:", projectPath);
 
-async function fetchSvgOrThrow(path) {
-  console.log(`[cuePage] 🔍 Fetching SVG from: ${path}`);
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`HTTP ${res.status} at ${path}`);
-  const text = await res.text();
-  console.log(`[cuePage] ✅ Successfully fetched SVG (${text.length} chars)`);
-  return text;
-}
+  async function fetchSvgOrThrow(path) {
+    console.log(`[cuePage] 🔍 Fetching SVG from: ${path}`);
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(`HTTP ${res.status} at ${path}`);
+    const text = await res.text();
+    console.log(`[cuePage] ✅ Successfully fetched SVG (${text.length} chars)`);
+    return text;
+  }
 
-let svgText;
-try {
-  svgText = await fetchSvgOrThrow(projectPath);
-  console.log(`[cuePage] ✅ Page loaded successfully: ${projectPath}`);
-} catch (err) {
-  console.error(`[cuePage] ❌ Failed to load page "${pageName}" from: ${projectPath}`);
-  console.error("Error details:", err.message);
+  let svgText;
+  try {
+    svgText = await fetchSvgOrThrow(projectPath);
+    console.log(`[cuePage] ✅ Page loaded successfully: ${projectPath}`);
+  } catch (err) {
+    console.error(`[cuePage] ❌ Failed to load page "${pageName}" from: ${projectPath}`);
+    console.error("Error details:", err.message);
+    console.groupEnd();
+    return;
+  }
+
   console.groupEnd();
-  return;
-}
-
-console.groupEnd();
 
   // -------------------------------------------------------------
   // 5️⃣ Inject SVG and initialize
@@ -1884,27 +1884,27 @@ console.groupEnd();
   // 🟢 Auto-inject globally registered UI groups on page load
 
   if (window.groupRegistry) {
-  console.log(`[cueGroup] 🔍 Checking if page "${pageName}" requests any groups...`);
+    console.log(`[cueGroup] 🔍 Checking if page "${pageName}" requests any groups...`);
 
-  // Look inside the loaded SVG for cueGroup(...) references
-  const groupUses = [...svg.querySelectorAll('[id^="cueGroup("]')].map(el =>
-    el.id.match(/cueGroup\(([^)]+)\)/)?.[1]
-  ).filter(Boolean);
+    // Look inside the loaded SVG for cueGroup(...) references
+    const groupUses = [...svg.querySelectorAll('[id^="cueGroup("]')].map(el =>
+      el.id.match(/cueGroup\(([^)]+)\)/)?.[1]
+    ).filter(Boolean);
 
-  if (groupUses.length === 0) {
-    console.log(`[cueGroup] 🚫 No cueGroup() references found in "${pageName}"`);
-  } else {
-    console.log(`[cueGroup] 📋 Found cueGroup() references:`, groupUses);
-    for (const groupId of groupUses) {
-      if (window.groupRegistry[groupId]) {
-        console.log(`[cueGroup] 🚀 Injecting requested group "${groupId}" on page "${pageName}"`);
-        handleGroupCue(`cueGroup(${groupId})`, { choice: groupId });
-      } else {
-        console.warn(`[cueGroup] ⚠️ Group "${groupId}" referenced in "${pageName}" not found in registry.`);
+    if (groupUses.length === 0) {
+      console.log(`[cueGroup] 🚫 No cueGroup() references found in "${pageName}"`);
+    } else {
+      console.log(`[cueGroup] 📋 Found cueGroup() references:`, groupUses);
+      for (const groupId of groupUses) {
+        if (window.groupRegistry[groupId]) {
+          console.log(`[cueGroup] 🚀 Injecting requested group "${groupId}" on page "${pageName}"`);
+          handleGroupCue(`cueGroup(${groupId})`, { choice: groupId });
+        } else {
+          console.warn(`[cueGroup] ⚠️ Group "${groupId}" referenced in "${pageName}" not found in registry.`);
+        }
       }
     }
   }
-}
 
 
   // -------------------------------------------------------------
@@ -2049,8 +2049,8 @@ export async function handlePageCueFromAST(ast) {
     if (item.type === "page") {
       const cue = `cuePage(${item.name})_dur(${item.dur || 0})`;
       console.log(`[CueDSL] ▶ Page → ${cue}`);
-const durNum = Number(item.dur) || 0;
-await handlePageCue(cue, durNum, commonParams);      // if (item.dur && item.dur > 0) await wait(item.dur * 1000);
+      const durNum = Number(item.dur) || 0;
+      await handlePageCue(cue, durNum, commonParams);      // if (item.dur && item.dur > 0) await wait(item.dur * 1000);
     }
 
     // --- Random choice ---
@@ -2058,8 +2058,8 @@ await handlePageCue(cue, durNum, commonParams);      // if (item.dur && item.dur
       const pick = item.options[Math.floor(Math.random() * item.options.length)];
       const cue = `cuePage(${pick})_dur(${item.dur || 0})`;
       console.log(`[CueDSL] 🎲 Randomly chosen page: ${pick}`);
-const durNum = Number(item.dur) || 0;
-await handlePageCue(cue, durNum, commonParams);
+      const durNum = Number(item.dur) || 0;
+      await handlePageCue(cue, durNum, commonParams);
       // if (item.dur && item.dur > 0) await wait(item.dur * 1000);
     }
     // --- Randomized sequence: rand(page1:...,page2:...){x:N} ---
@@ -2097,49 +2097,48 @@ await handlePageCue(cue, durNum, commonParams);
     }
 
   }
-// 2️⃣ Now process control items (after playback)
-for (const ctrl of controlItems) {
-  if (ctrl.name === "mode") {
-    if (ctrl.value === "scroll" && ctrl.target) {
-      console.log(`[CueDSL] ⚙️ Exiting to scroll mode at rehearsal mark: ${ctrl.target}`);
+  // 2️⃣ Now process control items (after playback)
+  for (const ctrl of controlItems) {
+    if (ctrl.name === "mode") {
+      if (ctrl.value === "scroll" && ctrl.target) {
+        console.log(`[CueDSL] ⚙️ Exiting to scroll mode at rehearsal mark: ${ctrl.target}`);
 
-      // Trigger mode switch cue first
-      handleCueTrigger(`cueNav(mode(scroll))`);
+        // Trigger mode switch cue first
+        handleCueTrigger(`cueNav(mode(scroll))`);
 
-      // 🕒 Defer the actual scroll jump until the main score container is visible
-      requestAnimationFrame(() => {
-        const sc = document.getElementById("scoreContainer");
-        if (sc) {
-          console.log(`[CueDSL] 🎯 Jumping to rehearsal mark after page teardown: ${ctrl.target}`);
-          jumpToRehearsalMark(ctrl.target);
-          startPlayback();
-        } else {
-          console.warn("[CueDSL] ⚠️ scoreContainer not yet ready; retrying...");
-          setTimeout(() => {
-            const sc2 = document.getElementById("scoreContainer");
-            if (sc2) {
-              console.log(`[CueDSL] 🎯 Retried jump to mark: ${ctrl.target}`);
-              jumpToRehearsalMark(ctrl.target);
-              startPlayback();
-            }
-          }, 150);
-        }
-      });
-    } else {
-      console.log(`[CueDSL] ⚙️ Switching mode → ${ctrl.value}`);
-      handleCueTrigger(`cueNav(mode(${ctrl.value}))`);
+        // 🕒 Defer the actual scroll jump until the main score container is visible
+        requestAnimationFrame(() => {
+          const sc = document.getElementById("scoreContainer");
+          if (sc) {
+            console.log(`[CueDSL] 🎯 Jumping to rehearsal mark after page teardown: ${ctrl.target}`);
+            jumpToRehearsalMark(ctrl.target);
+            startPlayback();
+          } else {
+            console.warn("[CueDSL] ⚠️ scoreContainer not yet ready; retrying...");
+            setTimeout(() => {
+              const sc2 = document.getElementById("scoreContainer");
+              if (sc2) {
+                console.log(`[CueDSL] 🎯 Retried jump to mark: ${ctrl.target}`);
+                jumpToRehearsalMark(ctrl.target);
+                startPlayback();
+              }
+            }, 150);
+          }
+        });
+      } else {
+        console.log(`[CueDSL] ⚙️ Switching mode → ${ctrl.value}`);
+        handleCueTrigger(`cueNav(mode(${ctrl.value}))`);
+      }
+    }
+
+    else {
+      console.warn(`[CueDSL] ⚠️ Unknown control:`, ctrl);
     }
   }
 
-  else {
-    console.warn(`[CueDSL] ⚠️ Unknown control:`, ctrl);
-  }
-}
-
-console.log("[CueDSL] ✅ cuePage sequence finished or stopped.");
+  console.log("[CueDSL] ✅ cuePage sequence finished or stopped.");
 
 }
-
 
 
 function handleFadeCueFromAST(ast, cueElementId) {
@@ -2147,26 +2146,53 @@ function handleFadeCueFromAST(ast, cueElementId) {
 
   const params = Object.fromEntries(ast.args.map(a => [a.type, a.value]));
 
-  const mode   = params.mode  || "in";
-  const dur    = Number(params.dur   ?? 1);
-  const from   = Number(params.from  ?? (mode === "in" ? 0 : 1));
-  const to     = Number(params.to    ?? (mode === "in" ? 1 : 0));
-  const ease   = params.ease  || "linear";
-  const delay  = Number(params.delay ?? 0);
-  const hold   = Number(params.hold  ?? 0);
+  const mode = params.mode || "in";
+  const dur = Number(params.dur ?? 1);
+  const from = Number(params.from ?? (mode === "in" ? 0 : 1));
+  const to = Number(params.to ?? (mode === "in" ? 1 : 0));
+  const ease = params.ease || "linear";
+  const delay = Number(params.delay ?? 0);
+  const hold = Number(params.hold ?? 0); // ⏸ pause between loops
   const targetId = params.target || "self";
+
+
+
+  function sendFadeOSC(value) {
+  const oscFlag = Number(params.osc ?? 1);
+  if (!window.OSC_ENABLED || !oscFlag) return;
+  if (!window.wsEnabled || !window.socket || window.socket.readyState !== WebSocket.OPEN) return;
+
+  const message = {
+    type: "osc_fade",
+    uid,
+    value,
+    timestamp: Date.now(),
+  };
+
+  window.socket.send(JSON.stringify(message));
+  console.debug("[OSC] 🎚 Sent fade update:", message);
+}
+
+
+
+
 
   // 🎯 Resolve target: "self" defaults to element containing this cue
   let target = null;
 
   if (targetId === "self") {
     if (typeof cueElementId === "string") {
-      target = document.getElementById(cueElementId);
+      target =
+        document.getElementById(cueElementId) ||
+        window.svgElement?.getElementById?.(cueElementId);
     } else if (cueElementId instanceof Element) {
       target = cueElementId;
     }
   } else {
-    target = document.getElementById(targetId);
+    // Try HTML first, then inside the loaded SVG
+    target =
+      document.getElementById(targetId) ||
+      window.svgElement?.getElementById?.(targetId);
   }
 
   // 💡 Robust fallback chain
@@ -2174,20 +2200,41 @@ function handleFadeCueFromAST(ast, cueElementId) {
     target =
       document.querySelector(`[data-id="${ast.type}"]`) ||
       document.getElementById("scoreContainer") ||
+      window.svgElement ||
       document.body;
   }
 
   if (!target || !(target instanceof Element)) {
-    console.warn("[cueFade] ⚠️ No valid target found for cueFade, aborting.");
+    console.warn(`[cueFade] ⚠️ No valid target found for ID '${targetId}', aborting.`);
     console.groupEnd();
     return;
   }
 
-  console.log(`[cueFade] mode=${mode}, dur=${dur}s, from=${from}, to=${to}, ease=${ease}, delay=${delay}s`);
+  console.log(
+    `[cueFade] mode=${mode}, dur=${dur}s, hold=${hold}s, from=${from}, to=${to}, ease=${ease}, delay=${delay}s`
+  );
   console.log("[cueFade] Target element:", target);
 
   anime.remove(target);
   target.style.opacity = from;
+
+
+
+// 🔖 Resolve and normalize UID once for OSC and logging
+let uid = params.uid || null;
+
+if (!uid) {
+  // Prefer target.id if valid, otherwise fall back to cueElementId
+  uid =
+    target?.id ||
+    cueElementId?.replace(/^cue:/, "") ||
+    targetId?.replace(/^cue:/, "") ||
+    "unknown";
+}
+
+// Sanitize for OSC address
+uid = String(uid).replace(/[^a-zA-Z0-9_\-]/g, "");
+
 
   const commonProps = {
     targets: target,
@@ -2195,9 +2242,23 @@ function handleFadeCueFromAST(ast, cueElementId) {
     duration: dur * 1000,
     delay: delay * 1000,
     begin: () => console.log("[cueFade] ▶ Fade begin"),
-    complete: () => console.log("[cueFade] ✅ Fade complete"),
+    update: anim => {
+      const current = parseFloat(anim.animations?.[0]?.currentValue || 0);
+      sendFadeOSC(current);
+    },
+    complete: () => {
+      sendFadeOSC(to);
+      console.log("[cueFade] ✅ Fade complete");
+    },
   };
 
+
+
+
+
+
+
+  // 🎚 Switch by mode
   switch (mode) {
     case "in":
     case "out":
@@ -2209,15 +2270,75 @@ function handleFadeCueFromAST(ast, cueElementId) {
       break;
 
     case "pulseSlow":
-      anime({ ...commonProps, opacity: [from, to], direction: "alternate", loop: true, easing: "easeInOutSine", duration: dur * 2000 });
+      anime({
+        ...commonProps,
+        opacity: [from, to],
+        direction: "alternate",
+        loop: true,
+        easing: "easeInOutSine",
+        duration: dur * 2000,
+        endDelay: hold * 1000, // ⏸ pause between each cycle
+      });
       break;
 
     case "pulseFast":
-      anime({ ...commonProps, opacity: [from, to], direction: "alternate", loop: true, easing: "easeInOutSine", duration: dur * 500 });
+      anime({
+        ...commonProps,
+        opacity: [from, to],
+        direction: "alternate",
+        loop: true,
+        easing: "easeInOutSine",
+        duration: dur * 500,
+        endDelay: hold * 1000, // ⏸ pause between each cycle
+      });
       break;
 
     case "strobe":
-      anime({ ...commonProps, opacity: [from, to], loop: true, direction: "alternate", duration: dur * 100, easing: "steps(2)" });
+      anime({
+        ...commonProps,
+        opacity: [from, to],
+        loop: true,
+        direction: "alternate",
+        duration: dur * 100,
+        easing: "steps(2)",
+        endDelay: hold * 1000, // ⏸ pause between strobes
+      });
+      break;
+
+    case "blink": {
+      console.log("[cueFade] ⚡ Blink mode (native setInterval + OSC)");
+
+      const cycle = dur * 1000;
+      const half = cycle / 2;
+      let visible = false;
+
+      if (target._blinkTimer) clearInterval(target._blinkTimer);
+
+      target._blinkTimer = setInterval(() => {
+        visible = !visible;
+        const value = visible ? to : from;
+        target.style.opacity = value;
+        sendFadeOSC(value); // 🔊 send only on change
+      }, half);
+
+      const timeLimit = Number(params.time || params.hold || 0);
+      if (timeLimit > 0) {
+        setTimeout(() => {
+          clearInterval(target._blinkTimer);
+          target.style.opacity = from;
+          sendFadeOSC(from);
+          console.log(`[cueFade] ⏹ Blink auto-stopped after ${timeLimit}s`);
+        }, timeLimit * 1000);
+      }
+      break;
+    }
+
+
+    case "stop":
+      console.log(`[cueFade] ⏹ Stopping fade on target: ${target.id || target}`);
+      anime.remove(target);
+      clearInterval(target._blinkTimer);
+      target.style.opacity = from ?? 0;
       break;
 
     default:
@@ -2225,11 +2346,19 @@ function handleFadeCueFromAST(ast, cueElementId) {
       break;
   }
 
+  // 🕒 Optional global auto-stop (applies to any looping mode)
+  const timeLimit = Number(params.time || 0);
+  if (timeLimit > 0 && ["blink", "pulseSlow", "pulseFast", "strobe"].includes(mode)) {
+    setTimeout(() => {
+      anime.remove(target);
+      clearInterval(target._blinkTimer);
+      target.style.opacity = from;
+      console.log(`[cueFade] ⏹ Auto-stopped after ${timeLimit}s`);
+    }, timeLimit * 1000);
+  }
+
   console.groupEnd();
 }
-
-
-
 
 
 
@@ -2740,9 +2869,9 @@ export const audioLastHit = window.audioLastHit || new Map();
 export let activeAudioCues = window.activeAudioCues || new Set();
 
 // --- Optional OSC stub (replace with your WebSocket / OSC sender) ---
-export function sendOSC(address, args) {
-  console.log(`[OSC] → ${address}`, args);
-}
+// export function sendOSC(address, args) {
+//   console.log(`[OSC] → ${address}`, args);
+// }
 
 // --- Utility: generate fallback sine buffer (for offline testing) ---
 export function generateToneBuffer(ctx, freq = 440, dur = 0.3, amp = 0.3) {
@@ -3401,30 +3530,30 @@ export function handleGroupCue(cueId, cueParams = {}) {
 
   // 4️⃣ Find the correct active SVG container
   // 4️⃣ Find the correct active SVG container
-const currentSvg =
-  window._currentPageSvg ||
-  document.querySelector('#singlePage-content svg') ||
-  document.querySelector('svg#pageSVG') ||
-  document.querySelector('svg#score') ||
-  document.querySelector('#scoreContainer svg'); // ✅ fallback for scroll mode
+  const currentSvg =
+    window._currentPageSvg ||
+    document.querySelector('#singlePage-content svg') ||
+    document.querySelector('svg#pageSVG') ||
+    document.querySelector('svg#score') ||
+    document.querySelector('#scoreContainer svg'); // ✅ fallback for scroll mode
 
-if (!currentSvg) {
-  console.warn("[cueGroup] ⚠️ No valid SVG container found for group injection.");
-  return;
-}
+  if (!currentSvg) {
+    console.warn("[cueGroup] ⚠️ No valid SVG container found for group injection.");
+    return;
+  }
 
-console.log("[cueGroup] 🎯 Found target SVG for injection:", currentSvg.id || "(unnamed)");
+  console.log("[cueGroup] 🎯 Found target SVG for injection:", currentSvg.id || "(unnamed)");
 
 
   // 5️⃣ Append and mark group
   currentSvg.appendChild(clone);
-// 🔎 Verify the clone actually landed in the live DOM
-const liveCheck = currentSvg.querySelector(`#${clone.id}`) || document.querySelector(`#${clone.id}`);
-if (liveCheck) {
-  console.log(`[cueGroup] ✅ Verified "${groupId}" now exists in DOM under ${currentSvg.id}`);
-} else {
-  console.warn(`[cueGroup] ⚠️ "${groupId}" clone not found after append — possible timing or replacement issue.`);
-}
+  // 🔎 Verify the clone actually landed in the live DOM
+  const liveCheck = currentSvg.querySelector(`#${clone.id}`) || document.querySelector(`#${clone.id}`);
+  if (liveCheck) {
+    console.log(`[cueGroup] ✅ Verified "${groupId}" now exists in DOM under ${currentSvg.id}`);
+  } else {
+    console.warn(`[cueGroup] ⚠️ "${groupId}" clone not found after append — possible timing or replacement issue.`);
+  }
 
 
   clone.classList.add("cueButtonGroup");

@@ -377,6 +377,27 @@ break;
     break;
   }
 
+// -----------------------------------------------------------
+// 🎚️ OSC Fade updates from client
+// -----------------------------------------------------------
+case "osc_fade": {
+  let { uid, value } = data;
+  if (!uid) uid = "unknown";
+  uid = String(uid).replace(/[^a-zA-Z0-9_\-]/g, "");
+
+  console.log(`[OSC] 🎚 FADER ${uid}: value=${Number(value).toFixed(3)}`);
+
+  oscPort.send({
+    address: `/oscilla/fade/${uid}`,
+    args: [{ type: "f", value: Number(value) }],
+  });
+  break;
+}
+
+
+
+
+
 case "osc_scale": {
   let { uid, scaleX, scaleY } = data;
 
