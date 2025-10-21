@@ -1,3 +1,69 @@
+
+
+
+// stopwatch.js — simple standalone timer
+// --------------------------------------
+// Provides a real-time stopwatch with Start / Pause / Reset controls.
+// Does not depend on transport, elapsedTime, or any global vars.
+
+export function initStopwatch() {
+  let startTime = 0;
+  let elapsed = 0;
+  let timerInterval = null;
+
+  const display = document.getElementById("stopwatch");
+  const startBtn = document.getElementById("startBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  if (!display || !startBtn || !pauseBtn || !resetBtn) {
+    console.warn("[stopwatch] Missing one or more DOM elements.");
+    return;
+  }
+
+  const updateDisplay = () => {
+    const totalSeconds = Math.floor(elapsed / 1000);
+    const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+    const seconds = String(totalSeconds % 60).padStart(2, "0");
+    display.textContent = `${minutes}:${seconds}`;
+  };
+
+  const start = () => {
+    if (timerInterval) return; // already running
+    startTime = Date.now() - elapsed;
+    timerInterval = setInterval(() => {
+      elapsed = Date.now() - startTime;
+      updateDisplay();
+    }, 200); // update 5× per second
+  };
+
+  const pause = () => {
+    if (!timerInterval) return;
+    clearInterval(timerInterval);
+    timerInterval = null;
+  };
+
+  const reset = () => {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    elapsed = 0;
+    updateDisplay();
+  };
+
+  startBtn.addEventListener("click", start);
+  pauseBtn.addEventListener("click", pause);
+  resetBtn.addEventListener("click", reset);
+
+  updateDisplay();
+  console.log("[stopwatch] Initialized");
+}
+
+export function getStopwatchTime() {
+  const display = document.getElementById("stopwatch");
+  return display ? display.textContent : "00:00";
+}
+
+
 /*!
  * stopwatch.js — Real-Time Performance Stopwatch for OscillaScore
  *

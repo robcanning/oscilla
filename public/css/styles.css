@@ -1424,29 +1424,71 @@ body.inverted #stopwatch {
   /* ✅ Adds spacing */
 }
 
-
-/* 🔹 Stopwatch (Centered Over Playhead) */
-#stopwatch {
-  font-size: 1.5rem;
-  font-weight: bold;
+/* Outer cluster wrapper */
+#stopwatch-cluster {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-60%);
-  /* ✅ Centers it */
-  /* background: rgba(0, 0, 0, 0.7); */
-
+  justify-content: center;
+  width: 200px;        /* fixed width for consistent layout */
+  gap: 4px;            /* small space between time and buttons */
 }
 
+
+/* Stopwatch timer text */
+#stopwatch {
+  font-family: monospace;
+  font-size: 1.2em;
+  color: #fff;
+  text-align: center;
+  margin: 0;                /* remove vertical gaps */
+  padding: 0;
+  line-height: 1;
+}
+
+/* Control buttons */
+#stopwatch-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;                 /* tighter spacing between buttons */
+  margin: 0;
+  padding: 0;
+}
+
+#stopwatch-controls button {
+  font-size: 1em;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: #333;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.1s;
+}
+
+#stopwatch-controls button:hover {
+  background: #555;
+}
+
+#stopwatch-controls button:active {
+  transform: scale(0.95);
+}
+
+
+
+
+
+/* 
 /* 🔹 Stopwatch Icon */
 #stopwatch::before {
   content: "⏱";
   /* Stopwatch Icon */
   font-size: 1.4rem;
-}
+} */
 
 /* 🔹 Cue Info (Placed to the right of the stopwatch) */
 #cue-info {

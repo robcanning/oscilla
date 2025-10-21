@@ -47,6 +47,12 @@ const NumberLiteral = createToken({
   name: "NumberLiteral",
   pattern: /[0-9]+(\.[0-9]+)?/,
 });
+
+const StringLiteral = createToken({
+  name: "StringLiteral",
+  pattern: /"[^"]*"|'[^']*'/,
+});
+
 const Identifier = createToken({
   name: "Identifier",
   pattern: /[a-zA-Z_][a-zA-Z0-9_-]*/
@@ -62,6 +68,8 @@ const WS = createToken({
 const Cue    = createToken({ name: "Cue", pattern: /cue/ });
 const Fade   = createToken({ name: "Fade",   pattern: /fade\b/,   longer_alt: Identifier });
 const Page = createToken({ name: "Page", pattern: /\bpage\b/ });
+const Stopwatch = createToken({ name: "Stopwatch", pattern: /\bstopwatch\b/ });
+
 const Seq    = createToken({ name: "Seq", pattern: /seq/ });
 const Loop   = createToken({ name: "Loop", pattern: /loop/ });
 const Rand   = createToken({ name: "Rand", pattern: /rand/ });
@@ -81,9 +89,9 @@ const XParam = createToken({ name: "XParam", pattern: /x/ });
 
 
 export const allTokens = [
-  Cue, Fade, Page, Seq, Loop, Rand, Choose, Mode,
+  Cue, Fade, Page, Stopwatch, Seq, Loop, Rand, Choose, Mode,
   LParen, RParen, LBrace, RBrace, Colon, Comma, At, XParam,
-  NumberLiteral, Identifier, WS
+  NumberLiteral, StringLiteral, Identifier, WS
 ];
 export const CueLexer = new Lexer(allTokens);
 
@@ -94,6 +102,32 @@ export class CueParser extends CstParser {
   constructor() {
     super(allTokens);
     const $ = this;
+
+
+
+
+// -----------------------
+// Generic key:value param list — reusable across cues
+// -----------------------
+$.RULE("genericParam", () => {
+  $.CONSUME(Identifier, { LABEL: "key" });
+  $.CONSUME(Colon);
+  $.OR([
+    { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "value" }) },
+    { ALT: () => $.CONSUME(StringLiteral, { LABEL: "value" }) },
+    { ALT: () => $.CONSUME1(Identifier, { LABEL: "value" }) },
+  ]);
+});
+
+$.RULE("genericParamList", () => {
+  $.CONSUME(LParen);
+  $.AT_LEAST_ONE_SEP({
+    SEP: Comma,
+    DEF: () => $.SUBRULE($.genericParam),
+  });
+  $.CONSUME(RParen);
+});
+
 
     // -----------------------
     // Base page elements
@@ -233,6 +267,27 @@ $.RULE("fadeParam", () => {
       $.CONSUME(RParen);
     });
 
+
+// -----------------------
+// cue:stopwatch(...)
+// -----------------------
+$.RULE("cueStopwatchTop", () => {
+  $.CONSUME(Stopwatch);
+  $.CONSUME(LParen);
+  $.OPTION(() => {
+    $.AT_LEAST_ONE_SEP({
+      SEP: Comma,
+      DEF: () => $.SUBRULE($.genericParam),
+    });
+  });
+  $.CONSUME(RParen);
+});
+
+
+
+
+
+
     // -----------------------
     // cueTop — only fade|page at top level
     // -----------------------
@@ -242,6 +297,8 @@ $.RULE("fadeParam", () => {
       $.OR([
         { ALT: () => $.SUBRULE($.cueFadeTop) },
         { ALT: () => $.SUBRULE($.cuePageTop) },
+        { ALT: () => $.SUBRULE($.cueStopwatchTop) },
+
       ]);
     });
 
@@ -365,6 +422,25 @@ export function cstToAst(cst) {
 
     return ast;
   }
+
+// ============================================================================
+// 🔹 cue:stopwatch(hold:10)
+// ============================================================================
+const stopwatchNode = cst.children?.cueStopwatchTop?.[0] 
+                   || (cst.name === "cueStopwatchTop" ? cst : null);
+
+if (stopwatchNode) {
+  const args = [];
+  const items = stopwatchNode.children.genericParam || [];
+  for (const p of items) {
+    const key = p.children.key?.[0]?.image;
+    const val = p.children.value?.[0]?.image;
+    if (key) args.push({ type: key, value: isNaN(Number(val)) ? val : Number(val) });
+  }
+
+  return { type: "cueStopwatch", args };
+}
+
 
   // ============================================================================
   // 🔹 Fallback (unknown cue)

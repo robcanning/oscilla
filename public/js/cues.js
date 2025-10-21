@@ -241,6 +241,15 @@ export function handleCueTrigger(cueId, isRemote = false, force = false, cueElem
     }
   }
 
+else if (cueId.startsWith("cue:stopwatch")) {
+  console.log("[CueDSL] ⏱ Handling cue:stopwatch...");
+  if (ast) {
+    return handleStopwatchCue(ast, cueElement);
+  }
+}
+
+
+
   // ✅ Find appropriate handler
   if (!cueHandlers.hasOwnProperty(type)) {
     console.warn(`[CLIENT] No handler found for cue type: ${type}`);
@@ -2269,7 +2278,7 @@ uid = String(uid).replace(/[^a-zA-Z0-9_\-]/g, "");
     case "inout":
       anime({ ...commonProps, opacity: [from, to], direction: "alternate", loop: 2 });
       break;
-      
+
 case "pulse": {
   const ms = dur * 1000;
   anime({
@@ -2374,6 +2383,125 @@ case "pulse": {
 
   console.groupEnd();
 }
+
+import { getStopwatchTime } from "./stopwatch.js";
+
+export function handleStopwatchCue(ast, cueElement = null) {
+  // 1️⃣ Extract parameters
+  const params = {};
+  for (const p of ast.args || []) params[p.type] = p.value;
+
+  const hold = Number(params.hold || 0);
+  const followScroll = params.scroll === true || params.scroll === "true";
+  const offsetX = Number(params.offsetX || 0);
+  const sourceType = params.source || "main";
+  const styleString = params.style ? params.style.replace(/^['"]|['"]$/g, "") : null;
+
+  console.log("[cueStopwatch] Params →", params, "→ source:", sourceType);
+
+  // 2️⃣ Get container + target
+  const score = document.getElementById("scoreContainer");
+  if (!score) return console.warn("[cueStopwatch] No score container found.");
+  if (!cueElement) return console.warn("[cueStopwatch] No cueElement provided.");
+
+  // 3️⃣ Bounding boxes
+  const bbox = cueElement.getBoundingClientRect();
+  const containerBox = score.getBoundingClientRect();
+  const scrollX = score.scrollLeft || 0;
+  const scrollY = score.scrollTop || 0;
+
+  const x = (followScroll
+      ? bbox.left - containerBox.left + scrollX
+      : bbox.left) + offsetX;
+  const y = (followScroll
+      ? bbox.top - containerBox.top + scrollY - 10
+      : bbox.top - 10);
+
+  // 4️⃣ Choose / create the overlay
+  const divId = `cue-stopwatch-${sourceType}`;
+  let div = document.getElementById(divId);
+  let startTime = Date.now();
+  let intervalId;
+
+  if (div) {
+    // already exists → reuse
+    console.log(`[cueStopwatch] Reusing existing ${divId}, resetting timer`);
+    div.textContent = "00:00";
+    div.style.opacity = "1";
+    div.style.transition = "none";
+    startTime = Date.now(); // reset
+    // clear any prior interval marker
+    if (div._intervalId) clearInterval(div._intervalId);
+  } else {
+    // create new overlay
+    div = document.createElement("div");
+    div.id = divId;
+    div.className = "cue-stopwatch-display";
+    div.style.position = followScroll ? "absolute" : "fixed";
+    div.style.left = `${x}px`;
+    div.style.top = `${y}px`;
+    div.style.transform = "translate(0%, -100%)";
+
+    if (styleString) {
+      styleString.split(";").forEach(rule => {
+        const [prop, val] = rule.split(":").map(s => s && s.trim());
+        if (prop && val) div.style[prop] = val;
+      });
+    }
+
+    if (followScroll) score.appendChild(div);
+    else document.body.appendChild(div);
+  }
+
+  // 5️⃣ Timer logic
+  if (sourceType === "main") {
+    div.textContent = getStopwatchTime();
+    intervalId = setInterval(() => {
+      div.textContent = getStopwatchTime();
+      if (followScroll) {
+        const b = cueElement.getBoundingClientRect();
+        const sx = score.scrollLeft || 0;
+        const sy = score.scrollTop || 0;
+        div.style.left = `${b.left - containerBox.left + sx + offsetX}px`;
+        div.style.top  = `${b.top  - containerBox.top + sy - 10}px`;
+      }
+    }, 1000);
+  } else if (sourceType === "new") {
+    intervalId = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const m = String(Math.floor(elapsed / 60)).padStart(2, "0");
+      const s = String(elapsed % 60).padStart(2, "0");
+      div.textContent = `${m}:${s}`;
+    }, 1000);
+
+    if (!hold) {
+      div.style.cursor = "pointer";
+      div.onclick = () => {
+        clearInterval(intervalId);
+        div.remove();
+      };
+    }
+  }
+
+  // store interval for reuse clearing
+  div._intervalId = intervalId;
+
+  // 6️⃣ Auto-fade if hold > 0
+  if (hold > 0) {
+    setTimeout(() => {
+      clearInterval(intervalId);
+      div.style.transition = "opacity 1s ease";
+      div.style.opacity = "0";
+      setTimeout(() => div.remove(), 1000);
+    }, hold * 1000);
+  }
+
+  console.log(
+    `[cue:stopwatch] ⏱ source=${sourceType}, hold=${hold}s, scroll=${followScroll}, offsetX=${offsetX}`
+  );
+}
+
+
 
 
 

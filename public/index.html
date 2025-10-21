@@ -74,9 +74,7 @@
       <!-- 🔹 Help & Documentation Section -->
       <div class="help-section">
         <h3>Help & Documentation</h3>
-        <button class="project-card" id="load-help-btn">Load Demo / Help Score</button>
-        <br>
-        <br>
+        <p class="project-card">Load the helper-score for in-score documentation.</p><br>
 
         <a class="project-card" href="https://github.com/robcanning/oscilla/tree/main/md_docs" target="_blank">Online
           Documentation</a>
@@ -112,7 +110,21 @@
   <!-- 🔹 Top Bar Container -->
   <div id="top-bar">
     <div id="client-list">Clients: 0</div>
-    <div id="stopwatch">00:00</div>
+
+
+    <div id="stopwatch-cluster">
+
+      <div id="stopwatch">00:00</div>
+      <div id="stopwatch-controls">
+        <button id="startBtn" title="Start">⏵</button>
+        <button id="pauseBtn" title="Pause">⏸</button>
+        <button id="resetBtn" title="Reset">⏹</button>
+      </div>
+
+    </div>
+
+
+
     <div id="cue-info">OSC:</div>
 
     <!-- 🔹 Right-aligned container for the dropdown -->
@@ -346,6 +358,10 @@
       });
   </script>
 
+  <script type="module">
+    import { initStopwatch } from './js/stopwatch.js';
+    initStopwatch();
+  </script>
 
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js" crossorigin="anonymous"></script> -->
   <script src="js/anime.min.js"></script>
