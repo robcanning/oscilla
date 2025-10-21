@@ -2357,7 +2357,6 @@ case "pulse": {
       break;
     }
 
-
     case "stop":
       console.log(`[cueFade] ⏹ Stopping fade on target: ${target.id || target}`);
       anime.remove(target);
