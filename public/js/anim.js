@@ -1263,9 +1263,7 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
                 y: p.y
               };
 
-              console.log(
-                `[o2p][linear] ${path.id} → progress:${prog.toFixed(3)} x:${p.x.toFixed(1)} y:${p.y.toFixed(1)}`
-              );
+              // console.log(`[o2p][linear] ${path.id} → progress:${prog.toFixed(3)} x:${p.x.toFixed(1)} y:${p.y.toFixed(1)}`);
 
               emitOSCFromPathProgress(msg);
             }

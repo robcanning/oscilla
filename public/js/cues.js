@@ -51,6 +51,7 @@ export const cueHandlers = {
 
 import { parseCueToAST } from "./parser.js";
 
+// import { switchToScrollMode } from "./projectLoader.js";
 
 
 // 🔁 Allow re-triggering of cues with the given UID or cueId
@@ -2268,6 +2269,20 @@ uid = String(uid).replace(/[^a-zA-Z0-9_\-]/g, "");
     case "inout":
       anime({ ...commonProps, opacity: [from, to], direction: "alternate", loop: 2 });
       break;
+      
+case "pulse": {
+  const ms = dur * 1000;
+  anime({
+    ...commonProps,
+    opacity: [from, to],
+    direction: "alternate",
+    loop: true,
+    easing: ease || "easeInOutSine",
+    duration: ms,
+    endDelay: hold * 1000,
+  });
+  break;
+}
 
     case "pulseSlow":
       anime({
@@ -4655,52 +4670,61 @@ export async function handleNavCue(parsed) {
 
 
     case "mode":
-      if (!argExpr) {
-        dbg("mode() missing arg");
-        break;
-      }
+  if (!argExpr) {
+    dbg("mode() missing arg");
+    break;
+  }
 
-      if (argExpr === "scroll") {
-        dbg("→ Switching to scroll mode");
+  if (argExpr === "scroll") {
+    dbg("→ Switching to scroll mode");
 
-        const ps = window.pageState;
-        const container = document.getElementById("singlePage-container");
-        const content = document.getElementById("singlePage-content");
+    const ps = window.pageState;
+    const container = document.getElementById("singlePage-container");
+    const content = document.getElementById("singlePage-content");
 
-        if (container && content) {
-          // fade out and hide the overlay
-          container.style.transition = "opacity 0.5s ease";
-          container.style.opacity = "0";
-          setTimeout(() => {
-            container.style.display = "none";
-            content.innerHTML = "";
-            if (window._activePageButtons) {
-              window._activePageButtons.forEach(btn => btn._destroyCueButton?.());
-              window._activePageButtons = [];
-            }
-            if (ps) {
-              ps.mode = "scroll";
-              ps.current = null;
-            }
-            window.resumeScrollScore?.();
-            dbg("✅ Returned to scroll mode");
-          }, 500);
-        } else {
-          dbg("⚠️ No container found; forcing resumeScrollScore()");
-          window.resumeScrollScore?.();
-          if (ps) ps.mode = "scroll";
+    // 🟢 If a preloaded hidden score exists (hybrid mode), use that
+    if (window.preloadedScoreSvg) {
+      dbg("🌿 Detected preloaded score — switching via switchToScrollMode()");
+      // switchToScrollMode();
+      if (ps) ps.mode = "scroll";
+      return;
+    }
+
+    // 🔹 Otherwise, fall back to your existing overlay-fade + resume logic
+    if (container && content) {
+      container.style.transition = "opacity 0.5s ease";
+      container.style.opacity = "0";
+      setTimeout(() => {
+        container.style.display = "none";
+        content.innerHTML = "";
+        if (window._activePageButtons) {
+          window._activePageButtons.forEach(btn => btn._destroyCueButton?.());
+          window._activePageButtons = [];
         }
-      }
+        if (ps) {
+          ps.mode = "scroll";
+          ps.current = null;
+        }
+        window.resumeScrollScore?.();
+        dbg("✅ Returned to scroll mode");
+      }, 500);
+    } else {
+      dbg("⚠️ No container found; forcing resumeScrollScore()");
+      window.resumeScrollScore?.();
+      if (ps) ps.mode = "scroll";
+    }
+  }
 
-      else if (argExpr === "page") {
-        dbg("→ Switching to page mode placeholder (future)");
-        // optionally: trigger cuePage(...) manually if desired
-      }
+  else if (argExpr === "page") {
+    dbg("→ Switching to page mode placeholder (future)");
+    // optionally: trigger cuePage(...) manually if desired
+  }
 
-      else {
-        console.warn("[cueNav] Unknown mode argument:", argExpr);
-      }
-      break;
+  else {
+    console.warn("[cueNav] Unknown mode argument:", argExpr);
+  }
+  break;
+
 
 
     default:

@@ -1,12 +1,7 @@
 
 
-
-
-
 window.seekDebounceTime = 300;
 window.seekingTimeout = null;
-
-
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
@@ -239,21 +234,18 @@ export const forward = () => {
 
 /**
  * getSpeedForPosition(xPosition)
- * 
  * Determines the correct speed multiplier based on the nearest previous cueSpeed.
- * Used when seeking, rewinding, or jumping to a new location in the score.
- * Defaults to 1.0x if no matching cue is found.
- * 
- * @param {number} xPosition - The scroll/playhead X position
- * @returns {number} speedMultiplier
+ * Defaults to the project's preferred speed (or 1.0 if undefined).
  */
 export function getSpeedForPosition(xPosition) {
-  const viewportOffset = window.scoreContainer?.offsetWidth / 2 || 0; // Center of the screen
+  const viewportOffset = window.scoreContainer?.offsetWidth / 2 || 0;
   const adjustedPlayheadX = xPosition + viewportOffset;
+  const defaultSpeed = window.oscillaPrefs?.defaultPlaybackSpeed ?? 1.0;
 
   if (!window.speedCueMap || window.speedCueMap.length === 0) {
-    console.warn("[WARNING] No speed cues exist. Defaulting to 1.0x speed.");
-    return 1.0;
+    console.warn(`[WARNING] No speed cues exist. Defaulting to project speed ${defaultSpeed}x.`);
+    setSpeed(defaultSpeed);                  // ✅ syncs with server
+    return defaultSpeed;
   }
 
   const lastSpeedCue = window.speedCueMap
@@ -261,15 +253,16 @@ export function getSpeedForPosition(xPosition) {
     .slice(-1)[0];
 
   if (lastSpeedCue) {
-    // console.log(`[DEBUG] ✅ Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
-    window.speedMultiplier = lastSpeedCue.multiplier;
-    window.updateSpeedDisplay?.();
+    setSpeed(lastSpeedCue.multiplier);       // ✅ syncs with server
     return window.speedMultiplier;
   } else {
-    console.log("[DEBUG] ❗ No previous speed cue found, defaulting to 1.0");
-    return 1.0;
+    console.log(`[DEBUG] ❗ No previous speed cue found, defaulting to ${defaultSpeed}x`);
+    setSpeed(defaultSpeed);                  // ✅ syncs with server
+    return defaultSpeed;
   }
 }
+
+
 
 
 /**
@@ -378,6 +371,7 @@ export const showControls = () => {
   if (topBar) topBar.classList.remove('dismissed'); // ✅ Show top-bar
 };
 
+window.hideControls = hideControls;
 
 
 
@@ -949,9 +943,23 @@ function showControlsAndAutoHide() {
 
 
 
+// ------------------------------------------------------------
+// 🌙 Dark Mode Utility (Console-Equivalent)
+// ------------------------------------------------------------
+export function applyDarkMode(on = false) {
+  const html = document.documentElement;
+  if (on) {
+    html.style.filter = "invert(1) hue-rotate(180deg)";
+    document.body.style.background = "black";
+  } else {
+    html.style.filter = "";
+    document.body.style.background = "";
+  }
+  console.log(`[DarkMode] ${on ? "🌑 Enabled" : "☀️ Disabled"}`);
+}
 
 // ------------------------------------------------------------
-//  Dark Mode Toggle — Simple Console-Equivalent
+// 🌗 Dark Mode Toggle Button
 // ------------------------------------------------------------
 export function initializeDarkModeToggle() {
   const invertBtn = document.getElementById("invert-button");
@@ -961,19 +969,11 @@ export function initializeDarkModeToggle() {
   }
 
   invertBtn.addEventListener("click", () => {
-    const html = document.documentElement;
-    const active = html.style.filter.includes("invert");
-
-    if (active) {
-      html.style.filter = "";
-      document.body.style.background = "";
-    } else {
-      html.style.filter = "invert(1) hue-rotate(180deg)";
-      document.body.style.background = "black";
-    }
+    const active = document.documentElement.style.filter.includes("invert");
+    applyDarkMode(!active);
   });
 
-  console.log("[DarkMode] 🌗 Simple toggle ready.");
+  console.log("[DarkMode] 🌗 Toggle ready.");
 }
 
 // ------------------------------------------------------------
