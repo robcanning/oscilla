@@ -4,6 +4,28 @@
 
 oscillaScore is a flexible, browser-based environment for creating and performing time-based and media-enhanced scores. Whether working with traditional notation, improvisation frameworks, or audiovisual compositions, users can coordinate performances across multiple devices in real time using SVG, WebSockets, and OSC (Open Sound Control).
 
+## Quick Start
+
+Clone the repository and start the local server:
+
+```bash
+git clone https://github.com/robcanning/oscilla.git
+cd oscilla
+npm install
+npm start
+```
+
+Then open your browser at:
+
+```
+http://localhost:8001
+```
+
+The demo project can be launched directly from the splash screen.
+
+For full setup instructions (including Inkscape, Node.js, and platform-specific installation), see the [Full Installation Guide](md_docs/INSTALL.md).
+
+
 ## Table of Contents
 
 * [Conceptual Overview](#conceptual-overview)
