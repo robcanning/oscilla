@@ -5,17 +5,53 @@
  */
 
 import { initializeSVG } from "./app.js";
-import { setSpeed, applyDarkMode } from "./transport.js";
+import { setSpeed, applyDarkMode, toggleSplashScreen, hideSplashScreen } from "./transport.js";
 
 // ------------------------------------------------------------
 // 🚀 Main entry point
 // ------------------------------------------------------------
-export async function loadProject(projectName) {
+export async function loadProject(projectName, options = {}) {
   try {
+
+
+
+
+    
     console.log(`\n[loadProject] 🚀 Loading project: ${projectName}`);
+    const { resetOnLoad = false } = options;
+
+    // What was previously loaded in *this* session?
+    const previousProject = window.currentProject || null;
+
+    // What was the last project across reloads/tabs?
+    const lastProject = sessionStorage.getItem("oscilla_lastProject") || null;
+
+    // Update immediately
+    window.currentProject = projectName;
+    sessionStorage.setItem("oscilla_lastProject", projectName);
+
+    // Decide if this counts as a "switch"
+    const switchingInSession = !!previousProject && previousProject !== projectName;
+    const switchingAcrossReload = !!lastProject && lastProject !== projectName;
+    const shouldReset = resetOnLoad || switchingInSession || switchingAcrossReload;
+
+    if (shouldReset) {
+      console.log(`[Project] Resetting playhead for new project "${projectName}".`);
+      window.playheadX = 0;
+      window.elapsedTime = 0;
+      if (window.scoreContainer) window.scoreContainer.scrollLeft = 0;
+
+      // ------------------------------------------------------------
+      // 🧹 Clear any old saved playhead position for this project
+      // ------------------------------------------------------------
+      const key = `oscilla_lastPos_${projectName}`;
+      if (localStorage.getItem(key)) {
+        localStorage.removeItem(key);
+        console.log(`[Project] Cleared old saved position for ${projectName}.`);
+      }
+    }
 
     // 1️⃣ Define base paths
-    window.currentProject = projectName;
     window.projectBase = `scores/${projectName}/`;
     window.svgDir = `${window.projectBase}`;
     window.audioDir = `${window.projectBase}audio/`;
@@ -55,14 +91,34 @@ export async function loadProject(projectName) {
     if (mode === "page" || mode === "hybrid") {
       const cue = `cue:page(${startPage})`;
       console.log(`[ProjectLoader] 📄 Starting in ${mode} mode → ${cue}`);
-
-      // give scroll setup time to finish before cueing
       requestAnimationFrame(() =>
         requestAnimationFrame(() => window.handleCueTrigger?.(cue))
       );
     }
 
+    // Update the URL to ?project=name without reloading
+    window.history.replaceState({}, "", `?project=${projectName}`);
+
+    // ------------------------------------------------------------
+    // 🕐 Restore last saved playhead (only when NOT a switch)
+    // ------------------------------------------------------------
+    const savedPos = localStorage.getItem(`oscilla_lastPos_${projectName}`);
+    if (!shouldReset && savedPos) {
+      console.log(`[Resume] Queuing jump to last playhead position: ${savedPos}px`);
+
+      setTimeout(() => {
+        if (window.scoreContainer) {
+          window.playheadX = parseFloat(savedPos);
+          window.scoreContainer.scrollLeft = window.playheadX;
+          console.log(`[Resume] Jumped to saved position: ${savedPos}px`);
+          window.togglePlay?.();
+          window.togglePlay?.();
+        }
+      }, 300);
+    }
+
     console.log(`[loadProject] ✅ Project "${projectName}" fully loaded.`);
+    hideSplashScreen();
   } catch (err) {
     console.error(`[loadProject] ❌ Failed to load project "${projectName}":`, err);
   }
@@ -125,7 +181,7 @@ async function loadScrollMode(container) {
 }
 
 // ------------------------------------------------------------
-// 📚 Preload reusable shared SVG groups (unchanged)
+// 📚 Preload reusable shared SVG groups
 // ------------------------------------------------------------
 export async function preloadSvgGroups(list = []) {
   window.groupRegistry = window.groupRegistry || {};
@@ -173,3 +229,20 @@ export function resolveProjectPath(type, filename) {
 
 window.resolveProjectPath = resolveProjectPath;
 window.loadProject = loadProject;
+
+// ------------------------------------------------------------
+// 🔗 Auto-load project if specified in URL (?project=name)
+// ------------------------------------------------------------
+const urlParams = new URLSearchParams(window.location.search);
+const projectFromURL = urlParams.get("project");
+
+if (projectFromURL) {
+  console.log(`[Oscilla] Loading project from URL: ${projectFromURL}`);
+  loadProject(projectFromURL);
+} else {
+  if (typeof window.showSplashScreen === "function") {
+    window.showSplashScreen();
+  } else {
+    console.warn("[Oscilla] showSplashScreen() not available yet.");
+  }
+}

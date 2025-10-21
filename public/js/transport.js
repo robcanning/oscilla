@@ -977,3 +977,69 @@ export function initializeDarkModeToggle() {
 }
 
 // ------------------------------------------------------------
+
+// ======================================================
+// SPLASH SCREEN CONTROL
+// ======================================================
+function setSplashVisibility(show) {
+  const splash = document.getElementById('splash');
+  const scoreContainer = window.scoreContainer || document.getElementById('scoreContainer');
+  const controls = document.getElementById('controls');
+
+  if (!splash) {
+    console.error('[Splash] Missing #splash element');
+    return;
+  }
+
+  if (show) {
+    console.log('[Splash] Showing splash screen.');
+    splash.style.display = 'flex';
+    splash.classList.remove('hidden');
+    if (scoreContainer) scoreContainer.style.display = 'none';
+    if (controls) controls.style.display = 'none';
+  } else {
+    console.log('[Splash] Hiding splash screen.');
+    splash.style.display = 'none';
+    splash.classList.add('hidden');
+    if (scoreContainer) scoreContainer.style.display = 'block';
+    if (controls) controls.style.display = 'flex';
+
+    // Reinitialize SVG when showing the score
+    const svgElement = document.querySelector('svg');
+    if (svgElement) initializeSVG(svgElement);
+  }
+}
+
+export function showSplashScreen() {
+  setSplashVisibility(true);
+}
+
+export function hideSplashScreen() {
+  setSplashVisibility(false);
+}
+
+export function toggleSplashScreen() {
+  const splash = document.getElementById('splash');
+  const isHidden = splash?.style.display === 'none' || splash?.classList.contains('hidden');
+  setSplashVisibility(isHidden);
+}
+
+window.showSplashScreen = showSplashScreen;
+window.hideSplashScreen = hideSplashScreen;
+window.toggleSplashScreen = toggleSplashScreen;
+
+
+//////////////////////////////////////////////////////////////////////////
+function savePlayheadPosition() {
+  if (window.playheadX != null && window.currentProject) {
+    localStorage.setItem(
+      `oscilla_lastPos_${window.currentProject}`,
+      window.playheadX
+    );
+    console.log(`[AutoSave] Saved playheadX = ${window.playheadX} for ${window.currentProject}`);
+  }
+}
+
+window.addEventListener('beforeunload', savePlayheadPosition);
+window.addEventListener('pagehide', savePlayheadPosition);
+

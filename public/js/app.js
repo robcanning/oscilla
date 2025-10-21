@@ -377,10 +377,10 @@ function logCoord(tag, obj={}){ if(window.DEBUG_COORDS) console.log(`[COORD] ${t
 
 
   requestAnimationFrame(() => {
-    window.playheadX = 0;
-    window.elapsedTime = 0;
-    window.scoreContainer.scrollLeft = window.playheadX;
-    console.log(`[DEBUG] Initial scrollLeft set to: ${window.scoreContainer.scrollLeft}`);
+    // window.playheadX = 0;
+    // window.elapsedTime = 0;
+    // window.scoreContainer.scrollLeft = window.playheadX;
+    // console.log(`[DEBUG] Initial scrollLeft set to: ${window.scoreContainer.scrollLeft}`);
 
 
     
@@ -1710,59 +1710,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // SPLASH SCREEN LOGIC //////////////////////////////////////////////////////
-
-  const fadeToBlack = () => {
-    const overlay = document.getElementById('black-overlay');
-    if (!overlay) {
-      console.error('[ERROR] Black overlay element not found!');
-      return;
-    }
-
-    overlay.style.opacity = '1'; // Make the overlay visible
-    console.log('[DEBUG] Fade-to-black triggered.');
-  };
-
-  // splash.addEventListener('click', (event) => {
-  //   event.stopPropagation(); // Prevent clicks on child elements from blocking
-  //   console.log("[CLIENT] Splash screen clicked.");
-  //   toggleSplashScreen();
-  // });
-
-  function toggleSplashScreen() {
-    console.log("[CLIENT] toggleSplashScreen() called.");
-
-    const splash = document.getElementById('splash');
-    // const scoreContainer = document.getElementById('scoreContainer');
-    // const controls = document.getElementById('controls');
-
-    if (splash.style.display === 'none' || splash.classList.contains('hidden')) {
-      console.log("[CLIENT] Showing splash screen.");
-      splash.style.display = 'flex';
-      splash.classList.remove('hidden');
-      window.scoreContainer.style.display = 'none'; // Hide the score window.scoreContainer
-      // controls.style.display = 'none'; // Hide controls
-    } else {
-      console.log("[CLIENT] Hiding splash screen.");
-      splash.style.display = 'none';
-      splash.classList.add('hidden');
-      window.scoreContainer.style.display = 'block'; // Show the score scoreContainer
-      controls.style.display = 'flex'; // Show controls
-
-      // Ensure scoreContainer size is recalculated
-      // adjustscoreContainerHeight();
-
-      // Reinitialize SVG to ensure proper scaling
-      const svgElement = document.querySelector('svg');
-      if (svgElement) {
-        
-        initializeSVG(svgElement);
-      } else {
-        // console.warn("[CLIENT] No SVG element found in scoreContainer during splash toggle.");
-      }
-    }
-  }
-  // END OF SPLASH SCREEEN TOGGLE ////////////////////////////////////////////////////
 
   // helper for obj2path case3
 
@@ -3653,7 +3600,7 @@ window.addEventListener("DOMContentLoaded", () => {
   window.updatePosition = updatePosition; // Expose updatePosition globally
 
 
-  toggleSplashScreen();
+   toggleSplashScreen();
 
 
 
