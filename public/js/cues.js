@@ -1990,176 +1990,216 @@ export async function handlePageCue(cueId, duration, cueParams = {}) {
 }
 
 
+// helper
+// ------------------------------------------------------------
+// handleAfterAction(ast)
+// ------------------------------------------------------------
+// 🔍 Purpose:
+//   Executes the post-cue action defined via `after:`
+//   (internally normalised as `onCompletion`).
+// ------------------------------------------------------------
+export function handleAfterAction(ast) {
+  if (!ast?.onCompletion) return;
 
+  const raw = ast.onCompletion;
+  const control = raw.control;
+  const arg = raw.arg;
+  const target = raw.target;
 
-/**
- * --------------------------------------------------------------------------
- * handlePageCueFromAST(ast)
- * --------------------------------------------------------------------------
- * Executes a parsed cue:page() sequence that was produced by the Chevrotain
- * CueDSL parser (see parser.js → parseCueToAST()).
- *
- * 🔹 ENTRY POINT:
- * Called from parseCueParams() or handleCueTrigger() when a cue string uses
- * the new DSL syntax:
- *
- *   cue:page(seq: page1:4,
- *                 loop(page1:3,page2:2){x:2},
- *                 rand(page1:2,page2:2,page3:2){x:4},
- *                 choose(page2,page3):3,
- *                 mode:scroll)
- *
- * The parser converts this DSL into an AST of form:
- *   { type: "cuePage", args: [ {type:"page"}, {type:"loop"}, {type:"rand"}, … ] }
- *
- * 🔹 FUNCTION FLOW:
- * 1.  Filters the AST into playbackItems (page/loop/choose/rand) and
- *     controlItems (e.g. mode:scroll).
- *
- * 2.  Sequentially iterates over playbackItems:
- *       - page  → directly loads a single page for its duration.
- *       - choose → randomly picks one from a list.
- *       - rand   → runs N random selections of its inner pages.
- *       - loop   → repeats its page sequence x times.
- *     Each call delegates to handlePageCue(), which loads the SVG page,
- *     displays its countdown, and resolves when the page finishes.
- *
- * 3.  After all playback items complete, processes controlItems:
- *       - e.g. {type:"control", name:"mode", value:"scroll"}
- *         triggers handleCueTrigger('cueNav(mode(scroll))'),
- *         switching back to scrolling-score mode.
- *
- * 4.  Finally logs completion and clears window._cuePageRunning so that
- *     isCancelled() checks work for any subsequent cues.
- *
- * 🔹 EXIT POINT:
- * When this function resolves, all cuePage sub-pages and transitions have
- * finished and control has been returned to the main score transport.
- */
+  if (!control) return;
+  console.log(`[CueDSL] 🎬 Running after-action → ${control}(${arg}${target ? "@" + target : ""})`);
 
-export async function handlePageCueFromAST(ast) {
-  const commonParams = { suppressTransition: true };
+  try {
+    // --- Case 1: mode(scroll) ---
+    if (control === "mode") {
+      if (arg === "scroll" && target) {
+        console.log(`[CueDSL] ⚙️ Exiting to scroll mode at rehearsal mark: ${target}`);
 
-  if (!ast || !ast.args || !Array.isArray(ast.args)) {
-    console.warn("[CueDSL] ⚠️ Invalid or empty AST passed to handlePageCueFromAST:", ast);
-    return;
-  }
-
-  console.log("[CueDSL] 🚀 Handling cue:page AST", ast);
-
-  const playbackItems = ast.args.filter(a => ["page", "loop", "choose", "rand"].includes(a.type));
-  const controlItems = ast.args.filter(a => a.type === "control");
-
-  const wait = ms => new Promise(r => setTimeout(r, ms));
-
-  // Helper to check for interruption (optional, for safety)
-
-  //  (only cancel mid-sequence, not before start)
-  const isCancelled = () =>
-    window._cuePageRunning && window.pageState?.mode === "scroll";
-
-  // 1️⃣ Sequentially process all playback items
-  for (const item of playbackItems) {
-    if (isCancelled()) {
-      console.log("[CueDSL] ⏹️ Sequence stopped due to mode change.");
-      return;
-    }
-
-    // --- Simple page ---
-    if (item.type === "page") {
-      const cue = `cuePage(${item.name})_dur(${item.dur || 0})`;
-      console.log(`[CueDSL] ▶ Page → ${cue}`);
-      const durNum = Number(item.dur) || 0;
-      await handlePageCue(cue, durNum, commonParams);      // if (item.dur && item.dur > 0) await wait(item.dur * 1000);
-    }
-
-    // --- Random choice ---
-    else if (item.type === "choose") {
-      const pick = item.options[Math.floor(Math.random() * item.options.length)];
-      const cue = `cuePage(${pick})_dur(${item.dur || 0})`;
-      console.log(`[CueDSL] 🎲 Randomly chosen page: ${pick}`);
-      const durNum = Number(item.dur) || 0;
-      await handlePageCue(cue, durNum, commonParams);
-      // if (item.dur && item.dur > 0) await wait(item.dur * 1000);
-    }
-    // --- Randomized sequence: rand(page1:...,page2:...){x:N} ---
-    else if (item.type === "rand") {
-      console.log(`[CueDSL] 🎲 Random sequence (${item.repeat || 1}x)`);
-
-      const repeatCount = item.repeat || 1;
-      for (let i = 0; i < repeatCount; i++) {
-        // choose a random page each time
-        const pick = item.pages[Math.floor(Math.random() * item.pages.length)];
-        const cue = `cuePage(${pick.name})_dur(${pick.dur || 0})`;
-        console.log(`[CueDSL] 🔀 Random pick ${i + 1}/${repeatCount} → ${cue}`);
-
-        // trigger and await the page
-        await handlePageCue(cue, pick.dur, { fromLoop: true, suppressTransition: true });
-      }
-    }
-
-
-    // --- Loop block ---
-    else if (item.type === "loop") {
-      console.log(`[CueDSL] 🔁 Looping sequence x${item.repeat || 1}`);
-      const repeatCount = item.repeat || 1;
-      for (let i = 0; i < repeatCount; i++) {
-        console.log(`[CueDSL] 🔁 Loop iteration ${i + 1}/${repeatCount}`);
-        for (const pg of item.pages) {
-          if (isCancelled()) return console.log("[CueDSL] ⏹️ Interrupted during loop.");
-          const cue = `cuePage(${pg.name})_dur(${pg.dur || 0})`;
-          console.log(`[CueDSL] ↻ Loop page → ${cue}`);
-
-          // 🟢 Wait for this page’s own countdown to finish (promise from handlePageCue)
-          await handlePageCue(cue, pg.dur, { fromLoop: true, suppressTransition: true });
-        }
-      }
-    }
-
-  }
-  // 2️⃣ Now process control items (after playback)
-  for (const ctrl of controlItems) {
-    if (ctrl.name === "mode") {
-      if (ctrl.value === "scroll" && ctrl.target) {
-        console.log(`[CueDSL] ⚙️ Exiting to scroll mode at rehearsal mark: ${ctrl.target}`);
-
-        // Trigger mode switch cue first
+        // 1️⃣ Switch to scroll mode
         handleCueTrigger(`cueNav(mode(scroll))`);
 
-        // 🕒 Defer the actual scroll jump until the main score container is visible
+        // 2️⃣ Defer jump until scroll container is visible
         requestAnimationFrame(() => {
           const sc = document.getElementById("scoreContainer");
           if (sc) {
-            console.log(`[CueDSL] 🎯 Jumping to rehearsal mark after page teardown: ${ctrl.target}`);
-            jumpToRehearsalMark(ctrl.target);
+            console.log(`[CueDSL] 🎯 Jumping to rehearsal mark after page teardown: ${target}`);
+            jumpToRehearsalMark(target);
             startPlayback();
           } else {
             console.warn("[CueDSL] ⚠️ scoreContainer not yet ready; retrying...");
             setTimeout(() => {
               const sc2 = document.getElementById("scoreContainer");
               if (sc2) {
-                console.log(`[CueDSL] 🎯 Retried jump to mark: ${ctrl.target}`);
-                jumpToRehearsalMark(ctrl.target);
+                console.log(`[CueDSL] 🎯 Retried jump to mark: ${target}`);
+                jumpToRehearsalMark(target);
                 startPlayback();
               }
             }, 150);
           }
         });
-      } else {
-        console.log(`[CueDSL] ⚙️ Switching mode → ${ctrl.value}`);
-        handleCueTrigger(`cueNav(mode(${ctrl.value}))`);
+        return;
       }
+
+      // Normal mode switch (no target)
+      console.log(`[CueDSL] ⚙️ Switching mode → ${arg}`);
+      handleCueTrigger(`cueNav(mode(${arg}))`);
+      return;
     }
 
-    else {
-      console.warn(`[CueDSL] ⚠️ Unknown control:`, ctrl);
+    // --- Case 2: nav(scroll) ---
+    if (control === "nav") {
+      console.log(`[CueDSL] 🧭 Triggering cueNav(mode(${arg}))`);
+      handleCueTrigger(`cueNav(mode(${arg}))`);
+
+      if (target) {
+        console.log(`[CueDSL] 🎯 Jumping to rehearsal mark: ${target}`);
+        requestAnimationFrame(() => {
+          jumpToRehearsalMark(target);
+          startPlayback();
+        });
+      }
+      return;
     }
+
+    // --- Case 3: cue(page(...)) — chained cue ---
+    if (control === "cue") {
+      console.log(`[CueDSL] 🔗 Triggering chained cue → ${arg}`);
+      handleCueTrigger(arg);
+      return;
+    }
+
+    // --- Default: pass raw to handler ---
+    handleCueTrigger(`${control}(${arg})`);
+  } catch (err) {
+    console.warn("[CueDSL] ⚠️ Failed to execute after-action:", err);
   }
-
-  console.log("[CueDSL] ✅ cuePage sequence finished or stopped.");
-
 }
 
+
+
+
+// ------------------------------------------------------------
+// handlePageCueFromAST(ast)
+// ------------------------------------------------------------
+// Handles cue:page(...) pattern-based ASTs.
+// Supports both simple identifiers (cue:page(page1)) and full
+// SuperCollider-style pattern expressions (Pseq, Prand, Pshuf...),
+// including page:duration pairs and global `after:` actions.
+// ------------------------------------------------------------
+export async function handlePageCueFromAST(ast) {
+  const commonParams = { suppressTransition: true };
+
+  if (!ast || !ast.pattern) {
+    console.warn("[CueDSL] ⚠️ Invalid or empty AST passed to handlePageCueFromAST:", ast);
+    return;
+  }
+
+  console.log("[CueDSL] 🚀 Handling cue:page AST", ast);
+
+   // ------------------------------------------------------------
+  // Helper: recursively flatten pattern AST → array of pages or {page,dur} objects
+  // ------------------------------------------------------------
+  const expandPattern = (patternAST) => {
+    if (!patternAST) return [];
+
+    // --- Literal ---
+    if (patternAST.type === "Literal") {
+      const v = patternAST.value;
+      if (v && typeof v === "object" && v.page) return [v];
+      if (v != null && typeof v !== "object") return [v];
+      return [];
+    }
+
+    // --- Identifier wrapped in Pseq ---
+    if (patternAST.type === "Pseq" && patternAST.list?.length === 1 && typeof patternAST.list[0] === "string") {
+      return Array(patternAST.repeats || 1).fill(patternAST.list[0]);
+    }
+
+    // --- Pattern types ---
+    switch (patternAST.type) {
+      case "Pseq": {
+        // Filter out stray numeric literals or nulls
+        const list = patternAST.list
+          .flatMap(expandPattern)
+          .filter(v => v && (typeof v === "string" || v.page)); // keep only pages or ids
+        const reps = patternAST.repeats === "inf" ? Infinity : Number(patternAST.repeats) || 1;
+        return Array.from({ length: reps }, () => list).flat();
+      }
+      case "Prand": {
+        const reps = patternAST.repeats === "inf" ? Infinity : Number(patternAST.repeats) || 1;
+        const list = patternAST.list.flatMap(expandPattern).filter(v => v && (typeof v === "string" || v.page));
+        const out = [];
+        for (let i = 0; i < reps; i++) out.push(list[Math.floor(Math.random() * list.length)]);
+        return out;
+      }
+      case "Pshuf": {
+        const reps = patternAST.repeats === "inf" ? 1 : Number(patternAST.repeats) || 1;
+        const list = patternAST.list.flatMap(expandPattern).filter(v => v && (typeof v === "string" || v.page));
+        const out = [];
+        for (let i = 0; i < reps; i++) out.push(...[...list].sort(() => Math.random() - 0.5));
+        return out;
+      }
+      case "Pchoose": {
+        const reps = patternAST.repeats === "inf" ? 1 : Number(patternAST.repeats) || 1;
+        const list = patternAST.list.flatMap(expandPattern).filter(v => v && (typeof v === "string" || v.page));
+        const out = [];
+        for (let i = 0; i < reps; i++) out.push(list[Math.floor(Math.random() * list.length)]);
+        return out;
+      }
+      case "Identifier": {
+        const id = patternAST.image || patternAST.value || null;
+        return id ? [id] : [];
+      }
+      default:
+        return [];
+    }
+  };
+
+
+  // ------------------------------------------------------------
+  // Expand pattern and filter out nulls
+  // ------------------------------------------------------------
+  const pages = expandPattern(ast.pattern).filter(x => x != null);
+  console.log("[CueDSL] ▶ Page pattern expanded to:", pages);
+
+  if (!pages.length) {
+    console.warn("[CueDSL] ⚠️ Empty or invalid page pattern:", ast.pattern);
+    return;
+  }
+
+  // ------------------------------------------------------------
+  // Sequentially play through all pages
+  // ------------------------------------------------------------
+  const isCancelled = () =>
+    window._cuePageRunning && window.pageState?.mode === "scroll";
+
+  for (let i = 0; i < pages.length; i++) {
+    if (isCancelled()) {
+      console.log("[CueDSL] ⏹️ Sequence stopped due to mode change.");
+      return;
+    }
+
+    const item = pages[i];
+    const pageId = typeof item === "object" && item.page ? item.page : item;
+    const durNum = typeof item === "object" && item.dur ? Number(item.dur) : 0;
+
+    const cue = `cuePage(${pageId})_dur(${durNum})`;
+    console.log(`[CueDSL] ▶ Page ${i + 1}/${pages.length} → ${cue}`);
+
+    await handlePageCue(cue, durNum, commonParams);
+  }
+
+  console.log("[CueDSL] ✅ cuePage pattern sequence finished.");
+
+  // ------------------------------------------------------------
+  // 🧩 Run global after: clause (if present)
+  // ------------------------------------------------------------
+  handleAfterAction(ast);
+}
+
+
+
+/////////////////////////////////////////////////////////////////////////////////
 
 function handleFadeCueFromAST(ast, cueElementId) {
   console.group("[cueFade] 🎛 Handling fade cue");

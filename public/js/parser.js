@@ -90,12 +90,22 @@ const Comma = createToken({ name: "Comma", pattern: /,/ });
 const At = createToken({ name: "At", pattern: /@/ });
 const XParam = createToken({ name: "XParam", pattern: /x/ });
 
+const After = createToken({ name: "After", pattern: /after\b/ });
+const Nav = createToken({ name: "Nav", pattern: /nav\b/, longer_alt: Identifier });
+
+export const PatternName = createToken({
+  name: "PatternName",
+  pattern: /P[A-Za-z_]\w*/,
+});
+
 
 export const allTokens = [
-  Cue, Fade, Page, Stopwatch, Video, Seq, Loop, Rand, Choose, Mode,
+  Cue, Fade, Page, Stopwatch, Video, After, Nav, PatternName, Seq, Loop, Rand, Choose, Mode,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
   NumberLiteral, StringLiteral, Identifier, WS
 ];
+
+
 export const CueLexer = new Lexer(allTokens);
 
 // ============================================================================
@@ -107,6 +117,13 @@ export class CueParser extends CstParser {
     const $ = this;
 
 
+
+    function logEnterExit(name) {
+      return {
+        enter: () => console.log(`➡️ Enter ${name} (next: ${$.LA(1).image})`),
+        exit: () => console.log(`⬅️ Exit  ${name} (next: ${$.LA(1).image})`)
+      };
+    }
 
 
     // -----------------------
@@ -140,155 +157,124 @@ export class CueParser extends CstParser {
       $.CONSUME1(NumberLiteral, { LABEL: "height" });
     });
 
-//////////////////////////////////////
+    //////////////////////////////////////
+
+    $.RULE("pageWithDuration", () => {
+      $.CONSUME(Identifier, { LABEL: "page" });
+      $.CONSUME(Colon);
+      $.CONSUME(NumberLiteral, { LABEL: "dur" });
+    });
+
+    // ------------------------------------------------------------
+    // patternExpr — handles identifiers, numbers, page:dur, patterns, etc.
+    // ------------------------------------------------------------
+    $.RULE("patternExpr", () => {
+      console.log(`[TRACE] patternExpr enter — ${$.LA(1).image}`);
+
+      $.OR([
+        // 🟢 Pattern call
+        {
+          GATE: () => $.LA(1).tokenType.name === "PatternName",
+          ALT: () => $.SUBRULE($.patternCall)
+        },
+
+        // 🟢 Page with duration (e.g. page1:4)
+        {
+          GATE: () => $.LA(1).tokenType.name === "Identifier" &&
+            $.LA(2).tokenType.name === "Colon",
+          ALT: () => $.SUBRULE($.pageWithDuration)
+        },
+
+        // Simple identifier
+        { ALT: () => $.CONSUME(Identifier) },
+
+        // Number literal
+        { ALT: () => $.CONSUME(NumberLiteral) },
+
+        // Grouped expression
+        {
+          ALT: () => {
+            $.CONSUME(LParen);
+            $.SUBRULE2($.patternExpr);
+            $.CONSUME(RParen);
+          }
+        },
+      ]);
+
+      console.log(`[TRACE] patternExpr exit — ${$.LA(1).image}`);
+    });
+
+    // ------------------------------------------------------------
+    // patternCall — generic pattern function call
+    // e.g. Pseq([page1:4], 1)  /  Prand([page1, page2], inf)
+    // ------------------------------------------------------------
+    $.RULE("patternCall", () => {
+      console.log(`[TRACE] patternCall enter — ${$.LA(1).image}`);
+
+      // 1️⃣ Allow any token identified as a PatternName
+      $.CONSUME(PatternName); // token type covers Pseq, Prand, Pshuf, Pchoose, etc.
+
+      // 2️⃣ Opening parenthesis
+      $.CONSUME(LParen);
+
+      // 3️⃣ Opening square bracket for the sequence/list
+      $.CONSUME(LBracket);
+
+      // 4️⃣ One or more comma-separated pattern expressions
+      $.AT_LEAST_ONE_SEP({
+        SEP: Comma,
+        DEF: () => $.SUBRULE1($.patternExpr)
+      });
+
+      // 5️⃣ Close the list
+      $.CONSUME(RBracket);
+
+      // 6️⃣ Optional repeat or argument (e.g., , 1)
+      $.OPTION(() => {
+        $.CONSUME(Comma);
+        $.SUBRULE($.patternExpr, { LABEL: "repeats" });
+      });
+
+      // 7️⃣ Close the parentheses
+      $.CONSUME(RParen);
+
+      console.log(`[TRACE] patternCall exit — ${$.LA(1).image}`);
+    });
 
 
-// Tokens for pattern names (you can add more later)
-const Pseq    = createToken({ name: "Pseq", pattern: /\bPseq\b/ });
-const Prand   = createToken({ name: "Prand", pattern: /\bPrand\b/ });
-const Pshuf   = createToken({ name: "Pshuf", pattern: /\bPshuf\b/ });
-const Pchoose = createToken({ name: "Pchoose", pattern: /\bPchoose\b/ });
-// ... optionally Pseries, Pwhite, etc.
 
-// Rule for pattern expression (generic)
-$.RULE("patternExpr", () => {
+$.RULE("controlExpr", () => {
   $.OR([
-    { ALT: () => $.SUBRULE($.patternCall) },
-    { ALT: () => $.CONSUME(NumberLiteral) },
-    { ALT: () => $.CONSUME(StringLiteral) },
-    { ALT: () => $.CONSUME(Identifier) }
-  ]);
-});
-
-// Shared rule for any Pxxx pattern
-$.RULE("patternCall", () => {
-  $.OR([
-    { ALT: () => $.CONSUME(Pseq) },
-    { ALT: () => $.CONSUME(Prand) },
-    { ALT: () => $.CONSUME(Pshuf) },
-    { ALT: () => $.CONSUME(Pchoose) }
+    { ALT: () => $.CONSUME(Nav, { LABEL: "controlName" }) },
+    { ALT: () => $.CONSUME(Mode, { LABEL: "controlName" }) },
+    { ALT: () => $.CONSUME(Identifier, { LABEL: "controlName" }) },
   ]);
   $.CONSUME(LParen);
-  $.CONSUME(LBracket);
+  $.CONSUME1(Identifier, { LABEL: "controlArg" });
 
-  // Allow nested patterns or literals inside the list
-  $.AT_LEAST_ONE_SEP({
-    SEP: Comma,
-    DEF: () => $.SUBRULE1($.patternExpr)
-  });
-
-  $.CONSUME(RBracket);
-
-  // Optional repeat count (can be number, inf, or pattern)
+  // 🆕 Optional @target (restored from your old rule)
   $.OPTION(() => {
-    $.CONSUME(Comma);
-    $.SUBRULE($.patternExpr, { LABEL: "repeats" });
+    $.CONSUME(At, { LABEL: "At" });   // same token as before
+    $.CONSUME2(Identifier, { LABEL: "targetUid" });
   });
 
   $.CONSUME(RParen);
 });
 
 
-////////////////////////////////////////
-
-    
-
-
-
-
-
-
-
-
-
-
-    // -----------------------
-    // Base page elements
-    // -----------------------
-    $.RULE("pageItem", () => {
-      $.CONSUME(Identifier, { LABEL: "page" });
-      $.OPTION(() => {
-        $.CONSUME(Colon);
-        $.CONSUME(NumberLiteral, { LABEL: "dur" });
-      });
-    });
-
-    $.RULE("loopItem", () => {
-      $.CONSUME(Loop);
-      $.CONSUME(LParen);
-      $.AT_LEAST_ONE_SEP({
-        SEP: Comma,
-        DEF: () => $.SUBRULE($.pageItem),
-      });
-      $.CONSUME(RParen);
-      $.OPTION(() => {
-        $.CONSUME(LBrace);
-        $.CONSUME(XParam);
-        $.CONSUME(Colon);
-        $.CONSUME(NumberLiteral, { LABEL: "xVal" });
-        $.CONSUME(RBrace);
-      });
-    });
-
-    $.RULE("chooseItem", () => {
-      $.CONSUME(Choose);
-      $.CONSUME(LParen);
-      $.AT_LEAST_ONE_SEP({
-        SEP: Comma,
-        DEF: () => $.CONSUME(Identifier, { LABEL: "choicePage" }),
-      });
-      $.CONSUME(RParen);
-      $.OPTION(() => {
-        $.CONSUME(Colon);
-        $.CONSUME(NumberLiteral, { LABEL: "dur" });
-      });
-    });
-
-    $.RULE("randItem", () => {
-      $.CONSUME(Rand);
-      $.CONSUME(LParen);
-      $.AT_LEAST_ONE_SEP({
-        SEP: Comma,
-        DEF: () => $.SUBRULE($.pageItem),
-      });
-      $.CONSUME(RParen);
-      $.OPTION(() => {
-        $.CONSUME(LBrace);
-        $.CONSUME(XParam);
-        $.CONSUME(Colon);
-        $.CONSUME(NumberLiteral, { LABEL: "xVal" });
-        $.CONSUME(RBrace);
-      });
-    });
-
-    $.RULE("controlItem", () => {
-      $.CONSUME(Mode);
+    $.RULE("afterClause", () => {
+      $.CONSUME(After);
       $.CONSUME(Colon);
-      $.CONSUME1(Identifier, { LABEL: "modeType" });
-      $.OPTION(() => {
-        $.CONSUME(At);
-        $.CONSUME2(Identifier, { LABEL: "targetUid" });
-      });
-    });
-
-    $.RULE("playlistItem", () => {
       $.OR([
-        { ALT: () => $.SUBRULE($.loopItem) },
-        { ALT: () => $.SUBRULE($.chooseItem) },
-        { ALT: () => $.SUBRULE($.randItem) },
-        { ALT: () => $.SUBRULE($.controlItem) },
-        { ALT: () => $.SUBRULE($.pageItem) },
+        // preferred explicit controlExpr (e.g. nav(scroll))
+        { ALT: () => $.SUBRULE($.controlExpr, { LABEL: "afterAction" }) },
+        // fallback literal like after:scroll
+        { ALT: () => $.CONSUME(Identifier, { LABEL: "afterSimple" }) }
       ]);
     });
 
-    $.RULE("playlist", () => {
-      $.CONSUME(Seq);
-      $.CONSUME(Colon);
-      $.AT_LEAST_ONE_SEP({
-        SEP: Comma,
-        DEF: () => $.SUBRULE($.playlistItem),
-      });
-    });
+    ////////////////////////////////////////
+
 
     // -----------------------
     // Fade params
@@ -317,6 +303,7 @@ $.RULE("patternCall", () => {
     // -----------------------
     // cue:fade(...)
     // -----------------------
+
     $.RULE("cueFadeTop", () => {
       $.CONSUME(Fade);
       $.CONSUME(LParen);
@@ -324,26 +311,61 @@ $.RULE("patternCall", () => {
       $.CONSUME(RParen);
     });
 
-    // -----------------------
-    // cue:page(...)
-    // -----------------------
+
+
+    // ------------------------------------------------------------
+    // cuePageTop — full cue:page(...) rule
+    // ------------------------------------------------------------
     $.RULE("cuePageTop", () => {
-      $.CONSUME(Page);
-      $.CONSUME(LParen);
-      $.OPTION(() => {
-        $.OR([
-          { ALT: () => $.SUBRULE($.playlist) },
-          { ALT: () => $.SUBRULE($.pageItem) },
-          { ALT: () => $.SUBRULE($.controlItem) },
-        ]);
-      });
-      $.CONSUME(RParen);
+      const dbg = {
+        enter: () => console.log(`➡️ Enter cuePageTop (next: ${$.LA(1)?.image || "EOF"})`),
+        exit: () => console.log(`⬅️ Exit  cuePageTop (next: ${$.LA(1)?.image || "EOF"})`)
+      };
+      dbg.enter();
+
+      $.CONSUME(Page);          // cue:page
+      $.CONSUME(LParen);        // open (
+
+      // Everything inside parentheses handled by pageBody
+      $.SUBRULE($.pageBody, { LABEL: "body" });
+
+      $.CONSUME(RParen);        // close )
+      dbg.exit();
     });
+
+
+    // ------------------------------------------------------------
+    // pageBody — handles pattern + optional after clause
+    // ------------------------------------------------------------
+    $.RULE("pageBody", () => {
+      const dbg = {
+        enter: () => console.log(`  ↳ Enter pageBody (lookahead: ${$.LA(1)?.image || "EOF"})`),
+        exit: () => console.log(`  ↲ Exit  pageBody (lookahead: ${$.LA(1)?.image || "EOF"})`)
+      };
+      dbg.enter();
+
+      // Main pattern expression (Pseq(...), simple identifier, etc.)
+      console.log(`[TRACE] patternExpr start — lookahead: ${$.LA(1)?.image || "EOF"}`);
+      $.SUBRULE($.patternExpr, { LABEL: "pattern" });
+      console.log(`[TRACE] patternExpr end   — lookahead: ${$.LA(1)?.image || "EOF"}`);
+
+      // Optional comma + after clause
+      $.OPTION(() => {
+        $.CONSUME(Comma);
+        console.log(`[TRACE] afterClause start — lookahead: ${$.LA(1)?.image || "EOF"}`);
+        $.SUBRULE($.afterClause, { LABEL: "afterClause" });
+        console.log(`[TRACE] afterClause end   — lookahead: ${$.LA(1)?.image || "EOF"}`);
+      });
+
+      dbg.exit();
+    });
+
 
 
     // -----------------------
     // cue:stopwatch(...)
     // -----------------------
+
     $.RULE("cueStopwatchTop", () => {
       $.CONSUME(Stopwatch);
       $.CONSUME(LParen);
@@ -359,6 +381,7 @@ $.RULE("patternCall", () => {
     // ------------------------------------------------------------
     // 🎬 cue:video(...) — video playback cue
     // ------------------------------------------------------------
+
     this.RULE("cueVideoTop", () => {
       this.CONSUME(Video);
       this.CONSUME(LParen);
@@ -386,12 +409,6 @@ $.RULE("patternCall", () => {
       ]);
     });
 
-
-
-
-
-
-
     // -----------------------
     // cueTop — only fade|page at top level
     // -----------------------
@@ -407,13 +424,156 @@ $.RULE("patternCall", () => {
       ]);
     });
 
+
+
+
+
+
     this.performSelfAnalysis();
   }
+
+}
+// ------------------------------------
+// 🔍 DEBUG TOKEN STREAM
+// ------------------------------------
+export function debugTokens(inputText) {
+  const lex = CueLexer.tokenize(inputText);
+  console.groupCollapsed("[LexerDebug] Tokens");
+  console.table(
+    lex.tokens.map(t => ({
+      idx: t.startOffset,
+      image: t.image,
+      type: t.tokenType.name
+    }))
+  );
+  console.groupEnd();
+  return lex.tokens;
 }
 
-// ============================================================================
-// 3️⃣ CST → AST
-// ============================================================================
+
+
+
+// Helpers ////////////////
+
+// ------------------------------------------------------------
+// convertPatternNodeToAST(node)
+// ------------------------------------------------------------
+//  Purpose:
+// Recursively converts a Chevrotain CST node produced by the
+// unified patternExpr grammar into a lightweight AST object.
+//
+//  Supports:
+//   • Single identifiers → wraps as { type:'Pseq', list:[id], repeats:1 }
+//   • Numeric / string literals
+//   • Pattern calls (Pseq, Prand, Pshuf, Pchoose) with nested lists
+//   • Optional repeat argument (numeric, 'inf', or pattern)
+//
+//  Usage:
+// Used by cue:page, cue:fade, cue:video, and any other cues that
+// accept pattern-based parameters. Keeps the AST format consistent
+// across all cue types.
+//
+//  Example:
+//   cue:page(Pseq([page1,page2],2))
+//
+//   → {
+//        type: "cuePage",
+//        pattern: {
+//          type: "Pseq",
+//          list: ["page1","page2"],
+//          repeats: 2
+//        }
+//     }
+//
+//   Notes:
+//   • Safe to call recursively — handles nested patternExpr nodes.
+//   • Returns simple { type:'Literal', value:... } for unmatched nodes.
+//   • Designed to normalise single values into 1-element Pseq patterns.
+//
+// ------------------------------------------------------------
+// ------------------------------------------------------------
+// convertPatternNodeToAST(node)
+// ------------------------------------------------------------
+// Converts CST nodes for pattern constructs (Pseq, Prand, etc.)
+// into clean AST objects. Works with a single generic PatternName
+// token that matches any “Pxxx” form — no need for explicit Pseq/Prand definitions.
+// ------------------------------------------------------------
+function convertPatternNodeToAST(node) {
+  if (!node) {
+    console.warn("[convertPatternNodeToAST] ⚠️ Node is null");
+    return { type: "Literal", value: null };
+  }
+
+  console.log("[convertPatternNodeToAST] 🧩 Node:", node.name || node.type, node.children);
+
+  // --- patternExpr wrapper ---
+  if (node.name === "patternExpr") {
+    // Try to unwrap nested nodes first
+    if (node.children?.patternCall) return convertPatternNodeToAST(node.children.patternCall[0]);
+    if (node.children?.pageWithDuration) return convertPatternNodeToAST(node.children.pageWithDuration[0]);
+    if (node.children?.Identifier) return { type: "Literal", value: node.children.Identifier[0].image };
+    if (node.children?.NumberLiteral) return { type: "Literal", value: Number(node.children.NumberLiteral[0].image) };
+  }
+
+  // --- pageWithDuration support ---
+  if (node.name === "pageWithDuration") {
+    const id = node.children.Identifier?.[0]?.image || node.children.page?.[0]?.image || null;
+    const dur = node.children.NumberLiteral?.[0]?.image || node.children.dur?.[0]?.image || 0;
+    return { type: "Literal", value: { page: id, dur: Number(dur) } };
+  }
+
+  // --- Number or String literal ---
+  if (node.name === "NumberLiteral" || node.name === "StringLiteral") {
+    return { type: "Literal", value: node.image };
+  }
+
+  // --- Generic pattern call ---
+  if (node.name === "patternCall") {
+    const name = node.children?.PatternName?.[0]?.image ?? "Pseq";
+    const exprs = Object.values(node.children)
+      .flat()
+      .filter(n => n.name?.startsWith("patternExpr"));
+    const repeats = node.children.repeats?.[0];
+
+    return {
+      type: name,
+      list: exprs.map(convertPatternNodeToAST),
+      repeats: repeats ? convertPatternNodeToAST(repeats) : 1,
+    };
+  }
+
+  // --- Fallback ---
+  if (node.children?.patternExpr) return convertPatternNodeToAST(node.children.patternExpr[0]);
+  return { type: "Literal", value: node.image || null };
+}
+
+
+// ------------------------------------------------------------
+// extractNumber(children, fallback = 0)
+// ------------------------------------------------------------
+//  Purpose:
+// Utility helper to safely extract a numeric value from a CST
+// node’s children object, handling optional or missing fields.
+//
+//  Supports:
+//   • children.NumberLiteral   – standard numeric tokens
+//   • children.dur             – duration fields (e.g. cue:fade(dur:2))
+//   • children.xVal            – custom numeric parameters (e.g. x:3)
+//
+//  Behaviour:
+// Returns the first valid numeric token as a JavaScript Number.
+// If no valid numeric token is found, returns the provided fallback.
+//
+//  Example:
+//   extractNumber(node.children)      → 1.25
+//   extractNumber(node.children, 0)   → 0  (if no number found)
+//
+//  Notes:
+//   • Prevents “undefined → NaN” propagation in AST construction.
+//   • Used throughout CST→AST conversion for cue parameters
+//     like dur, x, hold, speed, etc.
+//
+// ------------------------------------------------------------
 
 function extractNumber(children, fallback = 0) {
   if (!children) return fallback;
@@ -423,6 +583,91 @@ function extractNumber(children, fallback = 0) {
     children.xVal?.[0]?.image;
   return num ? Number(num) : fallback;
 }
+
+
+// ------------------------------------------------------------
+// extractAfterClause — safely extracts the "after" clause
+// ------------------------------------------------------------
+// ------------------------------------------------------------
+// Extract `after:` clause as a normalized object:
+//
+//   { control: "nav", arg: "scroll", target: "F" | null }
+//
+// Works with CSTs where `afterAction` either IS the controlExpr
+// or wraps it. Also tolerates missing pieces without throwing.
+// ------------------------------------------------------------
+export function extractAfterClause(children) {
+  const clause = children?.afterClause?.[0];
+  const action = clause?.children?.afterAction?.[0];
+  const ctrl = action?.children?.controlExpr?.[0] || action;
+
+  if (!ctrl?.children) return null;
+
+  const control = ctrl.children.controlName?.[0]?.image || null;
+  const arg     = ctrl.children.controlArg?.[0]?.image || null;
+  const target  = ctrl.children.targetUid?.[0]?.image || null;
+
+  if (!control) return null;
+  console.log("[extractAfterClause] ✅ control:", control, "arg:", arg, "target:", target);
+  return { control, arg, target };
+}
+
+
+
+// ============================================================================
+// 3: CST → AST
+// ============================================================================
+
+// ------------------------------------------------------------
+// cstToAst(cst)
+// ------------------------------------------------------------
+//  Purpose:
+// Converts a full Chevrotain Concrete Syntax Tree (CST) produced
+// by the Oscilla CueDSL parser into a lightweight, normalised AST
+// used internally by cueHandlers (e.g. cue:page, cue:fade, cue:video).
+//
+//  Responsibilities:
+//   • Detect the cue type from the CST root (e.g. cuePageTop, cueFadeTop)
+//   • Extract and flatten relevant parameter blocks
+//   • Convert child CST nodes via helper functions
+//       → extractNumber()            for numeric params
+//       → convertPatternNodeToAST()  for patternExpr-based params
+//   • Return a minimal JSON-style object describing cue type + args
+//
+//  Behaviour:
+// Each cue type is handled in its own conditional block, ensuring
+// consistent AST format and easy extensibility when adding new cues.
+//
+//  Example:
+//
+//   cue:fade(mode:in, dur:2, from:0, to:1)
+//
+//   → {
+//        type: "cueFade",
+//        params: { mode: "in", dur: 2, from: 0, to: 1 }
+//     }
+//
+//   cue:page(Pseq([page1, page2], 2))
+//
+//   → {
+//        type: "cuePage",
+//        pattern: {
+//          type: "Pseq",
+//          list: ["page1", "page2"],
+//          repeats: 2
+//        }
+//     }
+//
+//  Notes:
+//   • Acts as the main interface between the parser (Chevrotain) and
+//     runtime logic in cues.js.
+//   • All cue-specific extractors follow the same pattern:
+//         const node = cst.children?.cueTypeTop?.[0] || (cst.name === "cueTypeTop" ? cst : null);
+//   • Returns null if parsing fails or cue type is unrecognised.
+//
+// ------------------------------------------------------------
+
+
 
 export function cstToAst(cst) {
   // ============================================================================
@@ -449,84 +694,27 @@ export function cstToAst(cst) {
     return { type: "cueFade", args: params };
   }
 
-  // ============================================================================
-  // 🔹 cue:page(...) — full playlist, control, loop, choose, rand support
-  // ============================================================================
-  const pageNode = cst.children?.cuePageTop?.[0] || (cst.name === "cuePageTop" ? cst : null);
+  // ------------------------------------------------------------
+  // cue:page(...) — unified pattern + after clause support
+  // ------------------------------------------------------------
+  // --- cue:page ---
+  const ast = {};
+
+  const pageNode = cst.children?.cuePageTop?.[0];
   if (pageNode) {
-    const ast = { type: "cuePage", args: [] };
-    const items = pageNode.children.playlist?.[0]?.children.playlistItem || [];
+    const bodyNode = pageNode.children?.body?.[0];
+    const patternNode = bodyNode?.children?.pattern?.[0];
+    const afterNode = bodyNode?.children?.afterClause?.[0];
 
-    for (const i of items) {
-      const c = i.children;
-
-      // pageItem
-      if (c.pageItem) {
-        const ch = c.pageItem[0].children;
-        const name = ch.page?.[0]?.image;
-        const dur = extractNumber(ch);
-        ast.args.push({ type: "page", name, dur });
-        continue;
-      }
-
-      // loopItem
-      if (c.loopItem) {
-        const ch = c.loopItem[0].children;
-        const pages = (ch.pageItem || []).map(p => {
-          const pg = p.children;
-          return { type: "page", name: pg.page?.[0]?.image, dur: extractNumber(pg) };
-        });
-        const repeat = extractNumber(ch, 1);
-        ast.args.push({ type: "loop", pages, repeat });
-        continue;
-      }
-
-      // chooseItem
-      if (c.chooseItem) {
-        const ch = c.chooseItem[0].children;
-        const options = (ch.choicePage || []).map(t => t.image);
-        const dur = extractNumber(ch, 0);
-        ast.args.push({ type: "choose", options, dur });
-        continue;
-      }
-
-      // randItem
-      if (c.randItem) {
-        const ch = c.randItem[0].children;
-        const pages = (ch.pageItem || []).map(p => {
-          const pg = p.children;
-          const name = pg.page?.[0]?.image;
-          const dur =
-            Number(pg.dur?.[0]?.image) ||
-            Number(pg.NumberLiteral?.[0]?.image) ||
-            0;
-          return { type: "page", name, dur };
-        });
-        const repeat = extractNumber(ch, 1);
-        ast.args.push({ type: "rand", pages, repeat });
-        continue;
-      }
-
-      // controlItem
-      if (c.controlItem) {
-        const ch = c.controlItem[0].children;
-        const value = ch.modeType?.[0]?.image;
-        const target = ch.targetUid?.[0]?.image || null;
-        ast.args.push({ type: "control", name: "mode", value, target });
-        continue;
-      }
-    }
-
-    // bare cue:page(page1)
-    if (ast.args.length === 0 && pageNode.children.pageItem) {
-      const ch = pageNode.children.pageItem[0].children;
-      const name = ch.page?.[0]?.image;
-      const dur = extractNumber(ch);
-      ast.args.push({ type: "page", name, dur });
-    }
+    ast.type = "cuePage";
+    ast.pattern = patternNode ? convertPatternNodeToAST(patternNode) : null;
+    ast.onCompletion = afterNode
+      ? extractAfterClause(bodyNode.children)
+      : null;
 
     return ast;
   }
+
 
   // ============================================================================
   // 🔹 cue:stopwatch(hold:10)
@@ -585,6 +773,8 @@ export function cstToAst(cst) {
 // ============================================================================
 export function parseCueToAST(input) {
   const lexResult = CueLexer.tokenize(input);
+  debugTokens(input);  // 👈 add this
+
   console.log("[LexerDebug] Tokens:", lexResult.tokens.map(t => t.image));
   console.log("[LexerDebug] Errors:", lexResult.errors);
 
