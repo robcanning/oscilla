@@ -2575,120 +2575,204 @@ export function handleStopwatchCue(ast, cueElement = null) {
 }
 
 
-
 // ------------------------------------------------------------
 // 🎬 handleVideoCueFromAST(ast, cueElement)
 // ------------------------------------------------------------
 // Plays a video from window.videoDir according to cue:video(...) params.
-// Supports file:, size:, loop:, hold:, speed:, offsetX:, offsetY:, location: (fixed|scroll).
-// Autoplay, click-to-close, clean removal, and multiple simultaneous instances.
+//
+// Supports:
+// file:, size:, loop:, hold:, speed:, offsetX:, offsetY:, location:(fixed|scroll),
+// in:, out:, opacity:, fadeIn:, fadeOut:.
+//
+// Fade-in/out are applied to the *total cue duration*, not per-loop.
+//
+// ------------------------------------------------------------
+// 🎬 handleVideoCueFromAST(ast, cueElement)
+// ------------------------------------------------------------
+// Plays a video from window.videoDir according to cue:video(...) params.
+//
+// Supported params:
+// file:, size:, loop:, hold:, speed:, offsetX:, offsetY:, location:(fixed|scroll),
+// target:(uid), in:, out:, fadeIn:, fadeOut:, opacity:, audio:(0|1)
 //
 export function handleVideoCueFromAST(ast, cueElement = null) {
-  if (!ast?.params) {
-    console.error("[cueVideo] ❌ Missing AST params.");
-    return;
-  }
+  if (!ast?.params) return console.error("[cueVideo] ❌ Missing AST params.");
 
   const p = ast.params;
-  if (!p.file) {
-    console.error("[cueVideo] ❌ Missing required 'file' parameter.");
+  if (!p.file) return console.error("[cueVideo] ❌ Missing required 'file' parameter.");
+
+  // --- Build source path
+  let fileName = p.file.trim();
+  if (!fileName.match(/\.(mp4|webm|ogg)$/)) fileName += ".mp4";
+  const src = `${window.videoDir}${fileName}`;
+
+  // --- Unique key for retrigger detection
+  const key = `${p.file}_${p.target || "none"}`;
+  const existing = document.querySelector(`video[data-key="${key}"]`);
+  if (existing) {
+    console.log(`[cueVideo] 🔁 Reusing existing instance for ${key}`);
+    existing.currentTime = Number(p.in || 0);
+    existing.playbackRate = Number(p.speed) || 1;
+    existing.muted = p.audio === "0" || p.audio === 0 || p.audio === "false" || p.audio === false;
+    existing.style.opacity = p.opacity ? Number(p.opacity) : 1;
+    existing.play();
     return;
   }
 
-  // --- Build full path
-  // const src = `${window.videoDir}${p.file}.mp4`;
-  let fileName = p.file.trim();
-  if (!fileName.match(/\.(mp4|webm|ogg)$/)) fileName += ".mp4"; // default
-  const src = `${window.videoDir}${fileName}`;
-
-
-  // --- Create element
+  // --- Create video element
   const vid = document.createElement("video");
   const uid = `video-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
-
   vid.id = uid;
+  vid.dataset.key = key;
   vid.src = src;
   vid.autoplay = true;
   vid.playsInline = true;
-  vid.muted = false;
+  vid.muted = p.audio === "0" || p.audio === 0 || p.audio === "false" || p.audio === false;
   vid.controls = false;
+  vid.loop = false;
+  vid.playbackRate = Number(p.speed) || 1;
   vid.style.position = p.location === "fixed" ? "fixed" : "absolute";
   vid.style.cursor = "pointer";
   vid.style.zIndex = 9999;
   vid.style.border = "none";
-  vid.playbackRate = Number(p.speed) || 1;
+  vid.style.opacity = p.fadeIn ? 0 : (p.opacity ? Number(p.opacity) : 1);
+  vid.style.transition = "opacity 0.5s ease";
 
-  // --- Determine placement
-  const baseRect = cueElement?.getBoundingClientRect?.() || { x: 100, y: 100 };
+  // --- Geometry (centered)
+  const score = document.getElementById("scoreContainer");
+  const scrollX = score?.scrollLeft || 0;
+  const scrollY = score?.scrollTop || 0;
+  const containerBox = score?.getBoundingClientRect?.() || { left: 0, top: 0 };
+
+  const targetEl = p.target ? document.getElementById(p.target) : null;
+  const baseEl = targetEl || cueElement;
   const offsetX = Number(p.offsetX) || 0;
   const offsetY = Number(p.offsetY) || 0;
-  const posX = baseRect.x + offsetX;
-  const posY = baseRect.y + offsetY + (p.location === "scroll" ? window.scrollY : 0);
 
-  vid.style.left = `${posX}px`;
-  vid.style.top = `${posY}px`;
+  let x = 100, y = 100;
+  if (baseEl?.getBoundingClientRect) {
+    const bbox = baseEl.getBoundingClientRect();
+    if (p.location === "scroll") {
+      x = bbox.left - containerBox.left + scrollX + offsetX;
+      y = bbox.top - containerBox.top + scrollY + offsetY;
+    } else {
+      x = bbox.left + offsetX;
+      y = bbox.top + offsetY;
+    }
+    // center on target
+    x += bbox.width / 2;
+    y += bbox.height / 2;
+  }
 
-  // --- Size handling
+  // --- Size
+  let vidW = 320, vidH = 180;
   if (p.size === "fs" || p.size === "fullscreen") {
-    Object.assign(vid.style, {
-      top: "0",
-      left: "0",
-      width: "100vw",
-      height: "100vh",
-    });
+    Object.assign(vid.style, { top: "0", left: "0", width: "100vw", height: "100vh" });
   } else if (typeof p.size === "string" && p.size.includes("x")) {
     const [w, h] = p.size.split("x").map(Number);
-    if (!isNaN(w)) vid.width = w;
-    if (!isNaN(h)) vid.height = h;
+    if (!isNaN(w)) vidW = w;
+    if (!isNaN(h)) vidH = h;
   } else if (!isNaN(p.size)) {
-    vid.width = Number(p.size);
+    vidW = Number(p.size);
   }
+  vid.width = vidW;
+  vid.height = vidH;
 
-  // --- Append to appropriate layer
+  // center offset correction
+  vid.style.left = `${x - vidW / 2}px`;
+  vid.style.top = `${y - vidH / 2}px`;
+
+  // --- Append
   const container = document.getElementById("videoLayer") || document.body;
-  container.appendChild(vid);
+  if (p.location === "scroll" && score) score.appendChild(vid);
+  else container.appendChild(vid);
 
-  console.log(`[cueVideo] ▶️ Playing ${src} (${p.size || "auto"} @ ${p.speed || 1}x)`);
+  console.log(`[cueVideo] ▶️ ${src} (size:${vidW}x${vidH}, speed:${vid.playbackRate}x, target:${p.target || "(none)"})`);
 
-  // --- Looping and hold timing
+  // --- Timing & fade parameters
+  const fadeInDur = Number(p.fadeIn || 0);
+  const fadeOutDur = Number(p.fadeOut || 0);
+  const inTime = Number(p.in || 0);
+  const outTime = Number(p.out || 0);
+  const opacityTarget = Number(p.opacity || 1);
+  const totalHold = p.hold ? Number(p.hold) * 1000 : null;
+
   let loopCount = 0;
   const maxLoops = Number(p.loop) || 1;
-  const holdMs = p.hold ? Number(p.hold) * 1000 : null;
 
-  if (p.loop === 0 || p.loop === "0") {
-    vid.loop = true; // infinite
-  } else if (maxLoops > 1) {
-    vid.addEventListener("ended", () => {
-      loopCount++;
-      if (loopCount < maxLoops) {
-        vid.play();
-      } else {
-        removeVideo();
-      }
-    });
-  } else {
-    // one-shot
-    vid.addEventListener("ended", removeVideo);
-  }
-
-  if (holdMs && holdMs > 0) {
-    setTimeout(removeVideo, holdMs);
-  }
-
-  // --- Click to close anytime
-  vid.addEventListener("click", removeVideo);
-
-  // --- Cleanup and emit cueComplete
+  // --- Cleanup
   function removeVideo() {
     try {
       vid.pause();
+      if (vid._scrollHandler && score) score.removeEventListener("scroll", vid._scrollHandler);
       vid.remove();
-      console.log(`[cueVideo] 🧹 Removed video ${uid}`);
-      emitCueComplete(uid, "cueVideo");
+      console.log(`[cueVideo] 🧹 Removed ${uid}`);
+      emitCueComplete?.(uid, "cueVideo");
     } catch (err) {
       console.warn("[cueVideo] ⚠️ Error removing video:", err);
     }
   }
+
+  // --- Scroll tracking
+  if (p.location === "scroll" && baseEl && score) {
+    const updatePos = () => {
+      const bbox = baseEl.getBoundingClientRect();
+      const sx = score.scrollLeft || 0;
+      const sy = score.scrollTop || 0;
+      vid.style.left = `${bbox.left - containerBox.left + sx + bbox.width / 2 - vidW / 2 + offsetX}px`;
+      vid.style.top = `${bbox.top - containerBox.top + sy + bbox.height / 2 - vidH / 2 + offsetY}px`;
+    };
+    vid._scrollHandler = updatePos;
+    score.addEventListener("scroll", updatePos);
+  }
+
+  // --- Fades
+  vid.addEventListener("loadedmetadata", () => {
+    if (inTime > 0) vid.currentTime = inTime;
+
+    if (fadeInDur > 0) {
+      vid.style.opacity = 0;
+      vid.animate([{ opacity: 0 }, { opacity: opacityTarget }], {
+        duration: fadeInDur * 1000,
+        fill: "forwards",
+        easing: "ease-out",
+      });
+    } else {
+      vid.style.opacity = opacityTarget;
+    }
+
+    if (outTime > 0) {
+      const fadeOutStart = Math.max((outTime - fadeOutDur) * 1000, 0);
+      setTimeout(() => {
+        vid.animate([{ opacity: opacityTarget }, { opacity: 0 }], {
+          duration: fadeOutDur * 1000,
+          fill: "forwards",
+          easing: "ease-in",
+        });
+      }, fadeOutStart);
+    }
+  });
+
+  // --- Looping & removal
+  if (p.loop === 0 || p.loop === "0") {
+    vid.loop = true;
+  } else if (maxLoops > 1) {
+    vid.addEventListener("ended", () => {
+      loopCount++;
+      if (loopCount < maxLoops) {
+        vid.currentTime = inTime;
+        vid.play();
+      } else removeVideo();
+    });
+  } else {
+    vid.addEventListener("ended", removeVideo);
+  }
+
+  if (totalHold && totalHold > 0) {
+    setTimeout(removeVideo, totalHold);
+  }
+
+  vid.addEventListener("click", removeVideo);
 }
 
 

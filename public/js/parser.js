@@ -73,7 +73,7 @@ const Stopwatch = createToken({ name: "Stopwatch", pattern: /\bstopwatch\b/ });
 const Video = createToken({ name: "Video", pattern: /\bvideo\b/ });
 
 const Seq = createToken({ name: "Seq", pattern: /seq/ });
-const Loop = createToken({ name: "Loop", pattern: /loop/ });
+// const Loop = createToken({ name: "Loop", pattern: /loop/ });
 const Rand = createToken({ name: "Rand", pattern: /rand/ });
 const Choose = createToken({ name: "Choose", pattern: /choose/ });
 const Mode = createToken({ name: "Mode", pattern: /mode/ });
@@ -100,7 +100,7 @@ export const PatternName = createToken({
 
 
 export const allTokens = [
-  Cue, Fade, Page, Stopwatch, Video, After, Nav, PatternName, Seq, Loop, Rand, Choose, Mode,
+  Cue, Fade, Page, Stopwatch, Video, After, Nav, PatternName, Seq, Rand, Choose, Mode,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
   NumberLiteral, StringLiteral, Identifier, WS
 ];
