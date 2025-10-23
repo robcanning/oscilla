@@ -241,21 +241,21 @@ export function handleCueTrigger(cueId, isRemote = false, force = false, cueElem
     }
   }
 
-else if (cueId.startsWith("cue:stopwatch")) {
-  console.log("[CueDSL] ⏱ Handling cue:stopwatch...");
-  if (ast) {
-    return handleStopwatchCue(ast, cueElement);
+  else if (cueId.startsWith("cue:stopwatch")) {
+    console.log("[CueDSL] ⏱ Handling cue:stopwatch...");
+    if (ast) {
+      return handleStopwatchCue(ast, cueElement);
+    }
   }
-}
 
-else if (cueId.startsWith("cue:video")) {
-  console.log("[CueDSL] 🎬 Handling cue:video...");
-  if (ast) {
-    return handleVideoCueFromAST(ast, cueElement);
-  } else {
-    console.warn("[CueDSL] No AST found for cue:video — ignoring trigger.");
+  else if (cueId.startsWith("cue:video")) {
+    console.log("[CueDSL] 🎬 Handling cue:video...");
+    if (ast) {
+      return handleVideoCueFromAST(ast, cueElement);
+    } else {
+      console.warn("[CueDSL] No AST found for cue:video — ignoring trigger.");
+    }
   }
-}
 
 
 
@@ -2011,40 +2011,32 @@ export function handleAfterAction(ast) {
 
   try {
     // --- Case 1: mode(scroll) ---
-    if (control === "mode") {
-      if (arg === "scroll" && target) {
-        console.log(`[CueDSL] ⚙️ Exiting to scroll mode at rehearsal mark: ${target}`);
+    if ((arg === "scroll" || arg === "scrollPaused") && target) {
+      console.log(`[CueDSL] ⚙️ Exiting to scroll mode at rehearsal mark: ${target}`);
 
-        // 1️⃣ Switch to scroll mode
-        handleCueTrigger(`cueNav(mode(scroll))`);
+      // 1️⃣ Switch to scroll mode
+      handleCueTrigger(`cueNav(mode(scroll))`);
 
-        // 2️⃣ Defer jump until scroll container is visible
-        requestAnimationFrame(() => {
-          const sc = document.getElementById("scoreContainer");
-          if (sc) {
-            console.log(`[CueDSL] 🎯 Jumping to rehearsal mark after page teardown: ${target}`);
-            jumpToRehearsalMark(target);
-            startPlayback();
-          } else {
-            console.warn("[CueDSL] ⚠️ scoreContainer not yet ready; retrying...");
-            setTimeout(() => {
-              const sc2 = document.getElementById("scoreContainer");
-              if (sc2) {
-                console.log(`[CueDSL] 🎯 Retried jump to mark: ${target}`);
-                jumpToRehearsalMark(target);
-                startPlayback();
-              }
-            }, 150);
-          }
-        });
-        return;
-      }
+      // 2️⃣ Wait for DOM to update, then jump
+      requestAnimationFrame(() => {
+        const sc = document.getElementById("scoreContainer");
+        if (!sc) return;
 
-      // Normal mode switch (no target)
-      console.log(`[CueDSL] ⚙️ Switching mode → ${arg}`);
-      handleCueTrigger(`cueNav(mode(${arg}))`);
+        console.log(`[CueDSL] 🎯 Jumping to rehearsal mark after page teardown: ${target}`);
+        jumpToRehearsalMark(target);
+
+        // 3️⃣ Only resume playback if not explicitly paused
+        if (arg !== "scrollPaused") {
+          startPlayback();
+          console.log("[CueDSL] ▶ Resuming playback (scroll mode)");
+        } else {
+          console.log("[CueDSL] ⏸ Scroll mode entered paused");
+          window.pausePlayback?.();
+        }
+      });
       return;
     }
+
 
     // --- Case 2: nav(scroll) ---
     if (control === "nav") {
@@ -2096,7 +2088,7 @@ export async function handlePageCueFromAST(ast) {
 
   console.log("[CueDSL] 🚀 Handling cue:page AST", ast);
 
-   // ------------------------------------------------------------
+  // ------------------------------------------------------------
   // Helper: recursively flatten pattern AST → array of pages or {page,dur} objects
   // ------------------------------------------------------------
   const expandPattern = (patternAST) => {
@@ -2218,20 +2210,20 @@ function handleFadeCueFromAST(ast, cueElementId) {
 
 
   function sendFadeOSC(value) {
-  const oscFlag = Number(params.osc ?? 1);
-  if (!window.OSC_ENABLED || !oscFlag) return;
-  if (!window.wsEnabled || !window.socket || window.socket.readyState !== WebSocket.OPEN) return;
+    const oscFlag = Number(params.osc ?? 1);
+    if (!window.OSC_ENABLED || !oscFlag) return;
+    if (!window.wsEnabled || !window.socket || window.socket.readyState !== WebSocket.OPEN) return;
 
-  const message = {
-    type: "osc_fade",
-    uid,
-    value,
-    timestamp: Date.now(),
-  };
+    const message = {
+      type: "osc_fade",
+      uid,
+      value,
+      timestamp: Date.now(),
+    };
 
-  window.socket.send(JSON.stringify(message));
-  console.debug("[OSC] 🎚 Sent fade update:", message);
-}
+    window.socket.send(JSON.stringify(message));
+    console.debug("[OSC] 🎚 Sent fade update:", message);
+  }
 
 
 
@@ -2280,20 +2272,20 @@ function handleFadeCueFromAST(ast, cueElementId) {
 
 
 
-// 🔖 Resolve and normalize UID once for OSC and logging
-let uid = params.uid || null;
+  // 🔖 Resolve and normalize UID once for OSC and logging
+  let uid = params.uid || null;
 
-if (!uid) {
-  // Prefer target.id if valid, otherwise fall back to cueElementId
-  uid =
-    target?.id ||
-    cueElementId?.replace(/^cue:/, "") ||
-    targetId?.replace(/^cue:/, "") ||
-    "unknown";
-}
+  if (!uid) {
+    // Prefer target.id if valid, otherwise fall back to cueElementId
+    uid =
+      target?.id ||
+      cueElementId?.replace(/^cue:/, "") ||
+      targetId?.replace(/^cue:/, "") ||
+      "unknown";
+  }
 
-// Sanitize for OSC address
-uid = String(uid).replace(/[^a-zA-Z0-9_\-]/g, "");
+  // Sanitize for OSC address
+  uid = String(uid).replace(/[^a-zA-Z0-9_\-]/g, "");
 
 
   const commonProps = {
@@ -2329,19 +2321,19 @@ uid = String(uid).replace(/[^a-zA-Z0-9_\-]/g, "");
       anime({ ...commonProps, opacity: [from, to], direction: "alternate", loop: 2 });
       break;
 
-case "pulse": {
-  const ms = dur * 1000;
-  anime({
-    ...commonProps,
-    opacity: [from, to],
-    direction: "alternate",
-    loop: true,
-    easing: ease || "easeInOutSine",
-    duration: ms,
-    endDelay: hold * 1000,
-  });
-  break;
-}
+    case "pulse": {
+      const ms = dur * 1000;
+      anime({
+        ...commonProps,
+        opacity: [from, to],
+        direction: "alternate",
+        loop: true,
+        easing: ease || "easeInOutSine",
+        duration: ms,
+        endDelay: hold * 1000,
+      });
+      break;
+    }
 
     case "pulseSlow":
       anime({
@@ -2460,11 +2452,11 @@ export function handleStopwatchCue(ast, cueElement = null) {
   const scrollY = score.scrollTop || 0;
 
   const x = (followScroll
-      ? bbox.left - containerBox.left + scrollX
-      : bbox.left) + offsetX;
+    ? bbox.left - containerBox.left + scrollX
+    : bbox.left) + offsetX;
   const y = (followScroll
-      ? bbox.top - containerBox.top + scrollY - 10
-      : bbox.top - 10);
+    ? bbox.top - containerBox.top + scrollY - 10
+    : bbox.top - 10);
 
   // 4️⃣ Choose / create the overlay
   const divId = `cue-stopwatch-${sourceType}`;
@@ -2512,7 +2504,7 @@ export function handleStopwatchCue(ast, cueElement = null) {
         const sx = score.scrollLeft || 0;
         const sy = score.scrollTop || 0;
         div.style.left = `${b.left - containerBox.left + sx + offsetX}px`;
-        div.style.top  = `${b.top  - containerBox.top + sy - 10}px`;
+        div.style.top = `${b.top - containerBox.top + sy - 10}px`;
       }
     }, 1000);
   } else if (sourceType === "new") {
@@ -2573,9 +2565,9 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
 
   // --- Build full path
   // const src = `${window.videoDir}${p.file}.mp4`;
-let fileName = p.file.trim();
-if (!fileName.match(/\.(mp4|webm|ogg)$/)) fileName += ".mp4"; // default
-const src = `${window.videoDir}${fileName}`;
+  let fileName = p.file.trim();
+  if (!fileName.match(/\.(mp4|webm|ogg)$/)) fileName += ".mp4"; // default
+  const src = `${window.videoDir}${fileName}`;
 
 
   // --- Create element
@@ -4961,60 +4953,60 @@ export async function handleNavCue(parsed) {
 
 
     case "mode":
-  if (!argExpr) {
-    dbg("mode() missing arg");
-    break;
-  }
+      if (!argExpr) {
+        dbg("mode() missing arg");
+        break;
+      }
 
-  if (argExpr === "scroll") {
-    dbg("→ Switching to scroll mode");
+      if (argExpr === "scroll") {
+        dbg("→ Switching to scroll mode");
 
-    const ps = window.pageState;
-    const container = document.getElementById("singlePage-container");
-    const content = document.getElementById("singlePage-content");
+        const ps = window.pageState;
+        const container = document.getElementById("singlePage-container");
+        const content = document.getElementById("singlePage-content");
 
-    // 🟢 If a preloaded hidden score exists (hybrid mode), use that
-    if (window.preloadedScoreSvg) {
-      dbg("🌿 Detected preloaded score — switching via switchToScrollMode()");
-      // switchToScrollMode();
-      if (ps) ps.mode = "scroll";
-      return;
-    }
-
-    // 🔹 Otherwise, fall back to your existing overlay-fade + resume logic
-    if (container && content) {
-      container.style.transition = "opacity 0.5s ease";
-      container.style.opacity = "0";
-      setTimeout(() => {
-        container.style.display = "none";
-        content.innerHTML = "";
-        if (window._activePageButtons) {
-          window._activePageButtons.forEach(btn => btn._destroyCueButton?.());
-          window._activePageButtons = [];
+        // 🟢 If a preloaded hidden score exists (hybrid mode), use that
+        if (window.preloadedScoreSvg) {
+          dbg("🌿 Detected preloaded score — switching via switchToScrollMode()");
+          // switchToScrollMode();
+          if (ps) ps.mode = "scroll";
+          return;
         }
-        if (ps) {
-          ps.mode = "scroll";
-          ps.current = null;
+
+        // 🔹 Otherwise, fall back to your existing overlay-fade + resume logic
+        if (container && content) {
+          container.style.transition = "opacity 0.5s ease";
+          container.style.opacity = "0";
+          setTimeout(() => {
+            container.style.display = "none";
+            content.innerHTML = "";
+            if (window._activePageButtons) {
+              window._activePageButtons.forEach(btn => btn._destroyCueButton?.());
+              window._activePageButtons = [];
+            }
+            if (ps) {
+              ps.mode = "scroll";
+              ps.current = null;
+            }
+            window.resumeScrollScore?.();
+            dbg("✅ Returned to scroll mode");
+          }, 500);
+        } else {
+          dbg("⚠️ No container found; forcing resumeScrollScore()");
+          window.resumeScrollScore?.();
+          if (ps) ps.mode = "scroll";
         }
-        window.resumeScrollScore?.();
-        dbg("✅ Returned to scroll mode");
-      }, 500);
-    } else {
-      dbg("⚠️ No container found; forcing resumeScrollScore()");
-      window.resumeScrollScore?.();
-      if (ps) ps.mode = "scroll";
-    }
-  }
+      }
 
-  else if (argExpr === "page") {
-    dbg("→ Switching to page mode placeholder (future)");
-    // optionally: trigger cuePage(...) manually if desired
-  }
+      else if (argExpr === "page") {
+        dbg("→ Switching to page mode placeholder (future)");
+        // optionally: trigger cuePage(...) manually if desired
+      }
 
-  else {
-    console.warn("[cueNav] Unknown mode argument:", argExpr);
-  }
-  break;
+      else {
+        console.warn("[cueNav] Unknown mode argument:", argExpr);
+      }
+      break;
 
 
 

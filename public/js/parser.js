@@ -504,21 +504,34 @@ function convertPatternNodeToAST(node) {
     return { type: "Literal", value: null };
   }
 
+  // Debug (optional, can comment out later)
   console.log("[convertPatternNodeToAST] 🧩 Node:", node.name || node.type, node.children);
 
   // --- patternExpr wrapper ---
   if (node.name === "patternExpr") {
-    // Try to unwrap nested nodes first
-    if (node.children?.patternCall) return convertPatternNodeToAST(node.children.patternCall[0]);
-    if (node.children?.pageWithDuration) return convertPatternNodeToAST(node.children.pageWithDuration[0]);
-    if (node.children?.Identifier) return { type: "Literal", value: node.children.Identifier[0].image };
-    if (node.children?.NumberLiteral) return { type: "Literal", value: Number(node.children.NumberLiteral[0].image) };
+    if (node.children?.patternCall)
+      return convertPatternNodeToAST(node.children.patternCall[0]);
+
+    if (node.children?.pageWithDuration)
+      return convertPatternNodeToAST(node.children.pageWithDuration[0]);
+
+    if (node.children?.Identifier)
+      return { type: "Literal", value: node.children.Identifier[0].image };
+
+    if (node.children?.NumberLiteral)
+      return { type: "Literal", value: Number(node.children.NumberLiteral[0].image) };
   }
 
   // --- pageWithDuration support ---
   if (node.name === "pageWithDuration") {
-    const id = node.children.Identifier?.[0]?.image || node.children.page?.[0]?.image || null;
-    const dur = node.children.NumberLiteral?.[0]?.image || node.children.dur?.[0]?.image || 0;
+    const id =
+      node.children.Identifier?.[0]?.image ||
+      node.children.page?.[0]?.image ||
+      null;
+    const dur =
+      node.children.NumberLiteral?.[0]?.image ||
+      node.children.dur?.[0]?.image ||
+      0;
     return { type: "Literal", value: { page: id, dur: Number(dur) } };
   }
 
@@ -527,23 +540,34 @@ function convertPatternNodeToAST(node) {
     return { type: "Literal", value: node.image };
   }
 
-  // --- Generic pattern call ---
+  // --- Generic pattern call (Pseq, PRand, etc.) ---
   if (node.name === "patternCall") {
     const name = node.children?.PatternName?.[0]?.image ?? "Pseq";
-    const exprs = Object.values(node.children)
-      .flat()
-      .filter(n => n.name?.startsWith("patternExpr"));
-    const repeats = node.children.repeats?.[0];
 
-    return {
-      type: name,
-      list: exprs.map(convertPatternNodeToAST),
-      repeats: repeats ? convertPatternNodeToAST(repeats) : 1,
-    };
+    // Recurse into all child patternExpr nodes (including nested Pseqs)
+    const exprs = (node.children.patternExpr || []).map(convertPatternNodeToAST);
+
+    // Handle repeats argument if present
+    let repeats = 1;
+    if (node.children.repeats?.[0]) {
+      const repNode = node.children.repeats[0];
+      const num = repNode.children?.NumberLiteral?.[0]?.image;
+      if (num) repeats = Number(num);
+    }
+
+    // Flatten nested Literals inside list
+    const list = exprs.map(e => {
+      if (e.type === "Literal" && e.value?.page) return e; // page literal
+      return e; // keep nested pattern objects intact
+    });
+
+    return { type: name, list, repeats };
   }
 
-  // --- Fallback ---
-  if (node.children?.patternExpr) return convertPatternNodeToAST(node.children.patternExpr[0]);
+  // --- Fallback recursion ---
+  if (node.children?.patternExpr)
+    return convertPatternNodeToAST(node.children.patternExpr[0]);
+
   return { type: "Literal", value: node.image || null };
 }
 
