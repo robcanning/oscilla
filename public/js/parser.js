@@ -55,7 +55,8 @@ const StringLiteral = createToken({
 
 const Identifier = createToken({
   name: "Identifier",
-  pattern: /[a-zA-Z_][a-zA-Z0-9_-]*/
+  // allow dots and hyphens inside identifiers (but not at start)
+  pattern: /[a-zA-Z_][a-zA-Z0-9_.-]*/
 });
 
 const WS = createToken({
@@ -65,32 +66,34 @@ const WS = createToken({
 });
 
 // Keywords must precede Identifier.
-const Cue    = createToken({ name: "Cue", pattern: /cue/ });
-const Fade   = createToken({ name: "Fade",   pattern: /fade\b/,   longer_alt: Identifier });
+const Cue = createToken({ name: "Cue", pattern: /cue/ });
+const Fade = createToken({ name: "Fade", pattern: /fade\b/, longer_alt: Identifier });
 const Page = createToken({ name: "Page", pattern: /\bpage\b/ });
 const Stopwatch = createToken({ name: "Stopwatch", pattern: /\bstopwatch\b/ });
+const Video = createToken({ name: "Video", pattern: /\bvideo\b/ });
 
-const Seq    = createToken({ name: "Seq", pattern: /seq/ });
-const Loop   = createToken({ name: "Loop", pattern: /loop/ });
-const Rand   = createToken({ name: "Rand", pattern: /rand/ });
+const Seq = createToken({ name: "Seq", pattern: /seq/ });
+const Loop = createToken({ name: "Loop", pattern: /loop/ });
+const Rand = createToken({ name: "Rand", pattern: /rand/ });
 const Choose = createToken({ name: "Choose", pattern: /choose/ });
-const Mode   = createToken({ name: "Mode", pattern: /mode/ });
+const Mode = createToken({ name: "Mode", pattern: /mode/ });
 
 // Punctuation
 const LParen = createToken({ name: "LParen", pattern: /\(/ });
 const RParen = createToken({ name: "RParen", pattern: /\)/ });
 const LBrace = createToken({ name: "LBrace", pattern: /\{/ });
 const RBrace = createToken({ name: "RBrace", pattern: /\}/ });
-const Colon  = createToken({ name: "Colon",  pattern: /:/ });
-const Comma  = createToken({ name: "Comma",  pattern: /,/ });
-const At     = createToken({ name: "At",     pattern: /@/ });
+const LBracket = createToken({ name: "LBracket", pattern: /\[/ });
+const RBracket = createToken({ name: "RBracket", pattern: /\]/ });
+const Colon = createToken({ name: "Colon", pattern: /:/ });
+const Comma = createToken({ name: "Comma", pattern: /,/ });
+const At = createToken({ name: "At", pattern: /@/ });
 const XParam = createToken({ name: "XParam", pattern: /x/ });
 
 
-
 export const allTokens = [
-  Cue, Fade, Page, Stopwatch, Seq, Loop, Rand, Choose, Mode,
-  LParen, RParen, LBrace, RBrace, Colon, Comma, At, XParam,
+  Cue, Fade, Page, Stopwatch, Video, Seq, Loop, Rand, Choose, Mode,
+  LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
   NumberLiteral, StringLiteral, Identifier, WS
 ];
 export const CueLexer = new Lexer(allTokens);
@@ -106,27 +109,97 @@ export class CueParser extends CstParser {
 
 
 
-// -----------------------
-// Generic key:value param list — reusable across cues
-// -----------------------
-$.RULE("genericParam", () => {
-  $.CONSUME(Identifier, { LABEL: "key" });
-  $.CONSUME(Colon);
+    // -----------------------
+    // Generic key:value param list — reusable across cues
+    // -----------------------
+    $.RULE("genericParam", () => {
+      $.CONSUME(Identifier, { LABEL: "key" });
+      $.CONSUME(Colon);
+      $.OR([
+        { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "value" }) },
+        { ALT: () => $.CONSUME(StringLiteral, { LABEL: "value" }) },
+        { ALT: () => $.CONSUME1(Identifier, { LABEL: "value" }) },
+      ]);
+    });
+
+    $.RULE("genericParamList", () => {
+      $.CONSUME(LParen);
+      $.AT_LEAST_ONE_SEP({
+        SEP: Comma,
+        DEF: () => $.SUBRULE($.genericParam),
+      });
+      $.CONSUME(RParen);
+    });
+
+    // -----------------------
+    // Generic size pair (e.g. 480x270)
+    // -----------------------
+    $.RULE("sizePair", () => {
+      $.CONSUME(NumberLiteral, { LABEL: "width" });
+      $.CONSUME(XParam);
+      $.CONSUME1(NumberLiteral, { LABEL: "height" });
+    });
+
+//////////////////////////////////////
+
+
+// Tokens for pattern names (you can add more later)
+const Pseq    = createToken({ name: "Pseq", pattern: /\bPseq\b/ });
+const Prand   = createToken({ name: "Prand", pattern: /\bPrand\b/ });
+const Pshuf   = createToken({ name: "Pshuf", pattern: /\bPshuf\b/ });
+const Pchoose = createToken({ name: "Pchoose", pattern: /\bPchoose\b/ });
+// ... optionally Pseries, Pwhite, etc.
+
+// Rule for pattern expression (generic)
+$.RULE("patternExpr", () => {
   $.OR([
-    { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "value" }) },
-    { ALT: () => $.CONSUME(StringLiteral, { LABEL: "value" }) },
-    { ALT: () => $.CONSUME1(Identifier, { LABEL: "value" }) },
+    { ALT: () => $.SUBRULE($.patternCall) },
+    { ALT: () => $.CONSUME(NumberLiteral) },
+    { ALT: () => $.CONSUME(StringLiteral) },
+    { ALT: () => $.CONSUME(Identifier) }
   ]);
 });
 
-$.RULE("genericParamList", () => {
+// Shared rule for any Pxxx pattern
+$.RULE("patternCall", () => {
+  $.OR([
+    { ALT: () => $.CONSUME(Pseq) },
+    { ALT: () => $.CONSUME(Prand) },
+    { ALT: () => $.CONSUME(Pshuf) },
+    { ALT: () => $.CONSUME(Pchoose) }
+  ]);
   $.CONSUME(LParen);
+  $.CONSUME(LBracket);
+
+  // Allow nested patterns or literals inside the list
   $.AT_LEAST_ONE_SEP({
     SEP: Comma,
-    DEF: () => $.SUBRULE($.genericParam),
+    DEF: () => $.SUBRULE1($.patternExpr)
   });
+
+  $.CONSUME(RBracket);
+
+  // Optional repeat count (can be number, inf, or pattern)
+  $.OPTION(() => {
+    $.CONSUME(Comma);
+    $.SUBRULE($.patternExpr, { LABEL: "repeats" });
+  });
+
   $.CONSUME(RParen);
 });
+
+
+////////////////////////////////////////
+
+    
+
+
+
+
+
+
+
+
 
 
     // -----------------------
@@ -220,19 +293,19 @@ $.RULE("genericParamList", () => {
     // -----------------------
     // Fade params
     // -----------------------
-$.RULE("fadeParam", () => {
-  // key can be Mode keyword or plain identifier
-  $.OR([
-    { ALT: () => $.CONSUME(Mode, { LABEL: "keyMode" }) },
-    { ALT: () => $.CONSUME(Identifier, { LABEL: "keyIdent" }) },
-  ]);
-  $.CONSUME(Colon);
-  // value can be number or identifier (second OR → must be OR1)
-  $.OR1([
-    { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "num" }) },
-    { ALT: () => $.CONSUME1(Identifier, { LABEL: "ident" }) },
-  ]);
-});
+    $.RULE("fadeParam", () => {
+      // key can be Mode keyword or plain identifier
+      $.OR([
+        { ALT: () => $.CONSUME(Mode, { LABEL: "keyMode" }) },
+        { ALT: () => $.CONSUME(Identifier, { LABEL: "keyIdent" }) },
+      ]);
+      $.CONSUME(Colon);
+      // value can be number or identifier (second OR → must be OR1)
+      $.OR1([
+        { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "num" }) },
+        { ALT: () => $.CONSUME1(Identifier, { LABEL: "ident" }) },
+      ]);
+    });
 
     $.RULE("fadeParamList", () => {
       $.AT_LEAST_ONE_SEP({
@@ -268,20 +341,51 @@ $.RULE("fadeParam", () => {
     });
 
 
-// -----------------------
-// cue:stopwatch(...)
-// -----------------------
-$.RULE("cueStopwatchTop", () => {
-  $.CONSUME(Stopwatch);
-  $.CONSUME(LParen);
-  $.OPTION(() => {
-    $.AT_LEAST_ONE_SEP({
-      SEP: Comma,
-      DEF: () => $.SUBRULE($.genericParam),
+    // -----------------------
+    // cue:stopwatch(...)
+    // -----------------------
+    $.RULE("cueStopwatchTop", () => {
+      $.CONSUME(Stopwatch);
+      $.CONSUME(LParen);
+      $.OPTION(() => {
+        $.AT_LEAST_ONE_SEP({
+          SEP: Comma,
+          DEF: () => $.SUBRULE($.genericParam),
+        });
+      });
+      $.CONSUME(RParen);
     });
-  });
-  $.CONSUME(RParen);
-});
+
+    // ------------------------------------------------------------
+    // 🎬 cue:video(...) — video playback cue
+    // ------------------------------------------------------------
+    this.RULE("cueVideoTop", () => {
+      this.CONSUME(Video);
+      this.CONSUME(LParen);
+      this.OPTION(() => {
+        this.SUBRULE(this.videoParamList);
+      });
+      this.CONSUME(RParen);
+    });
+
+    this.RULE("videoParamList", () => {
+      this.AT_LEAST_ONE_SEP({
+        SEP: Comma,
+        DEF: () => $.SUBRULE(this.videoParam)
+      });
+    });
+
+    this.RULE("videoParam", () => {
+      this.CONSUME(Identifier);
+      this.CONSUME(Colon);
+      this.OR([
+        { ALT: () => $.SUBRULE($.sizePair) },
+        { ALT: () => $.CONSUME(NumberLiteral) },
+        { ALT: () => $.CONSUME(StringLiteral) },
+        { ALT: () => $.CONSUME1(Identifier) }
+      ]);
+    });
+
 
 
 
@@ -298,6 +402,7 @@ $.RULE("cueStopwatchTop", () => {
         { ALT: () => $.SUBRULE($.cueFadeTop) },
         { ALT: () => $.SUBRULE($.cuePageTop) },
         { ALT: () => $.SUBRULE($.cueStopwatchTop) },
+        { ALT: () => $.SUBRULE($.cueVideoTop) },
 
       ]);
     });
@@ -423,23 +528,48 @@ export function cstToAst(cst) {
     return ast;
   }
 
-// ============================================================================
-// 🔹 cue:stopwatch(hold:10)
-// ============================================================================
-const stopwatchNode = cst.children?.cueStopwatchTop?.[0] 
-                   || (cst.name === "cueStopwatchTop" ? cst : null);
+  // ============================================================================
+  // 🔹 cue:stopwatch(hold:10)
+  // ============================================================================
+  const stopwatchNode = cst.children?.cueStopwatchTop?.[0]
+    || (cst.name === "cueStopwatchTop" ? cst : null);
 
-if (stopwatchNode) {
-  const args = [];
-  const items = stopwatchNode.children.genericParam || [];
-  for (const p of items) {
-    const key = p.children.key?.[0]?.image;
-    const val = p.children.value?.[0]?.image;
-    if (key) args.push({ type: key, value: isNaN(Number(val)) ? val : Number(val) });
+  if (stopwatchNode) {
+    const args = [];
+    const items = stopwatchNode.children.genericParam || [];
+    for (const p of items) {
+      const key = p.children.key?.[0]?.image;
+      const val = p.children.value?.[0]?.image;
+      if (key) args.push({ type: key, value: isNaN(Number(val)) ? val : Number(val) });
+    }
+
+    return { type: "cueStopwatch", args };
   }
 
-  return { type: "cueStopwatch", args };
-}
+  // ------------------------------------------------------------
+  // 🎬 cue:video(...) → AST
+  // ------------------------------------------------------------
+  const videoNode = cst.children?.cueVideoTop?.[0] || (cst.name === "cueVideoTop" ? cst : null);
+  if (videoNode) {
+    const params = {};
+    const list = videoNode.children?.videoParamList?.[0];
+    const items = list?.children?.videoParam || [];
+
+    for (const p of items) {
+      const key = p.children.Identifier[0].image;
+      const valueToken =
+        p.children.NumberLiteral?.[0] ||
+        p.children.StringLiteral?.[0] ||
+        p.children.Identifier?.[1]; // second identifier (if present)
+      const rawVal = valueToken?.image ?? null;
+
+      const val = isNaN(rawVal) ? rawVal?.replace(/^"|"$/g, "") : Number(rawVal);
+      params[key] = val;
+    }
+
+    return { type: "cueVideo", params };
+  }
+
 
 
   // ============================================================================

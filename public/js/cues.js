@@ -108,11 +108,11 @@ export function parseCueParams(cueId) {
   // ----------------------------------------------------------
   if (cueId.startsWith("cue:")) {
     try {
-      console.log("[CueDSL] 🧩 Parsing new-style cue:", cueId);
+      console.log("[CueDSL]  Parsing new-style cue:", cueId);
       const ast = parseCueToAST(cueId); // returns plain AST
       return { type: "cuePage", params: {}, ast }; // unified structure
     } catch (err) {
-      console.error("[CueDSL] ❌ Parse failed for Chevrotain cue:", err);
+      console.error("[CueDSL]  Parse failed for Chevrotain cue:", err);
       // continue to legacy fallback
     }
   }
@@ -123,10 +123,10 @@ export function parseCueParams(cueId) {
   if (cueId.includes(":") && cueId.includes("{")) {
     try {
       const result = parseCueDSL(cueId); // your older experimental parser
-      console.log("[CueDSL] ✅ JSON-style DSL parsed successfully:", result);
+      console.log("[CueDSL] JSON-style DSL parsed successfully:", result);
       return result;
     } catch (err) {
-      console.warn("[CueDSL] ⚠️ JSON-style DSL failed, using legacy fallback:", err);
+      console.warn("[CueDSL] JSON-style DSL failed, using legacy fallback:", err);
     }
   }
 
@@ -189,7 +189,7 @@ function capitalize(s) {
 
 
 
-// 🔁 Main dispatcher function for cue triggers
+// Main dispatcher function for cue triggers
 export function handleCueTrigger(cueId, isRemote = false, force = false, cueElement = null) {
   console.log(`[DEBUG] Attempting to trigger cue: ${cueId}`);
   console.log("[handleCueTrigger] cueId:", cueId);
@@ -203,7 +203,7 @@ export function handleCueTrigger(cueId, isRemote = false, force = false, cueElem
     return;
   }
 
-  // ✅ Mark cue as triggered
+  // Mark cue as triggered
   window.triggeredCues?.add(cueId);
 
   // 🔍 Parse cue and get AST (if DSL)
@@ -217,27 +217,27 @@ export function handleCueTrigger(cueId, isRemote = false, force = false, cueElem
   console.log(`[parseCueParams] Final cue type: ${type}`);
   console.log(`[parseCueParams] Final cueParams:`, cueParams || params);
 
-  // 🧩 Unified param reference
+  //  Unified param reference
   const p = cueParams || params || {};
 
-  // 🧠 NEW DSL cue:page(...) syntax via Chevrotain
+  //  NEW DSL cue:page(...) syntax via Chevrotain
   if (cueId.startsWith("cue:page")) {
-    console.log("[CueDSL] 🌿 Handling new cue:page syntax...");
+    console.log("[CueDSL]  Handling new cue:page syntax...");
     if (ast) {
       return handlePageCueFromAST(ast);
     } else {
-      console.warn("[CueDSL] ⚠️ No AST found for cue:page — fallback to legacy.");
+      console.warn("[CueDSL] No AST found for cue:page — fallback to legacy.");
     }
   }
 
   // 🧠 NEW DSL cue:page(...) syntax via Chevrotain
   else if (cueId.startsWith("cue:fade")) {
-    console.log("[CueDSL] 🌿 Handling new cue:fade syntax...");
+    console.log("[CueDSL] Handling new cue:fade syntax...");
     if (ast) {
       const elementId = cueElement?.id || cueElement?.getAttribute("id");
       return handleFadeCueFromAST(ast, elementId);
     } else {
-      console.warn("[CueDSL] ⚠️ No AST found for cue:fade — fallback to legacy.");
+      console.warn("[CueDSL] No AST found for cue:fade — fallback to legacy.");
     }
   }
 
@@ -248,9 +248,19 @@ else if (cueId.startsWith("cue:stopwatch")) {
   }
 }
 
+else if (cueId.startsWith("cue:video")) {
+  console.log("[CueDSL] 🎬 Handling cue:video...");
+  if (ast) {
+    return handleVideoCueFromAST(ast, cueElement);
+  } else {
+    console.warn("[CueDSL] No AST found for cue:video — ignoring trigger.");
+  }
+}
 
 
-  // ✅ Find appropriate handler
+
+
+  // Find appropriate handler
   if (!cueHandlers.hasOwnProperty(type)) {
     console.warn(`[CLIENT] No handler found for cue type: ${type}`);
     return;
@@ -295,16 +305,16 @@ else if (cueId.startsWith("cue:stopwatch")) {
   }
 
   // -------------------------------------------------------
-  //  📄 cuePage (legacy and AST-aware)
+  //  cuePage (legacy and AST-aware)
   // -------------------------------------------------------
   else if (type === "cuePage") {
-    // ✅ DSL AST-based cuePage
+    //  DSL AST-based cuePage
     if (ast) {
-      console.log("[CueDSL] 🧩 AST detected inside cuePage – handling via AST parser.");
+      console.log("[CueDSL]  AST detected inside cuePage handling via AST parser.");
       return handlePageCueFromAST(ast);
     }
 
-    // 🧠 Legacy extraction for cuePage(...)
+    //  Legacy extraction for cuePage(...)
     const openIdx = cueId.indexOf("(");
     let inner = "";
     if (openIdx !== -1) {
@@ -327,7 +337,7 @@ else if (cueId.startsWith("cue:stopwatch")) {
       return;
     }
 
-    // 🧩 Normal single page cue
+    //  Normal single page cue
     let animDuration = Number(p.dur);
     if (isNaN(animDuration) || animDuration < 0) animDuration = 0;
 
@@ -342,7 +352,7 @@ else if (cueId.startsWith("cue:stopwatch")) {
   }
 
   // -------------------------------------------------------
-  //  🧭 cueNav (or cueNavigate)
+  //  cueNav (or cueNavigate)
   // -------------------------------------------------------
   else if (cueId.startsWith("cueNav(") || cueId.startsWith("cueNavigate(")) {
     const parsedNav = parseNavCue(cueId);
@@ -350,7 +360,7 @@ else if (cueId.startsWith("cue:stopwatch")) {
   }
 
   // -------------------------------------------------------
-  //  🎧 cueAudioStop
+  //   cueAudioStop
   // -------------------------------------------------------
   else if (cueId.startsWith("cueAudioStop(")) {
     const match = cueId.match(/^cueAudioStop\(([^)]+)\)/);
@@ -365,7 +375,7 @@ else if (cueId.startsWith("cue:stopwatch")) {
   }
 
   // -------------------------------------------------------
-  //  🎬 Fallback for other cue types
+  //   Fallback for other cue types
   // -------------------------------------------------------
   else {
     console.log(`[CUE] Triggering cue handler: ${type}`);
@@ -386,7 +396,7 @@ else if (cueId.startsWith("cue:stopwatch")) {
 
 
 // =========================
-// 🧭 Universal UID Registry
+//  Universal UID Registry
 // =========================
 export function registerCueUid(cueExpr, context = "unknown") {
   if (!cueExpr || typeof cueExpr !== "string") return;
@@ -398,12 +408,12 @@ export function registerCueUid(cueExpr, context = "unknown") {
   const uid = uidMatch[1].trim();
   window.cueRegistry[uid] = cueExpr;
 
-  // console.log(`[REGISTRY] ✅ Registered UID "${uid}" (${context}) → ${cueExpr}`);
+  // console.log(`[REGISTRY]  Registered UID "${uid}" (${context}) → ${cueExpr}`);
 }
 
 
 
-// 🔔 Unified cue completion event emitter
+//  Unified cue completion event emitter
 export function emitCueComplete(id, type = "generic") {
   console.log(`[cueComplete] 🔚 ${type} complete → ${id}`);
   window.dispatchEvent(new CustomEvent("oscilla:cueComplete", {
@@ -482,8 +492,8 @@ export function handlePauseCue(cueId, duration, showCountdownOverride = null, re
   window.isPaused = true;
   window.ignoreSyncPlayback = true;
 
-  stopAnimation(); // ✅ Stops local animation
-  // wiindow.stopStopwatch(); // ✅ Optional if stopwatch is linked
+  stopAnimation(); // Stops local animation
+  // wiindow.stopStopwatch(); // Optional if stopwatch is linked
 
   // Send pause message to server to stop advancing playhead globally
   if (window.socket && window.socket.readyState === WebSocket.OPEN) {
@@ -604,7 +614,7 @@ export function clearPauseTimers() {
 export function resumePlayback(receivedFromServer = false) {
   console.log("[DEBUG] Resuming playback after countdown dismissal.");
 
-  // ✅ Allow resuming even if playheadX = 0 (only reject NaN)
+  //  Allow resuming even if playheadX = 0 (only reject NaN)
   if (!Number.isNaN(window.playheadX)) {
     console.log(`[DEBUG] Resuming from playheadX: ${window.playheadX}`);
   } else {
@@ -612,15 +622,15 @@ export function resumePlayback(receivedFromServer = false) {
     return;
   }
 
-  // ✅ Refresh UI state
+  // Refresh UI state
   window.updatePosition?.();
   // window.updateSeekBar?.();
   window.updateStopwatch?.();
 
-  // ✅ Reset animation clock baseline to avoid delta jumps
+  //  Reset animation clock baseline to avoid delta jumps
   window.lastAnimationFrameTime = null;
 
-  // ✅ Use the canonical startPlayback() for a full smooth resume
+  //  Use the canonical startPlayback() for a full smooth resume
   if (typeof window.startPlayback === "function") {
     console.log("[DEBUG] Calling startPlayback() from resumePlayback()");
     window.startPlayback();
@@ -2502,6 +2512,120 @@ export function handleStopwatchCue(ast, cueElement = null) {
 
 
 
+// ------------------------------------------------------------
+// 🎬 handleVideoCueFromAST(ast, cueElement)
+// ------------------------------------------------------------
+// Plays a video from window.videoDir according to cue:video(...) params.
+// Supports file:, size:, loop:, hold:, speed:, offsetX:, offsetY:, location: (fixed|scroll).
+// Autoplay, click-to-close, clean removal, and multiple simultaneous instances.
+//
+export function handleVideoCueFromAST(ast, cueElement = null) {
+  if (!ast?.params) {
+    console.error("[cueVideo] ❌ Missing AST params.");
+    return;
+  }
+
+  const p = ast.params;
+  if (!p.file) {
+    console.error("[cueVideo] ❌ Missing required 'file' parameter.");
+    return;
+  }
+
+  // --- Build full path
+  // const src = `${window.videoDir}${p.file}.mp4`;
+let fileName = p.file.trim();
+if (!fileName.match(/\.(mp4|webm|ogg)$/)) fileName += ".mp4"; // default
+const src = `${window.videoDir}${fileName}`;
+
+
+  // --- Create element
+  const vid = document.createElement("video");
+  const uid = `video-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
+
+  vid.id = uid;
+  vid.src = src;
+  vid.autoplay = true;
+  vid.playsInline = true;
+  vid.muted = false;
+  vid.controls = false;
+  vid.style.position = p.location === "fixed" ? "fixed" : "absolute";
+  vid.style.cursor = "pointer";
+  vid.style.zIndex = 9999;
+  vid.style.border = "none";
+  vid.playbackRate = Number(p.speed) || 1;
+
+  // --- Determine placement
+  const baseRect = cueElement?.getBoundingClientRect?.() || { x: 100, y: 100 };
+  const offsetX = Number(p.offsetX) || 0;
+  const offsetY = Number(p.offsetY) || 0;
+  const posX = baseRect.x + offsetX;
+  const posY = baseRect.y + offsetY + (p.location === "scroll" ? window.scrollY : 0);
+
+  vid.style.left = `${posX}px`;
+  vid.style.top = `${posY}px`;
+
+  // --- Size handling
+  if (p.size === "fs" || p.size === "fullscreen") {
+    Object.assign(vid.style, {
+      top: "0",
+      left: "0",
+      width: "100vw",
+      height: "100vh",
+    });
+  } else if (typeof p.size === "string" && p.size.includes("x")) {
+    const [w, h] = p.size.split("x").map(Number);
+    if (!isNaN(w)) vid.width = w;
+    if (!isNaN(h)) vid.height = h;
+  } else if (!isNaN(p.size)) {
+    vid.width = Number(p.size);
+  }
+
+  // --- Append to appropriate layer
+  const container = document.getElementById("videoLayer") || document.body;
+  container.appendChild(vid);
+
+  console.log(`[cueVideo] ▶️ Playing ${src} (${p.size || "auto"} @ ${p.speed || 1}x)`);
+
+  // --- Looping and hold timing
+  let loopCount = 0;
+  const maxLoops = Number(p.loop) || 1;
+  const holdMs = p.hold ? Number(p.hold) * 1000 : null;
+
+  if (p.loop === 0 || p.loop === "0") {
+    vid.loop = true; // infinite
+  } else if (maxLoops > 1) {
+    vid.addEventListener("ended", () => {
+      loopCount++;
+      if (loopCount < maxLoops) {
+        vid.play();
+      } else {
+        removeVideo();
+      }
+    });
+  } else {
+    // one-shot
+    vid.addEventListener("ended", removeVideo);
+  }
+
+  if (holdMs && holdMs > 0) {
+    setTimeout(removeVideo, holdMs);
+  }
+
+  // --- Click to close anytime
+  vid.addEventListener("click", removeVideo);
+
+  // --- Cleanup and emit cueComplete
+  function removeVideo() {
+    try {
+      vid.pause();
+      vid.remove();
+      console.log(`[cueVideo] 🧹 Removed video ${uid}`);
+      emitCueComplete(uid, "cueVideo");
+    } catch (err) {
+      console.warn("[cueVideo] ⚠️ Error removing video:", err);
+    }
+  }
+}
 
 
 
