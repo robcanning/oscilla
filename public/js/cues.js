@@ -2117,27 +2117,59 @@ export async function handlePageCueFromAST(ast) {
         const reps = patternAST.repeats === "inf" ? Infinity : Number(patternAST.repeats) || 1;
         return Array.from({ length: reps }, () => list).flat();
       }
-      case "Prand": {
-        const reps = patternAST.repeats === "inf" ? Infinity : Number(patternAST.repeats) || 1;
-        const list = patternAST.list.flatMap(expandPattern).filter(v => v && (typeof v === "string" || v.page));
-        const out = [];
-        for (let i = 0; i < reps; i++) out.push(list[Math.floor(Math.random() * list.length)]);
-        return out;
-      }
       case "Pshuf": {
         const reps = patternAST.repeats === "inf" ? 1 : Number(patternAST.repeats) || 1;
-        const list = patternAST.list.flatMap(expandPattern).filter(v => v && (typeof v === "string" || v.page));
-        const out = [];
-        for (let i = 0; i < reps; i++) out.push(...[...list].sort(() => Math.random() - 0.5));
+        const list = patternAST.list
+          .flatMap(expandPattern)
+          .filter(v => v && (typeof v === "string" || v.page));
+
+        // Shuffle ONCE
+        const shuffled = [...list].sort(() => Math.random() - 0.5);
+        const out = Array.from({ length: reps }, () => shuffled).flat();
         return out;
       }
+
+      case "Pxrand": {
+        const reps = patternAST.repeats === "inf" ? 1 : Number(patternAST.repeats) || 1;
+        const list = patternAST.list
+          .flatMap(expandPattern)
+          .filter(v => v && (typeof v === "string" || v.page));
+
+        // Shuffle EACH REPEAT
+        const out = [];
+        for (let i = 0; i < reps; i++) {
+          const shuffled = [...list].sort(() => Math.random() - 0.5);
+          out.push(...shuffled);
+        }
+        return out;
+      }
+
+      case "Prand": {
+        const reps = patternAST.repeats === "inf" ? Infinity : Number(patternAST.repeats) || 1;
+        const list = patternAST.list
+          .flatMap(expandPattern)
+          .filter(v => v && (typeof v === "string" || v.page));
+
+        const out = [];
+        for (let i = 0; i < reps; i++) {
+          out.push(list[Math.floor(Math.random() * list.length)]);
+        }
+        return out;
+      }
+
       case "Pchoose": {
         const reps = patternAST.repeats === "inf" ? 1 : Number(patternAST.repeats) || 1;
-        const list = patternAST.list.flatMap(expandPattern).filter(v => v && (typeof v === "string" || v.page));
+        const list = patternAST.list
+          .flatMap(expandPattern)
+          .filter(v => v && (typeof v === "string" || v.page));
+
         const out = [];
-        for (let i = 0; i < reps; i++) out.push(list[Math.floor(Math.random() * list.length)]);
+        for (let i = 0; i < reps; i++) {
+          out.push(list[Math.floor(Math.random() * list.length)]);
+        }
         return out;
       }
+
       case "Identifier": {
         const id = patternAST.image || patternAST.value || null;
         return id ? [id] : [];
