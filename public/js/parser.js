@@ -71,10 +71,16 @@ const Fade = createToken({ name: "Fade", pattern: /fade\b/, longer_alt: Identifi
 const Page = createToken({ name: "Page", pattern: /\bpage\b/ });
 const Stopwatch = createToken({ name: "Stopwatch", pattern: /\bstopwatch\b/ });
 const Video = createToken({ name: "Video", pattern: /\bvideo\b/ });
+const Text = createToken({ name: "Text", pattern: /\btext\b/, longer_alt: Identifier });
+
+const RangeLiteral = createToken({
+  name: "RangeLiteral",
+  pattern: /[0-9]+(?:\.[0-9]+)?-[0-9]+(?:\.[0-9]+)?/
+});
 
 const Seq = createToken({ name: "Seq", pattern: /seq/ });
 // const Loop = createToken({ name: "Loop", pattern: /loop/ });
-const Rand = createToken({ name: "Rand", pattern: /rand/ });
+// const Rand = createToken({ name: "Rand", pattern: /rand/ });
 const Choose = createToken({ name: "Choose", pattern: /choose/ });
 const Mode = createToken({ name: "Mode", pattern: /mode/ });
 
@@ -100,9 +106,9 @@ export const PatternName = createToken({
 
 
 export const allTokens = [
-  Cue, Fade, Page, Stopwatch, Video, After, Nav, PatternName, Seq, Rand, Choose, Mode,
+  Cue, Fade, Page, Stopwatch, Video, Text, After, Nav, PatternName, Seq, Choose, Mode,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
-  NumberLiteral, StringLiteral, Identifier, WS
+  RangeLiteral, NumberLiteral, StringLiteral,  Identifier, WS
 ];
 
 
@@ -135,6 +141,7 @@ export class CueParser extends CstParser {
       $.OR([
         { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(StringLiteral, { LABEL: "value" }) },
+        { ALT: () => $.CONSUME(RangeLiteral, { LABEL: "value" }) },
         { ALT: () => $.CONSUME1(Identifier, { LABEL: "value" }) },
       ]);
     });
@@ -409,6 +416,14 @@ $.RULE("controlExpr", () => {
       ]);
     });
 
+// ------------------------------------------------------------
+// cue:text(...)
+// ------------------------------------------------------------
+this.RULE("cueTextTop", () => {
+  this.CONSUME(Text);
+  this.SUBRULE(this.genericParamList);
+});
+
 
 // ------------------------------------------------------------
 // cue:metronome(...) / cue:metro(...)
@@ -430,7 +445,9 @@ $.RULE("cueMetronomeTop", () => {
         { ALT: () => $.SUBRULE($.cuePageTop) },
         { ALT: () => $.SUBRULE($.cueStopwatchTop) },
         { ALT: () => $.SUBRULE($.cueVideoTop) },
-        { ALT: () => $.SUBRULE($.cueMetronomeTop) },
+        { ALT: () => $.SUBRULE($.cueTextTop) },
+        { ALT: () => $.SUBRULE($.cueMetronomeTop) }
+
 
       ]);
     });
@@ -792,6 +809,45 @@ export function cstToAst(cst) {
 
     return { type: "cueVideo", params };
   }
+
+// ------------------------------------------------------------
+// cue:text(...)
+// ------------------------------------------------------------
+const textNode =
+  cst.children?.cueTextTop?.[0] ||
+  (cst.name === "cueTextTop" ? cst : null);
+
+if (textNode) {
+  const args = [];
+  const list = textNode.children.genericParamList?.[0];
+  const items = list?.children.genericParam || [];
+
+  for (const p of items) {
+    const keyNode = p.children.key?.[0];
+    const valNode = p.children.value?.[0];
+
+    const key =
+      keyNode?.image ||
+      keyNode?.children?.Identifier?.[0]?.image ||
+      "unknown";
+let val = null;
+if (valNode?.children?.StringLiteral?.[0]) {
+  val = valNode.children.StringLiteral[0].image;
+} else if (valNode?.children?.NumberLiteral?.[0]) {
+  val = valNode.children.NumberLiteral[0].image;
+} else if (valNode?.children?.RangeLiteral?.[0]) {
+  val = valNode.children.RangeLiteral[0].image;
+} else if (valNode?.image) {
+  val = valNode.image;
+}
+
+
+    args.push({ type: key, value: val });
+  }
+
+  return { type: "cueText", args };
+}
+
 
 // ============================================================================
 // 🔹 cue:metronome(...) / cue:metro(...)

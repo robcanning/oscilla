@@ -285,6 +285,26 @@ export function handleCueTrigger(cueId, isRemote = false, force = false, cueElem
     }
   }
 
+// ------------------------------------------------------------
+// cue:text(...) — AST-based text overlay handler
+// ------------------------------------------------------------
+else if (cueId.startsWith("cue:text")) {
+  console.log("[CueDSL] 📝 Handling cue:text...");
+  if (ast) {
+    import("./text.js")
+      .then(mod => mod.handleCueTextFromAST(ast, cueElement))
+      .catch(err => console.error("[CueDSL] Failed to load text.js module:", err));
+  } else {
+    console.warn("[CueDSL] No AST found for cue:text — using legacy fallback.");
+    if (typeof handleTextCue === "function") {
+      handleTextCue(cueId, cueElement);
+    } else {
+      console.warn("[CueDSL] Legacy handleTextCue() not defined.");
+    }
+  }
+}
+
+
   // ------------------------------------------------------------
 //  cue:metronome / cue:metro
 // ------------------------------------------------------------
@@ -2643,14 +2663,19 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
   if (!fileName.match(/\.(mp4|webm|ogg)$/)) fileName += ".mp4";
   const src = `${window.videoDir}${fileName}`;
 
-  // --- Unique key for retrigger detection
+  // --- Unique key and instance control
   const key = `${p.file}_${p.target || "none"}`;
-  const existing = document.querySelector(`video[data-key="${key}"]`);
+  const allowNewInstance = Boolean(p.uid) || p.new === "1" || p.new === 1;
+
+  const existing = !allowNewInstance
+    ? document.querySelector(`video[data-key="${key}"]`)
+    : null;
+
   if (existing) {
     console.log(`[cueVideo] 🔁 Reusing existing instance for ${key}`);
     existing.currentTime = Number(p.in || 0);
     existing.playbackRate = Number(p.speed) || 1;
-    existing.muted = p.audio === "0" || p.audio === 0 || p.audio === "false" || p.audio === false;
+    existing.muted = !(p.audio === "1" || p.audio === 1 || p.audio === "true" || p.audio === true);
     existing.style.opacity = p.opacity ? Number(p.opacity) : 1;
     existing.play();
     return;
@@ -2658,13 +2683,14 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
 
   // --- Create video element
   const vid = document.createElement("video");
-  const uid = `video-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
+  const uid = p.uid || `video-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
   vid.id = uid;
+  vid.dataset.uid = uid;
   vid.dataset.key = key;
   vid.src = src;
   vid.autoplay = true;
   vid.playsInline = true;
-  vid.muted = p.audio === "0" || p.audio === 0 || p.audio === "false" || p.audio === false;
+  vid.muted = !(p.audio === "1" || p.audio === 1 || p.audio === "true" || p.audio === true);
   vid.controls = false;
   vid.loop = false;
   vid.playbackRate = Number(p.speed) || 1;
@@ -2672,10 +2698,12 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
   vid.style.cursor = "pointer";
   vid.style.zIndex = 9999;
   vid.style.border = "none";
-  vid.style.opacity = p.fadeIn ? 0 : (p.opacity ? Number(p.opacity) : 1);
+  vid.style.opacity = p.fadeIn ? 0 : p.opacity ? Number(p.opacity) : 1;
   vid.style.transition = "opacity 0.5s ease";
 
-  // --- Geometry (centered)
+  console.log(`[cueVideo] 🎬 Creating ${allowNewInstance ? "new" : "reused"} instance → ${key} (uid:${uid})`);
+
+  // --- Geometry base
   const score = document.getElementById("scoreContainer");
   const scrollX = score?.scrollLeft || 0;
   const scrollY = score?.scrollTop || 0;
@@ -2689,22 +2717,37 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
   let x = 100, y = 100;
   if (baseEl?.getBoundingClientRect) {
     const bbox = baseEl.getBoundingClientRect();
+    const centerX = bbox.left + bbox.width / 2;
+    const centerY = bbox.top + bbox.height / 2;
+
     if (p.location === "scroll") {
-      x = bbox.left - containerBox.left + scrollX + offsetX;
-      y = bbox.top - containerBox.top + scrollY + offsetY;
+      // relative to scrollable content
+      x = centerX - containerBox.left + scrollX + offsetX;
+      y = centerY - containerBox.top + scrollY + offsetY;
     } else {
-      x = bbox.left + offsetX;
-      y = bbox.top + offsetY;
+      // fixed to viewport, preserve sign of offsets
+      x = centerX + offsetX;
+      y = centerY + offsetY;
     }
-    // center on target
-    x += bbox.width / 2;
-    y += bbox.height / 2;
   }
 
-  // --- Size
+  // --- Size and positioning
   let vidW = 320, vidH = 180;
-  if (p.size === "fs" || p.size === "fullscreen") {
-    Object.assign(vid.style, { top: "0", left: "0", width: "100vw", height: "100vh" });
+  const size = p.size?.toLowerCase?.();
+
+  if (size === "fs" || size === "fullscreen") {
+    Object.assign(vid.style, {
+      position: "fixed",
+      top: "0",
+      left: "0",
+      width: "100vw",
+      height: "100vh",
+      margin: "0",
+      padding: "0",
+      pointerEvents: "none",
+    });
+    // Re-enable click handling only if explicitly requested
+    if (p.clickable === "1" || p.clickable === 1) vid.style.pointerEvents = "auto";
   } else if (typeof p.size === "string" && p.size.includes("x")) {
     const [w, h] = p.size.split("x").map(Number);
     if (!isNaN(w)) vidW = w;
@@ -2712,19 +2755,22 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
   } else if (!isNaN(p.size)) {
     vidW = Number(p.size);
   }
+
   vid.width = vidW;
   vid.height = vidH;
 
-  // center offset correction
-  vid.style.left = `${x - vidW / 2}px`;
-  vid.style.top = `${y - vidH / 2}px`;
+  // Only center if not fullscreen
+  if (size !== "fs" && size !== "fullscreen") {
+    vid.style.left = `${x - vidW / 2}px`;
+    vid.style.top = `${y - vidH / 2}px`;
+  }
 
   // --- Append
   const container = document.getElementById("videoLayer") || document.body;
   if (p.location === "scroll" && score) score.appendChild(vid);
   else container.appendChild(vid);
 
-  console.log(`[cueVideo] ▶️ ${src} (size:${vidW}x${vidH}, speed:${vid.playbackRate}x, target:${p.target || "(none)"})`);
+  console.log(`[cueVideo] ▶️ ${src} (size:${size || `${vidW}x${vidH}`}, speed:${vid.playbackRate}x, target:${p.target || "(none)"})`);
 
   // --- Timing & fade parameters
   const fadeInDur = Number(p.fadeIn || 0);
@@ -2741,7 +2787,8 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
   function removeVideo() {
     try {
       vid.pause();
-      if (vid._scrollHandler && score) score.removeEventListener("scroll", vid._scrollHandler);
+      if (vid._scrollHandler && score)
+        score.removeEventListener("scroll", vid._scrollHandler);
       vid.remove();
       console.log(`[cueVideo] 🧹 Removed ${uid}`);
       emitCueComplete?.(uid, "cueVideo");
@@ -2750,8 +2797,8 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
     }
   }
 
-  // --- Scroll tracking
-  if (p.location === "scroll" && baseEl && score) {
+  // --- Scroll tracking (non-fullscreen)
+  if (p.location === "scroll" && baseEl && score && size !== "fs" && size !== "fullscreen") {
     const updatePos = () => {
       const bbox = baseEl.getBoundingClientRect();
       const sx = score.scrollLeft || 0;

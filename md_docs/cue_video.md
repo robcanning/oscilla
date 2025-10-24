@@ -1,70 +1,74 @@
-## cue:video(...) — play and control video overlays in the score
+## `cue:video` (Concise Reference)
 
-Displays and controls a video element inside the OscillaScore environment.  
-The video can be positioned relative to cue elements or target objects,  
-either pinned to the viewport (fixed) or following the scroll position of the score.
+**Purpose:** Spawn and control HTML5 video overlays during a score.
 
-This cue is used for embedding time-based visual media — for instance,  
-projected video, reference material for performers, or synchronized visual cues.
+**Required**
+- `file:` Filename with optional extension (`.mp4` default if missing). Supports `mp4|webm|ogg`.
 
-### Syntax
-cue:video(file:<filename>[.mp4|.webm], size:<pixels|WxH|fs>,
-in:<seconds>, out:<seconds>, fadeIn:<seconds>, fadeOut:<seconds>,
-opacity:<0–1>, speed:<rate>, audio:<0|1>,
-loop:<count|0=infinite>, hold:<seconds>,
-target:<uid>, location:<fixed|scroll>,
-offsetX:<px>, offsetY:<px>)
+**Placement & Positioning**
+- `location:` `fixed` (default) | `scroll`
+  - `fixed` → pinned to viewport.
+  - `scroll` → follows target/score scroll.
+- `target:` `<elementId>` — centers the video on the target (if not fullscreen).
+- `offsetX:` / `offsetY:` pixel offsets applied after centering.
 
+**Size**
+- `size:` 
+  - `fs` or `fullscreen` → covers viewport at `(0,0)` with `100vw×100vh` and **passes clicks through** by default.
+  - `<W>` (e.g. `640`) → width in px, auto height.
+  - `<W>x<H>` (e.g. `640x360`).
 
-### Arguments
-| Argument | Description |
-|-----------|-------------|
-| **file** | Video file name (relative to the project’s `/videos/` directory). Extension optional (`.mp4` by default). |
-| **size** | Display size: a single pixel width (e.g. `360`), a WxH string (e.g. `640x480`), or fullscreen via `fs` / `fullscreen`. |
-| **in** | Start time in seconds within the source file. |
-| **out** | End time in seconds within the source file. |
-| **fadeIn** | Duration of fade-in (seconds). Applied from cue start. |
-| **fadeOut** | Duration of fade-out (seconds). Applied before end or out time. |
-| **opacity** | Base opacity (0–1). Default = 1. |
-| **speed** | Playback speed multiplier. Default = 1.0. |
-| **audio** | `0` or `false` mutes playback; `1` or `true` enables sound. |
-| **loop** | Number of loops to perform. `0` = infinite loop. |
-| **hold** | Time in seconds before video auto-removes, overriding loop/end if shorter. |
-| **target** | SVG element ID or UID to anchor the video to. The video centers on this element’s bounding box. |
-| **location** | `scroll` = follow score scrolling; `fixed` = pin to viewport. |
-| **offsetX / offsetY** | Optional pixel offsets relative to target or cue element. |
-| **click-to-close** | Clicking the video closes it immediately. (Always enabled by default.) |
+**Audio (Default Muted)**
+- `audio:` `0|1|true|false` — **default is muted**. Set `audio:1` (or `true`) to unmute.
 
-### Behavior
-- The video automatically appears when the cue triggers, then removes itself when finished, held duration expires, or user clicks it.  
-- If triggered again with the same `file` and `target`, the existing instance resets (reuses instead of duplicating).  
-- When `location:scroll`, the video moves with the target as the score scrolls.  
-- When `location:fixed`, it stays pinned to the same viewport coordinates.  
-- `in:` and `out:` trim the playback range in seconds within the media file.  
-- `fadeIn:` and `fadeOut:` smoothly interpolate the element’s opacity over time.  
-- `opacity:` defines maximum visible opacity after fade-in.  
-- `loop:` repeats playback; `loop:0` means infinite looping.  
-- `hold:` removes the video after a given time regardless of playback duration.  
-- `audio:0` disables sound, ideal for silent or overlay cues.  
-- `target:` positions the video at the visual center of the specified SVG element.  
-- If the target cannot be found, it falls back to the cue element, then to a default (100,100) position.
+**Spawning / Reuse**
+- By default, cues **reuse** an existing video matching the same `file + target`.
+- `uid:` `<string>` or `new:1` → **force a new concurrent instance** (even if one exists).
+- Every instance receives `data-uid` for tracking; `data-key` = `file_target`.
+
+**Timing & Playback**
+- `in:` seconds (seek start)
+- `out:` seconds (optional fade-out scheduling; pairs well with `fadeOut`)
+- `hold:` seconds (auto-remove after this duration, regardless of loop)
+- `loop:` `0` = infinite; `N` = loop count; omit = play once
+- `speed:` playback rate (e.g. `0.5`, `1.25`)
+- `opacity:` `0..1` (default `1`)
+- `fadeIn:` seconds; `fadeOut:` seconds
+
+**Interaction**
+- **Fullscreen (`size:fs`)**: uses `pointer-events:none` so the score behind remains draggable/clickable.
+  - Add `clickable:1` to allow clicks **on** the fullscreen video (e.g., to close on click).
+- Non-fullscreen videos remain clickable; single-click removes them by default.
+
+**Removal**
+- Ends when:
+  - playback completes (no loop) **or**
+  - `loop` count is reached **or**
+  - `hold` expires **or**
+  - user clicks (non-fs) / double-click overlay (if you implement) / explicit cue cleanup.
+
+---
 
 ### Examples
-cue:video(file:lum.webm, size:360, in:4, out:12, fadeIn:2, fadeOut:2, opacity:0.6,
-loop:0, speed:1.5, audio:0, location:scroll, target:circle3)
 
-cue:video(file:clip.mp4, size:fs, fadeIn:1, fadeOut:1, loop:3, audio:1, location:fixed)
+1. **Fullscreen, pass-through clicks, but allow click-to-close**
+   ```
+   cue:video(file:intro.mp4,size:fs,clickable:1,audio:1,fadeIn:0.5)
+   ```
 
-cue:video(file:demo, size:640x360, speed:0.8, opacity:0.8, hold:15, target:cueMarker5)
+2. **Windowed, anchored to a target, follows scroll, infinite loop**
+   ```
+   cue:video(file:clip.webm,target:markerA,location:scroll,size:640x360,loop:0,opacity:0.9)
+   ```
 
-cue:video(file:projection, size:480, fadeIn:0.5, fadeOut:0.5, audio:false, location:scroll)
+3. **Spawn a second independent instance via `uid`**
+   ```
+   cue:video(file:cam.mp4,uid:stageLeft,in:5,fadeIn:1,fadeOut:1,hold:20)
+   ```
 
+4. **Force new instance without specifying uid**
+   ```
+   cue:video(file:teaser.mp4,new:1,in:2,out:10,fadeIn:0.5,fadeOut:0.5,speed:1.25)
+   ```
 
-### Notes
-- Multiple videos can play simultaneously at different positions.  
-- Re-triggering the same file and target reuses the existing instance instead of spawning a duplicate.  
-- Fullscreen videos (`size:fs`) are automatically fixed to the viewport.  
-- If `hold:` is longer than total playback duration, fade-out still occurs before removal.  
-- Works seamlessly with network sync — clients triggering the same cue will play in sync.  
-- When `audio:0`, the video is muted but still plays visually.  
-- Future versions will support `blend:` modes and OSC video control hooks.
+> **Note:** `size:fs` always positions at `(0,0)` and ignores target geometry; all other sizes center on `target` (or the cue position) with optional `offsetX/offsetY`. Default audio is muted; use `audio:1` to unmute. By default, same `file+target` cues reuse the existing element unless `uid` or `new:1` is supplied.
