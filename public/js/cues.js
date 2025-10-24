@@ -50,6 +50,8 @@ export const cueHandlers = {
 };
 
 import { parseCueToAST } from "./parser.js";
+import { handleMetronomeCue } from "./metro.js";
+
 
 // import { switchToScrollMode } from "./projectLoader.js";
 
@@ -103,19 +105,45 @@ function waitForCueComplete(targetId, timeout = 60000) {
 
 // cues.js (top-level or imported from parser.js)
 export function parseCueParams(cueId) {
-  // ----------------------------------------------------------
-  // 1️⃣ New Chevrotain DSL (cue:page(...), cue:audio(...), etc.)
-  // ----------------------------------------------------------
-  if (cueId.startsWith("cue:")) {
-    try {
-      console.log("[CueDSL]  Parsing new-style cue:", cueId);
-      const ast = parseCueToAST(cueId); // returns plain AST
-      return { type: "cuePage", params: {}, ast }; // unified structure
-    } catch (err) {
-      console.error("[CueDSL]  Parse failed for Chevrotain cue:", err);
-      // continue to legacy fallback
-    }
+// ----------------------------------------------------------
+// 1️⃣ New Chevrotain DSL (cue:page(...), cue:audio(...), etc.)
+// ----------------------------------------------------------
+// Allow passing AST directly
+if (typeof cueId !== "string" && cueId?.type) {
+  const ast = cueId;
+  const cueParams = {};
+  if (ast?.args?.length) {
+    for (const arg of ast.args) cueParams[arg.type] = arg.value;
   }
+  return { type: ast.type, params: cueParams, ast };
+}
+
+
+if (cueId.startsWith("cue:")) {
+  try {
+    console.log("[CueDSL]  Parsing new-style cue:", cueId);
+    const ast = parseCueToAST(cueId); // returns parsed AST
+
+    // derive type and params from AST
+    const cueType = ast?.type || "cueUnknown";
+    const cueParams = {};
+
+    if (ast?.args?.length) {
+      for (const arg of ast.args) {
+        cueParams[arg.type] = arg.value;
+      }
+    }
+
+    console.log("[parseCueParams] Final cue type:", cueType);
+    console.log("[parseCueParams] Final cueParams:", cueParams);
+
+    return { type: cueType, params: cueParams, ast };
+  } catch (err) {
+    console.error("[CueDSL]  Parse failed for Chevrotain cue:", err);
+    // continue to legacy fallback
+  }
+}
+
 
   // ----------------------------------------------------------
   // 2️⃣ Optional JSON/experimental DSL (colon + braces form)
@@ -230,7 +258,7 @@ export function handleCueTrigger(cueId, isRemote = false, force = false, cueElem
     }
   }
 
-  // 🧠 NEW DSL cue:page(...) syntax via Chevrotain
+  //  NEW DSL cue:fade(...) syntax via Chevrotain
   else if (cueId.startsWith("cue:fade")) {
     console.log("[CueDSL] Handling new cue:fade syntax...");
     if (ast) {
@@ -249,13 +277,22 @@ export function handleCueTrigger(cueId, isRemote = false, force = false, cueElem
   }
 
   else if (cueId.startsWith("cue:video")) {
-    console.log("[CueDSL] 🎬 Handling cue:video...");
+    console.log("[CueDSL]  Handling cue:video...");
     if (ast) {
       return handleVideoCueFromAST(ast, cueElement);
     } else {
       console.warn("[CueDSL] No AST found for cue:video — ignoring trigger.");
     }
   }
+
+  // ------------------------------------------------------------
+//  cue:metronome / cue:metro
+// ------------------------------------------------------------
+else if (cueId.startsWith("cue:metronome") || cueId.startsWith("cue:metro")) {
+  console.log("[CueDSL] 🕒 Handling cue:metronome...");
+  handleMetronomeCue(ast, cueElement);
+  return; // ✅ prevent further fallback lookup
+}
 
 
 

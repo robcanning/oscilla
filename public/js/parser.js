@@ -409,6 +409,16 @@ $.RULE("controlExpr", () => {
       ]);
     });
 
+
+// ------------------------------------------------------------
+// cue:metronome(...) / cue:metro(...)
+// ------------------------------------------------------------
+$.RULE("cueMetronomeTop", () => {
+  $.CONSUME(Identifier, { LABEL: "metronomeName" }); // 'metro' or 'metronome'
+  $.SUBRULE($.genericParamList); // genericParamList already handles ( ... )
+});
+
+
     // -----------------------
     // cueTop — only fade|page at top level
     // -----------------------
@@ -420,6 +430,7 @@ $.RULE("controlExpr", () => {
         { ALT: () => $.SUBRULE($.cuePageTop) },
         { ALT: () => $.SUBRULE($.cueStopwatchTop) },
         { ALT: () => $.SUBRULE($.cueVideoTop) },
+        { ALT: () => $.SUBRULE($.cueMetronomeTop) },
 
       ]);
     });
@@ -782,6 +793,27 @@ export function cstToAst(cst) {
     return { type: "cueVideo", params };
   }
 
+// ============================================================================
+// 🔹 cue:metronome(...) / cue:metro(...)
+// ============================================================================
+const metroNode = cst.children?.cueMetronomeTop?.[0]
+  || (cst.name === "cueMetronomeTop" ? cst : null);
+
+if (metroNode) {
+  const args = [];
+  const list = metroNode.children.genericParamList?.[0];
+  const params = list?.children.genericParam || [];
+  for (const p of params) {
+    const key = p.children.key?.[0]?.image;
+    const val = p.children.value?.[0]?.image;
+    if (key) args.push({
+      type: key,
+      value: isNaN(Number(val)) ? val : Number(val)
+    });
+  }
+
+  return { type: "cueMetronome", args };
+}
 
 
   // ============================================================================
