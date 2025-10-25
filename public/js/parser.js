@@ -78,11 +78,11 @@ const RangeLiteral = createToken({
   pattern: /[0-9]+(?:\.[0-9]+)?-[0-9]+(?:\.[0-9]+)?/
 });
 
-const Seq = createToken({ name: "Seq", pattern: /seq/ });
+// const Seq = createToken({ name: "Seq", pattern: /seq/ });
 // const Loop = createToken({ name: "Loop", pattern: /loop/ });
 // const Rand = createToken({ name: "Rand", pattern: /rand/ });
 const Choose = createToken({ name: "Choose", pattern: /choose/ });
-const Mode = createToken({ name: "Mode", pattern: /mode/ });
+// const Mode = createToken({ name: "Mode", pattern: /mode/ });
 
 // Punctuation
 const LParen = createToken({ name: "LParen", pattern: /\(/ });
@@ -106,7 +106,7 @@ export const PatternName = createToken({
 
 
 export const allTokens = [
-  Cue, Fade, Page, Stopwatch, Video, Text, After, Nav, PatternName, Seq, Choose, Mode,
+  Cue, Fade, Page, Stopwatch, Video, Text, After, Nav, PatternName, Choose,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
   RangeLiteral, NumberLiteral, StringLiteral,  Identifier, WS
 ];
@@ -253,7 +253,7 @@ export class CueParser extends CstParser {
 $.RULE("controlExpr", () => {
   $.OR([
     { ALT: () => $.CONSUME(Nav, { LABEL: "controlName" }) },
-    { ALT: () => $.CONSUME(Mode, { LABEL: "controlName" }) },
+    // { ALT: () => $.CONSUME(Mode, { LABEL: "controlName" }) },
     { ALT: () => $.CONSUME(Identifier, { LABEL: "controlName" }) },
   ]);
   $.CONSUME(LParen);
@@ -289,7 +289,7 @@ $.RULE("controlExpr", () => {
     $.RULE("fadeParam", () => {
       // key can be Mode keyword or plain identifier
       $.OR([
-        { ALT: () => $.CONSUME(Mode, { LABEL: "keyMode" }) },
+        // { ALT: () => $.CONSUME(Mode, { LABEL: "keyMode" }) },
         { ALT: () => $.CONSUME(Identifier, { LABEL: "keyIdent" }) },
       ]);
       $.CONSUME(Colon);
