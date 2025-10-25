@@ -25,66 +25,110 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
   const params = {};
   for (const p of ast.args || []) params[p.type] = p.value;
 
-  // ── Helpers
-  const wait = (ms) => new Promise(r => setTimeout(r, ms));
-  const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+  // ───────────────────────────────────────────────
+  // Helpers (cancel-aware)
+  // ───────────────────────────────────────────────
+  const rafWait = (ms, token) =>
+    new Promise((resolve) => {
+      if (token.cancel) return resolve();
+      const end = performance.now() + ms;
+      function loop(t) {
+        if (token.cancel) return resolve();
+        if (t >= end) return resolve();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    });
 
-  // ── Core params
+  const nextFrame = (token) =>
+    new Promise((r) => requestAnimationFrame(() => (token.cancel ? r() : r())));
+
+  // ───────────────────────────────────────────────
+  // Core params
+  // ───────────────────────────────────────────────
   let content = (params.src || params.content || "").replace(/^["'`](.*)["'`]$/, "$1");
   let style   = (params.style || "").replace(/^["'`](.*)["'`]$/, "$1");
+
   const targetId = params.target || "center";
   const offsetX  = Number(params.offsetX || 0);
   const offsetY  = Number(params.offsetY || 0);
   const order    = (params.order || "seq").replace(/^["'`](.*)["'`]$/, "$1");
   const mode     = (params.mode  || "line").replace(/^["'`](.*)["'`]$/, "$1");
-  const uid     = params.uid || Math.floor(Math.random() * 100000);
 
-  // ── Ranges
+  // Stable default uid: explicit → cueElement.id → target → center
+  const uid = (params.uid || cueElement?.id || `cueText_${targetId || "center"}`).toString();
+
+  // ───────────────────────────────────────────────
+  // Global registry & anti-stacking on retrigger
+  // ───────────────────────────────────────────────
+  if (!window.activeCueTexts) window.activeCueTexts = new Map();
+
+  // If an overlay with same uid exists, cancel & remove it first
+  if (window.activeCueTexts.has(uid)) {
+    const prev = window.activeCueTexts.get(uid);
+    prev.cancel = true;
+    try { prev.div?.remove(); } catch {}
+    window.activeCueTexts.delete(uid);
+  }
+
+  // Nuke any stray DOM overlays with same uid (paranoia cleanup)
+  document.querySelectorAll(`.cue-text-overlay[data-uid="${CSS.escape(uid)}"]`)
+    .forEach((el) => el.remove());
+
+  // ───────────────────────────────────────────────
+  // Ranges
+  // ───────────────────────────────────────────────
   function parseRange(val, fallback) {
     if (!val) return [fallback, fallback];
     const cleaned = String(val).replace(/^["'`](.*)["'`]$/, "$1");
-    const parts = cleaned.split(/[-,]/).map(Number).filter(v => !isNaN(v));
-    return parts.length === 2
-      ? [parts[0], parts[1]]
-      : [parts[0] ?? fallback, parts[0] ?? fallback];
+    const parts = cleaned.split(/[-,]/).map(Number).filter((v) => !isNaN(v));
+    return parts.length === 2 ? [parts[0], parts[1]] : [parts[0] ?? fallback, parts[0] ?? fallback];
   }
   const [durMin,  durMax ] = parseRange(params.dur,  2);
   const [gapMin,  gapMax ] = parseRange(params.gap,  0);
   const [holdMin, holdMax] = parseRange(params.hold, 0);
 
-  // ── Fade (absolute ms or % of dur)
+  // ───────────────────────────────────────────────
+  // Fade (absolute ms or % of dur)
+  // ───────────────────────────────────────────────
   let fadeParam = params.fade ? String(params.fade).replace(/^["'`](.*)["'`]$/, "$1") : null;
-  let fadePercent = 0.25; // default 25%
+  let fadePercent = 0.25;
   let fadeTimeBase = null;
   if (fadeParam) {
     if (fadeParam.endsWith("%")) fadePercent = Number(fadeParam.replace("%", "")) / 100;
     else fadeTimeBase = Number(fadeParam);
   }
 
-  // ── Loop control
-  const loopParam = (params.loop || "0").toString().trim().toLowerCase();
-  let loopCount = 0, infinite = false;
-  if (loopParam === "inf" || loopParam === "infinite" || loopParam === "0") infinite = true;
-  else loopCount = parseInt(loopParam, 10) || 0;
+  // ───────────────────────────────────────────────
+  // Loop control
+  //   loop: 0 | inf → infinite
+  //   otherwise → finite count
+  // Defaults: seq → 1, rnd → infinite
+  // ───────────────────────────────────────────────
+  const loopRaw = (params.loop ?? (order === "rnd" ? "0" : "1")).toString().trim().toLowerCase();
+  const infinite = loopRaw === "0" || loopRaw === "inf" || loopRaw === "infinite";
+  const loopCount = infinite ? 0 : Math.max(1, parseInt(loopRaw, 10) || 1);
 
-  // ── Build units [{text, dur|null, gap|null}]
-  let units = [];
+  // ───────────────────────────────────────────────
+  // Build units [{text, dur|null, gap|null}]
+  // ───────────────────────────────────────────────
   const toUnits = (str) => {
     if (mode === "word") {
-      return str.split(/\s+/).filter(Boolean).map(tok => {
-        const parts = tok.split(":").map(p => p.trim());
+      return str.split(/\s+/).filter(Boolean).map((tok) => {
+        const parts = tok.split(":").map((p) => p.trim());
         const text = parts[0];
         const dur  = parts[1] && !isNaN(parseFloat(parts[1])) ? parseFloat(parts[1]) : null;
         const gap  = parts[2] && !isNaN(parseFloat(parts[2])) ? parseFloat(parts[2]) : null;
         return { text, dur, gap };
       });
     } else if (mode === "char") {
-      return str.split("").map(ch => ({ text: ch, dur: null, gap: null }));
+      return str.split("").map((ch) => ({ text: ch, dur: null, gap: null }));
     } else {
-      return str.split(/[\r\n;]+/).filter(Boolean).map(line => ({ text: line, dur: null, gap: null }));
+      return str.split(/[\r\n;]+/).filter(Boolean).map((line) => ({ text: line, dur: null, gap: null }));
     }
   };
 
+  let units = [];
   if (/\.txt$/i.test(content)) {
     const filePath = `${window.textDir}${content}`;
     try {
@@ -99,10 +143,12 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     units = toUnits(content);
   }
 
-  // ── Overlay
+  // ───────────────────────────────────────────────
+  // Overlay
+  // ───────────────────────────────────────────────
   const div = document.createElement("div");
-  div.id = `cue-text-${uid}`;
-  div.classList.add("cue-text-overlay");
+  div.className = "cue-text-overlay";
+  div.dataset.uid = uid;
   div.style.cssText = `
     position: fixed;
     top: 50%; left: 50%;
@@ -117,12 +163,20 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     opacity: 0;
     transition: opacity 0.3s ease;
     text-shadow: 0 0 10px rgba(0,0,0,0.7);
-    pointer-events: none;
+    pointer-events: auto; /* allow click to cancel */
     ${style}
   `;
   document.body.appendChild(div);
 
-  // ── Position logic: target:self / target:center / explicit
+  // Create a cancel token object and register
+  const token = { cancel: false, div };
+  window.activeCueTexts.set(uid, token);
+
+  // Click to cancel for BOTH finite and infinite
+  const onClickCancel = () => { token.cancel = true; };
+  div.addEventListener("click", onClickCancel);
+
+  // Positioning: center | self | elementId
   let placed = false;
   if (targetId === "self" && cueElement) {
     const box = cueElement.getBoundingClientRect();
@@ -149,46 +203,53 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     div.style.transform = "translate(-50%, -50%)";
   }
 
-  // ── Cross-fade ONE unit
+  // ───────────────────────────────────────────────
+  // Cross-fade one unit (cancel-aware)
+  // ───────────────────────────────────────────────
   const crossFadeUnit = async (newText, duration) => {
+    if (token.cancel) return;
+
     const fadeMs = fadeTimeBase ?? (fadePercent * duration * 1000);
     const fadeApplied = Math.max(50, Math.min(fadeMs, duration * 1000 * 0.8));
 
+    // fade out current
     div.style.transition = `opacity ${fadeApplied}ms ease`;
     void div.offsetHeight;
     div.style.opacity = 0;
-    await wait(fadeApplied);
+    await rafWait(fadeApplied, token);
+    if (token.cancel) return;
 
+    // set new text and fade in
     div.textContent = newText;
-    await nextFrame();
+    await nextFrame(token);
     div.style.transition = `opacity ${fadeApplied}ms ease`;
     void div.offsetHeight;
     div.style.opacity = 1;
-    await wait(duration * 1000);
+    await rafWait(duration * 1000, token);
+    if (token.cancel) return;
 
+    // fade out after display
     div.style.transition = `opacity ${fadeApplied}ms ease`;
     void div.offsetHeight;
     div.style.opacity = 0;
-    await wait(fadeApplied);
+    await rafWait(fadeApplied, token);
   };
 
   const fadeAndRemove = () => {
-    div.style.transition = "opacity 400ms ease";
+    if (token.cancel) { /* already heading out */ }
+    div.removeEventListener("click", onClickCancel);
+    div.style.transition = "opacity 250ms ease";
     void div.offsetHeight;
     div.style.opacity = 0;
-    setTimeout(() => div.remove(), 420);
+    setTimeout(() => {
+      try { div.remove(); } catch {}
+      window.activeCueTexts.delete(uid);
+    }, 280);
   };
 
-  // ── Sequence players
-  const playSequenceOnce = async () => {
-    for (const unit of units) {
-      const dur = (unit.dur ?? (durMin + Math.random() * (durMax - durMin)));
-      const gap = (unit.gap ?? (gapMin + Math.random() * (gapMax - gapMin)));
-      await crossFadeUnit(unit.text.trim(), dur);
-      if (gap > 0) await wait(gap * 1000);
-    }
-  };
-
+  // ───────────────────────────────────────────────
+  // Sequence helpers
+  // ───────────────────────────────────────────────
   const shuffleInPlace = (arr) => {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = (Math.random() * (i + 1)) | 0;
@@ -196,32 +257,44 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     }
   };
 
-  // ── Playback
+  const playSequenceOnce = async () => {
+    for (const unit of units) {
+      if (token.cancel) return;
+      const dur = unit.dur ?? (durMin + Math.random() * (durMax - durMin));
+      const gap = unit.gap ?? (gapMin + Math.random() * (gapMax - gapMin));
+      await crossFadeUnit(unit.text.trim(), dur);
+      if (token.cancel) return;
+      if (gap > 0) await rafWait(gap * 1000, token);
+    }
+  };
+
+  // ───────────────────────────────────────────────
+  // Playback (cancel-aware)
+  // ───────────────────────────────────────────────
   (async () => {
-    let currentLoop = 0;
     if (order === "rnd" || infinite) {
-      while (true) {
+      while (!token.cancel) {
         shuffleInPlace(units);
         await playSequenceOnce();
       }
-    } else {
-      do {
-        await playSequenceOnce();
-        currentLoop++;
-      } while (loopCount > 0 && currentLoop < loopCount);
-
-      const finalHold = holdMin + Math.random() * (holdMax - holdMin);
-      if (finalHold > 0) {
-        await wait(finalHold * 1000);
-        fadeAndRemove();
-      } else {
-        div.addEventListener("click", fadeAndRemove);
-        await wait(300);
-        fadeAndRemove();
-      }
+      fadeAndRemove();
+      return;
     }
+
+    // finite sequential
+    let pass = 0;
+    while (!token.cancel && pass < loopCount) {
+      await playSequenceOnce();
+      pass++;
+    }
+    if (token.cancel) return fadeAndRemove();
+
+    const finalHold = holdMin + Math.random() * (holdMax - holdMin);
+    if (finalHold > 0) await rafWait(finalHold * 1000, token);
+    fadeAndRemove();
   })();
 }
+
 
 
 
