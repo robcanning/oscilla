@@ -26,50 +26,54 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
   for (const p of ast.args || []) params[p.type] = p.value;
 
   // ───────────────────────────────────────────────
-  // Core parameters
+  // 1️⃣ Core parameters
   // ───────────────────────────────────────────────
-  let content = params.content || "";
-  content = content.replace(/^"(.*)"$/, "$1");
+  let content = params.src || params.content || "";
+  content = content.replace(/^["'`](.*)["'`]$/, "$1");
+
   let style = params.style || "";
   style = style.replace(/^["'`](.*)["'`]$/, "$1");
 
   const targetId = params.target || null;
   const offsetX = Number(params.offsetX || 0);
   const offsetY = Number(params.offsetY || 0);
-  const randomSeq = Number(params.randomseq || 0) === 1;
-  const fadeTime = 800;
+  const order = (params.order || "seq").replace(/^["'`](.*)["'`]$/, "$1");
   const mode = (params.mode || "line").replace(/^["'`](.*)["'`]$/, "$1");
 
   // ───────────────────────────────────────────────
-  // Timing ranges
+  // 2️⃣ Timing ranges
   // ───────────────────────────────────────────────
-  const display = Number(params.display || 2);
-  let dispMin = display, dispMax = display;
-  if (params.displayrange) {
-    const [min, max] = params.displayrange.replace(/^["'`](.*)["'`]$/, "$1").split(/[-,]/).map(Number);
-    if (!isNaN(min) && !isNaN(max)) [dispMin, dispMax] = [min, max];
+  function parseRange(val, fallback) {
+    if (!val) return [fallback, fallback];
+    const cleaned = val.replace(/^["'`](.*)["'`]$/, "$1");
+    const parts = cleaned.split(/[-,]/).map(Number).filter(v => !isNaN(v));
+    return parts.length === 2 ? [parts[0], parts[1]] : [parts[0] ?? fallback, parts[0] ?? fallback];
   }
 
-  let pauseMin = 0, pauseMax = 0;
-  if (params.pauserange) {
-    const [min, max] = params.pauserange.replace(/^["'`](.*)["'`]$/, "$1").split(/[-,]/).map(Number);
-    if (!isNaN(min) && !isNaN(max)) [pauseMin, pauseMax] = [min, max];
-  }
-
-  const hold = Number(params.hold || 0);
-  let holdMin = hold, holdMax = hold;
-  if (params.holdrange) {
-    const [min, max] = params.holdrange.replace(/^["'`](.*)["'`]$/, "$1").split(/[-,]/).map(Number);
-    if (!isNaN(min) && !isNaN(max)) [holdMin, holdMax] = [min, max];
-  }
+  const [durMin, durMax]   = parseRange(params.dur,   2);
+  const [gapMin, gapMax]   = parseRange(params.gap,   0);
+  const [holdMin, holdMax] = parseRange(params.hold,  0);
 
   // ───────────────────────────────────────────────
-  // Load and split content
+  // 3️⃣ Adaptive fade system (absolute or % of dur)
+  // ───────────────────────────────────────────────
+  let fadeParam = params.fade ? params.fade.replace(/^["'`](.*)["'`]$/, "$1") : null;
+  let fadePercent = 0.25; // default 25%
+  let fadeTimeBase = null;
+  if (fadeParam) {
+    if (fadeParam.endsWith("%")) {
+      fadePercent = Number(fadeParam.replace("%", "")) / 100;
+    } else {
+      fadeTimeBase = Number(fadeParam); // absolute in ms
+    }
+  }
+
+  // ───────────────────────────────────────────────
+  // 4️⃣ Load and split text content
   // ───────────────────────────────────────────────
   let units = [content];
-  if (content.startsWith("file:")) {
-    const fileName = content.replace("file:", "").trim();
-    const filePath = `${window.textDir}${fileName}`;
+  if (content.match(/\.txt$/)) {
+    const filePath = `${window.textDir}${content}`;
     try {
       const resp = await fetch(filePath);
       const data = await resp.text();
@@ -82,7 +86,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       }
     } catch (err) {
       console.warn(`[cueText] ⚠️ Failed to load ${filePath}`, err);
-      units = [`[Missing file: ${fileName}]`];
+      units = [`[Missing file: ${content}]`];
     }
   } else {
     if (mode === "word") {
@@ -95,26 +99,27 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
   }
 
   // ───────────────────────────────────────────────
-  // Create overlay
+  // 5️⃣ Create overlay
   // ───────────────────────────────────────────────
   const div = document.createElement("div");
   div.classList.add("cue-text-overlay");
-  div.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 1.2em;
-    max-width: 70vw;
-    text-align: center;
-    opacity: 0;
-    transition: opacity ${fadeTime}ms ease;
-    ${style}
-  `;
+div.style.cssText = `
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.7);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 1.2em;
+  max-width: 70vw;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+`;
+div.style.cssText += style;  // ✅ apply custom overrides last
+
   document.body.appendChild(div);
 
   // Position near cue or target if available
@@ -139,69 +144,72 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
   }
 
   // ───────────────────────────────────────────────
-  // Helper: cross-fade
+  // 6️⃣ Helper: cross-fade per line
   // ───────────────────────────────────────────────
- const crossFadeLine = async (newText, duration, pause) => {
-  // Fade out current text
-  div.style.transition = `opacity ${fadeTime}ms ease`;
-  div.style.opacity = 0;
-  await new Promise(r => setTimeout(r, fadeTime));
+  const crossFadeLine = async (newText, duration, pause) => {
+    const fadeMs = fadeTimeBase ?? (fadePercent * duration * 1000);
+    const fadeApplied = Math.max(50, Math.min(fadeMs, duration * 1000 * 0.8));
 
-  // Optional blank period before showing new text
-  if (pause > 0) await new Promise(r => setTimeout(r, pause * 1000));
+    // fade out
+    div.style.transition = `opacity ${fadeApplied}ms ease`;
+    div.style.opacity = 0;
+    await new Promise(r => setTimeout(r, fadeApplied));
 
-  // Fade in new text
-  div.textContent = newText;
-  div.style.opacity = 1;
-  await new Promise(r => setTimeout(r, duration * 1000));
-};
+    // blank gap
+    if (pause > 0) await new Promise(r => setTimeout(r, pause * 1000));
+
+    // fade in new text
+    div.textContent = newText;
+    div.style.opacity = 1;
+    await new Promise(r => setTimeout(r, duration * 1000));
+  };
 
   // ───────────────────────────────────────────────
-  // Playback loop
+  // 7️⃣ Playback loop
   // ───────────────────────────────────────────────
   (async () => {
-    if (randomSeq) {
+    const loopForever = order === "rnd";
+    if (loopForever) {
       console.log(`[cueText] 🎲 Starting continuous random ${mode}-sequence`);
-      const pool = [...units];
       while (true) {
         // shuffle
-        for (let i = pool.length - 1; i > 0; i--) {
+        for (let i = units.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
-          [pool[i], pool[j]] = [pool[j], pool[i]];
+          [units[i], units[j]] = [units[j], units[i]];
         }
 
-for (const unit of pool) {
-  let duration = dispMin + Math.random() * (dispMax - dispMin);
-  let pause = pauseMin + Math.random() * (pauseMax - pauseMin);
-  await crossFadeLine(unit.trim(), duration, pause);
-}
-
+        for (const unit of units) {
+          const dur = durMin + Math.random() * (durMax - durMin);
+          const gap = gapMin + Math.random() * (gapMax - gapMin);
+          await crossFadeLine(unit.trim(), dur, gap);
+        }
       }
     } else {
-      // one-pass
+      // sequential one-pass
       for (const unit of units) {
-        let duration = dispMin + Math.random() * (dispMax - dispMin);
-        let pause = pauseMin + Math.random() * (pauseMax - pauseMin);
-        await crossFadeLine(unit.trim(), duration);
-        await new Promise(r => setTimeout(r, pause * 1000));
+        const dur = durMin + Math.random() * (durMax - durMin);
+        const gap = gapMin + Math.random() * (gapMax - gapMin);
+        await crossFadeLine(unit.trim(), dur, gap);
       }
+
       // final hold
-      let finalHold = holdMin + Math.random() * (holdMax - holdMin);
+      const finalHold = holdMin + Math.random() * (holdMax - holdMin);
       if (finalHold > 0) {
         await new Promise(r => setTimeout(r, finalHold * 1000));
-        div.style.transition = `opacity ${fadeTime}ms ease`;
+        div.style.transition = `opacity 400ms ease`;
         div.style.opacity = 0;
-        setTimeout(() => div.remove(), fadeTime);
+        setTimeout(() => div.remove(), 400);
       } else {
         div.addEventListener("click", () => {
-          div.style.transition = `opacity ${fadeTime}ms ease`;
+          div.style.transition = `opacity 400ms ease`;
           div.style.opacity = 0;
-          setTimeout(() => div.remove(), fadeTime);
+          setTimeout(() => div.remove(), 400);
         });
       }
     }
   })();
 }
+
 
 
 
