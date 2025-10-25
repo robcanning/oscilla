@@ -25,25 +25,28 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
   const params = {};
   for (const p of ast.args || []) params[p.type] = p.value;
 
-  // Helpers
+  // ── Helpers
   const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
 
   // ── Core params
   let content = (params.src || params.content || "").replace(/^["'`](.*)["'`]$/, "$1");
-  let style = (params.style || "").replace(/^["'`](.*)["'`]$/, "$1");
-  const targetId = params.target || null;
-  const offsetX = Number(params.offsetX || 0);
-  const offsetY = Number(params.offsetY || 0);
-  const order   = (params.order || "seq").replace(/^["'`](.*)["'`]$/, "$1");
-  const mode    = (params.mode  || "line").replace(/^["'`](.*)["'`]$/, "$1");
+  let style   = (params.style || "").replace(/^["'`](.*)["'`]$/, "$1");
+  const targetId = params.target || "center";
+  const offsetX  = Number(params.offsetX || 0);
+  const offsetY  = Number(params.offsetY || 0);
+  const order    = (params.order || "seq").replace(/^["'`](.*)["'`]$/, "$1");
+  const mode     = (params.mode  || "line").replace(/^["'`](.*)["'`]$/, "$1");
+  const uid     = params.uid || Math.floor(Math.random() * 100000);
 
   // ── Ranges
   function parseRange(val, fallback) {
     if (!val) return [fallback, fallback];
     const cleaned = String(val).replace(/^["'`](.*)["'`]$/, "$1");
     const parts = cleaned.split(/[-,]/).map(Number).filter(v => !isNaN(v));
-    return parts.length === 2 ? [parts[0], parts[1]] : [parts[0] ?? fallback, parts[0] ?? fallback];
+    return parts.length === 2
+      ? [parts[0], parts[1]]
+      : [parts[0] ?? fallback, parts[0] ?? fallback];
   }
   const [durMin,  durMax ] = parseRange(params.dur,  2);
   const [gapMin,  gapMax ] = parseRange(params.gap,  0);
@@ -54,14 +57,14 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
   let fadePercent = 0.25; // default 25%
   let fadeTimeBase = null;
   if (fadeParam) {
-    if (fadeParam.endsWith("%")) fadePercent = Number(fadeParam.replace("%","")) / 100;
+    if (fadeParam.endsWith("%")) fadePercent = Number(fadeParam.replace("%", "")) / 100;
     else fadeTimeBase = Number(fadeParam);
   }
 
   // ── Loop control
   const loopParam = (params.loop || "0").toString().trim().toLowerCase();
   let loopCount = 0, infinite = false;
-  if (loopParam === "inf" || loopParam === "infinite") infinite = true;
+  if (loopParam === "inf" || loopParam === "infinite" || loopParam === "0") infinite = true;
   else loopCount = parseInt(loopParam, 10) || 0;
 
   // ── Build units [{text, dur|null, gap|null}]
@@ -98,6 +101,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
 
   // ── Overlay
   const div = document.createElement("div");
+  div.id = `cue-text-${uid}`;
   div.classList.add("cue-text-overlay");
   div.style.cssText = `
     position: fixed;
@@ -113,13 +117,21 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     opacity: 0;
     transition: opacity 0.3s ease;
     text-shadow: 0 0 10px rgba(0,0,0,0.7);
+    pointer-events: none;
     ${style}
   `;
   document.body.appendChild(div);
 
-  // Position near target/cue
+  // ── Position logic: target:self / target:center / explicit
   let placed = false;
-  if (targetId) {
+  if (targetId === "self" && cueElement) {
+    const box = cueElement.getBoundingClientRect();
+    div.style.position = "absolute";
+    div.style.left = `${box.x + offsetX}px`;
+    div.style.top  = `${box.y + offsetY}px`;
+    div.style.transform = "translate(0,0)";
+    placed = true;
+  } else if (targetId !== "center" && targetId !== "self") {
     const target = document.getElementById(targetId);
     if (target) {
       const box = target.getBoundingClientRect();
@@ -130,35 +142,30 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       placed = true;
     }
   }
-  if (!placed && cueElement) {
-    const box = cueElement.getBoundingClientRect();
-    div.style.position = "absolute";
-    div.style.left = `${box.x + offsetX}px`;
-    div.style.top  = `${box.y + offsetY}px`;
-    div.style.transform = "translate(0,0)";
+  if (!placed) {
+    div.style.position = "fixed";
+    div.style.left = `calc(50% + ${offsetX}px)`;
+    div.style.top  = `calc(50% + ${offsetY}px)`;
+    div.style.transform = "translate(-50%, -50%)";
   }
 
-  // ── Cross-fade ONE unit (no gap here)
+  // ── Cross-fade ONE unit
   const crossFadeUnit = async (newText, duration) => {
     const fadeMs = fadeTimeBase ?? (fadePercent * duration * 1000);
     const fadeApplied = Math.max(50, Math.min(fadeMs, duration * 1000 * 0.8));
 
-    // Fade out current (if visible)
     div.style.transition = `opacity ${fadeApplied}ms ease`;
-    // force layout before change
     void div.offsetHeight;
     div.style.opacity = 0;
     await wait(fadeApplied);
 
-    // Set new text, ensure layout, then fade in
     div.textContent = newText;
-    await nextFrame(); // make sure textContent is committed
+    await nextFrame();
     div.style.transition = `opacity ${fadeApplied}ms ease`;
     void div.offsetHeight;
     div.style.opacity = 1;
     await wait(duration * 1000);
 
-    // Fade out after display duration
     div.style.transition = `opacity ${fadeApplied}ms ease`;
     void div.offsetHeight;
     div.style.opacity = 0;
@@ -178,7 +185,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       const dur = (unit.dur ?? (durMin + Math.random() * (durMax - durMin)));
       const gap = (unit.gap ?? (gapMin + Math.random() * (gapMax - gapMin)));
       await crossFadeUnit(unit.text.trim(), dur);
-      if (gap > 0) await wait(gap * 1000); // ← gap AFTER fade-out of this unit
+      if (gap > 0) await wait(gap * 1000);
     }
   };
 
@@ -192,15 +199,12 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
   // ── Playback
   (async () => {
     let currentLoop = 0;
-
     if (order === "rnd" || infinite) {
-      // infinite random passes
       while (true) {
         shuffleInPlace(units);
         await playSequenceOnce();
       }
     } else {
-      // sequential, loop N times, then clear
       do {
         await playSequenceOnce();
         currentLoop++;
@@ -218,6 +222,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     }
   })();
 }
+
 
 
 
