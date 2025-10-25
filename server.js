@@ -98,7 +98,6 @@ app.get('/scores/*', (req, res, next) => {
     next();
   }
 });
-
 // --- Directory listing for /shared/... (outside public) ---
 app.get('/shared/*', (req, res, next) => {
   const subPath = req.params[0] || '';
@@ -112,18 +111,35 @@ app.get('/shared/*', (req, res, next) => {
   }
 });
 
-// app.use(express.static('dist'));
+// --- Directory listing for /docs/... ---
+app.get('/docs/*', (req, res, next) => {
+  const subPath = req.params[0] || '';
+  const dir = path.join(process.cwd(), 'public/docs/md_docs', subPath);
+  try {
+    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+      res
+        .type('html')
+        .send(listDirectory(dir, req.path.endsWith('/') ? req.path : req.path + '/'));
+    } else next();
+  } catch (err) {
+    next();
+  }
+});
 
-// serve the docs ////////////////////////
-app.use('/webdocs', express.static(path.join(__dirname, 'webdocs/site')));
+// --- Serve static files in /docs (Markdown etc.) ---
+app.use('/docs', express.static(path.join(process.cwd(), 'public/docs/md_docs')));
+
+// app.use(express.static('dist'));
 
 const server = app.listen(port, () => {
   console.log(`HTTP server is running on http://localhost:${port}`);
-  console.log(JSON.stringify({
-    gui: true,
-    type: "http",
-    port
-  }));
+  console.log(
+    JSON.stringify({
+      gui: true,
+      type: 'http',
+      port
+    })
+  );
 });
 
 const wss = new WebSocket.Server({ server });
@@ -132,10 +148,10 @@ let sharedState = {
   elapsedTime: 0,
   isPlaying: false,
   playheadX: 0, // ✅ Ensure playheadX is always included
-  duration: 20 * 60 * 1000, // ✅ Duration will be set dynamically in popup but this is the default fallback
-  speedMultiplier: 1.0, // ✅ Add speed multiplier to shared state
-
+  duration: 20 * 60 * 1000, // ✅ Default duration (20 min)
+  speedMultiplier: 1.0 // ✅ Add speed multiplier to shared state
 };
+
 
 let lastUpdateTime = null;
 let lastKnownElapsedTime = 0; // ✅ Store last valid elapsed time
@@ -418,6 +434,33 @@ case "osc_scale": {
       { type: "f", value: scaleY },
     ],
   });
+  break;
+}
+
+case "osc_obj2path": {
+  const { pathId, x, y, angle } = data;
+
+  if (!pathId) {
+    console.warn("[OSC] ⚠️ Missing pathId in osc_obj2path message.");
+    break;
+  }
+
+  // Coerce to numeric values
+  const nx = parseFloat(x) || 0;
+  const ny = parseFloat(y) || 0;
+  const na = parseFloat(angle) || 0;
+
+  console.log(`[OSC] 🛰 obj2path ${pathId}: x=${nx.toFixed(3)} y=${ny.toFixed(3)} a=${na.toFixed(1)}`);
+
+  oscPort.send({
+    address: `/oscilla/obj2path/${pathId}`,
+    args: [
+      { type: "f", value: nx },
+      { type: "f", value: ny },
+      { type: "f", value: na }
+    ]
+  });
+
   break;
 }
 

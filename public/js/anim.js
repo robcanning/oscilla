@@ -979,6 +979,7 @@ const oscLastSent = new Map();
  * @param {number} normY - Normalized Y (0–1)
  * @param {number} angle - Heading angle in degrees
  */
+
 function sendObj2PathOsc(pathId, normX, normY, angle = 0) {
 
   if (!window.OSC_ENABLED) return;
@@ -1216,58 +1217,33 @@ const animateObjToPath = (object, path, duration, animations = [], config = {}) 
           if (oscEnabled && now - lastOscSent > oscThrottleMs) {
             lastOscSent = now;
 
+            // ────────────── Closed-path orbital angle (0° at top)
             if (isClosed) {
-              // 🔁 Angular progress for closed/orbital paths
-              const dx = p.x - cx; // horizontal vector from center to point
-              const dy = p.y - cy; // vertical vector from center to point (SVG Y-down)
+              const dx = p.x - cx;
+              const dy = p.y - cy;
 
-              // Convert to polar angle (invert Y for SVG coordinates)
+              // Polar conversion (SVG Y-down → clockwise angles)
               let angleRad = Math.atan2(-dy, dx);
-
-              // Shift zero-angle from 3 o’clock → 12 o’clock
               angleRad -= Math.PI / 2;
-
-              // Mirror so angles increase clockwise (SVG visual orientation)
               angleRad = 2 * Math.PI - angleRad;
-
-              // Wrap back into [0 … 2π)
               angleRad = ((angleRad % (2 * Math.PI)) + (2 * Math.PI)) % (2 * Math.PI);
 
-              // Normalized 0 – 1 progress and degrees
-              const angleNorm = angleRad / (2 * Math.PI);
               const angleDeg = angleRad * 180 / Math.PI;
 
+              // Normalised position inside bounding box
+              const bbox = path.getBBox();
+              const normX = (dx / (bbox.width / 2) + 1) / 2;
+              const normY = (dy / (bbox.height / 2) + 1) / 2;
 
-              const msg = {
-                pathId: path.id,
-                type: "closed",
-                progress: angleNorm,
-                xNorm: dx / (bbox.width / 2),   // normalized -1..1 horizontal offset
-                yNorm: dy / (bbox.height / 2),  // normalized -1..1 vertical offset
-                angleDeg: (angleRad * 180) / Math.PI // degrees 0° = top, CW positive
-              };
+              sendObj2PathOsc(path.id, normX, normY, angleDeg);
 
-              console.log(
-                `[o2p][closed] ${path.id} → progress:${angleNorm.toFixed(3)} angle:${msg.angleDeg.toFixed(1)}° x:${msg.xNorm.toFixed(3)} y:${msg.yNorm.toFixed(3)}`
-              );
-
-              emitOSCFromPathProgress(msg);
-
+              // ────────────── Open paths → use unified helper
             } else {
-              // ⏩ Linear progress for open paths
-              const msg = {
-                pathId: path.id,
-                type: "linear",
-                progress: prog,
-                x: p.x,
-                y: p.y
-              };
-
-              // console.log(`[o2p][linear] ${path.id} → progress:${prog.toFixed(3)} x:${p.x.toFixed(1)} y:${p.y.toFixed(1)}`);
-
-              emitOSCFromPathProgress(msg);
+              emitOSCFromPathProgress({ path, progress: anim.progress, pathId: path.id });
             }
           }
+
+
         }
       });
 

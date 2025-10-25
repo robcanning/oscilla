@@ -65,7 +65,7 @@ export function emitOscPhase(phase, bar, bpm, timestamp) {
 /* 🕒  LOCAL PRECISE METRONOME LOOP                                      */
 /* -------------------------------------------------------------------- */
 
-export function startPreciseMetronome(bpm = 120, beats = 4, onBeat = () => {}) {
+export function startPreciseMetronome(bpm = 120, beats = 4, onBeat = () => { }) {
   const beatMs = 60000 / bpm;
   let beatCount = 0;
   let barCount = 0;
@@ -156,7 +156,6 @@ export function startNetworkMetronome(socket, onBeat) {
 // cue:metronome(...) / cue:metro(...)
 // Precise visual metronome using performance.now() timing.
 // ============================================================================
-
 export function handleMetronomeCue(ast, cueElement = null) {
   const params = {};
   for (const p of (ast.args || [])) params[p.type] = p.value;
@@ -171,9 +170,9 @@ export function handleMetronomeCue(ast, cueElement = null) {
   const showCount    = params.showcount !== "0" && params.showcount !== 0;
   const targetUid    = params.target || null;
   const holdSeconds  = Number(params.hold || 0);
-  const hideTarget   = Number(params.hideTarget || 1) === 1;
-  const colour       = params.colour || "red";      // 🎨 new
-  const size         = Number(params.size || 50);   // 📏 new
+  const hideTarget   = Number(params.hideTarget ?? 1) === 1;  // ✅ fixed logic
+  const colour       = params.colour || "red";
+  const size         = Number(params.size || 50);
 
   console.log("[cue:metro] Params →", params);
 
@@ -206,22 +205,23 @@ export function handleMetronomeCue(ast, cueElement = null) {
     ? bbox.top - containerBox.top + scrollY - 10
     : bbox.top - 10);
 
-  // 👻 Hide the original cue element
-  if (cueElement) {
-    cueElement.style.opacity = "0";
-    cueElement.style.pointerEvents = "none";
-    cueElement.style.visibility = "hidden";
-    cueElement.dataset._hiddenByCue = "metro";
-    console.log(`[cue:metro] Hiding cue element for ${ast.type}`);
-  }
+  // 🫥 Hide cue and/or target depending on hideTarget
+  if (hideTarget) {
+    if (cueElement) {
+      cueElement.style.opacity = "0";
+      cueElement.style.pointerEvents = "none";
+      cueElement.style.visibility = "hidden";
+      cueElement.dataset._hiddenByCue = "metro";
+      console.log(`[cue:metro] Hiding cue element for ${ast.type}`);
+    }
 
-  // 🫥 Optionally hide the target element
-  if (targetEl && hideTarget) {
-    targetEl.style.opacity = "0";
-    targetEl.style.pointerEvents = "none";
-    targetEl.style.visibility = "hidden";
-    targetEl.dataset._hiddenByCue = "metroTarget";
-    console.log(`[cue:metro] Hiding target element '${targetUid}'`);
+    if (targetEl) {
+      targetEl.style.opacity = "0";
+      targetEl.style.pointerEvents = "none";
+      targetEl.style.visibility = "hidden";
+      targetEl.dataset._hiddenByCue = "metroTarget";
+      console.log(`[cue:metro] Hiding target element '${targetUid}'`);
+    }
   }
 
   // 🎨 Prepare overlay element (one per uid)
@@ -356,12 +356,10 @@ export function handleMetronomeCue(ast, cueElement = null) {
   };
 
   div._beatTimer = requestAnimationFrame(animateBeat);
-
   div._stopMetro = stopMetronome;
 
   console.log(`[cue:metro] 🎵 Started metronome uid=${uid} bpm=${bpm} beats=${beats} position=${positionMode} hold=${holdSeconds}s colour=${colour} size=${size}px`);
 }
-
 
 
 
