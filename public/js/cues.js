@@ -2632,19 +2632,9 @@ export function handleStopwatchCue(ast, cueElement = null) {
 }
 
 
+
 // ------------------------------------------------------------
-// 🎬 handleVideoCueFromAST(ast, cueElement)
-// ------------------------------------------------------------
-// Plays a video from window.videoDir according to cue:video(...) params.
-//
-// Supports:
-// file:, size:, loop:, hold:, speed:, offsetX:, offsetY:, location:(fixed|scroll),
-// in:, out:, opacity:, fadeIn:, fadeOut:.
-//
-// Fade-in/out are applied to the *total cue duration*, not per-loop.
-//
-// ------------------------------------------------------------
-// 🎬 handleVideoCueFromAST(ast, cueElement)
+//  handleVideoCueFromAST(ast, cueElement)
 // ------------------------------------------------------------
 // Plays a video from window.videoDir according to cue:video(...) params.
 //
@@ -2810,10 +2800,65 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
     score.addEventListener("scroll", updatePos);
   }
 
-  // --- Fades
-  vid.addEventListener("loadedmetadata", () => {
-    if (inTime > 0) vid.currentTime = inTime;
+// --- Handle video timing, fades, and in/out offsets
+vid.style.visibility = "hidden"; // hide the element to prevent the first frame flash
 
+vid.addEventListener("loadedmetadata", () => {
+  // --------------------------
+  //  SEEK TO START ("in:" parameter)
+  // --------------------------
+  if (inTime > 0) {
+    vid.pause(); // stop autoplay so we can seek safely
+    vid.currentTime = inTime; // jump to desired start position in seconds
+
+    // Wait until the seek completes before revealing or playing
+    vid.addEventListener(
+      "seeked",
+      () => {
+        vid.style.visibility = "visible"; // show the video only after the seek is complete
+        vid.play(); // now begin playback from the desired inTime
+
+        // --------------------------
+        //  FADE IN
+        // --------------------------
+        if (fadeInDur > 0) {
+          vid.style.opacity = 0;
+          vid.animate([{ opacity: 0 }, { opacity: opacityTarget }], {
+            duration: fadeInDur * 1000,
+            fill: "forwards",
+            easing: "ease-out",
+          });
+        } else {
+          vid.style.opacity = opacityTarget; // no fade → set opacity immediately
+        }
+
+        // --------------------------
+        //  FADE OUT (based on "out:" and "fadeOut:" parameters)
+        // --------------------------
+        if (outTime > 0) {
+          // start fade out slightly before the outTime so fade completes by that time
+          const fadeOutStart = Math.max((outTime - fadeOutDur) * 1000, 0);
+          setTimeout(() => {
+            vid.animate([{ opacity: opacityTarget }, { opacity: 0 }], {
+              duration: fadeOutDur * 1000,
+              fill: "forwards",
+              easing: "ease-in",
+            });
+          }, fadeOutStart);
+        }
+      },
+      { once: true } // ensures the event handler runs only once
+    );
+  }
+
+  // --------------------------
+  //  NO "in:" PARAMETER — PLAY IMMEDIATELY
+  // --------------------------
+  else {
+    vid.style.visibility = "visible"; // show right away
+    vid.play();
+
+    // --- Fade in
     if (fadeInDur > 0) {
       vid.style.opacity = 0;
       vid.animate([{ opacity: 0 }, { opacity: opacityTarget }], {
@@ -2825,6 +2870,7 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
       vid.style.opacity = opacityTarget;
     }
 
+    // --- Fade out
     if (outTime > 0) {
       const fadeOutStart = Math.max((outTime - fadeOutDur) * 1000, 0);
       setTimeout(() => {
@@ -2835,7 +2881,10 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
         });
       }, fadeOutStart);
     }
-  });
+  }
+});
+
+
 
   // --- Looping & removal
   if (p.loop === 0 || p.loop === "0") {

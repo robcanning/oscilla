@@ -49,7 +49,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
   let content = (params.src || params.content || "").replace(/^["'`](.*)["'`]$/, "$1");
   let style   = (params.style || "").replace(/^["'`](.*)["'`]$/, "$1");
 
-  const targetId = params.target || "center";
+  const targetId = params.target || "self";
   const offsetX  = Number(params.offsetX || 0);
   const offsetY  = Number(params.offsetY || 0);
   const order    = (params.order || "seq").replace(/^["'`](.*)["'`]$/, "$1");
@@ -155,7 +155,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     transform: translate(-50%, -50%);
     background: transparent;
     color: white;
-    font-size: 2em;
+    font-size: 4em;
     padding: 8px 12px;
     border-radius: 8px;
     max-width: 70vw;
