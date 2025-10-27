@@ -373,6 +373,52 @@ export const showControls = () => {
 
 window.hideControls = hideControls;
 
+// -------------------------------------------------------------------
+// 🧷 Controls Pin Toggle
+// -------------------------------------------------------------------
+window.controlsPinned = false;
+
+export function initializeControlsPin() {
+  const pinButton = document.getElementById("pin-controls");
+  if (!pinButton) return console.warn("[UI] ⚠️ No #pin-controls button found.");
+
+  pinButton.addEventListener("click", () => {
+    window.controlsPinned = !window.controlsPinned;
+    pinButton.classList.toggle("active", window.controlsPinned);
+
+    if (window.controlsPinned) {
+      console.log("[UI] 📌 Controls pinned — will stay visible.");
+      showControls();
+    } else {
+      console.log("[UI] 📍 Controls unpinned — auto-hide re-enabled.");
+      window.hideControlsLater(); // ✅ call the global version
+    }
+  });
+}
+
+
+// ---------------------------------------------------------
+// ⏳ Hide controls later — respects pin state
+// ---------------------------------------------------------
+// ---------------------------------------------------------
+// ⏳ Unified Hide Controls Timer (respects pin state, never resets on re-call)
+// ---------------------------------------------------------
+window.hideControlsLater = function (delay = 4000) {
+  // 🧩 if controls are pinned, block any hide timer setup entirely
+  if (window.controlsPinned) {
+    console.log("[UI] 📌 Controls pinned — ignoring hideControlsLater call.");
+    clearTimeout(window._hideControlsTimer);
+    return;
+  }
+
+  clearTimeout(window._hideControlsTimer);
+  window._hideControlsTimer = setTimeout(() => {
+    if (!window.controlsPinned) {
+      hideControls();
+      console.log("[UI] ⏳ Auto-hide executed (unpinned).");
+    }
+  }, delay);
+};
 
 
 // Function to synchronize playback time
@@ -718,14 +764,6 @@ window.addEventListener('resize', () => {
 *  Debug Output:
 *    Logs every phase of touch detection to identify false triggers.
 * --------------------------------------------------------------------------- */
-// ⏳ Hide controls a few seconds after showing them
-function hideControlsLater(delay = 4000) {
-  clearTimeout(window._hideControlsTimer);
-  window._hideControlsTimer = setTimeout(() => {
-    hideControls();
-    console.log("[TAP] ⏳ Hiding controls (timeout expired)");
-  }, delay);
-}
 
 // 🟢 Show controls immediately and restart hide timer
 function showControlsAndAutoHide() {
@@ -981,6 +1019,7 @@ export function initializeDarkModeToggle() {
 // ======================================================
 // SPLASH SCREEN CONTROL
 // ======================================================
+
 function setSplashVisibility(show) {
   const splash = document.getElementById('splash');
   const scoreContainer = window.scoreContainer || document.getElementById('scoreContainer');
@@ -1004,11 +1043,20 @@ function setSplashVisibility(show) {
     if (scoreContainer) scoreContainer.style.display = 'block';
     if (controls) controls.style.display = 'flex';
 
+    // ✅ make sure pin controls activates *after* controls are visible
+    setTimeout(() => {
+      if (typeof initializeControlsPin === "function") {
+        console.log("[UI] Initializing pin controls after splash hide");
+        initializeControlsPin();
+      }
+    }, 300);
+
     // Reinitialize SVG when showing the score
     const svgElement = document.querySelector('svg');
     if (svgElement) initializeSVG(svgElement);
   }
 }
+
 
 export function showSplashScreen() {
   setSplashVisibility(true);

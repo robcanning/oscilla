@@ -36,6 +36,40 @@ body {
 }
 
 
+/* 🔹 Remove focus outlines and blue flash from all major containers and SVGs */
+#scoreContainer,
+#scoreContainer:focus,
+#scoreContainer *:focus,
+#singlePage-container,
+#singlePage-container:focus,
+#singlePage-container *:focus,
+#animation-popup,
+#animation-popup:focus,
+#animation-popup *:focus,
+svg:focus,
+svg *:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* 🔹 Prevent text selection & focus flashing on click */
+#scoreContainer,
+#singlePage-container,
+#animation-popup,
+svg {
+  user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important; /* ✅ removes blue flash on mobile/webkit */
+  -webkit-focus-ring-color: transparent !important;    /* ✅ removes blue outline in Chrome/Safari */
+}
+
+
+
+:focus-visible {
+  outline: none;
+}
+
+
 
 
 /* Controls Container */
@@ -44,7 +78,7 @@ body {
   flex-direction: column;
   /* ✅ Makes seek bar appear above buttons */
   position: fixed;
-  bottom: 20px;
+  bottom: 40px;
   left: 0;
   width: 100vw;
   background-color: rgba(0, 0, 0, 0.6);
@@ -300,6 +334,38 @@ body {
 #audio-master-button.active {
   border-color: limegreen;
 }
+
+
+
+/* -----------------------------------------------------------
+   📌 PIN + 📝 NOTES TOGGLE (match Audio Master style)
+   ----------------------------------------------------------- */
+#pin-controls,
+#toggle-notes-button {
+  border: 2px solid red;
+  background: black;
+  color: white;
+  font-size: 20px;
+  padding: 5px 10px;
+  margin-left: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Active state — green border like Audio Master */
+#pin-controls.active,
+#toggle-notes-button.active {
+  border-color: limegreen;
+  color: limegreen;
+  box-shadow: 0 0 10px limegreen;
+}
+
+/* Optional hover behaviour for both states */
+#pin-controls:hover,
+#toggle-notes-button:hover {
+  background: #222;
+}
+
 
 
 #rehearsal-marks-button {

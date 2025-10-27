@@ -525,6 +525,10 @@ window.addEventListener("DOMContentLoaded", () => {
 window.addEventListener("DOMContentLoaded", () => {
   initializeSpeedControls();
   pauseDismissClickHandler(); // Enables click/spacebar dismiss for pause UI
+
+// initializeControlsPin();
+
+
 });
 
 // ===========================
@@ -3462,9 +3466,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // wsToggleButton.textContent = isCommunicationEnabled ? 'Disable Communication' : 'Enable Communication';
   });
 
-  helpButton.addEventListener('click', () => {
-    toggleKeybindingsPopup(); // Show keybindings popup when Help button is clicked
-  });
+  // helpButton.addEventListener('click', () => {
+  //   toggleKeybindingsPopup(); // Show keybindings popup when Help button is clicked
+  // });
 
 
   function showProgrammeNote() {

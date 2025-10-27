@@ -22,8 +22,8 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="0.59"
-     inkscape:cx="744.91525"
-     inkscape:cy="494.91525"
+     inkscape:cx="736.44068"
+     inkscape:cy="584.74576"
      inkscape:window-width="1920"
      inkscape:window-height="1011"
      inkscape:window-x="0"
@@ -32,6 +32,12 @@
      inkscape:current-layer="svg5125" />
   <defs
      id="defs5129">
+    <rect
+       x="172.58199"
+       y="632.80064"
+       width="1124.1799"
+       height="335.5761"
+       id="rect5" />
     <rect
        x="925.23125"
        y="94.6804"
@@ -145,70 +151,45 @@
        y="313.47986" /></text>
   <text
      xml:space="preserve"
-     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:32px;font-family:FreeMono;-inkscape-font-specification:FreeMono;white-space:pre;inline-size:399.259;display:inline;fill:#000000"
-     x="-4091.2209"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:32px;font-family:FreeMono;-inkscape-font-specification:FreeMono;white-space:pre;inline-size:660.529;display:inline;fill:#000000"
+     x="-3020.3401"
      y="183.20314"
      id="text142319"
-     transform="translate(4813.0109,1.8084732)"><tspan
-       x="-4091.2209"
+     transform="translate(3802.3389,-136.44329)"><tspan
+       x="-3020.3401"
        y="183.20314"
-       id="tspan6"><tspan
-         style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan5">Sequenced page </tspan></tspan><tspan
-       x="-4091.2209"
+       id="tspan5">Sequenced page playback and </tspan><tspan
+       x="-3020.3401"
        y="223.20313"
-       id="tspan8"><tspan
-         style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan7">playback and </tspan></tspan><tspan
-       x="-4091.2209"
+       id="tspan7">controlled randomness can be </tspan><tspan
+       x="-3020.3401"
        y="263.20313"
-       id="tspan10"><tspan
-         style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan9">controlled </tspan></tspan><tspan
-       x="-4091.2209"
+       id="tspan8">combined to create dynamic, </tspan><tspan
+       x="-3020.3401"
        y="303.20315"
-       id="tspan12"><tspan
-         style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan11">randomness can be </tspan></tspan><tspan
-       x="-4091.2209"
+       id="tspan9">evolving structures within </tspan><tspan
+       x="-3020.3401"
        y="343.20315"
-       id="tspan14"><tspan
-         style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan13">combined to create </tspan></tspan><tspan
-       x="-4091.2209"
-       y="383.20315"
-       id="tspan16"><tspan
-         style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan15">dynamic, evolving </tspan></tspan><tspan
-       x="-4091.2209"
-       y="423.20315"
-       id="tspan18"><tspan
-         style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan17">structures within </tspan></tspan><tspan
-       x="-4091.2209"
-       y="463.20315"
-       id="tspan20"><tspan
-         style="font-weight:bold;-inkscape-font-specification:'FreeMono Bold'"
-         id="tspan19">OscillaScore. </tspan></tspan></text>
+       id="tspan10">OscillaScore. </tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:48px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#000000"
-     x="62.089272"
-     y="56.407318"
+     x="64.486244"
+     y="70.789146"
      id="text142327"><tspan
        sodipodi:role="line"
        id="tspan142325"
-       x="62.089272"
-       y="56.407318"
+       x="64.486244"
+       y="70.789146"
        style="font-size:48px;fill:#ff0000">Sequencing and </tspan><tspan
        sodipodi:role="line"
-       x="62.089272"
-       y="116.40732"
+       x="64.486244"
+       y="130.78915"
        style="font-size:48px;fill:#ff0000"
        id="tspan1">Randomization </tspan><tspan
        sodipodi:role="line"
-       x="62.089272"
-       y="176.40732"
+       x="64.486244"
+       y="190.78915"
        style="font-size:48px;fill:#ff0000"
        id="tspan2">of Pages</tspan></text>
   <g
@@ -223,27 +204,6 @@
      xml:space="preserve"
      id="text175178"
      style="font-size:48px;font-family:FreeMono;-inkscape-font-specification:FreeMono;white-space:pre;shape-inside:url(#rect175180);display:inline;fill:#ff0000" />
-  <text
-     xml:space="preserve"
-     style="font-weight:bold;font-size:89.4301px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:inline;fill:#000000;stroke-width:4.19204"
-     x="75.870911"
-     y="239.93307"
-     id="cueButton(cue:page(Pseq([page1:4],1), after:nav(scroll)))_style(label:&quot;Page1 → Scroll&quot;, color:&quot;skyblue&quot;)&#10;&#10;-6"><tspan
-       sodipodi:role="line"
-       id="tspan944-7"
-       x="75.870911"
-       y="239.93307"
-       style="stroke-width:4.19204">.</tspan><tspan
-       sodipodi:role="line"
-       x="75.870911"
-       y="351.7207"
-       id="tspan946-5"
-       style="stroke-width:4.19204" /><tspan
-       sodipodi:role="line"
-       x="75.870911"
-       y="463.50833"
-       id="tspan947-3"
-       style="stroke-width:4.19204" /></text>
   <text
      xml:space="preserve"
      style="font-weight:bold;font-size:33.6148px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:1.80078"
@@ -265,110 +225,120 @@
      xml:space="preserve"
      id="text15"
      style="font-weight:bold;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect15);display:inline;fill:#000000" />
-  <g
-     id="svg5125-2"
-     transform="matrix(4.3706702,0,0,4.3706702,-4000.2681,47.22385)">
-    <text
-       xml:space="preserve"
-       style="font-weight:bold;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:inline;fill:#000000"
-       x="934.20001"
-       y="68.495964"
-       id="cueButton(cue:page(Pseq([page1:4],1), after:nav(scroll@F)))_style(label:&quot;Page1 → Scroll@F&quot;, color:&quot;skyblue&quot;)&#10;&#10;-6"><tspan
-         sodipodi:role="line"
-         id="tspan944-7-7"
-         x="934.20001"
-         y="68.495964">.</tspan><tspan
-         sodipodi:role="line"
-         x="934.20001"
-         y="95.16259"
-         id="tspan946-5-0" /><tspan
-         sodipodi:role="line"
-         x="934.20001"
-         y="121.82922"
-         id="tspan947-3-9" /></text>
-  </g>
-  <g
-     id="svg5125-0"
-     transform="matrix(33.151333,0,0,4.5579297,-30876.029,10.133874)">
-    <text
-       xml:space="preserve"
-       transform="matrix(0.13748858,0,0,1,806.41765,-28.64088)"
-       id="text55"
-       style="font-weight:300;font-size:16px;font-family:Antonio;-inkscape-font-specification:'Antonio Light';text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect55);display:inline;fill:#000000;stroke:#000000" />
-    <g
-       id="svg5125-9"
-       transform="matrix(0.13748858,0,0,1,805.31775,30.359124)">
-      <text
-         xml:space="preserve"
-         style="font-weight:bold;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:inline;fill:#000000"
-         x="934.20001"
-         y="68.495964"
-         id="cueButton(cue:page(Pseq([page1:4],1), after:nav(scroll@F)))_style(label:&quot;Page1 → Scroll@F&quot;, color:&quot;skyblue&quot;)&#10;&#10;-6-22"><tspan
-           sodipodi:role="line"
-           id="tspan944-7-8"
-           x="934.20001"
-           y="68.495964">.</tspan><tspan
-           sodipodi:role="line"
-           x="934.20001"
-           y="95.16259"
-           id="tspan946-5-9" /><tspan
-           sodipodi:role="line"
-           x="934.20001"
-           y="121.82922"
-           id="tspan947-3-7" /></text>
-    </g>
-  </g>
   <text
      xml:space="preserve"
-     style="font-weight:300;font-size:13.3333px;font-family:Antonio;-inkscape-font-specification:'Antonio Light';text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:704.154;display:inline;fill:#000000;stroke:#000000"
+     style="font-weight:300;font-size:13.3333px;font-family:Antonio;-inkscape-font-specification:'Antonio Light';text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:433.815;display:inline;fill:#000000;stroke:#000000"
      x="938.98303"
      y="109.32203"
-     id="cueButton(cue:page(Pseq([Pseq([io18:2, io12:2], 2), oi02:4], 1), after:mode(scroll@C) ))_style(label:&quot;Page1 → Scroll@F&quot;, color:&quot;yellow&quot;)&#10;&#10;"
-     transform="translate(-569.56083,714.37343)"><tspan
+     id="cueButton(cue:page(Pseq([Pseq([oi18:3, oi12:2, oi02:3], 2), bobthecat:2], 2),after:mode(scroll@D)))_style(label:&quot;Pattern Sequence → Scroll@D&quot;, color:&quot;blue&quot;)"
+     transform="translate(-174.60171,196.63915)"><tspan
        x="938.98303"
        y="109.32203"
-       id="tspan22"><tspan
+       id="tspan12"><tspan
          style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan21">cueButton(cue:page(Pseq([Pseq([io18:2, io12:2], 2), oi02:4], 1), </tspan></tspan><tspan
+         id="tspan11">cueButton(cue:page(Pseq([Pseq([oi18:4, oi12:2], 5), </tspan></tspan><tspan
        x="938.98303"
        y="127.22135"
-       id="tspan24"><tspan
+       id="tspan14"><tspan
          style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan23">after:mode(scroll@C) ))_style(label:&quot;Page1 → Scroll@F&quot;, color:&quot;yellow&quot;)
-</tspan></tspan></text>
+         id="tspan13">oi02:6], 2),after:mode(scroll@D)))_style(label:&quot;Page1 </tspan></tspan><tspan
+       x="938.98303"
+       y="145.12068"
+       id="tspan16"><tspan
+         style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
+         id="tspan15">→ Scroll@D&quot;, color:&quot;blue&quot;)</tspan></tspan></text>
   <text
      xml:space="preserve"
-     style="font-weight:300;font-size:13.3333px;font-family:Antonio;-inkscape-font-specification:'Antonio Light';text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:704.154;display:inline;fill:#000000;stroke:#000000"
-     x="938.98303"
-     y="109.32203"
-     id="cueButton(cue:page(Pseq([Pseq([page1:2, page2:2], 2), page3:4],1),after:mode(scroll@C)))_style(label:&quot;Page1 → Scroll@F&quot;, color:&quot;yellow&quot;)"
-     transform="translate(-675.02861,801.13124)"><tspan
-       x="938.98303"
-       y="109.32203"
-       id="tspan26"><tspan
-         style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan25">cueButton(cue:page(Pseq([Pseq([io18:2, io12:2], 2), oi02:4], 1), </tspan></tspan><tspan
-       x="938.98303"
-       y="127.22135"
-       id="tspan28"><tspan
-         style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan27">after:mode(scroll@C) ))_style(label:&quot;Page1 → Scroll@F&quot;, color:&quot;yellow&quot;)
-</tspan></tspan></text>
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:48px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:1109.36;display:inline;fill:#000000;stroke:#cf5151"
+     x="433.85196"
+     y="587.25818"
+     id="text4"
+     transform="translate(-253.51812,-281.7793)"><tspan
+       x="433.85196"
+       y="587.25818"
+       id="tspan18"><tspan
+   style="fill:#0000ff"
+   id="tspan17">cue:page(</tspan>
+</tspan><tspan
+       x="433.85196"
+       y="647.25815"
+       id="tspan19"> Pseq([
+</tspan><tspan
+       x="433.85196"
+       y="707.25815"
+       id="tspan23"><tspan
+   style="fill:#ffff00"
+   id="tspan20">  Pseq([oi18:3, oi12:2, oi02:3],  2),</tspan>
+</tspan><tspan
+       x="433.85196"
+       y="767.25815"
+       id="tspan27">  bobthecat:2], 
+</tspan><tspan
+       x="433.85196"
+       y="827.25815"
+       id="tspan29"> 2), <tspan
+   style="fill:#0000ff"
+   id="tspan28">after:mode(scroll@D))</tspan></tspan></text>
   <text
      xml:space="preserve"
-     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:42.6667px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:896.092;display:inline;fill:#000000;stroke:#cf5151"
-     x="666.35828"
-     y="412.27921"
-     id="text3"
-     transform="translate(-353.55339,194.15475)"><tspan
-       x="666.35828"
-       y="412.27921"
-       id="tspan29">cue:page(Pseq([Pseq([page1:2, </tspan><tspan
-       x="666.35828"
-       y="465.61257"
-       id="tspan30">page2:2], 2), page3:4], 1), </tspan><tspan
-       x="666.35828"
-       y="518.94594"
-       id="tspan31">after:mode(scroll@C))
-</tspan></text>
+     id="text5"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:29.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect5);display:inline;fill:#000000;stroke:#cf5151"
+     transform="translate(-96.510382,-12.275662)"><tspan
+       x="172.58203"
+       y="659.93408"
+       id="tspan33"><tspan
+         style="stroke:#000000"
+         id="tspan30">### Syntax </tspan><tspan
+         style="fill:#ff0000;stroke:#c74b4b"
+         id="tspan31">(Thank you Supercollider Patterns!)</tspan><tspan
+         style="stroke:#000000"
+         id="tspan32">
+</tspan></tspan><tspan
+       x="172.58203"
+       y="696.60071"
+       id="tspan35"><tspan
+         style="stroke:#000000"
+         id="tspan34">cue:page(&lt;pageId&gt;)
+</tspan></tspan><tspan
+       x="172.58203"
+       y="733.26734"
+       id="tspan37"><tspan
+         style="stroke:#000000"
+         id="tspan36">cue:page(Pseq([&lt;page1&gt;:&lt;dur&gt;,&lt;page2&gt;:&lt;dur&gt;],&lt;repeats&gt;))
+</tspan></tspan><tspan
+       x="172.58203"
+       y="769.93396"
+       id="tspan39"><tspan
+         style="stroke:#000000"
+         id="tspan38">cue:page(Pxrand([&lt;page1&gt;,&lt;page2&gt;,&lt;page3&gt;],&lt;repeats&gt;))
+</tspan></tspan><tspan
+       x="172.58203"
+       y="806.60059"
+       id="tspan41"><tspan
+         style="stroke:#000000"
+         id="tspan40">cue:page(Pshuf([&lt;page1&gt;,&lt;page2&gt;,&lt;page3&gt;],&lt;repeats&gt;))
+</tspan></tspan><tspan
+       x="172.58203"
+       y="843.26721"
+       id="tspan43"><tspan
+         style="stroke:#000000"
+         id="tspan42">cue:page(Prand([&lt;page1&gt;,&lt;page2&gt;,&lt;page3&gt;],&lt;repeats&gt;))
+</tspan></tspan><tspan
+       x="172.58203"
+       y="879.93384"
+       id="tspan45"><tspan
+         style="stroke:#000000"
+         id="tspan44">cue:page(Pchoose([&lt;page1&gt;,&lt;page2&gt;,&lt;page3&gt;]))
+</tspan></tspan><tspan
+       x="172.58203"
+       y="916.60047"
+       id="tspan47"><tspan
+         style="stroke:#000000"
+         id="tspan46">cue:page(Pseq([page1:3, page2:3],1), after:mode(scroll@F))
+</tspan></tspan><tspan
+       x="172.58203"
+       y="953.26709"
+       id="tspan49"><tspan
+         style="stroke:#000000"
+         id="tspan48">cue:page(Pseq([Pseq([page1:2,page2:2],2),page3:4],1))</tspan></tspan></text>
 </svg>
