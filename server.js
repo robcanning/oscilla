@@ -330,12 +330,12 @@ wss.on('connection', (ws, req) => {
   clientNames.set(ws, clientName);
   activeClients.add(ws);
   console.log(`[DEBUG] New WebSocket connection: ${clientName}`);
-  
+
   // ✅ Send welcome message to client so they know their name
   ws.send(JSON.stringify({ type: 'welcome', name: clientName }));
-  
+
   broadcastClientList();
-  
+
   // ✅ Instead of resetting, send the current state to the new client
   // ws.send(JSON.stringify({ type: "welcome", name: clientName }));
   // ✅ Sync the new client with existing state
@@ -355,114 +355,114 @@ wss.on('connection', (ws, req) => {
 
     switch (data.type) {
       case "cueStop":
-  console.log(`[DEBUG] Broadcasting cue_stop from client.`);
+        console.log(`[DEBUG] Broadcasting cue_stop from client.`);
 
-  // ✅ Use client-provided state
-  sharedState.isPlaying = false;
-  sharedState.elapsedTime = !isNaN(data.elapsedTime) ? data.elapsedTime : sharedState.elapsedTime;
-  sharedState.playheadX = !isNaN(data.playheadX) ? data.playheadX : sharedState.playheadX;
-  lastUpdateTime = null;
+        // ✅ Use client-provided state
+        sharedState.isPlaying = false;
+        sharedState.elapsedTime = !isNaN(data.elapsedTime) ? data.elapsedTime : sharedState.elapsedTime;
+        sharedState.playheadX = !isNaN(data.playheadX) ? data.playheadX : sharedState.playheadX;
+        lastUpdateTime = null;
 
-  const stopMessage = JSON.stringify({
-    type: "cueStop",
-    elapsedTime: sharedState.elapsedTime,
-    playheadX: sharedState.playheadX,
-    id: data.id || "cueStop"
-  });
+        const stopMessage = JSON.stringify({
+          type: "cueStop",
+          elapsedTime: sharedState.elapsedTime,
+          playheadX: sharedState.playheadX,
+          id: data.id || "cueStop"
+        });
 
-wss.clients.forEach((client) => {
-  if (client !== ws && client.readyState === WebSocket.OPEN) {
-    client.send(stopMessage);
-  }
-});
+        wss.clients.forEach((client) => {
+          if (client !== ws && client.readyState === WebSocket.OPEN) {
+            client.send(stopMessage);
+          }
+        });
 
-broadcastState();
-break;
+        broadcastState();
+        break;
 
-  case "osc_rotate": {
-    const { uid, angle, radians, norm } = data;
-    console.log(`[OSC] 🔁 ROTATE ${uid}: ${angle.toFixed(1)}°`);
-    oscPort.send({
-      address: `/oscilla/rotate/${uid}`,
-      args: [
-        { type: "f", value: angle },
-        { type: "f", value: radians },
-        { type: "f", value: norm },
-      ],
-    });
-    break;
-  }
+      case "osc_rotate": {
+        const { uid, angle, radians, norm } = data;
+        console.log(`[OSC] 🔁 ROTATE ${uid}: ${angle.toFixed(1)}°`);
+        oscPort.send({
+          address: `/oscilla/rotate/${uid}`,
+          args: [
+            { type: "f", value: angle },
+            { type: "f", value: radians },
+            { type: "f", value: norm },
+          ],
+        });
+        break;
+      }
 
-// -----------------------------------------------------------
-// 🎚️ OSC Fade updates from client
-// -----------------------------------------------------------
-case "osc_fade": {
-  let { uid, value } = data;
-  if (!uid) uid = "unknown";
-  uid = String(uid).replace(/[^a-zA-Z0-9_\-]/g, "");
+      // -----------------------------------------------------------
+      // 🎚️ OSC Fade updates from client
+      // -----------------------------------------------------------
+      case "osc_fade": {
+        let { uid, value } = data;
+        if (!uid) uid = "unknown";
+        uid = String(uid).replace(/[^a-zA-Z0-9_\-]/g, "");
 
-  console.log(`[OSC] 🎚 FADER ${uid}: value=${Number(value).toFixed(3)}`);
+        console.log(`[OSC] 🎚 FADER ${uid}: value=${Number(value).toFixed(3)}`);
 
-  oscPort.send({
-    address: `/oscilla/fade/${uid}`,
-    args: [{ type: "f", value: Number(value) }],
-  });
-  break;
-}
-
-
+        oscPort.send({
+          address: `/oscilla/fade/${uid}`,
+          args: [{ type: "f", value: Number(value) }],
+        });
+        break;
+      }
 
 
 
-case "osc_scale": {
-  let { uid, scaleX, scaleY } = data;
 
-  // Coerce to numeric
-  scaleX = parseFloat(scaleX);
-  scaleY = parseFloat(scaleY);
 
-  // Fallbacks to avoid crash
-  if (isNaN(scaleX)) scaleX = 1;
-  if (isNaN(scaleY)) scaleY = 1;
+      case "osc_scale": {
+        let { uid, scaleX, scaleY } = data;
 
-  console.log(`[OSC] 📏 SCALE ${uid}: X=${scaleX.toFixed(3)} Y=${scaleY.toFixed(3)}`);
+        // Coerce to numeric
+        scaleX = parseFloat(scaleX);
+        scaleY = parseFloat(scaleY);
 
-  oscPort.send({
-    address: `/oscilla/scale/${uid}`,
-    args: [
-      { type: "f", value: scaleX },
-      { type: "f", value: scaleY },
-    ],
-  });
-  break;
-}
+        // Fallbacks to avoid crash
+        if (isNaN(scaleX)) scaleX = 1;
+        if (isNaN(scaleY)) scaleY = 1;
 
-case "osc_obj2path": {
-  const { pathId, x, y, angle } = data;
+        console.log(`[OSC] 📏 SCALE ${uid}: X=${scaleX.toFixed(3)} Y=${scaleY.toFixed(3)}`);
 
-  if (!pathId) {
-    console.warn("[OSC] ⚠️ Missing pathId in osc_obj2path message.");
-    break;
-  }
+        oscPort.send({
+          address: `/oscilla/scale/${uid}`,
+          args: [
+            { type: "f", value: scaleX },
+            { type: "f", value: scaleY },
+          ],
+        });
+        break;
+      }
 
-  // Coerce to numeric values
-  const nx = parseFloat(x) || 0;
-  const ny = parseFloat(y) || 0;
-  const na = parseFloat(angle) || 0;
+      case "osc_obj2path": {
+        const { pathId, x, y, angle } = data;
 
-  console.log(`[OSC] 🛰 obj2path ${pathId}: x=${nx.toFixed(3)} y=${ny.toFixed(3)} a=${na.toFixed(1)}`);
+        if (!pathId) {
+          console.warn("[OSC] ⚠️ Missing pathId in osc_obj2path message.");
+          break;
+        }
 
-  oscPort.send({
-    address: `/oscilla/obj2path/${pathId}`,
-    args: [
-      { type: "f", value: nx },
-      { type: "f", value: ny },
-      { type: "f", value: na }
-    ]
-  });
+        // Coerce to numeric values
+        const nx = parseFloat(x) || 0;
+        const ny = parseFloat(y) || 0;
+        const na = parseFloat(angle) || 0;
 
-  break;
-}
+        console.log(`[OSC] 🛰 obj2path ${pathId}: x=${nx.toFixed(3)} y=${ny.toFixed(3)} a=${na.toFixed(1)}`);
+
+        oscPort.send({
+          address: `/oscilla/obj2path/${pathId}`,
+          args: [
+            { type: "f", value: nx },
+            { type: "f", value: ny },
+            { type: "f", value: na }
+          ]
+        });
+
+        break;
+      }
 
 
 
@@ -558,7 +558,7 @@ case "osc_obj2path": {
 
 
 
-          
+
       /**
       * ✅ Handles manual pause requests from a client.
       * - Updates `isPlaying` state to false and stops playback tracking.
@@ -804,51 +804,51 @@ case "osc_obj2path": {
         console.log(`[DEBUG] Sent OSC cue: /cue/trigger ${cueNumber}`);
         break;
 
-case "jump": {
-  console.log(`[DEBUG] 🏃 Handling jump request. Received playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
+      case "jump": {
+        console.log(`[DEBUG] 🏃 Handling jump request. Received playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
 
-  if (!isNaN(data.playheadX) && data.playheadX >= 0) {
-    // ✅ Trust absolute pixel value
-    sharedState.playheadX = data.playheadX;
+        if (!isNaN(data.playheadX) && data.playheadX >= 0) {
+          // Trust absolute pixel value
+          sharedState.playheadX = data.playheadX;
 
-    // ✅ Update elapsedTime if valid
-    if (!isNaN(data.elapsedTime)) {
-      sharedState.elapsedTime = data.elapsedTime;
-    }
+          // Update elapsedTime if valid
+          if (!isNaN(data.elapsedTime)) {
+            sharedState.elapsedTime = data.elapsedTime;
+          }
 
-    // ✅ Preserve play state if we were already playing
-    if (sharedState.isPlaying) {
-      console.log("[SERVER] 🏃 Jump occurred during playback — keeping isPlaying = true");
-    } else {
-      console.log("[SERVER] 💤 Jump received while paused — maintaining paused state");
-    }
+          // Preserve play state if we were already playing
+          if (sharedState.isPlaying) {
+            console.log("[SERVER] 🏃 Jump occurred during playback — keeping isPlaying = true");
+          } else {
+            console.log("[SERVER] 💤 Jump received while paused — maintaining paused state");
+          }
 
-    // ✅ Build jump message (no isPlaying flip)
-    const jumpMessage = JSON.stringify({
-      type: "jump",
-      playheadX: sharedState.playheadX,
-      elapsedTime: sharedState.elapsedTime,
-      isPlaying: sharedState.isPlaying, // 🔁 explicitly include so clients know not to pause
-    });
+          // Build jump message (no isPlaying flip)
+          const jumpMessage = JSON.stringify({
+            type: "jump",
+            playheadX: sharedState.playheadX,
+            elapsedTime: sharedState.elapsedTime,
+            isPlaying: sharedState.isPlaying, // 🔁 explicitly include so clients know not to pause
+          });
 
-    // ✅ Send to all other clients
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN && client !== ws) {
-        client.send(jumpMessage);
+          // Send to all other clients
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN && client !== ws) {
+              client.send(jumpMessage);
+            }
+          });
+
+          //  No broadcastState() here — prevents redundant sync
+        } else {
+          console.warn("[WARNING] ❌ Invalid playheadX received in jump. Ignoring.");
+        }
+        break;
       }
-    });
-
-    // ⛔️ No broadcastState() here — prevents redundant sync
-  } else {
-    console.warn("[WARNING] ❌ Invalid playheadX received in jump. Ignoring.");
-  }
-  break;
-}
 
 
 
       /**
-      * ✅ Handles resuming playback after a pause.
+      *  Handles resuming playback after a pause.
       * - Ensures synchronization across clients.
       */
       case "resume_after_pause":
@@ -885,11 +885,30 @@ case "jump": {
           }
         });
 
-        updateElapsedTime(); // ✅ Restart elapsed time tracking
-        sendOscMessage(); // ✅ Immediately send an OSC stopwatch update
+        updateElapsedTime(); //  Restart elapsed time tracking
+        sendOscMessage(); //  Immediately send an OSC stopwatch update
 
         broadcastState();
         break;
+
+
+      case "score_meta":
+        if (typeof data.scoreWidth === "number" && data.scoreWidth > 0) {
+          sharedState.scoreWidth = data.scoreWidth;
+          console.log(`[SERVER]  Received score_meta: scoreWidth = ${data.scoreWidth}`);
+
+          // Broadcast to all connected clients
+          broadcastState(JSON.stringify({
+            type: "score_meta",
+            scoreWidth: sharedState.scoreWidth
+          }));
+        } else {
+          console.warn("[SERVER]  Invalid or missing scoreWidth in score_meta message.");
+        }
+        break;
+
+
+
 
       default:
         console.log(`[DEBUG] Unknown message type: ${data.type}`);

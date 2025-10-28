@@ -17,7 +17,7 @@
 // });
 
 
-import { initializeDarkModeToggle } from "./transport.js";
+import { initializeDarkModeToggle, scrollToPlayheadVisual } from "./transport.js";
 
 
 import { loadProject } from './projectLoader.js';
@@ -111,30 +111,27 @@ export const initializeSVG = async (svgElement) => {
 
 
 
-/////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////
 
 
-/////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////////
 
 
-window.DEBUG_COORDS = true;
+  window.DEBUG_COORDS = true;
 
-function getSVG(){ return document.querySelector("#score"); }
-function getCTM(){ const s=getSVG(); return s ? s.getScreenCTM() : null; }
+  function getSVG() { return document.querySelector("#score"); }
+  function getCTM() { const s = getSVG(); return s ? s.getScreenCTM() : null; }
 
-function svgToClientX(svgX){
-  const s=getSVG(), c=getCTM(); if(!s||!c) return null;
-  const pt=s.createSVGPoint(); pt.x=svgX; pt.y=0; return pt.matrixTransform(c).x;
-}
-function clientToSvgX(clientX){
-  const s=getSVG(), c=getCTM(); if(!s||!c) return null;
-  const inv=c.inverse(); const pt=s.createSVGPoint(); pt.x=clientX; pt.y=0;
-  return pt.matrixTransform(inv).x;
-}
-function logCoord(tag, obj={}){ if(window.DEBUG_COORDS) console.log(`[COORD] ${tag}`, obj); }
-
-
-
+  function svgToClientX(svgX) {
+    const s = getSVG(), c = getCTM(); if (!s || !c) return null;
+    const pt = s.createSVGPoint(); pt.x = svgX; pt.y = 0; return pt.matrixTransform(c).x;
+  }
+  function clientToSvgX(clientX) {
+    const s = getSVG(), c = getCTM(); if (!s || !c) return null;
+    const inv = c.inverse(); const pt = s.createSVGPoint(); pt.x = clientX; pt.y = 0;
+    return pt.matrixTransform(inv).x;
+  }
+  function logCoord(tag, obj = {}) { if (window.DEBUG_COORDS) console.log(`[COORD] ${tag}`, obj); }
 
 
 
@@ -158,13 +155,16 @@ function logCoord(tag, obj={}){ if(window.DEBUG_COORDS) console.log(`[COORD] ${t
 
 
 
- // 🛡️ Ensure r(...) rotations use correct transform origin
-     console.log("[initializeSVG]  ensureRotationCSSGuard called .");
+
+
+
+  // 🛡️ Ensure r(...) rotations use correct transform origin
+  console.log("[initializeSVG]  ensureRotationCSSGuard called .");
 
   ensureRotationCSSGuard(svgElement);
 
 
-  
+
   // 🧩 Skip global reinit for embedded page overlays
   if (svgElement?.id === "pageSVG" || svgElement?.classList.contains("oscilla-page")) {
     console.log("[initializeSVG] ⚠️ Skipping global reset for page overlay SVG.");
@@ -383,7 +383,7 @@ function logCoord(tag, obj={}){ if(window.DEBUG_COORDS) console.log(`[COORD] ${t
     // console.log(`[DEBUG] Initial scrollLeft set to: ${window.scoreContainer.scrollLeft}`);
 
 
-    
+
     requestAnimationFrame(() => {
       window.ensureWindowPlayheadX(); // 💡 ensure valid center before any jumping logic
       initializeObjectPathPairs(svgElement);
@@ -477,12 +477,63 @@ function logCoord(tag, obj={}){ if(window.DEBUG_COORDS) console.log(`[COORD] ${t
     });
 
 
-    console.log("\n🚀 [DEBUG] Page Loaded - Initial State:");
-    // logState("Initial Load");
 
+
+
+
+    // --- Align world origin for fixed playhead model ---
+    const container = window.scoreContainer;
+    const svg = svgElement;
+    if (svg && container) {
+      const pad = container.clientWidth / 2;
+      svg.style.paddingLeft = `${pad}px`; // virtual negative scroll space
+      console.log(`[Oscilla] 🧭 SVG padding-left set to ${pad}px`);
+    }
+
+
+
+
+    if (svg) {
+      let width = null;
+
+      // Priority 1: numeric width attribute
+      const attrWidth = svg.getAttribute("width");
+      if (attrWidth && !attrWidth.includes("%")) {
+        width = parseFloat(attrWidth);
+      }
+
+      // Priority 2: viewBox width
+      if (!width && svg.viewBox && svg.viewBox.baseVal) {
+        width = svg.viewBox.baseVal.width;
+      }
+
+      // Priority 3: measured bounding box
+      if (!width && svg.getBBox) {
+        width = svg.getBBox().width;
+      }
+
+      // Fallback
+      window.scoreWidth = width || 40960;
+      console.log(`[Oscilla] 📏 scoreWidth = ${window.scoreWidth}`);
+    }
+
+    if (window.socket && window.scoreWidth) {
+      console.log("[initializeSVG] scorewidth sent to server.");
+
+      window.socket.send(JSON.stringify({
+        type: "score_meta",
+        scoreWidth: window.scoreWidth,
+      }));
+    }
+
+
+
+    console.log("\n🚀 [DEBUG] Page Loaded - Initial State:");
+
+    // logState("Initial Load");
     // updateSeekBar();
     //updatestopwatch();
-    window.toggleScoreNotes();
+    //window.toggleScoreNotes();
 
     setTimeout(() => {
       // rewindToStart(); // Optional
@@ -526,7 +577,7 @@ window.addEventListener("DOMContentLoaded", () => {
   initializeSpeedControls();
   pauseDismissClickHandler(); // Enables click/spacebar dismiss for pause UI
 
-// initializeControlsPin();
+  // initializeControlsPin();
 
 
 });
@@ -621,7 +672,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // let playheadX = 0; // ✅ Ensure `playheadX` is always available globally
   window.recentlyRecalculatedPlayhead = false;
   const score = document.getElementById('score');
-  window.scoreWidth = document.querySelector('svg')?.getAttribute('width') || 40960; // Use SVG's intrinsic width
+  // ------------------------------------------------------------
+  // Global playback metrics
+  // ------------------------------------------------------------
+
+  window.duration = window.duration || 600; // ensure duration exists
+  window.remoteScoreWidth = null; // will be filled from server if available
+  window.pixelsPerSecond = window.scoreWidth / window.duration;
+
   window.seekBar = document.getElementById('seek-bar');
   const toggleButton = document.getElementById('toggle-button');
   const rewindButton = document.getElementById('rewind-button');
@@ -1401,6 +1459,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             /** ✅ Synchronize Playback State */
             case "sync":
+
+              if (data.state?.scoreWidth) window.remoteScoreWidth = data.state.scoreWidth;
+
               if (window.ignoreNextSync) {
                 console.log("[SYNC] ⏭ Ignoring first sync after resume.");
                 window.ignoreNextSync = false;
@@ -1428,7 +1489,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
               if (!window.recentlyRecalculatedPlayhead) {
                 window.playheadX = data.state.playheadX;
-                window.scoreContainer.scrollLeft = window.playheadX;
+                scrollToPlayheadVisual();
               } else {
                 console.log(`[DEBUG] 🔄 Ignoring server window.playheadX update to prevent override.`);
               }
@@ -1544,8 +1605,7 @@ document.addEventListener('DOMContentLoaded', () => {
               window.playheadX = data.playheadX;
 
               // 🔁 Locally center the scroll view based on received absolute playheadX
-              window.scoreContainer.scrollLeft = window.playheadX;//- (visibleWidth / 2);
-
+              scrollToPlayheadVisual();
               lastJumpTime = now;
               break;
 
@@ -2617,7 +2677,7 @@ document.addEventListener('DOMContentLoaded', () => {
     previousMaxScrollDistance = maxScrollDistance;
     previousViewportWidth = newScoreContainerWidth;
 
-    window.scoreContainer.scrollLeft = window.playheadX;
+    scrollToPlayheadVisual();
     console.log(`[DEBUG] 🎯 Updated window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
   };
 
@@ -2649,7 +2709,7 @@ document.addEventListener('DOMContentLoaded', () => {
         //     console.log(`[DEBUG] 🔄 Adjusted window.playheadX after resize: ${window.playheadX}`);
         // }
 
-        window.scoreContainer.scrollLeft = Math.max(0, window.playheadX);
+        scrollToPlayheadVisual();
         console.log(`[DEBUG] Updated window.scoreContainer.scrollLeft=${window.scoreContainer.scrollLeft}`);
 
         // ✅ Also update window.playheadX (SVG space at center of screen)
@@ -2686,53 +2746,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  /**
-  * ✅ Freewheeling: Smoothly estimates `playheadX` between sync updates.
-  * - Runs continuously on `requestAnimationFrame()`.
-  * - Uses last sync position and estimated playback speed.
-  * - Keeps UI smoothly animating even if no sync update is received.
-  */
-
-  const estimatePlayheadPosition = () => {
-    console.log(`[DEBUG] estimatePlayheadPosition() running at ${Date.now()}`);
-
-    if (!window.isPlaying || !freewheelingActive) {
-      console.log("[DEBUG] Freewheeling stopped.");
-      freewheelingActive = false;
-      return;
-    }
-
-    const now = Date.now();
-    const timeSinceLastSync = now - lastSyncTime;
-
-    // ✅ Calculate estimated position based on playback speed
-    const estimatedIncrement = ((timeSinceLastSync / 1000) * window.speedMultiplier) * pixelsPerSecond;
-    window.estimatedPlayheadX = lastSyncPlayheadX + estimatedIncrement;
-
-    // ✅ Ensure window.playheadX stays within valid bounds
-    if (window.estimatedPlayheadX > window.scoreWidth) window.estimatedPlayhe4adX = window.scoreWidth;
-    window.playheadX = window.estimatedPlayheadX;
-    window.scoreContainer.scrollLeft = window.playheadX;
-
-    // ✅ Auto-correct small desyncs based on server sync updates
-    if (Math.abs(window.playheadX - serverSyncPlayheadX) > 50) {
-      console.log("[DEBUG] Auto-correcting window.playheadX due to drift.");
-      window.playheadX = serverSyncPlayheadX;
-    }
-
-    // ✅ Throttle debug logs to avoid spamming console
-    if (now - lastDebugLog > 500) {
-      console.log(`[DEBUG] Freewheeling Playhead: ${window.playheadX}`);
-      lastDebugLog = now;
-    }
-
-    // ✅ Keep freewheeling running
-    requestAnimationFrame(estimatePlayheadPosition);
-  };
-
-
-
-
 
 
   /**
@@ -2762,7 +2775,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+
+  //////////////////////////////////////////////////////////////////////////////
   // --- Transported Playback Loop (app.js or transport.js) ---
+  // freewheeling 
 
   window.lastAnimationFrameTime = null;
 
@@ -2776,15 +2792,27 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       const delta = (currentTime - window.lastAnimationFrameTime) * playbackSpeed;
 
-      const estimatedIncrement =
-        ((delta * window.speedMultiplier) / window.duration) * window.scoreWidth;
+      // ✅ Use canonical width from server if available
+      const refWidth = window.remoteScoreWidth || window.scoreWidth;
 
-      window.playheadX = Math.max(
-        0,
-        Math.min(window.playheadX + estimatedIncrement, window.scoreWidth)
-      );
-      window.scoreContainer.scrollLeft = window.playheadX;
+      // ✅ Convert time delta → world-space increment
+      const estimatedIncrement =
+        ((delta * window.speedMultiplier) / window.duration) * refWidth;
+
+      // ✅ Advance playhead in world units
+      window.playheadX = Math.min(window.playheadX + estimatedIncrement, refWidth);
+
+      // ✅ Keep scroll visualised correctly
+      scrollToPlayheadVisual();
+
+      if (window.serverSyncPlayheadX !== undefined) {
+        const drift = window.serverSyncPlayheadX - window.playheadX;
+        if (Math.abs(drift) > 200) {
+          window.playheadX += drift * 0.1; // smooth catch-up
+        }
+      }
     }
+
 
     window.lastAnimationFrameTime = currentTime;
 
@@ -2810,6 +2838,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.animationFrameId = requestAnimationFrame(window.animate);
   };
 
+
+  //////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -3013,7 +3043,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
- 
+
 
   const toggleWebSocket = () => {
     window.wsEnabled = !window.wsEnabled;
@@ -3245,7 +3275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Direct snap to playhead when not seeking
     if (Math.abs(window.scoreContainer.scrollLeft - window.playheadX) > 1) {
-      window.scoreContainer.scrollLeft = window.playheadX;
+      scrollToPlayheadVisual();
 
       // ✅ Throttled animation update during jump or resume
       // if (now - lastTriggerTime > 250) {
@@ -3458,7 +3488,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   fullscreenButton.addEventListener('click', toggleFullscreen);
-  
+
   // invertButton.addEventListener('click', invertColors);
 
   wsToggleButton.addEventListener('click', () => {
@@ -3501,9 +3531,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
-window.addEventListener("DOMContentLoaded", () => {
-  initializeDarkModeToggle();
-});
+  window.addEventListener("DOMContentLoaded", () => {
+    initializeDarkModeToggle();
+  });
 
 
   // Single keydown event listener
@@ -3533,7 +3563,7 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
 
-  
+
   // disable enable network elements //////////////////////////////////////////////////////
 
   let isCommunicationEnabled = true; // Track the state of WebSocket and OSC communication
@@ -3604,7 +3634,7 @@ window.addEventListener("DOMContentLoaded", () => {
   window.updatePosition = updatePosition; // Expose updatePosition globally
 
 
-   toggleSplashScreen();
+  toggleSplashScreen();
 
 
 

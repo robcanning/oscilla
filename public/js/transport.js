@@ -1,3 +1,10 @@
+function getScrollScale() {
+  const svg = document.querySelector("#scoreContainer svg");
+  if (!svg) return 1;
+  const worldWidth = svg.viewBox?.baseVal?.width || window.scoreWidth;
+  const renderedWidth = svg.getBoundingClientRect().width;
+  return renderedWidth / worldWidth;
+}
 
 
 window.seekDebounceTime = 300;
@@ -118,10 +125,12 @@ export const rewindToStart = () => {
 */
 
 export const rewind = () => {
-  const REWIND_INCREMENT_X = (1000 / duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
+  const REWIND_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
   window.playheadX = Math.max(window.playheadX - REWIND_INCREMENT_X, 0);
 
-  window.scoreContainer.scrollLeft = window.playheadX;
+  const scale = getScrollScale();
+  scrollToPlayheadVisual();
+
   // console.log(`[DEBUG] Rewind applied. Newwindow.playheadX: ${window.playheadX}`);
 
   // ✅ Calculate `elapsedTime` based on `playheadX` for reference
@@ -139,7 +148,7 @@ export const rewind = () => {
   // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
   window.updateSpeedDisplay();
 
-  updatePosition();
+  // updatePosition();
   // updateSeekBar();
   //updatestopwatch();
 
@@ -177,10 +186,11 @@ export const rewind = () => {
 */
 
 export const forward = () => {
-  const FORWARD_INCREMENT_X = (1000 / duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
+  const FORWARD_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
   window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
 
-  window.scoreContainer.scrollLeft = window.playheadX;
+  const scale = getScrollScale();
+  scrollToPlayheadVisual();
   // console.log(`[DEBUG] Forward applied. Newwindow.playheadX: ${window.playheadX}`);
 
   // ✅ Calculate `elapsedTime` based on `playheadX` for reference
@@ -565,7 +575,8 @@ export function startPlayback() {
   // --- Animation loop kickstart ---
   if (typeof window.animate === "function") {
     cancelAnimationFrame(window.animationFrameId);
-    window.animationFrameId = requestAnimationFrame(window.animate);
+
+     window.animationFrameId = requestAnimationFrame(window.animate);
   }
 
   // --- UI sync ---
@@ -647,7 +658,9 @@ export const jumpToCueId = (id) => {
 
   window.playheadX = targetX - (window.innerWidth / 2);
   window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-  window.scoreContainer.scrollLeft = window.playheadX;
+
+  const scale = getScrollScale();
+  scrollToPlayheadVisual();
 
   console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
 
@@ -903,13 +916,14 @@ function showControlsAndAutoHide() {
       const scrollMax = scoreArea.scrollWidth - scoreArea.clientWidth;
       const elapsed =
         scrollMax > 0 ? (pos / scrollMax) * (window.totalDuration || 1) : 0;
-      window.playheadX = pos;
+      const scale = getScrollScale();
+      window.playheadX = pos / scale;
       window.elapsedTime = elapsed;
       if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
         window.socket.send(
           JSON.stringify({
             type: "jump",
-            playheadX: pos,
+            playheadX: window.playheadX,   // ✅ send world coordinate
             elapsedTime: elapsed,
             source: "scroll",
           })
@@ -925,14 +939,17 @@ function showControlsAndAutoHide() {
       const scrollMax = scoreArea.scrollWidth - scoreArea.clientWidth;
       const elapsed =
         scrollMax > 0 ? (pos / scrollMax) * (window.totalDuration || 1) : 0;
-      window.playheadX = pos;
+
+      const scale = getScrollScale();
+      window.playheadX = pos / scale;
+
       window.elapsedTime = elapsed;
 
       if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
         window.socket.send(
           JSON.stringify({
             type: "jump",
-            playheadX: pos,
+  playheadX: window.playheadX,   // ✅ send world coordinate
             elapsedTime: elapsed,
             source: "scrollend",
           })
@@ -1091,3 +1108,23 @@ function savePlayheadPosition() {
 window.addEventListener('beforeunload', savePlayheadPosition);
 window.addEventListener('pagehide', savePlayheadPosition);
 
+
+
+export function scrollToPlayheadVisual() {
+  const container = window.scoreContainer;
+  const svg = container?.querySelector("svg");
+  if (!container || !svg) return;
+
+  const pad = container.clientWidth / 2;
+  if (svg.style.paddingLeft !== `${pad}px`) svg.style.paddingLeft = `${pad}px`;
+
+  const worldWidth = svg.viewBox?.baseVal?.width || window.scoreWidth;
+  const renderedWidth = svg.getBoundingClientRect().width;
+  const scale = renderedWidth / worldWidth;
+
+  let targetScroll = window.playheadX * scale;
+  const maxScroll = container.scrollWidth - container.clientWidth;
+  if (targetScroll > maxScroll) targetScroll = maxScroll;
+
+  container.scrollLeft = targetScroll;
+}

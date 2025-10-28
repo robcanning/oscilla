@@ -478,48 +478,25 @@ button:active {
 
 
 #scoreContainer {
-
-  transform: translateZ(0);
-  /* Forces GPU acceleration */
-  will-change: transform;
-  /* Optimizes rendering */
-  backface-visibility: hidden;
-  /* Helps prevent flickering */
-
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  /* ✅ Full height of the viewport */
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  /* ✅ Centers horizontally */
-  align-items: center;
-  /* ✅ Centers vertically */
-  background-color: white;
-  white-space: normal !important;
-  /* ✅ Allows resizing */
-  pointer-events: auto;
-  z-index: 0;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  display: block;
+  white-space: nowrap;
+  background: white;
+  box-sizing: border-box;
 }
 
-/* ✅ Forces the SVG to use the full height while maintaining aspect ratio */
-
 #scoreContainer svg {
-  height: 100vh;
-  /* ✅ SVG always takes the full viewport height */
+  height: 100%;
   width: auto;
-  /* ✅ Keeps aspect ratio */
-  max-width: none;
-  /* ✅ Prevents width restrictions */
-  max-height: 100vh;
-  /* ✅ Ensures it doesn’t exceed viewport height */
-  object-fit: contain;
-  /* ✅ Keeps the aspect ratio intact */
-  overflow-y: hidden !important;
-  pointer-events: auto;
+  display: inline-block;
+  vertical-align: top;
+  box-sizing: border-box;   /* ✅ ensures padding adds scrollable width */
 }
 
 
