@@ -478,9 +478,6 @@ export const initializeSVG = async (svgElement) => {
 
 
 
-
-
-
     // --- Align world origin for fixed playhead model ---
     const container = window.scoreContainer;
     const svg = svgElement;
@@ -489,9 +486,6 @@ export const initializeSVG = async (svgElement) => {
       svg.style.paddingLeft = `${pad}px`; // virtual negative scroll space
       console.log(`[Oscilla] 🧭 SVG padding-left set to ${pad}px`);
     }
-
-
-
 
     if (svg) {
       let width = null;
@@ -518,11 +512,21 @@ export const initializeSVG = async (svgElement) => {
     }
 
     if (window.socket && window.scoreWidth) {
-      console.log("[initializeSVG] scorewidth sent to server.");
+      /**
+     * Sends score metadata to the server once the SVG is loaded.
+     * scoreWidth = world coordinate width of the score
+     * renderedWidth = actual pixel width on this device
+     * The server uses the first reported renderedWidth to define a shared scale.
+     */
+      console.log("[initializeSVG] score_meta sent to server.");
+
+      const renderedWidth = svg.getBoundingClientRect().width; // ✅ device visual width
+      const worldWidth = window.scoreWidth;                     // ✅ world coordinate width
 
       window.socket.send(JSON.stringify({
         type: "score_meta",
-        scoreWidth: window.scoreWidth,
+        scoreWidth: worldWidth,
+        renderedWidth: renderedWidth
       }));
     }
 
@@ -1459,8 +1463,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             /** ✅ Synchronize Playback State */
             case "sync":
-
               if (data.state?.scoreWidth) window.remoteScoreWidth = data.state.scoreWidth;
+              /**
+               * If the server provides a canonical rendered width,
+               * compute a shared scale (world → screen conversion).
+               * This makes visual scrolling consistent across devices.
+               */
+              if (data.state?.canonicalRenderedWidth && data.state?.scoreWidth) {
+                window.canonicalScale = data.state.canonicalRenderedWidth / data.state.scoreWidth;
+                // console.log(`[CLIENT] Canonical scale = ${window.canonicalScale}`);
+              }
+
 
               if (window.ignoreNextSync) {
                 console.log("[SYNC] ⏭ Ignoring first sync after resume.");
@@ -2889,36 +2902,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-
-
-
-
-
-
-
-
-  // TODO maybe this can be removed now
-  //
-  // const updateAlignment =  (window.elapsedTime) => {
-  //   const svgElement = document.querySelector('#window.scoreContainer svg'); // Ensure correct selector
-  //   if (!svgElement) {
-  //     console.error("[ERROR] SVG element not found. Skipping alignment.");
-  //     return; // Exit function if no SVG element
-  //   }
-  //   const duration = 20 * 60 * 1000; // 20 minutes in milliseconds
-  //   const progress = window.elapsedTime / duration; // Fraction of time elapsed
-  //   const scorePosition = maxScrollDistance * progress; // Position in pixels
-  //
-  //   // Scale the offset correction dynamically
-  //   const baseOffset = -43; // Observed correction at 30 seconds
-  //   const scaledOffset = baseOffset * (scorePosition / (maxScrollDistance * (30000 / duration))); // Scaled
-  //
-  //   const newLeft = -scorePosition + window.innerWidth / 2 + scaledOffset; // Centering with correction
-  //   svgElement.style.transform = `translateX(${newLeft}px)`; // Apply alignment
-  //   //console.log(`Elapsed Time: ${elapsedTime}, TranslateX: ${newLeft}px`);
-  // };
-
   // ///////////////////////////////////////
   // // SEEKBAR LOGIC
 
@@ -3519,7 +3502,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-
   // detect mobile for buttons or text on title page
   function isMobileDevice() {
     return /Mobi|Android|iPhone/i.test(navigator.userAgent);
@@ -3561,8 +3543,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // toggleCommunication(); // Enable/disable WebSocket/OSC communication
     }
   });
-
-
 
   // disable enable network elements //////////////////////////////////////////////////////
 
@@ -3608,13 +3588,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-
-
-
-
-
   // Initialize
-
   // wsToggleButton.textContent = isCommunicationEnabled ? 'Disable Communication' : 'Enable Communication';
   wsToggleButton.style.borderColor = isCommunicationEnabled ? 'green' : 'red';
 
@@ -3625,27 +3599,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (scoreOptionsPopup) {
     scoreOptionsPopup.classList.add('hidden');
   }
-
   // calculateMaxScrollDistance();
   updatePosition();
   //updatestopwatch();
-
   window.scoreContainer = window.scoreContainer; // Expose globally
   window.updatePosition = updatePosition; // Expose updatePosition globally
-
-
   toggleSplashScreen();
-
-
-
-
-
   console.log('// EOF');
-
-
-
-
-
 
 });
 

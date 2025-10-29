@@ -1,3 +1,36 @@
+/**
+ * OSCILLA SCORE SYNCHRONIZATION MODEL
+ * -----------------------------------
+ * The score has a single shared coordinate system ("world space") defined by
+ * `scoreWidth`, which represents the full horizontal extent of the SVG. The
+ * playhead position (`playheadX`) always exists in this world coordinate space.
+ *
+ * Each device displays the score at a different pixel width depending on screen
+ * size, zoom level, and DPI. To keep visual playback synchronized, we do NOT
+ * scroll based on each device’s own rendered pixel width. Instead, the *first*
+ * client to load the score reports its `renderedWidth`, and the server uses this
+ * as the canonical reference visual width. All clients compute:
+ *
+ *      canonicalScale = canonicalRenderedWidth / scoreWidth
+ *
+ * and convert world-space playheadX to screen scroll using:
+ *
+ *      scrollLeft = playheadX * canonicalScale
+ *
+ * This ensures all clients scroll at the exact same perceived visual speed,
+ * eliminating drift caused by different viewport sizes or zoom factors.
+ * 
+
+scoreWidth = world-space length of score
+renderedWidth = this device’s pixel width of score
+canonicalRenderedWidth = shared reference pixel width (from server)
+canonicalScale = conversion from world to screen
+playheadX = position in world units
+scrollLeft = screen scroll offset in pixels
+
+ */
+
+
 function getScrollScale() {
   const svg = document.querySelector("#scoreContainer svg");
   if (!svg) return 1;
@@ -576,7 +609,7 @@ export function startPlayback() {
   if (typeof window.animate === "function") {
     cancelAnimationFrame(window.animationFrameId);
 
-     window.animationFrameId = requestAnimationFrame(window.animate);
+    window.animationFrameId = requestAnimationFrame(window.animate);
   }
 
   // --- UI sync ---
@@ -872,129 +905,129 @@ function showControlsAndAutoHide() {
 /* ---------------------------------------------------------------------------
  *  HYBRID SCROLL + GESTURE PLAYBACK CONTROL  (debounced + safe resume)
  * --------------------------------------------------------------------------- */
-(() => {
-  const scoreArea = document.getElementById("scoreContainer");
-  if (!scoreArea) return;
+// (() => {
+//   const scoreArea = document.getElementById("scoreContainer");
+//   if (!scoreArea) return;
 
-  const SEND_INTERVAL = 80;
-  const SCROLL_THRESHOLD = 6;
-  const SCROLL_END_DELAY = 80; // wait after final scroll before resume
+//   const SEND_INTERVAL = 80;
+//   const SCROLL_THRESHOLD = 6;
+//   const SCROLL_END_DELAY = 80; // wait after final scroll before resume
 
-  let lastSent = 0;
-  let lastScrollPos = scoreArea.scrollLeft;
-  let scrollEndTimer = null;
-  let resumeTimer = null;
-  let wasPlayingBeforeScroll = false;
+//   let lastSent = 0;
+//   let lastScrollPos = scoreArea.scrollLeft;
+//   let scrollEndTimer = null;
+//   let resumeTimer = null;
+//   let wasPlayingBeforeScroll = false;
 
-  scoreArea.addEventListener("scroll", () => {
-    if (window.programmaticScroll) return;
+//   scoreArea.addEventListener("scroll", () => {
+//     if (window.programmaticScroll) return;
 
-    const pos = scoreArea.scrollLeft;
-    const delta = Math.abs(pos - lastScrollPos);
-    lastScrollPos = pos;
+//     const pos = scoreArea.scrollLeft;
+//     const delta = Math.abs(pos - lastScrollPos);
+//     lastScrollPos = pos;
 
-    if (delta < SCROLL_THRESHOLD) return;
+//     if (delta < SCROLL_THRESHOLD) return;
 
-    // Pause playback when swipe begins
-    if (!window.userScrolling) {
-      window.userScrolling = true;
-      if (window.isPlaying) {
-        wasPlayingBeforeScroll = true;
-        console.log("[GESTURE] 🖐️ Swipe detected — pausing playback");
-        window.pausePlayback?.();
-      } else {
-        wasPlayingBeforeScroll = false;
-      }
-    }
+//     // Pause playback when swipe begins
+//     if (!window.userScrolling) {
+//       window.userScrolling = true;
+//       if (window.isPlaying) {
+//         wasPlayingBeforeScroll = true;
+//         console.log("[GESTURE] 🖐️ Swipe detected — pausing playback");
+//         window.pausePlayback?.();
+//       } else {
+//         wasPlayingBeforeScroll = false;
+//       }
+//     }
 
-    window.ignoreSyncPlayback = true;
+//     window.ignoreSyncPlayback = true;
 
-    // Throttled WS jump while scrolling
-    const now = performance.now();
-    if (now - lastSent > SEND_INTERVAL) {
-      lastSent = now;
-      const scrollMax = scoreArea.scrollWidth - scoreArea.clientWidth;
-      const elapsed =
-        scrollMax > 0 ? (pos / scrollMax) * (window.totalDuration || 1) : 0;
-      const scale = getScrollScale();
-      window.playheadX = pos / scale;
-      window.elapsedTime = elapsed;
-      if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-        window.socket.send(
-          JSON.stringify({
-            type: "jump",
-            playheadX: window.playheadX,   // ✅ send world coordinate
-            elapsedTime: elapsed,
-            source: "scroll",
-          })
-        );
-      }
-    }
+//     // Throttled WS jump while scrolling
+//     const now = performance.now();
+//     if (now - lastSent > SEND_INTERVAL) {
+//       lastSent = now;
+//       const scrollMax = scoreArea.scrollWidth - scoreArea.clientWidth;
+//       const elapsed =
+//         scrollMax > 0 ? (pos / scrollMax) * (window.totalDuration || 1) : 0;
+//       const scale = getScrollScale();
+//       window.playheadX = pos / scale;
+//       window.elapsedTime = elapsed;
+//       if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+//         window.socket.send(
+//           JSON.stringify({
+//             type: "jump",
+//             playheadX: window.playheadX,   // ✅ send world coordinate
+//             elapsedTime: elapsed,
+//             source: "scroll",
+//           })
+//         );
+//       }
+//     }
 
-    // Reset scroll-end timer
-    clearTimeout(scrollEndTimer);
-    scrollEndTimer = setTimeout(() => {
-      if (window.programmaticScroll) return;
+//     // Reset scroll-end timer
+//     clearTimeout(scrollEndTimer);
+//     scrollEndTimer = setTimeout(() => {
+//       if (window.programmaticScroll) return;
 
-      const scrollMax = scoreArea.scrollWidth - scoreArea.clientWidth;
-      const elapsed =
-        scrollMax > 0 ? (pos / scrollMax) * (window.totalDuration || 1) : 0;
+//       const scrollMax = scoreArea.scrollWidth - scoreArea.clientWidth;
+//       const elapsed =
+//         scrollMax > 0 ? (pos / scrollMax) * (window.totalDuration || 1) : 0;
 
-      const scale = getScrollScale();
-      window.playheadX = pos / scale;
+//       const scale = getScrollScale();
+//       window.playheadX = pos / scale;
 
-      window.elapsedTime = elapsed;
+//       window.elapsedTime = elapsed;
 
-      if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-        window.socket.send(
-          JSON.stringify({
-            type: "jump",
-  playheadX: window.playheadX,   // ✅ send world coordinate
-            elapsedTime: elapsed,
-            source: "scrollend",
-          })
-        );
-        console.log("[SCROLL] 🛰️ Final jump broadcast:", pos);
-      }
+//       if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+//         window.socket.send(
+//           JSON.stringify({
+//             type: "jump",
+//   playheadX: window.playheadX,   // ✅ send world coordinate
+//             elapsedTime: elapsed,
+//             source: "scrollend",
+//           })
+//         );
+//         console.log("[SCROLL] 🛰️ Final jump broadcast:", pos);
+//       }
 
-      // Mark scroll ended
-      window.userScrolling = false;
-      window.ignoreSyncPlayback = false;
+//       // Mark scroll ended
+//       window.userScrolling = false;
+//       window.ignoreSyncPlayback = false;
 
-      // Debounce: cancel any existing resume attempts
-      clearTimeout(resumeTimer);
+//       // Debounce: cancel any existing resume attempts
+//       clearTimeout(resumeTimer);
 
-      if (wasPlayingBeforeScroll) {
+//       if (wasPlayingBeforeScroll) {
 
-        if (triggeredCues) {
-          triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
-          window._cueInsideState?.clear();
-          console.log("[DEBUG] Cleared triggered cues due to rewind.");
-        }
+//         if (triggeredCues) {
+//           triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
+//           window._cueInsideState?.clear();
+//           console.log("[DEBUG] Cleared triggered cues due to rewind.");
+//         }
 
-        console.log("[GESTURE] ⏳ Scroll finished — scheduling resume…");
+//         console.log("[GESTURE] ⏳ Scroll finished — scheduling resume…");
 
-        resumeTimer = setTimeout(() => {
-          // Check again: no further scroll since we scheduled this
-          if (!window.userScrolling) {
-            console.log("[GESTURE] ▶️ Resuming playback after settle delay");
+//         resumeTimer = setTimeout(() => {
+//           // Check again: no further scroll since we scheduled this
+//           if (!window.userScrolling) {
+//             console.log("[GESTURE] ▶️ Resuming playback after settle delay");
 
 
-            window.startPlayback?.();
+//             window.startPlayback?.();
 
-            wasPlayingBeforeScroll = false;
-          } else {
-            console.log("[GESTURE] 🚫 Resume canceled — still scrolling");
-          }
-        }, SCROLL_END_DELAY);
-      } else {
-        console.log("[GESTURE] ⏸️ Scroll finished — staying paused");
-      }
-    }, SCROLL_END_DELAY);
-  });
+//             wasPlayingBeforeScroll = false;
+//           } else {
+//             console.log("[GESTURE] 🚫 Resume canceled — still scrolling");
+//           }
+//         }, SCROLL_END_DELAY);
+//       } else {
+//         console.log("[GESTURE] ⏸️ Scroll finished — staying paused");
+//       }
+//     }, SCROLL_END_DELAY);
+//   });
 
-  console.log("[SCROLL] ✅ Debounced scroll/gesture-playback control active");
-})();
+//   console.log("[SCROLL] ✅ Debounced scroll/gesture-playback control active");
+// })();
 
 
 
@@ -1111,6 +1144,11 @@ window.addEventListener('pagehide', savePlayheadPosition);
 
 
 export function scrollToPlayheadVisual() {
+    /**
+   * Converts playheadX (world position) to a scrollLeft value (screen space).
+   * Uses canonicalScale if available to ensure all clients scroll
+   * at identical visual rates regardless of screen resolution or zoom.
+   */
   const container = window.scoreContainer;
   const svg = container?.querySelector("svg");
   if (!container || !svg) return;
@@ -1120,7 +1158,9 @@ export function scrollToPlayheadVisual() {
 
   const worldWidth = svg.viewBox?.baseVal?.width || window.scoreWidth;
   const renderedWidth = svg.getBoundingClientRect().width;
-  const scale = renderedWidth / worldWidth;
+
+  const localScale = renderedWidth / worldWidth;
+  const scale = window.canonicalScale || localScale; // ✅ canonical when available
 
   let targetScroll = window.playheadX * scale;
   const maxScroll = container.scrollWidth - container.clientWidth;

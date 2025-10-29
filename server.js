@@ -238,6 +238,11 @@ const updateElapsedTime = () => {
 let connectedClients = {}; // { socketId: "ClientName" }
 
 const broadcastState = () => {
+    /**
+   * Broadcasts authoritative playback state to all clients.
+   * Includes the canonicalRenderedWidth so clients compute the same scale,
+   * ensuring identical visual scroll speed across different screen sizes.
+   */
   sharedState.scoreWidth = Number.isFinite(sharedState.scoreWidth) && sharedState.scoreWidth > 0 ? sharedState.scoreWidth : 40960;
   sharedState.elapsedTime = Number.isFinite(sharedState.elapsedTime) && sharedState.elapsedTime >= 0 ? sharedState.elapsedTime : 0;
   sharedState.playheadX = Number.isFinite(sharedState.playheadX) && sharedState.playheadX >= 0 ? sharedState.playheadX : 0;
@@ -257,6 +262,7 @@ const broadcastState = () => {
       scoreWidth: sharedState.scoreWidth,
       playheadX: sharedState.playheadX,
       speedMultiplier: sharedState.speedMultiplier, // ✅ Only send when needed
+      canonicalRenderedWidth: sharedState.canonicalRenderedWidth || null // ✅ shared visual reference
     },
     serverTime: Date.now(),
   });
@@ -892,20 +898,33 @@ wss.on('connection', (ws, req) => {
         break;
 
 
-      case "score_meta":
-        if (typeof data.scoreWidth === "number" && data.scoreWidth > 0) {
-          sharedState.scoreWidth = data.scoreWidth;
-          console.log(`[SERVER]  Received score_meta: scoreWidth = ${data.scoreWidth}`);
+      case "score_meta": {
+        /**
+       * Receives score metadata from a client after loading its SVG.
+       * scoreWidth = world-space width (the musical coordinate system)
+       * renderedWidth = pixel width on this device's screen
+       * The first device to report renderedWidth becomes the canonical visual scale
+       * so all clients scroll using the same screen-space scaling.
+       */
+        const { scoreWidth, renderedWidth } = data;
 
-          // Broadcast to all connected clients
-          broadcastState(JSON.stringify({
-            type: "score_meta",
-            scoreWidth: sharedState.scoreWidth
-          }));
+        if (typeof scoreWidth === "number" && scoreWidth > 0) {
+          sharedState.scoreWidth = scoreWidth;
+          console.log(`[SERVER] 📏 Received scoreWidth = ${scoreWidth}`);
         } else {
-          console.warn("[SERVER]  Invalid or missing scoreWidth in score_meta message.");
+          console.warn("[SERVER] ⚠️ Invalid scoreWidth received in score_meta.");
         }
+
+        // ✅ Capture canonical rendered width ONCE (first client decides the reference scale)
+        if (!sharedState.canonicalRenderedWidth && typeof renderedWidth === "number" && renderedWidth > 0) {
+          sharedState.canonicalRenderedWidth = renderedWidth;
+          console.log(`[SERVER] 🎯 Canonical renderedWidth set = ${renderedWidth}`);
+        }
+
+        // ✅ Broadcast updated state to all clients
+        broadcastState();
         break;
+      }
 
 
 
