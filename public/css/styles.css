@@ -512,8 +512,17 @@ html, body {
   display: block !important;
   max-width: none !important;
   max-height: none !important;
-  height: 100vh;
   width: auto;
+    height: auto !important;
+
+}
+
+
+#scrollStage,
+#scoreInner,
+#scoreContainer svg {
+  height: auto !important;
+
 }
 
 /* ❗ Remove #scoreContainer svg rule entirely */

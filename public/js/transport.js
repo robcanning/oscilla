@@ -124,7 +124,7 @@ export const rewindToStart = () => {
   window.speedMultiplier = getSpeedForPosition(window.playheadX);
   window.updateSpeedDisplay();
 
-  updatePosition();
+  // updatePosition();
   // updateSeekBar();
 
   if (triggeredCues) {
@@ -240,7 +240,7 @@ export const forward = () => {
   window.updateSpeedDisplay();
 
 
-  updatePosition();
+  // updatePosition();
   // updateSeekBar();
   //updatestopwatch();
 
@@ -465,7 +465,7 @@ window.hideControlsLater = function (delay = 4000) {
 // Ensures correct positioning and checks for active cues.
 export const setElapsedTime = (newTime) => {
   window.elapsedTime = newTime; // ✅ Update playback time
-  updatePosition(window.playheadX); // ✅ Use the correct playhead position
+  // updatePosition(window.playheadX); // ✅ Use the correct playhead position
 
   checkCueTriggers(window.elapsedTime); // ✅ Recheck cues
 };
@@ -497,7 +497,7 @@ export function initSeekBarListeners() {
     const newTime = (parseInt(event.target.value, 10) / 100) * duration;
     window.setElapsedTime?.(newTime);
 
-    window.updatePosition?.(window.playheadX);
+    // window.updatePosition?.(window.playheadX);
     // window.updateSeekBar?.();
   });
 
@@ -612,7 +612,7 @@ export function startPlayback() {
   togglePlayButton?.();
   hideControls?.();
   // updateSeekBar?.(); // ✅ visually sync progress bar immediately
-  updatePosition?.();
+  // updatePosition?.();
 
   // --- Cue trigger sync ---
   checkCueTriggers?.();
@@ -701,7 +701,7 @@ export const jumpToCueId = (id) => {
     }));
   }
 
-  updatePosition();
+  // updatePosition();
 };
 
 

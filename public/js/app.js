@@ -1472,26 +1472,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const stage = document.getElementById("scrollStage");   // ✅ ADD THIS
 
   if (svg && inner && stage && window.canonicalScale && window.scoreWidth) {
-    const canonicalWidthPx = window.scoreWidth * window.canonicalScale;
+  const canonicalWidthPx = window.scoreWidth * window.canonicalScale;
 
-    // ✅ Set SVG pixel width
-    svg.style.width = `${canonicalWidthPx}px`;
-    svg.style.height = "100vh";
-    svg.style.maxWidth = "none";
-    svg.style.minWidth = "0";
-    svg.style.display = "block";
-    svg.style.boxSizing = "content-box";
+  // SVG world scaled into canonical pixel width
+  svg.style.width = `${canonicalWidthPx}px`;
+  svg.style.height = "auto";
 
-    // ✅ scoreInner sets world coordinate width
-    inner.style.width = `${canonicalWidthPx}px`;
-    inner.style.height = "100%";
-    inner.style.maxWidth = "none";
-    inner.style.minWidth = "0";
+  // ScoreInner matches SVG width
+  inner.style.width = `${canonicalWidthPx}px`;
+  inner.style.height = "100%";
 
-    // ✅ scrollStage MUST match this width (this is the missing piece)
-    stage.style.width = `${canonicalWidthPx}px`;     // ⭐ REQUIRED FIX
-    stage.style.height = "100%";
-  }
+  // scrollStage must also match world width in pixel space
+  stage.style.width = `${canonicalWidthPx}px`;   // ✅ THIS WAS MISSING
+  stage.style.height = "100%";
+}
+
 
   // --- Apply synced transport state
   const wasPlaying = window.isPlaying;
@@ -1546,7 +1541,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`[DEBUG] 🔄 Ignoring server window.playheadX update to prevent override.`);
               }
 
-              updatePosition();
+              // updatePosition();
               window.recentlyRecalculatedPlayhead = false;
               // updateSeekBar();
 
@@ -2894,7 +2889,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Core updates each frame ---
-    updatePosition?.();    // moves playhead graphics
+    // updatePosition?.();    // moves playhead graphics
     // updateSeekBar?.();     // ✅ updates the seek bar progress
     await checkCueTriggers?.(window.elapsedTime); // triggers cues
 
@@ -2966,7 +2961,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Ensures correct positioning and checks for active cues.
   const setElapsedTime = (newTime) => {
     window.elapsedTime = newTime; // ✅ Update playback time
-    updatePosition(window.playheadX); // ✅ Use the correct playhead position
+    // updatePosition(window.playheadX); // ✅ Use the correct playhead position
 
     checkCueTriggers(window.elapsedTime); // ✅ Recheck cues
   };
@@ -3292,18 +3287,18 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
  * Main scroll update function — called during playback / interaction loop
  */
-  const updatePosition = () => {
-    // Always use world → screen mapping when canonical scale exists
-    if (window.canonicalScale) {
-      scrollToPlayheadVisual();
-      return;
-    }
+  // const updatePosition = () => {
+  //   // Always use world → screen mapping when canonical scale exists
+  //   if (window.canonicalScale) {
+  //     scrollToPlayheadVisual();
+  //     return;
+  //   }
 
-    // Fallback only *before* canonical scale is known (first-client load state)
-    // Do NOT compare scrollLeft to playheadX — different unit spaces.
-    // Instead, simply snap visually to the current playhead X.
-    scrollToPlayheadVisual();
-  };
+  //   // Fallback only *before* canonical scale is known (first-client load state)
+  //   // Do NOT compare scrollLeft to playheadX — different unit spaces.
+  //   // Instead, simply snap visually to the current playhead X.
+  //   scrollToPlayheadVisual();
+  // };
 
 
 
@@ -3637,10 +3632,10 @@ document.addEventListener('DOMContentLoaded', () => {
     scoreOptionsPopup.classList.add('hidden');
   }
   // calculateMaxScrollDistance();
-  updatePosition();
+  // updatePosition();
   //updatestopwatch();
   window.scoreContainer = window.scoreContainer; // Expose globally
-  window.updatePosition = updatePosition; // Expose updatePosition globally
+  // window.updatePosition = updatePosition; // Expose updatePosition globally
   toggleSplashScreen();
   console.log('// EOF');
 
