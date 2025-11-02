@@ -573,7 +573,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let svgElement = null; // Declare globally
   window.scoreSVG = null; //  Store global reference to SVG
   const keybindingsPopup = document.getElementById('keybindings-popup');
-  const scoreOptionsPopup = document.getElementById("score-options-popup");
   const closeKeybindingsButton = document.getElementById('close-keybindings');
   const closeScoreOptionsButton = document.getElementById('close-score-options');
   const SEEK_INCREMENT = 0.001; // Represents 1% of the total duration
@@ -711,7 +710,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const animationPopup = document.getElementById('animation-popup');
     const videoPopup = document.getElementById('video-popup');
     const audioPopup = document.getElementById('audio-popup');
-    const scoreOptionsPopup = document.getElementById('score-options-popup');
     const cueChoiceContainer = document.getElementById('cue-choice-container');
     const playhead = document.getElementById('playhead');
     const playzone = document.getElementById('playzone');
@@ -720,11 +718,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const popupsToClear = [animationPopup, videoPopup, audioPopup, animeJsContainer];
     let popupCleared = false;
     // Ignore clicks inside cue-choice-container or score-options-popup
-    if ((cueChoiceContainer && cueChoiceContainer.contains(event.target)) ||
-      (scoreOptionsPopup && scoreOptionsPopup.contains(event.target))) {
-      console.log('[DEBUG] Click inside a protected container (cue-choice-container or score-options-popup), not clearing.');
-      return;
-    }
+    // if ((cueChoiceContainer && cueChoiceContainer.contains(event.target)) ||
+    //   (scoreOptionsPopup && scoreOptionsPopup.contains(event.target))) {
+    //   console.log('[DEBUG] Click inside a protected container (cue-choice-container or score-options-popup), not clearing.');
+    //   return;
+    // }
 
     // Close popups if they are active
     popupsToClear.forEach((popup) => {
@@ -2422,10 +2420,6 @@ case "sync": {
   console.log("[DEBUG] Page loaded, ensuring playhead is properly aligned.");
 
 
-  // Ensure the popup starts hidden
-  scoreOptionsPopup.classList.add('hidden');
-  console.log('Score Options popup initialized as hidden');
-
   const toggleKeybindingsPopup = () => {
     const keybindingsPopup = document.getElementById('keybindings-popup');
     if (keybindingsPopup.classList.contains('hidden')) {
@@ -2437,16 +2431,6 @@ case "sync": {
     }
   };
 
-  const toggleScoreOptionsPopup = () => {
-    const scoreOptionsPopup = document.getElementById('score-options-popup');
-    if (scoreOptionsPopup.classList.contains('hidden')) {
-      console.log("[CLIENT] Showing score options popup.");
-      scoreOptionsPopup.classList.remove('hidden');
-    } else {
-      console.log("[CLIENT] Hiding score options popup.");
-      scoreOptionsPopup.classList.add('hidden');
-    }
-  };
 
 
 
@@ -2464,15 +2448,6 @@ case "sync": {
   window.duration = durationInput
     ? parseInt(durationInput.value, 10) * 60 * 1000
     : 30 * 60 * 1000;
-
-  if (scoreOptionsPopup) {
-    scoreOptionsPopup.addEventListener("click", (event) => {
-      console.log("[DEBUG] Click inside score-options-popup, stopping propagation.");
-      event.stopPropagation();
-    });
-  } else {
-    console.error("[DEBUG] score-options-popup not found.");
-  }
 
   if (durationInput) {
     durationInput.addEventListener("change", (event) => {
@@ -2571,8 +2546,6 @@ case "sync": {
     // console.log(`Key pressed: ${event.key}`);
     if (event.key === 'h' || event.key === 'H') {
       toggleKeybindingsPopup(); // Show/hide keybindings popup
-    } else if (event.key === 's' || event.key === 'S') {
-      toggleScoreOptionsPopup(); // Show/hide score options popup
     } else if (event.key === 'f' || event.key === 'F') {
       toggleFullscreen(); // Fullscreen mode
     } else if (event.key === 't' || event.key === 'T' || event.key === 'Enter') {
@@ -2580,15 +2553,7 @@ case "sync": {
     } else if (event.key === ' ') {
       event.preventDefault(); // Prevent default browser behavior for space key
       window.isPlaying ? window.pausePlayback() : window.startPlayback();
-      // Play/Pause score
-      // } else if (event.key === 'r' || event.key === 'R') {
-      //     rewindToStart(); // Rewind to start
-    } else if (event.key === 'p' || event.key === 'P') {
-      toggleProgrammeNotePopup(); // Show/hide program note popup
-    } else if (event.key === 'n' || event.key === 'N') {
-      toggleScoreNotesPopup(); // Show/hide score notes popup
     } else if (event.key === 'Escape') {
-      // toggleCommunication(); // Enable/disable WebSocket/OSC communication
     }
   });
 
@@ -2630,11 +2595,6 @@ case "sync": {
     });
   }
 
-  if (closeScoreOptionsButton) {
-    closeScoreOptionsButton.addEventListener('click', () => {
-      scoreOptionsPopup.classList.add('hidden');
-    });
-  }
 
   // Initialize
   // wsToggleButton.textContent = isCommunicationEnabled ? 'Disable Communication' : 'Enable Communication';
@@ -2644,9 +2604,7 @@ case "sync": {
     keybindingsPopup.classList.add('hidden');
   }
 
-  if (scoreOptionsPopup) {
-    scoreOptionsPopup.classList.add('hidden');
-  }
+
   //updatestopwatch();
   window.scoreContainer = window.scoreContainer; // Expose globally
   toggleSplashScreen();
