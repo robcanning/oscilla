@@ -9,6 +9,7 @@
  * and environment detection for the OscillaScore client.
  */
 
+import { enableLiveInspector } from "./oscillaLive.js";
 
 import { initializeDarkModeToggle, scrollToPlayheadVisual } from "./transport.js";
 import { loadProject } from './projectLoader.js';
@@ -31,6 +32,9 @@ import {
   resumeStopwatch,
   setupStopwatchFullscreenToggle
 } from './stopwatch.js';
+
+
+
 
 // ===========================
 // 📦 Import Cue Handlers
@@ -217,6 +221,15 @@ export const initializeSVG = async (svgElement) => {
   assignCues(svgElement, window.cues);
 
 
+
+  enableLiveInspector({
+    startRotate,
+    startScale,
+    // startObj2Path
+  });
+
+
+
   /**
    * Scan and register reusable <g> groups with reserved prefixes.
    * Stores them in window.groupRegistry for later cueGroup() recall.
@@ -336,9 +349,15 @@ export const initializeSVG = async (svgElement) => {
     initializeObserver();
 
 
+
     console.log("[DEBUG] Animation setup complete. Running detection and observer.");
     detectExistingAnimations();
     observeAnimations();
+
+
+
+
+
 
 
 
@@ -1944,8 +1963,7 @@ case "sync": {
   // Initialize splash logic
   window.addEventListener("DOMContentLoaded", populateProjectSelector);
 
-
-
+ 
 
 
 
@@ -2416,6 +2434,10 @@ case "sync": {
   };
 
 
+
+
+
+
   //  Check if the reload happened due to a resize
   console.log("[DEBUG] Page loaded, ensuring playhead is properly aligned.");
 
@@ -2538,6 +2560,7 @@ case "sync": {
 
   window.addEventListener("DOMContentLoaded", () => {
     initializeDarkModeToggle();
+
   });
 
 
@@ -2608,6 +2631,9 @@ case "sync": {
   //updatestopwatch();
   window.scoreContainer = window.scoreContainer; // Expose globally
   toggleSplashScreen();
+
+
+ 
   console.log('// EOF');
 
 });
