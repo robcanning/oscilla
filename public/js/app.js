@@ -10,16 +10,7 @@
  */
 
 
-// --- Temporary boot override: disable automatic score initialization ---
-// window.autoLoadDisabled = true;
-// window.addEventListener("DOMContentLoaded", () => {
-//   console.log("[BOOT] 💤 Auto-loading of project disabled — waiting for user selection.");
-// });
-
-
 import { initializeDarkModeToggle, scrollToPlayheadVisual } from "./transport.js";
-
-
 import { loadProject } from './projectLoader.js';
 import { setupScore, extractScoreElements, propagate, autoInjectGroupsInScroll } from './scoreSetup.js';
 import {
@@ -41,7 +32,6 @@ import {
   setupStopwatchFullscreenToggle
 } from './stopwatch.js';
 
-
 // ===========================
 // 📦 Import Cue Handlers
 // ===========================
@@ -51,12 +41,6 @@ import {
   checkCueTriggers,
   parseCueParams,
   resetTriggeredCues,
-  // preloadSpeedCues,
-  // getSpeedForPosition,
-  // initializeSpeedControls,
-  // updateSpeedDisplay,
-  // setSpeed,
-  // adjustSpeed,
   handlePauseCue,
   handleStopCue,
   dismissPauseCountdown,
@@ -98,7 +82,6 @@ import {
 } from './anim.js';
 
 
-
 import { ensureRotationCSSGuard } from './anim.js';
 
 export const initializeSVG = async (svgElement) => {
@@ -110,11 +93,7 @@ export const initializeSVG = async (svgElement) => {
   console.log("Bounding box:", svgElement.getBoundingClientRect());
 
 
-
   /////////////////////////////////////////////////////////////////////////////
-
-
-  /////////////////////////////////////////////////////////////////////////////////
 
 
   window.DEBUG_COORDS = true;
@@ -135,34 +114,10 @@ export const initializeSVG = async (svgElement) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // 🛡️ Ensure r(...) rotations use correct transform origin
   console.log("[initializeSVG]  ensureRotationCSSGuard called .");
 
   ensureRotationCSSGuard(svgElement);
-
 
 
   // 🧩 Skip global reinit for embedded page overlays
@@ -262,8 +217,6 @@ export const initializeSVG = async (svgElement) => {
   assignCues(svgElement, window.cues);
 
 
-
-
   /**
    * Scan and register reusable <g> groups with reserved prefixes.
    * Stores them in window.groupRegistry for later cueGroup() recall.
@@ -287,7 +240,6 @@ export const initializeSVG = async (svgElement) => {
     });
   }
 
-
   // ✅ Register reusable cue groups (menus, UI clusters)
   registerSvgGroups(svgElement);
   console.log("[Debug] Total cues:", window.cues.length);
@@ -303,20 +255,15 @@ export const initializeSVG = async (svgElement) => {
     window.registerSvgGroups = registerSvgGroups;
   }
 
-
   // 🧩 Build pathVariantsMap for o2p Case 5 animations —
   // groups related path IDs (e.g. path-9997-1,-2,…) so multi-path ghost motion works
 
   window.storePathVariants(svgElement)
 
-
   // preloadSpeedCues();
-
-
 
   // Handle all <use> clones
   const useElements = svgElement.querySelectorAll('use');
-
 
   useElements.forEach(clone => {
     // Skip <use> if it is already inside a <g id^="obj_rotate_">
@@ -371,20 +318,10 @@ export const initializeSVG = async (svgElement) => {
     window.playheadX = 0;  // safe world origin default
   }
 
-
   // 🚀 Continue with full original animation setup
   console.log("[DEBUG] Initializing SVG element:", svgElement);
 
-
-
-
   requestAnimationFrame(() => {
-    // window.playheadX = 0;
-    // window.elapsedTime = 0;
-    // window.scoreContainer.scrollLeft = window.playheadX;
-    // console.log(`[DEBUG] Initial scrollLeft set to: ${window.scoreContainer.scrollLeft}`);
-
-
 
     requestAnimationFrame(() => {
       window.ensureWindowPlayheadX(); // 💡 ensure valid center before any jumping logic
@@ -397,7 +334,6 @@ export const initializeSVG = async (svgElement) => {
     initializeRotatingObjects(svgElement);
     initializeScalingObjects(svgElement);
     initializeObserver();
-
 
 
     console.log("[DEBUG] Animation setup complete. Running detection and observer.");
@@ -524,43 +460,13 @@ export const initializeSVG = async (svgElement) => {
 
     console.log("\n🚀 [DEBUG] Page Loaded - Initial State:");
 
-    // logState("Initial Load");
-    // updateSeekBar();
-    //updatestopwatch();
-    //window.toggleScoreNotes();
-
-    setTimeout(() => {
-      // rewindToStart(); // Optional
-    }, 100);
   });
-
 };
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 window.addEventListener("DOMContentLoaded", () => {
 
-
-
-
-
-  // Wait a bit to ensure initializeSVG and animations are registered
-  setTimeout(() => {
-    // loadProject("help");
-  }, 500);
 });
-
 
 
 // ===========================
@@ -572,7 +478,6 @@ window.addEventListener("DOMContentLoaded", () => {
   pauseDismissClickHandler(); // Enables click/spacebar dismiss for pause UI
 
   // initializeControlsPin();
-
 
 });
 
@@ -589,7 +494,6 @@ window.triggeredCues = new Set();
 
 let lastJumpTime = 0;
 
-
 window.playheadX = 0;
 window.estimatedPlayheadX = 0;
 window.speedMultiplier = 1;
@@ -597,38 +501,6 @@ window.scoreContainer = document.getElementById('scoreContainer');
 
 // Duration of score in minutes (default = 30 minutes)
 window.duration = 30;
-
-// ===========================
-// 🛠️ Logging Utilities
-// ===========================
-
-// const LogLevel = {
-//   DEBUG: 0,
-//   INFO: 1,
-//   WARN: 2,
-//   ERROR: 3,
-// };
-
-// let currentLogLevel = LogLevel.WARN;
-
-// const log = (level, ...messages) => {
-//   if (level >= currentLogLevel) {
-//     if (level === LogLevel.ERROR) {
-//       console.error(...messages);
-//     } else if (level === LogLevel.WARN) {
-//       console.warn(...messages);
-//     } else {
-//       console.log(...messages);
-//     }
-//   }
-// };
-
-// const setLogLevel = (level) => {
-//   currentLogLevel = level;
-// };
-
-// // Debug: show sessionStorage keys if needed
-// console.log("[DEBUG] sessionStorage keys:", Object.keys(sessionStorage));
 
 // ===========================
 // 📱 Mobile Stylesheet Loader
@@ -657,15 +529,14 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  // setLogLevel(LogLevel.WARN);
   let pendingRepeatStateMap = null; // stores repeat state from server before cues[] are ready
   console.log('Interactive Scrolling Score Initialized.');
   const splash = document.getElementById('splash');
   const controls = document.getElementById('controls');
   const playhead = document.getElementById('playhead');
-  // let playheadX = 0; // ✅ Ensure `playheadX` is always available globally
   window.recentlyRecalculatedPlayhead = false;
   const score = document.getElementById('score');
+
   // ------------------------------------------------------------
   // Global playback metrics
   // ------------------------------------------------------------
@@ -694,7 +565,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const stopwatch = document.getElementById('stopwatch');
   const rehearsalMarksButton = document.getElementById('rehearsal-marks-button');
   const fullscreenButton = document.getElementById('fullscreen-button');
-  // const durationInput = document.getElementById('duration-input');
   const svgFileInput = document.getElementById('svg-file');
   let svgElement = null; // Declare globally
   window.scoreSVG = null; // ✅ Store global reference to SVG
@@ -720,172 +590,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const adjustscoreContainerHeight = () => {
     const controls = document.getElementById('controls');
-    // const scoreContainer = document.getElementById('scoreContainer');
-    //const controlsHeight = controls && !controls.classList.contains('hidden') ? controls.offsetHeight : 0;
     const controlsHeight = 5;
-    // scoreContainer.style.height = `calc(100vh - ${controlsHeight}px)`; // Adjust height dynamically
     console.log(`scoreContainer height adjusted to: ${window.scoreContainer.style.height}`);
   };
 
 
 
   ///////////////////////////////////////////////////////////////
-  // let SVGPathData = null;
   const { SVGPathData } = SVGPathCommander;
-  // const flattenGroupTransform = (group, inherited = '') => {
-  //   const localTransform = group.getAttribute('transform') || '';
-  //   const combinedTransform = [inherited, localTransform].filter(Boolean).join(' ').trim();
-
-  //   console.groupCollapsed(`[flattenGroupTransform] ▶️ Group: ${group.id || '(no id)'} transform="${localTransform}"`);
-
-  //   Array.from(group.children).forEach(child => {
-  //     const tag = child.tagName?.toLowerCase();
-
-  //     // Recurse into nested groups
-  //     if (tag === 'g') {
-  //       console.log(`↪️ Nested group: ${child.id || '(no id)'}`);
-  //       flattenGroupTransform(child, combinedTransform);
-  //       return;
-  //     }
-
-  //     if (tag !== 'path') {
-  //       console.log(`⏭️ Skipping non-path <${tag}>`, child.id);
-  //       return;
-  //     }
-
-  //     const d = child.getAttribute('d');
-  //     const id = child.id || '(no id)';
-  //     console.groupCollapsed(`[flattenGroupTransform] 🧩 Path: ${id}`);
-  //     console.log('Original d:', d?.slice(0, 120) + (d?.length > 120 ? '...' : ''));
-  //     console.log('Combined transform:', combinedTransform);
-
-  //     if (!d || !d.trim()) {
-  //       console.warn(`⚠️ Skipping '${id}' — no valid path data.`);
-  //       console.groupEnd();
-  //       return;
-  //     }
-
-  //     if (!combinedTransform) {
-  //       console.info(`ℹ️ No transform for '${id}' — nothing to flatten.`);
-  //       console.groupEnd();
-  //       return;
-  //     }
-
-  //     try {
-  //       // Step 1: Normalize shorthand/relative commands
-  //       let normalized = d;
-  //       if (typeof SVGPathCommander.normalizePathData === 'function') {
-  //         try {
-  //           normalized = SVGPathCommander.normalizePathData(d);
-  //           console.log('✅ normalizePathData succeeded');
-  //         } catch (errNorm) {
-  //           console.warn(`⚠️ normalizePathData failed for '${id}':`, errNorm.message);
-  //         }
-  //       }
-
-  //       // Step 2: Try to apply transform
-  //       let newD;
-  //       try {
-  //         newD = SVGPathCommander.transformPath(normalized, combinedTransform);
-  //         console.log('✅ transformPath succeeded');
-  //       } catch (innerErr) {
-  //         console.error(`❌ transformPath() failed for '${id}':`, innerErr.message);
-  //         console.groupEnd();
-  //         return;
-  //       }
-
-  //       // Step 3: Validate and replace
-  //       if (typeof newD === 'string' && newD.includes(' ')) {
-  //         child.setAttribute('d', newD);
-  //         child.removeAttribute('transform');
-  //         console.log('✅ Path flattened successfully.');
-  //       } else {
-  //         console.warn(`⚠️ Invalid transform output for '${id}':`, newD);
-  //       }
-  //     } catch (err) {
-  //       console.error(`[flattenGroupTransform] ❌ Failed to flatten '${id}':`, err.message);
-  //     }
-
-  //     console.groupEnd();
-  //   });
-
-  //   if (localTransform) {
-  //     console.log(`🧹 Removing transform from group ${group.id || '(no id)'}`);
-  //     group.removeAttribute('transform');
-  //   }
-
-  //   console.groupEnd();
-  // };
-
-
-
-
-
-  /**
-   * flattenTransforms(svgRoot)
-   * -------------------------------------------
-   * Flattens all SVG `transform` attributes into actual geometry
-   * using svg-path-commander where applicable.
-   * Supports: <path>, <rect>, <circle>, <ellipse>, <line>, <polygon>, <polyline>.
-   * Skips <text> (preserved as-is) and logs warnings for Inkscape-specific elements
-   * like sodipodi:star or spiral.
-   */
-  // const { SVGPathData } = SVGPathCommander;
-
-
-  // function flattenTransforms(svgRoot) {
-
-  //   const transformed = svgRoot.querySelectorAll('[transform]');
-
-  //   transformed.forEach((el) => {
-  //     const transform = el.getAttribute('transform');
-  //     if (!transform) return;
-
-  //     const tag = el.tagName.toLowerCase();
-
-  //     // Skip unsupported or Inkscape-specific shapes
-  //     if (el.hasAttribute('sodipodi:type')) {
-  //       console.warn(`[flatten] ⚠️ Skipping Inkscape-specific shape <${tag}> with sodipodi:type`, el);
-  //       return;
-  //     }
-
-  //     if (tag === 'path') {
-  //       try {
-  //         const path = new SVGPathData(el.getAttribute('d')).transform(transform);
-  //         el.setAttribute('d', path.encode());
-  //         el.removeAttribute('transform');
-  //       } catch (err) {
-  //         console.warn(`[flatten] ⚠️ Failed to transform path:`, el, err);
-  //       }
-  //     } else if (['rect', 'circle', 'ellipse', 'line', 'polygon', 'polyline'].includes(tag)) {
-  //       try {
-  //         const tempPath = SVGPathData.fromElement(el); // this uses svg-path-commander
-  //         const transformedPath = new SVGPathData(tempPath).transform(transform);
-  //         const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  //         newPath.setAttribute('d', transformedPath.encode());
-  //         newPath.setAttribute('id', el.id);
-  //         newPath.setAttribute('class', el.getAttribute('class'));
-  //         el.replaceWith(newPath);
-  //       } catch (err) {
-  //         console.warn(`[flatten] ⚠️ Failed to convert <${tag}> to path:`, el, err);
-  //       }
-  //     } else if (tag === 'text') {
-  //       console.info(`[flatten] ℹ️ Preserving <text> element with transform:`, el);
-  //     } else if (tag === 'g') {
-  //   try {
-  //     console.info(`[flatten] 🌀 Flattening group <${tag}> with transform:`, transform);
-  //     flattenGroupTransform(el); // call your recursive function
-  //   } catch (err) {
-  //     console.warn(`[flatten] ⚠️ Failed to flatten group <${tag}>:`, err);
-  //   }
-  // }
-
-  //     else {
-  //       console.warn(`[flatten] ⚠️ Unsupported tag <${tag}> — transform not flattened`, el);
-  //     }
-  //   });
-  // }
-
 
 
 
@@ -924,8 +636,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   ///////////////////////////////////////////////////////////////
   // Handle Rehearsal Marks Navigation Popup
-
-
 
   /**
   * ✅ Opens the rehearsal mark popup.
@@ -969,8 +679,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-
-
   rehearsalMarksButton.addEventListener('click', () => {
     console.log("[DEBUG] Rehearsal Marks button clicked.");
     const popup = document.getElementById("rehearsal-popup");
@@ -989,33 +697,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupStopwatchFullscreenToggle();
 
-  // /**
-  // * Function: Dismiss the Splash Screen
-  // */
-  // function dismissSplashScreen() {
-  //   const splashScreen = document.getElementById("main-splash-screen");
-  //   if (splashScreen) {
-  //     splashScreen.style.display = "none";
-  //     console.log("[DEBUG] Splash screen dismissed.");
-  //   }
-  // }
-
-  /**
-  * Ensure Splash Screen is Visible on Load
-  */
-  window.onload = () => {
-    const splashScreen = document.getElementById("main-splash-screen");
-    if (splashScreen) splashScreen.style.display = "flex";
-  };
-
-  // // /**
-  // // * Hide Splash Screen and Load Selected Score
-  // // */
-  // function loadScore(scoreFile) {
-  //   // console.log(`[DEBUG] Loading score: ${scoreFile}`);
-  //   // document.getElementById("main-splash-screen").style.display = "none"; // Hide splash
-  //   // initializeScore(scoreFile); // Existing function to load a score
-  // }
 
   const clearPopupsOnInteraction = (event) => {
     // Ensure the event and event.target are valid
@@ -1452,58 +1133,58 @@ document.addEventListener('DOMContentLoaded', () => {
               break;
 
             /** ✅ Synchronize Playback State */
-           case "sync": {
+            case "sync": {
 
-  // --- World width (must always exist once synced)
-  if (data.state?.scoreWidth) {
-    window.scoreWidth = data.state.scoreWidth;
-    window.remoteScoreWidth = data.state.scoreWidth;
-  }
+              // --- World width (must always exist once synced)
+              if (data.state?.scoreWidth) {
+                window.scoreWidth = data.state.scoreWidth;
+                window.remoteScoreWidth = data.state.scoreWidth;
+              }
 
-  // --- Canonical scaling from server
-  if (data.state?.canonicalRenderedWidth && data.state?.scoreWidth) {
-    window.canonicalRenderedWidth = data.state.canonicalRenderedWidth;
-    window.canonicalScale = window.canonicalRenderedWidth / window.scoreWidth;
-    console.log(`[SYNC] ✅ canonicalScale = ${window.canonicalScale}`);
-  }
+              // --- Canonical scaling from server
+              if (data.state?.canonicalRenderedWidth && data.state?.scoreWidth) {
+                window.canonicalRenderedWidth = data.state.canonicalRenderedWidth;
+                window.canonicalScale = window.canonicalRenderedWidth / window.scoreWidth;
+                console.log(`[SYNC] ✅ canonicalScale = ${window.canonicalScale}`);
+              }
 
-  const svg = document.querySelector("#scoreContainer svg");
-  const inner = document.getElementById("scoreInner");
-  const stage = document.getElementById("scrollStage");   // ✅ ADD THIS
+              const svg = document.querySelector("#scoreContainer svg");
+              const inner = document.getElementById("scoreInner");
+              const stage = document.getElementById("scrollStage");   // ✅ ADD THIS
 
-  if (svg && inner && stage && window.canonicalScale && window.scoreWidth) {
-  const canonicalWidthPx = window.scoreWidth * window.canonicalScale;
+              if (svg && inner && stage && window.canonicalScale && window.scoreWidth) {
+                const canonicalWidthPx = window.scoreWidth * window.canonicalScale;
 
-  // SVG world scaled into canonical pixel width
-  svg.style.width = `${canonicalWidthPx}px`;
-  svg.style.height = "auto";
+                // SVG world scaled into canonical pixel width
+                svg.style.width = `${canonicalWidthPx}px`;
+                svg.style.height = "auto";
 
-  // ScoreInner matches SVG width
-  inner.style.width = `${canonicalWidthPx}px`;
-  inner.style.height = "100%";
+                // ScoreInner matches SVG width
+                inner.style.width = `${canonicalWidthPx}px`;
+                inner.style.height = "100%";
 
-  // scrollStage must also match world width in pixel space
-  stage.style.width = `${canonicalWidthPx}px`;   // ✅ THIS WAS MISSING
-  stage.style.height = "100%";
-}
+                // scrollStage must also match world width in pixel space
+                stage.style.width = `${canonicalWidthPx}px`;   // ✅ THIS WAS MISSING
+                stage.style.height = "100%";
+              }
 
 
-  // --- Apply synced transport state
-  const wasPlaying = window.isPlaying;
-  window.elapsedTime = data.state.elapsedTime;
-  window.isPlaying = data.state.isPlaying;
-  window.playheadX = data.state.playheadX;
+              // --- Apply synced transport state
+              const wasPlaying = window.isPlaying;
+              window.elapsedTime = data.state.elapsedTime;
+              window.isPlaying = data.state.isPlaying;
+              window.playheadX = data.state.playheadX;
 
-  // --- Immediately reposition visual layer
-  scrollToPlayheadVisual();
+              // --- Immediately reposition visual layer
+              scrollToPlayheadVisual();
 
-  // --- Animation play/pause sync
-  window.recentlyRecalculatedPlayhead = false;
-  if (window.isPlaying && !wasPlaying) window.startAnimation?.();
-  if (!window.isPlaying && wasPlaying) window.stopAnimation?.();
+              // --- Animation play/pause sync
+              window.recentlyRecalculatedPlayhead = false;
+              if (window.isPlaying && !wasPlaying) window.startAnimation?.();
+              if (!window.isPlaying && wasPlaying) window.stopAnimation?.();
 
-  break;
-}
+              break;
+            }
 
 
 
@@ -1541,7 +1222,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`[DEBUG] 🔄 Ignoring server window.playheadX update to prevent override.`);
               }
 
-              // updatePosition();
               window.recentlyRecalculatedPlayhead = false;
               // updateSeekBar();
 
@@ -2069,85 +1749,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-  ////// SVG LOADING LOGIC ///////////////////////////////////////////////
-
-  // Loads an external SVG file and adds it to the scoreContainer, replacing any existing SVG.
-  // Aligns the playhead correctly at the start of the score
-  // Runs `rewindToStart()` with a slight delay to finalize alignment after loading.
-  /**
-   * ✅ Enhanced SVG loader with session persistence
-   *
-   * - Uploads work using blob URLs.
-   * - Keeps track of current score using sessionStorage.
-   * - Falls back to draft.svg if nothing is set or session is new.
-   */
-
-  /**
-   * ✅ SVG Loading & Session Persistence Logic
-   * - Supports uploading custom SVG scores
-   * - Automatically restores the last uploaded score using sessionStorage
-   * - Falls back to "svg/draft.svg" if session or blob is unavailable
-   */
-  /**
-   * svgpersist: SVG Loading & Session Persistence Logic
-   * - Lets users upload custom SVG scores during a session.
-   * - Remembers the last uploaded score using sessionStorage.
-   * - Falls back to "svg/draft.svg" if session data or blob is invalid.
-   */
-
-  // [svgpersist] 🧠 Rationale: store uploaded SVG as base64 string so it survives page reloads.
-  // - Avoids relying on Blob URLs, which expire after tab close.
-  // - sessionStorage keeps it for the session; use localStorage if you want cross-session persistence.
-
-  // [svgpersist] 🧠 Using base64 to persist SVG across page reloads during the same session.
-  // - Avoids expired Blob URLs
-  // - sessionStorage holds a data URL encoded from the user's uploaded SVG
-
-  // [svgpersist] Full SVG persistence and upload logic
   window.pathVariantsMap = {};
-
-  // window.loadExternalSVG = (svgSource) => {
-  //   console.log('[svgpersist] Loading external SVG...');
-
-  //   // 🟨 Base64 inline SVG
-  //   if (svgSource.startsWith("data:image/svg+xml;base64,")) {
-  //     console.log(`[svgpersist] Loaded base64 SVG (length: ${svgSource.length})`);
-  //     const parser = new DOMParser();
-  //     const svgElement = parser.parseFromString(atob(svgSource.split(",")[1]), 'image/svg+xml').documentElement;
-  //     svgElement.id = "score";
-
-  //     window.scoreContainer.innerHTML = '';
-  //     window.scoreContainer.appendChild(svgElement);
-
-  //     initializeSVG(svgElement);
-  //     storePathVariants(svgElement);
-  //     return;
-  //   }
-
-  //   // 🟦 External fetch (e.g., svg/draft.svg or blob:)
-  //   fetch(svgSource)
-  //     .then(response => response.text())
-  //     .then(svgText => {
-  //       const parser = new DOMParser();
-  //       const svgElement = parser.parseFromString(svgText, 'image/svg+xml').documentElement;
-  //       svgElement.id = "score";
-
-  //       window.scoreContainer.innerHTML = '';
-  //       window.scoreContainer.appendChild(svgElement);
-
-  //       initializeSVG(svgElement);
-
-  //       storePathVariants(svgElement);
-  //     })
-  //     .catch(err => {
-  //       console.error('[svgpersist] ERROR loading SVG:', err);
-  //       if (svgSource.startsWith("blob:")) {
-  //         console.warn('[svgpersist] Fallback to draft.svg after blob failure.');
-  //         loadExternalSVG("scores/help.svg");
-  //       }
-  //     });
-  // };
 
 
 
@@ -2237,39 +1839,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-  // // [svgpersist] Initialize score from sessionStorage on load
-  // const initializeScore = () => {
-  //   const savedBase64 = sessionStorage.getItem("scoreBase64");
-
-  //   if (savedBase64) {
-  //     console.log('[svgpersist] Restoring previous base64 SVG.');
-  //     loadExternalSVG(savedBase64);
-  //   } else {
-  //     console.log('[svgpersist] No saved SVG found. Loading default draft.svg.');
-  //     loadExternalSVG("scores/help.svg");
-  //   }
-  // };
-
-
-  // initializeScore(); // ⬅️ Make sure this runs outside any event listener
-
-  // // [svgpersist] Upload and persist new SVG to sessionStorage
-  // document.getElementById("upload-score").addEventListener("change", (event) => {
-  //   const file = event.target.files[0];
-  //   if (!file) return alert("Please select a file.");
-
-  //   const reader = new FileReader();
-  //   reader.onload = (e) => {
-  //     const base64 = e.target.result;
-  //     sessionStorage.setItem("scoreBase64", base64);
-  //     console.log(`[svgpersist] New SVG uploaded. Persisted length: ${base64.length}`);
-  //     loadExternalSVG(base64);
-  //   };
-  //   reader.readAsDataURL(file);
-  // });
-
-
   /**
    * initializeSVG(svgElement)
    * --------------------------
@@ -2281,18 +1850,7 @@ document.addEventListener('DOMContentLoaded', () => {
    * @param {SVGElement} svgElement - The <svg> element representing the musical score.
    */
 
-
-
-
-
   window.initializeSVG = initializeSVG;
-
-
-
-
-
-
-
 
   // Initializes interactive behavior for elements within the SVG.
   // Ensures all elements with an ID can register click events for user interaction.
@@ -2667,81 +2225,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // svgFileInput.addEventListener('change', (event) => {
-  //   console.log('SVG file input change detected.');
-  //   const file = event.target.files[0];
-  //   if (file && file.type === 'image/svg+xml') {
-  //     const reader = new FileReader();
-
-  //     reader.onload = (e) => {
-  //       console.log('SVG file loaded. Passing to external loader...');
-  //       loadExternalSVG(e.target.result);
-  //     };
-
-  //     reader.onerror = (err) => {
-  //       console.error('Error reading file:', err);
-  //     };
-
-  //     reader.readAsDataURL(file); // Read file as Data URL
-  //   } else {
-  //     console.error('Invalid file type. Please upload an SVG.');
-  //   }
-  // });
-
-
-  ///////////////////////////////////////////////////////////////////////////////
-
-  // /**
-  // * Dynamically recalculates the max scrollable distance of the score.
-  // * Uses the actual rendered width of the SVG to ensure accuracy.
-  // * Adjustswindow.playheadX proportionally to prevent scaling misalignment.
-  // * Uses window.scoreContainer width instead of viewport width for scaling calculations.
-  // * Rounds scrollLeft to prevent sub-pixel rendering issues.
-  // * Ensures smooth and precise playhead alignment after resizing.
-  // */
-
-  // let previousViewportWidth = window.scoreContainer.offsetWidth; // Track score container width
-  // let previousMaxScrollDistance = null; // Track last max scroll distance
-
-  // const calculateMaxScrollDistance = () => {
-  //   const svgElement = document.querySelector('svg');
-
-  //   if (!window.scoreContainer || !svgElement) {
-  //     console.warn("[WARNING] Missing scoreContainer or SVG, cannot calculate maxScrollDistance.");
-  //     return;
-  //   }
-
-  //   // Get actual rendered width of the SVG instead of viewBox
-  //   // const svgWidth = svgElement.getBoundingClientRect().width;
-  //   const svgWidth = svgElement.viewBox.baseVal.width;
-
-
-  //   // Detect scale changes using scoreContainer width instead of viewport width
-  //   const newScoreContainerWidth = window.scoreContainer.offsetWidth;
-  //   const scaleRatio = newScoreContainerWidth / previousViewportWidth;
-
-  //   // Update max scroll distance to the new SVG width
-  //   maxScrollDistance = svgWidth;
-
-  //   console.log(`[DEBUG] 📏 Updated maxScrollDistance: ${maxScrollDistance} (SVG Rendered Width: ${svgWidth})`);
-
-  //   // Adjustwindow.playheadX using proportional scaling
-  //   if (previousMaxScrollDistance !== null && previousMaxScrollDistance > 0) {
-  //     let playheadPercentage = window.playheadX / previousMaxScrollDistance;
-  //     window.playheadX = playheadPercentage * maxScrollDistance;
-  //     console.log(`[DEBUG] 🔄 Recalculatedwindow.playheadX: ${window.playheadX}`);
-  //   }
-
-  //   // Update stored values
-  //   previousMaxScrollDistance = maxScrollDistance;
-  //   previousViewportWidth = newScoreContainerWidth;
-
-  //   scrollToPlayheadVisual();
-  //   console.log(`[DEBUG] 🎯 Updated window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
-  // };
-
-  // ///////////////////////////////////////////////////////////////////////////////
-
 
 
 
@@ -2760,14 +2243,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!isNaN(state.playheadX) && state.playheadX >= 0) {
       if (!window.isSeeking) {
         window.playheadX = state.playheadX;
-        //
-        // // ✅ Ensure window.playheadX is properly adjusted after a screen resize
-        // if (window.recentlyRecalculatedPlayhead) {
-        //     const widthRatio = window.innerWidth / previousScreenWidth;
-        //     window.playheadX *= widthRatio;
-        //     console.log(`[DEBUG] 🔄 Adjusted window.playheadX after resize: ${window.playheadX}`);
-        // }
-
         scrollToPlayheadVisual();
         console.log(`[DEBUG] Updated window.scoreContainer.scrollLeft=${window.scoreContainer.scrollLeft}`);
 
@@ -2820,19 +2295,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
-
-  // //TODO maybe no longer needed
-  // const correctDrift = (serverElapsedTime) => {
-  //   const driftThreshold = 50; // Allowable drift in milliseconds
-  //   const drift = serverElapsedTime - window.elapsedTime;
-
-  //   if (Math.abs(drift) > driftThreshold) {
-  //     //console.log([CLIENT] Correcting drift. Server: ${serverElapsedTime}, Local: ${elapsedTime}, Drift: ${drift});
-
-  //     // Smoothly adjust window.elapsedTime using a weighted approach
-  //     window.elapsedTime += drift * 0.1; // Adjust factor to balance smoothness vs speed
-  //   }
-  // };
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -2889,7 +2351,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Core updates each frame ---
-    // updatePosition?.();    // moves playhead graphics
     // updateSeekBar?.();     // ✅ updates the seek bar progress
     await checkCueTriggers?.(window.elapsedTime); // triggers cues
 
@@ -2940,12 +2401,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // stopStopwatch();
   };
 
-
-
-
-
   let isJumpingToMark = false; // ✅ Prevents unwanted position overrides
-
 
 
   // ///////////////////////////////////////
@@ -2961,61 +2417,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Ensures correct positioning and checks for active cues.
   const setElapsedTime = (newTime) => {
     window.elapsedTime = newTime; // ✅ Update playback time
-    // updatePosition(window.playheadX); // ✅ Use the correct playhead position
-
     checkCueTriggers(window.elapsedTime); // ✅ Recheck cues
   };
 
-
-  // //// SEEKING LOGIC ///////////////////////////////////////////
-
-  // // Starts seeking mode when the user clicks the seek bar.
-  // // Pauses playback to allow smooth scrubbing.
-  // seekBar.addEventListener('mousedown', () => {
-  //   window.isSeeking = true; // ✅ Start seeking mode
-  //   stopAnimation(); // ✅ Pause playback
-  //   console.log("[CLIENT] Playback paused for seeking.");
-  // });
-
-  // // Updates playback time as the user moves the seek bar.
-  // // Converts percentage → time → X position for correct alignment.
-  // seekBar.addEventListener('input', (event) => {
-  //   const newTime = (parseInt(event.target.value, 10) / 100) * duration; // ✅ Convert percentage to time
-  //   setElapsedTime(newTime); // ✅ Adjust playback position
-
-  //   // ✅ Real-time UI updates
-  //   updatePosition(window.playheadX); // ✅ Ensure proper alignment
-  //   updateSeekBar();
-  //   //updatestopwatch();
-  // });
-
-  // // Ends seeking mode and re-enables cues after debounce.
-  // // Sends a WebSocket `jump` message to sync all connected clients.
-
-  // let seekDebounceTime = 300; // ✅ Adjust debounce as needed
-  // let seekingTimeout = null;
-
-  // seekBar.addEventListener('mouseup', (event) => {
-  //   window.isSeeking = false; // ✅ Stop seeking mode
-  //   console.log("[CLIENT] Seeking ended. Applying debounce before re-enabling cues.");
-
-  //   // ✅ Debounce before re-enabling cues
-  //   if (seekingTimeout) clearTimeout(seekingTimeout);
-  //   seekingTimeout = setTimeout(() => {
-  //     console.log("[CLIENT] Cue triggering re-enabled after debounce.");
-  //      window.isPlaying = true;
-  //      window.isMusicalPause = false;
-  //     startStopwatch();
-  //     startAnimation();
-
-  //     // ✅ Send WebSocket sync to ensure all clients align
-  //     if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-  //       window.socket?.send(JSON.stringify({ type: 'jump', playheadX: window.playheadX, 
-  //         elapsedTime: window.elapsedTime }));
-  //       console.log(`[CLIENT] Sent jump message to server after seek. Elapsed Time: ${elapsedTime}`);
-  //     }
-  //   }, seekDebounceTime); // ✅ Wait before enabling cues
-  // });
 
   // REPEAT BOX COUNTER LOGIC////////
 
@@ -3103,23 +2507,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  /**
-  * ✅ Ensures the playhead remains correctly aligned after a window resize or fullscreen toggle.
-  * - Uses `playheadX` directly instead of recalculating from elapsedTime.
-  * - Locks `scrollLeft` strictly to `playheadX`.
-  * - Temporarily suppresses `syncState()` updates to prevent overrides.
-  */
-
-  // const watchPlayheadX = () => {
-  //     let lastPlayheadX =window.playheadX;
-  //     setInterval(() => {
-  //         if (window.playheadX !== lastPlayheadX) {
-  //             console.warn(`[WATCHDOG] 🚨window.playheadX changed unexpectedly: ${lastPlayheadX} → ${window.playheadX}`);
-  //             lastPlayheadX =window.playheadX;
-  //         }
-  //     }, 50); // Check every 50ms
-  // };
-  // watchPlayheadX();
 
   // ✅ Check if the reload happened due to a resize
   console.log("[DEBUG] Page loaded, ensuring playhead is properly aligned.");
@@ -3128,82 +2515,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (splashScreen) {
     splashScreen.style.display = "none"; // 🔥 Hide splash screen
   }
-
-
-  // const logState = () => {
-  //   console.log(`[DEBUG] 📏 Screen Width: ${window.innerWidth}`);
-  //   console.log(`[DEBUG] 🎵window.playheadX: ${window.playheadX}`);
-  //   console.log(`[DEBUG] 🎯 window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
-  //   console.log(`[DEBUG] 📏 Max Scroll Distance: ${maxScrollDistance}`);
-  //   console.log(`[DEBUG] 🖥️ Current SVG Width: ${window.scoreSVG?.getAttribute('width')}`);
-  //   console.log(`[DEBUG] 🖥️ Current SVG ViewBox: ${window.scoreSVG?.getAttribute('viewBox')}`);
-
-  //   // Log the transformation matrix for the SVG elements
-  //   console.log(`[DEBUG] Transform Matrix of first rehearsal mark: ${getMatrixString(rehearsalMarks["B"])}`);
-
-  //   // Log extracted rehearsal marks' coordinates (B, C, D...)
-  //   console.log(`[DEBUG] 📍 Rehearsal Marks Coordinates:`);
-  //   for (const [key, value] of Object.entries(rehearsalMarks)) {
-  //     // console.log(`[DEBUG]  ${key}: X=${value.x}, Y=${value.y}`);
-  //   }
-
-  //   // Log array of rehearsal marks for debugging
-  //   // console.log(`[DEBUG] 🎭 Rehearsal Marks Array:`, Object.entries(rehearsalMarks));
-
-  //   // Log extracted cue positions
-  //   // console.log(`[DEBUG] 🔰 Cue Positions:`);
-  //   cues.forEach(cue => {
-  //     // console.log(`[DEBUG] Cue ${cue.id}: X=${cue.x}, Width=${cue.width}`);
-  //   });
-
-  //   // Track scaling adjustments
-  //   // console.log(`[DEBUG] Scaling Factor (scaleX): ${rehearsalMarks["B"]?.scale || 1}`);
-  //   // console.log(`[DEBUG] Recalculated X for Mark B: ${rehearsalMarks["B"]?.x}window.playheadX: ${window.playheadX} Screen Width: ${window.innerWidth} `);
-  //   // console.log(`[DEBUG] Recalculated Y for Mark B: ${rehearsalMarks["B"]?.y}`);
-
-  //   // Log the element count for rehearsal marks and cues
-  //   console.log(`[DEBUG] 🎭 Number of Rehearsal Marks: ${Object.keys(rehearsalMarks).length}`);
-  //   console.log(`[DEBUG] 🔰 Number of Cues: ${cues.length}`);
-
-  //   // Log state of animation
-  //   console.log(`[DEBUG] 🔄 Animation state: ${window.isPlaying ? "Playing" : "Paused"}`);
-  //   console.log(`[DEBUG] 🧮 Elapsed Time: ${elapsedTime}`);
-  //   console.log(`[DEBUG] 🕰️ Last animation frame time: ${window.lastAnimationFrameTime}`);
-
-  //   // Log SVG Element states
-  //   console.log(`[DEBUG] 🎨 SVG File: ${window.scoreSVG?.id || 'No SVG loaded'}`);
-  //   console.log(`[DEBUG] 🖥️ SVG Scroll Position (scrollLeft): ${window.scoreContainer.scrollLeft}`);
-
-  //   // Log state of WebSocket
-  //   console.log(`[DEBUG] 🌐 WebSocket State: ${window.wsEnabled ? 'Enabled' : 'Disabled'}`);
-  //   console.log(`[DEBUG] 🔗 WebSocket Connection Open: ${socket && socket.readyState === WebSocket.OPEN}`);
-
-  //   // Log sync related variables
-  //   console.log(`[DEBUG] 🕹️ Sync State - Elapsed Time: ${elapsedTime}`);
-  //   console.log(`[DEBUG] 🔄window.playheadX during Sync: ${window.playheadX}`);
-
-  //   // Log viewport adjustments
-  //   console.log(`[DEBUG] 🖥️ Fullscreen Mode: ${document.fullscreenElement ? "Enabled" : "Disabled"}`);
-  //   console.log(`[DEBUG] 🔍 Current Screen Orientation: ${window.innerWidth > window.innerHeight ? 'Landscape' : 'Portrait'}`);
-
-  //   // Log screen resizing adjustments
-  //   console.log(`[DEBUG] 🌐 Max Scroll Distance: ${maxScrollDistance}`);
-  //   console.log(`[DEBUG] 🎯 ScrollLeft after resize: ${window.scoreContainer.scrollLeft}`);
-
-  //   // Log status of paused elements
-  //   console.log(`[DEBUG] 🚦 Is Animation Paused? ${animationPaused ? "Yes" : "No"}`);
-  //   console.log(`[DEBUG] ⏸️ Animation Frame Id: ${animationFrameId || 'None'}`);
-
-  //   // Log playback speed
-  //   console.log(`[DEBUG] 🏃 Playback Speed Multiplier: ${playbackSpeed}`);
-
-  // };
-
-  // // Utility function to get the matrix string for debugging
-  // const getMatrixString = (mark) => {
-  //   if (!mark || !mark.matrix) return "No matrix data";
-  //   // return `scaleX: ${mark.matrix.a}, translateX: ${mark.matrix.e}`;
-  // };
 
 
 
@@ -3234,8 +2545,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
-
-
   const toggleScoreNotesPopup = () => {
     const toggleScoreNotesPopup = document.getElementById('score-notes-popup');
     if (toggleScoreNotesPopup.classList.contains('hidden')) {
@@ -3246,7 +2555,6 @@ document.addEventListener('DOMContentLoaded', () => {
       toggleScoreNotesPopup.classList.add('hidden');
     }
   };
-
 
 
   const toggleProgrammeNotePopup = () => {
@@ -3261,175 +2569,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   ////////  END OF UTIL //////////////////////////////////////////////
-
-
-  ///
-
-  /**
-  * ✅ updatePosition
-  * Synchronizes the scroll position of #window.scoreContainer with the current `playheadX`.
-  *
-  * - Smoothly follows the playhead while seeking (fast forward/rewind).
-  * - Snaps directly to `playheadX` when not seeking (e.g., on pause, jump).
-  * - Minimizes DOM writes (avoids flickering from redundant updates).
-  * - Throttles `startAllVisibleAnimations()` to avoid overload during seeking.
-  */
-
-  // ✅ Prevents automatic scroll updates when true (e.g., manual drag, custom control)
-  let suppressViewportUpdates = false;
-
-  // ✅ Stores the scroll position at the moment of pause — used to "hold" the view steady
-  let lastPausedPlayheadX = 0;
-
-  // ✅ Used to throttle animation restarts — avoid flooding during continuous scroll
-  let lastTriggerTime = 0;
-
-  /**
- * Main scroll update function — called during playback / interaction loop
- */
-  // const updatePosition = () => {
-  //   // Always use world → screen mapping when canonical scale exists
-  //   if (window.canonicalScale) {
-  //     scrollToPlayheadVisual();
-  //     return;
-  //   }
-
-  //   // Fallback only *before* canonical scale is known (first-client load state)
-  //   // Do NOT compare scrollLeft to playheadX — different unit spaces.
-  //   // Instead, simply snap visually to the current playhead X.
-  //   scrollToPlayheadVisual();
-  // };
-
-
-
-
-  // ANIMATION POPUP LOGIC
-  // -----------------------------------------------
-  // todo maybe all make obsolete by animejs
-
-  const openAnimationPopup = (triggerId) => {
-    // Extract animation settings from the namespace
-    const namespace = triggerId.split('_');
-    const svgFilename = namespace.find((ns) => ns.startsWith('file_'))?.replace('file_', '') || 'default.svg';
-    const duration = parseInt(namespace.find((ns) => ns.startsWith('dur_'))?.replace('dur_', '').replace('s', '')) * 1000 || 30000;
-    const loopSetting = namespace.find((ns) => ns.startsWith('loop_'))?.replace('loop_', '') || 1;
-
-    // Access popup elements
-    const popup = document.getElementById('animation-popup');
-    const content = document.getElementById('animation-content');
-
-    // Show popup
-    popup.classList.add('active');
-    popup.classList.remove('hidden');
-
-    // Load the SVG dynamically
-    content.innerHTML = `<object id="animated-svg" data="${svgFilename}" type="image/svg+xml"></object>`;
-
-    // Wait for SVG to load
-    const svgObject = document.getElementById('animated-svg');
-    svgObject.onload = () => {
-      const svgDoc = svgObject.contentDocument;
-      const paths = svgDoc.querySelectorAll('path[id^="path-"]');
-      const objects = svgDoc.querySelectorAll('[id^="obj2path-"]');
-
-      // Animate objects along paths using Anime.js
-      objects.forEach((obj) => {
-        const pathId = obj.id.split('_')[0].replace('obj2path-', '');
-        const path = svgDoc.getElementById(pathId);
-        if (!path) return;
-
-        // Extract object settings from namespace
-        const objNamespace = obj.id.split('_');
-        const objDuration = parseInt(objNamespace.find((ns) => ns.startsWith('dur_'))?.replace('dur_', '').replace('s', '')) * 1000 || duration;
-        const objLoop = objNamespace.find((ns) => ns.startsWith('loop_'))?.replace('loop_', '') || loopSetting;
-        const rotate = objNamespace.includes('rotate') ? true : false;
-
-        // Get the TRUE start point of the path
-        const pathStart = path.getPointAtLength(0);
-
-        // Get object's bounding box (for alignment correction)
-        const objBBox = obj.getBBox();
-        const objHeight = objBBox.height;
-        const objWidth = objBBox.width;
-
-        // **New: Compute the Y-offset correction**
-        const yOffsetCorrection = pathStart.y - (objBBox.y + objHeight / 2);
-        const xOffsetCorrection = pathStart.x - (objBBox.x + objWidth / 2);
-
-        console.log(`[DEBUG] Fixing ${obj.id}: PathStart(y=${pathStart.y}), ObjBBox(height=${objHeight}), OffsetApplied=${yOffsetCorrection}`);
-
-        // ✅ Apply precomputed offsets directly in Anime.js keyframes
-        const anim = anime({
-          targets: obj,
-          keyframes: [
-            {
-              translateX: (el) => anime.path(path)('x')(el) - xOffsetCorrection,
-              translateY: (el) => anime.path(path)('y')(el) - yOffsetCorrection,
-            }
-          ],
-          rotate: rotate ? anime.path(path)('angle') : undefined,
-          duration: objDuration,
-          easing: 'easeInOutQuad',
-          loop: objLoop === 'infinite' ? true : parseInt(objLoop),
-        });
-
-        // ✅ Register with runningAnimations for observer tracking
-        if (obj?.id) {
-          window.runningAnimations[obj.id] = anim;
-        }
-
-      });
-
-    };
-
-
-    // Close popup on click
-    popup.addEventListener('click', () => {
-      popup.classList.remove('active');
-      popup.classList.add('hidden');
-      content.innerHTML = ''; // Clear content
-    });
-
-    // Automatically close popup after animation ends
-    setTimeout(() => {
-      popup.classList.remove('active');
-      popup.classList.add('hidden');
-      content.innerHTML = ''; // Clear content
-    }, duration);
-  };
-
-  window.openAnimationPopup = openAnimationPopup; // Ensure global access
-
-  document.addEventListener('keydown', (event) => {
-    switch (event.key) {
-      case '1': anime.pause(); break; // Pause animations
-      case '2': anime.play(); break;  // Resume animations
-      case '0': document.getElementById('animation-popup').click(); break; // Close popup
-    }
-  });
-
-
-  // // // 🟡 Make loadAndClose globally accessible to HTML
-  // window.loadAndClose = function (svgPath) {
-  //   loadExternalSVG(svgPath);
-  //   document.getElementById("score-options-popup").classList.add("hidden");
-  // };
-
-  // // 🟡 Make handleFileUploadAndClose globally accessible to HTML
-  // window.handleFileUploadAndClose = function () {
-  //   const fileInput = document.getElementById("svg-file");
-  //   const file = fileInput.files[0];
-
-  //   if (!file) return;
-
-  //   const blobURL = URL.createObjectURL(file);
-  //   sessionStorage.setItem("scoreURL", blobURL);
-  //   loadExternalSVG(blobURL);
-  //   document.getElementById("score-options-popup").classList.add("hidden");
-  // };
-
-
-
 
 
   // Event Listeners
@@ -3474,15 +2613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // console.warn("[DEBUG] Close button not found in DOM.");
   }
 
-  // TODO uncomment and fix fixme
 
-  // durationInput.addEventListener('input', () => {
-  //   duration = parseInt(durationInput.value, 10) * 60 * 1000;
-  //   //console.log(Duration updated to ${durationInput.value} minutes (${duration} milliseconds).);
-  //   calculateMaxScrollDistance();
-  //   updatePosition();
-  //   //updatestopwatch(); // Ensure the stopwatch reflects the updated total duration
-  // });
 
   toggleButton.addEventListener('click', () => {
     window.isPlaying ? window.pausePlayback() : window.resumePlayback();
@@ -3631,11 +2762,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (scoreOptionsPopup) {
     scoreOptionsPopup.classList.add('hidden');
   }
-  // calculateMaxScrollDistance();
-  // updatePosition();
   //updatestopwatch();
   window.scoreContainer = window.scoreContainer; // Expose globally
-  // window.updatePosition = updatePosition; // Expose updatePosition globally
   toggleSplashScreen();
   console.log('// EOF');
 
