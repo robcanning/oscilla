@@ -1165,14 +1165,12 @@ case "sync": {
   // --- Shared world width
   window.scoreWidth = state.scoreWidth;
 
-  // --- Canonical visual scale (first client determines)
+  // --- Canonical visual scale (unchanged)
   if (state.canonicalRenderedWidth) {
     window.canonicalRenderedWidth = state.canonicalRenderedWidth;
     window.canonicalScale = state.canonicalRenderedWidth / window.scoreWidth;
 
-    // Apply pixel-accurate width ONCE when scale changes
     const canonicalWidthPx = state.canonicalRenderedWidth;
-
     const svg = document.querySelector("#scoreContainer svg");
     const inner = document.getElementById("scoreInner");
     const stage = document.getElementById("scrollStage");
@@ -1180,10 +1178,8 @@ case "sync": {
     if (svg && inner && stage) {
       svg.style.width = `${canonicalWidthPx}px`;
       svg.style.height = "auto";
-
       inner.style.width = `${canonicalWidthPx}px`;
       inner.style.height = "100%";
-
       stage.style.width = `${canonicalWidthPx}px`;
       stage.style.height = "100%";
     }
@@ -1192,25 +1188,28 @@ case "sync": {
   // --- Playback / transport state
   window.elapsedTime = state.elapsedTime;
   window.isPlaying = state.isPlaying;
-  window.playheadX = state.playheadX;
 
-  // --- Reposition score immediately
+  // ✅ Store authoritative world position but DO NOT APPLY IT directly
+  if (state.playheadX !== undefined) {
+    window.serverSyncPlayheadX = state.playheadX;
+  }
+
+  // --- Visual update
   scrollToPlayheadVisual?.();
 
-  // --- Ensure RAF animation loop matches play/pause
+  // --- Animation loop state
   if (window.isPlaying && !wasPlaying) {
-    window.startAnimation?.();
     cancelAnimationFrame(window.animationFrameId);
     window.animationFrameId = requestAnimationFrame(window.animate);
   }
 
   if (!window.isPlaying && wasPlaying) {
-    window.stopAnimation?.();
     cancelAnimationFrame(window.animationFrameId);
   }
 
   break;
 }
+
 
 
             //  Repeat Sync Messages from Server
@@ -2223,67 +2222,102 @@ case "sync": {
 
 
 
+/**
+ * TRANSPORT PLAYBACK LOOP (Freewheeling + Smooth Server Sync Convergence)
+ * -----------------------------------------------------------------------
+ * This loop advances the score playhead smoothly in world-space using the
+ * local animation frame rate as the timing source. Playback speed is derived
+ * from:
+ *
+ *   - playbackSpeed (browser timer speed factor)
+ *   - window.speedMultiplier (musical tempo multiplier)
+ *   - window.duration (full score timeline length, ms)
+ *   - window.scoreWidth (total world width of the score)
+ *
+ * The result is continuous, frame-accurate scrolling *without needing to
+ * receive sync packets every frame*.
+ *
+ * Server Sync:
+ *  - The server periodically sends a reference playhead position
+ *    (window.serverSyncPlayheadX), but we NEVER overwrite our local playhead.
+ *
+ *  - Instead, we measure the *drift* between our position and the server's
+ *    reference. Large drift (cue jump, resume, seek) is snapped immediately.
+ *    Small drift is corrected gradually using a time-based smoothing factor,
+ *    making synchronization completely invisible to the performer.
+ *
+ * Benefits:
+ *  - No visible "catch-up" jumps when sync packets arrive.
+ *  - Smooth continuous scrolling even if network updates are irregular.
+ *  - Long-term sync stability between multiple clients.
+ *  - Works on different screen sizes due to canonical scaling.
+ *
+ * This is a stable real-time score transport model:
+ *   freewheel motion + low-pass drift convergence.
+ */
 
-  //////////////////////////////////////////////////////////////////////////////
-  // --- Transported Playback Loop (app.js or transport.js) ---
-  // freewheeling 
+window.lastAnimationFrameTime = null;
 
-  window.lastAnimationFrameTime = null;
+window.animate = async (currentTime) => {
+  // Stop animation when paused or seeking
+  if (!window.isPlaying || window.isSeeking) return;
 
-  window.animate = async (currentTime) => {
-    // Stop animation when paused or seeking
-    if (!window.isPlaying || window.isSeeking) return;
+  // --- Compute dt *before* using it ---
+  let dt = 0;
+  if (window.lastAnimationFrameTime !== null) {
+    dt = (currentTime - window.lastAnimationFrameTime) / 1000; // seconds
+  }
+  window.lastAnimationFrameTime = currentTime;
 
-    // --- Timing calculations ---
-    if (window.lastAnimationFrameTime === null) {
-      window.lastAnimationFrameTime = currentTime;
-    } else {
-      const delta = (currentTime - window.lastAnimationFrameTime) * playbackSpeed;
+  const refWidth = window.remoteScoreWidth || window.scoreWidth;
 
-      // Use canonical width from server if available
-      const refWidth = window.remoteScoreWidth || window.scoreWidth;
+  if (dt > 0 && refWidth && window.duration) {
 
-      //  Convert time delta → world-space increment
-      const estimatedIncrement =
-        ((delta * window.speedMultiplier) / window.duration) * refWidth;
+    // --- Freewheeling scroll increment ---
+    const delta = (dt * 1000) * playbackSpeed;  // restore your original scaling
+    const estimatedIncrement =
+      ((delta * window.speedMultiplier) / window.duration) * refWidth;
 
-      //  Advance playhead in world units
-      window.playheadX = Math.min(window.playheadX + estimatedIncrement, refWidth);
+    // Advance playhead in world units
+    window.playheadX = Math.min(window.playheadX + estimatedIncrement, refWidth);
 
-      //  Keep scroll visualised correctly
-      scrollToPlayheadVisual();
+    // --- Smooth drift correction from server position ---
+    if (window.serverSyncPlayheadX !== undefined && window.serverSyncPlayheadX != null) {
+      const drift = window.serverSyncPlayheadX - window.playheadX;
 
-      // if (window.serverSyncPlayheadX !== undefined) {
-      //   const drift = window.serverSyncPlayheadX - window.playheadX;
-      //   if (Math.abs(drift) > 200) {
-      //     window.playheadX += drift * 0.1; // smooth catch-up
-      //   }
-      // }
+      // Large discrepancy = jump case → snap
+      if (Math.abs(drift) > (refWidth * 0.05)) {
+        window.playheadX = window.serverSyncPlayheadX;
+      } else {
+        // Small discrepancy → invisible correction
+        const correctionRate = 1.4; // tune 1.2–1.7 to taste
+        window.playheadX += drift * correctionRate * dt;
+      }
     }
 
-    window.lastAnimationFrameTime = currentTime;
+    // Apply to visual scroll
+    scrollToPlayheadVisual();
+  }
 
-    // --- Update elapsed time for sync + UI ---
-    if (window.duration && window.scoreWidth) {
-      window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-    }
+  // --- Update elapsed time for cue & UI systems ---
+  if (window.duration && window.scoreWidth) {
+    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+  }
 
-    // --- Periodic visibility optimization ---
-    const visibilityCheckInterval = 150;
-    window.lastVisibilityCheckTime = window.lastVisibilityCheckTime || 0;
-    if (currentTime - window.lastVisibilityCheckTime > visibilityCheckInterval) {
-      window.checkAnimationVisibility?.();
-      window.lastVisibilityCheckTime = currentTime;
-    }
+  // --- Periodic visibility optimization ---
+  const visibilityCheckInterval = 150;
+  window.lastVisibilityCheckTime = window.lastVisibilityCheckTime || 0;
+  if (currentTime - window.lastVisibilityCheckTime > visibilityCheckInterval) {
+    window.checkAnimationVisibility?.();
+    window.lastVisibilityCheckTime = currentTime;
+  }
 
-    // --- Core updates each frame ---
-    // updateSeekBar?.();     // updates the seek bar progress
-    await checkCueTriggers?.(window.elapsedTime); // triggers cues
+  // --- Cues ---
+  await checkCueTriggers?.(window.elapsedTime);
 
-    // --- Continue animation ---
-    window.animationFrameId = requestAnimationFrame(window.animate);
-  };
-
+  // Continue animation
+  window.animationFrameId = requestAnimationFrame(window.animate);
+};
 
   //////////////////////////////////////////////////////////////////////////////
 

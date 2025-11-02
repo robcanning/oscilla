@@ -1,5 +1,7 @@
 #!/bin/node
 
+const { performance } = require('node:perf_hooks');
+
 // ---------------------------------------------
 // Command-Line & Environment Configuration Layer
 // ---------------------------------------------
@@ -147,10 +149,12 @@ const wss = new WebSocket.Server({ server });
 let sharedState = {
   elapsedTime: 0,
   isPlaying: false,
-  playheadX: 0, // ✅ Ensure playheadX is always included
-  duration: 20 * 60 * 1000, // ✅ Default duration (20 min)
-  speedMultiplier: 1.0 // ✅ Add speed multiplier to shared state
+  playheadX: 0,
+  duration: 20 * 60 * 1000,
+  speedMultiplier: 1.0,
+  startTimestamp: null // ✅ authoritative transport timebase (ms in performance.now() space)
 };
+
 
 
 let lastUpdateTime = null;
@@ -195,39 +199,26 @@ const sendOscMessage = () => {
 const speedMultiplier = 1; // Default multiplier
 
 const updateElapsedTime = () => {
-  if (sharedState.isPlaying && lastUpdateTime !== null) {
-    const now = Date.now();
-    const delta = now - lastUpdateTime;
+  if (!sharedState.isPlaying || sharedState.startTimestamp == null) return;
 
-    console.log(`[DEBUG] ⏳ updateElapsedTime() called. Time delta: ${delta}ms`);
+  const now = performance.now();
+  const wallSeconds = Math.max(0, (now - sharedState.startTimestamp) / 1000);
 
-    // Ensure a valid speedMultiplier
-    sharedState.speedMultiplier = Number.isFinite(sharedState.speedMultiplier) && sharedState.speedMultiplier > 0
-      ? sharedState.speedMultiplier
-      : 1;
+  // Apply speed, clamp to duration
+  const newElapsed = Math.min(wallSeconds * (sharedState.speedMultiplier || 1), sharedState.duration / 1000);
+  const previous = sharedState.elapsedTime;
 
-    // Apply elapsed time update
-    const previousElapsedTime = sharedState.elapsedTime;
-    sharedState.elapsedTime = Math.min(
-      sharedState.elapsedTime + delta * sharedState.speedMultiplier,
-      sharedState.duration
-    );
+  sharedState.elapsedTime = newElapsed * 1000;
 
-    console.log(`[DEBUG] 🕒 Updated elapsedTime: ${previousElapsedTime} → ${sharedState.elapsedTime}`);
-
-    // Update playheadX based on the elapsed time
-    if (sharedState.scoreWidth > 0) {
-      const previousPlayheadX = sharedState.playheadX;
-      sharedState.playheadX = (sharedState.elapsedTime / sharedState.duration) * sharedState.scoreWidth;
-      console.log(`[DEBUG] 📍 Updated playheadX: ${previousPlayheadX} → ${sharedState.playheadX}`);
-    } else {
-      console.error("[ERROR] ❌ scoreWidth is zero or undefined. Cannot update playheadX.");
-    }
-
-    lastUpdateTime = now;
-    sendOscMessage();
+  // Keep playheadX in sync for legacy consumers
+  if (sharedState.scoreWidth > 0) {
+    sharedState.playheadX = (sharedState.elapsedTime / sharedState.duration) * sharedState.scoreWidth;
   }
+
+  // Optional: emit OSC time every tick
+  sendOscMessage();
 };
+
 
 
 
@@ -254,18 +245,19 @@ const broadcastState = () => {
   console.log(`    📍 PlayheadX: ${sharedState.playheadX}`);
   console.log(`    🚀 Speed Multiplier: ${sharedState.speedMultiplier}`); // ✅ Log speed multiplier
 
-  const message = JSON.stringify({
-    type: 'sync',
-    state: {
-      elapsedTime: sharedState.elapsedTime,
-      isPlaying: sharedState.isPlaying,
-      scoreWidth: sharedState.scoreWidth,
-      playheadX: sharedState.playheadX,
-      speedMultiplier: sharedState.speedMultiplier, // ✅ Only send when needed
-      canonicalRenderedWidth: sharedState.canonicalRenderedWidth || null // ✅ shared visual reference
-    },
-    serverTime: Date.now(),
-  });
+const message = JSON.stringify({
+  type: 'sync',
+  state: {
+    elapsedTime: sharedState.elapsedTime, // legacy (clients should prefer startTimestamp)
+    isPlaying: sharedState.isPlaying,
+    scoreWidth: sharedState.scoreWidth,
+    playheadX: sharedState.playheadX,     // legacy
+    speedMultiplier: sharedState.speedMultiplier,
+    startTimestamp: sharedState.startTimestamp, // ✅ new
+    canonicalRenderedWidth: sharedState.canonicalRenderedWidth || null
+  },
+  serverTime: Date.now()
+});
 
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
@@ -472,33 +464,48 @@ wss.on('connection', (ws, req) => {
 
 
 
+case "set_speed_multiplier": {
+  const newMul = Number(data.multiplier);
+  if (!(newMul > 0)) break; // ignore invalid input
 
-      case 'set_speed_multiplier':
-        if (!isNaN(data.multiplier) && data.multiplier > 0) {
-          const roundedMultiplier = parseFloat(data.multiplier.toFixed(1)); // ✅ Round before storing
+  const oldMul = sharedState.speedMultiplier || 1;
 
-          if (sharedState.speedMultiplier !== roundedMultiplier) {
-            sharedState.speedMultiplier = roundedMultiplier;
-            console.log(`[SERVER] Updated speed multiplier to ${roundedMultiplier}`);
+  // If multiplier actually changed
+  if (newMul !== oldMul) {
 
-            // ✅ Send the update to all clients EXCEPT the sender
-            wss.clients.forEach((client) => {
-              if (client.readyState === WebSocket.OPEN && client !== ws) { // ✅ Skip sender
-                client.send(JSON.stringify({
-                  type: 'set_speed_multiplier',
-                  multiplier: sharedState.speedMultiplier
-                }));
-              }
-            });
+    // If playback is running under a clock anchor
+    if (sharedState.isPlaying && sharedState.startTimestamp != null) {
 
-            // ✅ DO NOT call broadcastState() here (to avoid syncing back to sender)
-          } else {
-            console.log(`[SERVER] Speed multiplier already set to ${roundedMultiplier}. No update needed.`);
-          }
-        } else {
-          console.warn("[SERVER] Invalid speed multiplier received.");
-        }
-        break;
+      const now = performance.now();
+
+      // Compute current elapsed under old multiplier
+      const wallSeconds = (now - sharedState.startTimestamp) / 1000;
+      const currentElapsedMs = Math.min(
+        wallSeconds * oldMul * 1000,
+        sharedState.duration
+      );
+
+      // ✅ Retarget startTimestamp so phase continuity is preserved
+      sharedState.startTimestamp = now - (currentElapsedMs / newMul);
+
+      // Keep legacy fields aligned
+      sharedState.elapsedTime = currentElapsedMs;
+      if (sharedState.scoreWidth > 0) {
+        sharedState.playheadX =
+          (sharedState.elapsedTime / sharedState.duration) *
+          sharedState.scoreWidth;
+      }
+    }
+
+    // Update shared multiplier
+    sharedState.speedMultiplier = parseFloat(newMul.toFixed(3));
+  }
+
+  // Broadcast once (don't loop-broadcast!)
+  broadcastState();
+  break;
+}
+
 
       /**
        * 🔁 Handles incoming repeat cycle updates from clients.
@@ -571,39 +578,35 @@ wss.on('connection', (ws, req) => {
       * - Broadcasts the pause state to all clients to keep them in sync.
       * - Ensures `playheadX` remains accurate.
       */
-      case "pause":
-        console.log("[DEBUG] Handling manual pause from client.");
+     case "pause": {
+  sharedState.isPlaying = false;
 
-        sharedState.isPlaying = false;
-        lastUpdateTime = null;
+  if (sharedState.startTimestamp != null) {
+    // Compute precise elapsed time at the moment of pausing
+    const now = performance.now();
+    const wallSeconds = (now - sharedState.startTimestamp) / 1000;
+    const exactElapsedMs = Math.min(
+      wallSeconds * (sharedState.speedMultiplier || 1) * 1000,
+      sharedState.duration
+    );
 
-        // ✅ Update shared state with provided values or maintain existing state
-        sharedState.playheadX = !isNaN(data.playheadX) ? data.playheadX : sharedState.playheadX;
-        sharedState.elapsedTime = !isNaN(data.elapsedTime) ? data.elapsedTime : sharedState.elapsedTime;
+    // Store frozen position
+    sharedState.elapsedTime = exactElapsedMs;
+  }
 
-        console.log(`[DEBUG] Pausing at playheadX=${sharedState.playheadX}, elapsedTime=${sharedState.elapsedTime}`);
+  // Remove timebase anchor (no drift while paused)
+  sharedState.startTimestamp = null;
 
-        if (isNaN(sharedState.playheadX) || isNaN(sharedState.elapsedTime)) {
-          console.error(`[ERROR] Invalid playheadX or elapsedTime received: playheadX=${sharedState.playheadX}, elapsedTime=${sharedState.elapsedTime}`);
-          return;
-        }
+  // Keep playheadX in sync for legacy consumers
+  if (sharedState.scoreWidth > 0) {
+    sharedState.playheadX =
+      (sharedState.elapsedTime / sharedState.duration) * sharedState.scoreWidth;
+  }
 
-        const pauseMessage = JSON.stringify({
-          type: "pause",
-          playheadX: sharedState.playheadX,
-          elapsedTime: sharedState.elapsedTime
-        });
+  broadcastState();
+  break;
+}
 
-        // ✅ Send the pause message to all clients except the sender
-        wss.clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN && client !== ws) {
-            console.log("[DEBUG] Sending pause message to client.");
-            client.send(pauseMessage);
-          }
-        });
-
-        broadcastState();
-        break;
 
 
 
@@ -721,29 +724,23 @@ wss.on('connection', (ws, req) => {
       * ✅ Handles play requests from clients.
       * - Updates `playheadX` and ensures synchronization across clients.
       */
-      case "play":
-        console.log("[DEBUG] ▶️ Handling play message from client.");
+case "play": {
+  // Ensure scoreWidth & duration defaults are set
+  sharedState.scoreWidth = sharedState.scoreWidth || 1;
+  sharedState.duration   = sharedState.duration   || (20 * 60 * 1000);
 
-        if (!isNaN(data.playheadX) && data.playheadX >= 0) {
-          console.log(`[DEBUG] Received playheadX=${data.playheadX} from client.`);
-          sharedState.playheadX = data.playheadX;
-        } else {
-          console.warn("[WARNING] `playheadX` from client is invalid. Retaining last known value.");
-        }
+  // If we are resuming playback:
+  // sharedState.elapsedTime is already the last known position (in ms),
+  // so we compute a timebase origin anchored to *right now*:
+  sharedState.startTimestamp = performance.now() - sharedState.elapsedTime;
 
-        if (typeof sharedState.duration === "number" && sharedState.scoreWidth > 0) {
-          const previousElapsedTime = sharedState.elapsedTime;
-          sharedState.elapsedTime = (sharedState.playheadX / sharedState.scoreWidth) * sharedState.duration;
-          console.log(`[DEBUG] 🔄 Recalculated elapsedTime: ${previousElapsedTime} → ${sharedState.elapsedTime}`);
-        } else {
-          console.warn("[WARNING] Skipping elapsedTime update: Missing valid `scoreWidth` or `duration`.");
-        }
+  sharedState.isPlaying = true;
 
-        sharedState.isPlaying = true;
-        lastUpdateTime = Date.now();
-        console.log("[DEBUG] 🎬 Broadcasting updated state after play.");
-        broadcastState();
-        break;
+  // Broadcast the new authoritative transport state
+  broadcastState();
+  break;
+}
+
 
 
       /**
@@ -809,47 +806,43 @@ wss.on('connection', (ws, req) => {
 
         console.log(`[DEBUG] Sent OSC cue: /cue/trigger ${cueNumber}`);
         break;
+case "jump": {
+  // Prefer elapsedTime (because it is already timeline-based)
+  let newElapsed = Number(data.elapsedTime);
 
-      case "jump": {
-        console.log(`[DEBUG] 🏃 Handling jump request. Received playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
+  // If elapsedTime wasn't provided, fall back to world-coordinate translation
+  if (!Number.isFinite(newElapsed)) {
+    if (Number.isFinite(data.playheadX) && Number.isFinite(sharedState.scoreWidth) && sharedState.scoreWidth > 0) {
+      newElapsed = (data.playheadX / sharedState.scoreWidth) * sharedState.duration;
+    } else {
+      // fallback to current position
+      newElapsed = sharedState.elapsedTime;
+    }
+  }
 
-        if (!isNaN(data.playheadX) && data.playheadX >= 0) {
-          // Trust absolute pixel value
-          sharedState.playheadX = data.playheadX;
+  // Clamp to valid timeline range
+  newElapsed = Math.max(0, Math.min(newElapsed, sharedState.duration));
 
-          // Update elapsedTime if valid
-          if (!isNaN(data.elapsedTime)) {
-            sharedState.elapsedTime = data.elapsedTime;
-          }
+  // Store new fixed position
+  sharedState.elapsedTime = newElapsed;
 
-          // Preserve play state if we were already playing
-          if (sharedState.isPlaying) {
-            console.log("[SERVER] 🏃 Jump occurred during playback — keeping isPlaying = true");
-          } else {
-            console.log("[SERVER] 💤 Jump received while paused — maintaining paused state");
-          }
+  // Maintain legacy world coordinate for older clients
+  if (sharedState.scoreWidth > 0) {
+    sharedState.playheadX = (newElapsed / sharedState.duration) * sharedState.scoreWidth;
+  }
 
-          // Build jump message (no isPlaying flip)
-          const jumpMessage = JSON.stringify({
-            type: "jump",
-            playheadX: sharedState.playheadX,
-            elapsedTime: sharedState.elapsedTime,
-            isPlaying: sharedState.isPlaying, // 🔁 explicitly include so clients know not to pause
-          });
+  if (sharedState.isPlaying) {
+    // ✅ Re-anchor the shared transport timeline to newElapsed
+    sharedState.startTimestamp = performance.now() - newElapsed;
+  } else {
+    // ✅ Frozen position (paused)
+    sharedState.startTimestamp = null;
+  }
 
-          // Send to all other clients
-          wss.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN && client !== ws) {
-              client.send(jumpMessage);
-            }
-          });
+  broadcastState();
+  break;
+}
 
-          //  No broadcastState() here — prevents redundant sync
-        } else {
-          console.warn("[WARNING] ❌ Invalid playheadX received in jump. Ignoring.");
-        }
-        break;
-      }
 
 
 
@@ -965,7 +958,7 @@ case "score_meta": {
 const updateLoop = () => {
   if (sharedState.isPlaying) {
     updateElapsedTime();
-    broadcastState();
+     broadcastState();
   } else {
     //  console.log("[DEBUG] Skipping updates; playback is paused.");
   }
