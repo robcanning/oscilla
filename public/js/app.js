@@ -377,6 +377,7 @@ export const initializeSVG = async (svgElement) => {
     // BUT THEN THE JUMP2X ETC SYNC BREAKS . NEED TO SORT ORDER OF EX
     // PROJECT LOADER ALSO DOES CSS STUFF LIKE THIS - WHAT IS REDUNDANT?
     // 
+
     // --- Wide-scroll layout correction ---
     const applyWideScrollLayout = () => {
       const cont = document.getElementById("scoreContainer");
@@ -405,9 +406,12 @@ export const initializeSVG = async (svgElement) => {
       });
 
       svg.getBoundingClientRect(); // force reflow
-      console.log("[initializeSVG] ✅ Applied wide-scroll layout correction.");
+      console.log("[initializeSVG] Applied wide-scroll layout correction.");
     };
+
     window.applyWideScrollLayout = applyWideScrollLayout;
+
+
 
     // Wait until the SVG is *actually* inserted and painted
     requestAnimationFrame(() => {
@@ -419,16 +423,16 @@ export const initializeSVG = async (svgElement) => {
 
     if (!container || !svg) return;
 
-    // ✅ Step 2: Hard-disable native scroll BEFORE doing any measurement
+    //  Step 2: Hard-disable native scroll BEFORE doing any measurement
     container.style.overflow = "hidden";
 
-    // ✅ Block wheel/touch gestures that cause momentum scroll
+    //  Block wheel/touch gestures that cause momentum scroll
     const stopScroll = e => { e.preventDefault(); e.stopPropagation(); return false; };
     ["wheel", "touchmove", "gesturestart", "gesturechange", "gestureend"].forEach(ev =>
       container.addEventListener(ev, stopScroll, { passive: false })
     );
 
-    // ✅ Zero any scroll offsets immediately and forever
+    //  Zero any scroll offsets immediately and forever
     container.addEventListener("scroll", () => {
       if (container.scrollLeft !== 0 || container.scrollTop !== 0) {
         container.scrollLeft = 0;
@@ -443,9 +447,9 @@ export const initializeSVG = async (svgElement) => {
     if (!width && svg.viewBox?.baseVal) width = svg.viewBox.baseVal.width;
     if (!width && svg.getBBox) width = svg.getBBox().width;
     window.scoreWidth = width || 40960;
-    console.log(`[Oscilla] 📏 scoreWidth = ${window.scoreWidth}`);
+    console.log(`[Oscilla] scoreWidth = ${window.scoreWidth}`);
 
-    // ✅ Now measure — guaranteed not polluted by scroll offsets
+    //  Now measure — guaranteed not polluted by scroll offsets
     if (window.socket && window.scoreWidth) {
       const renderedWidth = svg.getBoundingClientRect().width;
       const worldWidth = window.scoreWidth;
@@ -458,7 +462,7 @@ export const initializeSVG = async (svgElement) => {
       }));
     }
 
-    console.log("\n🚀 [DEBUG] Page Loaded - Initial State:");
+    console.log("\n [DEBUG] Page Loaded - Initial State:");
 
   });
 };
@@ -470,7 +474,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
 // ===========================
-// 🚀 DOM Ready Initializers
+//  DOM Ready Initializers
 // ===========================
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -482,7 +486,7 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 // ===========================
-// 🌍 Global Window Bindings
+//  Global Window Bindings
 // ===========================
 
 window.handleCueTrigger = handleCueTrigger;
@@ -556,8 +560,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const wsToggleButton = document.getElementById('ws-toggle-button');
   const helpButton = document.getElementById('help-button');
   const progammeNoteButton = document.getElementById('programme--button');
-  let animationLoop = null; // ✅ Declare animation loop variable
-  let animationFrameId = null; // ✅ Ensure global tracking of requestAnimationFrame
+  let animationLoop = null; // Declare animation loop variable
+  let animationFrameId = null; // Ensure global tracking of requestAnimationFrame
   let incomingServerUpdate = false;
   let ignorePauseAfterResume = false;
   window.ignoreNextSync = false;
@@ -567,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const fullscreenButton = document.getElementById('fullscreen-button');
   const svgFileInput = document.getElementById('svg-file');
   let svgElement = null; // Declare globally
-  window.scoreSVG = null; // ✅ Store global reference to SVG
+  window.scoreSVG = null; //  Store global reference to SVG
   const keybindingsPopup = document.getElementById('keybindings-popup');
   const scoreOptionsPopup = document.getElementById("score-options-popup");
   const closeKeybindingsButton = document.getElementById('close-keybindings');
@@ -579,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.lastAnimationFrameTime = null;
   window.wsEnabled = true;
   // letwindow.socket= null; // Define globally so all functions can access it
-  let resumeReceived = false; // ✅ Prevents infinite broadcast loops
+  let resumeReceived = false; //  Prevents infinite broadcast loops
   let totalPauseDuration = 0; // Tracks cumulative pause time for musical pauses
   let pauseStartTime = null; // Start time of the current musical pause
   let isManualPause = false; // Flag to differentiate manual vs. musical pause
@@ -604,7 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /** ///////////////////////////////////////////////////////////////
   * Toggles the visibility of all score annotations using the "note-" namespace.
   * Queries only the SVG elements and switches between "block" and "none" display states.
-  * Controlled via the 📝 button in the GUI.
+  * Controlled via the  button in the GUI.
   */
 
   const toggleScoreNotes = () => {
@@ -638,7 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle Rehearsal Marks Navigation Popup
 
   /**
-  * ✅ Opens the rehearsal mark popup.
+  * Opens the rehearsal mark popup.
   */
   const openRehearsalPopup = () => {
     console.log("[DEBUG] Opening rehearsal mark popup...");
@@ -658,20 +662,20 @@ document.addEventListener('DOMContentLoaded', () => {
     popup.classList.remove("hidden");
     popup.style.display = "flex";
 
-    console.log("[DEBUG] ✅ Rehearsal mark popup opened.");
+    console.log("[DEBUG]  Rehearsal mark popup opened.");
   };
 
   /**
-  * ✅ Close popup function.
+  *  Close popup function.
   */
   const closeRehearsalPopup = () => {
     document.getElementById("rehearsal-popup").classList.add("hidden");
   };
 
-  // ✅ Make it globally accessible
+  //  Make it globally accessible
   window.closeRehearsalPopup = closeRehearsalPopup;
 
-  // ✅ Allow opening with "R" key
+  //  Allow opening with "R" key
   document.addEventListener("keydown", (event) => {
     if (event.key.toUpperCase() === "R") {
       openRehearsalPopup();
@@ -729,17 +733,17 @@ document.addEventListener('DOMContentLoaded', () => {
         popup.classList.add('hidden'); // Hide the popup
         popupCleared = true;
 
-        // ✅ Special handling for Anime.js popup
+        //  Special handling for Anime.js popup
         if (popup.id === "singlePage-container") {
           console.log("[DEBUG] Closing Anime.js popup...");
           popup.classList.remove("active"); // Ensure it is fully hidden
           popup.style.display = "none";
-          if (animeJsContent) animeJsContent.innerHTML = ""; // ✅ Remove the loaded SVG
+          if (animeJsContent) animeJsContent.innerHTML = ""; //  Remove the loaded SVG
           console.log("[DEBUG] Anime.js popup cleared and SVG removed.");
 
-          // 🛑 Stop any active cuePage playlist timers
+          // Stop any active cuePage playlist timers
           if (window.isCuePagePlaylistActive) {
-            console.log("[cuePage] 🛑 Playlist aborted due to popup clear.");
+            console.log("[cuePage] Playlist aborted due to popup clear.");
             window.isCuePagePlaylistActive = false;
           }
           if (window.cuePagePlaylistTimer) {
@@ -796,7 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // function handleRestoredRepeatState(repeatStateMap, cues) {
-  //   console.log("[CLIENT] 🧠 Restoring repeat state now...", repeatStateMap);
+  //   console.log("[CLIENT]  Restoring repeat state now...", repeatStateMap);
 
   //   for (const [cueId, repeat] of Object.entries(repeatStateMap)) {
   //     if (!repeat || typeof repeat !== "object") {
@@ -817,7 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
   //         const inRange = playheadCenter >= startCue.x && playheadCenter <= endCue.x + endCue.width;
 
   //         if (inRange) {
-  //           console.log(`[CLIENT] 🧭 Already inside repeat range for ${cueId}. Skipping jump.`);
+  //           console.log(`[CLIENT] Already inside repeat range for ${cueId}. Skipping jump.`);
 
   //           repeat.initialJumpDone = true;
   //           repeat.ready = true;
@@ -830,7 +834,7 @@ document.addEventListener('DOMContentLoaded', () => {
   //           }
 
   //           repeat.recovered = true;
-  //           jumpToCueId(repeat.startId); // ✅ Force visual re-alignment
+  //           jumpToCueId(repeat.startId); // Force visual re-alignment
 
   //           repeatStateMap[cueId] = repeat;
 
@@ -841,7 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   //         } else {
-  //           console.log(`[CLIENT] 🔁 Outside repeat range — jumping to start for ${cueId}.`);
+  //           console.log(`[CLIENT]  Outside repeat range — jumping to start for ${cueId}.`);
 
   //           repeat.ready = false;
   //           repeat.initialJumpDone = true;
@@ -851,12 +855,12 @@ document.addEventListener('DOMContentLoaded', () => {
   //             setTimeout(() => {
   //               repeat.ready = true;
   //               repeatStateMap[cueId] = repeat;
-  //               console.log(`[CLIENT] ✅ Repeat ${cueId} now ready to detect end cue.`);
+  //               console.log(`[CLIENT]  Repeat ${cueId} now ready to detect end cue.`);
   //             }, 300);
   //           });
   //         }
   //       } else {
-  //         console.warn(`[CLIENT] ⚠️ Could not resolve start or end cue for ${cueId}. Skipping recovery.`);
+  //         console.warn(`[CLIENT]  Could not resolve start or end cue for ${cueId}. Skipping recovery.`);
   //       }
   //     }
   //   }
@@ -915,32 +919,32 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`[CLIENT] Connecting to WebSocket at: ${WS_URL}`);
 
       const socket = new WebSocket(WS_URL);
-      window.socket = socket; // ✅ This makes it globally available
+      window.socket = socket; //  This makes it globally available
       /**
-      * ✅ Event: Successfully Connected
+      * Event: Successfully Connected
       * Resets the reconnect counter when a connection is established.
       */
       window.socket.addEventListener('open', () => {
         console.log(`[CLIENT] WebSocket connected successfully to: ${WS_URL}`);
-        reconnectAttempts = 0; // ✅ Reset retry counter
+        reconnectAttempts = 0; //  Reset retry counter
       });
 
       window.socket.addEventListener("open", () => {
-        console.log("[CLIENT] 🌐 WebSocket connected — requesting repeat state...");
+        console.log("[CLIENT]  WebSocket connected — requesting repeat state...");
         window.wsEnabled = true;
 
         window.socket.send(JSON.stringify({ type: "get_repeat_state" }));
       });
 
       /**
-      * ✅ Event: Message Received from Server
+      * Event: Message Received from Server
       * Processes incoming WebSocket messages and syncs state across clients.
       */
 
-      let recentlyJumped = false; // ✅ New flag to prevent double jumps
+      let recentlyJumped = false; //  New flag to prevent double jumps
 
       window.socket.addEventListener("message", (event) => {
-        // console.log(`[DEBUG] 🌐 WebSocket Message Received: ${event.data}`);
+        // console.log(`[DEBUG]  WebSocket Message Received: ${event.data}`);
 
         try {
           const data = JSON.parse(event.data);
@@ -953,14 +957,14 @@ document.addEventListener('DOMContentLoaded', () => {
           // console.log(`[DEBUG] WebSocket message received:`, data);
 
           switch (data.type) {
-            /** ✅ Welcome Message - Assigns client name */
+            /**  Welcome Message - Assigns client name */
             case "welcome":
               console.log(`[CLIENT] Connected as: ${data.name}`);
               window.localClientName = data.name;
               console.log("[CLIENT] Assigned local client name:", data.name);
               break;
 
-            // ✅ Handle receiving the updated client list from the server
+            //  Handle receiving the updated client list from the server
             case "client_list":
               updateClientList(data.clients);
               break;
@@ -969,25 +973,25 @@ document.addEventListener('DOMContentLoaded', () => {
               if (!isNaN(data.multiplier) && data.multiplier > 0) {
                 const roundedMultiplier = parseFloat(data.multiplier.toFixed(1));
 
-                console.log(`[CLIENT] 🔄 Server Speed Update Received: ${data.multiplier} (Rounded: ${roundedMultiplier})`);
-                console.log(`[CLIENT] 🔍 Currentwindow.playheadX: ${window.playheadX}, Adjustedwindow.playheadX: ${window.playheadX + (window.innerWidth * 0.5)}`);
+                console.log(`[CLIENT]  Server Speed Update Received: ${data.multiplier} (Rounded: ${roundedMultiplier})`);
+                console.log(`[CLIENT]  Currentwindow.playheadX: ${window.playheadX}, Adjustedwindow.playheadX: ${window.playheadX + (window.innerWidth * 0.5)}`);
 
                 if (speedMultiplier !== roundedMultiplier) {
-                  incomingServerUpdate = true;  // ✅ Prevent redundant updates
+                  incomingServerUpdate = true;  //  Prevent redundant updates
                   window.speedMultiplier = roundedMultiplier;
-                  console.log(`[CLIENT] ✅ Speed multiplier updated from server: ${speedMultiplier}`);
+                  console.log(`[CLIENT] Speed multiplier updated from server: ${speedMultiplier}`);
                   window.updateSpeedDisplay();
-                  setTimeout(() => { incomingServerUpdate = false; }, 100);  // ✅ Short delay to reset flag
+                  setTimeout(() => { incomingServerUpdate = false; }, 100);  // Short delay to reset flag
                 } else {
-                  console.log(`[CLIENT] ⚠️ Speed multiplier already set to ${speedMultiplier}. No update needed.`);
+                  console.log(`[CLIENT]  Speed multiplier already set to ${speedMultiplier}. No update needed.`);
                 }
               } else {
-                console.warn(`[CLIENT] ❌ Invalid speed multiplier received: ${data.multiplier}`);
+                console.warn(`[CLIENT]  Invalid speed multiplier received: ${data.multiplier}`);
               }
               break;
 
 
-            /** ✅ Pause Playback */
+            /**  Pause Playback */
             case "pause":
               console.log(`[DEBUG] Processing pause request.window.playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
 
@@ -1008,12 +1012,12 @@ document.addEventListener('DOMContentLoaded', () => {
               window.isPlaying = false;
               window.isMusicalPause = false;
               // stopStopwatch();
-              stopAnimation(); // ✅ Stop playhead movement
-              togglePlayButton(); // ✅ Update UI play button
+              stopAnimation(); //  Stop playhead movement
+              togglePlayButton(); // Update UI play button
               console.log("[DEBUG] Playback paused successfully.");
               break;
 
-            /** ✅ Resume Playback After Pause */
+            /**  Resume Playback After Pause */
             case "resume_after_pause":
               console.log(`[DEBUG] Processing resume_after_pause. window.playheadX=${data.playheadX}, elapsedTime=${data.elapsedTime}`);
 
@@ -1031,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
               }
 
-              // ✅ Prevent unwanted resume if pause logic is still active
+              //  Prevent unwanted resume if pause logic is still active
               if (window.isMusicalPause) {
                 console.warn("[DEBUG] Ignoring resume_after_pause because isMusicalPause is still true.");
                 return;
@@ -1045,23 +1049,23 @@ document.addEventListener('DOMContentLoaded', () => {
               break;
 
 
-            /** ✅ Dismiss Pause Countdown */
+            /**  Dismiss Pause Countdown */
             case "dismiss_pause_countdown":
               console.log("[DEBUG] Received dismiss_pause_countdown event. Hiding countdown popup.");
               dismissPauseCountdown(true, true);
               break;
 
-            /** ✅ Update Connected Clients List */
+            /** Update Connected Clients List */
             case "client_list":
               console.log(`[CLIENT] Connected clients: ${JSON.stringify(data.clients)}`);
               updateClientList(data.clients);
               break;
 
-            /** ✅ Handle Cue Pause */
+            /**  Handle Cue Pause */
             case "cuePause":
               console.log(`[CLIENT] Received cuePause. Duration: ${data.duration}ms`);
 
-              // ✅ Apply server-provided values BEFORE sending ack or triggering pause
+              //  Apply server-provided values BEFORE sending ack or triggering pause
               if (!isNaN(data.playheadX)) {
                 window.playheadX = data.playheadX;
                 // console.log(`[CLIENT] Syncedwindow.playheadX from cuePause: ${window.playheadX}`);
@@ -1094,21 +1098,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-            /** ✅ Handle Cue Stop */
+            /** Handle Cue Stop */
             case "cueStop":
               console.log(`[CLIENT] Received cueStop. Elapsed Time: ${data.elapsedTime}`);
               handleStopCue(data.id || "cueStop");
               break;
 
 
-            /** ✅ Handle Traverse Cue */
+            /** Handle Traverse Cue */
             case "cueTraverse":
               console.log(`[CLIENT] Received cueTraverse: ${data}`);
               handleTraverseCue(data.id || "cueTraverse");
               break;
 
             /**
-             * ✅ General Cue Trigger Handler
+             *  General Cue Trigger Handler
              *
              * This is called when the server broadcasts a cue that was triggered
              * (e.g., pause, audio, repeat, etc.). It ensures all clients react
@@ -1117,134 +1121,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
             case "cueTriggered":
               console.log(`[CLIENT] Cue was triggered: ${data.cueId}`);
-              handleCueTrigger(data.cueId, true); // ✅ mark as remote trigger
+              handleCueTrigger(data.cueId, true); // mark as remote trigger
               break;
 
-            /** ✅ Acknowledge Cue Pause */
+            /** Acknowledge Cue Pause */
             case "cuePause_ack":
               console.log("[CLIENT] Received cuePause_ack from another client.");
               break;
 
-            /** ✅ Audio Cue Received */
+            /** Audio Cue Received */
             case "audio_cue":
               console.log(`[CLIENT] Received audio cue event: ${data.filename} at volume ${data.volume}`);
               handleAudioCue(data.cueId);
               break;
 
-            /** ✅ Synchronize Playback State */
-            case "sync": {
-
-              // --- World width (must always exist once synced)
-              if (data.state?.scoreWidth) {
-                window.scoreWidth = data.state.scoreWidth;
-                window.remoteScoreWidth = data.state.scoreWidth;
-              }
-
-              // --- Canonical scaling from server
-              if (data.state?.canonicalRenderedWidth && data.state?.scoreWidth) {
-                window.canonicalRenderedWidth = data.state.canonicalRenderedWidth;
-                window.canonicalScale = window.canonicalRenderedWidth / window.scoreWidth;
-                console.log(`[SYNC] ✅ canonicalScale = ${window.canonicalScale}`);
-              }
-
-              const svg = document.querySelector("#scoreContainer svg");
-              const inner = document.getElementById("scoreInner");
-              const stage = document.getElementById("scrollStage");   // ✅ ADD THIS
-
-              if (svg && inner && stage && window.canonicalScale && window.scoreWidth) {
-                const canonicalWidthPx = window.scoreWidth * window.canonicalScale;
-
-                // SVG world scaled into canonical pixel width
-                svg.style.width = `${canonicalWidthPx}px`;
-                svg.style.height = "auto";
-
-                // ScoreInner matches SVG width
-                inner.style.width = `${canonicalWidthPx}px`;
-                inner.style.height = "100%";
-
-                // scrollStage must also match world width in pixel space
-                stage.style.width = `${canonicalWidthPx}px`;   // ✅ THIS WAS MISSING
-                stage.style.height = "100%";
-              }
-
-
-              // --- Apply synced transport state
-              const wasPlaying = window.isPlaying;
-              window.elapsedTime = data.state.elapsedTime;
-              window.isPlaying = data.state.isPlaying;
-              window.playheadX = data.state.playheadX;
-
-              // --- Immediately reposition visual layer
-              scrollToPlayheadVisual();
-
-              // --- Animation play/pause sync
-              window.recentlyRecalculatedPlayhead = false;
-              if (window.isPlaying && !wasPlaying) window.startAnimation?.();
-              if (!window.isPlaying && wasPlaying) window.stopAnimation?.();
-
-              break;
-            }
 
 
 
-              if (window.ignoreNextSync) {
-                console.log("[SYNC] ⏭ Ignoring first sync after resume.");
-                window.ignoreNextSync = false;
-                break;
-              }
+          /** Synchronize Playback State */
+case "sync": {
+  const state = data.state;
+  if (!state) break;
 
-              if (suppressSync) {
-                console.warn(`[WARNING] Ignoring sync message to prevent overriding rewind.`);
-                return;
-              }
+  const wasPlaying = window.isPlaying;
 
-              if (data.playheadX) {
-                console.warn(`[WARNING] WebSocket message modifying window.playheadX: ${data.playheadX}`);
-              }
+  // --- Shared world width
+  window.scoreWidth = state.scoreWidth;
 
-              const wasPlaying = window.isPlaying;
+  // --- Canonical visual scale (first client determines)
+  if (state.canonicalRenderedWidth) {
+    window.canonicalRenderedWidth = state.canonicalRenderedWidth;
+    window.canonicalScale = state.canonicalRenderedWidth / window.scoreWidth;
 
-              window.elapsedTime = data.state.elapsedTime;
+    // Apply pixel-accurate width ONCE when scale changes
+    const canonicalWidthPx = state.canonicalRenderedWidth;
 
-              if (!window.ignoreSyncPlayback) {
-                window.isPlaying = data.state.isPlaying;
-              } else {
-                console.log("[SYNC] Ignoring isPlaying update due to local enforced pause.");
-              }
+    const svg = document.querySelector("#scoreContainer svg");
+    const inner = document.getElementById("scoreInner");
+    const stage = document.getElementById("scrollStage");
 
-              if (!window.recentlyRecalculatedPlayhead) {
-                window.playheadX = data.state.playheadX;
-                scrollToPlayheadVisual();
-              } else {
-                console.log(`[DEBUG] 🔄 Ignoring server window.playheadX update to prevent override.`);
-              }
+    if (svg && inner && stage) {
+      svg.style.width = `${canonicalWidthPx}px`;
+      svg.style.height = "auto";
 
-              window.recentlyRecalculatedPlayhead = false;
-              // updateSeekBar();
+      inner.style.width = `${canonicalWidthPx}px`;
+      inner.style.height = "100%";
 
-              if (!isNaN(data.state.speedMultiplier) && data.state.speedMultiplier > 0) {
-                if (speedMultiplier !== data.state.speedMultiplier) {
-                  window.speedMultiplier = data.state.speedMultiplier;
-                }
-              }
+      stage.style.width = `${canonicalWidthPx}px`;
+      stage.style.height = "100%";
+    }
+  }
 
-              // ✅ Only start animation if transitioning from not playing → playing
-              if (window.isPlaying && !wasPlaying) {
-                console.log("[SYNC] ▶️ Starting playback due to sync message.");
-                window.startAnimation?.();
-              } else if (!window.isPlaying && wasPlaying) {
-                console.log("[SYNC] ⏸ Stopping playback due to sync message.");
-                window.stopAnimation?.();
-              }
+  // --- Playback / transport state
+  window.elapsedTime = state.elapsedTime;
+  window.isPlaying = state.isPlaying;
+  window.playheadX = state.playheadX;
 
-              ignoreRewindOnStartup = true;
-              break;
+  // --- Reposition score immediately
+  scrollToPlayheadVisual?.();
+
+  // --- Ensure RAF animation loop matches play/pause
+  if (window.isPlaying && !wasPlaying) {
+    window.startAnimation?.();
+    cancelAnimationFrame(window.animationFrameId);
+    window.animationFrameId = requestAnimationFrame(window.animate);
+  }
+
+  if (!window.isPlaying && wasPlaying) {
+    window.stopAnimation?.();
+    cancelAnimationFrame(window.animationFrameId);
+  }
+
+  break;
+}
 
 
-            //  🔁 Repeat Sync Messages from Server
+            //  Repeat Sync Messages from Server
 
             /**
-            * 🔁 When another client updates a repeat cycle, apply it visually.
+            *  When another client updates a repeat cycle, apply it visually.
             * - Show repeat count if active
             * - Hide when repeat finishes
             * - Keeps local UI synced even if we didn’t trigger the repeat
@@ -1256,10 +1211,10 @@ document.addEventListener('DOMContentLoaded', () => {
               const before = { ...(repeatStateMap[updateCueId] || {}) };
               const incoming = { ...repeatData };
 
-              // 🔍 OPTIONAL: Adjust currentCount if you're testing it
+              //  OPTIONAL: Adjust currentCount if you're testing it
               // incoming.currentCount = Math.max(0, (incoming.currentCount || 0) - 1);
 
-              // 🛑 Volatile flags that we’ll preserve
+              //  Volatile flags that we’ll preserve
               delete incoming.ready;
               delete incoming.busy;
               delete incoming.jumpCooldownUntil;
@@ -1276,13 +1231,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 recovered: before.recovered ?? false,
               };
 
-              // 🧪 Diff before/after to log what actually changed
+              //  Diff before/after to log what actually changed
               const after = merged;
               const changedKeys = Object.keys(after).filter(
                 key => before[key] !== after[key]
               );
 
-              console.log(`[🔬 repeat_update] Changed fields for ${updateCueId}:`, changedKeys);
+              console.log(`[ repeat_update] Changed fields for ${updateCueId}:`, changedKeys);
               for (const key of changedKeys) {
                 console.log(`    ${key}:`, before[key], "→", after[key]);
               }
@@ -1292,7 +1247,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             /**
-            * 🔁 Restore repeat state from the server.
+            *  Restore repeat state from the server.
             * - If a repeat is active but not yet jumped on this client, perform the jump.
             * - Ensures correct positioning on reconnect.
             */
@@ -1315,16 +1270,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
 
-            /** ✅ Jump to Rehearsal Mark */
+            /**  Jump to Rehearsal Mark */
             case "jump":
               window.playheadX = data.playheadX;
-              // 🔁 Locally center the scroll view based on received absolute playheadX
+              //  Locally center the scroll view based on received absolute playheadX
               scrollToPlayheadVisual();
               lastJumpTime = now;
               break;
 
 
-            /** ❌ Handle Unknown Messages */
+            /**  Handle Unknown Messages */
             default:
               console.warn(`[WARNING] Received unknown Webwindow.socket message:`, data);
               break;
@@ -1335,7 +1290,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       /**
-      * ✅ Event: WebSocket Connection Closed
+      *  Event: WebSocket Connection Closed
       * Attempts to reconnect if the closure was unexpected.
       */
       window.socket.addEventListener('close', (event) => {
@@ -1351,7 +1306,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       /**
-      * ✅ Event: WebSocket Encountered an Error
+      * Event: WebSocket Encountered an Error
       * Logs WebSocket errors but does not close the connection.
       */
       window.socket.addEventListener('error', (err) => {
@@ -1369,15 +1324,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // END OF WEBSOCKET CONNECTION AND MESSAGE HANDLERS ///////////////////////////
 
 
-
-
-  // window.canonicalRenderedWidth = sharedState.canonicalRenderedWidth;
-  // window.canonicalScale = window.canonicalRenderedWidth / window.scoreWidth;
-
-
-
-
-
   // START OF CLIENT MANAGMENT LOGIC ////////////////////////////////////////////
 
   //  Allows users to update their displayed name by clicking the client list.
@@ -1392,16 +1338,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (newName && newName.trim() !== "") {
       console.log(`[CLIENT] Updating name to: ${newName}`);
 
-      // ✅ Store the name in localStorage for persistence
+      //  Store the name in localStorage for persistence
       localStorage.setItem("clientName", newName.trim());
 
-      // ✅ Send the updated name to the server
+      //  Send the updated name to the server
       if (window.wsEnabled && window.socket) {
         window.socket.send(JSON.stringify({ type: "update_client_name", name: newName.trim() }));
       }
 
-      window.localClientName = newName.trim(); // ✅ Update locally stored client name
-      updateClientList(clients); // ✅ Refresh UI with updated name
+      window.localClientName = newName.trim(); // Update locally stored client name
+      updateClientList(clients); //  Refresh UI with updated name
 
     }
   });
@@ -1411,12 +1357,12 @@ document.addEventListener('DOMContentLoaded', () => {
   //  Formats names in a comma-separated manner with line breaks where necessary.
 
 
-  // ✅ Updates the client list with "Online: " prefix and proper spacing.
-  // ✅ Local client name is highlighted using `.local-client` styling.
-  // ✅ Names are arranged 1 per line, maintaining clarity and separation.
+  // Updates the client list with "Online: " prefix and proper spacing.
+  // Local client name is highlighted using `.local-client` styling.
+  // Names are arranged 1 per line, maintaining clarity and separation.
 
   const updateClientList = (clientArray) => {
-    window.clients = clientArray; // ✅ Store globally
+    window.clients = clientArray; // Store globally
     const clientListElement = document.getElementById("client-list");
 
     if (clientListElement) {
@@ -1450,24 +1396,22 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   /**
-  * ✅ Sends stored client name to the server upon connection.
+  * Sends stored client name to the server upon connection.
   * - Ensures the stored name is sent right after connecting.
   */
 
   const handleClientConnected = (clientName) => {
-    window.localClientName = localStorage.getItem("clientName") || clientName; // ✅ Use stored name if available
+    window.localClientName = localStorage.getItem("clientName") || clientName; //  Use stored name if available
 
     console.log(`[CLIENT] Connected as: ${window.localClientName}`);
 
-    // ✅ If a stored name exists, send it to the server
+    //  If a stored name exists, send it to the server
     if (window.wsEnabled && window.socket && localClientName) {
       window.socket.send(JSON.stringify({ type: "update_client_name", name: window.localClientName }));
     }
   };
 
   // end of client management /////////////////////////////////////////////////
-
-
 
 
 
@@ -1511,14 +1455,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const transformed = pt.matrixTransform(svg.getScreenCTM().inverse());
     window.playheadX = transformed.x;
-    console.log(`[playheadX] 📍 Initialized from screen center: ${window.playheadX.toFixed(2)} (SVG space)`);
+    console.log(`[playheadX] Initialized from screen center: ${window.playheadX.toFixed(2)} (SVG space)`);
   };
-
-
-
-
-
-
 
 
 
@@ -1560,7 +1498,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   /**
-  * ✅ Optimized Function: checkAnimationVisibility (with state change logging)
+  *  Optimized Function: checkAnimationVisibility (with state change logging)
   *
   * - Checks both the object and its associated path for visibility.
   * - If the path is visible but the object is off-screen, the animation **continues**.
@@ -1603,7 +1541,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.observer) window.observer.disconnect();
 
     window.observer = new IntersectionObserver((entries) => {
-      if (window.disableObserver) return; // 🔥 Skip all observer logic
+      if (window.disableObserver) return; // Skip all observer logic
 
       for (const entry of entries) {
         const el = entry.target;
@@ -1629,7 +1567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, {
       root: null,
       threshold: 0.01,
-      rootMargin: "0px", // ✅ Use full viewport width for visibility detection.
+      rootMargin: "0px", //  Use full viewport width for visibility detection.
       // This ensures that any object visually inside the screen 
       // (not just near the center) will trigger IntersectionObserver.
       // Narrow values like "-45%" were previously used to simulate a 
@@ -1648,7 +1586,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // ✅ Immediately check visibility
+    //  Immediately check visibility
     requestAnimationFrame(() => {
       window.checkAnimationVisibility();
     });
@@ -1725,22 +1663,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-
-
-
-
-
-
-
-
-  window.pathVariantsMap = {};
-
-
-
-
   /**
-   * 🧭 storePathVariants(svgElement)
+   * storePathVariants(svgElement)
    * ---------------------------------------------------------
    * Builds and populates `window.pathVariantsMap`, which groups
    * all <path> elements in the loaded SVG that share a common base ID
@@ -1771,12 +1695,14 @@ document.addEventListener('DOMContentLoaded', () => {
    */
 
 
+  window.pathVariantsMap = {};
+
   const storePathVariants = (svgElement) => {
-    console.groupCollapsed("[storePathVariants] 🧩 Building pathVariantsMap");
+    console.groupCollapsed("[storePathVariants]  Building pathVariantsMap");
     window.pathVariantsMap = {};
 
     if (!svgElement) {
-      console.warn("[storePathVariants] ⚠️ No SVG element provided.");
+      console.warn("[storePathVariants]  No SVG element provided.");
       console.groupEnd();
       return;
     }
@@ -1787,7 +1713,7 @@ document.addEventListener('DOMContentLoaded', () => {
     allPaths.forEach(path => {
       const id = path.id || "(no id)";
       if (!id) {
-        console.warn("[storePathVariants] ⚠️ Path without ID skipped.");
+        console.warn("[storePathVariants]  Path without ID skipped.");
         return;
       }
 
@@ -1803,11 +1729,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!window.pathVariantsMap[baseID]) window.pathVariantsMap[baseID] = [];
       window.pathVariantsMap[baseID].push(path);
 
-      console.log(`[storePathVariants] ✅ Registered variant ${id} → base group "${baseID}"`);
+      console.log(`[storePathVariants]  Registered variant ${id} → base group "${baseID}"`);
     });
 
     const totalGroups = Object.keys(window.pathVariantsMap).length;
-    console.log(`[storePathVariants] ✅ Completed. ${totalGroups} base groups created.`);
+    console.log(`[storePathVariants]  Completed. ${totalGroups} base groups created.`);
     console.table(
       Object.entries(window.pathVariantsMap).map(([base, paths]) => ({
         baseID: base,
@@ -1877,7 +1803,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const handleSvgPopupClick = (event) => {
     // console.log(`[DEBUG] SVG Click Detected on: ${event.target.tagName}, ID: ${event.target.id}`);
 
-    // ✅ Skip handling if click is inside Shoelace menu or dropdown
+    //  Skip handling if click is inside Shoelace menu or dropdown
     if (
       event.target.closest('sl-dropdown') ||
       event.target.closest('sl-menu') ||
@@ -1998,7 +1924,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     } catch (err) {
       console.warn("[SPLASH] Could not fetch project list:", err);
-      message.textContent = "⚠️ Automatic listing failed.";
+      message.textContent = " Automatic listing failed.";
       manualEntry.style.display = "block";
 
       document.getElementById("manual-load-btn").addEventListener("click", () => {
@@ -2037,31 +1963,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // const handleSpeedCue = (cueId, newMultiplier) => {
   //   /**
-  //   * ✅ Processes `cueSpeed` messages from clients.
+  //   *  Processes `cueSpeed` messages from clients.
   //   * - Extracts and validates the speed multiplier before applying.
   //   * - Prevents redundant updates by checking the current speed.
   //   * - Sends a WebSocket message only if speed changes.
   //   */
-  //   console.log(`[DEBUG] 🎯 Triggering Speed Cue: ${cueId}`);
+  //   console.log(`[DEBUG]  Triggering Speed Cue: ${cueId}`);
 
-  //   // ✅ Ensure multiplier is a valid positive number
+  //   //  Ensure multiplier is a valid positive number
   //   newMultiplier = parseFloat(newMultiplier.toFixed(1));
   //   if (isNaN(newMultiplier) || newMultiplier <= 0) {
   //     console.warn(`[WARNING] ❌ Invalid speed multiplier detected: ${cueId}`);
   //     return;
   //   }
 
-  //   // ✅ Prevent redundant updates
+  //   //  Prevent redundant updates
   //   if (speedMultiplier === newMultiplier) {
-  //     console.log(`[DEBUG] ⚠️ Speed is already set to ${speedMultiplier}. No update needed.`);
+  //     console.log(`[DEBUG] Speed is already set to ${speedMultiplier}. No update needed.`);
   //     return;
   //   }
 
   //   window.speedMultiplier = newMultiplier;
-  //   console.log(`[DEBUG] ✅ Speed multiplier set to ${speedMultiplier}`);
+  //   console.log(`[DEBUG]  Speed multiplier set to ${speedMultiplier}`);
   //   window.updateSpeedDisplay();
 
-  //   // ✅ Send update to WebSocket only if it was not from a sync message
+  //   // Send update to WebSocket only if it was not from a sync message
   //   if (window.wsEnabled &&window.socket&& socket.readyState === WebSocket.OPEN && !incomingServerUpdate) {
   //     const speedMessage = {
   //       type: "set_speed_multiplier",
@@ -2070,7 +1996,7 @@ document.addEventListener('DOMContentLoaded', () => {
   //     };
 
   //     window.socket.send(JSON.stringify(speedMessage));
-  //     console.log(`[DEBUG] 📡 Sent speed update to server:`, speedMessage);
+  //     console.log(`[DEBUG] Sent speed update to server:`, speedMessage);
   //   }
   // };
 
@@ -2083,8 +2009,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // // const getSpeedForPosition = (xPosition) => {
 
-  // //   const viewportOffset = window.scoreContainer.offsetWidth / 2; // ✅ Center offset
-  // //   const adjustedPlayheadX = xPosition + viewportOffset; // ✅ Align with visual playhead
+  // //   const viewportOffset = window.scoreContainer.offsetWidth / 2; // Center offset
+  // //   const adjustedPlayheadX = xPosition + viewportOffset; //  Align with visual playhead
 
   // //   console.log(`[DEBUG] Looking for speed at adjusted position: ${adjustedPlayheadX} (window.playheadX: ${xPosition})`);
   // //   //console.log("[DEBUG] Current speedCueMap:", speedCueMap);
@@ -2099,9 +2025,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // //     .slice(-1)[0];
 
   // //   if (lastSpeedCue) {
-  // //     console.log(`[DEBUG] ✅ Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
+  // //     console.log(`[DEBUG]  Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
 
-  // //     window.speedMultiplier = lastSpeedCue.multiplier; // ✅ Ensure it is stored globally
+  // //     window.speedMultiplier = lastSpeedCue.multiplier; // Ensure it is stored globally
   // //     window.updateSpeedDisplay();
 
   // //     return window.speedMultiplier;
@@ -2123,7 +2049,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // // const preloadSpeedCues = () => {
   // //   speedCueMap = []; // Reset stored cues
 
-  // //   // ✅ Find all speed cues in the score
+  // //   // Find all speed cues in the score
   // //   document.querySelectorAll('[id^="speed_"]').forEach(element => {
   // //     const cueId = element.id;
   // //     const match = cueId.match(/speed_(\d+(\.\d+)?)/); // Support floats
@@ -2136,7 +2062,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // //     }
   // //   });
 
-  // //   // ✅ Sort cues by position to ensure correct lookup when seeking
+  // //   //  Sort cues by position to ensure correct lookup when seeking
   // //   speedCueMap.sort((a, b) => a.position - b.position);
 
   // //   console.log("[DEBUG] Preloaded speed cues:", speedCueMap);
@@ -2214,7 +2140,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   /**
-  * ✅ Handles real-time synchronization of playback state.
+  *  Handles real-time synchronization of playback state.
   * - Updates `playheadX`, `elapsedTime`, and playback status from the server.
   * - Prevents unnecessary UI updates when paused or seeking.
   * - Ensures smooth scrolling and accurate position tracking.
@@ -2223,7 +2149,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const syncState = (state) => {
     if (!state || typeof state !== "object") return;
 
-    console.log(`[DEBUG] 🔄 WebSocket Sync Received - window.playheadX=${state.playheadX},  window.isPlaying=${state.isPlaying}, window.scoreWidth=${state.scoreWidth}`);
+    console.log(`[DEBUG]  WebSocket Sync Received - window.playheadX=${state.playheadX},  window.isPlaying=${state.isPlaying}, window.scoreWidth=${state.scoreWidth}`);
 
     if (!isNaN(state.playheadX) && state.playheadX >= 0) {
       if (!window.isSeeking) {
@@ -2231,7 +2157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollToPlayheadVisual();
         console.log(`[DEBUG] Updated window.scoreContainer.scrollLeft=${window.scoreContainer.scrollLeft}`);
 
-        // ✅ Also update window.playheadX (SVG space at center of screen)
+        //  Also update window.playheadX (SVG space at center of screen)
         const svg = document.querySelector("svg");
         if (svg) {
           const svgPoint = svg.createSVGPoint();
@@ -2239,7 +2165,7 @@ document.addEventListener('DOMContentLoaded', () => {
           svgPoint.y = 0;
           const playheadSVG = svgPoint.matrixTransform(svg.getScreenCTM().inverse());
           window.playheadX = playheadSVG.x;
-          console.log(`[syncState] 🧭 Updated window.playheadX = ${window.playheadX.toFixed(2)} (SVG space)`);
+          console.log(`[syncState]  Updated window.playheadX = ${window.playheadX.toFixed(2)} (SVG space)`);
         }
         console.log(`[DEBUG] Updated window.scoreContainer.scrollLeft=${window.scoreContainer.scrollLeft}`);
       } else {
@@ -2268,7 +2194,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   /**
-  * ✅ Wrapped `syncState()` to prevent sync updates during manual pause.
+  *  Wrapped `syncState()` to prevent sync updates during manual pause.
   * - Ensures user-initiated pauses are not overridden by server sync messages.
   */
   const wrappedSyncState = (state) => {
@@ -2298,17 +2224,17 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       const delta = (currentTime - window.lastAnimationFrameTime) * playbackSpeed;
 
-      // ✅ Use canonical width from server if available
+      // Use canonical width from server if available
       const refWidth = window.remoteScoreWidth || window.scoreWidth;
 
-      // ✅ Convert time delta → world-space increment
+      //  Convert time delta → world-space increment
       const estimatedIncrement =
         ((delta * window.speedMultiplier) / window.duration) * refWidth;
 
-      // ✅ Advance playhead in world units
+      //  Advance playhead in world units
       window.playheadX = Math.min(window.playheadX + estimatedIncrement, refWidth);
 
-      // ✅ Keep scroll visualised correctly
+      //  Keep scroll visualised correctly
       scrollToPlayheadVisual();
 
       // if (window.serverSyncPlayheadX !== undefined) {
@@ -2318,7 +2244,6 @@ document.addEventListener('DOMContentLoaded', () => {
       //   }
       // }
     }
-
 
     window.lastAnimationFrameTime = currentTime;
 
@@ -2336,7 +2261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Core updates each frame ---
-    // updateSeekBar?.();     // ✅ updates the seek bar progress
+    // updateSeekBar?.();     // updates the seek bar progress
     await checkCueTriggers?.(window.elapsedTime); // triggers cues
 
     // --- Continue animation ---
@@ -2386,7 +2311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // stopStopwatch();
   };
 
-  let isJumpingToMark = false; // ✅ Prevents unwanted position overrides
+  let isJumpingToMark = false; // Prevents unwanted position overrides
 
 
   // ///////////////////////////////////////
@@ -2401,8 +2326,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Updates `elapsedTime` and aligns the score
   // Ensures correct positioning and checks for active cues.
   const setElapsedTime = (newTime) => {
-    window.elapsedTime = newTime; // ✅ Update playback time
-    checkCueTriggers(window.elapsedTime); // ✅ Recheck cues
+    window.elapsedTime = newTime; // Update playback time
+    checkCueTriggers(window.elapsedTime); // Recheck cues
   };
 
 
@@ -2421,7 +2346,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
-  // 🔁 Early repeat escape when clicking the count box
+  // Early repeat escape when clicking the count box
   document.getElementById("repeat-count-box").addEventListener("click", () => {
     for (const [cueId, repeat] of Object.entries(repeatStateMap)) {
       if (repeat.active) {
@@ -2437,14 +2362,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function tryApplyPendingRepeatState(retries = 5) {
     if (pendingRepeatStateMap && cues.length > 0) {
-      console.log("[CLIENT] 🔁 Deferred repeat state applied!");
+      console.log("[CLIENT]  Deferred repeat state applied!");
       handleRestoredRepeatState(pendingRepeatStateMap, cues);
       pendingRepeatStateMap = null;
     } else if (retries > 0) {
-      console.log("[CLIENT] ⏳ Waiting to apply repeat state...");
+      console.log("[CLIENT]  Waiting to apply repeat state...");
       setTimeout(() => tryApplyPendingRepeatState(retries - 1), 300);
     } else {
-      console.warn("[CLIENT] ❌ Gave up on applying repeat state — cues not ready.");
+      console.warn("[CLIENT]  Gave up on applying repeat state — cues not ready.");
     }
   }
 
@@ -2493,14 +2418,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
-  // ✅ Check if the reload happened due to a resize
+  //  Check if the reload happened due to a resize
   console.log("[DEBUG] Page loaded, ensuring playhead is properly aligned.");
-
-  const splashScreen = document.getElementById("splash");
-  if (splashScreen) {
-    splashScreen.style.display = "none"; // 🔥 Hide splash screen
-  }
-
 
 
   // Ensure the popup starts hidden
@@ -2560,7 +2479,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const durationInput = document.getElementById("duration-input");
 
-  // ✅ Set default duration after durationInput is defined
+  //  Set default duration after durationInput is defined
   window.duration = durationInput
     ? parseInt(durationInput.value, 10) * 60 * 1000
     : 30 * 60 * 1000;
@@ -2578,7 +2497,7 @@ document.addEventListener('DOMContentLoaded', () => {
     durationInput.addEventListener("change", (event) => {
       const newDuration = parseFloat(event.target.value);
       if (!isNaN(newDuration)) {
-        duration = newDuration * 60 * 1000; // ✅ store in ms
+        duration = newDuration * 60 * 1000; //  store in ms
         console.log(`[DEBUG] Updated duration to ${newDuration} minutes.`);
       }
     });
@@ -2586,7 +2505,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn("[DEBUG] #duration-input not found in DOM.");
   }
 
-  // ✅ Safely attach the close button listener now that DOM is ready
+  //  Safely attach the close button listener now that DOM is ready
   const closeBtn = document.getElementById("close-score-options");
   if (closeBtn) {
     closeBtn.addEventListener("click", (event) => {

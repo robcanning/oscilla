@@ -1,43 +1,44 @@
 /**
- * OSCILLA SCORE SYNCHRONIZATION MODEL
- * -----------------------------------
+ * OSCILLA SCORE SYNCHRONIZATION MODEL (TRANSFORM-BASED, DRIFT-PROOF)
+ * ------------------------------------------------------------------
  * The score has a single shared coordinate system ("world space") defined by
- * `scoreWidth`, which represents the full horizontal extent of the SVG. The
- * playhead position (`playheadX`) always exists in this world coordinate space.
+ * `scoreWidth`, the SVG’s horizontal extent in viewBox units. The playback
+ * position (`playheadX`) always exists in this world coordinate space and is
+ * synchronized across all clients via the server.
  *
- * Each device displays the score at a different pixel width depending on screen
- * size, zoom level, and DPI. To keep visual playback synchronized, we do NOT
- * scroll based on each device’s own rendered pixel width. Instead, the *first*
- * client to load the score reports its `renderedWidth`, and the server uses this
- * as the canonical reference visual width. All clients compute:
+ * One device (the first client to load the score) becomes the *visual authority*.
+ * It reports its rendered pixel width of the score (`renderedWidth`). The server
+ * stores this as the canonical display width for the session:
  *
  *      canonicalScale = canonicalRenderedWidth / scoreWidth
  *
- * and convert world-space playheadX to screen scroll using:
+ * Every client uses this exact scale, regardless of its screen size or DPI.
+ * No client rescales the score based on viewport size — this avoids desync.
  *
- *      scrollLeft = playheadX * canonicalScale
+ * Instead of scrolling the container (scrollLeft), the score is positioned using
+ * GPU-accelerated transform:
  *
- * This ensures all clients scroll at the exact same perceived visual speed,
- * eliminating drift caused by different viewport sizes or zoom factors.
- * 
-
-scoreWidth = world-space length of score
-renderedWidth = this device’s pixel width of score
-canonicalRenderedWidth = shared reference pixel width (from server)
-canonicalScale = conversion from world to screen
-playheadX = position in world units
-scrollLeft = screen scroll offset in pixels
-
+ *      screenX = playheadX * canonicalScale
+ *      translateX = (viewportWidth / 2) - screenX
+ *      scrollStage.style.transform = `translateX(${translateX}px)`
+ *
+ * This means:
+ *   - All clients always display the *same absolute score content* at the playhead.
+ *   - Different screen shapes only change how much is visible to the left/right.
+ *   - No accumulation of drift, rounding error, or FPS timing differences.
+ *   - Jumping, seeking, and late joins remain synchronized.
+ *
+ * Key Terms:
+ *
+ *   scoreWidth            → Width of SVG in world / viewBox units
+ *   canonicalRenderedWidth → The pixel width reported by the first client
+ *   canonicalScale        → World → Pixel scale shared by all clients
+ *   playheadX             → Playback position in world units
+ *   scrollStage           → The wrapper div that is translated horizontally
+ *
+ * The result is stable, resolution-independent, zero-drift visual synchronization.
  */
-
-
-// function getScrollScale() {
-//   const svg = document.querySelector("#scoreContainer svg");
-//   if (!svg) return 1;
-//   const worldWidth = svg.viewBox?.baseVal?.width || window.scoreWidth;
-//   const renderedWidth = svg.getBoundingClientRect().width;
-//   return renderedWidth / worldWidth;
-// }
+  
 
 
 window.seekDebounceTime = 300;
@@ -45,9 +46,9 @@ window.seekingTimeout = null;
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-    event.preventDefault(); // ✅ Prevents page scrolling
+    event.preventDefault(); //  Prevents page scrolling
 
-    // 🟢 Capture whether playback was active before seek
+    //  Capture whether playback was active before seek
     const wasPlayingBeforeSeek = window.isPlaying === true;
 
     window.isSeeking = true;
@@ -67,7 +68,7 @@ document.addEventListener('keydown', (event) => {
 
       checkCueTriggers();
 
-      // ✅ Always resume playback if it was running before seek
+      //  Always resume playback if it was running before seek
       if (wasPlayingBeforeSeek) {
         window.startPlayback(); // resume
       }
@@ -78,7 +79,6 @@ document.addEventListener('keydown', (event) => {
 
 
 
-// end of seeking logiC ///////////////////////////////////////////////
 
 
 
@@ -103,14 +103,14 @@ document.addEventListener('keydown', (event) => {
 window.isSeeking = false;
 
 /**
-* ✅ Rewinds playback to the start of the score.
+*  Rewinds playback to the start of the score.
 * - Resets `playheadX` to 0 and ensures immediate UI update.
 * - Prevents unwanted sync overrides from reverting the rewind.
 * - Clears triggered cues and resets playback state.
 * - Sends an updated state to the server to sync all clients.
 */
 
-window.ignoreRewindOnStartup = false; // ✅ Prevents unnecessary resets
+window.ignoreRewindOnStartup = false; //  Prevents unnecessary resets
 window.suppressSync = false;
 
 export const rewindToStart = () => {
@@ -118,7 +118,7 @@ export const rewindToStart = () => {
 
   window.playheadX = 0;
   window.elapsedTime = 0;
-  // resetStopwatch(); // ✅ Reset stopwatch
+  // resetStopwatch(); // Reset stopwatch
 
   scrollToPlayheadVisual();
   window.speedMultiplier = getSpeedForPosition(window.playheadX);
@@ -128,7 +128,7 @@ export const rewindToStart = () => {
   // updateSeekBar();
 
   if (triggeredCues) {
-    triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
+    triggeredCues.clear(); //  Ensure cues retrigger after rewind
     window._cueInsideState?.clear();
     // console.log("[DEBUG] Cleared triggered cues due to rewind.");
   }
@@ -152,30 +152,30 @@ export const rewindToStart = () => {
 
 
 /**
-* ✅ Moves backward by a fixed distance on the score based on `playheadX`.
+*  Moves backward by a fixed distance on the score based on `playheadX`.
 * - Ensures smooth cue retriggering after rewinding.
 * - Updates UI elements and syncs with the server.
 */
 
 export const rewind = () => {
-  const REWIND_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
+  const REWIND_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // Convert time step into X coordinate shift
   window.playheadX = Math.max(window.playheadX - REWIND_INCREMENT_X, 0);
 
   scrollToPlayheadVisual();
 
   // console.log(`[DEBUG] Rewind applied. Newwindow.playheadX: ${window.playheadX}`);
 
-  // ✅ Calculate `elapsedTime` based on `playheadX` for reference
+  //  Calculate `elapsedTime` based on `playheadX` for reference
   window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
   // console.log(`[DEBUG] Synced elapsedTime fromwindow.playheadX: ${elapsedTime}`);
 
   if (triggeredCues) {
-    triggeredCues.clear(); // ✅ Ensure cues retrigger after rewind
+    triggeredCues.clear(); //  Ensure cues retrigger after rewind
     window._cueInsideState?.clear();
     // console.log("[DEBUG] Cleared triggered cues due to rewind.");
   }
 
-  // ✅ Apply and store correct speed based on the new playhead position
+  //  Apply and store correct speed based on the new playhead position
   window.speedMultiplier = getSpeedForPosition(window.playheadX);
   // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
   window.updateSpeedDisplay();
@@ -191,14 +191,14 @@ export const rewind = () => {
     }));
   }
 
-  /* ✅ Ignore the next sync broadcast — it's our own jump being echoed */
+  /* Ignore the next sync broadcast — it's our own jump being echoed */
   window.ignoreNextSync = true;
 
-  /* ✅ Prevent server from overriding our new position for a short window */
+  /*  Prevent server from overriding our new position for a short window */
   window.recentlyRecalculatedPlayhead = true;
   setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
 
-  /* ✅ Ensure local animation keeps running if playback is active */
+  /*  Ensure local animation keeps running if playback is active */
   if (window.isPlaying) {
     console.log("[DEBUG] Freewheel continue after seek");
     window.animationPaused = false;
@@ -212,29 +212,29 @@ export const rewind = () => {
 
 
 /**
-* ✅ Moves forward by a fixed distance on the score based on `playheadX`.
+*  Moves forward by a fixed distance on the score based on `playheadX`.
 * - Ensures smooth cue retriggering after advancing.
 * - Updates UI elements and syncs with the server.
 */
 
 export const forward = () => {
-  const FORWARD_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
+  const FORWARD_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // Convert time step into X coordinate shift
   window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
 
   scrollToPlayheadVisual();
   // console.log(`[DEBUG] Forward applied. Newwindow.playheadX: ${window.playheadX}`);
 
-  // ✅ Calculate `elapsedTime` based on `playheadX` for reference
+  //  Calculate `elapsedTime` based on `playheadX` for reference
   window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
   // console.log(`[DEBUG] Synced window.elapsedTime fromwindow.playheadX: ${elapsedTime}`);
 
   if (triggeredCues) {
-    triggeredCues.clear(); // ✅ Ensure cues retrigger after forward
+    triggeredCues.clear(); // Ensure cues retrigger after forward
     window._cueInsideState?.clear();
     // console.log("[DEBUG] Cleared triggered cues due to forward.");
   }
 
-  // ✅ Apply and store correct speed based on the new playhead position
+  //  Apply and store correct speed based on the new playhead position
   window.speedMultiplier = getSpeedForPosition(window.playheadX);
   // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
   window.updateSpeedDisplay();
@@ -252,14 +252,14 @@ export const forward = () => {
     }));
   }
 
-  /* ✅ Ignore the next sync broadcast — it's our own jump being echoed */
+  /* Ignore the next sync broadcast — it's our own jump being echoed */
   window.ignoreNextSync = true;
 
-  /* ✅ Prevent server from overriding our new position for a short window */
+  /*  Prevent server from overriding our new position for a short window */
   window.recentlyRecalculatedPlayhead = true;
   setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
 
-  /* ✅ Ensure local animation keeps running if playback is active */
+  /*  Ensure local animation keeps running if playback is active */
   if (window.isPlaying) {
     console.log("[DEBUG] Freewheel continue after seek");
     window.animationPaused = false;
@@ -286,7 +286,7 @@ export function getSpeedForPosition(xPosition) {
     return defaultSpeed;
   }
 
-  // ✅ Pure world-space comparison (no viewport mixing)
+  // Pure world-space comparison (no viewport mixing)
   const lastSpeedCue = window.speedCueMap
     .filter(cue => cue.position <= xPosition)
     .slice(-1)[0];
@@ -299,9 +299,6 @@ export function getSpeedForPosition(xPosition) {
     return defaultSpeed;
   }
 }
-
-
-
 
 
 /**
@@ -394,20 +391,20 @@ let controlsTimeout; // Timer to hide controls after inactivity
 
 export const hideControls = () => {
   const controls = document.getElementById('controls');
-  const topBar = document.getElementById('top-bar'); // ✅ Include top-bar
+  const topBar = document.getElementById('top-bar'); //  Include top-bar
 
   controls.classList.add('dismissed');
-  if (topBar) topBar.classList.add('dismissed'); // ✅ Hide top-bar
+  if (topBar) topBar.classList.add('dismissed'); //  Hide top-bar
 
   console.log('Controls hidden.');
 };
 
 export const showControls = () => {
   const controls = document.getElementById('controls');
-  const topBar = document.getElementById('top-bar'); // ✅ Include top-bar
+  const topBar = document.getElementById('top-bar'); //  Include top-bar
 
   controls.classList.remove('dismissed');
-  if (topBar) topBar.classList.remove('dismissed'); // ✅ Show top-bar
+  if (topBar) topBar.classList.remove('dismissed'); //  Show top-bar
 };
 
 window.hideControls = hideControls;
@@ -419,18 +416,18 @@ window.controlsPinned = false;
 
 export function initializeControlsPin() {
   const pinButton = document.getElementById("pin-controls");
-  if (!pinButton) return console.warn("[UI] ⚠️ No #pin-controls button found.");
+  if (!pinButton) return console.warn("[UI] No #pin-controls button found.");
 
   pinButton.addEventListener("click", () => {
     window.controlsPinned = !window.controlsPinned;
     pinButton.classList.toggle("active", window.controlsPinned);
 
     if (window.controlsPinned) {
-      console.log("[UI] 📌 Controls pinned — will stay visible.");
+      console.log("[UI] Controls pinned — will stay visible.");
       showControls();
     } else {
-      console.log("[UI] 📍 Controls unpinned — auto-hide re-enabled.");
-      window.hideControlsLater(); // ✅ call the global version
+      console.log("[UI] Controls unpinned — auto-hide re-enabled.");
+      window.hideControlsLater(); // call the global version
     }
   });
 }
@@ -443,9 +440,9 @@ export function initializeControlsPin() {
 // ⏳ Unified Hide Controls Timer (respects pin state, never resets on re-call)
 // ---------------------------------------------------------
 window.hideControlsLater = function (delay = 4000) {
-  // 🧩 if controls are pinned, block any hide timer setup entirely
+  // if controls are pinned, block any hide timer setup entirely
   if (window.controlsPinned) {
-    console.log("[UI] 📌 Controls pinned — ignoring hideControlsLater call.");
+    console.log("[UI] Controls pinned — ignoring hideControlsLater call.");
     clearTimeout(window._hideControlsTimer);
     return;
   }
@@ -454,7 +451,7 @@ window.hideControlsLater = function (delay = 4000) {
   window._hideControlsTimer = setTimeout(() => {
     if (!window.controlsPinned) {
       hideControls();
-      console.log("[UI] ⏳ Auto-hide executed (unpinned).");
+      console.log("[UI] Auto-hide executed (unpinned).");
     }
   }, delay);
 };
@@ -464,10 +461,10 @@ window.hideControlsLater = function (delay = 4000) {
 // Updates `elapsedTime` and aligns the score
 // Ensures correct positioning and checks for active cues.
 export const setElapsedTime = (newTime) => {
-  window.elapsedTime = newTime; // ✅ Update playback time
-  // updatePosition(window.playheadX); // ✅ Use the correct playhead position
+  window.elapsedTime = newTime; // Update playback time
+  // updatePosition(window.playheadX); // Use the correct playhead position
 
-  checkCueTriggers(window.elapsedTime); // ✅ Recheck cues
+  checkCueTriggers(window.elapsedTime); // Recheck cues
 };
 
 // transport.js
@@ -475,12 +472,12 @@ export function initSeekBarListeners() {
   const seekBar = window.seekBar || document.getElementById("seek-bar");
 
   if (!seekBar) {
-    console.warn("[transport] ⚠️ Seek bar not yet available, retrying in 300ms...");
+    console.warn("[transport] Seek bar not yet available, retrying in 300ms...");
     setTimeout(initSeekBarListeners, 300);
     return;
   }
 
-  console.log("[transport] 🎚️ Initializing seek bar listeners.");
+  console.log("[transport] Initializing seek bar listeners.");
 
   //// SEEKING LOGIC ///////////////////////////////////////////
 
@@ -518,7 +515,7 @@ export function initSeekBarListeners() {
       window.startStopwatch?.();
       window.startAnimation?.();
 
-      // ✅ Send WebSocket sync to ensure all clients align
+      // Send WebSocket sync to ensure all clients align
       if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
         window.socket.send(
           JSON.stringify({
@@ -532,13 +529,13 @@ export function initSeekBarListeners() {
     }, seekDebounceTime);
   });
 
-  console.log("[transport] ✅ Seek bar listeners attached successfully.");
+  console.log("[transport] Seek bar listeners attached successfully.");
 }
 
 
 
 /**
- * ✅ Toggles playback state between play and pause.
+ * Toggles playback state between play and pause.
  * - Delegates to startPlayback() or pausePlayback() for consistent logic.
  * - Ensures all flags and state updates are handled in one place.
  */
@@ -550,7 +547,7 @@ export const togglePlay = () => {
   }
 };
 
-// ✅ Updates the play/pause button UI to match playback state
+// Updates the play/pause button UI to match playback state
 export const togglePlayButton = () => {
   const playButton = document.getElementById("toggle-button");
 
@@ -567,10 +564,9 @@ export const togglePlayButton = () => {
 // import { updateSeekBar } from "./transport.js"; // safe circular import; only function refs used
 // import { togglePlayButton } from "./ui.js"; // if you have a UI helper
 import { checkCueTriggers } from "./cues.js";
-// import { updatePosition } from "./anim.js";
 
 /**
- * ✅ Starts playback
+ *  Starts playback
  * - Sets all state flags
  * - Starts stopwatch + animation
  * - Syncs with server
@@ -580,10 +576,10 @@ export function startPlayback() {
   if (window.isPlaying) return;
 
   if (window.userScrolling) {
-    console.warn("[Playback] ⏳ Ignored start — user still scrolling");
+    console.warn("[Playback] Ignored start — user still scrolling");
     return;
   }
-  console.log("[Playback] ▶️ Starting playback");
+  console.log("[Playback] Starting playback");
 
   // --- State setup ---
   window.isPlaying = true;
@@ -610,8 +606,7 @@ export function startPlayback() {
   // --- UI sync ---
   togglePlayButton?.();
   hideControls?.();
-  // updateSeekBar?.(); // ✅ visually sync progress bar immediately
-  // updatePosition?.();
+  // updateSeekBar?.(); // visually sync progress bar immediately
 
   // --- Cue trigger sync ---
   checkCueTriggers?.();
@@ -628,10 +623,10 @@ export function startPlayback() {
     );
   }
 
-  console.log("[Playback] ✅ Playback initialized");
+  console.log("[Playback] Playback initialized");
 }
 
-// ✅ Pauses playback: sets state, stops animation + stopwatch, syncs with server
+// Pauses playback: sets state, stops animation + stopwatch, syncs with server
 export function pausePlayback() {
   if (window.isPlaying) {
     console.log("[Playback] ⏸ Pausing playback");
@@ -654,9 +649,9 @@ export function pausePlayback() {
   }
 };
 
-// ✅ Resume logic: reuse startPlayback() for consistency
+// Resume logic: reuse startPlayback() for consistency
 export function resumePlayback() {
-  console.log("[Playback] 🔁 resumePlayback() called");
+  console.log("[Playback] resumePlayback() called");
   window.startPlayback();
 };
 
@@ -672,7 +667,7 @@ export const jumpToCueId = (id) => {
     return;
   }
 
-  // ✅ Extract world-X robustly
+  // Extract world-X robustly
   let targetX = 0;
   if (target.x?.baseVal) {                         // <rect>, <use>, <text>
     targetX = target.x.baseVal.value;
@@ -682,20 +677,20 @@ export const jumpToCueId = (id) => {
     targetX = parseFloat(target.getAttribute("x")) || 0;
   }
 
-  // ✅ Set world playhead
+  // Set world playhead
   window.playheadX = targetX;
 
-  // ✅ Sync musical timeline
+  // Sync musical timeline
   window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
 
-  // ✅ Convert world → screen (centering, padding, canonicalScale)
+  // Convert world → screen (centering, padding, canonicalScale)
   scrollToPlayheadVisual();
 
-  // ✅ Sync to other clients
+  // Sync to other clients
   if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
     window.socket.send(JSON.stringify({
       type: "jump",
-      playheadX: window.playheadX,   // ✅ send world coordinate
+      playheadX: window.playheadX,   // send world coordinate
       elapsedTime: window.elapsedTime,
     }));
   }
@@ -719,7 +714,7 @@ document.addEventListener('fullscreenchange', () => {
     clearTimeout(controlsTimeout);
   }
 
-  // 🔥 Ensurewindow.playheadX is recalculated on fullscreen change
+  // Ensurewindow.playheadX is recalculated on fullscreen change
   // recalculatePlayheadPosition(window.scoreSVG);
   calculateMaxScrollDistance();
   requestAnimationFrame(scrollToPlayheadVisual);
@@ -733,8 +728,8 @@ window.addEventListener('resize', () => {
   const startTime = performance.now();
   extractScoreElements(window.scoreSVG);
   const endTime = performance.now();
-  console.log(`[DEBUG] ⏳ extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
-  console.log("[DEBUG] ✅ Extracted Score Elements. Now Checking Sync...");
+  console.log(`[DEBUG] extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
+  console.log("[DEBUG] Extracted Score Elements. Now Checking Sync...");
 
 
   console.log("[DEBUG] Resize detected, recalculating maxScrollDistance and aligning playhead...");
