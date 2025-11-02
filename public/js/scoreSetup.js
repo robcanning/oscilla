@@ -119,74 +119,30 @@ document.addEventListener("keydown", (event) => {
 });
 
 
-
-function scrollToSVGX(x) {
-  const svg = document.querySelector("svg");
-  if (!svg) {
-    // console.warn("[scrollToSVGX] ⚠️ No <svg> element found.");
-    return;
-  }
-  console.log(`[scrollToSVGX] 🎯 Target SVG x: ${x}`);
-
-  const container = window.scoreContainer;
-  if (!container) {
-    // console.warn("[scrollToSVGX] ⚠️ No scoreContainer found.");
-    return;
-  }
-
-  // Get SVG width in viewBox units (absolute SVG coordinate space)
-  const svgWidth = svg.viewBox.baseVal.width;
-  //console.log(`[scrollToSVGX] 🖼️ SVG viewBox width: ${svgWidth}`);
-
-  // Get actual scrollable pixel width of the container (DOM pixels)
-  const scrollableWidth = container.scrollWidth;
-  //   console.log(`[scrollToSVGX] 📜 Container scrollWidth: ${scrollableWidth}`);
-
-  // Calculate scale from SVG units → DOM pixels
-  const scale = scrollableWidth / svgWidth;
-  //   console.log(`[scrollToSVGX] 📏 Calculated scale: ${scale}`);
-
-  // Compute the visible width (to center the target point)
-  const visibleWidth = container.clientWidth;
-  //   console.log(`[scrollToSVGX] 🪟 Container visible width: ${visibleWidth}`);
-
-  // Calculate the adjusted scrollLeft
-  const scrollLeft = x * scale - (visibleWidth / 2);
-  //   console.log(`[scrollToSVGX] 🔄 Computed scrollLeft: ${scrollLeft}`);
-
-  // Apply the scroll position
-  container.scrollLeft = scrollLeft;
-  //   console.log(`[scrollToSVGX] ✅ Applied scrollLeft: ${container.scrollLeft}`);
-
-  // Update internal playhead tracker
-  window.playheadX = container.scrollLeft;
-  //   console.log(`[scrollToSVGX] 🎬 Updated window.playheadX: ${window.playheadX}`);
-}
-
-
 const jumpToRehearsalMark = (mark) => {
-  if (!rehearsalMarks[mark]) {
-    console.error(`[ERROR] Rehearsal Mark "${mark}" not found.`);
+  const entry = rehearsalMarks[mark];
+  if (!entry) {
+    console.error(`[jumpToRehearsalMark] Mark "${mark}" not found.`);
     return;
   }
 
-  const x = rehearsalMarks[mark].x;
+  const x = entry.x; // world coordinate
+  window.playheadX = x;
 
-  scrollToSVGX(rehearsalMarks[mark].x);
+  // Position visually using the new transform translateX model:
+  scrollToPlayheadVisual?.();
 
-  // Send the **absolute scrollLeft** to other clients
-  if (window.wsEnabled && window.socket.readyState === WebSocket.OPEN) {
+  // Broadcast world coordinate only — NOT scrollLeft or pixels
+  if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
     window.socket.send(JSON.stringify({
-      type: 'jump',
-      playheadX: x
+      type: "jump",
+      playheadX: x,
     }));
   }
-
-  // updatePosition();
-  // updateSeekBar();
 };
 
 window.jumpToRehearsalMark = jumpToRehearsalMark;
+
 
 
 let currentIndex = 0; // Track the current rehearsal mark index

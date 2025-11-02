@@ -863,7 +863,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // }
 
 
-
   ///////START OF WEBSOCKET SETUP LOGIC ///////////////////////////////////////////
 
   const getWebSocketURL = async () => {
@@ -1095,12 +1094,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
             /** ✅ Handle Cue Stop */
             case "cueStop":
               console.log(`[CLIENT] Received cueStop. Elapsed Time: ${data.elapsedTime}`);
               handleStopCue(data.id || "cueStop");
               break;
+
 
             /** ✅ Handle Traverse Cue */
             case "cueTraverse":
@@ -1188,8 +1187,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-
               if (window.ignoreNextSync) {
                 console.log("[SYNC] ⏭ Ignoring first sync after resume.");
                 window.ignoreNextSync = false;
@@ -1244,8 +1241,6 @@ document.addEventListener('DOMContentLoaded', () => {
               break;
 
 
-
-
             //  🔁 Repeat Sync Messages from Server
 
             /**
@@ -1296,9 +1291,6 @@ document.addEventListener('DOMContentLoaded', () => {
               break;
             }
 
-
-
-
             /**
             * 🔁 Restore repeat state from the server.
             * - If a repeat is active but not yet jumped on this client, perform the jump.
@@ -1325,20 +1317,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             /** ✅ Jump to Rehearsal Mark */
             case "jump":
-              const now = Date.now();
-              if (now - lastJumpTime < 1000) return;
-
               window.playheadX = data.playheadX;
-
               // 🔁 Locally center the scroll view based on received absolute playheadX
               scrollToPlayheadVisual();
               lastJumpTime = now;
               break;
 
 
-            // case "sync":
-            //   console.log(`[DEBUG] 🔄 Received sync message, ignoring jump.`);
-            //   break;
             /** ❌ Handle Unknown Messages */
             default:
               console.warn(`[WARNING] Received unknown Webwindow.socket message:`, data);

@@ -503,7 +503,6 @@ export function initSeekBarListeners() {
 
   // Ends seeking mode and re-enables cues after debounce.
 
-
   seekingTimeout = window.seekingTimeout;
 
   seekBar.addEventListener("mouseup", (event) => {
