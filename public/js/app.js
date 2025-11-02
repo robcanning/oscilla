@@ -2449,28 +2449,9 @@ case "sync": {
   };
 
 
-  const toggleScoreNotesPopup = () => {
-    const toggleScoreNotesPopup = document.getElementById('score-notes-popup');
-    if (toggleScoreNotesPopup.classList.contains('hidden')) {
-      console.log("[CLIENT] Showing score notes.");
-      toggleScoreNotesPopup.classList.remove('hidden');
-    } else {
-      console.log("[CLIENT] Hiding score notes.");
-      toggleScoreNotesPopup.classList.add('hidden');
-    }
-  };
 
 
-  const toggleProgrammeNotePopup = () => {
-    const programmeNotePopup = document.getElementById('programme-popup');
-    if (programmeNotePopup.classList.contains('hidden')) {
-      console.log("[CLIENT] Showing score options popup.");
-      programmeNotePopup.classList.remove('hidden');
-    } else {
-      console.log("[CLIENT] Hiding ProgrammeNotePopup.");
-      programmeNotePopup.classList.add('hidden');
-    }
-  };
+
 
   ////////  END OF UTIL //////////////////////////////////////////////
 

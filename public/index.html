@@ -304,52 +304,8 @@
 
   <div id="black-overlay"></div>
 
-  <!-- Score Options Popup -->
-  <div id="score-options-popup" class="popup hidden">
-    <h2>Score Options</h2>
 
-    <h3>🎼 Load a Predefined Score from the Server:</h3>
-    <ul>
-      <li><a href="#" onclick="loadAndClose('svg/draft.svg')">"Six Inches to the Mile" for PonySays by Rob Canning
-          2025</a></li>
-      <li><a href="#" onclick="loadAndClose('scores/help.svg')"> Basic Help File in Score Format help.svg</a></li>
-      <li><a href="#" onclick="loadAndClose('scores/help.svg')">TODO calibrate.svg placeholder link</a></li>
-      <li><a href="#" onclick="loadAndClose('scores/help.svg')">TODO template.svg placeholder link</a></li>
-    </ul>
-
-    <h3>📁 Upload Your Own SVG:</h3>
-
-    <div class="custom-file-upload">
-      <label for="svg-file">📁 Choose an SVG File</label>
-      <input type="file" id="svg-file" accept=".svg" onchange="handleFileUploadAndClose()">
-    </div>
-
-    <label for="duration-input">Set Duration (minutes):</label>
-    <input type="number" id="duration-input" value="20" min="1">
-    <br>
-    <h3>⬇️ Download the Template:</h3>
-    <button id="download-template-btn">Download template.svg</button>
-
-  </div>
-
-  <!-- Programme Note Popup -->
-  <div id="programme-popup" class="popup hidden">
-    <h2>Programme Note</h2>
-    <p>
-
-    </p>
-    <button onclick="toggleProgrammeNotePopup()">Close</button>
-  </div>
-
-  <!-- Score Notes Popup -->
-  <div id="score-notes-popup" class="popup hidden">
-    <h2>Score Notes</h2>
-    <p>
-      Details about the notation system and performance instructions will appear here.
-    </p>
-    <button onclick="toggleScoreNotesPopup()">Close</button>
-  </div>
-
+ 
   <script>
     fetch('/config')
       .then(response => response.json())
