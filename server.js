@@ -898,33 +898,30 @@ wss.on('connection', (ws, req) => {
         break;
 
 
-      case "score_meta": {
-        /**
-       * Receives score metadata from a client after loading its SVG.
-       * scoreWidth = world-space width (the musical coordinate system)
-       * renderedWidth = pixel width on this device's screen
-       * The first device to report renderedWidth becomes the canonical visual scale
-       * so all clients scroll using the same screen-space scaling.
-       */
-        const { scoreWidth, renderedWidth } = data;
+case "score_meta": {
+  const { scoreWidth, renderedWidth } = data;
 
-        if (typeof scoreWidth === "number" && scoreWidth > 0) {
-          sharedState.scoreWidth = scoreWidth;
-          console.log(`[SERVER] 📏 Received scoreWidth = ${scoreWidth}`);
-        } else {
-          console.warn("[SERVER] ⚠️ Invalid scoreWidth received in score_meta.");
-        }
+  // ✅ Set scoreWidth ONLY once (first client wins)
+  if (!sharedState.scoreWidth && typeof scoreWidth === "number" && scoreWidth > 0) {
+    sharedState.scoreWidth = scoreWidth;
+    console.log(`[SERVER] 📏 Canonical scoreWidth set = ${scoreWidth}`);
+  } else {
+    console.log("[SERVER] 📏 scoreWidth ignored (already set)");
+  }
 
-        // ✅ Capture canonical rendered width ONCE (first client decides the reference scale)
-        if (!sharedState.canonicalRenderedWidth && typeof renderedWidth === "number" && renderedWidth > 0) {
-          sharedState.canonicalRenderedWidth = renderedWidth;
-          console.log(`[SERVER] 🎯 Canonical renderedWidth set = ${renderedWidth}`);
-        }
+  // ✅ Set canonical rendered width ONLY once (first client wins)
+  if (!sharedState.canonicalRenderedWidth && typeof renderedWidth === "number" && renderedWidth > 0) {
+    sharedState.canonicalRenderedWidth = renderedWidth;
+    console.log(`[SERVER] 🎯 Canonical renderedWidth set = ${renderedWidth}`);
+  } else {
+    console.log("[SERVER] 🎯 renderedWidth ignored (already set)");
+  }
 
-        // ✅ Broadcast updated state to all clients
-        broadcastState();
-        break;
-      }
+  // ✅ After both values exist, broadcast state
+  broadcastState();
+  break;
+}
+
 
 
 

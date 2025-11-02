@@ -31,13 +31,13 @@ scrollLeft = screen scroll offset in pixels
  */
 
 
-function getScrollScale() {
-  const svg = document.querySelector("#scoreContainer svg");
-  if (!svg) return 1;
-  const worldWidth = svg.viewBox?.baseVal?.width || window.scoreWidth;
-  const renderedWidth = svg.getBoundingClientRect().width;
-  return renderedWidth / worldWidth;
-}
+// function getScrollScale() {
+//   const svg = document.querySelector("#scoreContainer svg");
+//   if (!svg) return 1;
+//   const worldWidth = svg.viewBox?.baseVal?.width || window.scoreWidth;
+//   const renderedWidth = svg.getBoundingClientRect().width;
+//   return renderedWidth / worldWidth;
+// }
 
 
 window.seekDebounceTime = 300;
@@ -120,7 +120,7 @@ export const rewindToStart = () => {
   window.elapsedTime = 0;
   // resetStopwatch(); // ✅ Reset stopwatch
 
-  window.scoreContainer.scrollLeft = Math.max(0, window.playheadX);
+  scrollToPlayheadVisual();
   window.speedMultiplier = getSpeedForPosition(window.playheadX);
   window.updateSpeedDisplay();
 
@@ -161,7 +161,6 @@ export const rewind = () => {
   const REWIND_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
   window.playheadX = Math.max(window.playheadX - REWIND_INCREMENT_X, 0);
 
-  const scale = getScrollScale();
   scrollToPlayheadVisual();
 
   // console.log(`[DEBUG] Rewind applied. Newwindow.playheadX: ${window.playheadX}`);
@@ -222,7 +221,6 @@ export const forward = () => {
   const FORWARD_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // ✅ Convert time step into X coordinate shift
   window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
 
-  const scale = getScrollScale();
   scrollToPlayheadVisual();
   // console.log(`[DEBUG] Forward applied. Newwindow.playheadX: ${window.playheadX}`);
 
@@ -281,29 +279,27 @@ export const forward = () => {
  * Defaults to the project's preferred speed (or 1.0 if undefined).
  */
 export function getSpeedForPosition(xPosition) {
-  const viewportOffset = window.scoreContainer?.offsetWidth / 2 || 0;
-  const adjustedPlayheadX = xPosition + viewportOffset;
   const defaultSpeed = window.oscillaPrefs?.defaultPlaybackSpeed ?? 1.0;
 
   if (!window.speedCueMap || window.speedCueMap.length === 0) {
-    console.warn(`[WARNING] No speed cues exist. Defaulting to project speed ${defaultSpeed}x.`);
-    setSpeed(defaultSpeed);                  // ✅ syncs with server
+    setSpeed(defaultSpeed);
     return defaultSpeed;
   }
 
+  // ✅ Pure world-space comparison (no viewport mixing)
   const lastSpeedCue = window.speedCueMap
-    .filter(cue => cue.position <= adjustedPlayheadX)
+    .filter(cue => cue.position <= xPosition)
     .slice(-1)[0];
 
   if (lastSpeedCue) {
-    setSpeed(lastSpeedCue.multiplier);       // ✅ syncs with server
+    setSpeed(lastSpeedCue.multiplier);
     return window.speedMultiplier;
   } else {
-    console.log(`[DEBUG] ❗ No previous speed cue found, defaulting to ${defaultSpeed}x`);
-    setSpeed(defaultSpeed);                  // ✅ syncs with server
+    setSpeed(defaultSpeed);
     return defaultSpeed;
   }
 }
+
 
 
 
@@ -667,49 +663,49 @@ export function resumePlayback() {
 
 
 
-
 //////////////////////////////////////////////////
-
 export const jumpToCueId = (id) => {
-  // Try first in cues[]
-  let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"));
-
-  // Fallback to global SVG search if not found in cues[]
-  if (!target) {
-    target = document.getElementById(id);
-  }
+  let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"))
+             || document.getElementById(id);
 
   if (!target) {
     console.warn(`[jumpToCueId] Cue not found: ${id}`);
     return;
   }
 
-  let targetX = target.x;
-  if (typeof targetX !== 'number') {
-    targetX = parseFloat(target.getAttribute('x')) || 0;
+  // ✅ Extract world-X robustly
+  let targetX = 0;
+  if (target.x?.baseVal) {                         // <rect>, <use>, <text>
+    targetX = target.x.baseVal.value;
+  } else if (target.cx?.baseVal) {                 // <circle>, <ellipse>
+    targetX = target.cx.baseVal.value;
+  } else if (typeof target.getAttribute === "function") {
+    targetX = parseFloat(target.getAttribute("x")) || 0;
   }
 
-  window.playheadX = targetX - (window.innerWidth / 2);
+  // ✅ Set world playhead
+  window.playheadX = targetX;
+
+  // ✅ Sync musical timeline
   window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
 
-  const scale = getScrollScale();
+  // ✅ Convert world → screen (centering, padding, canonicalScale)
   scrollToPlayheadVisual();
 
-  console.log(`[jumpToCueId] Jumping to ${id} (window.playheadX: ${window.playheadX})`);
-
-  if (window.wsEnabled && window.socket && socket.readyState === WebSocket.OPEN) {
-    window.socket?.send(JSON.stringify({
-      type: 'jump', playheadX: window.playheadX,
-      elapsedTime: window.elapsedTime
+  // ✅ Sync to other clients
+  if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+    window.socket.send(JSON.stringify({
+      type: "jump",
+      playheadX: window.playheadX,   // ✅ send world coordinate
+      elapsedTime: window.elapsedTime,
     }));
   }
 
   updatePosition();
-  // updateSeekBar();
-  //updatestopwatch();
 };
 
 
+window.jumpToCueId = jumpToCueId;
 
 
 
@@ -727,6 +723,8 @@ document.addEventListener('fullscreenchange', () => {
   // 🔥 Ensurewindow.playheadX is recalculated on fullscreen change
   // recalculatePlayheadPosition(window.scoreSVG);
   calculateMaxScrollDistance();
+  requestAnimationFrame(scrollToPlayheadVisual);
+
   // extractScoreElements(svgElement);
 
 });
@@ -1141,30 +1139,26 @@ function savePlayheadPosition() {
 window.addEventListener('beforeunload', savePlayheadPosition);
 window.addEventListener('pagehide', savePlayheadPosition);
 
-
-
+window.viewOrigin = window.viewOrigin || 'left'; // 'center' | 'left'
 export function scrollToPlayheadVisual() {
-    /**
-   * Converts playheadX (world position) to a scrollLeft value (screen space).
-   * Uses canonicalScale if available to ensure all clients scroll
-   * at identical visual rates regardless of screen resolution or zoom.
-   */
   const container = window.scoreContainer;
-  const svg = container?.querySelector("svg");
-  if (!container || !svg) return;
+  const stage = document.getElementById("scrollStage");
+  if (!container || !stage || !window.canonicalScale) return;
 
+  container.scrollLeft = 0;
+  container.scrollTop = 0;
+
+  const scale = window.canonicalScale;
+  const worldPx = window.playheadX * scale;
+
+  // ✅ create equal virtual space on both sides
   const pad = container.clientWidth / 2;
-  if (svg.style.paddingLeft !== `${pad}px`) svg.style.paddingLeft = `${pad}px`;
 
-  const worldWidth = svg.viewBox?.baseVal?.width || window.scoreWidth;
-  const renderedWidth = svg.getBoundingClientRect().width;
+  // ✅ shift so playhead stays centered anywhere, including at start
+  const translateX = pad - worldPx;
 
-  const localScale = renderedWidth / worldWidth;
-  const scale = window.canonicalScale || localScale; // ✅ canonical when available
-
-  let targetScroll = window.playheadX * scale;
-  const maxScroll = container.scrollWidth - container.clientWidth;
-  if (targetScroll > maxScroll) targetScroll = maxScroll;
-
-  container.scrollLeft = targetScroll;
+  stage.style.transform = `translate3d(${translateX}px, 0, 0)`;
 }
+
+
+window.scrollToPlayheadVisual = scrollToPlayheadVisual;

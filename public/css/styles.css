@@ -475,30 +475,48 @@ button:active {
 
 
 
-
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
 
 #scoreContainer {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow-x: scroll;
-  overflow-y: hidden;
-  display: block;
-  white-space: nowrap;
+  inset: 0;
+  overflow: hidden;
   background: white;
-  box-sizing: border-box;
+  white-space: nowrap;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-#scoreContainer svg {
+#scrollStage {
+  display: block;
+  width: max-content;
   height: 100%;
-  width: auto;
-  display: inline-block;
-  vertical-align: top;
-  box-sizing: border-box;   /* ✅ ensures padding adds scrollable width */
+  transform-origin: left top;
+  will-change: transform;
+    padding-left: 0 !important; /* will be virtual via translate, not real padding */
+
 }
 
+
+#scoreInner {
+  display: inline-block;  /* THIS MATTERS */
+  height: 100%;
+  line-height: 0;
+}
+
+#scoreInner svg {
+  display: block !important;
+  max-width: none !important;
+  max-height: none !important;
+  height: 100vh;
+  width: auto;
+}
+
+/* ❗ Remove #scoreContainer svg rule entirely */
 
 
 

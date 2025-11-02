@@ -367,7 +367,9 @@ export const initializeSVG = async (svgElement) => {
 
   });
 
-
+  if (window.playheadX === undefined) {
+    window.playheadX = 0;  // safe world origin default
+  }
 
 
   // 🚀 Continue with full original animation setup
@@ -476,61 +478,49 @@ export const initializeSVG = async (svgElement) => {
       requestAnimationFrame(applyWideScrollLayout);
     });
 
-
-
-    // --- Align world origin for fixed playhead model ---
     const container = window.scoreContainer;
     const svg = svgElement;
-    if (svg && container) {
-      const pad = container.clientWidth / 2;
-      svg.style.paddingLeft = `${pad}px`; // virtual negative scroll space
-      console.log(`[Oscilla] 🧭 SVG padding-left set to ${pad}px`);
-    }
 
-    if (svg) {
-      let width = null;
+    if (!container || !svg) return;
 
-      // Priority 1: numeric width attribute
-      const attrWidth = svg.getAttribute("width");
-      if (attrWidth && !attrWidth.includes("%")) {
-        width = parseFloat(attrWidth);
+    // ✅ Step 2: Hard-disable native scroll BEFORE doing any measurement
+    container.style.overflow = "hidden";
+
+    // ✅ Block wheel/touch gestures that cause momentum scroll
+    const stopScroll = e => { e.preventDefault(); e.stopPropagation(); return false; };
+    ["wheel", "touchmove", "gesturestart", "gesturechange", "gestureend"].forEach(ev =>
+      container.addEventListener(ev, stopScroll, { passive: false })
+    );
+
+    // ✅ Zero any scroll offsets immediately and forever
+    container.addEventListener("scroll", () => {
+      if (container.scrollLeft !== 0 || container.scrollTop !== 0) {
+        container.scrollLeft = 0;
+        container.scrollTop = 0;
       }
+    }, { passive: true });
 
-      // Priority 2: viewBox width
-      if (!width && svg.viewBox && svg.viewBox.baseVal) {
-        width = svg.viewBox.baseVal.width;
-      }
+    // --- Align world coordinate width (your existing code) ---
+    let width = null;
+    const attrWidth = svg.getAttribute("width");
+    if (attrWidth && !attrWidth.includes("%")) width = parseFloat(attrWidth);
+    if (!width && svg.viewBox?.baseVal) width = svg.viewBox.baseVal.width;
+    if (!width && svg.getBBox) width = svg.getBBox().width;
+    window.scoreWidth = width || 40960;
+    console.log(`[Oscilla] 📏 scoreWidth = ${window.scoreWidth}`);
 
-      // Priority 3: measured bounding box
-      if (!width && svg.getBBox) {
-        width = svg.getBBox().width;
-      }
-
-      // Fallback
-      window.scoreWidth = width || 40960;
-      console.log(`[Oscilla] 📏 scoreWidth = ${window.scoreWidth}`);
-    }
-
+    // ✅ Now measure — guaranteed not polluted by scroll offsets
     if (window.socket && window.scoreWidth) {
-      /**
-     * Sends score metadata to the server once the SVG is loaded.
-     * scoreWidth = world coordinate width of the score
-     * renderedWidth = actual pixel width on this device
-     * The server uses the first reported renderedWidth to define a shared scale.
-     */
+      const renderedWidth = svg.getBoundingClientRect().width;
+      const worldWidth = window.scoreWidth;
+
       console.log("[initializeSVG] score_meta sent to server.");
-
-      const renderedWidth = svg.getBoundingClientRect().width; // ✅ device visual width
-      const worldWidth = window.scoreWidth;                     // ✅ world coordinate width
-
       window.socket.send(JSON.stringify({
         type: "score_meta",
         scoreWidth: worldWidth,
         renderedWidth: renderedWidth
       }));
     }
-
-
 
     console.log("\n🚀 [DEBUG] Page Loaded - Initial State:");
 
@@ -1462,17 +1452,66 @@ document.addEventListener('DOMContentLoaded', () => {
               break;
 
             /** ✅ Synchronize Playback State */
-            case "sync":
-              if (data.state?.scoreWidth) window.remoteScoreWidth = data.state.scoreWidth;
-              /**
-               * If the server provides a canonical rendered width,
-               * compute a shared scale (world → screen conversion).
-               * This makes visual scrolling consistent across devices.
-               */
-              if (data.state?.canonicalRenderedWidth && data.state?.scoreWidth) {
-                window.canonicalScale = data.state.canonicalRenderedWidth / data.state.scoreWidth;
-                // console.log(`[CLIENT] Canonical scale = ${window.canonicalScale}`);
-              }
+           case "sync": {
+
+  // --- World width (must always exist once synced)
+  if (data.state?.scoreWidth) {
+    window.scoreWidth = data.state.scoreWidth;
+    window.remoteScoreWidth = data.state.scoreWidth;
+  }
+
+  // --- Canonical scaling from server
+  if (data.state?.canonicalRenderedWidth && data.state?.scoreWidth) {
+    window.canonicalRenderedWidth = data.state.canonicalRenderedWidth;
+    window.canonicalScale = window.canonicalRenderedWidth / window.scoreWidth;
+    console.log(`[SYNC] ✅ canonicalScale = ${window.canonicalScale}`);
+  }
+
+  const svg = document.querySelector("#scoreContainer svg");
+  const inner = document.getElementById("scoreInner");
+  const stage = document.getElementById("scrollStage");   // ✅ ADD THIS
+
+  if (svg && inner && stage && window.canonicalScale && window.scoreWidth) {
+    const canonicalWidthPx = window.scoreWidth * window.canonicalScale;
+
+    // ✅ Set SVG pixel width
+    svg.style.width = `${canonicalWidthPx}px`;
+    svg.style.height = "100vh";
+    svg.style.maxWidth = "none";
+    svg.style.minWidth = "0";
+    svg.style.display = "block";
+    svg.style.boxSizing = "content-box";
+
+    // ✅ scoreInner sets world coordinate width
+    inner.style.width = `${canonicalWidthPx}px`;
+    inner.style.height = "100%";
+    inner.style.maxWidth = "none";
+    inner.style.minWidth = "0";
+
+    // ✅ scrollStage MUST match this width (this is the missing piece)
+    stage.style.width = `${canonicalWidthPx}px`;     // ⭐ REQUIRED FIX
+    stage.style.height = "100%";
+  }
+
+  // --- Apply synced transport state
+  const wasPlaying = window.isPlaying;
+  window.elapsedTime = data.state.elapsedTime;
+  window.isPlaying = data.state.isPlaying;
+  window.playheadX = data.state.playheadX;
+
+  // --- Immediately reposition visual layer
+  scrollToPlayheadVisual();
+
+  // --- Animation play/pause sync
+  window.recentlyRecalculatedPlayhead = false;
+  if (window.isPlaying && !wasPlaying) window.startAnimation?.();
+  if (!window.isPlaying && wasPlaying) window.stopAnimation?.();
+
+  break;
+}
+
+
+
 
 
               if (window.ignoreNextSync) {
@@ -1614,7 +1653,6 @@ document.addEventListener('DOMContentLoaded', () => {
               const now = Date.now();
               if (now - lastJumpTime < 1000) return;
 
-              const visibleWidth = window.scoreContainer.getBoundingClientRect().width;
               window.playheadX = data.playheadX;
 
               // 🔁 Locally center the scroll view based on received absolute playheadX
@@ -1669,6 +1707,14 @@ document.addEventListener('DOMContentLoaded', () => {
   connectWebSocket();
 
   // END OF WEBSOCKET CONNECTION AND MESSAGE HANDLERS ///////////////////////////
+
+
+
+
+  // window.canonicalRenderedWidth = sharedState.canonicalRenderedWidth;
+  // window.canonicalScale = window.canonicalRenderedWidth / window.scoreWidth;
+
+
 
 
 
@@ -1760,6 +1806,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // end of client management /////////////////////////////////////////////////
+
+
+
+
+
 
   // AUDIO MASTER LOGIC 
 
@@ -2645,56 +2696,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
   ///////////////////////////////////////////////////////////////////////////////
 
-  /**
-  * Dynamically recalculates the max scrollable distance of the score.
-  * Uses the actual rendered width of the SVG to ensure accuracy.
-  * Adjustswindow.playheadX proportionally to prevent scaling misalignment.
-  * Uses window.scoreContainer width instead of viewport width for scaling calculations.
-  * Rounds scrollLeft to prevent sub-pixel rendering issues.
-  * Ensures smooth and precise playhead alignment after resizing.
-  */
+  // /**
+  // * Dynamically recalculates the max scrollable distance of the score.
+  // * Uses the actual rendered width of the SVG to ensure accuracy.
+  // * Adjustswindow.playheadX proportionally to prevent scaling misalignment.
+  // * Uses window.scoreContainer width instead of viewport width for scaling calculations.
+  // * Rounds scrollLeft to prevent sub-pixel rendering issues.
+  // * Ensures smooth and precise playhead alignment after resizing.
+  // */
 
-  let previousViewportWidth = window.scoreContainer.offsetWidth; // Track score container width
-  let previousMaxScrollDistance = null; // Track last max scroll distance
+  // let previousViewportWidth = window.scoreContainer.offsetWidth; // Track score container width
+  // let previousMaxScrollDistance = null; // Track last max scroll distance
 
-  const calculateMaxScrollDistance = () => {
-    const svgElement = document.querySelector('svg');
+  // const calculateMaxScrollDistance = () => {
+  //   const svgElement = document.querySelector('svg');
 
-    if (!window.scoreContainer || !svgElement) {
-      console.warn("[WARNING] Missing scoreContainer or SVG, cannot calculate maxScrollDistance.");
-      return;
-    }
+  //   if (!window.scoreContainer || !svgElement) {
+  //     console.warn("[WARNING] Missing scoreContainer or SVG, cannot calculate maxScrollDistance.");
+  //     return;
+  //   }
 
-    // Get actual rendered width of the SVG instead of viewBox
-    // const svgWidth = svgElement.getBoundingClientRect().width;
-    const svgWidth = svgElement.viewBox.baseVal.width;
+  //   // Get actual rendered width of the SVG instead of viewBox
+  //   // const svgWidth = svgElement.getBoundingClientRect().width;
+  //   const svgWidth = svgElement.viewBox.baseVal.width;
 
 
-    // Detect scale changes using scoreContainer width instead of viewport width
-    const newScoreContainerWidth = window.scoreContainer.offsetWidth;
-    const scaleRatio = newScoreContainerWidth / previousViewportWidth;
+  //   // Detect scale changes using scoreContainer width instead of viewport width
+  //   const newScoreContainerWidth = window.scoreContainer.offsetWidth;
+  //   const scaleRatio = newScoreContainerWidth / previousViewportWidth;
 
-    // Update max scroll distance to the new SVG width
-    maxScrollDistance = svgWidth;
+  //   // Update max scroll distance to the new SVG width
+  //   maxScrollDistance = svgWidth;
 
-    console.log(`[DEBUG] 📏 Updated maxScrollDistance: ${maxScrollDistance} (SVG Rendered Width: ${svgWidth})`);
+  //   console.log(`[DEBUG] 📏 Updated maxScrollDistance: ${maxScrollDistance} (SVG Rendered Width: ${svgWidth})`);
 
-    // Adjustwindow.playheadX using proportional scaling
-    if (previousMaxScrollDistance !== null && previousMaxScrollDistance > 0) {
-      let playheadPercentage = window.playheadX / previousMaxScrollDistance;
-      window.playheadX = playheadPercentage * maxScrollDistance;
-      console.log(`[DEBUG] 🔄 Recalculatedwindow.playheadX: ${window.playheadX}`);
-    }
+  //   // Adjustwindow.playheadX using proportional scaling
+  //   if (previousMaxScrollDistance !== null && previousMaxScrollDistance > 0) {
+  //     let playheadPercentage = window.playheadX / previousMaxScrollDistance;
+  //     window.playheadX = playheadPercentage * maxScrollDistance;
+  //     console.log(`[DEBUG] 🔄 Recalculatedwindow.playheadX: ${window.playheadX}`);
+  //   }
 
-    // Update stored values
-    previousMaxScrollDistance = maxScrollDistance;
-    previousViewportWidth = newScoreContainerWidth;
+  //   // Update stored values
+  //   previousMaxScrollDistance = maxScrollDistance;
+  //   previousViewportWidth = newScoreContainerWidth;
 
-    scrollToPlayheadVisual();
-    console.log(`[DEBUG] 🎯 Updated window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
-  };
+  //   scrollToPlayheadVisual();
+  //   console.log(`[DEBUG] 🎯 Updated window.scoreContainer.scrollLeft: ${window.scoreContainer.scrollLeft}`);
+  // };
 
-  ///////////////////////////////////////////////////////////////////////////////
+  // ///////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -2775,18 +2826,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  //TODO maybe no longer needed
-  const correctDrift = (serverElapsedTime) => {
-    const driftThreshold = 50; // Allowable drift in milliseconds
-    const drift = serverElapsedTime - window.elapsedTime;
+  // //TODO maybe no longer needed
+  // const correctDrift = (serverElapsedTime) => {
+  //   const driftThreshold = 50; // Allowable drift in milliseconds
+  //   const drift = serverElapsedTime - window.elapsedTime;
 
-    if (Math.abs(drift) > driftThreshold) {
-      //console.log([CLIENT] Correcting drift. Server: ${serverElapsedTime}, Local: ${elapsedTime}, Drift: ${drift});
+  //   if (Math.abs(drift) > driftThreshold) {
+  //     //console.log([CLIENT] Correcting drift. Server: ${serverElapsedTime}, Local: ${elapsedTime}, Drift: ${drift});
 
-      // Smoothly adjust window.elapsedTime using a weighted approach
-      window.elapsedTime += drift * 0.1; // Adjust factor to balance smoothness vs speed
-    }
-  };
+  //     // Smoothly adjust window.elapsedTime using a weighted approach
+  //     window.elapsedTime += drift * 0.1; // Adjust factor to balance smoothness vs speed
+  //   }
+  // };
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -2818,12 +2869,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // ✅ Keep scroll visualised correctly
       scrollToPlayheadVisual();
 
-      if (window.serverSyncPlayheadX !== undefined) {
-        const drift = window.serverSyncPlayheadX - window.playheadX;
-        if (Math.abs(drift) > 200) {
-          window.playheadX += drift * 0.1; // smooth catch-up
-        }
-      }
+      // if (window.serverSyncPlayheadX !== undefined) {
+      //   const drift = window.serverSyncPlayheadX - window.playheadX;
+      //   if (Math.abs(drift) > 200) {
+      //     window.playheadX += drift * 0.1; // smooth catch-up
+      //   }
+      // }
     }
 
 
@@ -3239,33 +3290,19 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastTriggerTime = 0;
 
   /**
-  * Main scroll update function — called during playback / interaction loop
-  */
+ * Main scroll update function — called during playback / interaction loop
+ */
   const updatePosition = () => {
-    const now = performance.now();
-
-    if (window.isSeeking) {
-      window.scoreContainer.scrollLeft += (window.playheadX - window.scoreContainer.scrollLeft) * 0.3;
-
-      //   ✅ Throttled animation update during active seeking
-      // if (now - lastTriggerTime > 250) {
-      //   window.startAllVisibleAnimations();
-      //   lastTriggerTime = now;
-      // }
-
+    // Always use world → screen mapping when canonical scale exists
+    if (window.canonicalScale) {
+      scrollToPlayheadVisual();
       return;
     }
 
-    // Direct snap to playhead when not seeking
-    if (Math.abs(window.scoreContainer.scrollLeft - window.playheadX) > 1) {
-      scrollToPlayheadVisual();
-
-      // ✅ Throttled animation update during jump or resume
-      // if (now - lastTriggerTime > 250) {
-      //   window.startAllVisibleAnimations();
-      //   lastTriggerTime = now;
-      // }
-    }
+    // Fallback only *before* canonical scale is known (first-client load state)
+    // Do NOT compare scrollLeft to playheadX — different unit spaces.
+    // Instead, simply snap visually to the current playhead X.
+    scrollToPlayheadVisual();
   };
 
 

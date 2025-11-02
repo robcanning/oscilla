@@ -74,8 +74,7 @@ export async function loadProject(projectName, options = {}) {
     Object.assign(container.style, {
       width: "100vw",
       height: "100vh",
-      overflowX: "auto",
-      overflowY: "hidden",
+      overflow: "hidden",
       whiteSpace: "nowrap",
       display: "block",
       position: "relative",
@@ -171,13 +170,43 @@ async function loadScrollMode(container) {
     verticalAlign: "top",
   });
 
-  container.innerHTML = "";
-  container.appendChild(svg);
-  window.mode = "scroll";
+// Clear container
+container.innerHTML = "";
 
-  console.log("[ScrollMode] ✅ Loaded score.svg");
-  if (typeof initializeSVG === "function") initializeSVG(svg);
-  window.hideControls?.();
+// ✅ Create transform isolation wrapper (scroll/pan layer)
+const stage = document.createElement("div");
+stage.id = "scrollStage";
+Object.assign(stage.style, {
+  willChange: "transform",
+  transformOrigin: "left top",
+  display: "block",
+  margin: "0",
+  padding: "0",
+  lineHeight: "0"
+});
+
+// ✅ Create world-width wrapper (the element that gets the canonical scaled size)
+const inner = document.createElement("div");
+inner.id = "scoreInner";
+Object.assign(inner.style, {
+  display: "block",
+  margin: "0",
+  padding: "0",
+  lineHeight: "0"
+});
+
+// ✅ Build the correct DOM hierarchy
+container.appendChild(stage);
+stage.appendChild(inner);
+inner.appendChild(svg);
+
+window.mode = "scroll";
+
+console.log("[ScrollMode] ✅ Loaded score.svg into #scrollStage → #scoreInner → <svg>");
+if (typeof initializeSVG === "function") initializeSVG(svg);
+window.hideControls?.();
+
+
 }
 
 // ------------------------------------------------------------
