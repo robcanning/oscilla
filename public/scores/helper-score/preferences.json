@@ -1,10 +1,11 @@
 {
   "_comment": "OscillaScore project preferences and metadata",
 
-  "oscillaVersion": "0.2.1_beta",
+  "oscillaVersion": "0.2.6_beta",
   "projectTitle": "Helper Score",
   "projectAuthor": "Rob Canning",
   "projectDescription": "Demonstration score showcasing all cue types and animations.",
+  "duration_minutes": 40,
 
   "darkMode": true,
   "defaultPlaybackSpeed": 1.0,

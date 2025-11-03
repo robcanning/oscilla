@@ -16,7 +16,7 @@ export async function loadProject(projectName, options = {}) {
 
 
 
-    
+
     console.log(`\n[loadProject] 🚀 Loading project: ${projectName}`);
     const { resetOnLoad = false } = options;
 
@@ -62,23 +62,35 @@ export async function loadProject(projectName, options = {}) {
 
 
 
-// Reset canonical width + scale locally
-window.canonicalRenderedWidth = null;
-window.canonicalScale = null;
+    // Reset canonical width + scale locally
+    window.canonicalRenderedWidth = null;
+    window.canonicalScale = null;
 
-// Tell server this project should start fresh
-if (window.socket) {
-  window.socket.send(JSON.stringify({
-    type: "reset_project_width",
-    project: projectName   // <-- whatever your variable is
-  }));
-}
+    // Tell server this project should start fresh
+    if (window.socket) {
+      window.socket.send(JSON.stringify({
+        type: "reset_project_state",
+        project: projectName   
+      }));
+    }
 
 
 
 
     // 2️⃣ Load and apply preferences
     const prefs = await loadPreferences(window.projectBase);
+
+
+    // ✅ Duration normalization (minutes → ms)
+    if (prefs.duration_minutes && prefs.duration_minutes > 0) {
+      window.duration = prefs.duration_minutes * 60 * 1000;
+      console.log(`[Duration] 🎼 Set from prefs: ${prefs.duration_minutes} min → ${window.duration} ms`);
+    } else {
+      window.duration = 10 * 60 * 1000; // fallback: 10 min
+      console.log("[Duration] ⏱ Using default duration: 10 minutes");
+    }
+
+
     applyDarkMode(!!prefs.darkMode);
     if (prefs.defaultPlaybackSpeed) setSpeed(prefs.defaultPlaybackSpeed);
 
@@ -187,41 +199,41 @@ async function loadScrollMode(container) {
     verticalAlign: "top",
   });
 
-// Clear container
-container.innerHTML = "";
+  // Clear container
+  container.innerHTML = "";
 
-// ✅ Create transform isolation wrapper (scroll/pan layer)
-const stage = document.createElement("div");
-stage.id = "scrollStage";
-Object.assign(stage.style, {
-  willChange: "transform",
-  transformOrigin: "left top",
-  display: "block",
-  margin: "0",
-  padding: "0",
-  lineHeight: "0"
-});
+  // ✅ Create transform isolation wrapper (scroll/pan layer)
+  const stage = document.createElement("div");
+  stage.id = "scrollStage";
+  Object.assign(stage.style, {
+    willChange: "transform",
+    transformOrigin: "left top",
+    display: "block",
+    margin: "0",
+    padding: "0",
+    lineHeight: "0"
+  });
 
-// ✅ Create world-width wrapper (the element that gets the canonical scaled size)
-const inner = document.createElement("div");
-inner.id = "scoreInner";
-Object.assign(inner.style, {
-  display: "block",
-  margin: "0",
-  padding: "0",
-  lineHeight: "0"
-});
+  // ✅ Create world-width wrapper (the element that gets the canonical scaled size)
+  const inner = document.createElement("div");
+  inner.id = "scoreInner";
+  Object.assign(inner.style, {
+    display: "block",
+    margin: "0",
+    padding: "0",
+    lineHeight: "0"
+  });
 
-// ✅ Build the correct DOM hierarchy
-container.appendChild(stage);
-stage.appendChild(inner);
-inner.appendChild(svg);
+  // ✅ Build the correct DOM hierarchy
+  container.appendChild(stage);
+  stage.appendChild(inner);
+  inner.appendChild(svg);
 
-window.mode = "scroll";
+  window.mode = "scroll";
 
-console.log("[ScrollMode] ✅ Loaded score.svg into #scrollStage → #scoreInner → <svg>");
-if (typeof initializeSVG === "function") initializeSVG(svg);
-window.hideControls?.();
+  console.log("[ScrollMode] ✅ Loaded score.svg into #scrollStage → #scoreInner → <svg>");
+  if (typeof initializeSVG === "function") initializeSVG(svg);
+  window.hideControls?.();
 
 
 }
@@ -292,3 +304,4 @@ if (projectFromURL) {
     console.warn("[Oscilla] showSplashScreen() not available yet.");
   }
 }
+

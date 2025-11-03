@@ -150,14 +150,15 @@ let sharedState = {
   elapsedTime: 0,
   isPlaying: false,
   playheadX: 0,
-  duration: 20 * 60 * 1000,
+  duration: null, // allow project to supply duration
   speedMultiplier: 1.0,
-  startTimestamp: null // ✅ authoritative transport timebase (ms in performance.now() space)
+  startTimestamp: null //  authoritative transport timebase (ms in performance.now() space)
 };
 
 // Store canonical rendered width *per project*
 let canonicalRenderedWidthByProject = {};
 let scoreWidthByProject = {};
+let durationByProject = {};
 
 
 let lastUpdateTime = null;
@@ -240,7 +241,6 @@ const broadcastState = () => {
   sharedState.scoreWidth = Number.isFinite(sharedState.scoreWidth) && sharedState.scoreWidth > 0 ? sharedState.scoreWidth : 40960;
   sharedState.elapsedTime = Number.isFinite(sharedState.elapsedTime) && sharedState.elapsedTime >= 0 ? sharedState.elapsedTime : 0;
   sharedState.playheadX = Number.isFinite(sharedState.playheadX) && sharedState.playheadX >= 0 ? sharedState.playheadX : 0;
-  sharedState.duration = Number.isFinite(sharedState.duration) && sharedState.duration > 0 ? sharedState.duration : 1200000;
 
   console.log("\n[SERVER] 🔄 Broadcasting State:");
   console.log(`    🕒 Elapsed Time: ${sharedState.elapsedTime}`);
@@ -256,8 +256,9 @@ const broadcastState = () => {
       scoreWidth: sharedState.scoreWidth,
       playheadX: sharedState.playheadX,     // legacy
       speedMultiplier: sharedState.speedMultiplier,
-      startTimestamp: sharedState.startTimestamp, // ✅ new
-      canonicalRenderedWidth: sharedState.canonicalRenderedWidth || null
+      startTimestamp: sharedState.startTimestamp, // 
+      canonicalRenderedWidth: sharedState.canonicalRenderedWidth || null,
+      duration: sharedState.duration   // 
     },
     serverTime: Date.now()
   });
@@ -730,7 +731,6 @@ wss.on('connection', (ws, req) => {
       case "play": {
         // Ensure scoreWidth & duration defaults are set
         sharedState.scoreWidth = sharedState.scoreWidth || 1;
-        sharedState.duration = sharedState.duration || (20 * 60 * 1000);
 
         // If we are resuming playback:
         // sharedState.elapsedTime is already the last known position (in ms),
@@ -895,11 +895,17 @@ wss.on('connection', (ws, req) => {
 
 
       case "score_meta": {
-        const { project, scoreWidth, renderedWidth } = data;
+        const { project, scoreWidth, renderedWidth, duration } = data;
 
         if (!project) {
           console.warn("[SERVER] ⚠️ score_meta missing project name");
           break;
+        }
+
+        // ✅ duration (minutes converted to ms by client)
+        if (!durationByProject[project] && duration > 0) {
+          durationByProject[project] = duration;
+          console.log(`[SERVER] ⏱ duration for ${project} = ${duration}ms`);
         }
 
         // ✅ Set project-specific scoreWidth if not already stored
@@ -914,30 +920,32 @@ wss.on('connection', (ws, req) => {
           console.log(`[SERVER] 🎯 canonicalRenderedWidth set for ${project} = ${renderedWidth}`);
         }
 
-        // ✅ Update sharedState to reflect current project
+        //  Update sharedState to reflect current project
         sharedState.scoreWidth = scoreWidthByProject[project];
         sharedState.canonicalRenderedWidth = canonicalRenderedWidthByProject[project];
+        sharedState.duration = durationByProject[project];
+
 
         broadcastState();
         break;
       }
 
-case "reset_project_width": {
-  const { project } = data;
-  if (!project) break;
+      case "reset_project_state": {
+        const { project } = data;
+        if (!project) break;
 
-  console.log(`[SYNC] 🔄 Resetting canonical width state for project: ${project}`);
+        console.log(`[SYNC]  Resetting state for project: ${project}`);
 
-  // Clear stored width for this project
-  canonicalRenderedWidthByProject[project] = null;
-  scoreWidthByProject[project] = null;
+        // Clear stored width for this project
+        canonicalRenderedWidthByProject[project] = null;
+        scoreWidthByProject[project] = null;
 
-  // Also clear sharedState so future syncs don't reuse it
-  sharedState.canonicalRenderedWidth = null;
-  sharedState.scoreWidth = null;
-
-  break;
-}
+        // Also clear sharedState so future syncs don't reuse it
+        sharedState.canonicalRenderedWidth = null;
+        sharedState.scoreWidth = null;
+        sharedState.duration = null;   
+        break;
+      }
 
 
 

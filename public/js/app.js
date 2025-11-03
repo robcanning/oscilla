@@ -478,7 +478,9 @@ export const initializeSVG = async (svgElement) => {
         type: "score_meta",
         project: window.currentProject,
         scoreWidth: worldWidth,
-        renderedWidth: renderedWidth
+        renderedWidth: renderedWidth,
+        duration: window.duration  // ✅ send ms to server
+
       }));
     }
 
@@ -524,7 +526,10 @@ window.speedMultiplier = 1;
 window.scoreContainer = document.getElementById('scoreContainer');
 
 // Duration of score in minutes (default = 30 minutes)
-window.duration = 30;
+// window.duration = 30;
+
+
+
 
 // ===========================
 // 📱 Mobile Stylesheet Loader
@@ -1184,6 +1189,11 @@ if (state.canonicalRenderedWidth) {
     stage.style.width = `${canonicalWidthPx}px`;
     stage.style.height = "100%";
   }
+}
+
+if (state.duration && state.duration > 0) {
+  window.duration = state.duration;
+  console.log(`[Sync] ⏱ duration updated from server → ${window.duration} ms`);
 }
 
 
@@ -2500,24 +2510,6 @@ window.animate = async (currentTime) => {
 
   // Event Listeners
 
-  const durationInput = document.getElementById("duration-input");
-
-  //  Set default duration after durationInput is defined
-  window.duration = durationInput
-    ? parseInt(durationInput.value, 10) * 60 * 1000
-    : 30 * 60 * 1000;
-
-  if (durationInput) {
-    durationInput.addEventListener("change", (event) => {
-      const newDuration = parseFloat(event.target.value);
-      if (!isNaN(newDuration)) {
-        duration = newDuration * 60 * 1000; //  store in ms
-        console.log(`[DEBUG] Updated duration to ${newDuration} minutes.`);
-      }
-    });
-  } else {
-    console.warn("[DEBUG] #duration-input not found in DOM.");
-  }
 
   //  Safely attach the close button listener now that DOM is ready
   const closeBtn = document.getElementById("close-score-options");
