@@ -60,6 +60,23 @@ export async function loadProject(projectName, options = {}) {
     window.videoDir = `${window.projectBase}videos/`;
     window.sharedDir = `shared/`;
 
+
+
+// Reset canonical width + scale locally
+window.canonicalRenderedWidth = null;
+window.canonicalScale = null;
+
+// Tell server this project should start fresh
+if (window.socket) {
+  window.socket.send(JSON.stringify({
+    type: "reset_project_width",
+    project: projectName   // <-- whatever your variable is
+  }));
+}
+
+
+
+
     // 2️⃣ Load and apply preferences
     const prefs = await loadPreferences(window.projectBase);
     applyDarkMode(!!prefs.darkMode);

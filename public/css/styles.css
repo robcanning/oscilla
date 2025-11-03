@@ -521,7 +521,7 @@ html, body {
 #scrollStage,
 #scoreInner,
 #scoreContainer svg {
-  height: auto !important;
+  /* height: auto !important; */
 
 }
 

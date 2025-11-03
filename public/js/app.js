@@ -476,6 +476,7 @@ export const initializeSVG = async (svgElement) => {
       console.log("[initializeSVG] score_meta sent to server.");
       window.socket.send(JSON.stringify({
         type: "score_meta",
+        project: window.currentProject,
         scoreWidth: worldWidth,
         renderedWidth: renderedWidth
       }));
@@ -1165,25 +1166,26 @@ case "sync": {
   // --- Shared world width
   window.scoreWidth = state.scoreWidth;
 
-  // --- Canonical visual scale (unchanged)
-  if (state.canonicalRenderedWidth) {
-    window.canonicalRenderedWidth = state.canonicalRenderedWidth;
-    window.canonicalScale = state.canonicalRenderedWidth / window.scoreWidth;
+// --- Canonical visual scale (unchanged)
+if (state.canonicalRenderedWidth) {
+  window.canonicalRenderedWidth = state.canonicalRenderedWidth;
+  window.canonicalScale = state.canonicalRenderedWidth / window.scoreWidth;
 
-    const canonicalWidthPx = state.canonicalRenderedWidth;
-    const svg = document.querySelector("#scoreContainer svg");
-    const inner = document.getElementById("scoreInner");
-    const stage = document.getElementById("scrollStage");
+  const canonicalWidthPx = state.canonicalRenderedWidth;
+  const inner = document.getElementById("scoreInner");
+  const stage = document.getElementById("scrollStage");
 
-    if (svg && inner && stage) {
-      svg.style.width = `${canonicalWidthPx}px`;
-      svg.style.height = "auto";
-      inner.style.width = `${canonicalWidthPx}px`;
-      inner.style.height = "100%";
-      stage.style.width = `${canonicalWidthPx}px`;
-      stage.style.height = "100%";
-    }
+  // ❗ Do NOT touch the <svg> sizing here — CSS owns it (height:100vh; width:auto)
+  if (inner) {
+    inner.style.width = `${canonicalWidthPx}px`;
+    inner.style.height = "100%";
   }
+  if (stage) {
+    stage.style.width = `${canonicalWidthPx}px`;
+    stage.style.height = "100%";
+  }
+}
+
 
   // --- Playback / transport state
   window.elapsedTime = state.elapsedTime;

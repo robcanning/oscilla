@@ -155,6 +155,9 @@ let sharedState = {
   startTimestamp: null // ✅ authoritative transport timebase (ms in performance.now() space)
 };
 
+// Store canonical rendered width *per project*
+let canonicalRenderedWidthByProject = {};
+let scoreWidthByProject = {};
 
 
 let lastUpdateTime = null;
@@ -229,11 +232,11 @@ const updateElapsedTime = () => {
 let connectedClients = {}; // { socketId: "ClientName" }
 
 const broadcastState = () => {
-    /**
-   * Broadcasts authoritative playback state to all clients.
-   * Includes the canonicalRenderedWidth so clients compute the same scale,
-   * ensuring identical visual scroll speed across different screen sizes.
-   */
+  /**
+ * Broadcasts authoritative playback state to all clients.
+ * Includes the canonicalRenderedWidth so clients compute the same scale,
+ * ensuring identical visual scroll speed across different screen sizes.
+ */
   sharedState.scoreWidth = Number.isFinite(sharedState.scoreWidth) && sharedState.scoreWidth > 0 ? sharedState.scoreWidth : 40960;
   sharedState.elapsedTime = Number.isFinite(sharedState.elapsedTime) && sharedState.elapsedTime >= 0 ? sharedState.elapsedTime : 0;
   sharedState.playheadX = Number.isFinite(sharedState.playheadX) && sharedState.playheadX >= 0 ? sharedState.playheadX : 0;
@@ -245,19 +248,19 @@ const broadcastState = () => {
   console.log(`    📍 PlayheadX: ${sharedState.playheadX}`);
   console.log(`    🚀 Speed Multiplier: ${sharedState.speedMultiplier}`); // ✅ Log speed multiplier
 
-const message = JSON.stringify({
-  type: 'sync',
-  state: {
-    elapsedTime: sharedState.elapsedTime, // legacy (clients should prefer startTimestamp)
-    isPlaying: sharedState.isPlaying,
-    scoreWidth: sharedState.scoreWidth,
-    playheadX: sharedState.playheadX,     // legacy
-    speedMultiplier: sharedState.speedMultiplier,
-    startTimestamp: sharedState.startTimestamp, // ✅ new
-    canonicalRenderedWidth: sharedState.canonicalRenderedWidth || null
-  },
-  serverTime: Date.now()
-});
+  const message = JSON.stringify({
+    type: 'sync',
+    state: {
+      elapsedTime: sharedState.elapsedTime, // legacy (clients should prefer startTimestamp)
+      isPlaying: sharedState.isPlaying,
+      scoreWidth: sharedState.scoreWidth,
+      playheadX: sharedState.playheadX,     // legacy
+      speedMultiplier: sharedState.speedMultiplier,
+      startTimestamp: sharedState.startTimestamp, // ✅ new
+      canonicalRenderedWidth: sharedState.canonicalRenderedWidth || null
+    },
+    serverTime: Date.now()
+  });
 
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
@@ -464,47 +467,47 @@ wss.on('connection', (ws, req) => {
 
 
 
-case "set_speed_multiplier": {
-  const newMul = Number(data.multiplier);
-  if (!(newMul > 0)) break; // ignore invalid input
+      case "set_speed_multiplier": {
+        const newMul = Number(data.multiplier);
+        if (!(newMul > 0)) break; // ignore invalid input
 
-  const oldMul = sharedState.speedMultiplier || 1;
+        const oldMul = sharedState.speedMultiplier || 1;
 
-  // If multiplier actually changed
-  if (newMul !== oldMul) {
+        // If multiplier actually changed
+        if (newMul !== oldMul) {
 
-    // If playback is running under a clock anchor
-    if (sharedState.isPlaying && sharedState.startTimestamp != null) {
+          // If playback is running under a clock anchor
+          if (sharedState.isPlaying && sharedState.startTimestamp != null) {
 
-      const now = performance.now();
+            const now = performance.now();
 
-      // Compute current elapsed under old multiplier
-      const wallSeconds = (now - sharedState.startTimestamp) / 1000;
-      const currentElapsedMs = Math.min(
-        wallSeconds * oldMul * 1000,
-        sharedState.duration
-      );
+            // Compute current elapsed under old multiplier
+            const wallSeconds = (now - sharedState.startTimestamp) / 1000;
+            const currentElapsedMs = Math.min(
+              wallSeconds * oldMul * 1000,
+              sharedState.duration
+            );
 
-      // ✅ Retarget startTimestamp so phase continuity is preserved
-      sharedState.startTimestamp = now - (currentElapsedMs / newMul);
+            // ✅ Retarget startTimestamp so phase continuity is preserved
+            sharedState.startTimestamp = now - (currentElapsedMs / newMul);
 
-      // Keep legacy fields aligned
-      sharedState.elapsedTime = currentElapsedMs;
-      if (sharedState.scoreWidth > 0) {
-        sharedState.playheadX =
-          (sharedState.elapsedTime / sharedState.duration) *
-          sharedState.scoreWidth;
+            // Keep legacy fields aligned
+            sharedState.elapsedTime = currentElapsedMs;
+            if (sharedState.scoreWidth > 0) {
+              sharedState.playheadX =
+                (sharedState.elapsedTime / sharedState.duration) *
+                sharedState.scoreWidth;
+            }
+          }
+
+          // Update shared multiplier
+          sharedState.speedMultiplier = parseFloat(newMul.toFixed(3));
+        }
+
+        // Broadcast once (don't loop-broadcast!)
+        broadcastState();
+        break;
       }
-    }
-
-    // Update shared multiplier
-    sharedState.speedMultiplier = parseFloat(newMul.toFixed(3));
-  }
-
-  // Broadcast once (don't loop-broadcast!)
-  broadcastState();
-  break;
-}
 
 
       /**
@@ -578,34 +581,34 @@ case "set_speed_multiplier": {
       * - Broadcasts the pause state to all clients to keep them in sync.
       * - Ensures `playheadX` remains accurate.
       */
-     case "pause": {
-  sharedState.isPlaying = false;
+      case "pause": {
+        sharedState.isPlaying = false;
 
-  if (sharedState.startTimestamp != null) {
-    // Compute precise elapsed time at the moment of pausing
-    const now = performance.now();
-    const wallSeconds = (now - sharedState.startTimestamp) / 1000;
-    const exactElapsedMs = Math.min(
-      wallSeconds * (sharedState.speedMultiplier || 1) * 1000,
-      sharedState.duration
-    );
+        if (sharedState.startTimestamp != null) {
+          // Compute precise elapsed time at the moment of pausing
+          const now = performance.now();
+          const wallSeconds = (now - sharedState.startTimestamp) / 1000;
+          const exactElapsedMs = Math.min(
+            wallSeconds * (sharedState.speedMultiplier || 1) * 1000,
+            sharedState.duration
+          );
 
-    // Store frozen position
-    sharedState.elapsedTime = exactElapsedMs;
-  }
+          // Store frozen position
+          sharedState.elapsedTime = exactElapsedMs;
+        }
 
-  // Remove timebase anchor (no drift while paused)
-  sharedState.startTimestamp = null;
+        // Remove timebase anchor (no drift while paused)
+        sharedState.startTimestamp = null;
 
-  // Keep playheadX in sync for legacy consumers
-  if (sharedState.scoreWidth > 0) {
-    sharedState.playheadX =
-      (sharedState.elapsedTime / sharedState.duration) * sharedState.scoreWidth;
-  }
+        // Keep playheadX in sync for legacy consumers
+        if (sharedState.scoreWidth > 0) {
+          sharedState.playheadX =
+            (sharedState.elapsedTime / sharedState.duration) * sharedState.scoreWidth;
+        }
 
-  broadcastState();
-  break;
-}
+        broadcastState();
+        break;
+      }
 
 
 
@@ -724,22 +727,22 @@ case "set_speed_multiplier": {
       * ✅ Handles play requests from clients.
       * - Updates `playheadX` and ensures synchronization across clients.
       */
-case "play": {
-  // Ensure scoreWidth & duration defaults are set
-  sharedState.scoreWidth = sharedState.scoreWidth || 1;
-  sharedState.duration   = sharedState.duration   || (20 * 60 * 1000);
+      case "play": {
+        // Ensure scoreWidth & duration defaults are set
+        sharedState.scoreWidth = sharedState.scoreWidth || 1;
+        sharedState.duration = sharedState.duration || (20 * 60 * 1000);
 
-  // If we are resuming playback:
-  // sharedState.elapsedTime is already the last known position (in ms),
-  // so we compute a timebase origin anchored to *right now*:
-  sharedState.startTimestamp = performance.now() - sharedState.elapsedTime;
+        // If we are resuming playback:
+        // sharedState.elapsedTime is already the last known position (in ms),
+        // so we compute a timebase origin anchored to *right now*:
+        sharedState.startTimestamp = performance.now() - sharedState.elapsedTime;
 
-  sharedState.isPlaying = true;
+        sharedState.isPlaying = true;
 
-  // Broadcast the new authoritative transport state
-  broadcastState();
-  break;
-}
+        // Broadcast the new authoritative transport state
+        broadcastState();
+        break;
+      }
 
 
 
@@ -806,42 +809,42 @@ case "play": {
 
         console.log(`[DEBUG] Sent OSC cue: /cue/trigger ${cueNumber}`);
         break;
-case "jump": {
-  // Prefer elapsedTime (because it is already timeline-based)
-  let newElapsed = Number(data.elapsedTime);
+      case "jump": {
+        // Prefer elapsedTime (because it is already timeline-based)
+        let newElapsed = Number(data.elapsedTime);
 
-  // If elapsedTime wasn't provided, fall back to world-coordinate translation
-  if (!Number.isFinite(newElapsed)) {
-    if (Number.isFinite(data.playheadX) && Number.isFinite(sharedState.scoreWidth) && sharedState.scoreWidth > 0) {
-      newElapsed = (data.playheadX / sharedState.scoreWidth) * sharedState.duration;
-    } else {
-      // fallback to current position
-      newElapsed = sharedState.elapsedTime;
-    }
-  }
+        // If elapsedTime wasn't provided, fall back to world-coordinate translation
+        if (!Number.isFinite(newElapsed)) {
+          if (Number.isFinite(data.playheadX) && Number.isFinite(sharedState.scoreWidth) && sharedState.scoreWidth > 0) {
+            newElapsed = (data.playheadX / sharedState.scoreWidth) * sharedState.duration;
+          } else {
+            // fallback to current position
+            newElapsed = sharedState.elapsedTime;
+          }
+        }
 
-  // Clamp to valid timeline range
-  newElapsed = Math.max(0, Math.min(newElapsed, sharedState.duration));
+        // Clamp to valid timeline range
+        newElapsed = Math.max(0, Math.min(newElapsed, sharedState.duration));
 
-  // Store new fixed position
-  sharedState.elapsedTime = newElapsed;
+        // Store new fixed position
+        sharedState.elapsedTime = newElapsed;
 
-  // Maintain legacy world coordinate for older clients
-  if (sharedState.scoreWidth > 0) {
-    sharedState.playheadX = (newElapsed / sharedState.duration) * sharedState.scoreWidth;
-  }
+        // Maintain legacy world coordinate for older clients
+        if (sharedState.scoreWidth > 0) {
+          sharedState.playheadX = (newElapsed / sharedState.duration) * sharedState.scoreWidth;
+        }
 
-  if (sharedState.isPlaying) {
-    // ✅ Re-anchor the shared transport timeline to newElapsed
-    sharedState.startTimestamp = performance.now() - newElapsed;
-  } else {
-    // ✅ Frozen position (paused)
-    sharedState.startTimestamp = null;
-  }
+        if (sharedState.isPlaying) {
+          // ✅ Re-anchor the shared transport timeline to newElapsed
+          sharedState.startTimestamp = performance.now() - newElapsed;
+        } else {
+          // ✅ Frozen position (paused)
+          sharedState.startTimestamp = null;
+        }
 
-  broadcastState();
-  break;
-}
+        broadcastState();
+        break;
+      }
 
 
 
@@ -891,27 +894,48 @@ case "jump": {
         break;
 
 
-case "score_meta": {
-  const { scoreWidth, renderedWidth } = data;
+      case "score_meta": {
+        const { project, scoreWidth, renderedWidth } = data;
 
-  // ✅ Set scoreWidth ONLY once (first client wins)
-  if (!sharedState.scoreWidth && typeof scoreWidth === "number" && scoreWidth > 0) {
-    sharedState.scoreWidth = scoreWidth;
-    console.log(`[SERVER] 📏 Canonical scoreWidth set = ${scoreWidth}`);
-  } else {
-    console.log("[SERVER] 📏 scoreWidth ignored (already set)");
-  }
+        if (!project) {
+          console.warn("[SERVER] ⚠️ score_meta missing project name");
+          break;
+        }
 
-  // ✅ Set canonical rendered width ONLY once (first client wins)
-  if (!sharedState.canonicalRenderedWidth && typeof renderedWidth === "number" && renderedWidth > 0) {
-    sharedState.canonicalRenderedWidth = renderedWidth;
-    console.log(`[SERVER] 🎯 Canonical renderedWidth set = ${renderedWidth}`);
-  } else {
-    console.log("[SERVER] 🎯 renderedWidth ignored (already set)");
-  }
+        // ✅ Set project-specific scoreWidth if not already stored
+        if (!scoreWidthByProject[project] && typeof scoreWidth === "number" && scoreWidth > 0) {
+          scoreWidthByProject[project] = scoreWidth;
+          console.log(`[SERVER] 📏 scoreWidth set for ${project} = ${scoreWidth}`);
+        }
 
-  // ✅ After both values exist, broadcast state
-  broadcastState();
+        // ✅ Set project-specific canonicalRenderedWidth if not already stored
+        if (!canonicalRenderedWidthByProject[project] && typeof renderedWidth === "number" && renderedWidth > 0) {
+          canonicalRenderedWidthByProject[project] = renderedWidth;
+          console.log(`[SERVER] 🎯 canonicalRenderedWidth set for ${project} = ${renderedWidth}`);
+        }
+
+        // ✅ Update sharedState to reflect current project
+        sharedState.scoreWidth = scoreWidthByProject[project];
+        sharedState.canonicalRenderedWidth = canonicalRenderedWidthByProject[project];
+
+        broadcastState();
+        break;
+      }
+
+case "reset_project_width": {
+  const { project } = data;
+  if (!project) break;
+
+  console.log(`[SYNC] 🔄 Resetting canonical width state for project: ${project}`);
+
+  // Clear stored width for this project
+  canonicalRenderedWidthByProject[project] = null;
+  scoreWidthByProject[project] = null;
+
+  // Also clear sharedState so future syncs don't reuse it
+  sharedState.canonicalRenderedWidth = null;
+  sharedState.scoreWidth = null;
+
   break;
 }
 
@@ -958,7 +982,7 @@ case "score_meta": {
 const updateLoop = () => {
   if (sharedState.isPlaying) {
     updateElapsedTime();
-     broadcastState();
+    broadcastState();
   } else {
     //  console.log("[DEBUG] Skipping updates; playback is paused.");
   }
