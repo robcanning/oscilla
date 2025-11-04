@@ -2673,6 +2673,13 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
 
   // --- Create video element
   const vid = document.createElement("video");
+  vid.classList.add("cue-video");
+
+  const vsize = p.vsize?.toLowerCase?.();
+  if (vsize === "fs" || vsize === "fullscreen") {
+  vid.classList.add("cue-video-fullscreen");
+}
+
   const uid = p.uid || `video-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
   vid.id = uid;
   vid.dataset.uid = uid;
@@ -4126,6 +4133,12 @@ export function handleGroupCue(cueId, cueParams = {}) {
 
   console.log("[cueGroup] 🧱 Overlay container:", overlay?.id || "(none)");
 
+
+// 7️⃣ Remove old cue buttons before building new UI
+if (typeof window.destroyAllCueButtons === "function") {
+  window.destroyAllCueButtons();
+}
+
   // 7️⃣ Build visible cue buttons using the overlay
   if (typeof window.assignCueButtonsIn === "function") {
     console.log("[cueGroup] ⚙️ Using assignCueButtonsIn()");
@@ -4460,9 +4473,6 @@ function extractCueButtonInner(id) {
 
 
 
-
-
-
 // // ------------------------------
 // // cueButton: parsing (robust)
 // // ------------------------------
@@ -4565,30 +4575,50 @@ function extractCueButtonInner(id) {
 
 
 
+export function destroyAllCueButtons() {
+  document.querySelectorAll(".oscilla-cue-button").forEach(btn => {
+    try {
+      btn._destroyCueButton?.();   // ✅ cancel raf, listeners, restore SVG visibility
+    } catch(e) {}
 
+    btn.remove();                  // ✅ ensure DOM cleared
+  });
 
-export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window.scoreContainer) {
-  if (!cueSvgEl || !parsed || !containerEl) return null;
+  console.log("[cueButtons] 🧹 Cleared all cue buttons");
+}
+
+// window.destroyAllCueButtons = destroyAllCueButtons;
+export function createCueButtonForElement(cueSvgEl, parsed, containerEl) {
+  if (!parsed) return null;
   const { cueExpr, opt } = parsed;
 
-  // Hide the SVG cue element (replacement)
+// ✅ Correct overlay container selection
+if (!containerEl) {
+  containerEl = window._pageMode
+    ? document.querySelector('#singlePage-overlay')
+    : document.querySelector('#scoreInner'); // ← FIX HERE
+}
+  if (!cueSvgEl || !containerEl) return null;
+
+  // ✅ Hide SVG cue item (this must stay)
   cueSvgEl.style.visibility = "hidden";
   cueSvgEl.style.pointerEvents = "none";
 
+  // ⬇️ Create button
   const btn = document.createElement("button");
   btn.type = "button";
   btn.textContent = opt.label || "";
   btn.className = "oscilla-cue-button";
   if (opt.className) btn.classList.add(opt.className);
 
-  // 🛑 Prevent bubbling or document-level handlers (double-tap toggle, etc.)
+  // Prevent bubbling from clicks
   btn.addEventListener("mousedown", (e) => e.preventDefault());
   btn.addEventListener("click", (e) => {
     e.preventDefault();
-    e.stopPropagation(); // ✅ stops global playback toggle or page click detectors
+    e.stopPropagation();
   });
 
-  // Style
+  // Initial styling
   Object.assign(btn.style, {
     position: "absolute",
     width: (opt.width ? `${opt.width}px` : "100px"),
@@ -4596,7 +4626,7 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window
     background: opt.color,
     border: "1px solid rgba(0,0,0,.2)",
     borderRadius: `${opt.radius}px`,
-    padding: "2px 2px",
+    padding: "2px",
     fontWeight: opt.fontWeight || "600",
     fontSize: (opt.fontSize != null)
       ? (Number.isFinite(opt.fontSize) ? `${opt.fontSize}px` : String(opt.fontSize))
@@ -4610,71 +4640,47 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window
 
   containerEl.appendChild(btn);
 
-  // console.log(`[createCueButtonforelement] ${cueSvgEl.id} rect=`, cueSvgEl.getBoundingClientRect(),
-  //   `→ left=${btn.style.left}, top=${btn.style.top}`);
-
-
+  // ✅ Safe placement function (never overwrite with 0×0)
   const place = () => {
-    let r = cueSvgEl.getBoundingClientRect();
+    const r = cueSvgEl.getBoundingClientRect();
+    const c = containerEl.getBoundingClientRect();
 
-    // 🕒 Check if the SVG element has real layout metrics yet
-    if (r.width === 0 && r.height === 0) {
-      // console.warn(`[cueButton] ⚠️ ${cueSvgEl.id} not yet laid out — deferring placement.`);
-
-      // Wait one more animation frame, then retry once
-      requestAnimationFrame(() => {
-        const r2 = cueSvgEl.getBoundingClientRect();
-        if (r2.width > 0 || r2.height > 0) {
-          const c = containerEl.getBoundingClientRect();
-          const left = r2.left - c.left + (opt.offsetX || 0);
-          const top = r2.top - c.top + (opt.offsetY || 0);
-          btn.style.left = `${Math.round(left)}px`;
-          btn.style.top = `${Math.round(top)}px`;
-          // console.log(`[cueButton] ✅ ${cueSvgEl.id} now ready (${left}, ${top})`);
-        } else {
-          // console.warn(`[cueButton] ❌ ${cueSvgEl.id} still 0×0 after retry — skipping placement.`);
-        }
-      });
-
-      return; // prevent premature placement at (0,0)
+    // If layout still not resolved → don't place yet
+    if (r.width === 0 || r.height === 0 || c.width === 0 || c.height === 0) {
+      return; // ✨ do nothing instead of placing (0,0)
     }
 
-    // 🧭 Normal placement once geometry exists
-    const c = containerEl.getBoundingClientRect();
-    const left = r.left - c.left + (opt.offsetX || 0);
-    const top = r.top - c.top + (opt.offsetY || 0);
-    btn.style.left = `${Math.round(left)}px`;
-    btn.style.top = `${Math.round(top)}px`;
+    btn.style.left = `${Math.round(r.left - c.left + (opt.offsetX || 0))}px`;
+    btn.style.top = `${Math.round(r.top - c.top + (opt.offsetY || 0))}px`;
   };
 
-  place();
+  // ✅ Only start updating after layout stabilizes
+  requestAnimationFrame(() => {
+    place();
+    if (opt.scrollFollow) requestAnimationFrame(tick);
+  });
 
-  // Follow (optional)
+  // Live follow
   let rafId = null;
   const tick = () => {
     place();
     rafId = requestAnimationFrame(tick);
   };
-  if (opt.scrollFollow) rafId = requestAnimationFrame(tick);
+
+  // Re-place on resize
   const onResize = () => place();
   window.addEventListener("resize", onResize);
 
-  // Toggle logic (good for audio cues)
-  // --- 🔊 Audio cue detection
+  // 🔊 Audio cue detection
   const audioMatch = /^cueAudio\(\s*([^)]+)\s*\)/i.exec(cueExpr);
   const audioFile = audioMatch?.[1]?.trim() || null;
-  const stopCue = audioFile ? `cueAudioStop(${audioFile})` : null;
 
-  // --- 💡 Active visual feedback (pulsing, flashing, etc.)
+  // Active visual feedback
   let isVisuallyActive = false;
   const setVisualActive = (on) => {
     isVisuallyActive = !!on;
     btn.classList.toggle("oscilla-cue-button--active", isVisuallyActive);
-    btn.classList.remove(
-      "oscilla-cue-button--flash",
-      "oscilla-cue-button--pulse",
-      "oscilla-cue-button--fade"
-    );
+    btn.classList.remove("oscilla-cue-button--flash", "oscilla-cue-button--pulse", "oscilla-cue-button--fade");
     if (isVisuallyActive) {
       if (opt.activeStyle === "flash") btn.classList.add("oscilla-cue-button--flash");
       else if (opt.activeStyle === "pulse") btn.classList.add("oscilla-cue-button--pulse");
@@ -4682,60 +4688,31 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window
     }
   };
 
-  // --- 🕒 Debounce
+  // Debounce clicks
   let lastClick = 0;
-
-  // --- 🎛️ Click handler (polyphonic-safe)
   btn.addEventListener("click", async () => {
     const now = performance.now();
-    if (now - lastClick < (opt.debounceMs || 100)) return;
+    if (now - lastClick < (opt.debounceMs || 120)) return;
     lastClick = now;
 
-    // Restrict if conductor-only
     if (opt.conductorOnly && !window.isConductor) return;
 
-    // ✅ Ensure AudioContext is resumed
-    const ac =
-      window.sharedAudioCtx ||
-      window.WaveSurfer?.instances?.[0]?.backend?.ac ||
-      null;
-    if (ac && ac.state === "suspended") {
-      console.warn("[AUDIO] ⚡ AudioContext suspended — resuming.");
-      try {
-        await ac.resume();
-        console.log("[AUDIO] ✅ AudioContext resumed.");
-      } catch (err) {
-        console.error("[AUDIO] ❌ Resume failed:", err);
-      }
-    }
+    // Resume audio context if needed
+    const ac = window.sharedAudioCtx || window.WaveSurfer?.instances?.[0]?.backend?.ac || null;
+    if (ac && ac.state === "suspended") await ac.resume();
 
-    // 🟢 Fire cue immediately (polyphony allowed)
     window.handleCueTrigger?.(cueExpr, false, true);
     if (audioFile) setVisualActive(true);
-
-    // 🟣 Broadcast (optional)
-    if (opt.broadcast && window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-      window.socket.send(
-        JSON.stringify({
-          type: "cue_button_click",
-          cueExpr,
-          uid: opt.uid || null,
-          timestamp: Date.now(),
-        })
-      );
-    }
   });
 
-  // --- 🔁 Audio engine sync (maintain visual while playing)
+  // Sync UI with audio engine
   const onAudio = (ev) => {
     if (!audioFile) return;
-    const d = ev.detail || {};
-    if (d.file !== audioFile) return;
-    if (d.state === "play") setVisualActive(true);
-    if (d.state === "stop") setVisualActive(false);
+    const { file, state } = ev.detail || {};
+    if (file !== audioFile) return;
+    setVisualActive(state === "play");
   };
   window.addEventListener("oscilla:audio", onAudio);
-
 
   // Cleanup
   btn._destroyCueButton = () => {
@@ -4751,9 +4728,12 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl = window
 }
 
 
+
 export function assignCueButtonsIn(rootNode, containerEl) {
   console.log(`[assignCueButtonsIn] executing for ${rootNode.querySelectorAll('[id^="cueButton("]').length} elements`);
 
+
+  
   if (!rootNode || !containerEl) return [];
   const created = [];
 

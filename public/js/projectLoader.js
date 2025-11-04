@@ -7,15 +7,56 @@
 import { initializeSVG } from "./app.js";
 import { setSpeed, applyDarkMode, toggleSplashScreen, hideSplashScreen } from "./transport.js";
 
+
+export function cleanupProjectOverlays() {
+  console.log("[Cleanup] Removing overlays, videos, audio, metronomes, stopwatches, cue buttons…");
+
+  // --- Metronomes
+  document.querySelectorAll(".cue-metronome").forEach(el => el.remove());
+
+  // --- Stopwatches
+  document.querySelectorAll("[id^='cue-stopwatch-']").forEach(el => el.remove());
+
+  // --- Text overlays (cueText)
+  document.querySelectorAll(".cue-text-overlay").forEach(el => el.remove());
+
+  // --- Choice overlays
+  document.querySelectorAll(".cue-choice-overlay").forEach(el => el.remove());
+
+  // --- Cue Buttons
+  document.querySelectorAll(".oscilla-cue-button").forEach(el => el.remove());
+
+
+// --- VIDEO CLEANUP ---
+document.querySelectorAll(".cue-video").forEach(vid => {
+  try { vid.pause(); } catch(e){}
+  try { vid.src = ""; } catch(e){}
+  vid.remove();
+});
+
+
+  // ---------------------------------------------------
+  //   AUDIO CUE CLEANUP 
+  // ---------------------------------------------------
+  if (window.activeAudioCues) {
+    console.log("[Cleanup] Stopping active audio cues…");
+    for (const voice of window.activeAudioCues) {
+      try { voice.src.stop(); } catch(e){}
+      try { voice.src.disconnect(); } catch(e){}
+      try { voice.gainNode.disconnect(); } catch(e){}
+    }
+    window.activeAudioCues.clear();
+  }
+
+  console.log("[Cleanup] ✅ Done.");
+}
+
+
 // ------------------------------------------------------------
 // 🚀 Main entry point
 // ------------------------------------------------------------
 export async function loadProject(projectName, options = {}) {
   try {
-
-
-
-
 
     console.log(`\n[loadProject] 🚀 Loading project: ${projectName}`);
     const { resetOnLoad = false } = options;
@@ -60,11 +101,14 @@ export async function loadProject(projectName, options = {}) {
     window.videoDir = `${window.projectBase}videos/`;
     window.sharedDir = `shared/`;
 
-
-
     // Reset canonical width + scale locally
     window.canonicalRenderedWidth = null;
     window.canonicalScale = null;
+
+    // cleanupProjectOverlays(); // clear buttons videos metronomes etc
+    // destroyAllCueButtons();
+
+
 
     // Tell server this project should start fresh
     if (window.socket) {
@@ -233,7 +277,9 @@ async function loadScrollMode(container) {
 
   console.log("[ScrollMode] ✅ Loaded score.svg into #scrollStage → #scoreInner → <svg>");
   if (typeof initializeSVG === "function") initializeSVG(svg);
+
   window.hideControls?.();
+  window.toggleScoreNotes();
 
 
 }

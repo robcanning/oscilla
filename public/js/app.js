@@ -216,19 +216,14 @@ export const initializeSVG = async (svgElement) => {
 
   // ✅ Replace <use> elements (already done here)
 
-  window.cues = [];
 
-  assignCues(svgElement, window.cues);
-
-
+  // assignCues(svgElement, window.cues);
 
   enableLiveInspector({
     startRotate,
     startScale,
     // startObj2Path
   });
-
-
 
   /**
    * Scan and register reusable <g> groups with reserved prefixes.
@@ -254,6 +249,7 @@ export const initializeSVG = async (svgElement) => {
   }
 
   // ✅ Register reusable cue groups (menus, UI clusters)
+  window.cues = [];
   registerSvgGroups(svgElement);
   console.log("[Debug] Total cues:", window.cues.length);
 
@@ -635,29 +631,33 @@ document.addEventListener('DOMContentLoaded', () => {
   * Controlled via the  button in the GUI.
   */
 
-  const toggleScoreNotes = () => {
-    console.log("[DEBUG] Toggling visibility of score notes.");
+const toggleScoreNotes = () => {
+  console.log("[DEBUG] Toggling visibility of score notes.");
 
-    window.scoreSVG = document.querySelector("svg"); // Get the SVG container
-    if (!scoreSVG) {
-      console.error("[ERROR] SVG score not found.");
-      return;
-    }
+  const svg = document.querySelector("svg");
+  if (!svg) return console.error("[ERROR] SVG not found.");
 
-    const notes = scoreSVG.querySelectorAll('[id^="note-"]'); // Query only within the SVG
-    if (notes.length === 0) {
-      console.warn("[WARNING] No score notes found in SVG.");
-      return;
-    }
+  const notes = svg.querySelectorAll('[id^="note-"]');
+  if (!notes.length) return console.warn("[WARNING] No note-* elements found.");
 
-    notes.forEach(note => {
-      note.style.display = note.style.display === "none" ? "block" : "none";
-    });
+  // Check current state from the **first** note
+  const currentlyVisible = notes[0].style.display !== "none";
 
-    console.log(`[DEBUG] Toggled ${notes.length} score notes.`);
-  };
+  // Toggle display for all notes
+  notes.forEach(note => {
+    note.style.display = currentlyVisible ? "none" : "block";
+  });
 
-  document.getElementById("toggle-notes-button").addEventListener("click", toggleScoreNotes);
+  // ✅ Button UI: green when notes are visible
+  const btn = document.getElementById("toggle-notes-button");
+  btn.classList.toggle("active", !currentlyVisible);
+
+  console.log(`[DEBUG] Notes are now ${!currentlyVisible ? "visible" : "hidden"}.`);
+};
+
+document.getElementById("toggle-notes-button")
+  .addEventListener("click", toggleScoreNotes);
+
   window.toggleScoreNotes = toggleScoreNotes;
 
 
@@ -1193,7 +1193,7 @@ if (state.canonicalRenderedWidth) {
 
 if (state.duration && state.duration > 0) {
   window.duration = state.duration;
-  console.log(`[Sync] ⏱ duration updated from server → ${window.duration} ms`);
+  // console.log(`[Sync] ⏱ duration updated from server → ${window.duration} ms`);
 }
 
 
@@ -2599,7 +2599,7 @@ window.animate = async (currentTime) => {
       toggleKeybindingsPopup(); // Show/hide keybindings popup
     } else if (event.key === 'f' || event.key === 'F') {
       toggleFullscreen(); // Fullscreen mode
-    } else if (event.key === 't' || event.key === 'T' || event.key === 'Enter') {
+    } else if (event.key === 't' || event.key === 'T') {
       toggleSplashScreen(); // Toggle splash screen visibility
     } else if (event.key === ' ') {
       event.preventDefault(); // Prevent default browser behavior for space key
@@ -2658,9 +2658,7 @@ window.animate = async (currentTime) => {
 
   //updatestopwatch();
   window.scoreContainer = window.scoreContainer; // Expose globally
-  toggleSplashScreen();
-
-
+  // toggleSplashScreen();
  
   console.log('// EOF');
 

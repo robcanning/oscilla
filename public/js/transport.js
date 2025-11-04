@@ -369,7 +369,7 @@ export function sendSpeedUpdateToServer(speed) {
   };
 
   window.socket.send(JSON.stringify(message));
-  console.log("[speedControl] Sent speed update:", message);
+  // console.log("[speedControl] Sent speed update:", message);
 }
 
 
@@ -390,14 +390,20 @@ window.adjustSpeed = adjustSpeed;
 let controlsTimeout; // Timer to hide controls after inactivity
 
 export const hideControls = () => {
+  if (window.controlsPinned) {
+    console.log("[UI] Controls pinned — hideControls() blocked.");
+    return; // ✅ Do nothing
+  }
+
   const controls = document.getElementById('controls');
-  const topBar = document.getElementById('top-bar'); //  Include top-bar
+  const topBar = document.getElementById('top-bar');
 
   controls.classList.add('dismissed');
-  if (topBar) topBar.classList.add('dismissed'); //  Hide top-bar
+  if (topBar) topBar.classList.add('dismissed');
 
-  console.log('Controls hidden.');
+  console.log('[UI] Controls hidden.');
 };
+
 
 export const showControls = () => {
   const controls = document.getElementById('controls');
@@ -1078,25 +1084,24 @@ function setSplashVisibility(show) {
     splash.classList.remove('hidden');
     if (scoreContainer) scoreContainer.style.display = 'none';
     if (controls) controls.style.display = 'none';
-  } else {
-    console.log('[Splash] Hiding splash screen.');
-    splash.style.display = 'none';
-    splash.classList.add('hidden');
-    if (scoreContainer) scoreContainer.style.display = 'block';
-    if (controls) controls.style.display = 'flex';
+  }  else {
+  console.log('[Splash] Hiding splash screen.');
+  splash.style.display = 'none';
+  splash.classList.add('hidden');
 
-    // ✅ make sure pin controls activates *after* controls are visible
-    setTimeout(() => {
-      if (typeof initializeControlsPin === "function") {
-        console.log("[UI] Initializing pin controls after splash hide");
-        initializeControlsPin();
-      }
-    }, 300);
+  if (scoreContainer) scoreContainer.style.display = 'block';
+  if (controls) controls.style.display = 'flex';
 
-    // Reinitialize SVG when showing the score
-    const svgElement = document.querySelector('svg');
-    if (svgElement) initializeSVG(svgElement);
-  }
+  // ✅ Only reinitialize UI controls (not the SVG / score)
+  setTimeout(() => {
+    if (typeof initializeControlsPin === "function") {
+      console.log("[UI] Initializing pin controls after splash hide");
+      initializeControlsPin();
+    }
+  }, 300);
+
+}
+
 }
 
 
