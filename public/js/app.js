@@ -631,32 +631,32 @@ document.addEventListener('DOMContentLoaded', () => {
   * Controlled via the  button in the GUI.
   */
 
-const toggleScoreNotes = () => {
-  console.log("[DEBUG] Toggling visibility of score notes.");
+  const toggleScoreNotes = () => {
+    console.log("[DEBUG] Toggling visibility of score notes.");
 
-  const svg = document.querySelector("svg");
-  if (!svg) return console.error("[ERROR] SVG not found.");
+    const svg = document.querySelector("svg");
+    if (!svg) return console.error("[ERROR] SVG not found.");
 
-  const notes = svg.querySelectorAll('[id^="note-"]');
-  if (!notes.length) return console.warn("[WARNING] No note-* elements found.");
+    const notes = svg.querySelectorAll('[id^="note-"]');
+    if (!notes.length) return console.warn("[WARNING] No note-* elements found.");
 
-  // Check current state from the **first** note
-  const currentlyVisible = notes[0].style.display !== "none";
+    // Check current state from the **first** note
+    const currentlyVisible = notes[0].style.display !== "none";
 
-  // Toggle display for all notes
-  notes.forEach(note => {
-    note.style.display = currentlyVisible ? "none" : "block";
-  });
+    // Toggle display for all notes
+    notes.forEach(note => {
+      note.style.display = currentlyVisible ? "none" : "block";
+    });
 
-  // ✅ Button UI: green when notes are visible
-  const btn = document.getElementById("toggle-notes-button");
-  btn.classList.toggle("active", !currentlyVisible);
+    // ✅ Button UI: green when notes are visible
+    const btn = document.getElementById("toggle-notes-button");
+    btn.classList.toggle("active", !currentlyVisible);
 
-  console.log(`[DEBUG] Notes are now ${!currentlyVisible ? "visible" : "hidden"}.`);
-};
+    console.log(`[DEBUG] Notes are now ${!currentlyVisible ? "visible" : "hidden"}.`);
+  };
 
-document.getElementById("toggle-notes-button")
-  .addEventListener("click", toggleScoreNotes);
+  document.getElementById("toggle-notes-button")
+    .addEventListener("click", toggleScoreNotes);
 
   window.toggleScoreNotes = toggleScoreNotes;
 
@@ -1161,66 +1161,66 @@ document.getElementById("toggle-notes-button")
 
 
 
-          /** Synchronize Playback State */
-case "sync": {
-  const state = data.state;
-  if (!state) break;
+            /** Synchronize Playback State */
+            case "sync": {
+              const state = data.state;
+              if (!state) break;
 
-  const wasPlaying = window.isPlaying;
+              const wasPlaying = window.isPlaying;
 
-  // --- Shared world width
-  window.scoreWidth = state.scoreWidth;
+              // --- Shared world width
+              window.scoreWidth = state.scoreWidth;
 
-// --- Canonical visual scale (unchanged)
-if (state.canonicalRenderedWidth) {
-  window.canonicalRenderedWidth = state.canonicalRenderedWidth;
-  window.canonicalScale = state.canonicalRenderedWidth / window.scoreWidth;
+              // --- Canonical visual scale (unchanged)
+              if (state.canonicalRenderedWidth) {
+                window.canonicalRenderedWidth = state.canonicalRenderedWidth;
+                window.canonicalScale = state.canonicalRenderedWidth / window.scoreWidth;
 
-  const canonicalWidthPx = state.canonicalRenderedWidth;
-  const inner = document.getElementById("scoreInner");
-  const stage = document.getElementById("scrollStage");
+                const canonicalWidthPx = state.canonicalRenderedWidth;
+                const inner = document.getElementById("scoreInner");
+                const stage = document.getElementById("scrollStage");
 
-  // ❗ Do NOT touch the <svg> sizing here — CSS owns it (height:100vh; width:auto)
-  if (inner) {
-    inner.style.width = `${canonicalWidthPx}px`;
-    inner.style.height = "100%";
-  }
-  if (stage) {
-    stage.style.width = `${canonicalWidthPx}px`;
-    stage.style.height = "100%";
-  }
-}
+                // ❗ Do NOT touch the <svg> sizing here — CSS owns it (height:100vh; width:auto)
+                if (inner) {
+                  inner.style.width = `${canonicalWidthPx}px`;
+                  inner.style.height = "100%";
+                }
+                if (stage) {
+                  stage.style.width = `${canonicalWidthPx}px`;
+                  stage.style.height = "100%";
+                }
+              }
 
-if (state.duration && state.duration > 0) {
-  window.duration = state.duration;
-  // console.log(`[Sync] ⏱ duration updated from server → ${window.duration} ms`);
-}
+              if (state.duration && state.duration > 0) {
+                window.duration = state.duration;
+                // console.log(`[Sync] ⏱ duration updated from server → ${window.duration} ms`);
+              }
 
 
-  // --- Playback / transport state
-  window.elapsedTime = state.elapsedTime;
-  window.isPlaying = state.isPlaying;
+              // --- Playback / transport state
+              window.elapsedTime = state.elapsedTime;
+              window.isPlaying = state.isPlaying;
 
-  // ✅ Store authoritative world position but DO NOT APPLY IT directly
-  if (state.playheadX !== undefined) {
-    window.serverSyncPlayheadX = state.playheadX;
-  }
+              // ✅ Store authoritative world position but DO NOT APPLY IT directly
+              if (state.playheadX !== undefined) {
+                window.serverSyncPlayheadX = state.playheadX;
+              }
 
-  // --- Visual update
-  scrollToPlayheadVisual?.();
+              // --- Visual update
+              scrollToPlayheadVisual?.();
 
-  // --- Animation loop state
-  if (window.isPlaying && !wasPlaying) {
-    cancelAnimationFrame(window.animationFrameId);
-    window.animationFrameId = requestAnimationFrame(window.animate);
-  }
+              // --- Animation loop state
+              if (window.isPlaying && !wasPlaying) {
+                cancelAnimationFrame(window.animationFrameId);
+                window.animationFrameId = requestAnimationFrame(window.animate);
+              }
 
-  if (!window.isPlaying && wasPlaying) {
-    cancelAnimationFrame(window.animationFrameId);
-  }
+              if (!window.isPlaying && wasPlaying) {
+                cancelAnimationFrame(window.animationFrameId);
+              }
 
-  break;
-}
+              break;
+            }
 
 
 
@@ -1974,7 +1974,7 @@ if (state.duration && state.duration > 0) {
   // Initialize splash logic
   window.addEventListener("DOMContentLoaded", populateProjectSelector);
 
- 
+
 
 
 
@@ -2234,102 +2234,102 @@ if (state.duration && state.duration > 0) {
 
 
 
-/**
- * TRANSPORT PLAYBACK LOOP (Freewheeling + Smooth Server Sync Convergence)
- * -----------------------------------------------------------------------
- * This loop advances the score playhead smoothly in world-space using the
- * local animation frame rate as the timing source. Playback speed is derived
- * from:
- *
- *   - playbackSpeed (browser timer speed factor)
- *   - window.speedMultiplier (musical tempo multiplier)
- *   - window.duration (full score timeline length, ms)
- *   - window.scoreWidth (total world width of the score)
- *
- * The result is continuous, frame-accurate scrolling *without needing to
- * receive sync packets every frame*.
- *
- * Server Sync:
- *  - The server periodically sends a reference playhead position
- *    (window.serverSyncPlayheadX), but we NEVER overwrite our local playhead.
- *
- *  - Instead, we measure the *drift* between our position and the server's
- *    reference. Large drift (cue jump, resume, seek) is snapped immediately.
- *    Small drift is corrected gradually using a time-based smoothing factor,
- *    making synchronization completely invisible to the performer.
- *
- * Benefits:
- *  - No visible "catch-up" jumps when sync packets arrive.
- *  - Smooth continuous scrolling even if network updates are irregular.
- *  - Long-term sync stability between multiple clients.
- *  - Works on different screen sizes due to canonical scaling.
- *
- * This is a stable real-time score transport model:
- *   freewheel motion + low-pass drift convergence.
- */
+  /**
+   * TRANSPORT PLAYBACK LOOP (Freewheeling + Smooth Server Sync Convergence)
+   * -----------------------------------------------------------------------
+   * This loop advances the score playhead smoothly in world-space using the
+   * local animation frame rate as the timing source. Playback speed is derived
+   * from:
+   *
+   *   - playbackSpeed (browser timer speed factor)
+   *   - window.speedMultiplier (musical tempo multiplier)
+   *   - window.duration (full score timeline length, ms)
+   *   - window.scoreWidth (total world width of the score)
+   *
+   * The result is continuous, frame-accurate scrolling *without needing to
+   * receive sync packets every frame*.
+   *
+   * Server Sync:
+   *  - The server periodically sends a reference playhead position
+   *    (window.serverSyncPlayheadX), but we NEVER overwrite our local playhead.
+   *
+   *  - Instead, we measure the *drift* between our position and the server's
+   *    reference. Large drift (cue jump, resume, seek) is snapped immediately.
+   *    Small drift is corrected gradually using a time-based smoothing factor,
+   *    making synchronization completely invisible to the performer.
+   *
+   * Benefits:
+   *  - No visible "catch-up" jumps when sync packets arrive.
+   *  - Smooth continuous scrolling even if network updates are irregular.
+   *  - Long-term sync stability between multiple clients.
+   *  - Works on different screen sizes due to canonical scaling.
+   *
+   * This is a stable real-time score transport model:
+   *   freewheel motion + low-pass drift convergence.
+   */
 
-window.lastAnimationFrameTime = null;
+  window.lastAnimationFrameTime = null;
 
-window.animate = async (currentTime) => {
-  // Stop animation when paused or seeking
-  if (!window.isPlaying || window.isSeeking) return;
+  window.animate = async (currentTime) => {
+    // Stop animation when paused or seeking
+    if (!window.isPlaying || window.isSeeking) return;
 
-  // --- Compute dt *before* using it ---
-  let dt = 0;
-  if (window.lastAnimationFrameTime !== null) {
-    dt = (currentTime - window.lastAnimationFrameTime) / 1000; // seconds
-  }
-  window.lastAnimationFrameTime = currentTime;
+    // --- Compute dt *before* using it ---
+    let dt = 0;
+    if (window.lastAnimationFrameTime !== null) {
+      dt = (currentTime - window.lastAnimationFrameTime) / 1000; // seconds
+    }
+    window.lastAnimationFrameTime = currentTime;
 
-  const refWidth = window.remoteScoreWidth || window.scoreWidth;
+    const refWidth = window.remoteScoreWidth || window.scoreWidth;
 
-  if (dt > 0 && refWidth && window.duration) {
+    if (dt > 0 && refWidth && window.duration) {
 
-    // --- Freewheeling scroll increment ---
-    const delta = (dt * 1000) * playbackSpeed;  // restore your original scaling
-    const estimatedIncrement =
-      ((delta * window.speedMultiplier) / window.duration) * refWidth;
+      // --- Freewheeling scroll increment ---
+      const delta = (dt * 1000) * playbackSpeed;  // restore your original scaling
+      const estimatedIncrement =
+        ((delta * window.speedMultiplier) / window.duration) * refWidth;
 
-    // Advance playhead in world units
-    window.playheadX = Math.min(window.playheadX + estimatedIncrement, refWidth);
+      // Advance playhead in world units
+      window.playheadX = Math.min(window.playheadX + estimatedIncrement, refWidth);
 
-    // --- Smooth drift correction from server position ---
-    if (window.serverSyncPlayheadX !== undefined && window.serverSyncPlayheadX != null) {
-      const drift = window.serverSyncPlayheadX - window.playheadX;
+      // --- Smooth drift correction from server position ---
+      if (window.serverSyncPlayheadX !== undefined && window.serverSyncPlayheadX != null) {
+        const drift = window.serverSyncPlayheadX - window.playheadX;
 
-      // Large discrepancy = jump case → snap
-      if (Math.abs(drift) > (refWidth * 0.05)) {
-        window.playheadX = window.serverSyncPlayheadX;
-      } else {
-        // Small discrepancy → invisible correction
-        const correctionRate = 1.4; // tune 1.2–1.7 to taste
-        window.playheadX += drift * correctionRate * dt;
+        // Large discrepancy = jump case → snap
+        if (Math.abs(drift) > (refWidth * 0.05)) {
+          window.playheadX = window.serverSyncPlayheadX;
+        } else {
+          // Small discrepancy → invisible correction
+          const correctionRate = 1.4; // tune 1.2–1.7 to taste
+          window.playheadX += drift * correctionRate * dt;
+        }
       }
+
+      // Apply to visual scroll
+      scrollToPlayheadVisual();
     }
 
-    // Apply to visual scroll
-    scrollToPlayheadVisual();
-  }
+    // --- Update elapsed time for cue & UI systems ---
+    if (window.duration && window.scoreWidth) {
+      window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+    }
 
-  // --- Update elapsed time for cue & UI systems ---
-  if (window.duration && window.scoreWidth) {
-    window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-  }
+    // --- Periodic visibility optimization ---
+    const visibilityCheckInterval = 150;
+    window.lastVisibilityCheckTime = window.lastVisibilityCheckTime || 0;
+    if (currentTime - window.lastVisibilityCheckTime > visibilityCheckInterval) {
+      window.checkAnimationVisibility?.();
+      window.lastVisibilityCheckTime = currentTime;
+    }
 
-  // --- Periodic visibility optimization ---
-  const visibilityCheckInterval = 150;
-  window.lastVisibilityCheckTime = window.lastVisibilityCheckTime || 0;
-  if (currentTime - window.lastVisibilityCheckTime > visibilityCheckInterval) {
-    window.checkAnimationVisibility?.();
-    window.lastVisibilityCheckTime = currentTime;
-  }
+    // --- Cues ---
+    await checkCueTriggers?.(window.elapsedTime);
 
-  // --- Cues ---
-  await checkCueTriggers?.(window.elapsedTime);
-
-  // Continue animation
-  window.animationFrameId = requestAnimationFrame(window.animate);
-};
+    // Continue animation
+    window.animationFrameId = requestAnimationFrame(window.animate);
+  };
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -2659,7 +2659,7 @@ window.animate = async (currentTime) => {
   //updatestopwatch();
   window.scoreContainer = window.scoreContainer; // Expose globally
   // toggleSplashScreen();
- 
+
   console.log('// EOF');
 
 });

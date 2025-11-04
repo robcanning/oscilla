@@ -242,11 +242,15 @@ const broadcastState = () => {
   sharedState.elapsedTime = Number.isFinite(sharedState.elapsedTime) && sharedState.elapsedTime >= 0 ? sharedState.elapsedTime : 0;
   sharedState.playheadX = Number.isFinite(sharedState.playheadX) && sharedState.playheadX >= 0 ? sharedState.playheadX : 0;
 
-  console.log("\n[SERVER] 🔄 Broadcasting State:");
-  console.log(`    🕒 Elapsed Time: ${sharedState.elapsedTime}`);
-  console.log(`    🎵 Is Playing: ${sharedState.isPlaying}`);
-  console.log(`    📍 PlayheadX: ${sharedState.playheadX}`);
-  console.log(`    🚀 Speed Multiplier: ${sharedState.speedMultiplier}`); // ✅ Log speed multiplier
+  // --- Throttle sync logs to once per second ---
+  if (!global._syncLogCounter) global._syncLogCounter = 0;
+  global._syncLogCounter++;
+
+  if (global._syncLogCounter % 16 === 0) {
+    console.log(`[SYNC] t=${sharedState.elapsedTime} x=${sharedState.playheadX} speed=${sharedState.speedMultiplier}`);
+  }
+
+
 
   const message = JSON.stringify({
     type: 'sync',
@@ -269,7 +273,11 @@ const broadcastState = () => {
     }
   });
 
-  console.log(`[SERVER] ✅ Broadcast complete.`);
+const frames = ["·", "•", "●", "•"];
+if (!global._hb) global._hb = 0;
+
+process.stdout.write(`\x1b[32m${frames[global._hb++ % frames.length]}\x1b[0m`);
+process.stdout.write(""); // flush
 };
 
 
@@ -943,7 +951,7 @@ wss.on('connection', (ws, req) => {
         // Also clear sharedState so future syncs don't reuse it
         sharedState.canonicalRenderedWidth = null;
         sharedState.scoreWidth = null;
-        sharedState.duration = null;   
+        sharedState.duration = null;
         break;
       }
 
