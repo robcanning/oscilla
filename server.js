@@ -273,7 +273,7 @@ const broadcastState = () => {
     }
   });
 
-const frames = ["·", "•", "●", "•"];
+const frames = ["·", "•", " ● ", "•"];
 if (!global._hb) global._hb = 0;
 
 process.stdout.write(`\x1b[32m${frames[global._hb++ % frames.length]}\x1b[0m`);

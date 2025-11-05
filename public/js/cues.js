@@ -102,80 +102,61 @@ function waitForCueComplete(targetId, timeout = 60000) {
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
-
-// cues.js (top-level or imported from parser.js)
 export function parseCueParams(cueId) {
-// ----------------------------------------------------------
-// 1️⃣ New Chevrotain DSL (cue:page(...), cue:audio(...), etc.)
-// ----------------------------------------------------------
-// Allow passing AST directly
-if (typeof cueId !== "string" && cueId?.type) {
-  const ast = cueId;
-  const cueParams = {};
-  if (ast?.args?.length) {
-    for (const arg of ast.args) cueParams[arg.type] = arg.value;
+  // If caller passed an AST directly → just return it
+  if (typeof cueId !== "string" && cueId?.type) {
+    const ast = cueId;
+    return { type: ast.type, params: ast.params || {}, ast };
   }
-  return { type: ast.type, params: cueParams, ast };
-}
-
-
-if (cueId.startsWith("cue:")) {
-  try {
-    console.log("[CueDSL]  Parsing new-style cue:", cueId);
-    const ast = parseCueToAST(cueId); // returns parsed AST
-
-    // derive type and params from AST
-    const cueType = ast?.type || "cueUnknown";
-    const cueParams = {};
-
-    if (ast?.args?.length) {
-      for (const arg of ast.args) {
-        cueParams[arg.type] = arg.value;
-      }
-    }
-
-    console.log("[parseCueParams] Final cue type:", cueType);
-    console.log("[parseCueParams] Final cueParams:", cueParams);
-
-    return { type: cueType, params: cueParams, ast };
-  } catch (err) {
-    console.error("[CueDSL]  Parse failed for Chevrotain cue:", err);
-    // continue to legacy fallback
-  }
-}
-
 
   // ----------------------------------------------------------
-  // 2️⃣ Optional JSON/experimental DSL (colon + braces form)
+  // 1️⃣ Try Chevrotain AST Parsing (new DSL, supports pause(4), nav(A), etc.)
+  // ----------------------------------------------------------
+  try {
+    const ast = parseCueToAST(cueId.trim());
+
+    // Ensure param object exists
+    const cueParams = ast.params || {};
+
+    console.log("[parseCueParams] ✅ AST parsed:", ast);
+    return { type: ast.type, params: cueParams, ast };
+  } catch (err) {
+    // AST parse failed → continue to legacy fallback
+    // console.warn("[CueDSL] AST parse failed, trying legacy:", err);
+  }
+
+  // ----------------------------------------------------------
+  // 2️⃣ Optional JSON/brace DSL (old experimental form)
   // ----------------------------------------------------------
   if (cueId.includes(":") && cueId.includes("{")) {
     try {
-      const result = parseCueDSL(cueId); // your older experimental parser
+      const result = parseCueDSL(cueId);
       console.log("[CueDSL] JSON-style DSL parsed successfully:", result);
       return result;
     } catch (err) {
-      console.warn("[CueDSL] JSON-style DSL failed, using legacy fallback:", err);
+      console.warn("[CueDSL] JSON-style DSL failed → fallback to legacy:", err);
     }
   }
 
   // ----------------------------------------------------------
-  // 3️⃣ Fallback to legacy cue(param)_style(value) syntax
+  // 3️⃣ Legacy cue syntax fallback (cuePause_dur(N), cuePage(x), etc.)
   // ----------------------------------------------------------
   return parseCueLegacy(cueId);
 }
 
 
-////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
 export function parseCueDSL(str) {
-  // Example: cue:page(target:"page3"){dur:5,next:"page4"}
-  const mainMatch = str.match(/^cue:([a-zA-Z0-9_-]+)\((.*?)\)\s*\{(.*)\}$/);
+  // Example accepted:
+  // cue:page(target:"page3"){dur:5,next:"page4"}
+  // page(target:"page3"){dur:5,next:"page4"}
+  const mainMatch = str.match(/^(?:cue:)?([a-zA-Z0-9_-]+)\((.*?)\)\s*\{(.*)\}$/);
   if (!mainMatch) throw new Error("Invalid DSL structure");
 
   const [, type, argSection, paramSection] = mainMatch;
 
-  // Parse args: target:"page3", loop:[...]
   const args = {};
   argSection.split(",").forEach((kv) => {
     const [k, v] = kv.split(":").map(s => s.trim());
@@ -183,7 +164,6 @@ export function parseCueDSL(str) {
     args[k] = parseValue(v);
   });
 
-  // Parse params: dur:5, next:"page4"
   const params = {};
   paramSection.split(",").forEach((kv) => {
     const [k, v] = kv.split(":").map(s => s.trim());
@@ -194,7 +174,6 @@ export function parseCueDSL(str) {
   return { type: `cue${capitalize(type)}`, args, params };
 }
 
-// Helper
 function parseValue(v) {
   if (!v) return null;
   if (v.startsWith('"') && v.endsWith('"')) return v.slice(1, -1);
@@ -215,239 +194,100 @@ function capitalize(s) {
 
 
 
-
-
-// Main dispatcher function for cue triggers
 export function handleCueTrigger(cueId, isRemote = false, force = false, cueElement = null) {
   console.log(`[DEBUG] Attempting to trigger cue: ${cueId}`);
-  console.log("[handleCueTrigger] cueId:", cueId);
 
-
-  // ⚡ Allow duplicates if cuePage is inside a playlist
-  const isPagePlaylist = cueId.startsWith("cuePage(") && window.isCuePagePlaylistActive;
-
-  if (!isPagePlaylist && window.triggeredCues?.has(cueId)) {
+  if (!window.triggeredCues) window.triggeredCues = new Set();
+  if (window.triggeredCues.has(cueId)) {
     console.debug("[DEBUG] Skipping already-triggered cue:", cueId);
     return;
   }
-
-  // Mark cue as triggered
-  window.triggeredCues?.add(cueId);
-
-  // 🔍 Parse cue and get AST (if DSL)
-  const parsed = parseCueParams(cueId);
-  if (!parsed) {
-    console.error("[CUE] ❌ Failed to parse cue:", cueId);
-    return;
-  }
-
-  const { type, cueParams, params, ast } = parsed;
-  console.log(`[parseCueParams] Final cue type: ${type}`);
-  console.log(`[parseCueParams] Final cueParams:`, cueParams || params);
-
-  //  Unified param reference
-  const p = cueParams || params || {};
-
-  //  NEW DSL cue:page(...) syntax via Chevrotain
-  if (cueId.startsWith("cue:page")) {
-    console.log("[CueDSL]  Handling new cue:page syntax...");
-    if (ast) {
-      return handlePageCueFromAST(ast);
-    } else {
-      console.warn("[CueDSL] No AST found for cue:page — fallback to legacy.");
-    }
-  }
-
-  //  NEW DSL cue:fade(...) syntax via Chevrotain
-  else if (cueId.startsWith("cue:fade")) {
-    console.log("[CueDSL] Handling new cue:fade syntax...");
-    if (ast) {
-      const elementId = cueElement?.id || cueElement?.getAttribute("id");
-      return handleFadeCueFromAST(ast, elementId);
-    } else {
-      console.warn("[CueDSL] No AST found for cue:fade — fallback to legacy.");
-    }
-  }
-
-  else if (cueId.startsWith("cue:stopwatch")) {
-    console.log("[CueDSL] ⏱ Handling cue:stopwatch...");
-    if (ast) {
-      return handleStopwatchCue(ast, cueElement);
-    }
-  }
-
-  else if (cueId.startsWith("cue:video")) {
-    console.log("[CueDSL]  Handling cue:video...");
-    if (ast) {
-      return handleVideoCueFromAST(ast, cueElement);
-    } else {
-      console.warn("[CueDSL] No AST found for cue:video — ignoring trigger.");
-    }
-  }
-
-// ------------------------------------------------------------
-// cue:text(...) — AST-based text overlay handler
-// ------------------------------------------------------------
-else if (cueId.startsWith("cue:text")) {
-  console.log("[CueDSL] 📝 Handling cue:text...");
-  if (ast) {
-    import("./text.js")
-      .then(mod => mod.handleCueTextFromAST(ast, cueElement))
-      .catch(err => console.error("[CueDSL] Failed to load text.js module:", err));
-  } else {
-    console.warn("[CueDSL] No AST found for cue:text — using legacy fallback.");
-    if (typeof handleTextCue === "function") {
-      handleTextCue(cueId, cueElement);
-    } else {
-      console.warn("[CueDSL] Legacy handleTextCue() not defined.");
-    }
-  }
-}
-
+  window.triggeredCues.add(cueId);
 
   // ------------------------------------------------------------
-//  cue:metronome / cue:metro
-// ------------------------------------------------------------
-else if (cueId.startsWith("cue:metronome") || cueId.startsWith("cue:metro")) {
-  console.log("[CueDSL] 🕒 Handling cue:metronome...");
-  handleMetronomeCue(ast, cueElement);
-  return; // ✅ prevent further fallback lookup
-}
+  // ✅ Parse cue expression into AST (new DSL or legacy)
+  // ------------------------------------------------------------
+  let ast = null;
+  try {
+    ast = parseCueToAST(cueId.trim());
+  } catch { }
 
-
-
-
-  // Find appropriate handler
-  if (!cueHandlers.hasOwnProperty(type)) {
-    console.warn(`[CLIENT] No handler found for cue type: ${type}`);
-    return;
-  }
-
-  const handler = cueHandlers[type];
-  if (!handler) {
-    console.warn(`[CLIENT] Cue type '${type}' has no defined function.`);
-    return;
-  }
-
-  // -------------------------------------------------------
-  //  🎚️ Specific cue type handling
-  // -------------------------------------------------------
-
-  if (type === "cueSpeed") {
-    const speed = p.speed ?? p.Speed ?? p.choice;
-    if (!speed || isNaN(speed)) {
-      console.warn(`[CLIENT] Invalid or missing speed in cueSpeed: ${cueId}`);
+  if (!ast) {
+    const legacy = parseCueParams(cueId);
+    if (!legacy || !legacy.ast) {
+      console.error("[CUE] ❌ Could not parse cue:", cueId);
       return;
     }
-    handler(cueId, Number(speed));
+    ast = legacy.ast;
   }
 
-  else if (type === "cuePause") {
-    const durationSec = p.duration ?? p.dur ?? p.choice;
-    const durationMs = Number(durationSec) * 1000;
-    if (!durationMs || isNaN(durationMs)) {
-      console.error(`[CLIENT] Invalid duration for cuePause: ${cueId}`);
+  const p = ast.params || {};
+  console.log(`[CueDSL] ✅ Resolved AST Cue Type: ${ast.type}`, ast);
+
+  // ------------------------------------------------------------
+  // 🚀 Dispatch by AST type — This *is* the cue system now.
+  // ------------------------------------------------------------
+  switch (ast.type) {
+
+    case "cuePage":
+      return handlePageCueFromAST(ast, cueElement);
+
+    case "cueFade":
+      return handleFadeCueFromAST(ast, cueElement);
+
+    case "cueStopwatch":
+      return handleStopwatchCue(ast, cueElement);
+
+    case "cueVideo":
+      return handleVideoCueFromAST(ast, cueElement);
+
+    case "cueText":
+      import("./text.js")
+        .then(mod => mod.handleCueTextFromAST(ast, cueElement))
+        .catch(err => console.error("[CueDSL] Failed to load text.js module:", err));
       return;
-    }
-    handler(cueId, durationMs);
-  }
 
-  else if (type === "cueChoice") {
-    if (p.choice && p.dur) {
-      console.log(`[CUE] Triggering cue handler: ${type}`);
-      handler(cueId, p);
-    } else {
-      console.error(`[CLIENT] Invalid cueChoice: missing 'choice' or 'dur' param`);
-    }
-  }
+    case "cueMetronome":
+    case "cueMetro":
+      return handleMetronomeCue(ast, cueElement);
 
-  // -------------------------------------------------------
-  //  cuePage (legacy and AST-aware)
-  // -------------------------------------------------------
-  else if (type === "cuePage") {
-    //  DSL AST-based cuePage
-    if (ast) {
-      console.log("[CueDSL]  AST detected inside cuePage handling via AST parser.");
-      return handlePageCueFromAST(ast);
-    }
+    case "cuePause":
+      return handlePauseCue(
+        cueId,
+        (ast.dur ?? 0) * 1000,
+        null,
+        ast.next ?? cueId,
+        ast.count === true
+      );
 
-    //  Legacy extraction for cuePage(...)
-    const openIdx = cueId.indexOf("(");
-    let inner = "";
-    if (openIdx !== -1) {
-      let depth = 0;
-      for (let i = openIdx + 1; i < cueId.length; i++) {
-        const ch = cueId[i];
-        if (ch === "(") depth++;
-        else if (ch === ")") {
-          if (depth === 0) {
-            inner = cueId.slice(openIdx + 1, i);
-            break;
-          } else depth--;
-        }
+    case "cueSpeed": {
+      const start = window.speedMultiplier ?? 1.0;
+      const end = ast.value ?? start;
+      const dur = ast.dur ?? null;
+
+      if (dur && dur > 0) {
+        return handleSpeedRamp(start, end, dur);
+      } else {
+        return handleSpeedCue(`speed(${end})`, end);
       }
     }
 
-    if (/^(seq|loop|rand)\(/.test(inner)) {
-      console.log(`[cuePage] Detected playlist expression: ${inner}`);
-      handleCuePagePlaylist(cueId, inner);
+case "cueStop":
+  return handleStopCue(ast, cueElement);
+
+    case "cueNav":
+    case "cueNavigate":
+      return handleNavCue(ast, cueElement);
+
+    case "cueAudio":
+      return handleAudioCueFromAST(ast, cueElement);
+
+    case "cueAudioStop":
+      return stopAudioCue(ast.filename || ast.file);
+
+    default:
+      console.warn(`[CueDSL] ⚠ Unsupported cue type: ${ast.type}`);
       return;
-    }
-
-    //  Normal single page cue
-    let animDuration = Number(p.dur);
-    if (isNaN(animDuration) || animDuration < 0) animDuration = 0;
-
-    const pageName = p.choice || cueId.match(/cuePage\(([^)]+)\)/)?.[1];
-    if (!pageName) {
-      console.error(`[CLIENT] cuePage missing page name: ${cueId}`);
-      return;
-    }
-
-    const animationPath = `scores/pages/${pageName}.svg`;
-    handler(cueId, animationPath, animDuration, p);
-  }
-
-  // -------------------------------------------------------
-  //  cueNav (or cueNavigate)
-  // -------------------------------------------------------
-  else if (cueId.startsWith("cueNav(") || cueId.startsWith("cueNavigate(")) {
-    const parsedNav = parseNavCue(cueId);
-    return handleNavCue(parsedNav);
-  }
-
-  // -------------------------------------------------------
-  //   cueAudioStop
-  // -------------------------------------------------------
-  else if (cueId.startsWith("cueAudioStop(")) {
-    const match = cueId.match(/^cueAudioStop\(([^)]+)\)/);
-    const file = match?.[1]?.trim();
-    if (file) {
-      console.log(`[CUE] 🔻 cueAudioStop for ${file}`);
-      stopAudioCue(file);
-      const ev = new CustomEvent("oscilla:audio", { detail: { file, state: "stop" } });
-      window.dispatchEvent(ev);
-    }
-    return;
-  }
-
-  // -------------------------------------------------------
-  //   Fallback for other cue types
-  // -------------------------------------------------------
-  else {
-    console.log(`[CUE] Triggering cue handler: ${type}`);
-    handler(cueId, p);
-  }
-
-  // -------------------------------------------------------
-  //  🌐 Mark and optionally broadcast the cue
-  // -------------------------------------------------------
-  if (!window.triggeredCues.has(cueId)) {
-    window.triggeredCues.add(cueId);
-    if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN && !isRemote) {
-      window.socket.send(JSON.stringify({ type: "cueTriggered", cueId }));
-      console.log(`[CLIENT] Sent cue trigger to server: ${cueId}`);
-    }
   }
 }
 
@@ -543,9 +383,14 @@ export function emitCueComplete(id, type = "generic") {
  * - `window.isPlaying`, `startAnimation()`, `stopAnimation()`, etc., must be globally accessible
  */
 
-export function handlePauseCue(cueId, duration, showCountdownOverride = null, resumeTarget = cueId) {
-  console.log(`[DEBUG] Handling pause cue: ${cueId}, duration: ${duration}ms.`);
-
+export function handlePauseCue(
+  cueId,
+  durationMs,
+  showCountdownOverride = null,
+  resumeTarget = cueId,
+  forceShowCountdown = false
+) {
+  console.log(`[DEBUG] Handling pause cue: ${cueId}, duration: ${durationMs}ms.`);
   window.isPaused = true;
   window.ignoreSyncPlayback = true;
 
@@ -586,10 +431,20 @@ export function handlePauseCue(cueId, duration, showCountdownOverride = null, re
     return;
   }
 
-  const showCountdown = showCountdownOverride ?? (duration > 2000);
+  // Determine whether to show countdown UI
+  let showCountdown;
+
+  if (forceShowCountdown === true) {
+    showCountdown = true;                // explicitly show
+  } else if (forceShowCountdown === false) {
+    showCountdown = false;               // explicitly hide
+  } else {
+    // automatic behavior (Option A)
+    showCountdown = (showCountdownOverride ?? (durationMs > 2000));
+  }
 
   if (showCountdown) {
-    const targetEnd = Date.now() + duration;
+    const targetEnd = Date.now() + durationMs;
 
     pauseCountdown.classList.remove("hidden");
     pauseCountdown.style.display = "flex";
@@ -617,12 +472,16 @@ export function handlePauseCue(cueId, duration, showCountdownOverride = null, re
   window.pauseTimeout = setTimeout(() => {
     console.log("[DEBUG] Auto-resuming after pause duration.");
     window.ignoreSyncDuringPause = false;
+
     dismissPauseCountdown();
+
     if (resumeTarget && resumeTarget !== cueId) {
-      console.log(`[DEBUG] Jumping to resume target: ${resumeTarget}`);
-      window.jumpToCueId?.(resumeTarget);
+      console.log(`[DEBUG] Resuming → triggering next cue: ${resumeTarget}`);
+      window.handleCueTrigger?.(resumeTarget, false, false, null);
     }
-  }, duration);
+
+  }, durationMs);
+
 }
 
 
@@ -642,10 +501,13 @@ export function dismissPauseCountdown(forceNoResume = false, receivedFromServer 
 
   clearPauseTimers();
 
-  if (forceNoResume) {
-    console.log("[DEBUG] Countdown dismissed without resuming playback.");
-    return;
-  }
+   // --- NEW: Fully exit pause mode if user resumes manually ---
+ if (forceNoResume) {
+  window.ignoreSyncDuringPause = false;
+   window.isMusicalPause = false;
+   console.log("[DEBUG] Manual resume: cleared pause mode.");
+   return;
+ }
 
   resumePlayback(receivedFromServer);
 }
@@ -1179,24 +1041,29 @@ export function assignCues(svgRoot, cuesArray = []) {
         continue;
       }
 
+      if (id && /[()]/.test(id)) {  // ✅ only try if it looks like a function call
+        let ast = null;
+        try {
+          ast = parseCueToAST(id.trim());
+        } catch {
+          ast = null;
+        }
 
-      // ✅ Normal cue element handling
+        if (ast && ast.type?.startsWith("cue")) {  // ✅ only real cue types
+          const bbox = child.getBBox?.();
+          cuesArray.push({
+            id,
+            ast,
+            element: child,
+            triggered: false,
+            ...(bbox && { x: bbox.x, width: bbox.width })
+          });
 
-      if (id?.startsWith("cue") && !cuesArray.some(c => c.id === id && c.element)) {
-        const bbox = child.getBBox?.();
-        cuesArray.push({
-          id: id,
-          element: child,
-          triggered: false,
-          ...(bbox && { x: bbox.x, width: bbox.width })
-        });
-        // console.log(`[assignCues] ➕ Added external cue: ${id}`);
-
-        registerCueUid(id, "walk");
-
-      } else if (id?.includes("cue") && !id.startsWith("cue")) {
-        // console.warn(`[assignCues] ⚠️ Skipped suspicious cue-like ID: ${id}`);
+          registerCueUid(id, "walk");
+        }
       }
+
+
       walkForCueElements(child); // recurse
     }
   }
@@ -1299,40 +1166,115 @@ export async function handleTraverseCue(cueId) {
 }
 
 
+
 // ⚡ Handles cueSpeed: updates playback speed and syncs
-export function handleSpeedCue(cueId, newMultiplier) {
-  newMultiplier = parseFloat(newMultiplier.toFixed(1));
-  if (isNaN(newMultiplier) || newMultiplier <= 0) return;
+// --- Speed Ramp State ---
+let activeSpeedRamp = null;
+
+// ------------------------------------------------------------
+// handleSpeedRamp(start, end, durationSeconds, easing = "linear")
+// ------------------------------------------------------------
+export function handleSpeedRamp(start, end, durSec, easing = "linear") {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || !Number.isFinite(durSec) || durSec <= 0) {
+    console.warn("[cueSpeed] Invalid ramp params:", { start, end, durSec });
+    return;
+  }
+
+  console.log(`[cueSpeed] Starting ramp: ${start} → ${end} over ${durSec}s`);
+
+  const startTime = performance.now();
+  const durationMs = durSec * 1000;
+
+  // Cancel any existing ramp
+  activeSpeedRamp = { start, end, startTime, durationMs, easing };
+
+  // Ensure the animation loop is running
+  if (!window.speedRampLoopActive) {
+    window.speedRampLoopActive = true;
+    requestAnimationFrame(speedRampTick);
+  }
+}
+
+function easeLinear(t) { return t; }
+
+// Main ramp animation loop
+function speedRampTick(now) {
+  if (!activeSpeedRamp) {
+    window.speedRampLoopActive = false;
+    return;
+  }
+
+  const { start, end, startTime, durationMs, easing } = activeSpeedRamp;
+  const elapsed = now - startTime;
+  let t = Math.min(elapsed / durationMs, 1);
+
+  // Apply easing later — for now just linear:
+  t = easeLinear(t);
+
+  const value = start + (end - start) * t;
+
+  window.speedMultiplier = value;
+  window.updateSpeedDisplay?.();
+
+  // Broadcast to server smoothly
+  if (window.socket?.readyState === WebSocket.OPEN && !window.incomingServerUpdate) {
+    window.socket.send(JSON.stringify({
+      type: "set_speed_multiplier",
+      multiplier: value,
+      timestamp: Date.now()
+    }));
+  }
+
+  if (t < 1) {
+    requestAnimationFrame(speedRampTick);
+  } else {
+    console.log(`[cueSpeed] Ramp complete. Final multiplier = ${end}`);
+    activeSpeedRamp = null;
+    window.speedRampLoopActive = false;
+  }
+}
+
+
+
+// ⚡ Handles cueSpeed: updates playback speed and syncs
+export function handleSpeedCue(_id, newMultiplier) {
+  newMultiplier = Number(newMultiplier);
+  if (!newMultiplier || newMultiplier <= 0) return;
   if (window.speedMultiplier === newMultiplier) return;
 
   window.speedMultiplier = newMultiplier;
   window.updateSpeedDisplay?.();
 
+  // broadcast only if not receiving
   if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN && !window.incomingServerUpdate) {
-    const msg = { type: "set_speed_multiplier", multiplier: newMultiplier, timestamp: Date.now() };
-    window.socket.send(JSON.stringify(msg));
+    window.socket.send(JSON.stringify({
+      type: "set_speed_multiplier",
+      multiplier: newMultiplier,
+      t: Date.now()
+    }));
   }
 }
 
 
-export function handleStopCue(cueId = "cueStop") {
-  console.log("[CLIENT] 🛑 cueStop triggered:", cueId);
 
-  window.isPlaying ? window.pausePlayback() : window.startPlayback();
+export function handleStopCue(ast) {
+  console.log("[cueStop] Triggered:", ast);
 
-  // // Tell the server and other clients
-  // if (window.socket && window.socket.readyState === WebSocket.OPEN) {
-  //   window.socket.send(JSON.stringify({
-  //     type: "cueStop",
-  //     elapsedTime: window.elapsedTime,
-  //     playheadX: window.playheadX,
-  //     id: cueId
-  //   }));
-  // }
+  // Toggle playback:
+  if (window.isPlaying) {
+    window.pausePlayback();
+  } else {
+    window.startPlayback();
+  }
 
-  console.log("[CLIENT] Playback stopped by cue:", cueId);
+  // Optional chaining: stop(next:nav(B))
+  if (ast.next) {
+    console.log(`[cueStop] Scheduling next cue: ${ast.next}`);
+    setTimeout(() => {
+      handleCueTrigger(ast.next, false, true);
+    }, 50);
+  }
 }
-
 
 
 
@@ -2677,8 +2619,8 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
 
   const vsize = p.vsize?.toLowerCase?.();
   if (vsize === "fs" || vsize === "fullscreen") {
-  vid.classList.add("cue-video-fullscreen");
-}
+    vid.classList.add("cue-video-fullscreen");
+  }
 
   const uid = p.uid || `video-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
   vid.id = uid;
@@ -2807,89 +2749,89 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
     score.addEventListener("scroll", updatePos);
   }
 
-// --- Handle video timing, fades, and in/out offsets
-vid.style.visibility = "hidden"; // hide the element to prevent the first frame flash
+  // --- Handle video timing, fades, and in/out offsets
+  vid.style.visibility = "hidden"; // hide the element to prevent the first frame flash
 
-vid.addEventListener("loadedmetadata", () => {
-  // --------------------------
-  //  SEEK TO START ("in:" parameter)
-  // --------------------------
-  if (inTime > 0) {
-    vid.pause(); // stop autoplay so we can seek safely
-    vid.currentTime = inTime; // jump to desired start position in seconds
+  vid.addEventListener("loadedmetadata", () => {
+    // --------------------------
+    //  SEEK TO START ("in:" parameter)
+    // --------------------------
+    if (inTime > 0) {
+      vid.pause(); // stop autoplay so we can seek safely
+      vid.currentTime = inTime; // jump to desired start position in seconds
 
-    // Wait until the seek completes before revealing or playing
-    vid.addEventListener(
-      "seeked",
-      () => {
-        vid.style.visibility = "visible"; // show the video only after the seek is complete
-        vid.play(); // now begin playback from the desired inTime
+      // Wait until the seek completes before revealing or playing
+      vid.addEventListener(
+        "seeked",
+        () => {
+          vid.style.visibility = "visible"; // show the video only after the seek is complete
+          vid.play(); // now begin playback from the desired inTime
 
-        // --------------------------
-        //  FADE IN
-        // --------------------------
-        if (fadeInDur > 0) {
-          vid.style.opacity = 0;
-          vid.animate([{ opacity: 0 }, { opacity: opacityTarget }], {
-            duration: fadeInDur * 1000,
-            fill: "forwards",
-            easing: "ease-out",
-          });
-        } else {
-          vid.style.opacity = opacityTarget; // no fade → set opacity immediately
-        }
-
-        // --------------------------
-        //  FADE OUT (based on "out:" and "fadeOut:" parameters)
-        // --------------------------
-        if (outTime > 0) {
-          // start fade out slightly before the outTime so fade completes by that time
-          const fadeOutStart = Math.max((outTime - fadeOutDur) * 1000, 0);
-          setTimeout(() => {
-            vid.animate([{ opacity: opacityTarget }, { opacity: 0 }], {
-              duration: fadeOutDur * 1000,
+          // --------------------------
+          //  FADE IN
+          // --------------------------
+          if (fadeInDur > 0) {
+            vid.style.opacity = 0;
+            vid.animate([{ opacity: 0 }, { opacity: opacityTarget }], {
+              duration: fadeInDur * 1000,
               fill: "forwards",
-              easing: "ease-in",
+              easing: "ease-out",
             });
-          }, fadeOutStart);
-        }
-      },
-      { once: true } // ensures the event handler runs only once
-    );
-  }
+          } else {
+            vid.style.opacity = opacityTarget; // no fade → set opacity immediately
+          }
 
-  // --------------------------
-  //  NO "in:" PARAMETER — PLAY IMMEDIATELY
-  // --------------------------
-  else {
-    vid.style.visibility = "visible"; // show right away
-    vid.play();
-
-    // --- Fade in
-    if (fadeInDur > 0) {
-      vid.style.opacity = 0;
-      vid.animate([{ opacity: 0 }, { opacity: opacityTarget }], {
-        duration: fadeInDur * 1000,
-        fill: "forwards",
-        easing: "ease-out",
-      });
-    } else {
-      vid.style.opacity = opacityTarget;
+          // --------------------------
+          //  FADE OUT (based on "out:" and "fadeOut:" parameters)
+          // --------------------------
+          if (outTime > 0) {
+            // start fade out slightly before the outTime so fade completes by that time
+            const fadeOutStart = Math.max((outTime - fadeOutDur) * 1000, 0);
+            setTimeout(() => {
+              vid.animate([{ opacity: opacityTarget }, { opacity: 0 }], {
+                duration: fadeOutDur * 1000,
+                fill: "forwards",
+                easing: "ease-in",
+              });
+            }, fadeOutStart);
+          }
+        },
+        { once: true } // ensures the event handler runs only once
+      );
     }
 
-    // --- Fade out
-    if (outTime > 0) {
-      const fadeOutStart = Math.max((outTime - fadeOutDur) * 1000, 0);
-      setTimeout(() => {
-        vid.animate([{ opacity: opacityTarget }, { opacity: 0 }], {
-          duration: fadeOutDur * 1000,
+    // --------------------------
+    //  NO "in:" PARAMETER — PLAY IMMEDIATELY
+    // --------------------------
+    else {
+      vid.style.visibility = "visible"; // show right away
+      vid.play();
+
+      // --- Fade in
+      if (fadeInDur > 0) {
+        vid.style.opacity = 0;
+        vid.animate([{ opacity: 0 }, { opacity: opacityTarget }], {
+          duration: fadeInDur * 1000,
           fill: "forwards",
-          easing: "ease-in",
+          easing: "ease-out",
         });
-      }, fadeOutStart);
+      } else {
+        vid.style.opacity = opacityTarget;
+      }
+
+      // --- Fade out
+      if (outTime > 0) {
+        const fadeOutStart = Math.max((outTime - fadeOutDur) * 1000, 0);
+        setTimeout(() => {
+          vid.animate([{ opacity: opacityTarget }, { opacity: 0 }], {
+            duration: fadeOutDur * 1000,
+            fill: "forwards",
+            easing: "ease-in",
+          });
+        }, fadeOutStart);
+      }
     }
-  }
-});
+  });
 
 
 
@@ -4134,10 +4076,10 @@ export function handleGroupCue(cueId, cueParams = {}) {
   console.log("[cueGroup] 🧱 Overlay container:", overlay?.id || "(none)");
 
 
-// 7️⃣ Remove old cue buttons before building new UI
-if (typeof window.destroyAllCueButtons === "function") {
-  window.destroyAllCueButtons();
-}
+  // 7️⃣ Remove old cue buttons before building new UI
+  if (typeof window.destroyAllCueButtons === "function") {
+    window.destroyAllCueButtons();
+  }
 
   // 7️⃣ Build visible cue buttons using the overlay
   if (typeof window.assignCueButtonsIn === "function") {
@@ -4579,7 +4521,7 @@ export function destroyAllCueButtons() {
   document.querySelectorAll(".oscilla-cue-button").forEach(btn => {
     try {
       btn._destroyCueButton?.();   // ✅ cancel raf, listeners, restore SVG visibility
-    } catch(e) {}
+    } catch (e) { }
 
     btn.remove();                  // ✅ ensure DOM cleared
   });
@@ -4592,12 +4534,12 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl) {
   if (!parsed) return null;
   const { cueExpr, opt } = parsed;
 
-// ✅ Correct overlay container selection
-if (!containerEl) {
-  containerEl = window._pageMode
-    ? document.querySelector('#singlePage-overlay')
-    : document.querySelector('#scoreInner'); // ← FIX HERE
-}
+  // ✅ Correct overlay container selection
+  if (!containerEl) {
+    containerEl = window._pageMode
+      ? document.querySelector('#singlePage-overlay')
+      : document.querySelector('#scoreInner'); // ← FIX HERE
+  }
   if (!cueSvgEl || !containerEl) return null;
 
   // ✅ Hide SVG cue item (this must stay)
@@ -4733,7 +4675,7 @@ export function assignCueButtonsIn(rootNode, containerEl) {
   console.log(`[assignCueButtonsIn] executing for ${rootNode.querySelectorAll('[id^="cueButton("]').length} elements`);
 
 
-  
+
   if (!rootNode || !containerEl) return [];
   const created = [];
 

@@ -72,6 +72,11 @@ const Page = createToken({ name: "Page", pattern: /\bpage\b/ });
 const Stopwatch = createToken({ name: "Stopwatch", pattern: /\bstopwatch\b/ });
 const Video = createToken({ name: "Video", pattern: /\bvideo\b/ });
 const Text = createToken({ name: "Text", pattern: /\btext\b/, longer_alt: Identifier });
+const Pause = createToken({ name: "Pause", pattern: /\bpause\b/, longer_alt: Identifier });
+const Speed = createToken({ name: "Speed", pattern: /\bspeed\b/, longer_alt: Identifier });
+const Stop = createToken({ name: "Stop", pattern: /\bstop\b/, longer_alt: Identifier });
+
+
 
 const RangeLiteral = createToken({
   name: "RangeLiteral",
@@ -106,9 +111,10 @@ export const PatternName = createToken({
 
 
 export const allTokens = [
-  Cue, Fade, Page, Stopwatch, Video, Text, After, Nav, PatternName, Choose,
+  Cue, Fade, Page, Stopwatch, Video, Text, Pause, Speed, Stop,
+  After, Nav, PatternName, Choose,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
-  RangeLiteral, NumberLiteral, StringLiteral,  Identifier, WS
+  RangeLiteral, NumberLiteral, StringLiteral, Identifier, WS
 ];
 
 
@@ -142,9 +148,11 @@ export class CueParser extends CstParser {
         { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(StringLiteral, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(RangeLiteral, { LABEL: "value" }) },
+        { ALT: () => $.SUBRULE($.cueExpr, { LABEL: "cueCall" }) }, // <— NEW
         { ALT: () => $.CONSUME1(Identifier, { LABEL: "value" }) },
       ]);
     });
+
 
     $.RULE("genericParamList", () => {
       $.CONSUME(LParen);
@@ -250,23 +258,23 @@ export class CueParser extends CstParser {
 
 
 
-$.RULE("controlExpr", () => {
-  $.OR([
-    { ALT: () => $.CONSUME(Nav, { LABEL: "controlName" }) },
-    // { ALT: () => $.CONSUME(Mode, { LABEL: "controlName" }) },
-    { ALT: () => $.CONSUME(Identifier, { LABEL: "controlName" }) },
-  ]);
-  $.CONSUME(LParen);
-  $.CONSUME1(Identifier, { LABEL: "controlArg" });
+    $.RULE("controlExpr", () => {
+      $.OR([
+        { ALT: () => $.CONSUME(Nav, { LABEL: "controlName" }) },
+        // { ALT: () => $.CONSUME(Mode, { LABEL: "controlName" }) },
+        { ALT: () => $.CONSUME(Identifier, { LABEL: "controlName" }) },
+      ]);
+      $.CONSUME(LParen);
+      $.CONSUME1(Identifier, { LABEL: "controlArg" });
 
-  // 🆕 Optional @target (restored from your old rule)
-  $.OPTION(() => {
-    $.CONSUME(At, { LABEL: "At" });   // same token as before
-    $.CONSUME2(Identifier, { LABEL: "targetUid" });
-  });
+      // 🆕 Optional @target (restored from your old rule)
+      $.OPTION(() => {
+        $.CONSUME(At, { LABEL: "At" });   // same token as before
+        $.CONSUME2(Identifier, { LABEL: "targetUid" });
+      });
 
-  $.CONSUME(RParen);
-});
+      $.CONSUME(RParen);
+    });
 
 
     $.RULE("afterClause", () => {
@@ -416,46 +424,118 @@ $.RULE("controlExpr", () => {
       ]);
     });
 
-// ------------------------------------------------------------
-// cue:text(...)
-// ------------------------------------------------------------
-this.RULE("cueTextTop", () => {
-  this.CONSUME(Text);
-  this.SUBRULE(this.genericParamList);
+    // ------------------------------------------------------------
+    // cue:text(...)
+    // ------------------------------------------------------------
+    this.RULE("cueTextTop", () => {
+      this.CONSUME(Text);
+      this.SUBRULE(this.genericParamList);
+    });
+
+    // ------------------------------------------------------------
+    // cueSpeedTop
+    // ------------------------------------------------------------
+    $.RULE("cueSpeedTop", () => {
+      $.CONSUME(Speed);
+      $.CONSUME(LParen);
+
+      $.OR([
+        // speed(3) or speed(3, dur:4, easing:linear)
+        {
+          ALT: () => {
+            $.CONSUME(NumberLiteral, { LABEL: "shorthand" });
+
+            $.OPTION(() => {
+              $.CONSUME(Comma);
+              $.AT_LEAST_ONE_SEP({
+                SEP: Comma,
+                DEF: () => $.SUBRULE($.genericParam) // SUBRULE #1
+              });
+            });
+          }
+        },
+
+        // speed(value:3, dur:4)
+        {
+          ALT: () => {
+            $.AT_LEAST_ONE_SEP1({
+              SEP: Comma,
+              DEF: () => $.SUBRULE1($.genericParam) // SUBRULE #2
+            });
+          }
+        }
+      ]);
+
+      $.CONSUME(RParen);
+    });
+
+this.RULE("cueStopTop", () => {
+  this.CONSUME(Stop);
+
+  this.OPTION(() => {
+    this.CONSUME(LParen);
+    this.OPTION1(() => this.SUBRULE(this.genericParamList)); // allow zero OR more params
+    this.CONSUME(RParen);
+  });
 });
 
+    $.RULE("cuePauseTop", () => {
+      $.CONSUME(Pause);
+      $.CONSUME(LParen);
 
-// ------------------------------------------------------------
-// cue:metronome(...) / cue:metro(...)
-// ------------------------------------------------------------
-$.RULE("cueMetronomeTop", () => {
-  $.CONSUME(Identifier, { LABEL: "metronomeName" }); // 'metro' or 'metronome'
-  $.SUBRULE($.genericParamList); // genericParamList already handles ( ... )
-});
+      $.OR([
+        // shorthand: cue:pause(3)
+        { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "shorthandDur" }) },
 
+        // explicit params: cue:pause(dur:3, count:true)
+        {
+          ALT: () => $.AT_LEAST_ONE_SEP({
+            SEP: Comma,
+            DEF: () => $.SUBRULE($.genericParam),
+          })
+        }
+      ]);
+
+      $.CONSUME(RParen);
+    });
+
+    // ------------------------------------------------------------
+    // cue:metronome(...) / cue:metro(...)
+    // ------------------------------------------------------------
+    $.RULE("cueMetronomeTop", () => {
+      $.CONSUME(Identifier, { LABEL: "metronomeName" }); // 'metro' or 'metronome'
+      $.SUBRULE($.genericParamList); // genericParamList already handles ( ... )
+    });
+
+    $.RULE("cueExpr", () => {
+      $.CONSUME(Identifier, { LABEL: "fn" }); // e.g. nav, text, audio, metro, etc.
+      $.CONSUME(LParen);
+      $.CONSUME1(Identifier, { LABEL: "arg" }); // sectionB, msgHello, etc.
+      $.CONSUME(RParen);
+    });
 
     // -----------------------
     // cueTop — only fade|page at top level
     // -----------------------
     $.RULE("cueTop", () => {
-      $.CONSUME(Cue);
-      $.CONSUME(Colon);
+      // Allow optional cue: prefix (backwards compatible)
+      $.OPTION(() => {
+        $.CONSUME(Cue);
+        $.CONSUME(Colon);
+      });
+
       $.OR([
         { ALT: () => $.SUBRULE($.cueFadeTop) },
         { ALT: () => $.SUBRULE($.cuePageTop) },
         { ALT: () => $.SUBRULE($.cueStopwatchTop) },
         { ALT: () => $.SUBRULE($.cueVideoTop) },
         { ALT: () => $.SUBRULE($.cueTextTop) },
-        { ALT: () => $.SUBRULE($.cueMetronomeTop) }
-
-
+        { ALT: () => $.SUBRULE($.cueMetronomeTop) },
+        { ALT: () => $.SUBRULE($.cuePauseTop) },
+        { ALT: () => $.SUBRULE($.cueSpeedTop) },
+        { ALT: () => $.SUBRULE($.cueStopTop) },
       ]);
     });
-
-
-
-
-
 
     this.performSelfAnalysis();
   }
@@ -656,8 +736,8 @@ export function extractAfterClause(children) {
   if (!ctrl?.children) return null;
 
   const control = ctrl.children.controlName?.[0]?.image || null;
-  const arg     = ctrl.children.controlArg?.[0]?.image || null;
-  const target  = ctrl.children.targetUid?.[0]?.image || null;
+  const arg = ctrl.children.controlArg?.[0]?.image || null;
+  const target = ctrl.children.targetUid?.[0]?.image || null;
 
   if (!control) return null;
   console.log("[extractAfterClause] ✅ control:", control, "arg:", arg, "target:", target);
@@ -810,65 +890,172 @@ export function cstToAst(cst) {
     return { type: "cueVideo", params };
   }
 
-// ------------------------------------------------------------
-// cue:text(...)
-// ------------------------------------------------------------
-const textNode =
-  cst.children?.cueTextTop?.[0] ||
-  (cst.name === "cueTextTop" ? cst : null);
+  // ------------------------------------------------------------
+  // cue:text(...)
+  // ------------------------------------------------------------
+  const textNode =
+    cst.children?.cueTextTop?.[0] ||
+    (cst.name === "cueTextTop" ? cst : null);
 
-if (textNode) {
-  const args = [];
-  const list = textNode.children.genericParamList?.[0];
-  const items = list?.children.genericParam || [];
+  if (textNode) {
+    const args = [];
+    const list = textNode.children.genericParamList?.[0];
+    const items = list?.children.genericParam || [];
 
-  for (const p of items) {
-    const keyNode = p.children.key?.[0];
-    const valNode = p.children.value?.[0];
+    for (const p of items) {
+      const keyNode = p.children.key?.[0];
+      const valNode = p.children.value?.[0];
 
-    const key =
-      keyNode?.image ||
-      keyNode?.children?.Identifier?.[0]?.image ||
-      "unknown";
-let val = null;
-if (valNode?.children?.StringLiteral?.[0]) {
-  val = valNode.children.StringLiteral[0].image;
-} else if (valNode?.children?.NumberLiteral?.[0]) {
-  val = valNode.children.NumberLiteral[0].image;
-} else if (valNode?.children?.RangeLiteral?.[0]) {
-  val = valNode.children.RangeLiteral[0].image;
-} else if (valNode?.image) {
-  val = valNode.image;
-}
+      const key =
+        keyNode?.image ||
+        keyNode?.children?.Identifier?.[0]?.image ||
+        "unknown";
+      let val = null;
+      if (valNode?.children?.StringLiteral?.[0]) {
+        val = valNode.children.StringLiteral[0].image;
+      } else if (valNode?.children?.NumberLiteral?.[0]) {
+        val = valNode.children.NumberLiteral[0].image;
+      } else if (valNode?.children?.RangeLiteral?.[0]) {
+        val = valNode.children.RangeLiteral[0].image;
+      } else if (valNode?.image) {
+        val = valNode.image;
+      }
 
 
-    args.push({ type: key, value: val });
+      args.push({ type: key, value: val });
+    }
+
+    return { type: "cueText", args };
   }
 
-  return { type: "cueText", args };
-}
+
+  // ============================================================================
+  // 🔹 cue:metronome(...) / cue:metro(...)
+  // ============================================================================
+  const metroNode = cst.children?.cueMetronomeTop?.[0]
+    || (cst.name === "cueMetronomeTop" ? cst : null);
+
+  if (metroNode) {
+    const args = [];
+    const list = metroNode.children.genericParamList?.[0];
+    const params = list?.children.genericParam || [];
+    for (const p of params) {
+      const key = p.children.key?.[0]?.image;
+      const val = p.children.value?.[0]?.image;
+      if (key) args.push({
+        type: key,
+        value: isNaN(Number(val)) ? val : Number(val)
+      });
+    }
+
+    return { type: "cueMetronome", args };
+  }
 
 
-// ============================================================================
-// 🔹 cue:metronome(...) / cue:metro(...)
-// ============================================================================
-const metroNode = cst.children?.cueMetronomeTop?.[0]
-  || (cst.name === "cueMetronomeTop" ? cst : null);
 
-if (metroNode) {
-  const args = [];
-  const list = metroNode.children.genericParamList?.[0];
-  const params = list?.children.genericParam || [];
-  for (const p of params) {
+
+  // ------------------------------------------------------------
+  // cue:speed(...)
+  // ------------------------------------------------------------
+  // ------------------------------------------------------------
+  // cue:speed(...)  AST Builder
+  // ------------------------------------------------------------
+  const speedNode =
+    cst.children?.cueSpeedTop?.[0] ||
+    (cst.name === "cueSpeedTop" ? cst : null);
+
+  if (speedNode) {
+    // shorthand: speed(3)
+    const shorthandTok = speedNode.children?.shorthand?.[0] ||
+      speedNode.children?.NumberLiteral?.[0];
+
+    let value = shorthandTok ? Number(shorthandTok.image) : null;
+    let dur = null;
+    let easing = null;
+
+    // optional param list
+    const paramNodes =
+      speedNode.children.genericParamList ||
+      speedNode.children.genericParam || [];
+
+    for (const p of paramNodes) {
+      const key = p.children.key?.[0]?.image;
+      const raw = p.children.value?.[0]?.image;
+      if (!key || raw == null) continue;
+
+      const num = Number(raw);
+
+      if (key === "dur" && !isNaN(num)) dur = num;
+      else if (key === "easing") easing = raw;
+      else if (!isNaN(num) && (key === "value" || key === "speed" || key === "multiplier")) {
+        value = num;
+      }
+    }
+
+    return { type: "cueSpeed", value, dur, easing };
+  }
+
+
+
+
+
+
+  // ------------------------------------------------------------
+  // cue:pause(...)
+  // ------------------------------------------------------------
+  const pauseNode =
+    cst.children?.cuePauseTop?.[0] ||
+    (cst.name === "cuePauseTop" ? cst : null);
+
+  if (pauseNode) {
+    let dur = null;
+    let count = false;
+    let next = null;
+
+    const params = pauseNode.children.genericParam || [];
+    for (const p of params) {
+      const key = p.children.key[0].image;
+
+      // cueExpr form e.g. next:nav(sectionB)
+      if (p.children.cueCall) {
+        const call = p.children.cueCall[0].children;
+        const fn = call.fn[0].image;
+        const arg = call.arg[0].image;
+        next = `${fn}(${arg})`;
+        continue;
+      }
+
+      // Standard values
+      const raw = p.children.value?.[0]?.image;
+      if (key === "dur") dur = Number(raw);
+      if (key === "count") count = (raw === "true" || raw === "1");
+    }
+
+    return { type: "cuePause", dur, count, next };
+  }
+
+// ------------------------------------------------------------
+// cueStopTop → AST
+// ------------------------------------------------------------
+if (cst.children?.cueStopTop?.[0]) {
+  const node = cst.children.cueStopTop[0];
+
+  // Extract params if any:
+  const params = {};
+  const paramNodes = node.children.genericParam || [];
+
+  for (const p of paramNodes) {
     const key = p.children.key?.[0]?.image;
-    const val = p.children.value?.[0]?.image;
-    if (key) args.push({
-      type: key,
-      value: isNaN(Number(val)) ? val : Number(val)
-    });
+    const raw = p.children.value?.[0]?.image;
+    if (key && raw !== undefined) {
+      params[key] = isNaN(raw) ? raw : Number(raw);
+    }
   }
 
-  return { type: "cueMetronome", args };
+  return {
+    type: "cueStop",
+    next: params.next ?? null
+  };
 }
 
 
@@ -906,3 +1093,4 @@ export function parseCueToAST(input) {
   return ast;
 }
 
+window.parseCueToAST = parseCueToAST;
