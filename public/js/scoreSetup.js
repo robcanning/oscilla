@@ -102,47 +102,74 @@ const openRehearsalPopup = () => {
 };
 
 /**
-* ✅ Close popup function.
+* Close popup function.
 */
 const closeRehearsalPopup = () => {
   document.getElementById("rehearsal-popup").classList.add("hidden");
 };
 
-// ✅ Make it globally accessible
+//  Make it globally accessible
 window.closeRehearsalPopup = closeRehearsalPopup;
 
-// ✅ Allow opening with "R" key
+//  Allow opening with "R" key
 document.addEventListener("keydown", (event) => {
   if (event.key.toUpperCase() === "R") {
     openRehearsalPopup();
   }
 });
-
-
-const jumpToRehearsalMark = (mark) => {
+window.jumpToRehearsalMark = function (mark) {
   const entry = rehearsalMarks[mark];
   if (!entry) {
     console.error(`[jumpToRehearsalMark] Mark "${mark}" not found.`);
     return;
   }
 
-  const x = entry.x; // world coordinate
-  window.playheadX = x;
+  //  Temporarily disable cue triggers
+  window.suppressCueTriggers = true;
 
-  // Position visually using the new transform translateX model:
+  //  Stop playback *always* during jump
+  window.isPlaying = false;
+  window.animationPaused = true;
+
+  //  Teleport playhead without scrolling through cues
+  window.playheadX = entry.x;
   scrollToPlayheadVisual?.();
+  window.lastAnimationFrameTime = null;
 
-  // Broadcast world coordinate only — NOT scrollLeft or pixels
-  if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-    window.socket.send(JSON.stringify({
-      type: "jump",
-      playheadX: x,
-    }));
+  //  Reset cue-edge tracking
+  window._prevCueLefts = new Map();
+  window._cueInsideState = new Map();
+  window.triggeredCues = new Set();
+
+  //  Sync across clients
+  if (window.socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ type: "jump", playheadX: entry.x }));
   }
+
+  //  Re-enable cues only after DOM settles
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.suppressCueTriggers = false;
+
+      // ✅ Explicit final resume logic only
+      if (window._resumeAfterJump === true) {
+        window.animationPaused = false;
+        window.isPlaying = true;
+        window.startPlayback?.();
+      } else {
+        window.animationPaused = true;
+        window.isPlaying = false;
+      }
+
+      window._resumeAfterJump = null;
+    });
+  });
 };
 
-window.jumpToRehearsalMark = jumpToRehearsalMark;
 
+
+
+window.jumpToRehearsalMark = jumpToRehearsalMark;
 
 
 let currentIndex = 0; // Track the current rehearsal mark index
@@ -697,7 +724,7 @@ window.preloadAllSvgGroups = preloadAllSvgGroups;
 //////////////////////////////////////////////////
 
 
-  // 🧩 Detect and inject cueGroup(...) elements present in scroll view
+// 🧩 Detect and inject cueGroup(...) elements present in scroll view
 export async function autoInjectGroupsInScroll(svgElement) {
   if (!window.groupRegistry) {
     console.warn("[cueGroup] ⚠️ groupRegistry not ready yet");
@@ -771,10 +798,10 @@ export async function setupScore(svgElement) {
 
 
   if (typeof window.autoInjectGroupsInScroll === "function") {
-  console.log("[cueGroup] 🧩 Running autoInjectGroupsInScroll() after group registry ready");
-  const svgElement = document.querySelector("#scoreContainer svg");
-  if (svgElement) window.autoInjectGroupsInScroll(svgElement);
-}
+    console.log("[cueGroup] 🧩 Running autoInjectGroupsInScroll() after group registry ready");
+    const svgElement = document.querySelector("#scoreContainer svg");
+    if (svgElement) window.autoInjectGroupsInScroll(svgElement);
+  }
 
 
 

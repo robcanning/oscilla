@@ -272,12 +272,11 @@ export function handleCueTrigger(cueId, isRemote = false, force = false, cueElem
       }
     }
 
-case "cueStop":
-  return handleStopCue(ast, cueElement);
+    case "cueStop":
+      return handleStopCue(ast, cueElement);
 
     case "cueNav":
-    case "cueNavigate":
-      return handleNavCue(ast, cueElement);
+      return handleNavCue(ast);
 
     case "cueAudio":
       return handleAudioCueFromAST(ast, cueElement);
@@ -291,6 +290,7 @@ case "cueStop":
   }
 }
 
+ window.handleCueTrigger = handleCueTrigger;
 
 // =========================
 //  Universal UID Registry
@@ -485,8 +485,6 @@ export function handlePauseCue(
 }
 
 
-
-
 export function dismissPauseCountdown(forceNoResume = false, receivedFromServer = false) {
   console.log("[DEBUG] Dismissing pause countdown.");
 
@@ -501,13 +499,13 @@ export function dismissPauseCountdown(forceNoResume = false, receivedFromServer 
 
   clearPauseTimers();
 
-   // --- NEW: Fully exit pause mode if user resumes manually ---
- if (forceNoResume) {
-  window.ignoreSyncDuringPause = false;
-   window.isMusicalPause = false;
-   console.log("[DEBUG] Manual resume: cleared pause mode.");
-   return;
- }
+  // --- NEW: Fully exit pause mode if user resumes manually ---
+  if (forceNoResume) {
+    window.ignoreSyncDuringPause = false;
+    window.isMusicalPause = false;
+    console.log("[DEBUG] Manual resume: cleared pause mode.");
+    return;
+  }
 
   resumePlayback(receivedFromServer);
 }
@@ -526,14 +524,41 @@ export function clearPauseTimers() {
     console.log("[DEBUG] Pause timeout cleared.");
   }
 }
-
 /**
  * Resumes playback after pause and synchronizes across clients.
+ * Respects nav(mode:scrollPaused@X) via window._resumeAfterJump.
  */
 export function resumePlayback(receivedFromServer = false) {
+  console.log("[DEBUG] resumePlayback called (receivedFromServer:", receivedFromServer, ")");
+
+  // ✅ If a jump explicitly requested *paused* landing:
+  if (window._resumeAfterJump === false) {
+    console.log("[resumePlayback] ⏸ Staying paused due to scrollPaused mode.");
+
+    window.isPlaying = false;
+    window.animationPaused = true;
+    window.isMusicalPause = true;
+
+    // Ensure stopwatch stays stopped
+    window.pauseStopwatch?.();
+
+    // Allow normal cues to resume again later
+    window.ignoreSyncDuringPause = false;
+
+    // Clear flag so later resumes behave normally
+    window._resumeAfterJump = null;
+    return;
+  }
+
+  // ✅ Clear resume flag (normal scroll mode autos resume)
+  if (window._resumeAfterJump === true) {
+    console.log("[resumePlayback] ▶ Auto-resuming after jump.");
+  }
+  window._resumeAfterJump = null;
+
+  // --- (existing code follows) ---
   console.log("[DEBUG] Resuming playback after countdown dismissal.");
 
-  //  Allow resuming even if playheadX = 0 (only reject NaN)
   if (!Number.isNaN(window.playheadX)) {
     console.log(`[DEBUG] Resuming from playheadX: ${window.playheadX}`);
   } else {
@@ -541,20 +566,15 @@ export function resumePlayback(receivedFromServer = false) {
     return;
   }
 
-  // Refresh UI state
   window.updatePosition?.();
-  // window.updateSeekBar?.();
   window.updateStopwatch?.();
 
-  //  Reset animation clock baseline to avoid delta jumps
   window.lastAnimationFrameTime = null;
 
-  //  Use the canonical startPlayback() for a full smooth resume
   if (typeof window.startPlayback === "function") {
     console.log("[DEBUG] Calling startPlayback() from resumePlayback()");
     window.startPlayback();
   } else {
-    // fallback (legacy)
     window.isPlaying = true;
     window.animationPaused = false;
     window.ignoreSyncPlayback = false;
@@ -2983,7 +3003,7 @@ export function resolvePageTransition(opts = {}) {
         mainScore.style.pointerEvents = "auto";
       }
 
-      resumeScrollScore();
+       resumeScrollScore();
     }, 500);
     return;
   }
@@ -3017,22 +3037,41 @@ function pauseScrollScore() {
     );
   }
 }
+
 function resumeScrollScore() {
   console.log("[cuePage] ▶ Resuming scrolling score...");
 
+  // ✅ If we arrived here from nav(mode:scrollPaused@X)
+  if (window._resumeAfterJump === false) {
+    console.log("[cuePage] ⏸ Staying paused after jump (scrollPaused mode).");
+
+    // Ensure playback remains paused
+    window.isPlaying = false;
+    window.animationPaused = true;
+    window.isMusicalPause = true;
+
+    // Ensure remote sync does NOT resume playback
+    window.ignoreNextSync = true;
+
+    // Ensure stopwatch is paused
+    window.pauseStopwatch?.();
+
+    // ✅ Reset so next resumeScrollScore() isn't blocked
+    window._resumeAfterJump = null;
+    return;
+  }
+
+  // ✅ Normal resume (mode(scroll) or general resume)
   window.ignoreNextSync = true;
   window.isPlaying = true;
   window.isMusicalPause = false;
 
-  // ✅ Restore playhead and resume instead of reinitializing
   if (typeof window.resumePlayback === "function") {
     window.resumePlayback();
   } else if (typeof window.startPlayback === "function") {
-    // Fallback if resume not found
     window.startPlayback();
   }
 
-  // ✅ Resume stopwatch
   window.startStopwatch?.();
 
   window.lastSyncTime = performance.now();
@@ -3046,6 +3085,9 @@ function resumeScrollScore() {
       elapsedTime: window.elapsedTime,
     }));
   }
+
+  // ✅ Reset flag so future scroll resumes behave normally
+  window._resumeAfterJump = null;
 
   console.log("[cuePage] ▶ Scroll resume complete.");
 }
@@ -4178,6 +4220,9 @@ window.getPlayheadX = function () {
  * - Manual playback stop or resume via cueRepeat_* directives
  */
 export async function checkCueTriggers() {
+// 🔒 Global cue suppression guard (jumping, scrubbing, loading, etc.)
+if (window.suppressCueTriggers) return;
+
   // ✅ Ensure cues are ready
   if (!Array.isArray(window.cues)) return;
 
@@ -4312,7 +4357,11 @@ export async function checkCueTriggers() {
 }
 
 
-
+window.resetCueEdgeTracking = function() {
+  window._prevCueLefts = new Map();
+  window._cueInsideState = new Map();
+  window.triggeredCues = new Set();
+};
 
 
 
@@ -4952,241 +5001,47 @@ export function parseNavCue(id) {
   return { action: action.toLowerCase(), argExpr };
 }
 
+export function handleNavCue(ast) {
+  const { key, value, target } = ast;
+  const dbg = (...a) => console.log("[cueNav]", ...a);
 
+  dbg("→", ast);
 
-// ---- handler (instrumented)
-export async function handleNavCue(parsed) {
-  const { cueId, cueParams } = parsed;
-
-  if (!parsed) return;
-  const { action, argExpr } = parsed;
-
-  // ---- tiny debug helper
-  const dbg = (...a) => { if (window.DEBUG_NAV !== false) console.log("[cueNav]", ...a); };
-  const now = () => Math.round(performance.now());
-
-  // helpers (adapt to your actual page API names)
-  const exitPageMode = () => {
-    dbg("exitPageMode() start", { pageState: window.pageState?.mode });
-    const r =
-      window.exitPageMode?.() ||
-      window.setPageMode?.(false) ||
-      window.closePageOverlay?.();
-    dbg("exitPageMode() done", { pageState: window.pageState?.mode });
-    return r;
-  };
-
-  const stopPlaylist = () => {
-    dbg("stopPlaylist() start", {
-      isCuePagePlaylistActive: window.isCuePagePlaylistActive,
-      hasTimer: !!window.cuePagePlaylistTimer,
-    });
-
-    // Preferred API (if you have it)
-    const r = window.stopCuePagePlaylist?.() || window.pageController?.stop?.();
-
-    // Fallback: hard stop
-    if (window.cuePagePlaylistTimer) {
-      clearTimeout(window.cuePagePlaylistTimer);
-      window.cuePagePlaylistTimer = null;
-      dbg("cleared cuePagePlaylistTimer");
-    }
-    if (window.isCuePagePlaylistActive) {
-      window.isCuePagePlaylistActive = false;
-      dbg("set isCuePagePlaylistActive = false");
-    }
-    if (window.pageState) {
-      window.pageState.mode = "page"; // keep current page visible
-      dbg("set pageState.mode = 'page'");
-    }
-
-    // NEW: clear any other guards your scheduler may check
-    window.cuePageCountdownActive = false;
-    window.cuePageTransitioning = false;
-    window.cuePageHold = false;   // if you track waits/holds explicitly
-    window.cuePageNextDue = 0;       // if you compare times for next hop
-
-    dbg("stopPlaylist() done");
-    return r;
-  };
-
-  const gotoPage = (pid, cueParams = {}) => {
-    if (window.isCuePagePlaylistActive) stopPlaylist();
-
-    // ✅ Build suffixes dynamically from cueParams
-    const durSuffix = cueParams.dur ? `_dur(${cueParams.dur})` : "_wait(1)";
-    const nextSuffix = cueParams.next ? `_next(${cueParams.next})` : "";
-
-    const target = `cuePage(${pid})${durSuffix}${nextSuffix}`;
-    dbg("goto→trigger:", target);
-
-    try {
-      window.handleCueTrigger?.(target, false, true);
-    } catch (e) {
-      console.error("[cueNav] goto trigger failed:", target, e);
-    }
-  };
-
-
-  const nextPage = () => { dbg("nextPage()"); return window.nextPage?.() || window.pageController?.next?.(); };
-  const prevPage = () => { dbg("prevPage()"); return window.prevPage?.() || window.pageController?.prev?.(); };
-  const restartPlaylist = () => { dbg("restartPlaylist()"); return window.restartCuePagePlaylist?.() || window.pageController?.restart?.(); };
-
-  const triggerCueExpr = (expr, label = "trigger") => {
-    dbg(`${label}:`, expr);
-    try {
-      window.handleCueTrigger?.(expr);
-    } catch (e) {
-      console.error("[cueNav] trigger failed:", expr, e);
-    }
-  };
-
-  // small delay helper to avoid race conditions switching modes
-  const afterTick = (fn, label = "afterTick") => {
-    const t = now();
-    dbg(`${label} scheduled (+30ms)`);
-    setTimeout(() => { dbg(`${label} firing (~${now() - t}ms)`); fn(); }, 30);
-  };
-
-  dbg("→ action:", action, "arg:", argExpr, {
-    pageState: window.pageState?.mode,
-    isCuePagePlaylistActive: window.isCuePagePlaylistActive,
-    hasTimer: !!window.cuePagePlaylistTimer,
-  });
-
-  switch (action) {
-    case "exit":
-      exitPageMode();
-      break;
-
-    case "stop":
-      stopPlaylist();
-      break;
-
-    case "next":
-      nextPage();
-      break;
-
-    case "prev":
-      prevPage();
-      break;
-
-    case "restart":
-      restartPlaylist();
-      break;
-
-    case "goto": {
-      if (!argExpr) {
-        dbg("goto() missing arg");
-        break;
-      }
-
-      // ✅ Extract dur / next directly from parsed.cueParams
-      const dur = cueParams?.dur;
-      const next = cueParams?.next;
-
-      // ✅ Use defaults if not provided
-      const durSuffix = dur ? `_dur(${dur})` : "_wait(1)";
-      const nextSuffix = next ? `_next(${next})` : "";
-
-      const target = `cuePage(${argExpr})${durSuffix}${nextSuffix}`;
-      dbg("goto→trigger:", target);
-
-      try {
-        window.handleCueTrigger?.(target, false, true);
-      } catch (e) {
-        console.error("[cueNav] goto trigger failed:", target, e);
-      }
-      break;
-    }
-
-
-    case "trigger":
-      if (!argExpr) { dbg("trigger() missing arg"); break; }
-      triggerCueExpr(argExpr, "trigger()");
-      break;
-
-    case "stopandtrigger":
-      stopPlaylist();
-      if (argExpr) afterTick(() => triggerCueExpr(argExpr, "stopAndTrigger→trigger"));
-      break;
-
-    case "exitandtrigger":
-      exitPageMode();
-      if (argExpr) afterTick(() => triggerCueExpr(argExpr, "exitAndTrigger→trigger"));
-      break;
-
-    case "replace":
-      stopPlaylist();
-      exitPageMode();
-      if (argExpr) afterTick(() => triggerCueExpr(argExpr, "replace→trigger"));
-      break;
-
-
-    case "mode":
-      if (!argExpr) {
-        dbg("mode() missing arg");
-        break;
-      }
-
-      if (argExpr === "scroll") {
-        dbg("→ Switching to scroll mode");
-
-        const ps = window.pageState;
-        const container = document.getElementById("singlePage-container");
-        const content = document.getElementById("singlePage-content");
-
-        // 🟢 If a preloaded hidden score exists (hybrid mode), use that
-        if (window.preloadedScoreSvg) {
-          dbg("🌿 Detected preloaded score — switching via switchToScrollMode()");
-          // switchToScrollMode();
-          if (ps) ps.mode = "scroll";
-          return;
-        }
-
-        // 🔹 Otherwise, fall back to your existing overlay-fade + resume logic
-        if (container && content) {
-          container.style.transition = "opacity 0.5s ease";
-          container.style.opacity = "0";
-          setTimeout(() => {
-            container.style.display = "none";
-            content.innerHTML = "";
-            if (window._activePageButtons) {
-              window._activePageButtons.forEach(btn => btn._destroyCueButton?.());
-              window._activePageButtons = [];
-            }
-            if (ps) {
-              ps.mode = "scroll";
-              ps.current = null;
-            }
-            window.resumeScrollScore?.();
-            dbg("✅ Returned to scroll mode");
-          }, 500);
-        } else {
-          dbg("⚠️ No container found; forcing resumeScrollScore()");
-          window.resumeScrollScore?.();
-          if (ps) ps.mode = "scroll";
-        }
-      }
-
-      else if (argExpr === "page") {
-        dbg("→ Switching to page mode placeholder (future)");
-        // optionally: trigger cuePage(...) manually if desired
-      }
-
-      else {
-        console.warn("[cueNav] Unknown mode argument:", argExpr);
-      }
-      break;
-
-
-
-    default:
-      console.warn("[cueNav] Unknown action:", action, "arg:", argExpr);
+  // ------------------------------------------------------------
+  // MODE SWITCHING
+  // ------------------------------------------------------------
+if (key === "mode") {
+  if (value === "scroll") {
+    window._resumeAfterJump = true;
+    window.jumpToRehearsalMark?.(target);
+    return;
   }
 
-  dbg("✓ done", { action, argExpr, pageState: window.pageState?.mode, isCuePagePlaylistActive: window.isCuePagePlaylistActive });
+  if (value === "scrollPaused") {
+    window._resumeAfterJump = false;
+    window.jumpToRehearsalMark?.(target);
+    return;
+  }
 }
+
+
+  // ------------------------------------------------------------
+  // DIRECT PAGE LOAD
+  // nav(page:page3)   →   page(page3)
+  // ------------------------------------------------------------
+  if (key === "page") {
+    const pageId = value;
+    dbg(`Direct page load → page(${pageId})`);
+
+    // ✅ Use new cue namespace
+    handleCueTrigger?.(`page(${pageId})`);
+
+    return;
+  }
+
+  console.warn("[cueNav] Unknown nav key:", key);
+}
+
 
 
 

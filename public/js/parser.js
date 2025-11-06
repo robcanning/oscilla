@@ -75,6 +75,8 @@ const Text = createToken({ name: "Text", pattern: /\btext\b/, longer_alt: Identi
 const Pause = createToken({ name: "Pause", pattern: /\bpause\b/, longer_alt: Identifier });
 const Speed = createToken({ name: "Speed", pattern: /\bspeed\b/, longer_alt: Identifier });
 const Stop = createToken({ name: "Stop", pattern: /\bstop\b/, longer_alt: Identifier });
+const Nav = createToken({ name: "Nav", pattern: /nav\b/, longer_alt: Identifier });
+const After = createToken({ name: "After", pattern: /after\b/ });
 
 
 
@@ -101,8 +103,6 @@ const Comma = createToken({ name: "Comma", pattern: /,/ });
 const At = createToken({ name: "At", pattern: /@/ });
 const XParam = createToken({ name: "XParam", pattern: /x/ });
 
-const After = createToken({ name: "After", pattern: /after\b/ });
-const Nav = createToken({ name: "Nav", pattern: /nav\b/, longer_alt: Identifier });
 
 export const PatternName = createToken({
   name: "PatternName",
@@ -469,6 +469,72 @@ export class CueParser extends CstParser {
       $.CONSUME(RParen);
     });
 
+$.RULE("cueNavTop", () => {
+  $.CONSUME(Nav);        // nav
+  $.CONSUME(LParen);     // LParen[0]
+
+  $.OR([
+    // -------------------------------------------------------
+    // nav(mode(scroll@F))
+    // -------------------------------------------------------
+    {
+      ALT: () => {
+        // key: Identifier | Page
+        $.OR1([
+          { ALT: () => $.CONSUME(Identifier, { LABEL: "navKey" }) },   // Identifier[1]
+          { ALT: () => $.CONSUME(Page,       { LABEL: "navKey" }) }    // Page[1]
+        ]);
+
+        $.CONSUME1(LParen);                                           // LParen[1]
+
+        // value: Identifier | Page
+        $.OR2([
+          { ALT: () => $.CONSUME1(Identifier, { LABEL: "navValue" }) }, // Identifier[2]
+          { ALT: () => $.CONSUME1(Page,       { LABEL: "navValue" }) }  // Page[2]
+        ]);
+
+        // optional @Target
+        $.OPTION(() => {
+          $.CONSUME(At);                                              // At[0]
+          $.CONSUME2(Identifier, { LABEL: "navTargetValue" });        // Identifier[3]
+        });
+
+        $.CONSUME(RParen);                                            // RParen[0] (inner )
+      }
+    },
+
+    // -------------------------------------------------------
+    // nav(mode:scroll@F)  |  nav(page:page3)
+    // -------------------------------------------------------
+    {
+      ALT: () => {
+        // key: Identifier | Page
+        $.OR3([
+          { ALT: () => $.CONSUME3(Identifier, { LABEL: "navKey" }) },  // Identifier[4]
+          { ALT: () => $.CONSUME2(Page,       { LABEL: "navKey" }) }   // Page[3]
+        ]);
+
+        $.CONSUME(Colon);                                             // Colon[0]
+
+        // value: Identifier | Page
+        $.OR4([
+          { ALT: () => $.CONSUME4(Identifier, { LABEL: "navValue" }) }, // Identifier[5]
+          { ALT: () => $.CONSUME3(Page,       { LABEL: "navValue" }) }  // Page[4]
+        ]);
+
+        // optional @Target
+        $.OPTION1(() => {
+          $.CONSUME1(At);                                             // At[1]
+          $.CONSUME5(Identifier, { LABEL: "navTargetValue" });        // Identifier[6]
+        });
+      }
+    }
+  ]);
+
+  $.CONSUME1(RParen);                                                 // RParen[1] (final )
+});
+
+
 this.RULE("cueStopTop", () => {
   this.CONSUME(Stop);
 
@@ -478,6 +544,9 @@ this.RULE("cueStopTop", () => {
     this.CONSUME(RParen);
   });
 });
+
+
+
 
     $.RULE("cuePauseTop", () => {
       $.CONSUME(Pause);
@@ -534,6 +603,7 @@ this.RULE("cueStopTop", () => {
         { ALT: () => $.SUBRULE($.cuePauseTop) },
         { ALT: () => $.SUBRULE($.cueSpeedTop) },
         { ALT: () => $.SUBRULE($.cueStopTop) },
+        { ALT: () => $.SUBRULE($.cueNavTop) },
       ]);
     });
 
@@ -826,6 +896,46 @@ export function cstToAst(cst) {
     return { type: "cueFade", args: params };
   }
 
+
+// ------------------------------------------------------------
+// cueNav()
+// ------------------------------------------------------------
+// ------------------------------------------------------------
+// ------------------------------------------------------------
+// cueNav(...) AST builder
+// ------------------------------------------------------------
+const navNode =
+  cst.children?.cueNavTop?.[0] ||
+  (cst.name === "cueNavTop" ? cst : null);
+
+if (navNode) {
+  const ch = navNode.children;
+
+  // navKey may be Identifier or Page token
+  const keyToken =
+    ch.navKey?.[0] ||
+    ch.Identifier?.[0] || // fallback safety
+    null;
+
+  const key = keyToken?.image ?? null;
+
+  // navValue is always Identifier in our design
+  const valueToken = ch.navValue?.[0] || null;
+  const value = valueToken?.image ?? null;
+
+  // Optional @target
+  const targetToken = ch.navTargetValue?.[0] || null;
+  const target = targetToken?.image ?? null;
+
+  return {
+    type: "cueNav",
+    key,
+    value,
+    target
+  };
+}
+
+
   // ------------------------------------------------------------
   // cue:page(...) — unified pattern + after clause support
   // ------------------------------------------------------------
@@ -1057,6 +1167,11 @@ if (cst.children?.cueStopTop?.[0]) {
     next: params.next ?? null
   };
 }
+
+
+
+
+
 
 
   // ============================================================================
