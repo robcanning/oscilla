@@ -120,7 +120,6 @@ export async function loadProject(projectName, options = {}) {
 
 
 
-
     // 2️⃣ Load and apply preferences
     const prefs = await loadPreferences(window.projectBase);
 

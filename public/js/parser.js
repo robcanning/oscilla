@@ -76,6 +76,11 @@ const Pause = createToken({ name: "Pause", pattern: /\bpause\b/, longer_alt: Ide
 const Speed = createToken({ name: "Speed", pattern: /\bspeed\b/, longer_alt: Identifier });
 const Stop = createToken({ name: "Stop", pattern: /\bstop\b/, longer_alt: Identifier });
 const Nav = createToken({ name: "Nav", pattern: /nav\b/, longer_alt: Identifier });
+const Audio = createToken({ name: "Audio", pattern: /audio\b/ });
+const Button = createToken({ name: "Button", pattern: /button\b/ });
+
+
+
 const After = createToken({ name: "After", pattern: /after\b/ });
 
 
@@ -112,6 +117,7 @@ export const PatternName = createToken({
 
 export const allTokens = [
   Cue, Fade, Page, Stopwatch, Video, Text, Pause, Speed, Stop,
+  Audio, Button,
   After, Nav, PatternName, Choose,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
   RangeLiteral, NumberLiteral, StringLiteral, Identifier, WS
@@ -137,6 +143,31 @@ export class CueParser extends CstParser {
       };
     }
 
+
+
+    function unquoteLiteral(tok) {
+      if (!tok) return undefined;
+      const s = tok.image;
+      if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'")))
+        return s.slice(1, -1);
+      return s;
+    }
+
+    $.RULE("cueValue", () => {
+      return $.OR([
+        { ALT: () => parseFloat($.CONSUME(NumberLiteral).image) },
+        { ALT: () => unquoteLiteral($.CONSUME(StringLiteral)) },
+        { ALT: () => $.SUBRULE($.cueTop) },
+        { ALT: () => $.CONSUME(Identifier).image },
+      ]);
+    });
+
+    $.RULE("genericParamKV", () => {
+      const keyTok = $.CONSUME(Identifier);
+      $.CONSUME(Colon);
+      const value = $.SUBRULE($.cueValue);
+      return { key: keyTok.image, value };
+    });
 
     // -----------------------
     // Generic key:value param list — reusable across cues
@@ -469,81 +500,81 @@ export class CueParser extends CstParser {
       $.CONSUME(RParen);
     });
 
-$.RULE("cueNavTop", () => {
-  $.CONSUME(Nav);        // nav
-  $.CONSUME(LParen);     // LParen[0]
+    $.RULE("cueNavTop", () => {
+      $.CONSUME(Nav);        // nav
+      $.CONSUME(LParen);     // LParen[0]
 
-  $.OR([
-    // -------------------------------------------------------
-    // nav(mode(scroll@F))
-    // -------------------------------------------------------
-    {
-      ALT: () => {
-        // key: Identifier | Page
-        $.OR1([
-          { ALT: () => $.CONSUME(Identifier, { LABEL: "navKey" }) },   // Identifier[1]
-          { ALT: () => $.CONSUME(Page,       { LABEL: "navKey" }) }    // Page[1]
-        ]);
+      $.OR([
+        // -------------------------------------------------------
+        // nav(mode(scroll@F))
+        // -------------------------------------------------------
+        {
+          ALT: () => {
+            // key: Identifier | Page
+            $.OR1([
+              { ALT: () => $.CONSUME(Identifier, { LABEL: "navKey" }) },   // Identifier[1]
+              { ALT: () => $.CONSUME(Page, { LABEL: "navKey" }) }    // Page[1]
+            ]);
 
-        $.CONSUME1(LParen);                                           // LParen[1]
+            $.CONSUME1(LParen);                                           // LParen[1]
 
-        // value: Identifier | Page
-        $.OR2([
-          { ALT: () => $.CONSUME1(Identifier, { LABEL: "navValue" }) }, // Identifier[2]
-          { ALT: () => $.CONSUME1(Page,       { LABEL: "navValue" }) }  // Page[2]
-        ]);
+            // value: Identifier | Page
+            $.OR2([
+              { ALT: () => $.CONSUME1(Identifier, { LABEL: "navValue" }) }, // Identifier[2]
+              { ALT: () => $.CONSUME1(Page, { LABEL: "navValue" }) }  // Page[2]
+            ]);
 
-        // optional @Target
-        $.OPTION(() => {
-          $.CONSUME(At);                                              // At[0]
-          $.CONSUME2(Identifier, { LABEL: "navTargetValue" });        // Identifier[3]
-        });
+            // optional @Target
+            $.OPTION(() => {
+              $.CONSUME(At);                                              // At[0]
+              $.CONSUME2(Identifier, { LABEL: "navTargetValue" });        // Identifier[3]
+            });
 
-        $.CONSUME(RParen);                                            // RParen[0] (inner )
-      }
-    },
+            $.CONSUME(RParen);                                            // RParen[0] (inner )
+          }
+        },
 
-    // -------------------------------------------------------
-    // nav(mode:scroll@F)  |  nav(page:page3)
-    // -------------------------------------------------------
-    {
-      ALT: () => {
-        // key: Identifier | Page
-        $.OR3([
-          { ALT: () => $.CONSUME3(Identifier, { LABEL: "navKey" }) },  // Identifier[4]
-          { ALT: () => $.CONSUME2(Page,       { LABEL: "navKey" }) }   // Page[3]
-        ]);
+        // -------------------------------------------------------
+        // nav(mode:scroll@F)  |  nav(page:page3)
+        // -------------------------------------------------------
+        {
+          ALT: () => {
+            // key: Identifier | Page
+            $.OR3([
+              { ALT: () => $.CONSUME3(Identifier, { LABEL: "navKey" }) },  // Identifier[4]
+              { ALT: () => $.CONSUME2(Page, { LABEL: "navKey" }) }   // Page[3]
+            ]);
 
-        $.CONSUME(Colon);                                             // Colon[0]
+            $.CONSUME(Colon);                                             // Colon[0]
 
-        // value: Identifier | Page
-        $.OR4([
-          { ALT: () => $.CONSUME4(Identifier, { LABEL: "navValue" }) }, // Identifier[5]
-          { ALT: () => $.CONSUME3(Page,       { LABEL: "navValue" }) }  // Page[4]
-        ]);
+            // value: Identifier | Page
+            $.OR4([
+              { ALT: () => $.CONSUME4(Identifier, { LABEL: "navValue" }) }, // Identifier[5]
+              { ALT: () => $.CONSUME3(Page, { LABEL: "navValue" }) }  // Page[4]
+            ]);
 
-        // optional @Target
-        $.OPTION1(() => {
-          $.CONSUME1(At);                                             // At[1]
-          $.CONSUME5(Identifier, { LABEL: "navTargetValue" });        // Identifier[6]
-        });
-      }
-    }
-  ]);
+            // optional @Target
+            $.OPTION1(() => {
+              $.CONSUME1(At);                                             // At[1]
+              $.CONSUME5(Identifier, { LABEL: "navTargetValue" });        // Identifier[6]
+            });
+          }
+        }
+      ]);
 
-  $.CONSUME1(RParen);                                                 // RParen[1] (final )
-});
+      $.CONSUME1(RParen);                                                 // RParen[1] (final )
+    });
 
 
-this.RULE("cueStopTop", () => {
-  this.CONSUME(Stop);
+    this.RULE("cueStopTop", () => {
+      this.CONSUME(Stop);
 
-  this.OPTION(() => {
-    this.CONSUME(LParen);
-    this.OPTION1(() => this.SUBRULE(this.genericParamList)); // allow zero OR more params
-    this.CONSUME(RParen);
-  });
-});
+      this.OPTION(() => {
+        this.CONSUME(LParen);
+        this.OPTION1(() => this.SUBRULE(this.genericParamList)); // allow zero OR more params
+        this.CONSUME(RParen);
+      });
+    });
 
 
 
@@ -583,6 +614,82 @@ this.RULE("cueStopTop", () => {
       $.CONSUME(RParen);
     });
 
+
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
+
+$.RULE("buttonStyleBlock", () => {
+  $.CONSUME(LParen);
+
+  const style = {};
+
+  $.OPTION(() => {
+    $.AT_LEAST_ONE_SEP({
+      SEP: Comma,
+      DEF: () => {
+        const kv = $.SUBRULE($.genericParamKV);
+        style[kv.key] = kv.value;
+      }
+    });
+  });
+
+  $.CONSUME(RParen);
+  return style;
+});
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
+
+$.RULE("cueAudioTop", () => {
+  $.CONSUME(Audio);
+  $.SUBRULE($.genericParamList);  // <-- (src:..., amp:..., loop:...)
+});
+
+
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
+
+$.RULE("cueButtonTop", () => {
+  $.CONSUME(Button);
+  $.CONSUME(LParen);
+
+  // label: "Kick"
+  $.CONSUME(Identifier, { LABEL: "labelKey" });
+  $.CONSUME(Colon);
+  $.CONSUME(StringLiteral, { LABEL: "labelValue" });
+
+  // optional: , trigger: audio(...)
+  $.OPTION(() => {
+    $.CONSUME(Comma);
+    $.CONSUME2(Identifier, { LABEL: "triggerKey" });
+    $.CONSUME2(Colon);
+    $.SUBRULE($.cueAudioTop, { LABEL: "triggerValue" });
+  });
+
+  // optional: , style(...)
+  $.OPTION2(() => {
+    $.CONSUME3(Comma);
+    $.CONSUME3(Identifier, { LABEL: "styleKey" });
+    $.CONSUME2(LParen);
+
+    $.AT_LEAST_ONE_SEP({
+      SEP: Comma,
+      DEF: () => {
+        $.SUBRULE($.genericParam, { LABEL: "styleParam" });
+      },
+    });
+
+    $.CONSUME(RParen);
+  });
+
+  $.CONSUME2(RParen);
+});
+
+
+
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
+
+
     // -----------------------
     // cueTop — only fade|page at top level
     // -----------------------
@@ -604,6 +711,9 @@ this.RULE("cueStopTop", () => {
         { ALT: () => $.SUBRULE($.cueSpeedTop) },
         { ALT: () => $.SUBRULE($.cueStopTop) },
         { ALT: () => $.SUBRULE($.cueNavTop) },
+        { ALT: () => $.SUBRULE($.cueButtonTop) },
+        { ALT: () => $.SUBRULE($.cueAudioTop) },
+        
       ]);
     });
 
@@ -897,43 +1007,43 @@ export function cstToAst(cst) {
   }
 
 
-// ------------------------------------------------------------
-// cueNav()
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// cueNav(...) AST builder
-// ------------------------------------------------------------
-const navNode =
-  cst.children?.cueNavTop?.[0] ||
-  (cst.name === "cueNavTop" ? cst : null);
+  // ------------------------------------------------------------
+  // cueNav()
+  // ------------------------------------------------------------
+  // ------------------------------------------------------------
+  // ------------------------------------------------------------
+  // cueNav(...) AST builder
+  // ------------------------------------------------------------
+  const navNode =
+    cst.children?.cueNavTop?.[0] ||
+    (cst.name === "cueNavTop" ? cst : null);
 
-if (navNode) {
-  const ch = navNode.children;
+  if (navNode) {
+    const ch = navNode.children;
 
-  // navKey may be Identifier or Page token
-  const keyToken =
-    ch.navKey?.[0] ||
-    ch.Identifier?.[0] || // fallback safety
-    null;
+    // navKey may be Identifier or Page token
+    const keyToken =
+      ch.navKey?.[0] ||
+      ch.Identifier?.[0] || // fallback safety
+      null;
 
-  const key = keyToken?.image ?? null;
+    const key = keyToken?.image ?? null;
 
-  // navValue is always Identifier in our design
-  const valueToken = ch.navValue?.[0] || null;
-  const value = valueToken?.image ?? null;
+    // navValue is always Identifier in our design
+    const valueToken = ch.navValue?.[0] || null;
+    const value = valueToken?.image ?? null;
 
-  // Optional @target
-  const targetToken = ch.navTargetValue?.[0] || null;
-  const target = targetToken?.image ?? null;
+    // Optional @target
+    const targetToken = ch.navTargetValue?.[0] || null;
+    const target = targetToken?.image ?? null;
 
-  return {
-    type: "cueNav",
-    key,
-    value,
-    target
-  };
-}
+    return {
+      type: "cueNav",
+      key,
+      value,
+      target
+    };
+  }
 
 
   // ------------------------------------------------------------
@@ -1106,8 +1216,90 @@ if (navNode) {
   }
 
 
+// ------------------------------------------------------------
+// cue:button(...) AST Builder (returns legacy { cueExpr, opt })
+// ------------------------------------------------------------
+// ------------------------------------------------------------
+// cue:button(...) AST Builder  (Clean + Future-Safe)
+// ------------------------------------------------------------
+// ------------------------------------------------------------
+// cue:button(...) AST Builder
+// ------------------------------------------------------------
+const buttonNode =
+  cst.children?.cueButtonTop?.[0] ||
+  (cst.name === "cueButtonTop" ? cst : null);
+
+if (buttonNode) {
+  const labelTok = buttonNode.children.labelValue?.[0];
+  const label = labelTok ? labelTok.image.replace(/^"|"$/g, "") : "";
+
+  const triggerAst = buttonNode.children.triggerValue?.[0]
+    ? cstToAst(buttonNode.children.triggerValue[0])
+    : null;
+
+  const opt = {};
+  const styleList = buttonNode.children.styleParam || [];
+  for (const p of styleList) {
+    const key = p.children.key?.[0]?.image;
+    let val = p.children.value?.[0]?.image || "";
+    val = val.replace(/^"|"$/g, "");
+    opt[key] = val;
+  }
+
+  return {
+    type: "cueButton",
+    label,        // ✅ keep raw label
+    triggerAst,   // ✅ keep raw AST
+    opt           // ✅ raw style map
+  };
+}
 
 
+
+
+
+// ------------------------------------------------------------
+// cue:audio(...)  AST Builder
+// ------------------------------------------------------------
+// ------------------------------------------------------------
+// cue:audio(...)  AST Builder
+// ------------------------------------------------------------
+const audioNode =
+  cst.children?.cueAudioTop?.[0] ||
+  (cst.name === "cueAudioTop" ? cst : null);
+
+if (audioNode) {
+  let src = null;
+  let amp = null;
+  let loop = null;
+
+  const list = audioNode.children.genericParamList?.[0];
+  const params = list?.children?.genericParam || [];
+
+  for (const p of params) {
+    const key = p.children.key?.[0]?.image;
+    let val = p.children.value?.[0]?.image || "";
+    val = val.replace(/^"|"$/g, ""); // strip quotes
+
+    if (key === "src") src = val;
+    else if (key === "amp") amp = Number(val);
+    else if (key === "loop") loop = Number(val);
+  }
+
+  // ✅ Construct trigger expression string for handleCueTrigger()
+  const exprParts = [];
+  if (src) exprParts.push(`src:${src}`);
+  if (amp != null) exprParts.push(`amp:${amp}`);
+  if (loop != null) exprParts.push(`loop:${loop}`);
+
+  return {
+    type: "cueAudio",
+    src,
+    amp,
+    loop,
+    cueExpr: `audio(${exprParts.join(", ")})` // ✅ correct output
+  };
+}
 
 
   // ------------------------------------------------------------
@@ -1144,29 +1336,29 @@ if (navNode) {
     return { type: "cuePause", dur, count, next };
   }
 
-// ------------------------------------------------------------
-// cueStopTop → AST
-// ------------------------------------------------------------
-if (cst.children?.cueStopTop?.[0]) {
-  const node = cst.children.cueStopTop[0];
+  // ------------------------------------------------------------
+  // cueStopTop → AST
+  // ------------------------------------------------------------
+  if (cst.children?.cueStopTop?.[0]) {
+    const node = cst.children.cueStopTop[0];
 
-  // Extract params if any:
-  const params = {};
-  const paramNodes = node.children.genericParam || [];
+    // Extract params if any:
+    const params = {};
+    const paramNodes = node.children.genericParam || [];
 
-  for (const p of paramNodes) {
-    const key = p.children.key?.[0]?.image;
-    const raw = p.children.value?.[0]?.image;
-    if (key && raw !== undefined) {
-      params[key] = isNaN(raw) ? raw : Number(raw);
+    for (const p of paramNodes) {
+      const key = p.children.key?.[0]?.image;
+      const raw = p.children.value?.[0]?.image;
+      if (key && raw !== undefined) {
+        params[key] = isNaN(raw) ? raw : Number(raw);
+      }
     }
-  }
 
-  return {
-    type: "cueStop",
-    next: params.next ?? null
-  };
-}
+    return {
+      type: "cueStop",
+      next: params.next ?? null
+    };
+  }
 
 
 
