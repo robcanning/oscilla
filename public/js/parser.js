@@ -584,16 +584,25 @@ export class CueParser extends CstParser {
       $.CONSUME1(RParen);                                                 // RParen[1] (final )
     });
 
+this.RULE("cueStopTop", () => {
+  this.CONSUME(Stop);
 
-    this.RULE("cueStopTop", () => {
-      this.CONSUME(Stop);
+  this.OPTION(() => {
+    this.CONSUME(LParen);
 
-      this.OPTION(() => {
-        this.CONSUME(LParen);
-        this.OPTION1(() => this.SUBRULE(this.genericParamList)); // allow zero OR more params
-        this.CONSUME(RParen);
+    // --- allow zero or more params ---
+    this.OPTION1(() => {
+      this.SUBRULE(this.genericParam);
+      this.MANY(() => {
+        this.CONSUME(Comma);
+        this.SUBRULE2(this.genericParam);
       });
     });
+
+    this.CONSUME(RParen);
+  });
+});
+
 
 
 
@@ -1369,29 +1378,46 @@ if (audioNode) {
     return { type: "cuePause", dur, count, next };
   }
 
-  // ------------------------------------------------------------
-  // cueStopTop → AST
-  // ------------------------------------------------------------
-  if (cst.children?.cueStopTop?.[0]) {
-    const node = cst.children.cueStopTop[0];
+// ------------------------------------------------------------
+// cueStopTop → AST
+// ------------------------------------------------------------
+if (cst.children?.cueStopTop?.[0]) {
+  const node = cst.children.cueStopTop[0];
 
-    // Extract params if any:
-    const params = {};
-    const paramNodes = node.children.genericParam || [];
+  // --- Extract params (if any) from genericParamList ---
+  const params = {};
+  const paramNodes = node.children.genericParam || [];
 
-    for (const p of paramNodes) {
-      const key = p.children.key?.[0]?.image;
-      const raw = p.children.value?.[0]?.image;
-      if (key && raw !== undefined) {
-        params[key] = isNaN(raw) ? raw : Number(raw);
-      }
+  const parseRawValue = (raw) => {
+    if (raw === undefined || raw === null) return raw;
+
+    // Strip matching quotes if present
+    const s = String(raw).trim();
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+      return s.slice(1, -1);
     }
 
-    return {
-      type: "cueStop",
-      next: params.next ?? null
-    };
+    // Booleans
+    if (/^(true|false)$/i.test(s)) return /^true$/i.test(s);
+
+    // Numbers (int/float)
+    if (!isNaN(s) && s !== '') return Number(s);
+
+    return s; // fallback as string
+  };
+
+  for (const p of paramNodes) {
+    const key = p.children.key?.[0]?.image;
+    const raw = p.children.value?.[0]?.image;
+    if (key) params[key] = parseRawValue(raw);
   }
+
+  // Return all params so handlers can use uid, next, scope, etc.
+  return {
+    type: "cueStop",
+    ...params,        // e.g., uid, next, scope, all, label, etc.
+  };
+}
 
 
 
