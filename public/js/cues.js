@@ -4520,7 +4520,6 @@ const onAudio = (ev) => {
   }
 };
 
-
   window.addEventListener("oscilla:audio", onAudio);
 
   // --- Cleanup ---
@@ -4535,68 +4534,6 @@ const onAudio = (ev) => {
   return btn;
 }
 
-
-// Optional: WS receiver hook — call once during app init
-export function installCueButtonSocketReceiver() {
-  if (!window.wsEnabled || !window.socket) return;
-  window.socket.addEventListener("message", (ev) => {
-    try {
-      const data = JSON.parse(ev.data);
-      if (data?.type === "cue_button_click" && data?.cueExpr) {
-        // Prevent echo storms (optional: compare client IDs if you have them)
-        window.handleCueTrigger?.(data.cueExpr);
-      }
-    } catch (e) { }
-  });
-}
-
-// Extract inner of fnName(...) by counting parentheses
-function extractFuncInner(str, fnName) {
-  const key = fnName + "(";
-  const start = str.indexOf(key);
-  if (start === -1) return null;
-  let i = start + key.length, depth = 1;
-  for (; i < str.length; i++) {
-    const ch = str[i];
-    if (ch === "(") depth++;
-    else if (ch === ")") {
-      depth--;
-      if (depth === 0) return str.slice(start + key.length, i);
-    }
-  }
-  return null;
-}
-
-// Simple boolean parser for style
-function parseBool(v) {
-  return /^(1|true|on|yes)$/i.test(String(v).trim());
-}
-
-
-
-
-
-
-
-// ---- parser
-export function parseNavCue(id) {
-  const inner = extractFuncInner(id, "cueNav") || extractFuncInner(id, "cueNavigate");
-  if (!inner) return null;
-
-  // first token is the action at top level; optional arg in (...) after it
-  // e.g. "goto(page3)" or "exit" or "stopAndTrigger(cuePage(...))"
-  const parts = splitTopLevel(inner, ","); // safe, though usually 1 part
-  const actionExpr = parts[0].trim();
-
-  // action(arg?) pattern
-  const m = actionExpr.match(/^([a-zA-Z]+)(?:\(([\s\S]*)\))?$/);
-  if (!m) return null;
-
-  const action = m[1];
-  const argExpr = m[2] ? m[2].trim() : null; // may itself be a full cue expression
-
-  return { action: action.toLowerCase(), argExpr };
-}
 
 export function handleNavCue(ast) {
   const { key, value, target } = ast;
@@ -4620,7 +4557,6 @@ export function handleNavCue(ast) {
       return;
     }
   }
-
 
   // ------------------------------------------------------------
   // DIRECT PAGE LOAD
