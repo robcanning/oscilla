@@ -816,5 +816,3 @@ export async function setupScore(svgElement) {
 
 window.setupScore = setupScore;
 
-
-

@@ -107,7 +107,8 @@ const Colon = createToken({ name: "Colon", pattern: /:/ });
 const Comma = createToken({ name: "Comma", pattern: /,/ });
 const At = createToken({ name: "At", pattern: /@/ });
 const XParam = createToken({ name: "XParam", pattern: /x/ });
-
+const True = createToken({ name: "True", pattern: /\btrue\b/ });
+const False = createToken({ name: "False", pattern: /\bfalse\b/ });
 
 export const PatternName = createToken({
   name: "PatternName",
@@ -120,7 +121,8 @@ export const allTokens = [
   Audio, Button,
   After, Nav, PatternName, Choose,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
-  RangeLiteral, NumberLiteral, StringLiteral, Identifier, WS
+  RangeLiteral, NumberLiteral, StringLiteral, True, False,
+  Identifier, WS
 ];
 
 
@@ -169,6 +171,20 @@ export class CueParser extends CstParser {
       return { key: keyTok.image, value };
     });
 
+
+
+
+
+    $.RULE("value", () => {
+      $.OR([
+        { ALT: () => $.CONSUME(StringLiteral) },
+        { ALT: () => $.CONSUME(NumberLiteral) },
+        { ALT: () => $.CONSUME(True) },
+        { ALT: () => $.CONSUME(False) },
+        { ALT: () => $.CONSUME(Identifier) },
+      ]);
+    });
+
     // -----------------------
     // Generic key:value param list — reusable across cues
     // -----------------------
@@ -179,21 +195,24 @@ export class CueParser extends CstParser {
         { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(StringLiteral, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(RangeLiteral, { LABEL: "value" }) },
-        { ALT: () => $.SUBRULE($.cueExpr, { LABEL: "cueCall" }) }, // <— NEW
+        { ALT: () => $.CONSUME(True, { LABEL: "value" }) },
+        { ALT: () => $.CONSUME(False, { LABEL: "value" }) },
+        { ALT: () => $.SUBRULE($.cueExpr, { LABEL: "cueCall" }) },
         { ALT: () => $.CONSUME1(Identifier, { LABEL: "value" }) },
       ]);
     });
 
 
+
     $.RULE("genericParamList", () => {
       $.CONSUME(LParen);
-      $.AT_LEAST_ONE_SEP({
+      $.MANY_SEP({
         SEP: Comma,
         DEF: () => $.SUBRULE($.genericParam),
       });
+      $.OPTION(() => $.CONSUME(Comma)); // ✅ ALLOW final trailing comma
       $.CONSUME(RParen);
     });
-
     // -----------------------
     // Generic size pair (e.g. 480x270)
     // -----------------------
@@ -618,75 +637,68 @@ export class CueParser extends CstParser {
     // ------------------------------------------------------------
     // ------------------------------------------------------------
 
-$.RULE("buttonStyleBlock", () => {
-  $.CONSUME(LParen);
+    $.RULE("buttonStyleBlock", () => {
+      $.CONSUME(LParen);
 
-  const style = {};
+      const style = {};
 
-  $.OPTION(() => {
-    $.AT_LEAST_ONE_SEP({
-      SEP: Comma,
-      DEF: () => {
-        const kv = $.SUBRULE($.genericParamKV);
-        style[kv.key] = kv.value;
-      }
-    });
-  });
+      $.OPTION(() => {
+        $.AT_LEAST_ONE_SEP({
+          SEP: Comma,
+          DEF: () => {
+            const kv = $.SUBRULE($.genericParamKV);
+            style[kv.key] = kv.value;
+          }
+        });
+      });
 
-  $.CONSUME(RParen);
-  return style;
-});
-    // ------------------------------------------------------------
-    // ------------------------------------------------------------
-
-$.RULE("cueAudioTop", () => {
-  $.CONSUME(Audio);
-  $.SUBRULE($.genericParamList);  // <-- (src:..., amp:..., loop:...)
-});
-
-
-    // ------------------------------------------------------------
-    // ------------------------------------------------------------
-
-$.RULE("cueButtonTop", () => {
-  $.CONSUME(Button);
-  $.CONSUME(LParen);
-
-  // label: "Kick"
-  $.CONSUME(Identifier, { LABEL: "labelKey" });
-  $.CONSUME(Colon);
-  $.CONSUME(StringLiteral, { LABEL: "labelValue" });
-
-  // optional: , trigger: audio(...)
-  $.OPTION(() => {
-    $.CONSUME(Comma);
-    $.CONSUME2(Identifier, { LABEL: "triggerKey" });
-    $.CONSUME2(Colon);
-    $.SUBRULE($.cueAudioTop, { LABEL: "triggerValue" });
-  });
-
-  // optional: , style(...)
-  $.OPTION2(() => {
-    $.CONSUME3(Comma);
-    $.CONSUME3(Identifier, { LABEL: "styleKey" });
-    $.CONSUME2(LParen);
-
-    $.AT_LEAST_ONE_SEP({
-      SEP: Comma,
-      DEF: () => {
-        $.SUBRULE($.genericParam, { LABEL: "styleParam" });
-      },
+      $.CONSUME(RParen);
+      return style;
     });
 
-    $.CONSUME(RParen);
-  });
+    // ------------------------------------------------------------
 
-  $.CONSUME2(RParen);
-});
-
-
+    $.RULE("cueAudioTop", () => {
+      $.CONSUME(Audio);
+      $.SUBRULE($.genericParamList);  // <-- (src:..., amp:..., loop:...)
+    });
 
     // ------------------------------------------------------------
+
+    $.RULE("cueButtonTop", () => {
+      $.CONSUME(Button);
+      $.CONSUME(LParen);
+
+      // ✅ OPTIONAL label: "Something",
+      $.OPTION(() => {
+        $.CONSUME(Identifier, { LABEL: "labelKey" });
+        $.CONSUME(Colon);
+        $.CONSUME(StringLiteral, { LABEL: "labelValue" });
+        $.CONSUME(Comma);
+      });
+
+      // ✅ REQUIRED: trigger: <any cue expression>
+      $.CONSUME2(Identifier, { LABEL: "triggerKey" }); // must match "trigger"
+      $.CONSUME2(Colon);
+      $.SUBRULE($.cueTop, { LABEL: "triggerValue" });
+
+      // ✅ OPTIONAL: , style(...)
+      $.OPTION2(() => {
+        $.CONSUME2(Comma);
+        $.CONSUME3(Identifier, { LABEL: "styleKey" });
+        $.CONSUME2(LParen);
+
+        $.AT_LEAST_ONE_SEP({
+          SEP: Comma,
+          DEF: () => $.SUBRULE($.genericParam, { LABEL: "styleParam" })
+        });
+
+        $.CONSUME(RParen);
+      });
+
+      $.CONSUME2(RParen);
+    });
+
     // ------------------------------------------------------------
 
 
@@ -713,7 +725,7 @@ $.RULE("cueButtonTop", () => {
         { ALT: () => $.SUBRULE($.cueNavTop) },
         { ALT: () => $.SUBRULE($.cueButtonTop) },
         { ALT: () => $.SUBRULE($.cueAudioTop) },
-        
+
       ]);
     });
 
@@ -1216,91 +1228,112 @@ export function cstToAst(cst) {
   }
 
 
-// ------------------------------------------------------------
-// cue:button(...) AST Builder (returns legacy { cueExpr, opt })
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// cue:button(...) AST Builder  (Clean + Future-Safe)
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// cue:button(...) AST Builder
-// ------------------------------------------------------------
-const buttonNode =
-  cst.children?.cueButtonTop?.[0] ||
-  (cst.name === "cueButtonTop" ? cst : null);
+  // ------------------------------------------------------------
+  // cue:button(...) AST Builder
+  // ------------------------------------------------------------
+  const buttonNode =
+    cst.children?.cueButtonTop?.[0] ||
+    (cst.name === "cueButtonTop" ? cst : null);
 
-if (buttonNode) {
-  const labelTok = buttonNode.children.labelValue?.[0];
-  const label = labelTok ? labelTok.image.replace(/^"|"$/g, "") : "";
+  if (buttonNode) {
+    const labelTok = buttonNode.children.labelValue?.[0];
+    const label = labelTok ? labelTok.image.replace(/^"|"$/g, "") : "";
 
-  const triggerAst = buttonNode.children.triggerValue?.[0]
-    ? cstToAst(buttonNode.children.triggerValue[0])
-    : null;
+    const triggerAst = buttonNode.children.triggerValue?.[0]
+      ? cstToAst(buttonNode.children.triggerValue[0])
+      : null;
 
-  const opt = {};
-  const styleList = buttonNode.children.styleParam || [];
-  for (const p of styleList) {
-    const key = p.children.key?.[0]?.image;
-    let val = p.children.value?.[0]?.image || "";
-    val = val.replace(/^"|"$/g, "");
-    opt[key] = val;
+    const opt = {};
+    const styleList = buttonNode.children.styleParam || [];
+    for (const p of styleList) {
+      const key = p.children.key?.[0]?.image;
+      let val = p.children.value?.[0]?.image || "";
+      val = val.replace(/^"|"$/g, "");
+      opt[key] = val;
+    }
+    
+    const triggerExpr = triggerAst.cueExpr;
+   
+return {
+  type: "cueButton",
+  label,
+  triggerAst: {
+    ...triggerAst,        // ✅ real code, this copies src, amp, loop, cueExpr, toggle, uid, etc.
+    uid: triggerAst.uid ?? null   // ✅ ensure uid exists (even if missing)
+  },
+  opt
+};
   }
 
-  return {
-    type: "cueButton",
-    label,        // ✅ keep raw label
-    triggerAst,   // ✅ keep raw AST
-    opt           // ✅ raw style map
-  };
-}
 
-
-
-
-
-// ------------------------------------------------------------
-// cue:audio(...)  AST Builder
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// cue:audio(...)  AST Builder
-// ------------------------------------------------------------
-const audioNode =
+  // ------------------------------------------------------------
+  // cueAudio(...) AST Builder
+  // ------------------------------------------------------------
+  const audioNode =
   cst.children?.cueAudioTop?.[0] ||
   (cst.name === "cueAudioTop" ? cst : null);
 
 if (audioNode) {
-  let src = null;
-  let amp = null;
-  let loop = null;
 
   const list = audioNode.children.genericParamList?.[0];
-  const params = list?.children?.genericParam || [];
+  const items = list?.children?.genericParam || [];
 
-  for (const p of params) {
+  // Generic dictionary
+  const params = {};
+
+  for (const p of items) {
     const key = p.children.key?.[0]?.image;
-    let val = p.children.value?.[0]?.image || "";
-    val = val.replace(/^"|"$/g, ""); // strip quotes
+    const token =
+      p.children.value?.[0] ||
+      p.children.NumberLiteral?.[0] ||
+      p.children.StringLiteral?.[0] ||
+      p.children.True?.[0] ||
+      p.children.False?.[0] ||
+      p.children.Identifier?.[0] ||
+      null;
 
-    if (key === "src") src = val;
-    else if (key === "amp") amp = Number(val);
-    else if (key === "loop") loop = Number(val);
+    if (!key || !token) continue;
+
+    let raw = token.image.replace(/^"|"$/g, ""); // strip quotes
+
+    // Convert common numerics / bools automatically:
+    let val =
+      raw === "true"  ? true  :
+      raw === "false" ? false :
+      isNaN(raw)       ? raw  :
+                        Number(raw);
+
+    params[key] = val;  // ← store generically
   }
 
-  // ✅ Construct trigger expression string for handleCueTrigger()
-  const exprParts = [];
-  if (src) exprParts.push(`src:${src}`);
-  if (amp != null) exprParts.push(`amp:${amp}`);
-  if (loop != null) exprParts.push(`loop:${loop}`);
+  // ✅ Normalization layer — small & declarative
+  const {
+    src,
+    amp = 1,
+    loop = 1,
+    toggle = false,
+    fade,
+    fadeIn = fade,
+    fadeOut = fade,
+    uid = src // <— default uid to src if not provided
+  } = params;
+
+  const cueExpr = `audio(${Object.entries(params)
+    .map(([k,v]) => `${k}:${v}`)
+    .join(",")})`;
 
   return {
     type: "cueAudio",
     src,
     amp,
     loop,
-    cueExpr: `audio(${exprParts.join(", ")})` // ✅ correct output
+    fadeIn: fadeIn ?? 0,
+    fadeOut: fadeOut ?? 0,
+    toggle,
+    uid,
+    cueExpr
   };
 }
-
 
   // ------------------------------------------------------------
   // cue:pause(...)

@@ -52,21 +52,6 @@ export const cueHandlers = {
 import { parseCueToAST } from "./parser.js";
 import { handleMetronomeCue } from "./metro.js";
 
-
-// import { switchToScrollMode } from "./projectLoader.js";
-
-
-// 🔁 Allow re-triggering of cues with the given UID or cueId
-// export function resetCueTrigger(cueIdOrUid) {
-//   if (!window.cuesTriggered) return;
-
-//   const key = cueIdOrUid.trim();
-//   if (window.cuesTriggered.has(key)) {
-//     window.cuesTriggered.delete(key);
-//     console.log(`[cueReset] ♻️ Reset cue trigger: ${key}`);
-//   }
-// } 
-
 // Emulate the rewind reset: clear every gating structure we might use
 export function resetCueTrigger() {
   const cleared = [];
@@ -1058,24 +1043,14 @@ export function assignCues(svgRoot, cuesArray = []) {
 
           const { label = "", triggerAst = null, opt = {} } = ast;
 
-          // ✅ Convert triggerAst → cueExpr string
-          let cueExpr = "";
-          if (triggerAst?.type === "cueAudio") {
-            const parts = [];
-            if (triggerAst.src) parts.push(`src:${triggerAst.src}`);
-            if (triggerAst.amp != null) parts.push(`amp:${triggerAst.amp}`);
-            if (triggerAst.loop != null) parts.push(`loop:${triggerAst.loop}`);
-            cueExpr = `audio(${parts.join(",")})`;
-          } else if (triggerAst) {
-            cueExpr = triggerAst.cueExpr || "";
-          }
-
-          console.log("[cueButton] parsed →", { cueExpr, opt: { label, ...opt }, parsed: ast });
+          console.log("[cueButton] parsed →", { triggerAst, opt: { label, ...opt }, parsed: ast });
 
           createCueButtonForElement(child, {
-            cueExpr,
+            triggerAst,
+            label,
             opt: { label, ...opt }
           });
+
         }
 
         continue; // ✅ IMPORTANT: skip cue registration, skip recursion
@@ -3238,144 +3213,6 @@ export function handleOscCue(cueId, cueParams = {}) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-/**
- * handleMediaCue(cueId, cueParams)
- *
- * Displays a timed media popup for one or more files (SVG, image, or video).
- * Supports optional shuffling, looping, or randomized selection.
- * Automatically pauses score playback and resumes after timeout or manual dismissal.
- *
- * Supported cue parameters:
- *   - choice: comma-separated media filenames (e.g. image1.jpg,image2.mp4)
- *   - dur: total display time (in seconds)
- *   - interval: per-item duration (in seconds); if omitted, uses dur / N
- *   - shuffle: show all items once in random order
- *   - random: pick random item repeatedly for full duration
- *   - loop: cycle through items repeatedly until duration ends
- *
- * Example cue ID:
- *   cueMedia(image1.svg,image2.jpg)_dur(10)_shuffle(1)_interval(3)
- *
- * DOM requirements:
- *   - #media-popup (container for overlay)
- *   - #media-content (content region inside popup)
- *
- * © 2025 Rob Canning | GPLv3
- */
-
-// 📼 Media cue queue
-const mediaCueQueue = [];
-let isMediaPopupActive = false;
-
-export function handleMediaCue(cueId, cueParams) {
-  const rawFiles = cueParams.choice || cueParams.file;
-  const totalDuration = parseFloat(cueParams.dur || 10) * 1000;
-  const interval = parseFloat(cueParams.interval || 0);
-  const shuffle = cueParams.shuffle == 1;
-  const random = cueParams.random == 1;
-  const loop = cueParams.loop == 1;
-
-  if (!rawFiles) return console.warn("[cueMedia] No file(s) provided in cue:", cueId);
-  const files = rawFiles.split(',').map(f => f.trim()).filter(Boolean);
-  if (files.length === 0) return console.warn("[cueMedia] Empty media list:", cueId);
-
-  const popup = document.getElementById('media-popup');
-  const content = document.getElementById('media-content');
-  if (!popup || !content) return console.error('[cueMedia] Required DOM elements missing.');
-
-  if (window.isPlaying) {
-    window.isPlaying = false;
-    window.isMusicalPause = true;
-
-    window.animationPaused = true;
-    window.stopAnimation?.();
-  }
-
-  popup.classList.remove('hidden');
-  content.innerHTML = '';
-
-  const pickRandom = () => files[Math.floor(Math.random() * files.length)];
-  const shuffled = shuffle ? [...files].sort(() => Math.random() - 0.5) : files;
-  const displayTime = interval > 0 ? interval * 1000 : Math.floor(totalDuration / files.length);
-  const queue = random ? null : loop ? [...shuffled] : shuffled.slice();
-
-  let elapsed = 0;
-
-  function playNext() {
-    if (elapsed >= totalDuration) return dismiss();
-
-    let file = random ? pickRandom() : queue.shift();
-    if (!file) {
-      if (loop) {
-        queue.push(...shuffled);
-        file = queue.shift();
-      } else {
-        return dismiss();
-      }
-    }
-
-    renderMedia(file);
-    elapsed += displayTime;
-    setTimeout(playNext, displayTime);
-  }
-
-  function renderMedia(file) {
-    const ext = file.split('.').pop().toLowerCase();
-    content.innerHTML = '';
-    let el;
-
-    if (ext === 'svg') {
-      el = document.createElement('object');
-      el.type = 'image/svg+xml';
-      el.data = `media/${file}`;
-    } else if (['mp4', 'webm', 'ogg'].includes(ext)) {
-      el = document.createElement('video');
-      el.src = `media/${file}`;
-      el.controls = true;
-      el.autoplay = true;
-      el.style.width = '100%';
-      el.onended = () => setTimeout(playNext, 500);
-    } else {
-      el = document.createElement('img');
-      el.src = `media/${file}`;
-      el.style.maxWidth = '100%';
-    }
-
-    content.appendChild(el);
-  }
-
-  function dismiss() {
-    popup.classList.add('hidden');
-    content.innerHTML = '';
-    if (!window.isPlaying && window.animationPaused) {
-      window.isPlaying = true;
-      window.animationPaused = false;
-      window.startAnimation?.();
-    }
-  }
-
-  popup.onclick = (e) => {
-    if (e.target === popup) dismiss();
-  };
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') dismiss();
-  }, { once: true });
-
-  playNext();
-}
-
-
-
 // ===================
 // 🎧 Audio Cue Support
 // ===================
@@ -3413,13 +3250,11 @@ export async function handleAudioStopCue(cueId, cueParams = {}) {
 }
 
 
-
 // =========================================================
 // 🌐 Globals
 // =========================================================
 const audioDebounce = new Map();
 const maxAudioInstances = 10;
-
 
 // Shared AudioContext (singleton)
 export const sharedAudioCtx =
@@ -3446,8 +3281,6 @@ export function generateToneBuffer(ctx, freq = 440, dur = 0.3, amp = 0.3) {
   return buf;
 }
 
-
-
 // =========================================================
 // 🎧 handleAudioCue() — fully instrumented
 // =========================================================
@@ -3461,173 +3294,187 @@ function normalizeAudioSource(src) {
   if (/\.(wav|ogg|mp3|m4a)$/i.test(src)) return src;
   return `${src}.wav`;
 }
-
-// ------------------------------------------------------------
-// cueAudio handler (final, safe, extension-correct)
-// ------------------------------------------------------------
+// ============================================================
+// 🎧 cueAudio — Play / Toggle / Loop with UID-scoped control
+// ============================================================
+// ============================================================
+// 🎧 cueAudio — UID-scoped playback with pending safety,
+//               proper toggle-off, and clean retrigger
+//               Events: { uid, file, state: "play" | "stop" }
+// ============================================================
 export async function handleAudioCue(ast) {
+  const ctx =
+    window.sharedAudioCtx ||
+    (window.sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
+
   try {
-    // --- Stable AudioContext ---
-    const ctx =
-      window.sharedAudioCtx ||
-      (window.sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
     if (ctx.state === "suspended") await ctx.resume();
 
-    // --- Params (preserve your working logic) ---
-    let { src, amp = 1, loop = 1, fade, fadeIn, fadeOut } = ast || {};
-    if (!src) return console.warn("[cueAudio] No src in AST:", ast);
+    let {
+      src,
+      uid,
+      amp = 1,
+      loop = 1,
+      toggle = false,
+      fade,
+      fadeIn = 0,
+      fadeOut = 0
+    } = ast || {};
+
+    const key = uid && uid.trim();
+    if (!key) { console.warn("[cueAudio] Missing uid:", ast); return; }
+    if (!src) { console.warn("[cueAudio] Missing src:", ast); return; }
 
     const filename = src.endsWith(".wav") ? src : `${src}.wav`;
 
-    // Unified fade param
+    // normalize fades
     if (fade !== undefined) fadeIn = fadeOut = Number(fade);
     fadeIn = Number(fadeIn ?? 0);
     fadeOut = Number(fadeOut ?? 0);
 
-    // --- Resolve paths (unchanged working logic) ---
+    const reg = (window.activeAudioCues ||= new Map());
+
+    // --- TOGGLE: if playing (or pending), stop and exit
+    if (toggle && reg.has(key)) {
+      const v = reg.get(key);
+      try { v?.stop?.(fadeOut); } catch { }
+      reg.delete(key);
+      window.dispatchEvent(new CustomEvent("oscilla:audio", {
+        detail: { uid: key, file: filename, state: "stop" }
+      }));
+      return;
+    }
+
+    // --- MOMENTARY RETRIGGER: if already active, cut and restart
+    if (!toggle && reg.has(key)) {
+      const v = reg.get(key);
+      try { v?.stop?.(Math.min(fadeOut, 0.03)); } catch { }
+      reg.delete(key);
+      // we will immediately start again below
+    }
+
+    // --- Reserve a pending entry immediately (handles rapid second click)
+    let replaceStop = () => { };
+    reg.set(key, { uid: key, filename, stop: (sec) => replaceStop(sec), _pending: true });
+
+    // Notify UI immediately so toggle buttons light up without waiting for decode
+    window.dispatchEvent(new CustomEvent("oscilla:audio", {
+      detail: { uid: key, file: filename, state: "play" }
+    }));
+
+    // --- Load buffer with project→shared fallback
     const projectPath = resolveProjectPath("audio", filename);
     const sharedPath = `${window.sharedDir}audio/${filename}`;
 
-    let url;
+    let resp;
     try {
       const head = await fetch(projectPath, { method: "HEAD" });
-      url = head.ok ? projectPath : sharedPath;
+      resp = await fetch(head.ok ? projectPath : sharedPath);
     } catch {
-      url = sharedPath;
+      resp = await fetch(sharedPath);
     }
 
-    const res = await fetch(url);
-    const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+    const buf = await ctx.decodeAudioData(await resp.arrayBuffer());
 
-    // --- Gain node & voice registry ---
+    // --- Build voice
     const gainNode = ctx.createGain();
     gainNode.connect(ctx.destination);
 
-    window.activeAudioCues = window.activeAudioCues || new Set();
-
     let remaining = (loop === 0 ? Infinity : Number(loop)) || 1;
-    let stoppedEarly = false;
-    let activeSrc = null;
+    let stopped = false;
+    let srcNode = null;
 
-    // Voice object for stopping later
-    const voice = {
-      filename,
-      stop: (fadeOutSec = fadeOut) => {
-        stoppedEarly = true;
-        const now = ctx.currentTime;
+    const stop = (dur = fadeOut) => {
+      stopped = true;
+      const now = ctx.currentTime;
+      try {
         gainNode.gain.cancelScheduledValues(now);
         gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-        gainNode.gain.linearRampToValueAtTime(0, now + fadeOutSec);
-        try { activeSrc?.stop(now + fadeOutSec + 0.01); } catch { }
-      }
+        gainNode.gain.linearRampToValueAtTime(0, now + dur);
+      } catch { }
+      try { srcNode?.stop(now + dur + 0.01); } catch { }
     };
 
-    window.activeAudioCues.add(voice);
+    // Replace pending entry with real voice (and real stop)
+    replaceStop = stop;
+    reg.set(key, { uid: key, filename, stop });
 
-    // --- UI event (button flash / visual indicator) ---
-    window.dispatchEvent(new CustomEvent("oscilla:audio", {
-      detail: { file: filename, state: "play" }
-    }));
-
-    function cleanupAndNotify(naturalEnd) {
-      window.activeAudioCues.delete(voice);
+    const cleanup = () => {
+      // remove from registry & notify UI
+      if (reg.get(key)?.stop === stop) reg.delete(key);
       try { gainNode.disconnect(); } catch { }
-      activeSrc = null;
-
+      srcNode = null;
       window.dispatchEvent(new CustomEvent("oscilla:audio", {
-        detail: { file: filename, state: "stop", natural: !!naturalEnd }
+        detail: { uid: key, file: filename, state: "stop" }
       }));
-    }
+    };
 
-    // --- Playback function (your working loop chain) ---
-    function playOne(isFirst) {
-      const srcNode = ctx.createBufferSource();
+    const playOne = (first) => {
+      srcNode = ctx.createBufferSource();
       srcNode.buffer = buf;
       srcNode.connect(gainNode);
 
       const now = ctx.currentTime;
-
-      // ✅ FIXED FADE-IN BEHAVIOR
       gainNode.gain.cancelScheduledValues(now);
-      if (isFirst) {
-        if (fadeIn > 0) {
-          gainNode.gain.setValueAtTime(0, now);
-          gainNode.gain.linearRampToValueAtTime(Number(amp) || 1, now + fadeIn);
-        } else {
-          // instant attack = audible immediately
-          gainNode.gain.setValueAtTime(Number(amp) || 1, now);
-        }
+      gainNode.gain.setValueAtTime(first && fadeIn > 0 ? 0 : Number(amp), now);
+      if (first && fadeIn > 0) {
+        gainNode.gain.linearRampToValueAtTime(Number(amp), now + fadeIn);
       }
 
       srcNode.onended = () => {
-        if (stoppedEarly) return cleanupAndNotify(false);
-
+        if (stopped) return cleanup();         // toggled/forced stop
         remaining--;
-        if (remaining > 0) return playOne(false);
-
-        // Final fade-out at the end of looping
+        if (remaining > 0) return playOne(false); // loop
+        // natural end → fade then cleanup
         const t = ctx.currentTime;
-        gainNode.gain.cancelScheduledValues(t);
-        gainNode.gain.setValueAtTime(gainNode.gain.value, t);
-        gainNode.gain.linearRampToValueAtTime(0, t + fadeOut);
-        setTimeout(() => cleanupAndNotify(true), fadeOut * 1000 + 10);
+        try { gainNode.gain.linearRampToValueAtTime(0, t + fadeOut); } catch { }
+        setTimeout(cleanup, fadeOut * 1000 + 10);
       };
 
-      activeSrc = srcNode;
       srcNode.start();
-    }
+    };
 
     playOne(true);
 
-    console.log(
-      `[AUDIO] ▶️ Playing ${filename} (amp=${amp}, loops=${loop}, fadeIn=${fadeIn}, fadeOut=${fadeOut})`
-    );
-
   } catch (err) {
     console.error("[AUDIO] ❌ handleAudioCue error:", err);
+    // Safety: ensure UI turns off + registry cleared if we had announced play
+    try {
+      const key = ast?.uid?.trim();
+      const src = ast?.src;
+      const file = src ? (src.endsWith(".wav") ? src : `${src}.wav`) : undefined;
+      if (key && window.activeAudioCues?.has(key)) {
+        window.activeAudioCues.delete(key);
+        window.dispatchEvent(new CustomEvent("oscilla:audio", {
+          detail: { uid: key, file, state: "stop" }
+        }));
+      }
+    } catch { }
   } finally {
-    // ✅ CRITICAL for retriggering cues
     try { window.triggeredCues?.clear?.(); } catch { }
     try { window._cueInsideState?.clear?.(); } catch { }
   }
 }
 
 
+// ============================================================
+// 🛑 stopAllAudio — Global fade-out stop (filename scoped)
+// ============================================================
+export function stopAllAudio(filename, fadeOutSec = 1.0) {
+  const ctx = window.sharedAudioCtx;
+  const reg = window.activeAudioCues;
+  if (!ctx || !reg) return;
 
-// ========================================================
-// 🛑 Stop / fade-out by filename (all instances)
-// ========================================================
-export function stopAllAudio(filename, fadeOutSec = 1.5) {
-  const ctx = sharedAudioCtx;
-  const now = ctx.currentTime;
-
-  for (const [id, entry] of activeAudioCues.entries()) {
-    if (entry.filename !== filename) continue;
-
-    const { source, gainNode } = entry;
-    const current = gainNode.gain.value;
-    gainNode.gain.cancelScheduledValues(now);
-    gainNode.gain.setValueAtTime(current, now);
-    gainNode.gain.linearRampToValueAtTime(0, now + fadeOutSec);
-
-    setTimeout(() => {
-      try { source.stop(); } catch { }
-      activeAudioCues.delete(id);
-
-      const ev = new CustomEvent("oscilla:audio", {
-        detail: { file: filename, state: "stop" },
-      });
-      window.dispatchEvent(ev);
-      sendAudioOscTrigger({
-        cueId: `cueAudioStop(${filename})`,
-        filename,
-        volume: 0,
-        loop: 0,
-      });
-      console.log(`[AUDIO] ✅ Stopped ${filename} (${id})`);
-    }, fadeOutSec * 1000);
+  for (const [key, voice] of reg) {
+    if (voice.filename !== filename) continue;
+    try { voice.stop?.(fadeOutSec); } catch { }
+    reg.delete(key);
+    window.dispatchEvent(new CustomEvent("oscilla:audio", {
+      detail: { uid: key, file: filename, state: "stop" }
+    }));
   }
 }
+
 
 // ========================================================
 // 🌐 Send OSC audio trigger via WebSocket
@@ -3649,49 +3496,44 @@ export function sendAudioOscTrigger({ cueId, filename, volume = 1, loop = 1 }) {
   console.log("[OSC] 🎧 Sending audio cue:", message);
   window.socket.send(JSON.stringify(message));
 }
-document.getElementById("stop-audio-button").addEventListener("click", async () => {
-  console.log("[AUDIO] 🔇 Hard audio stop triggered");
 
-  const ctx = window.sharedAudioCtx;
+document.getElementById("stop-audio-button")?.addEventListener("click", () => {
+  console.log("[AUDIO] 🔇 Global STOP triggered");
+
   const active = window.activeAudioCues;
-
-  if (!ctx || !active || active.size === 0) {
-    console.warn("[AUDIO] ⚠️ No active Web Audio cues to stop.");
+  if (!active || active.size === 0) {
+    console.warn("[AUDIO] ⚠️ No active voices.");
     return;
   }
 
-  const now = ctx.currentTime;
+  // Fade-out duration for global stop (seconds)
+  const GLOBAL_FADE = 0.15;
+
   for (const voice of Array.from(active)) {
-    const { src, gainNode, filename } = voice;
     try {
-      // --- Smooth 100 ms fade-out ---
-      if (gainNode) {
-        gainNode.gain.cancelScheduledValues(now);
-        const current = gainNode.gain.value;
-        gainNode.gain.setValueAtTime(current, now);
-        gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
-      }
-      src.stop(now + 0.1);
+      // Each voice has its own stop(fadeOut)
+      voice.stop?.(GLOBAL_FADE);
+      active.delete(voice);
 
-      // --- UI + cue cleanup ---
-      window.dispatchEvent(new CustomEvent("oscilla:audio", { detail: { file: filename, state: "stop" } }));
-      window.emitCueComplete?.(filename, "cueAudio");
-      window.resetCueTrigger?.(filename);
-      console.log(`[AUDIO] 🔻 Stopped ${filename}`);
+      window.dispatchEvent(new CustomEvent("oscilla:audio", {
+        detail: { uid: voice.uid, state: "stop" }
+      }));
+
+      console.log(`[AUDIO] 🔻 Force-stopped ${voice.filename}`);
     } catch (err) {
-      console.warn(`[AUDIO] ❌ Error stopping ${filename}:`, err);
+      console.warn(`[AUDIO] ❌ Stop failed on ${voice.filename}:`, err);
     }
-    active.delete(voice);
   }
 
-  // --- OSC broadcast: stopAll ---
+  // Optional OSC network broadcast
   if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-    const msg = { type: "osc_audio_stopAll", timestamp: Date.now() };
-    window.socket.send(JSON.stringify(msg));
-    console.log("[STEP 10] Sent OSC stopAll:", msg);
+    window.socket.send(JSON.stringify({
+      type: "osc_audio_stopAll",
+      timestamp: Date.now()
+    }));
   }
 
-  console.log("[AUDIO] ✅ All Web Audio cues cleared.");
+  console.log("[AUDIO] ✅ All audio voices cleared.");
 });
 
 
@@ -4530,25 +4372,25 @@ if (window.triggeredCues)
   window.triggeredCues.clear();
 window._cueInsideState?.clear();
 
-// Robustly extract cueButton(...) inner content even if the ID has suffixes like -uid...
-function extractCueButtonInner(id) {
-  const key = "cueButton(";
-  const start = id.indexOf(key);
-  if (start === -1) return null;
-  let i = start + key.length, depth = 1;
-  for (; i < id.length; i++) {
-    const ch = id[i];
-    if (ch === "(") depth++;
-    else if (ch === ")") {
-      depth--;
-      if (depth === 0) {
-        // inner is between start+key.length and i (exclusive)
-        return id.slice(start + key.length, i);
-      }
-    }
-  }
-  return null; // unbalanced
-}
+// // Robustly extract cueButton(...) inner content even if the ID has suffixes like -uid...
+// function extractCueButtonInner(id) {
+//   const key = "cueButton(";
+//   const start = id.indexOf(key);
+//   if (start === -1) return null;
+//   let i = start + key.length, depth = 1;
+//   for (; i < id.length; i++) {
+//     const ch = id[i];
+//     if (ch === "(") depth++;
+//     else if (ch === ")") {
+//       depth--;
+//       if (depth === 0) {
+//         // inner is between start+key.length and i (exclusive)
+//         return id.slice(start + key.length, i);
+//       }
+//     }
+//   }
+//   return null; // unbalanced
+// }
 
 
 
@@ -4570,50 +4412,40 @@ export function destroyAllCueButtons() {
 // window.destroyAllCueButtons = destroyAllCueButtons;
 export function createCueButtonForElement(cueSvgEl, parsed, containerEl) {
   if (!parsed) return null;
-  const { cueExpr, opt = {} } = parsed;
 
-  // ✅ Container
+  const { triggerAst: originalAst, label: parsedLabel, opt = {} } = parsed;
+
+  // --- Resolve and deep-clone AST ---
+  let triggerAst = originalAst?.type === "cueAudio" ? originalAst : parseCueToAST(originalAst);
+  triggerAst = triggerAst ? JSON.parse(JSON.stringify(triggerAst)) : null;
+  if (!triggerAst) return console.warn("[cueButton] Missing triggerAst, skipping."), null;
+
+  // --- Label ---
+  let label =
+    triggerAst.uid ??
+    parsedLabel ??
+    cueSvgEl.getAttribute("data-label") ??
+    cueSvgEl.textContent?.trim() ??
+    "";
+
+  // --- Container selection ---
   if (!containerEl) {
     containerEl = window._pageMode
-      ? document.querySelector('#singlePage-overlay')
-      : document.querySelector('#scoreInner');
+      ? document.querySelector("#singlePage-overlay")
+      : document.querySelector("#scoreInner");
   }
   if (!cueSvgEl || !containerEl) return null;
 
-  // ✅ Hide the placeholder
   cueSvgEl.style.visibility = "hidden";
   cueSvgEl.style.pointerEvents = "none";
 
-  // ✅ DEBUG dump parsed
-  console.log(
-    "%c[cueButton] parsed →",
-    "color:#0a0",
-    { cueExpr, opt, parsed }
-  );
-
-  // ✅ Compute label with robust fallbacks
-  let computedLabel =
-    opt.label ??
-    parsed.label ??
-    cueSvgEl.getAttribute("data-label") ??
-    (cueSvgEl.textContent ? cueSvgEl.textContent.trim() : "") ??
-    "";
-
-  // ✅ Create button
+  // --- Make button ---
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.textContent = String(computedLabel);
+  btn.textContent = label;
   btn.className = "oscilla-cue-button";
-  if (opt.className) btn.classList.add(opt.className);
 
-  // Prevent bubbling
-  btn.addEventListener("mousedown", (e) => e.preventDefault());
-  btn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  });
-
-  // Style
+  // --- Apply sizing and visual params ---
   const toPx = (v, fallback) =>
     v == null ? fallback : (Number.isFinite(+v) ? `${+v}px` : String(v));
 
@@ -4621,112 +4453,87 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl) {
     position: "absolute",
     width: toPx(opt.width, "100px"),
     height: toPx(opt.height, "40px"),
-    background: opt.color ?? "#333",
-    border: "1px solid rgba(0,0,0,.2)",
     borderRadius: toPx(opt.radius ?? 4, "4px"),
-    padding: "2px",
-    fontWeight: opt.fontWeight ?? "600",
-    fontSize: toPx(opt.fontSize ?? 12, "12px"),
+    fontSize: toPx(opt.fontSize ?? 14, "14px"),
     fontFamily: opt.fontFamily ?? "system-ui, sans-serif",
-    color: opt.textColor ?? "#fff",
-    zIndex: "2000",
     cursor: "pointer",
-    userSelect: "none",
+    zIndex: "2000",
   });
+
+  // NEW: use CSS vars for button theme colors
+  if (opt.color) btn.style.setProperty("--btn-bg", opt.color);
+  if (opt.textColor) btn.style.setProperty("--btn-fg", opt.textColor);
 
   containerEl.appendChild(btn);
 
-  // ✅ Position relative to SVG placeholder
+  // --- Absolute placement relative to cue ---
   const place = () => {
     const r = cueSvgEl.getBoundingClientRect();
     const c = containerEl.getBoundingClientRect();
-    if (r.width === 0 || r.height === 0 || c.width === 0 || c.height === 0) return;
-    btn.style.left = `${Math.round(r.left - c.left + (+opt.offsetX || 0))}px`;
-    btn.style.top = `${Math.round(r.top - c.top + (+opt.offsetY || 0))}px`;
+    btn.style.left = `${r.left - c.left + (+opt.offsetX || 0)}px`;
+    btn.style.top = `${r.top - c.top + (+opt.offsetY || 0)}px`;
   };
+  requestAnimationFrame(place);
+  window.addEventListener("resize", place);
 
-  requestAnimationFrame(() => {
-    place();
-    if (opt.scrollFollow) requestAnimationFrame(tick);
-  });
+  // --- Identity ---
+  const uid = String(triggerAst.uid).trim();
+  btn.dataset.uid = uid;
 
-  let rafId = null;
-  const tick = () => {
-    place();
-    rafId = requestAnimationFrame(tick);
-  };
-  const onResize = () => place();
-  window.addEventListener("resize", onResize);
+  // --- Mode marker ---
+  if (triggerAst.toggle) {
+    btn.classList.add("oscilla-toggle");
+  } else {
+    btn.classList.add("oscilla-momentary");
+  }
 
-  // ✅ Extract audio src from cueExpr (for active flash)
-  let audioFile = null;
-  // supports audio(src:kick) or audio(kick)
-  const m =
-    /\baudio\s*\(\s*(?:src\s*:\s*)?([a-zA-Z0-9_\-]+)?/i.exec(cueExpr || "");
-  if (m && m[1]) audioFile = m[1].trim();
-
-  // Active visuals
-  const setVisualActive = (on) => {
-    btn.classList.toggle("oscilla-cue-button--active", !!on);
-    btn.classList.remove("oscilla-cue-button--flash", "oscilla-cue-button--pulse", "oscilla-cue-button--fade");
-    if (on && opt.active) btn.classList.add(`oscilla-cue-button--${opt.active}`);
-  };
-
-  // ✅ Click handler with DEBUG
+  // --- Click → trigger cue ---
   let lastClick = 0;
-  btn.addEventListener("click", async () => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const now = performance.now();
     if (now - lastClick < (opt.debounceMs || 120)) return;
     lastClick = now;
-
-    console.log("%c[cueButton] click →", "color:#c60;font-weight:700", { cueExpr, audioFile, opt });
-
-    const ac = window.sharedAudioCtx || window.WaveSurfer?.instances?.[0]?.backend?.ac || null;
-    if (ac && ac.state === "suspended") await ac.resume();
-
-    if (window.handleCueTrigger && cueExpr) {
-      window.handleCueTrigger(cueExpr, false, true);
-    } else {
-      console.warn("[cueButton] No handleCueTrigger or cueExpr missing", { cueExpr });
-    }
-
-    if (audioFile) setVisualActive(true);
+    window.handleCueTrigger?.(triggerAst, false, true);
   });
 
-  // sync with audio events
-  const onAudio = (ev) => {
-    if (!audioFile) return;
-    const { file, state } = ev.detail || {};
-    if (file === `${audioFile}.wav` || file === audioFile) {
-      setVisualActive(state === "play");
+ // --- Audio event → update ONLY THIS BUTTON ---
+const onAudio = (ev) => {
+  const { uid: eventUid, state, file } = ev.detail || {};
+  if (eventUid !== uid) return; // only react to our own UID
+
+  const isPlaying = state === "play";
+
+  if (triggerAst.toggle) {
+    // TOGGLE: steady on/off while playing
+    btn.classList.toggle("is-on", isPlaying);
+  } else {
+    // MOMENTARY: short flash on trigger, AND keep playing state until stop
+    if (isPlaying) {
+      btn.classList.add("is-on");         // stays until we get 'stop'
+      btn.classList.add("flash");         // quick burst
+      setTimeout(() => btn.classList.remove("flash"), 200);
+    } else {
+      btn.classList.remove("is-on");      // stop → remove playing state
     }
-  };
+  }
+};
+
+
   window.addEventListener("oscilla:audio", onAudio);
 
-  // cleanup
+  // --- Cleanup ---
   btn._destroyCueButton = () => {
-    window.removeEventListener("resize", onResize);
+    window.removeEventListener("resize", place);
     window.removeEventListener("oscilla:audio", onAudio);
-    if (rafId) cancelAnimationFrame(rafId);
     btn.remove();
     cueSvgEl.style.visibility = "";
     cueSvgEl.style.pointerEvents = "";
   };
 
-  // Final DEBUG
-  console.log(
-    "%c[cueButton] mounted",
-    "color:#06a",
-    { text: btn.textContent, left: btn.style.left, top: btn.style.top }
-  );
-
   return btn;
 }
-
-
-
-
-
 
 
 // Optional: WS receiver hook — call once during app init
@@ -4742,8 +4549,6 @@ export function installCueButtonSocketReceiver() {
     } catch (e) { }
   });
 }
-
-
 
 // Extract inner of fnName(...) by counting parentheses
 function extractFuncInner(str, fnName) {

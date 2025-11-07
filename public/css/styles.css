@@ -82,27 +82,9 @@ svg {
   pointer-events: none; /* <-- Overlay does not capture clicks */
 }
 
-.oscilla-cue-button {
-  position: absolute;
-  background: #222;
-  border: 1px solid rgba(0,0,0,.25);
-  border-radius: 8px;
-  padding: 2px;
-  font-family: system-ui, sans-serif;
-  font-weight: 600;
-  color: #fff;
-  cursor: pointer;
-  user-select: none;
-  z-index: 2000;
-}
 
-.oscilla-cue-button--active   { outline: 3px solid #fff4; }
-.oscilla-cue-button--flash    { animation: oscillaFlash 0.6s linear infinite; }
-.oscilla-cue-button--pulse    { animation: oscillaPulse 1.3s ease-in-out infinite; }
-.oscilla-cue-button--fade     { opacity: 0.5; }
 
-@keyframes oscillaFlash { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
-@keyframes oscillaPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+
 
 
 
@@ -1066,11 +1048,156 @@ body.inverted #stopwatch {
   pointer-events: auto;
 
 }
-
+/* =========================================
+   BASE BUTTON (uses CSS variables from JS)
+   JS sets: --btn-bg, --btn-fg (optional)
+   ========================================= */
 .oscilla-cue-button {
-  pointer-events: auto;
-  z-index: 100001;
+  position: absolute;
+  background: var(--btn-bg, #2f2f2f);
+  color: var(--btn-fg, #eee);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-family: system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  z-index: 100002;
+  transition:
+    background-color 0.18s,
+    box-shadow 0.18s,
+    transform 0.18s,
+    color 0.18s,
+    border-color 0.18s;
 }
+
+/* Hover — subtle lift */
+.oscilla-cue-button:hover {
+  background: color-mix(in oklab, var(--btn-bg, #2f2f2f) 85%, white 15%);
+}
+
+/* Focus ring (keyboard nav) */
+.oscilla-cue-button:focus-visible {
+  outline: 2px solid #8ecae6;
+  outline-offset: 2px;
+}
+
+/* =========================================
+   TOGGLE MODE (toggle:true)
+   While playing: slow, soft pulse + glow
+   JS ensures: .oscilla-toggle + .is-on
+   ========================================= */
+.oscilla-toggle.is-on {
+  /* you can override the "on" palette via CSS var if desired */
+  --_on-bg: var(--btn-on-bg, #e6b84a);
+  --_on-fg: var(--btn-on-fg, #111);
+
+  background: var(--_on-bg);
+  color: var(--_on-fg);
+  border-color: rgba(0,0,0,0.45);
+  box-shadow:
+    0 0 10px rgba(255, 210, 90, 0.45),
+    inset 0 0 2px rgba(255,255,255,0.5);
+
+  /* Slow pulse while playing */
+  animation: oscillaTogglePulse 1.6s ease-in-out infinite;
+}
+
+/* Slow pulsing glow for toggle */
+@keyframes oscillaTogglePulse {
+  0% {
+    transform: scale(1);
+    box-shadow:
+      0 0 8px rgba(255, 210, 90, 0.40),
+      inset 0 0 2px rgba(255,255,255,0.45);
+    filter: brightness(1.00);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow:
+      0 0 18px rgba(255, 210, 90, 0.75),
+      0 0 36px rgba(255, 170, 40, 0.35),
+      inset 0 0 3px rgba(255,255,255,0.65);
+    filter: brightness(1.06);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 8px rgba(255, 210, 90, 0.40),
+      inset 0 0 2px rgba(255,255,255,0.45);
+    filter: brightness(1.00);
+  }
+}
+
+/* =========================================
+   MOMENTARY MODE (toggle:false)
+   On trigger: quick pulse/flash
+   JS ensures: .oscilla-momentary + .flash (brief)
+   ========================================= */
+.oscilla-momentary.flash {
+  animation: oscillaMomentaryFlash 0.26s cubic-bezier(0.25, 0, 0.1, 1);
+}
+
+/* Quick flash/pulse — red accent, then settle */
+@keyframes oscillaMomentaryFlash {
+  0%   { background: #ff4a4a; transform: scale(1.03); box-shadow: 0 0 10px rgba(255,74,74,0.75); }
+  60%  { background: #552727; transform: scale(0.985); box-shadow: 0 0 4px rgba(85,39,39,0.35); }
+  100% { background: var(--btn-bg, #2f2f2f); transform: scale(1); box-shadow: none; }
+}
+
+/* Momentary buttons: show a faster pulse while audio is playing */
+.oscilla-momentary.is-on {
+  /* You can theme via --btn-on-bg/--btn-on-fg if you like */
+  --_on-bg: var(--btn-on-bg, color-mix(in oklab, var(--btn-bg, #814040) 70%, rgb(141, 142, 224) 30%));
+  --_on-fg: var(--btn-on-fg, #111);
+
+  background: var(--_on-bg);
+  color: var(--_on-fg);
+  border-color: rgba(0,0,0,0.4);
+  box-shadow:
+    0 0 8px rgba(177, 190, 58, 0.5),
+    inset 0 0 2px rgba(204, 83, 83, 0.5);
+
+  /* Faster/lighter pulse than toggle */
+  animation: oscillaMomentaryPlayingPulse 0.9s ease-in-out infinite;
+}
+
+@keyframes oscillaMomentaryPlayingPulse {
+  0% {
+    transform: scale(1);
+    box-shadow:
+      0 0 6px rgba(189, 82, 231, 0.45),
+      inset 0 0 2px rgba(255,255,255,0.45);
+    filter: brightness(1.00);
+  }
+  50% {
+    transform: scale(1.025);
+    box-shadow:
+      0 0 14px rgba(255, 120, 100, 0.78),
+      0 0 26px rgba(255, 110, 90, 0.30),
+      inset 0 0 3px rgba(255,255,255,0.6);
+    filter: brightness(1.05);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 6px rgba(250, 120, 243, 0.45),
+      inset 0 0 2px rgba(255,255,255,0.45);
+    filter: brightness(1.00);
+  }
+}
+
+
+/* =========================================
+   Motion preferences (gentler animations)
+   ========================================= */
+@media (prefers-reduced-motion: reduce) {
+  .oscilla-toggle.is-on { animation: none; }
+  .oscilla-momentary.flash { animation-duration: 0.12s; }
+}
+
 
 /* 🔹 Countdown styling */
 #singlePage-countdown {
@@ -1666,9 +1793,7 @@ body.inverted #stopwatch {
   right: 4px;
 }
 
-.oscilla-cue-button--active {
-  outline: 2px solid #e33;
-}
+
 
 @keyframes osc-flash {
 
@@ -1705,19 +1830,6 @@ body.inverted #stopwatch {
     opacity: .6;
   }
 }
-
-.oscilla-cue-button--flash.oscilla-cue-button--active {
-  animation: osc-flash 0.9s ease-in-out infinite;
-}
-
-.oscilla-cue-button--pulse.oscilla-cue-button--active {
-  animation: osc-pulse 1.2s ease-in-out infinite;
-}
-
-.oscilla-cue-button--fade.oscilla-cue-button--active {
-  animation: osc-fade 1.2s ease-in-out infinite;
-}
-
 
 
 #splash {

@@ -51,7 +51,6 @@ import {
   pauseDismissClickHandler,
   handleAudioCue,
   activeAudioCues,
-  handleMediaCue,
   handleOscCue,
   parseTraverseCueId,
   startTraverseAnimation,
