@@ -1442,7 +1442,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
   // AUDIO MASTER LOGIC 
 
   let isAudioMaster = false;
@@ -1468,8 +1467,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-
-
   // helper for obj2path case3
 
   window.ensureWindowPlayheadX = () => {
@@ -1484,10 +1481,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.playheadX = transformed.x;
     console.log(`[playheadX] Initialized from screen center: ${window.playheadX.toFixed(2)} (SVG space)`);
   };
-
-
-
-
 
 
 
@@ -1686,10 +1679,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
   }
 
-
-
-
-
   /**
    * storePathVariants(svgElement)
    * ---------------------------------------------------------
@@ -1774,9 +1763,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.storePathVariants = storePathVariants;
 
-
-
-
   /**
    * initializeSVG(svgElement)
    * --------------------------
@@ -1822,8 +1808,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
-  // TODO: USE THIS FEATURE
-  // Call this function to initialize
   initializeSvgInteractions();
 
 
@@ -1873,8 +1857,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
-
-
   // // Add listeners for SVG animations
   const svgAnimationElement = document.getElementById('svg-animation');
   if (svgAnimationElement) {
@@ -1897,7 +1879,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // });
 
 
-
   document.addEventListener("DOMContentLoaded", function () {
     const popup = document.getElementById("singlePage-content");
 
@@ -1911,7 +1892,6 @@ document.addEventListener('DOMContentLoaded', () => {
       event.stopPropagation(); // Prevents click inside popup from closing it
     });
   });
-
 
   async function populateProjectSelector() {
     const grid = document.getElementById("project-grid");
@@ -1973,198 +1953,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize splash logic
   window.addEventListener("DOMContentLoaded", populateProjectSelector);
 
-
-
-
-
-  // /////// START OF SPEED LOGIC ///////////////////////////////////////////////////
-
-  // window.speedMultiplier = 1.0;
-
-  // /**
-  // * Handles speed cue changes by setting and synchronizing the speed multiplier.
-  // * Ensures speed changes are only applied when valid and different from the current value.
-  // * Updates the UI and sends the new speed multiplier to the server if changed manually.
-  // */
-
-  // const handleSpeedCue = (cueId, newMultiplier) => {
-  //   /**
-  //   *  Processes `cueSpeed` messages from clients.
-  //   * - Extracts and validates the speed multiplier before applying.
-  //   * - Prevents redundant updates by checking the current speed.
-  //   * - Sends a WebSocket message only if speed changes.
-  //   */
-  //   console.log(`[DEBUG]  Triggering Speed Cue: ${cueId}`);
-
-  //   //  Ensure multiplier is a valid positive number
-  //   newMultiplier = parseFloat(newMultiplier.toFixed(1));
-  //   if (isNaN(newMultiplier) || newMultiplier <= 0) {
-  //     console.warn(`[WARNING] ❌ Invalid speed multiplier detected: ${cueId}`);
-  //     return;
-  //   }
-
-  //   //  Prevent redundant updates
-  //   if (speedMultiplier === newMultiplier) {
-  //     console.log(`[DEBUG] Speed is already set to ${speedMultiplier}. No update needed.`);
-  //     return;
-  //   }
-
-  //   window.speedMultiplier = newMultiplier;
-  //   console.log(`[DEBUG]  Speed multiplier set to ${speedMultiplier}`);
-  //   window.updateSpeedDisplay();
-
-  //   // Send update to WebSocket only if it was not from a sync message
-  //   if (window.wsEnabled &&window.socket&& socket.readyState === WebSocket.OPEN && !incomingServerUpdate) {
-  //     const speedMessage = {
-  //       type: "set_speed_multiplier",
-  //       multiplier: window.speedMultiplier,
-  //       timestamp: Date.now(),
-  //     };
-
-  //     window.socket.send(JSON.stringify(speedMessage));
-  //     console.log(`[DEBUG] Sent speed update to server:`, speedMessage);
-  //   }
-  // };
-
-
-  // // /**
-  // // * Determines the correct speed multiplier when seeking to a new position.
-  // // * Finds the most recent speed cue before the playhead and applies its value.
-  // // * Resets to the default speed (1.0) if no previous speed cue is found.
-  // // */
-
-  // // const getSpeedForPosition = (xPosition) => {
-
-  // //   const viewportOffset = window.scoreContainer.offsetWidth / 2; // Center offset
-  // //   const adjustedPlayheadX = xPosition + viewportOffset; //  Align with visual playhead
-
-  // //   console.log(`[DEBUG] Looking for speed at adjusted position: ${adjustedPlayheadX} (window.playheadX: ${xPosition})`);
-  // //   //console.log("[DEBUG] Current speedCueMap:", speedCueMap);
-
-  // //   if (speedCueMap.length === 0) {
-  // //     console.warn("[WARNING] No speed cues exist. Defaulting to 1.0x speed.");
-  // //     return 1.0;
-  // //   }
-
-  // //   let lastSpeedCue = speedCueMap
-  // //     .filter(cue => cue.position <= adjustedPlayheadX)
-  // //     .slice(-1)[0];
-
-  // //   if (lastSpeedCue) {
-  // //     console.log(`[DEBUG]  Applying Speed: ${lastSpeedCue.multiplier} (From Cue at ${lastSpeedCue.position})`);
-
-  // //     window.speedMultiplier = lastSpeedCue.multiplier; // Ensure it is stored globally
-  // //     window.updateSpeedDisplay();
-
-  // //     return window.speedMultiplier;
-  // //   } else {
-  // //     console.log("[DEBUG] ❗ No previous speed cue found, defaulting to 1.0");
-  // //     return 1.0;
-  // //   }
-  // // };
-
-
-
-
-  // // /**
-  // // * Preloads all speed cues from the score and stores them in a sorted list.
-  // // * Extracts speed values and their positions to enable accurate speed restoration.
-  // // * Ensures correct speed lookup when seeking by sorting cues by position.
-  // // */
-
-  // // const preloadSpeedCues = () => {
-  // //   speedCueMap = []; // Reset stored cues
-
-  // //   // Find all speed cues in the score
-  // //   document.querySelectorAll('[id^="speed_"]').forEach(element => {
-  // //     const cueId = element.id;
-  // //     const match = cueId.match(/speed_(\d+(\.\d+)?)/); // Support floats
-
-  // //     if (match) {
-  // //       const speedValue = parseFloat(match[1]);
-  // //       const cuePosition = getCuePosition(element); // Function to determine X position
-
-  // //       speedCueMap.push({ position: cuePosition, multiplier: speedValue });
-  // //     }
-  // //   });
-
-  // //   //  Sort cues by position to ensure correct lookup when seeking
-  // //   speedCueMap.sort((a, b) => a.position - b.position);
-
-  // //   console.log("[DEBUG] Preloaded speed cues:", speedCueMap);
-  // // };
-
-
-
-  // /**
-  // * Handles speed multiplier adjustments via keyboard shortcuts and UI buttons.
-  // * Updates the display and syncs changes with the server if WebSocket is enabled.
-  // */
-
-  // document.addEventListener('keydown', (event) => {
-  //   switch (event.key) {
-  //     case '+':
-  //       window.speedMultiplier = Math.min(speedMultiplier + 0.1, 3);
-  //       console.log(`[DEBUG] Speed multiplier increased to ${speedMultiplier}`);
-
-  //       if (window.wsEnabled && socket) {
-  //         window.socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: window.speedMultiplier }));
-  //         console.log(`[CLIENT] Sent speed multiplier change to server: ${speedMultiplier}`);
-  //       }
-  //       break;
-
-  //     case '-':
-  //       window.speedMultiplier = Math.max(speedMultiplier - 0.1, 0.1);
-  //       console.log(`[DEBUG] Speed multiplier decreased to ${speedMultiplier}`);
-
-  //       if (window.wsEnabled && socket) {
-  //         window.socket.send(JSON.stringify({ type: 'set_speed_multiplier', multiplier: window.speedMultiplier }));
-  //         console.log(`[CLIENT] Sent speed multiplier change to server: ${speedMultiplier}`);
-  //       }
-  //       break;
-
-  //     default:
-  //       break;
-  //   }
-  // });
-
-  // document.getElementById("increaseSpeed").addEventListener("click", () => {
-  //   window.speedMultiplier = Math.min(speedMultiplier + 0.1, 3.0); // Limit to 3x speed
-  //   window.updateSpeedDisplay();
-  // });
-
-  // document.getElementById("decreaseSpeed").addEventListener("click", () => {
-  //   window.speedMultiplier = Math.max(speedMultiplier - 0.1, 0.5); // Limit to 0.5x speed
-  //   window.updateSpeedDisplay();
-  // });
-
-  // document.getElementById("resetSpeed").addEventListener("click", () => {
-  //   window.speedMultiplier = 1.0;
-  //   window.updateSpeedDisplay();
-  // });
-
-  // function window.updateSpeedDisplay() {
-  //   document.getElementById("speedDisplay").textContent = `${speedMultiplier.toFixed(1)}×`;
-  //   sendSpeedUpdateToServer(speedMultiplier);
-
-  // }
-
-  // function sendSpeedUpdateToServer(speed) {
-  //   if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
-  //     console.warn("[WARNING] WebSocket not available. Skipping speed update.");
-  //     return;
-  //   }
-  //   window.socket?.send(JSON.stringify({ type: "speedUpdate", speed }));
-  // }
-
-  /////// END OF SPEED LOGIC /////////////////////////////////////////////////////
-
-
-
-
-
-
-
   /**
   *  Handles real-time synchronization of playback state.
   * - Updates `playheadX`, `elapsedTime`, and playback status from the server.
@@ -2213,24 +2001,6 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`[CLIENT] Sent sync update after state change: window.playheadX=${window.playheadX}, window.elapsedTime=${elapsedTime}`);
     }
   };
-
-
-
-
-
-
-  /**
-  *  Wrapped `syncState()` to prevent sync updates during manual pause.
-  * - Ensures user-initiated pauses are not overridden by server sync messages.
-  */
-  const wrappedSyncState = (state) => {
-    if (ignoreSyncDuringPause) {
-      console.log("[CLIENT] Ignoring sync during pause.");
-      return;
-    }
-    syncState(state);
-  };
-
 
 
   /**
@@ -2330,10 +2100,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.animationFrameId = requestAnimationFrame(window.animate);
   };
 
+
   //////////////////////////////////////////////////////////////////////////////
-
-
-
   // Manages the playback animation loop, updating position, seek bar, and cues in real-time.
   // Uses requestAnimationFrame to ensure smooth, efficient animations synchronized with screen refresh.
   // Prevents unnecessary updates when paused, seeking, or stopped to optimize performance.
@@ -2359,7 +2127,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-
   window.stopAnimation = () => {
     if (window.animationFrameId !== null) {
       cancelAnimationFrame(window.animationFrameId);
@@ -2373,7 +2140,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   let isJumpingToMark = false; // Prevents unwanted position overrides
-
 
   // ///////////////////////////////////////
   // // SEEKBAR LOGIC
@@ -2406,7 +2172,6 @@ document.addEventListener('DOMContentLoaded', () => {
     repeatBox.classList.remove('pulse'); //also stop pulsing
   }
 
-
   // Early repeat escape when clicking the count box
   document.getElementById("repeat-count-box").addEventListener("click", () => {
     for (const [cueId, repeat] of Object.entries(repeatStateMap)) {
@@ -2419,35 +2184,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-
-
-  function tryApplyPendingRepeatState(retries = 5) {
-    if (pendingRepeatStateMap && cues.length > 0) {
-      console.log("[CLIENT]  Deferred repeat state applied!");
-      handleRestoredRepeatState(pendingRepeatStateMap, cues);
-      pendingRepeatStateMap = null;
-    } else if (retries > 0) {
-      console.log("[CLIENT]  Waiting to apply repeat state...");
-      setTimeout(() => tryApplyPendingRepeatState(retries - 1), 300);
-    } else {
-      console.warn("[CLIENT]  Gave up on applying repeat state — cues not ready.");
-    }
-  }
-
-
-  const toggleHelp = () => {
-    if (splash.style.display === 'none') {
-      //splash.style.display = 'grid';
-      window.scoreContainer.style.display = 'none';
-      controls.style.display = 'none';
-    } else {
-      splash.style.display = 'none';
-      window.scoreContainer.style.display = 'block';
-      controls.style.display = 'flex';
-    }
-  };
-
-
 
   const toggleWebSocket = () => {
     window.wsEnabled = !window.wsEnabled;
@@ -2463,8 +2199,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   wsToggleButton.textContent = window.wsEnabled ? '🌐' : '❌';
 
-
-
   const toggleFullscreen = () => {
 
     const elem = document.documentElement;
@@ -2477,11 +2211,6 @@ document.addEventListener('DOMContentLoaded', () => {
       document.exitFullscreen();
     }
   };
-
-
-
-
-
 
   //  Check if the reload happened due to a resize
   console.log("[DEBUG] Page loaded, ensuring playhead is properly aligned.");
@@ -2498,17 +2227,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-
-
-
-
-
-
   ////////  END OF UTIL //////////////////////////////////////////////
 
-
   // Event Listeners
-
 
   //  Safely attach the close button listener now that DOM is ready
   const closeBtn = document.getElementById("close-score-options");
@@ -2521,8 +2242,6 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     // console.warn("[DEBUG] Close button not found in DOM.");
   }
-
-
 
   toggleButton.addEventListener('click', () => {
     window.isPlaying ? window.pausePlayback() : window.resumePlayback();
@@ -2544,45 +2263,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   fullscreenButton.addEventListener('click', toggleFullscreen);
 
-  // invertButton.addEventListener('click', invertColors);
-
   wsToggleButton.addEventListener('click', () => {
     toggleCommunication(); // Use the toggle function for WebSocket and OSC messages
-    // wsToggleButton.textContent = isCommunicationEnabled ? 'Disable Communication' : 'Enable Communication';
   });
 
   // helpButton.addEventListener('click', () => {
   //   toggleKeybindingsPopup(); // Show keybindings popup when Help button is clicked
   // });
-
-
-  function showProgrammeNote() {
-    const programmePopup = document.getElementById('programme-popup');
-    if (programmePopup) {
-      programmePopup.classList.remove('hidden');
-    } else {
-      console.warn("[CLIENT] Programme popup not found.");
-    }
-  }
-
-  function showScoreNotes() {
-    const scoreNotesPopup = document.getElementById('score-notes-popup');
-    if (scoreNotesPopup) {
-      scoreNotesPopup.classList.remove('hidden');
-    } else {
-      console.warn("[CLIENT] Score notes popup not found.");
-    }
-  }
-
-  // detect mobile for buttons or text on title page
-  function isMobileDevice() {
-    return /Mobi|Android|iPhone/i.test(navigator.userAgent);
-  }
-
-  if (isMobileDevice()) {
-    document.querySelector('.instructions').style.display = 'none';
-    document.getElementById('action-buttons').style.display = 'flex';
-  }
 
 
   window.addEventListener("DOMContentLoaded", () => {
