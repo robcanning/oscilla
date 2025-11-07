@@ -4415,18 +4415,28 @@ export function createCueButtonForElement(cueSvgEl, parsed, containerEl) {
 
   const { triggerAst: originalAst, label: parsedLabel, opt = {} } = parsed;
 
+  // ✅ Label Fallback Chain
+  let label = parsedLabel?.trim() || "";
+  if (!label && originalAst?.uid) label = originalAst.uid;
+  else if (!label && originalAst?.action) label = originalAst.action;
+  label = label || "";
+
   // --- Resolve and deep-clone AST ---
-  let triggerAst = originalAst?.type === "cueAudio" ? originalAst : parseCueToAST(originalAst);
+// If it already looks like an AST, use it directly:
+let triggerAst = (originalAst && typeof originalAst === "object" && originalAst.type)
+  ? originalAst
+  : parseCueToAST(originalAst);
+  
   triggerAst = triggerAst ? JSON.parse(JSON.stringify(triggerAst)) : null;
   if (!triggerAst) return console.warn("[cueButton] Missing triggerAst, skipping."), null;
 
-  // --- Label ---
-  let label =
-    triggerAst.uid ??
-    parsedLabel ??
-    cueSvgEl.getAttribute("data-label") ??
-    cueSvgEl.textContent?.trim() ??
-    "";
+  // // --- Label ---
+  // let label =
+  //   triggerAst.uid ??
+  //   parsedLabel ??
+  //   cueSvgEl.getAttribute("data-label") ??
+  //   cueSvgEl.textContent?.trim() ??
+  //   "";
 
   // --- Container selection ---
   if (!containerEl) {
@@ -4536,45 +4546,59 @@ const onAudio = (ev) => {
 
 
 export function handleNavCue(ast) {
-  const { key, value, target } = ast;
   const dbg = (...a) => console.log("[cueNav]", ...a);
 
-  dbg("→", ast);
+  // --- Normalize AST (support legacy key/value) ---
+  // New form: { action, target }
+  // Old form: { key, value, target }  (e.g., key:"page", value:"page3")
+  let action = ast.action ?? null;
+  let target = ast.target ?? null;
 
-  // ------------------------------------------------------------
-  // MODE SWITCHING
-  // ------------------------------------------------------------
-  if (key === "mode") {
-    if (value === "scroll") {
-      window._resumeAfterJump = true;
-      window.jumpToRehearsalMark?.(target);
-      return;
-    }
-
-    if (value === "scrollPaused") {
-      window._resumeAfterJump = false;
-      window.jumpToRehearsalMark?.(target);
-      return;
+  if (!action && ast.key) {
+    if (ast.key === "mode") {
+      // legacy nav(mode:scroll@X)
+      action = ast.value || "scroll";
+      target = ast.target ?? null;
+    } else if (ast.key === "page") {
+      // legacy nav(page:page3)
+      action = ast.value || null; // becomes the page/rehearsal name
+      target = ast.target ?? null;
     }
   }
 
-  // ------------------------------------------------------------
-  // DIRECT PAGE LOAD
-  // nav(page:page3)   →   page(page3)
-  // ------------------------------------------------------------
-  if (key === "page") {
-    const pageId = value;
-    dbg(`Direct page load → page(${pageId})`);
+  dbg("→", { action, target, uid: ast.uid ?? null });
 
-    // ✅ Use new cue namespace
-    handleCueTrigger?.(`page(${pageId})`);
+  if (!action) return;   // Guard: nothing to do
 
+  // SCROLL MODE (auto-resume)
+  // ------------------------------------------------------------
+  if (action === "scroll") {
+    window._resumeAfterJump = true;
+    if (target) window.jumpToRehearsalMark?.(target);
     return;
   }
 
-  console.warn("[cueNav] Unknown nav key:", key);
-}
+  // SCROLL MODE PAUSED (no auto-resume)
+  // ------------------------------------------------------------
+  if (action === "scrollPaused") {
+    window._resumeAfterJump = false;
+    if (target) window.jumpToRehearsalMark?.(target);
+    return;
+  }
 
+  // DIRECT PAGE / REHEARSAL JUMP
+   // ------------------------------------------------------------
+  if (typeof window.handleCueTrigger === "function") {
+    // Treat `action` as the page/marker name
+    window._resumeAfterJump = true;
+    window.handleCueTrigger(`page(${action})`);
+    return;
+  }
+
+  // Fallback: jump directly if no cue dispatcher is available
+  window._resumeAfterJump = true;
+  window.jumpToRehearsalMark?.(action);
+}
 
 
 
