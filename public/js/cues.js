@@ -42,7 +42,7 @@ export const cueHandlers = {
   cueRepeat: handleRepeatCue,
   cueTraverse: handleTraverseCue,
   "c-t": handleTraverseCue,
-  cueText: handleTextCue,
+  // cueText: handleTextCue,
   cueSeq: handleSeqCue,
   cueGroup: handleGroupCue,
 
@@ -1897,21 +1897,36 @@ export async function handlePageCue(cueId, duration, cueParams = {}) {
   console.log(`[cuePage] ✅ Loaded ${pageName}.svg`);
   startPageAnimations(svg);
 
-  // autostart cueText with _autostart(1)
-  const autostartCues = svg.querySelectorAll('[id^="cueText"][id*="_autostart(1)"]');
-  autostartCues.forEach(el => {
-    const cueExpr = el.id;
-    console.log("[page] ▶ Auto-starting cue:", cueExpr);
-    handleCueTrigger(cueExpr);
-  });
+  // // autostart cueText with _autostart(1)
+  // const autostartCues = svg.querySelectorAll('[id^="cueText"][id*="_autostart(1)"]');
+  // autostartCues.forEach(el => {
+  //   const cueExpr = el.id;
+  //   console.log("[page] ▶ Auto-starting cue:", cueExpr);
+  //   handleCueTrigger(cueExpr);
+  // });
 
-  if (window.triggeredCues instanceof Set) {
-    console.log("[cuePage] 🔄 Resetting triggeredCues for new page");
-    window.triggeredCues.clear();
+
+// Reset triggered state so page reload / revisit replays cues
+if (window.triggeredCues instanceof Set) {
+  window.triggeredCues.clear();
+}
+
+
+// Auto-start any text() cue that includes autostart:true
+const autostartTextCues = svg.querySelectorAll('[id^="text("]');
+
+autostartTextCues.forEach(el => {
+  if (/autostart\s*:\s*true/i.test(el.id)) {
+    console.log("[page] ▶ Auto-starting text cue:", el.id);
+    handleCueTrigger(el.id, el);   // ✅ FIX: pass the cueElement
   }
+});
+
+
+
 
   window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
-  window._activePageButtons = assignCueButtonsIn(svg, container);
+  // window._activePageButtons = assignCueButtonsIn(svg, container);
 
   window._currentPageSvg = svg;
 
@@ -3542,369 +3557,370 @@ document.getElementById("stop-audio-button")?.addEventListener("click", () => {
 
 
 
-// import anime from "animejs";
-
-/**
- * handleTextCue(cueParams)
- * ------------------------
- * Displays timed text as an HTML overlay above the SVG score.
- */
-export async function handleTextCue(cueId, cueParams = {}) {
-  console.log("[handleTextCue] called:", cueId, cueParams);
-
-
-  // Support old (single-param) style just in case
-  if (typeof cueId === "object" && !cueParams.choice) {
-    cueParams = cueId;
-  }
-
-  try {
-    const clean = v => (typeof v === "string" ? v.replace(/^"|"$/g, "") : v);
-
-    // Unescape any backslash-escaped quotes from SVG IDs
-    if (typeof cueParams.choice === "string") {
-      cueParams.choice = cueParams.choice.replace(/\\"/g, '"');
-    }
-
-    const {
-      choice,
-      speed = 1,
-      deviation = 0,
-      anim = "fade",
-      loop = 1,
-      next = null,
-      pos = "center",
-      style = {},
-    } = Object.fromEntries(Object.entries(cueParams).map(([k, v]) => [k, clean(v)]));
-
-
-    // --------------------------------------------------------
-    // 🧱 CREATE / REUSE CONTAINER — now unique per cueId
-    let container = document.getElementById(`cueText-${cueId}`);
-
-    // 🧩 ensure valid node regardless of weird cueId formatting
-    if (!(container instanceof HTMLElement)) {
-      container = document.createElement("div");
-      try {
-        container.id = `cueText-${cueId}`;
-      } catch {
-        // fallback if cueId has invalid characters
-        container.id = "cueText-temp";
-      }
-
-      const ps = window.pageState || {};
-      const pageContainer = document.getElementById("singlePage-content");
-      const inPageMode =
-        (ps.mode === "page" || ps.mode === "playlist") &&
-        pageContainer &&
-        window.getComputedStyle(pageContainer).display !== "none";
-
-      if (inPageMode && pageContainer instanceof HTMLElement) {
-        pageContainer.appendChild(container);
-      } else {
-        document.body.appendChild(container);
-      }
-    }
-
-
-    Object.assign(container.style, {
-      position: "absolute",
-      zIndex: 10000000,
-      pointerEvents: "none",
-      color: style.color || "black",
-      fontFamily: style.font || "sans-serif",
-      fontSize: (style.fontsize ? `${style.fontsize}px` : "32px"),
-      textAlign: style.align || "center",
-      textShadow: style.textshadow || "0 0 10px rgba(0,0,0,0.6)",
-      transition: "opacity 0.3s ease",
-      opacity: 1,
-      background: style.bg || "transparent",
-      padding: style.padding !== undefined ? `${Number(style.padding)}px` : "10px",
-      borderRadius: style.radius !== undefined ? `${Number(style.radius)}px` : "8px",
-      backdropFilter: style.blur ? `blur(${Number(style.blur)}px)` : "none",
-    });
-
-
-    // --------------------------------------------------------
-    // 🎯 POSITION HANDLING (preset, coordinates, or SVG anchor)
-    // --------------------------------------------------------
-    const posVal = (pos || "").toString().trim();
-
-    // 1️⃣ default: center
-    let left = "50%";
-    let top = "50%";
-    let transform = "translate(-50%, -50%)";
-
-    // 2️⃣ if it matches an SVG element ID, anchor to that element
-    if (posVal && !["center", "top", "bottom", "left", "right"].includes(posVal.toLowerCase()) && !posVal.includes(",")) {
-      const target = document.getElementById(posVal);
-      if (target) {
-        const svg = target.closest("svg");
-        if (svg) {
-          const rect = target.getBoundingClientRect();
-          const svgRect = svg.getBoundingClientRect();
-
-          // calculate center of the target element in screen coords
-          const cx = rect.left + rect.width / 2;
-          const cy = rect.top + rect.height / 2;
-
-          left = `${cx}px`;
-          top = `${cy}px`;
-          transform = "translate(-50%, -50%)";
-
-          console.log(`[cueText] 🧭 Anchored to element #${posVal} at (${cx}, ${cy})`);
-        }
-      }
-    }
-
-    // 3️⃣ named presets
-    else {
-      const posLower = posVal.toLowerCase();
-      if (posLower === "top") top = "10%";
-      else if (posLower === "bottom") top = "90%";
-      else if (posLower === "left") { left = "10%"; transform = "translate(0, -50%)"; }
-      else if (posLower === "right") { left = "90%"; transform = "translate(-100%, -50%)"; }
-      else if (posLower.includes(",")) {
-        const [x, y] = posLower.split(",").map(s => s.trim());
-        left = x.endsWith("%") ? x : `${x}px`;
-        top = y.endsWith("%") ? y : `${y}px`;
-      }
-    }
-
-    // apply computed styles
-    Object.assign(container.style, { left, top, transform });
-
-
-    // --------------------------------------------------------
-    // 🧾 PARSE SOURCE (file, inline, or words[...])
-    // --------------------------------------------------------
-    let entries = [];
-    if (Array.isArray(choice)) {
-      entries = choice.map(t => ({ text: t, dur: null }));
-    }
-
-
-    // 🔍 Load text from project texts folder first, then fall back to shared/texts.
-    // Uses `${window.textDir}` and `${window.sharedDir}texts/` for consistent path resolution.
-
-    else if (typeof choice === "string" && choice.endsWith(".txt")) {
-      // Prefer resolveProjectPath for consistency with cuePage and cueAudio
-      const projectPath = resolveProjectPath("text", choice);
-      const sharedPath = `${window.sharedDir}texts/${choice}`;
-
-      let res, text;
-      try {
-        res = await fetch(projectPath);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        text = await res.text();
-        console.log(`[cueText] ✅ Loaded text from project: ${projectPath}`);
-      } catch (err1) {
-        console.warn(`[cueText] ⚠️ Project text not found, trying shared: ${sharedPath}`);
-        try {
-          res = await fetch(sharedPath);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          text = await res.text();
-          console.log(`[cueText] ✅ Loaded text from shared: ${sharedPath}`);
-        } catch (err2) {
-          console.error(`[cueText] ❌ Failed to load both project and shared text files:
-            Project: ${projectPath}
-            Shared:  ${sharedPath}
-            Error: ${err2.message}`);
-          return;
-        }
-      }
-
-      entries = text.split(/\r?\n/).filter(Boolean).map(line => ({ text: line, dur: null }));
-    }
-
-    // 🧩 Handle inline word lists like words["a","b","c"] or single-line text strings.
-    // Parses embedded word arrays into entries or wraps plain strings as single entries.
-    // Ensures cueText supports both structured and literal inline text definitions.
-
-    else if (typeof choice === "string" && choice.includes("words[")) {
-      console.log("[cueText DEBUG] raw choice:", choice);
-      console.log("[cueText DEBUG] typeof choice:", typeof choice);
-      console.log("[cueText DEBUG] choice literal chars:", Array.from(choice).join("|"));
-      entries = parseWordsSource(choice.trim());
-    }
-    else if (typeof choice === "string") {
-      entries = [{ text: choice, dur: null }];
-    }
-
-    console.log("[cueText] parsed entries:", entries);
-
-    if (!entries.length) {
-      console.warn("[cueText] No text content found.");
-      return;
-    }
-
-    // --------------------------------------------------------
-    // 🎲 RANDOMIZE ORDER if requested (_random(1))
-    // --------------------------------------------------------
-    if (cueParams.random && Array.isArray(entries) && entries.length > 1) {
-      console.log("[cueText] 🎲 Randomizing line order");
-      entries.sort(() => Math.random() - 0.5);
-    }
-
-    // --------------------------------------------------------
-    // ⏱️ COMPUTE DURATIONS
-    // --------------------------------------------------------
-    const baseDur = 1 / speed;
-    const avgLen = entries.reduce((a, b) => a + b.text.length, 0) / entries.length;
-
-    // uniform _dur from cue parameters (seconds per word)
-    const uniformDur = cueParams.dur ? Number(cueParams.dur) : null;
-
-    entries.forEach(e => {
-      if (uniformDur) {
-        e.dur = uniformDur;
-      } else if (e.dur) {
-        // keep explicit per-word duration
-        return;
-      } else {
-        // default: length-weighted based on speed
-        const lenFactor = e.text.length / avgLen;
-        const weight = 1 + (lenFactor - 1) * deviation;
-        e.dur = baseDur * weight;
-      }
-    });
-
-
-    // --------------------------------------------------------
-    // 🎬 ANIMATION LOOP
-    // --------------------------------------------------------
-    let loopCount = 0;
-    let running = true;
-
-    while (running) {
-      for (let i = 0; i < entries.length; i++) {
-        const { text, dur } = entries[i];
-        const ms = dur * 1000;
-
-        // 💤 handle rests
-        if (text === "rest" || text === "r") {
-          container.textContent = "";
-          await delay(ms);
-          continue;
-        }
-
-        // 🎭 ANIMATION MODES
-        if (anim === "fade") {
-          // total cycle = dur exactly
-          const fadeTime = Math.min(ms * 0.25, 400); // fade in/out = 25% each, max 400 ms
-          const holdTime = Math.max(0, ms - 2 * fadeTime);
-
-          container.style.opacity = 0;
-          container.textContent = text;
-
-          // fade in
-          await anime({
-            targets: container,
-            opacity: [0, 1],
-            duration: fadeTime,
-            easing: "easeOutQuad"
-          }).finished;
-
-          // hold visible
-          await delay(holdTime);
-
-          // fade out
-          await anime({
-            targets: container,
-            opacity: [1, 0],
-            duration: fadeTime,
-            easing: "easeInQuad"
-          }).finished;
-        }
-
-        else if (anim === "typewriter") {
-          // ensure full text renders exactly within dur
-          const perChar = ms / text.length;
-          container.textContent = "";
-
-          for (let j = 0; j < text.length; j++) {
-            container.textContent += text[j];
-            await delay(perChar);
-          }
-
-          // small pause before next word (so total ≈ dur)
-          // optional: await delay(perChar * 2);
-        }
-
-        else {
-          // plain
-          container.textContent = text;
-          await delay(ms);
-        }
-      }
-
-      loopCount++;
-      if (loop > 0 && loopCount >= loop) running = false;
-    }
-
-
-    // --------------------------------------------------------
-    // 🧹 END ACTIONS
-    // --------------------------------------------------------
-    container.textContent = "";
-    if (next) triggerCueById(next);
-
-  } catch (err) {
-    console.error("[cueText] Error:", err);
-  }
-}
-
-
-// --------------------------------------------------------
-// 🔍 SUPPORT FUNCTIONS
-// --------------------------------------------------------
-
-function delay(ms) {
-  return new Promise(res => setTimeout(res, ms));
-}
-
-function parseWordsSource(input) {
-
-  if (!input) return [];
-
-  // 🧹 unescape any escaped quotes from XML id parsing
-  input = input.replace(/\\"/g, '"');
-  console.log("[parseWordsSource DEBUG] input raw:", input);
-
-
-
-  // Strip wrapper
-  let inner = input
-    .replace(/^words\[/i, "")
-    .replace(/\]$/, "")
-    .trim();
-  console.log("[parseWordsSource DEBUG] inner string:", inner);
-
-  // Split on commas not inside quotes
-  const rawItems = inner
-    .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
-    .map(s => s.trim())
-    .filter(Boolean);
-
-  const entries = rawItems.map(item => {
-    const m = item.match(/^"?([^":]+?)"?\s*:\s*([\d.]+)?$/);
-    let text, dur;
-
-    if (m) {
-      text = m[1];
-      dur = m[2] ? parseFloat(m[2]) : null;
-    } else {
-      text = item.replace(/^"|"$/g, "").trim();
-      dur = null;
-    }
-
-    if (/^r(est)?$/i.test(text)) text = "rest";
-    return { text, dur };
-  });
-
-  console.log("[parseWordsSource] inner:", inner, "entries:", entries);
-  return entries;
-}
+// // import anime from "animejs";
+
+// /**
+//  * handleTextCue(cueParams)
+//  * ------------------------
+//  * Displays timed text as an HTML overlay above the SVG score.
+//  */
+// export async function handleTextCue(cueId, cueParams = {}) {
+//   console.log("[handleTextCue] called:", cueId, cueParams);
+
+
+//   // Support old (single-param) style just in case
+//   if (typeof cueId === "object" && !cueParams.choice) {
+//     cueParams = cueId;
+//   }
+
+//   try {
+//     const clean = v => (typeof v === "string" ? v.replace(/^"|"$/g, "") : v);
+
+//     // Unescape any backslash-escaped quotes from SVG IDs
+//     if (typeof cueParams.choice === "string") {
+//       cueParams.choice = cueParams.choice.replace(/\\"/g, '"');
+//     }
+
+// const {
+//   choice,
+//   speed = 1,
+//   deviation = 0,
+//   anim = "fade",
+//   loop = 1,
+//   next = null,
+//   pos = "center",
+//   style = {},
+//   autostart = true,     
+//   uid = cueId,          
+// } = Object.fromEntries(Object.entries(cueParams).map(([k, v]) => [k, clean(v)]));
+
+//     // --------------------------------------------------------
+//     // 🧱 CREATE / REUSE CONTAINER — now unique per cueId
+//     let container = document.getElementById(`cueText-${cueId}`);
+
+//     // 🧩 ensure valid node regardless of weird cueId formatting
+//     if (!(container instanceof HTMLElement)) {
+//       container = document.createElement("div");
+//       try {
+//         container.id = `cueText-${cueId}`;
+//       } catch {
+//         // fallback if cueId has invalid characters
+//         container.id = "cueText-temp";
+//       }
+
+//       const ps = window.pageState || {};
+//       const pageContainer = document.getElementById("singlePage-content");
+//       const inPageMode =
+//         (ps.mode === "page" || ps.mode === "playlist") &&
+//         pageContainer &&
+//         window.getComputedStyle(pageContainer).display !== "none";
+
+//       if (inPageMode && pageContainer instanceof HTMLElement) {
+//         pageContainer.appendChild(container);
+//       } else {
+//         document.body.appendChild(container);
+//       }
+//     }
+
+
+//     Object.assign(container.style, {
+//       position: "absolute",
+//       zIndex: 10000000,
+//       pointerEvents: "none",
+//       color: style.color || "black",
+//       fontFamily: style.font || "sans-serif",
+//       fontSize: (style.fontsize ? `${style.fontsize}px` : "32px"),
+//       textAlign: style.align || "center",
+//       textShadow: style.textshadow || "0 0 10px rgba(0,0,0,0.6)",
+//       transition: "opacity 0.3s ease",
+//       opacity: 1,
+//       background: style.bg || "transparent",
+//       padding: style.padding !== undefined ? `${Number(style.padding)}px` : "10px",
+//       borderRadius: style.radius !== undefined ? `${Number(style.radius)}px` : "8px",
+//       backdropFilter: style.blur ? `blur(${Number(style.blur)}px)` : "none",
+//     });
+
+
+//     // --------------------------------------------------------
+//     // 🎯 POSITION HANDLING (preset, coordinates, or SVG anchor)
+//     // --------------------------------------------------------
+//     const posVal = (pos || "").toString().trim();
+
+//     // 1️⃣ default: center
+//     let left = "50%";
+//     let top = "50%";
+//     let transform = "translate(-50%, -50%)";
+
+//     // 2️⃣ if it matches an SVG element ID, anchor to that element
+//     if (posVal && !["center", "top", "bottom", "left", "right"].includes(posVal.toLowerCase()) && !posVal.includes(",")) {
+//       const target = document.getElementById(posVal);
+//       if (target) {
+//         const svg = target.closest("svg");
+//         if (svg) {
+//           const rect = target.getBoundingClientRect();
+//           const svgRect = svg.getBoundingClientRect();
+
+//           // calculate center of the target element in screen coords
+//           const cx = rect.left + rect.width / 2;
+//           const cy = rect.top + rect.height / 2;
+
+//           left = `${cx}px`;
+//           top = `${cy}px`;
+//           transform = "translate(-50%, -50%)";
+
+//           console.log(`[cueText] 🧭 Anchored to element #${posVal} at (${cx}, ${cy})`);
+//         }
+//       }
+//     }
+
+//     // 3️⃣ named presets
+//     else {
+//       const posLower = posVal.toLowerCase();
+//       if (posLower === "top") top = "10%";
+//       else if (posLower === "bottom") top = "90%";
+//       else if (posLower === "left") { left = "10%"; transform = "translate(0, -50%)"; }
+//       else if (posLower === "right") { left = "90%"; transform = "translate(-100%, -50%)"; }
+//       else if (posLower.includes(",")) {
+//         const [x, y] = posLower.split(",").map(s => s.trim());
+//         left = x.endsWith("%") ? x : `${x}px`;
+//         top = y.endsWith("%") ? y : `${y}px`;
+//       }
+//     }
+
+//     // apply computed styles
+//     Object.assign(container.style, { left, top, transform });
+
+
+//     // --------------------------------------------------------
+//     // 🧾 PARSE SOURCE (file, inline, or words[...])
+//     // --------------------------------------------------------
+//     let entries = [];
+//     if (Array.isArray(choice)) {
+//       entries = choice.map(t => ({ text: t, dur: null }));
+//     }
+
+
+//     // 🔍 Load text from project texts folder first, then fall back to shared/texts.
+//     // Uses `${window.textDir}` and `${window.sharedDir}texts/` for consistent path resolution.
+
+//     else if (typeof choice === "string" && choice.endsWith(".txt")) {
+//       // Prefer resolveProjectPath for consistency with cuePage and cueAudio
+//       const projectPath = resolveProjectPath("text", choice);
+//       const sharedPath = `${window.sharedDir}texts/${choice}`;
+
+//       let res, text;
+//       try {
+//         res = await fetch(projectPath);
+//         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+//         text = await res.text();
+//         console.log(`[cueText] ✅ Loaded text from project: ${projectPath}`);
+//       } catch (err1) {
+//         console.warn(`[cueText] ⚠️ Project text not found, trying shared: ${sharedPath}`);
+//         try {
+//           res = await fetch(sharedPath);
+//           if (!res.ok) throw new Error(`HTTP ${res.status}`);
+//           text = await res.text();
+//           console.log(`[cueText] ✅ Loaded text from shared: ${sharedPath}`);
+//         } catch (err2) {
+//           console.error(`[cueText] ❌ Failed to load both project and shared text files:
+//             Project: ${projectPath}
+//             Shared:  ${sharedPath}
+//             Error: ${err2.message}`);
+//           return;
+//         }
+//       }
+
+//       entries = text.split(/\r?\n/).filter(Boolean).map(line => ({ text: line, dur: null }));
+//     }
+
+//     // 🧩 Handle inline word lists like words["a","b","c"] or single-line text strings.
+//     // Parses embedded word arrays into entries or wraps plain strings as single entries.
+//     // Ensures cueText supports both structured and literal inline text definitions.
+
+//     else if (typeof choice === "string" && choice.includes("words[")) {
+//       console.log("[cueText DEBUG] raw choice:", choice);
+//       console.log("[cueText DEBUG] typeof choice:", typeof choice);
+//       console.log("[cueText DEBUG] choice literal chars:", Array.from(choice).join("|"));
+//       entries = parseWordsSource(choice.trim());
+//     }
+//     else if (typeof choice === "string") {
+//       entries = [{ text: choice, dur: null }];
+//     }
+
+//     console.log("[cueText] parsed entries:", entries);
+
+//     if (!entries.length) {
+//       console.warn("[cueText] No text content found.");
+//       return;
+//     }
+
+//     // --------------------------------------------------------
+//     // 🎲 RANDOMIZE ORDER if requested (_random(1))
+//     // --------------------------------------------------------
+//     if (cueParams.random && Array.isArray(entries) && entries.length > 1) {
+//       console.log("[cueText] 🎲 Randomizing line order");
+//       entries.sort(() => Math.random() - 0.5);
+//     }
+
+//     // --------------------------------------------------------
+//     // ⏱️ COMPUTE DURATIONS
+//     // --------------------------------------------------------
+//     const baseDur = 1 / speed;
+//     const avgLen = entries.reduce((a, b) => a + b.text.length, 0) / entries.length;
+
+//     // uniform _dur from cue parameters (seconds per word)
+//     const uniformDur = cueParams.dur ? Number(cueParams.dur) : null;
+
+//     entries.forEach(e => {
+//       if (uniformDur) {
+//         e.dur = uniformDur;
+//       } else if (e.dur) {
+//         // keep explicit per-word duration
+//         return;
+//       } else {
+//         // default: length-weighted based on speed
+//         const lenFactor = e.text.length / avgLen;
+//         const weight = 1 + (lenFactor - 1) * deviation;
+//         e.dur = baseDur * weight;
+//       }
+//     });
+
+
+//     // --------------------------------------------------------
+//     // 🎬 ANIMATION LOOP
+//     // --------------------------------------------------------
+//     let loopCount = 0;
+//     let running = true;
+
+//     while (running) {
+//       for (let i = 0; i < entries.length; i++) {
+//         const { text, dur } = entries[i];
+//         const ms = dur * 1000;
+
+//         // 💤 handle rests
+//         if (text === "rest" || text === "r") {
+//           container.textContent = "";
+//           await delay(ms);
+//           continue;
+//         }
+
+//         // 🎭 ANIMATION MODES
+//         if (anim === "fade") {
+//           // total cycle = dur exactly
+//           const fadeTime = Math.min(ms * 0.25, 400); // fade in/out = 25% each, max 400 ms
+//           const holdTime = Math.max(0, ms - 2 * fadeTime);
+
+//           container.style.opacity = 0;
+//           container.textContent = text;
+
+//           // fade in
+//           await anime({
+//             targets: container,
+//             opacity: [0, 1],
+//             duration: fadeTime,
+//             easing: "easeOutQuad"
+//           }).finished;
+
+//           // hold visible
+//           await delay(holdTime);
+
+//           // fade out
+//           await anime({
+//             targets: container,
+//             opacity: [1, 0],
+//             duration: fadeTime,
+//             easing: "easeInQuad"
+//           }).finished;
+//         }
+
+//         else if (anim === "typewriter") {
+//           // ensure full text renders exactly within dur
+//           const perChar = ms / text.length;
+//           container.textContent = "";
+
+//           for (let j = 0; j < text.length; j++) {
+//             container.textContent += text[j];
+//             await delay(perChar);
+//           }
+
+//           // small pause before next word (so total ≈ dur)
+//           // optional: await delay(perChar * 2);
+//         }
+
+//         else {
+//           // plain
+//           container.textContent = text;
+//           await delay(ms);
+//         }
+//       }
+
+//       loopCount++;
+//       if (loop > 0 && loopCount >= loop) running = false;
+//     }
+
+
+//     // --------------------------------------------------------
+//     // 🧹 END ACTIONS
+//     // --------------------------------------------------------
+//     container.textContent = "";
+//     if (next) triggerCueById(next);
+
+//   } catch (err) {
+//     console.error("[cueText] Error:", err);
+//   }
+// }
+
+
+// // --------------------------------------------------------
+// // 🔍 SUPPORT FUNCTIONS
+// // --------------------------------------------------------
+
+// function delay(ms) {
+//   return new Promise(res => setTimeout(res, ms));
+// }
+
+// function parseWordsSource(input) {
+
+//   if (!input) return [];
+
+//   // 🧹 unescape any escaped quotes from XML id parsing
+//   input = input.replace(/\\"/g, '"');
+//   console.log("[parseWordsSource DEBUG] input raw:", input);
+
+
+
+//   // Strip wrapper
+//   let inner = input
+//     .replace(/^words\[/i, "")
+//     .replace(/\]$/, "")
+//     .trim();
+//   console.log("[parseWordsSource DEBUG] inner string:", inner);
+
+//   // Split on commas not inside quotes
+//   const rawItems = inner
+//     .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+//     .map(s => s.trim())
+//     .filter(Boolean);
+
+//   const entries = rawItems.map(item => {
+//     const m = item.match(/^"?([^":]+?)"?\s*:\s*([\d.]+)?$/);
+//     let text, dur;
+
+//     if (m) {
+//       text = m[1];
+//       dur = m[2] ? parseFloat(m[2]) : null;
+//     } else {
+//       text = item.replace(/^"|"$/g, "").trim();
+//       dur = null;
+//     }
+
+//     if (/^r(est)?$/i.test(text)) text = "rest";
+//     return { text, dur };
+//   });
+
+//   console.log("[parseWordsSource] inner:", inner, "entries:", entries);
+//   return entries;
+// }
 
 
 /**  LEGACY UI SYSTEM — TO BE MIGRATED SOON
