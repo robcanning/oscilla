@@ -1,4 +1,8 @@
-
+import {
+  registerReuseBlocks,
+  autoInjectUseBlocks,
+  preloadReuseBlocksFromPages
+} from "./reuse.js";
 
 // Rehearsal mark logic ////////////////////////////////////////////////////////
 
@@ -790,21 +794,32 @@ export async function setupScore(svgElement) {
 
 
 
-  // 🟢 Preload all reusable group definitions from pages/
-  // preloadSvgGroups();
-  await preloadAllSvgGroups();
-  console.log("[setupScore] ✅ All group definitions preloaded.");
+  // // 🟢 Preload all reusable group definitions from pages/
+  // // preloadSvgGroups();
+  // await preloadAllSvgGroups();
+  // console.log("[setupScore] ✅ All group definitions preloaded.");
 
 
 
-  if (typeof window.autoInjectGroupsInScroll === "function") {
-    console.log("[cueGroup] 🧩 Running autoInjectGroupsInScroll() after group registry ready");
-    const svgElement = document.querySelector("#scoreContainer svg");
-    if (svgElement) window.autoInjectGroupsInScroll(svgElement);
-  }
+  // if (typeof window.autoInjectGroupsInScroll === "function") {
+  //   console.log("[cueGroup] 🧩 Running autoInjectGroupsInScroll() after group registry ready");
+  //   const svgElement = document.querySelector("#scoreContainer svg");
+  //   if (svgElement) window.autoInjectGroupsInScroll(svgElement);
+  // }
 
 
+// 1) Load reusable blocks from external .svg files (pages/manifest.json)
+await preloadReuseBlocksFromPages();
+// 2) Register any <g id="reuse-*"> blocks inside the main score SVG
+// const svgElement = document.querySelector("#scoreContainer svg");
+if (svgElement) {
+  registerReuseBlocks(svgElement);
 
+  // 3) Expand <g id="use(name)"> inclusions
+  autoInjectUseBlocks(svgElement);
+
+  console.log("[setupScore] ✅ Reusable blocks ready.");
+}
 
 
 

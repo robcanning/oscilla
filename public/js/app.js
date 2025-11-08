@@ -14,6 +14,13 @@ import { enableLiveInspector } from "./oscillaLive.js";
 import { initializeDarkModeToggle, scrollToPlayheadVisual } from "./transport.js";
 import { loadProject } from './projectLoader.js';
 import { setupScore, extractScoreElements, propagate, autoInjectGroupsInScroll } from './scoreSetup.js';
+
+import {
+  registerReuseBlocks,
+  autoInjectUseBlocks,
+  preloadReuseBlocksFromPages
+} from "./reuse.js";
+
 import {
   forward, rewind, rewindToStart, getSpeedForPosition,
   initializeSpeedControls, adjustSpeed, setSpeed, updateSpeedDisplay,
@@ -247,16 +254,22 @@ export const initializeSVG = async (svgElement) => {
     });
   }
 
-  // ✅ Register reusable cue groups (menus, UI clusters)
-  window.cues = [];
-  registerSvgGroups(svgElement);
-  console.log("[Debug] Total cues:", window.cues.length);
+  // // ✅ Register reusable cue groups (menus, UI clusters)
+  // window.cues = [];
+  
+  // // registerSvgGroups(svgElement);
 
-  for (const cue of window.cues) {
-    if (!cue.element) {
-      console.warn(`[Debug] Cue "${cue.id}" is missing element`);
-    }
-  }
+  // console.log("[Debug] Total cues:", window.cues.length);
+
+  // for (const cue of window.cues) {
+  //   if (!cue.element) {
+  //     console.warn(`[Debug] Cue "${cue.id}" is missing element`);
+  //   }
+  // }
+
+registerReuseBlocks(svgElement);
+
+
 
   // ✅ Attach globally
   if (typeof window !== 'undefined') {

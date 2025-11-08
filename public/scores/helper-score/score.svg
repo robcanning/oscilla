@@ -26,8 +26,8 @@
      inkscape:document-units="px"
      showgrid="false"
      inkscape:zoom="1.2611508"
-     inkscape:cx="13711.683"
-     inkscape:cy="626.41198"
+     inkscape:cx="14352.367"
+     inkscape:cy="566.94249"
      inkscape:window-width="1920"
      inkscape:window-height="1011"
      inkscape:window-x="0"
@@ -34130,6 +34130,15 @@
          y="596.35339"
          id="tspan2106">button(nav</tspan></text><text
        xml:space="preserve"
+       style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Italic';white-space:pre;inline-size:373.179;display:inline;fill:#008000"
+       x="11318.223"
+       y="596.35339"
+       id="button(target:nav(page4, uid:12), style(size:&quot;150x40&quot;,label:&quot;Enter page 4!&quot;, font:&quot;Arial Black&quot;, fontsize:12))"
+       transform="translate(2645.2227,83.53188)"><tspan
+         x="11318.223"
+         y="596.35339"
+         id="tspan2107">button(nav</tspan></text><text
+       xml:space="preserve"
        style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Italic';white-space:pre;inline-size:202.577;display:inline;fill:#008000"
        x="9379.2148"
        y="507.56723"
@@ -34137,7 +34146,7 @@
        transform="translate(3618.7014,-119.50958)"><tspan
          x="9379.2148"
          y="507.56723"
-         id="tspan2107">cueButton(cueAudio(moog-</tspan></text><text
+         id="tspan2108">cueButton(cueAudio(moog-</tspan></text><text
        xml:space="preserve"
        style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:29.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Italic';fill:#ff0000"
        x="8919.2334"
@@ -34319,10 +34328,10 @@
        transform="translate(3608.1709,-273.37314)"><tspan
          x="9379.2148"
          y="507.56723"
-         id="tspan2108">cueButton(cueAudio(Noise.</tspan><tspan
+         id="tspan2109">cueButton(cueAudio(Noise.</tspan><tspan
          x="9379.2148"
          y="524.23385"
-         id="tspan2109">wav)</tspan></text><text
+         id="tspan2110">wav)</tspan></text><text
        xml:space="preserve"
        id="text69690"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;font-family:FreeMono;-inkscape-font-specification:FreeMono;white-space:pre;shape-inside:url(#rect69692);display:inline;fill:#ff0000" /><text
@@ -34334,128 +34343,128 @@
        transform="translate(-22273.019,-1023.8144)"><tspan
          x="36640.613"
          y="217.86128"
-         id="tspan2112"><tspan
+         id="tspan2113"><tspan
            style="font-weight:normal;font-size:48px;-inkscape-font-specification:FreeMono;fill:#ff0000;stroke:#ff0000"
-           id="tspan2110">cueSeq</tspan><tspan
+           id="tspan2111">cueSeq</tspan><tspan
            style="font-weight:normal;font-size:64px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2111">
+           id="tspan2112">
 </tspan></tspan><tspan
          x="36640.613"
          y="253.46129"
-         id="tspan2114"><tspan
+         id="tspan2115"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2113">Experimental Feature — cueSeq is a bleeding-edge, unstable API for </tspan></tspan><tspan
+           id="tspan2114">Experimental Feature — cueSeq is a bleeding-edge, unstable API for </tspan></tspan><tspan
          x="36640.613"
          y="273.46129"
-         id="tspan2116"><tspan
+         id="tspan2117"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2115">sequencing cues; syntax and behavior may change without notice. 
+           id="tspan2116">sequencing cues; syntax and behavior may change without notice. 
 </tspan></tspan><tspan
          x="36640.613"
          y="293.46129"
-         id="tspan2118"><tspan
+         id="tspan2119"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2117">
+           id="tspan2118">
 </tspan></tspan><tspan
          x="36640.613"
          y="318.39459"
-         id="tspan2120"><tspan
+         id="tspan2121"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2119">cueSeq chains multiple cues into timed sequences that </tspan></tspan><tspan
+           id="tspan2120">cueSeq chains multiple cues into timed sequences that </tspan></tspan><tspan
          x="36640.613"
          y="345.06121"
-         id="tspan2122"><tspan
+         id="tspan2123"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2121">unfold automatically. Each item can reference any cue </tspan></tspan><tspan
+           id="tspan2122">unfold automatically. Each item can reference any cue </tspan></tspan><tspan
          x="36640.613"
          y="371.72784"
-         id="tspan2124"><tspan
+         id="tspan2125"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2123">by its _uid, with timing modifiers like :2 </tspan></tspan><tspan
+           id="tspan2124">by its _uid, with timing modifiers like :2 </tspan></tspan><tspan
          x="36640.613"
          y="398.39447"
-         id="tspan2126"><tspan
+         id="tspan2127"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2125">(delay), :-1 (overlap), or :0 (parallel). You can mix </tspan></tspan><tspan
+           id="tspan2126">(delay), :-1 (overlap), or :0 (parallel). You can mix </tspan></tspan><tspan
          x="36640.613"
          y="425.06109"
-         id="tspan2128"><tspan
+         id="tspan2129"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2127">in waits (wait(2)), loops, and random choices </tspan></tspan><tspan
+           id="tspan2128">in waits (wait(2)), loops, and random choices </tspan></tspan><tspan
          x="36640.613"
          y="451.72772"
-         id="tspan2130"><tspan
+         id="tspan2131"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2129">(rand(a,b,c)) to create dynamic, branching cue flows. </tspan></tspan><tspan
+           id="tspan2130">(rand(a,b,c)) to create dynamic, branching cue flows. </tspan></tspan><tspan
          x="36640.613"
          y="478.39434"
-         id="tspan2132"><tspan
+         id="tspan2133"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2131">The sequencer waits for each cue to finish before </tspan></tspan><tspan
+           id="tspan2132">The sequencer waits for each cue to finish before </tspan></tspan><tspan
          x="36640.613"
          y="505.06097"
-         id="tspan2134"><tspan
+         id="tspan2135"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2133">advancing—unless marked parallel—making it perfect for </tspan></tspan><tspan
+           id="tspan2134">advancing—unless marked parallel—making it perfect for </tspan></tspan><tspan
          x="36640.613"
          y="531.7276"
-         id="tspan2136"><tspan
+         id="tspan2137"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2135">structuring autonomous or semi-scripted scenes.
+           id="tspan2136">structuring autonomous or semi-scripted scenes.
 </tspan></tspan><tspan
          x="36640.613"
          y="558.39419"
-         id="tspan2138"><tspan
+         id="tspan2139"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2137">
+           id="tspan2138">
 </tspan></tspan><tspan
          x="36640.613"
          y="585.06082"
-         id="tspan2140"><tspan
+         id="tspan2141"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2139">cueButton(  cueSeq(    wait(1),    introText,    </tspan></tspan><tspan
+           id="tspan2140">cueButton(  cueSeq(    wait(1),    introText,    </tspan></tspan><tspan
          x="36640.613"
          y="611.72744"
-         id="tspan2142"><tspan
+         id="tspan2143"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2141">noise:0,    synth:-2,    rand(page1, page2),    </tspan></tspan><tspan
+           id="tspan2142">noise:0,    synth:-2,    rand(page1, page2),    </tspan></tspan><tspan
          x="36640.613"
          y="638.39407"
-         id="tspan2144"><tspan
+         id="tspan2145"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2143">outroAudio  )_loop(2)_uid(sceneA))_style(label:&quot;Scene </tspan></tspan><tspan
+           id="tspan2144">outroAudio  )_loop(2)_uid(sceneA))_style(label:&quot;Scene </tspan></tspan><tspan
          x="36640.613"
          y="665.06069"
-         id="tspan2146"><tspan
+         id="tspan2147"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2145">A&quot;, color:&quot;goldenrod&quot;)
+           id="tspan2146">A&quot;, color:&quot;goldenrod&quot;)
 </tspan></tspan><tspan
          x="36640.613"
          y="691.72732"
-         id="tspan2148"><tspan
+         id="tspan2149"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2147">
+           id="tspan2148">
 </tspan></tspan><tspan
          x="36640.613"
          y="718.39395"
-         id="tspan2150"><tspan
+         id="tspan2151"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2149">This plays a 1 s wait, then introText, starts noise in </tspan></tspan><tspan
+           id="tspan2150">This plays a 1 s wait, then introText, starts noise in </tspan></tspan><tspan
          x="36640.613"
          y="745.06057"
-         id="tspan2152"><tspan
+         id="tspan2153"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2151">parallel, overlaps synth by 2 s, randomly picks </tspan></tspan><tspan
+           id="tspan2152">parallel, overlaps synth by 2 s, randomly picks </tspan></tspan><tspan
          x="36640.613"
          y="771.7272"
-         id="tspan2154"><tspan
+         id="tspan2155"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2153">between page1 or page2, then plays outroAudio, looping </tspan></tspan><tspan
+           id="tspan2154">between page1 or page2, then plays outroAudio, looping </tspan></tspan><tspan
          x="36640.613"
          y="798.39382"
-         id="tspan2156"><tspan
+         id="tspan2157"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2155">twice.</tspan></tspan></text><g
+           id="tspan2156">twice.</tspan></tspan></text><g
        aria-label="cueButton(   cueSeq(noise,"
        id="cueButton(   cueSeq(noise, noise, noise)_uid(seqTest))_style(   label:&quot;Noise Sequence&quot;,   size: &quot;150x40&quot;,   fontsize:16 )"
        transform="translate(3938.3505,-940.75934)"
@@ -34583,120 +34592,120 @@
        transform="translate(1197.8624,-140.07386)"><tspan
          x="13967.342"
          y="318.09583"
-         id="tspan2160"><tspan
+         id="tspan2161"><tspan
    style="font-size:48px"
-   id="tspan2157">cueGroup</tspan>  <tspan
+   id="tspan2158">cueGroup</tspan>  <tspan
    style="stroke:#000000"
-   id="tspan2158">allows </tspan><tspan
+   id="tspan2159">allows </tspan><tspan
    style="fill:#000000;stroke:#000000"
-   id="tspan2159">reusable clusters of visual </tspan></tspan><tspan
+   id="tspan2160">reusable clusters of visual </tspan></tspan><tspan
          x="13967.342"
          y="353.42913"
-         id="tspan2162"><tspan
+         id="tspan2163"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2161">or interactive elements to be defined once inside an SVG </tspan></tspan><tspan
+           id="tspan2162">or interactive elements to be defined once inside an SVG </tspan></tspan><tspan
          x="13967.342"
          y="380.09576"
-         id="tspan2164"><tspan
+         id="tspan2165"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2163">and recalled anywhere else in a score or page. Any SVG </tspan></tspan><tspan
+           id="tspan2164">and recalled anywhere else in a score or page. Any SVG </tspan></tspan><tspan
          x="13967.342"
          y="406.76239"
-         id="tspan2166"><tspan
+         id="tspan2167"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2165">group (&lt;g&gt;) whose ID begins with a reserved prefix such </tspan></tspan><tspan
+           id="tspan2166">group (&lt;g&gt;) whose ID begins with a reserved prefix such </tspan></tspan><tspan
          x="13967.342"
          y="433.42901"
-         id="tspan2168"><tspan
+         id="tspan2169"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2167">as group-, menu-, or ui- is automatically indexed when </tspan></tspan><tspan
+           id="tspan2168">as group-, menu-, or ui- is automatically indexed when </tspan></tspan><tspan
          x="13967.342"
          y="460.09564"
-         id="tspan2170"><tspan
+         id="tspan2171"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2169">the SVG is loaded. These groups can contain cueButtons, </tspan></tspan><tspan
+           id="tspan2170">the SVG is loaded. These groups can contain cueButtons, </tspan></tspan><tspan
          x="13967.342"
          y="486.76226"
-         id="tspan2172"><tspan
+         id="tspan2173"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2171">cueText elements, or animated objects, enabling complete </tspan></tspan><tspan
+           id="tspan2172">cueText elements, or animated objects, enabling complete </tspan></tspan><tspan
          x="13967.342"
          y="513.42889"
-         id="tspan2174"><tspan
+         id="tspan2175"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2173">menus, overlays, or interface panels to be designed </tspan></tspan><tspan
+           id="tspan2174">menus, overlays, or interface panels to be designed </tspan></tspan><tspan
          x="13967.342"
          y="540.09548"
-         id="tspan2176"><tspan
+         id="tspan2177"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2175">visually in Inkscape and then re-used without </tspan></tspan><tspan
+           id="tspan2176">visually in Inkscape and then re-used without </tspan></tspan><tspan
          x="13967.342"
          y="566.76211"
-         id="tspan2178"><tspan
+         id="tspan2179"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2177">duplication.
+           id="tspan2178">duplication.
 </tspan></tspan><tspan
          x="13967.342"
          y="593.42874"
-         id="tspan2180"><tspan
+         id="tspan2181"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2179">
+           id="tspan2180">
 </tspan></tspan><tspan
          x="13967.342"
          y="620.09536"
-         id="tspan2182"><tspan
+         id="tspan2183"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2181">When a cue such as cueGroup(mainMenu) is triggered, the </tspan></tspan><tspan
+           id="tspan2182">When a cue such as cueGroup(mainMenu) is triggered, the </tspan></tspan><tspan
          x="13967.342"
          y="646.76199"
-         id="tspan2184"><tspan
+         id="tspan2185"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2183">corresponding group is cloned from the registry and </tspan></tspan><tspan
+           id="tspan2184">corresponding group is cloned from the registry and </tspan></tspan><tspan
          x="13967.342"
          y="673.42861"
-         id="tspan2186"><tspan
+         id="tspan2187"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2185">injected into the active container (for example, the </tspan></tspan><tspan
+           id="tspan2186">injected into the active container (for example, the </tspan></tspan><tspan
          x="13967.342"
          y="700.09524"
-         id="tspan2188"><tspan
+         id="tspan2189"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2187">page overlay). Its internal cue logic and animations are </tspan></tspan><tspan
+           id="tspan2188">page overlay). Its internal cue logic and animations are </tspan></tspan><tspan
          x="13967.342"
          y="726.76187"
-         id="tspan2190"><tspan
+         id="tspan2191"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2189">automatically re-initialized, preserving all interactive </tspan></tspan><tspan
+           id="tspan2190">automatically re-initialized, preserving all interactive </tspan></tspan><tspan
          x="13967.342"
          y="753.42849"
-         id="tspan2192"><tspan
+         id="tspan2193"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2191">behaviour. This provides a simple way to create </tspan></tspan><tspan
+           id="tspan2192">behaviour. This provides a simple way to create </tspan></tspan><tspan
          x="13967.342"
          y="780.09512"
-         id="tspan2194"><tspan
+         id="tspan2195"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2193">consistent navigation or visual structures across </tspan></tspan><tspan
+           id="tspan2194">consistent navigation or visual structures across </tspan></tspan><tspan
          x="13967.342"
          y="806.76174"
-         id="tspan2196"><tspan
+         id="tspan2197"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2195">multiple pages while maintaining a clean, modular SVG </tspan></tspan><tspan
+           id="tspan2196">multiple pages while maintaining a clean, modular SVG </tspan></tspan><tspan
          x="13967.342"
          y="833.42837"
-         id="tspan2198"><tspan
+         id="tspan2199"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2197">authoring workflow. The below menu is defined by such a </tspan></tspan><tspan
+           id="tspan2198">authoring workflow. The below menu is defined by such a </tspan></tspan><tspan
          x="13967.342"
          y="860.095"
-         id="tspan2200"><tspan
+         id="tspan2201"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2199">structure in pages/page4.svg and recalled here with </tspan></tspan><tspan
+           id="tspan2200">structure in pages/page4.svg and recalled here with </tspan></tspan><tspan
          x="13967.342"
          y="886.76162"
-         id="tspan2202"><tspan
+         id="tspan2203"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2201">cueGroup(mainMenu)</tspan></tspan></text><g
+           id="tspan2202">cueGroup(mainMenu)</tspan></tspan></text><g
        id="g740458-2"
        transform="matrix(0.4222218,0,0,1.951416,-3930.2652,-1349.0813)"
        style="display:inline"><path
@@ -34819,156 +34828,156 @@
        transform="translate(99.033322,-97.743)"><tspan
          x="1275.7227"
          y="199.1249"
-         id="tspan2204"><tspan
+         id="tspan2205"><tspan
    style="font-weight:normal;font-size:42.6667px;-inkscape-font-specification:FreeMono;fill:#ff0000;stroke:#cf5151"
-   id="tspan2203">Navigating the Score</tspan>
+   id="tspan2204">Navigating the Score</tspan>
 </tspan><tspan
          x="1275.7227"
          y="232.72488"
-         id="tspan2205">
+         id="tspan2206">
 </tspan><tspan
          x="1275.7227"
          y="259.39151"
-         id="tspan2207"><tspan
+         id="tspan2208"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2206">Oscilla features two complementary paradigms — Page Mode and Score Mode. Though distinct in function, </tspan></tspan><tspan
+           id="tspan2207">Oscilla features two complementary paradigms — Page Mode and Score Mode. Though distinct in function, </tspan></tspan><tspan
          x="1275.7227"
          y="286.05813"
-         id="tspan2209"><tspan
+         id="tspan2210"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2208">these modes can interconnect and reference each other within a single project.
+           id="tspan2209">these modes can interconnect and reference each other within a single project.
 </tspan></tspan><tspan
          x="1275.7227"
          y="312.72476"
-         id="tspan2211"><tspan
+         id="tspan2212"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2210">
+           id="tspan2211">
 </tspan></tspan><tspan
          x="1275.7227"
          y="339.39138"
-         id="tspan2213"><tspan
+         id="tspan2214"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2212">By default, each project opens in Score Mode, presenting a continuous, time-based scrolling score. A </tspan></tspan><tspan
+           id="tspan2213">By default, each project opens in Score Mode, presenting a continuous, time-based scrolling score. A </tspan></tspan><tspan
          x="1275.7227"
          y="366.05801"
-         id="tspan2215"><tspan
+         id="tspan2216"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2214">portal to Page Mode can be initiated either at the outset to bypass scrolling entirely or at any point </tspan></tspan><tspan
+           id="tspan2215">portal to Page Mode can be initiated either at the outset to bypass scrolling entirely or at any point </tspan></tspan><tspan
          x="1275.7227"
          y="392.72464"
-         id="tspan2217"><tspan
+         id="tspan2218"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2216">within the score to introduce page-based branching and navigation.
+           id="tspan2217">within the score to introduce page-based branching and navigation.
 </tspan></tspan><tspan
          x="1275.7227"
          y="419.39126"
-         id="tspan2219"><tspan
+         id="tspan2220"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2218">
+           id="tspan2219">
 </tspan></tspan><tspan
          x="1275.7227"
          y="446.05789"
-         id="tspan2221"><tspan
+         id="tspan2222"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2220">Page Mode follows a familiar button- or hyperlink-based navigation structure, suited to modular or </tspan></tspan><tspan
+           id="tspan2221">Page Mode follows a familiar button- or hyperlink-based navigation structure, suited to modular or </tspan></tspan><tspan
          x="1275.7227"
          y="472.72451"
-         id="tspan2223"><tspan
+         id="tspan2224"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2222">cue-based works.
+           id="tspan2223">cue-based works.
 </tspan></tspan><tspan
          x="1275.7227"
          y="499.39114"
-         id="tspan2225"><tspan
+         id="tspan2226"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2224">
+           id="tspan2225">
 </tspan></tspan><tspan
          x="1275.7227"
          y="526.05777"
-         id="tspan2227"><tspan
+         id="tspan2228"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2226">Score Mode provides a media-player-style control bar with standard playback and navigation functions. </tspan></tspan><tspan
+           id="tspan2227">Score Mode provides a media-player-style control bar with standard playback and navigation functions. </tspan></tspan><tspan
          x="1275.7227"
          y="552.72439"
-         id="tspan2229"><tspan
+         id="tspan2230"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2228">Double-click or tap anywhere on the score to bring up or hide the control bar.
+           id="tspan2229">Double-click or tap anywhere on the score to bring up or hide the control bar.
 </tspan></tspan><tspan
          x="1275.7227"
          y="579.39102"
-         id="tspan2231"><tspan
+         id="tspan2232"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2230">
+           id="tspan2231">
 </tspan></tspan><tspan
          x="1275.7227"
          y="606.05764"
-         id="tspan2233"><tspan
+         id="tspan2234"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2232">
+           id="tspan2233">
 </tspan></tspan><tspan
          x="1275.7227"
          y="632.72427"
-         id="tspan2235"><tspan
+         id="tspan2236"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2234">
+           id="tspan2235">
 </tspan></tspan><tspan
          x="1275.7227"
          y="659.39089"
-         id="tspan2237"><tspan
+         id="tspan2238"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2236">
+           id="tspan2237">
 </tspan></tspan><tspan
          x="1275.7227"
          y="686.05752"
-         id="tspan2239">Rehearsal Marks<tspan
+         id="tspan2240">Rehearsal Marks<tspan
    style="font-weight:normal;-inkscape-font-specification:FreeMono"
-   id="tspan2238">
+   id="tspan2239">
 </tspan></tspan><tspan
          x="1275.7227"
          y="712.72415"
-         id="tspan2241"><tspan
+         id="tspan2242"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2240">Use the [A] button in the control panel to bring up the  
+           id="tspan2241">Use the [A] button in the control panel to bring up the  
 </tspan></tspan><tspan
          x="1275.7227"
          y="739.39077"
-         id="tspan2243"><tspan
+         id="tspan2244"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2242">rehearsal mark navigation interface (keybinding R) or 
+           id="tspan2243">rehearsal mark navigation interface (keybinding R) or 
 </tspan></tspan><tspan
          x="1275.7227"
          y="766.0574"
-         id="tspan2245"><tspan
+         id="tspan2246"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2244">use the chevron buttons in the control bar.
+           id="tspan2245">use the chevron buttons in the control bar.
 </tspan></tspan><tspan
          x="1275.7227"
          y="792.72402"
-         id="tspan2247"><tspan
+         id="tspan2248"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2246"> 
+           id="tspan2247"> 
 </tspan></tspan><tspan
          x="1275.7227"
          y="819.39065"
-         id="tspan2249"><tspan
+         id="tspan2250"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2248">
+           id="tspan2249">
 </tspan></tspan><tspan
          x="1275.7227"
          y="846.05728"
-         id="tspan2250">Score Annotations
+         id="tspan2251">Score Annotations
 </tspan><tspan
          x="1275.7227"
          y="872.7239"
-         id="tspan2252"><tspan
+         id="tspan2253"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2251">Toggle the visibility of score annotations 
+           id="tspan2252">Toggle the visibility of score annotations 
 </tspan></tspan><tspan
          x="1275.7227"
          y="899.39053"
-         id="tspan2254"><tspan
+         id="tspan2255"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2253">using the notes button in the control bar. 
+           id="tspan2254">using the notes button in the control bar. 
 </tspan></tspan></text><text
        xml:space="preserve"
        id="text611"
@@ -34996,189 +35005,189 @@
        y="0"><tspan
          x="4958.5879"
          y="87.05654"
-         id="tspan2257"><tspan
+         id="tspan2258"><tspan
            style="font-weight:normal;font-size:42.6667px;-inkscape-font-specification:FreeMono;text-align:justify;stroke:#c94545"
-           id="tspan2255">Inkscape to Interactive Score Workflow</tspan><tspan
+           id="tspan2256">Inkscape to Interactive Score Workflow</tspan><tspan
            style="text-align:justify;fill:#1a1a1a"
-           id="tspan2256">
+           id="tspan2257">
 </tspan></tspan><tspan
          x="4958.5879"
          y="120.65652"
-         id="tspan2259"><tspan
+         id="tspan2260"><tspan
            dx="0 0 0 0 0 0 0 0 7.1192932 0 0 0 0 7.1192932 0 0 0 0 0 0 0 0 7.1192932 0 0 0 7.1192932 0 0 0 0 0 7.1192627 0 0 0 0 0 0 0 7.1193237 0 0 7.1192627 0 0 0 0 0 0 0 0 7.1193237 0 0 7.1192627 0 0 0 7.1192627 0 0 0 0 0 0 7.1193237"
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2258">Oscilla uses standard SVG files created in Inkscape as its native score </tspan></tspan><tspan
+           id="tspan2259">Oscilla uses standard SVG files created in Inkscape as its native score </tspan></tspan><tspan
          x="4958.5879"
          y="147.32315"
-         id="tspan2261"><tspan
+         id="tspan2262"><tspan
            dx="0 0 0 0 0 0 0 0 3.9912186 0 0 0 0 0 0 0 0 0 3.9912109 0 0 0 3.9912109 0 0 0 0 0 0 0 0 0 3.9912109 0 0 0 3.9912415 0 0 0 0 0 3.9912109 0 0 0 0 0 0 3.9912109 0 0 0 0 0 0 0 0 3.9912109 0 0 0 3.991272 0 0 0 3.9912109"
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2260">format. Composers and designers can build visual layouts, add cue objects, </tspan></tspan><tspan
+           id="tspan2261">format. Composers and designers can build visual layouts, add cue objects, </tspan></tspan><tspan
          x="4958.5879"
          y="173.98977"
-         id="tspan2263"><tspan
+         id="tspan2264"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2262">and embed microsyntax directly within the SVG using Inkscape’s XML Editor. 
+           id="tspan2263">and embed microsyntax directly within the SVG using Inkscape’s XML Editor. 
 </tspan></tspan><tspan
          x="4958.5879"
          y="200.6564"
-         id="tspan2265"><tspan
+         id="tspan2266"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2264">
+           id="tspan2265">
 </tspan></tspan><tspan
          x="4958.5879"
          y="227.32302"
-         id="tspan2268"><tspan
+         id="tspan2269"><tspan
            dx="0 0 0 0 0 0.12602234 0 0 0 0 0 0 0.12602234 0 0 0 0.12602234 0 0 0 0 0.1260376 0 0 0 0.12600708 0 0 0.1260376 0 0 0 0 0 0 0.12600708 0 0 0.1260376 0 0 0 0.1260376 0 0 0 0 0 0 0 0 0 0 0 0 0 0.12597656 0 0 0 0 0 0 0 0.1260376 0 0 0 0 0 0 0 0.1260376"
            style="fill:#000000"
-           id="tspan2266">Once saved, the file can be loaded in the browser-based Oscilla player, where</tspan><tspan
+           id="tspan2267">Once saved, the file can be loaded in the browser-based Oscilla player, where</tspan><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2267"> </tspan></tspan><tspan
+           id="tspan2268"> </tspan></tspan><tspan
          x="4958.5879"
          y="253.98965"
-         id="tspan2270"><tspan
+         id="tspan2271"><tspan
            dx="0 0 0 0 7.2791328 0 0 0 7.279129 0 0 0 0 0 0 7.279129 0 0 0 0 0 0 0 0 0 0 0 7.2791443 0 0 0 7.2791138 0 0 0 0 0 0 0 0 0 0 0 0 7.2791138 0 0 0 7.2791138 0 0 0 0 0 0 0 0 0 0 0 0 0 7.2791748 0 0 0 0 0 0 7.2791138"
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2269">all cue logic, animations, and interactions are automatically parsed and </tspan></tspan><tspan
+           id="tspan2270">all cue logic, animations, and interactions are automatically parsed and </tspan></tspan><tspan
          x="4958.5879"
          y="280.65628"
-         id="tspan2272"><tspan
+         id="tspan2273"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2271">activated. 
+           id="tspan2272">activated. 
 </tspan></tspan><tspan
          x="4958.5879"
          y="307.3229"
-         id="tspan2274"><tspan
+         id="tspan2275"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2273">
+           id="tspan2274">
 </tspan></tspan><tspan
          x="4958.5879"
          y="333.98953"
-         id="tspan2276"><tspan
+         id="tspan2277"><tspan
            dx="0 0 0 0 0 15.812462 0 0 0 0 0 0 0 0 15.812469 0 0 0 0 0 0 15.812469 0 0 0 0 0 0 0 15.812469 0 0 15.812439 0 0 0 0 0 0 0 15.812439 0 0 0 0 0 0 0 0 15.812439 0 0 15.8125 0 0 0 0 0 0 0 0 15.812439"
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2275">This workflow allows artists to compose visually in Inkscape while </tspan></tspan><tspan
+           id="tspan2276">This workflow allows artists to compose visually in Inkscape while </tspan></tspan><tspan
          x="4958.5879"
          y="360.65615"
-         id="tspan2278"><tspan
+         id="tspan2279"><tspan
            dx="0 0 0 0 0 0 0 0 0 0 0 0 12.989014 0 0 0 0 0 0 0 0 0 0 12.989014 0 0 0 0 0 0 0 0 0 0 12.989044 0 0 0 0 0 0 0 12.989014 0 0 0 0 0 0 0 0 0 0 12.989075 0 0 12.989014 0 0 0 12.989014 0 0 0 0 0 0 0 12.989014"
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2277">maintaining real-time, executable control structures in the browser — </tspan></tspan><tspan
+           id="tspan2278">maintaining real-time, executable control structures in the browser — </tspan></tspan><tspan
          x="4958.5879"
          y="387.32278"
-         id="tspan2280"><tspan
+         id="tspan2281"><tspan
            dx="0 0 0 0 0 0 0 0 0 8.701355 0 8.701355 0 0 0 0 0 0 0 0 8.701355 0 0 0 0 0 0 0 0 0 0 8.701355 0 0 0 0 8.701355 0 0 0 0 0 0 0 8.701355 0 0 0 0 0 8.701355 0 0 0 0 0 0 8.701355 0 0 8.701355"
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2279">ensuring a seamless transition from graphic score design to interactive </tspan></tspan><tspan
+           id="tspan2280">ensuring a seamless transition from graphic score design to interactive </tspan></tspan><tspan
          x="4958.5879"
          y="413.98941"
-         id="tspan2282"><tspan
+         id="tspan2283"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2281">performance.
+           id="tspan2282">performance.
 </tspan></tspan><tspan
          x="4958.5879"
          y="440.65603"
-         id="tspan2284"><tspan
+         id="tspan2285"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2283">
+           id="tspan2284">
 </tspan></tspan><tspan
          x="4958.5879"
          y="474.72266"
-         id="tspan2287"><tspan
+         id="tspan2288"><tspan
            style="font-size:29.3333px;text-align:justify;fill:#1a1a1a"
-           id="tspan2285">How to Add or Edit Cues in Inkscape</tspan><tspan
+           id="tspan2286">How to Add or Edit Cues in Inkscape</tspan><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2286">
+           id="tspan2287">
 </tspan></tspan><tspan
          x="4958.5879"
          y="503.98928"
-         id="tspan2289"><tspan
+         id="tspan2290"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2288">In most examples, the microsyntax defining a cue is attached 
+           id="tspan2289">In most examples, the microsyntax defining a cue is attached 
 </tspan></tspan><tspan
          x="4958.5879"
          y="530.65591"
-         id="tspan2291"><tspan
+         id="tspan2292"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2290">to the XML id of a text element, which often also displays 
+           id="tspan2291">to the XML id of a text element, which often also displays 
 </tspan></tspan><tspan
          x="4958.5879"
          y="557.32254"
-         id="tspan2293"><tspan
+         id="tspan2294"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2292">the cue’s label.
+           id="tspan2293">the cue’s label.
 </tspan></tspan><tspan
          x="4958.5879"
          y="583.98916"
-         id="tspan2295"><tspan
+         id="tspan2296"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2294">
+           id="tspan2295">
 </tspan></tspan><tspan
          x="4958.5879"
          y="610.65579"
-         id="tspan2297"><tspan
+         id="tspan2298"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2296">To add or edit a cue (or any other microsyntax-based feature):
+           id="tspan2297">To add or edit a cue (or any other microsyntax-based feature):
 </tspan></tspan><tspan
          x="4958.5879"
          y="637.32241"
-         id="tspan2299"><tspan
+         id="tspan2300"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2298">
+           id="tspan2299">
 </tspan></tspan><tspan
          x="4958.5879"
          y="663.98904"
-         id="tspan2302"><tspan
+         id="tspan2303"><tspan
            style="font-style:oblique;-inkscape-font-specification:'FreeMono Bold Oblique';fill:#1a1a1a"
-           id="tspan2300">- Select the object you want to edit.</tspan><tspan
+           id="tspan2301">- Select the object you want to edit.</tspan><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2301">
+           id="tspan2302">
 </tspan></tspan><tspan
          x="4958.5879"
          y="690.65567"
-         id="tspan2305"><tspan
+         id="tspan2306"><tspan
            style="font-style:oblique;-inkscape-font-specification:'FreeMono Bold Oblique';fill:#1a1a1a"
-           id="tspan2303">- Press Ctrl + Shift + X to open Inkscape’s XML Editor.</tspan><tspan
+           id="tspan2304">- Press Ctrl + Shift + X to open Inkscape’s XML Editor.</tspan><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2304">
+           id="tspan2305">
 </tspan></tspan><tspan
          x="4958.5879"
          y="717.32229"
-         id="tspan2308"><tspan
+         id="tspan2309"><tspan
            style="font-style:oblique;-inkscape-font-specification:'FreeMono Bold Oblique';fill:#1a1a1a"
-           id="tspan2306">- Edit or insert the desired microsyntax in the object’s id field.</tspan><tspan
+           id="tspan2307">- Edit or insert the desired microsyntax in the object’s id field.</tspan><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2307">
+           id="tspan2308">
 </tspan></tspan><tspan
          x="4958.5879"
          y="743.98892"
-         id="tspan2310"><tspan
+         id="tspan2311"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2309">
+           id="tspan2310">
 </tspan></tspan><tspan
          x="4958.5879"
          y="770.65554"
-         id="tspan2312"><tspan
+         id="tspan2313"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2311">Microsyntax can be attached to any SVG object, not just 
+           id="tspan2312">Microsyntax can be attached to any SVG object, not just 
 </tspan></tspan><tspan
          x="4958.5879"
          y="797.32217"
-         id="tspan2314"><tspan
+         id="tspan2315"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2313">text elements. Objects carrying cues may also be hidden 
+           id="tspan2314">text elements. Objects carrying cues may also be hidden 
 </tspan></tspan><tspan
          x="4958.5879"
          y="823.9888"
-         id="tspan2316"><tspan
+         id="tspan2317"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2315">or non-visible, allowing invisible triggers and control points 
+           id="tspan2316">or non-visible, allowing invisible triggers and control points 
 </tspan></tspan><tspan
          x="4958.5879"
          y="850.65542"
-         id="tspan2318"><tspan
+         id="tspan2319"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono;text-align:justify;fill:#1a1a1a"
-           id="tspan2317">within the score.</tspan></tspan></text><text
+           id="tspan2318">within the score.</tspan></tspan></text><text
        xml:space="preserve"
        id="text922"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:42.6667px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect922);display:inline;opacity:1;fill:#ff0000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" /><image
@@ -35273,171 +35282,171 @@
        y="0"><tspan
          x="5581.7773"
          y="126.11416"
-         id="tspan2320"><tspan
+         id="tspan2321"><tspan
            dx="0 0 0 1.0464249 0 0 0 1.0464249 0 0 0 0 0 0 0 1.0464325 0 0 0 0 1.0464172 0 0 0 0 0 0 0 0 1.0464478 0 0 0 1.0464172"
            style="text-align:justify"
-           id="tspan2319">To get started with Oscilla, all you </tspan></tspan><tspan
+           id="tspan2320">To get started with Oscilla, all you </tspan></tspan><tspan
          x="5581.7773"
          y="152.78079"
-         id="tspan2322"><tspan
+         id="tspan2323"><tspan
            dx="0 0 0 0 0 14.055702 0 0 14.055702 0 14.055695 0 0 0 0 0 0 14.05571 0 0 0 0 0 0 0 14.055695"
            style="text-align:justify"
-           id="tspan2321">need is a single project folder </tspan></tspan><tspan
+           id="tspan2322">need is a single project folder </tspan></tspan><tspan
          x="5581.7773"
          y="179.44741"
-         id="tspan2324"><tspan
+         id="tspan2325"><tspan
            dx="0 0 0 0 0 0 0 67.139221 0 0 0 67.139221"
            style="text-align:justify"
-           id="tspan2323">inside the /public/scores/ </tspan></tspan><tspan
+           id="tspan2324">inside the /public/scores/ </tspan></tspan><tspan
          x="5581.7773"
          y="206.11404"
-         id="tspan2326"><tspan
+         id="tspan2327"><tspan
            dx="0 0 0 0 0 0 0 0 0 0 0 1.5696411 0 0 0 0 1.5696411 0 0 0 0 0 0 0 1.5696411 0 0 0 0 1.5696411"
            style="text-align:justify"
-           id="tspan2325">directory. Each project must contain </tspan></tspan><tspan
+           id="tspan2326">directory. Each project must contain </tspan></tspan><tspan
          x="5581.7773"
          y="232.78067"
-         id="tspan2328"><tspan
+         id="tspan2329"><tspan
            dx="0 0 2.7255077 0 0 0 0 0 0 0 0 0 2.7255096 0 0 0 0 2.7254944 0 0 2.7255249 0 0 0 2.7254944 0 0 0 2.7254944 0 0 0 0 0 2.7255249"
            style="text-align:justify"
-           id="tspan2327">a score.svg file at its top level — </tspan></tspan><tspan
+           id="tspan2328">a score.svg file at its top level — </tspan></tspan><tspan
          x="5581.7773"
          y="259.44729"
-         id="tspan2330"><tspan
+         id="tspan2331"><tspan
            dx="0 0 0 0 0 3.1797562 0 0 3.1797562 0 0 0 3.1797638 0 0 0 0 3.1797485 0 0 0 0 0 0 0 0 0 3.1797791 0 0 3.1797485"
            style="text-align:justify"
-           id="tspan2329">this is the main scrolling or page-</tspan></tspan><tspan
+           id="tspan2330">this is the main scrolling or page-</tspan></tspan><tspan
          x="5581.7773"
          y="286.11392"
-         id="tspan2332"><tspan
+         id="tspan2333"><tspan
            dx="0 0 0 0 0 0 8.9357071 0 0 0 0 0 8.9357147 0 0 0 0 8.9356995 0 0 0 0 0 0 0 8.9356995 0 0 0 0 0 8.9356995"
            style="text-align:justify"
-           id="tspan2331">based score that Oscilla loads on </tspan></tspan><tspan
+           id="tspan2332">based score that Oscilla loads on </tspan></tspan><tspan
          x="5581.7773"
          y="312.78054"
-         id="tspan2334"><tspan
+         id="tspan2335"><tspan
            style="text-align:justify"
-           id="tspan2333">startup. 
+           id="tspan2334">startup. 
 </tspan></tspan><tspan
          x="5581.7773"
          y="339.44717"
-         id="tspan2336"><tspan
+         id="tspan2337"><tspan
            style="text-align:justify"
-           id="tspan2335">
+           id="tspan2336">
 </tspan></tspan><tspan
          x="5581.7773"
          y="366.1138"
-         id="tspan2338"><tspan
+         id="tspan2339"><tspan
            dx="0 0 0 17.569626 0 0 0 0 17.569626 0 0 0 0 0 0 0 17.569611 0 0 0 0 17.569641"
            style="text-align:justify"
-           id="tspan2337">If your project uses additional </tspan></tspan><tspan
+           id="tspan2338">If your project uses additional </tspan></tspan><tspan
          x="5581.7773"
          y="392.78042"
-         id="tspan2340"><tspan
+         id="tspan2341"><tspan
            dx="0 0 0 0 0 0 14.055702 0 0 0 0 14.05571 0 0 14.055695 0 0 0 0 14.055695 0 0 0 0 0 14.055695"
            style="text-align:justify"
-           id="tspan2339">media such as text cues, audio, </tspan></tspan><tspan
+           id="tspan2340">media such as text cues, audio, </tspan></tspan><tspan
          x="5581.7773"
          y="419.44705"
-         id="tspan2342"><tspan
+         id="tspan2343"><tspan
            dx="0 0 0 0 0 0 0 14.055702 0 0 14.05571 0 0 0 0 0 0 0 14.05571 0 0 0 0 0 14.055695 0 0 0 0 14.055695"
            style="text-align:justify"
-           id="tspan2341">video, or images, these must be </tspan></tspan><tspan
+           id="tspan2342">video, or images, these must be </tspan></tspan><tspan
          x="5581.7773"
          y="446.11367"
-         id="tspan2344"><tspan
+         id="tspan2345"><tspan
            dx="0 0 0 0 0 0 0 86.339203 0 0 86.339203"
            style="text-align:justify"
-           id="tspan2343">placed in corresponding </tspan></tspan><tspan
+           id="tspan2344">placed in corresponding </tspan></tspan><tspan
          x="5581.7773"
          y="472.7803"
-         id="tspan2346"><tspan
+         id="tspan2347"><tspan
            dx="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 35.139252 0 0 0 0 0 0 0 0 35.139252"
            style="text-align:justify"
-           id="tspan2345">subdirectories (texts/, audio/, </tspan></tspan><tspan
+           id="tspan2346">subdirectories (texts/, audio/, </tspan></tspan><tspan
          x="5581.7773"
          y="499.44693"
-         id="tspan2348"><tspan
+         id="tspan2349"><tspan
            dx="0 0 0 0 0 0 0 0 0 7.969635 0 0 0 0 0 0 0 0 7.969635 0 0 0 0 0 7.969635 0 0 0 0 0 0 7.969635"
            style="text-align:justify"
-           id="tspan2347">videos/, images/, etc.) within the </tspan></tspan><tspan
+           id="tspan2348">videos/, images/, etc.) within the </tspan></tspan><tspan
          x="5581.7773"
          y="526.11355"
-         id="tspan2350"><tspan
+         id="tspan2351"><tspan
            dx="0 0 0 0 0 36.226158 0 0 0 0 0 0 0 36.226166 0 0 0 0 0 0 0 36.226166"
            style="text-align:justify"
-           id="tspan2349">same project folder. Oscilla </tspan></tspan><tspan
+           id="tspan2350">same project folder. Oscilla </tspan></tspan><tspan
          x="5581.7773"
          y="552.78018"
-         id="tspan2352"><tspan
+         id="tspan2353"><tspan
            dx="0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.5696411 0 0 0 0 0 1.5696411 0 0 0 1.5696411 0 0 0 0 0 1.5696411"
            style="text-align:justify"
-           id="tspan2351">automatically looks for these assets </tspan></tspan><tspan
+           id="tspan2352">automatically looks for these assets </tspan></tspan><tspan
          x="5581.7773"
          y="579.4468"
-         id="tspan2354"><tspan
+         id="tspan2355"><tspan
            style="text-align:justify"
-           id="tspan2353">relative to the project root. 
+           id="tspan2354">relative to the project root. 
 </tspan></tspan><tspan
          x="5581.7773"
          y="606.11343"
-         id="tspan2356"><tspan
+         id="tspan2357"><tspan
            style="text-align:justify"
-           id="tspan2355">
+           id="tspan2356">
 </tspan></tspan><tspan
          x="5581.7773"
          y="632.78006"
-         id="tspan2358"><tspan
+         id="tspan2359"><tspan
            dx="0 0 4.7696362 0 0 0 0 0 0 0 0 4.7696381 0 0 0 0 0 0 0 0 0 4.7696228 0 0 0 0 0 0 0 4.7696533"
            style="text-align:justify"
-           id="tspan2357">A complete reference example called </tspan></tspan><tspan
+           id="tspan2358">A complete reference example called </tspan></tspan><tspan
          x="5581.7773"
          y="659.44668"
-         id="tspan2360"><tspan
+         id="tspan2361"><tspan
            dx="0 0 0 0 0 0 0 0 0 0 0 0 0 11.169632 0 0 11.169632 0 0 0 0 0 0 0 0 11.169617 0 0 0 0 11.169647"
            style="text-align:justify"
-           id="tspan2359">helper-score is included with the </tspan></tspan><tspan
+           id="tspan2360">helper-score is included with the </tspan></tspan><tspan
          x="5581.7773"
          y="686.11331"
-         id="tspan2362"><tspan
+         id="tspan2363"><tspan
            dx="0 0 0 0 0 0 0 0 23.426163 0 0 0 0 0 0 0 0 0 0 0 0 0 23.426147 0 0 0 23.426178"
            style="text-align:justify"
-           id="tspan2361">system, demonstrating all major </tspan></tspan><tspan
+           id="tspan2362">system, demonstrating all major </tspan></tspan><tspan
          x="5581.7773"
          y="712.77993"
-         id="tspan2364"><tspan
+         id="tspan2365"><tspan
            dx="0 0 0 0 0 0 0 0 0 17.569626 0 17.569626 0 0 0 0 0 0 0 0 0 17.569611 0 0 0 17.569641"
            style="text-align:justify"
-           id="tspan2363">features — including cue types, </tspan></tspan><tspan
+           id="tspan2364">features — including cue types, </tspan></tspan><tspan
          x="5581.7773"
          y="739.44656"
-         id="tspan2366"><tspan
+         id="tspan2367"><tspan
            dx="0 0 0 0 0 0 20.769623 0 0 0 0 0 0 0 0 0 0 0 0 20.769623 0 0 0 20.769623 0 0 0 0 20.769623"
            style="text-align:justify"
-           id="tspan2365">media integration, and page or </tspan></tspan><tspan
+           id="tspan2366">media integration, and page or </tspan></tspan><tspan
          x="5581.7773"
          y="766.11318"
-         id="tspan2368"><tspan
+         id="tspan2369"><tspan
            dx="0 0 0 0 0 0 0 19.175697 0 0 0 0 0 0 19.175705 0 0 0 19.175705 0 0 0 19.17569 0 0 0 19.17569"
            style="text-align:justify"
-           id="tspan2367">scroll modes. You can use the </tspan></tspan><tspan
+           id="tspan2368">scroll modes. You can use the </tspan></tspan><tspan
          x="5581.7773"
          y="792.77981"
-         id="tspan2370"><tspan
+         id="tspan2371"><tspan
            dx="0 0 0 0 0 0 0 0 0 0 0 0 0 40.492813 0 0 0 0 0 0 0 0 0 40.492798 0 0 40.492828"
            style="text-align:justify"
-           id="tspan2369">helper-score structure as a </tspan></tspan><tspan
+           id="tspan2370">helper-score structure as a </tspan></tspan><tspan
          x="5581.7773"
          y="819.44644"
-         id="tspan2372"><tspan
+         id="tspan2373"><tspan
            dx="0 0 0 0 0 0 0 0 0 0 1.5696411 0 0 0 0 0 0 0 0 1.5696411 0 0 0 1.5696411 0 0 0 0 0 0 0 0 1.5696411"
            style="text-align:justify"
-           id="tspan2371">practical template for building your </tspan></tspan><tspan
+           id="tspan2372">practical template for building your </tspan></tspan><tspan
          x="5581.7773"
          y="846.11306"
-         id="tspan2374"><tspan
+         id="tspan2375"><tspan
            style="text-align:justify"
-           id="tspan2373">own projects.</tspan></tspan></text><text
+           id="tspan2374">own projects.</tspan></tspan></text><text
        xml:space="preserve"
        id="text4"
        style="font-weight:bold;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:justify;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect4);display:inline;fill:#000000" /><text
@@ -35452,170 +35461,170 @@
        y="0"><tspan
          x="6150.5938"
          y="260.71963"
-         id="tspan2376"><tspan
+         id="tspan2377"><tspan
            style="text-align:start"
-           id="tspan2375">oscilla/public/
+           id="tspan2376">oscilla/public/
 </tspan></tspan><tspan
          x="6150.5938"
          y="287.38626"
-         id="tspan2378"><tspan
+         id="tspan2379"><tspan
            style="text-align:start"
-           id="tspan2377">├── scores/
+           id="tspan2378">├── scores/
 </tspan></tspan><tspan
          x="6150.5938"
          y="314.05288"
-         id="tspan2380"><tspan
+         id="tspan2381"><tspan
            style="text-align:start"
-           id="tspan2379">│   └── sonata4/
+           id="tspan2380">│   └── sonata4/
 </tspan></tspan><tspan
          x="6150.5938"
          y="340.71951"
-         id="tspan2382"><tspan
+         id="tspan2383"><tspan
            style="text-align:start"
-           id="tspan2381">│       ├── score.svg     # Main scrolling score
+           id="tspan2382">│       ├── score.svg     # Main scrolling score
 </tspan></tspan><tspan
          x="6150.5938"
          y="367.38613"
-         id="tspan2384"><tspan
+         id="tspan2385"><tspan
            style="text-align:start"
-           id="tspan2383">│       ├── settings.json # Project settings 
+           id="tspan2384">│       ├── settings.json # Project settings 
 </tspan></tspan><tspan
          x="6150.5938"
          y="394.05276"
-         id="tspan2386"><tspan
+         id="tspan2387"><tspan
            style="text-align:start"
-           id="tspan2385">│       ├── pages/        # Page-mode SVGs
+           id="tspan2386">│       ├── pages/        # Page-mode SVGs
 </tspan></tspan><tspan
          x="6150.5938"
          y="420.71939"
-         id="tspan2388"><tspan
+         id="tspan2389"><tspan
            style="text-align:start"
-           id="tspan2387">│       │   ├── page0.svg
+           id="tspan2388">│       │   ├── page0.svg
 </tspan></tspan><tspan
          x="6150.5938"
          y="447.38601"
-         id="tspan2390"><tspan
+         id="tspan2391"><tspan
            style="text-align:start"
-           id="tspan2389">│       │   └── page1.svg
+           id="tspan2390">│       │   └── page1.svg
 </tspan></tspan><tspan
          x="6150.5938"
          y="474.05264"
-         id="tspan2392"><tspan
+         id="tspan2393"><tspan
            style="text-align:start"
-           id="tspan2391">│       ├── audio/        # project audio
+           id="tspan2392">│       ├── audio/        # project audio
 </tspan></tspan><tspan
          x="6150.5938"
          y="500.71926"
-         id="tspan2394"><tspan
+         id="tspan2395"><tspan
            style="text-align:start"
-           id="tspan2393">│       │   └── noise.wav
+           id="tspan2394">│       │   └── noise.wav
 </tspan></tspan><tspan
          x="6150.5938"
          y="527.38589"
-         id="tspan2396"><tspan
+         id="tspan2397"><tspan
            style="text-align:start"
-           id="tspan2395">│       ├── texts/        # text cues
+           id="tspan2396">│       ├── texts/        # text cues
 </tspan></tspan><tspan
          x="6150.5938"
          y="554.05252"
-         id="tspan2398"><tspan
+         id="tspan2399"><tspan
            style="text-align:start"
-           id="tspan2397">│       │   └── foo.txt
+           id="tspan2398">│       │   └── foo.txt
 </tspan></tspan><tspan
          x="6150.5938"
          y="580.71914"
-         id="tspan2400"><tspan
+         id="tspan2401"><tspan
            style="text-align:start"
-           id="tspan2399">│       ├── videos/       # video media
+           id="tspan2400">│       ├── videos/       # video media
 </tspan></tspan><tspan
          x="6150.5938"
          y="607.38577"
-         id="tspan2402"><tspan
+         id="tspan2403"><tspan
            style="text-align:start"
-           id="tspan2401">│       │   └── baz.mp4
+           id="tspan2402">│       │   └── baz.mp4
 </tspan></tspan><tspan
          x="6150.5938"
          y="634.05239"
-         id="tspan2404"><tspan
+         id="tspan2405"><tspan
            style="text-align:start"
-           id="tspan2403">│       ├── images/       # images
+           id="tspan2404">│       ├── images/       # images
 </tspan></tspan><tspan
          x="6150.5938"
          y="660.71902"
-         id="tspan2406"><tspan
+         id="tspan2407"><tspan
            style="text-align:start"
-           id="tspan2405">│       │   └── bar.jpg
+           id="tspan2406">│       │   └── bar.jpg
 </tspan></tspan><tspan
          x="6150.5938"
          y="687.38565"
-         id="tspan2408"><tspan
+         id="tspan2409"><tspan
            style="text-align:start"
-           id="tspan2407">│       ├── supercollider # SuperCollider
+           id="tspan2408">│       ├── supercollider # SuperCollider
 </tspan></tspan><tspan
          x="6150.5938"
          y="714.05227"
-         id="tspan2410"><tspan
+         id="tspan2411"><tspan
            style="text-align:start"
-           id="tspan2409">│       │   └── sonata4.scd
+           id="tspan2410">│       │   └── sonata4.scd
 </tspan></tspan><tspan
          x="6150.5938"
          y="740.7189"
-         id="tspan2412"><tspan
+         id="tspan2413"><tspan
            style="text-align:start"
-           id="tspan2411">│       ├── puredata/     # Pure Data patches
+           id="tspan2412">│       ├── puredata/     # Pure Data patches
 </tspan></tspan><tspan
          x="6150.5938"
          y="767.38552"
-         id="tspan2414"><tspan
+         id="tspan2415"><tspan
            style="text-align:start"
-           id="tspan2413">│       │   └── sonata4_main.pd
+           id="tspan2414">│       │   └── sonata4_main.pd
 </tspan></tspan><tspan
          x="6150.5938"
          y="794.05215"
-         id="tspan2416"><tspan
+         id="tspan2417"><tspan
            style="text-align:start"
-           id="tspan2415">
+           id="tspan2416">
 </tspan></tspan><tspan
          x="6150.5938"
          y="820.71878"
-         id="tspan2418"><tspan
+         id="tspan2419"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2417">You can open Oscilla in your browser at 
+           id="tspan2418">You can open Oscilla in your browser at 
 </tspan></tspan><tspan
          x="6150.5938"
          y="847.3854"
-         id="tspan2420">http://localhost:8001<tspan
+         id="tspan2421">http://localhost:8001<tspan
    style="font-weight:normal;-inkscape-font-specification:FreeMono"
-   id="tspan2419"> From there, use the splash screen to </tspan></tspan><tspan
+   id="tspan2420"> From there, use the splash screen to </tspan></tspan><tspan
          x="6150.5938"
          y="874.05203"
-         id="tspan2422"><tspan
+         id="tspan2423"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2421">select a project from the available list. Alternatively, you </tspan></tspan><tspan
+           id="tspan2422">select a project from the available list. Alternatively, you </tspan></tspan><tspan
          x="6150.5938"
          y="900.71865"
-         id="tspan2424"><tspan
+         id="tspan2425"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2423">can load a specific project directly by appending a query </tspan></tspan><tspan
+           id="tspan2424">can load a specific project directly by appending a query </tspan></tspan><tspan
          x="6150.5938"
          y="927.38528"
-         id="tspan2426"><tspan
+         id="tspan2427"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2425">parameter to the URL, for example:
+           id="tspan2426">parameter to the URL, for example:
 </tspan></tspan><tspan
          x="6150.5938"
          y="958.9853"
-         id="tspan2429"><tspan
+         id="tspan2430"><tspan
            style="font-size:26.6667px;fill:#1a1a1a"
-           id="tspan2427">http://localhost:8001/?project=helper-score</tspan><tspan
+           id="tspan2428">http://localhost:8001/?project=helper-score</tspan><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2428">
+           id="tspan2429">
 </tspan></tspan><tspan
          x="6150.5938"
          y="987.38528"
-         id="tspan2431"><tspan
+         id="tspan2432"><tspan
            style="font-weight:normal;-inkscape-font-specification:FreeMono"
-           id="tspan2430">.
+           id="tspan2431">.
 </tspan></tspan></text><text
        xml:space="preserve"
        style="font-weight:bold;font-size:42.6667px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000"
@@ -35633,247 +35642,247 @@
        transform="translate(5587.7849,-91.384319)"><tspan
          x="13795.008"
          y="182.56406"
-         id="tspan2434"><tspan
+         id="tspan2435"><tspan
            style="font-size:48px"
-           id="tspan2432">fade() </tspan><tspan
+           id="tspan2433">fade() </tspan><tspan
            style="font-weight:normal;font-size:42.6667px;-inkscape-font-specification:FreeMono;fill:#ff0000"
-           id="tspan2433">
+           id="tspan2434">
 </tspan></tspan><tspan
          x="13795.008"
          y="222.83076"
-         id="tspan2436"><tspan
+         id="tspan2437"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2435">Animate opacity of any SVG element.
+           id="tspan2436">Animate opacity of any SVG element.
 </tspan></tspan><tspan
          x="13795.008"
          y="256.16413"
-         id="tspan2438"><tspan
+         id="tspan2439"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2437">
+           id="tspan2438">
 </tspan></tspan><tspan
          x="13795.008"
          y="289.49751"
-         id="tspan2440"><tspan
+         id="tspan2441"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2439">fade(mode:&lt;type&gt;, dur:&lt;s&gt;, from:&lt;0–1&gt;, to:&lt;0–1&gt;,
+           id="tspan2440">fade(mode:&lt;type&gt;, dur:&lt;s&gt;, from:&lt;0–1&gt;, to:&lt;0–1&gt;,
 </tspan></tspan><tspan
          x="13795.008"
          y="322.83088"
-         id="tspan2442"><tspan
+         id="tspan2443"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2441">         ease:&lt;easing&gt;, time:&lt;s&gt;, delay:&lt;s&gt;, hold:&lt;s&gt;,
+           id="tspan2442">         ease:&lt;easing&gt;, time:&lt;s&gt;, delay:&lt;s&gt;, hold:&lt;s&gt;,
 </tspan></tspan><tspan
          x="13795.008"
          y="356.16426"
-         id="tspan2444"><tspan
+         id="tspan2445"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2443">         target:&lt;id&gt;, uid:&lt;name&gt;, osc:&lt;0|1&gt;)
+           id="tspan2444">         target:&lt;id&gt;, uid:&lt;name&gt;, osc:&lt;0|1&gt;)
 </tspan></tspan><tspan
          x="13795.008"
          y="389.49763"
-         id="tspan2446"><tspan
+         id="tspan2447"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2445">
+           id="tspan2446">
 </tspan></tspan><tspan
          x="13795.008"
          y="422.831"
-         id="tspan2448"><tspan
+         id="tspan2449"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2447">If no target is set, fade applies to self.
+           id="tspan2448">If no target is set, fade applies to self.
 </tspan></tspan><tspan
          x="13795.008"
          y="456.16438"
-         id="tspan2450"><tspan
+         id="tspan2451"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2449">Set osc:1 to send OSC messages (/oscilla/fade/&lt;uid&gt; value); use osc:0 to mute per cue.
+           id="tspan2450">Set osc:1 to send OSC messages (/oscilla/fade/&lt;uid&gt; value); use osc:0 to mute per cue.
 </tspan></tspan><tspan
          x="13795.008"
          y="489.49775"
-         id="tspan2452"><tspan
+         id="tspan2453"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2451">Global OSC can also be muted via window.OSC_ENABLED = false.
+           id="tspan2452">Global OSC can also be muted via window.OSC_ENABLED = false.
 </tspan></tspan><tspan
          x="13795.008"
          y="522.83113"
-         id="tspan2454"><tspan
+         id="tspan2455"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2453">
+           id="tspan2454">
 </tspan></tspan><tspan
          x="13795.008"
          y="556.1645"
-         id="tspan2456"><tspan
+         id="tspan2457"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2455">Modes:
+           id="tspan2456">Modes:
 </tspan></tspan><tspan
          x="13795.008"
          y="589.49787"
-         id="tspan2458"><tspan
+         id="tspan2459"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2457">in, out, inout, pulseSlow, pulseFast, strobe, blink, stop:
+           id="tspan2458">in, out, inout, pulseSlow, pulseFast, strobe, blink, stop:
 </tspan></tspan><tspan
          x="13795.008"
          y="622.83125"
-         id="tspan2460"><tspan
+         id="tspan2461"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2459">
+           id="tspan2460">
 </tspan></tspan><tspan
          x="13795.008"
          y="656.16462"
-         id="tspan2463"><tspan
+         id="tspan2464"><tspan
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2461">  </tspan><tspan
+           id="tspan2462">  </tspan><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2462">fade(mode:in,dur:2,from:0,to:1)            → Fade in 0→1 over 2 s
+           id="tspan2463">fade(mode:in,dur:2,from:0,to:1)            → Fade in 0→1 over 2 s
 </tspan></tspan><tspan
          x="13795.008"
          y="689.498"
-         id="tspan2465"><tspan
+         id="tspan2466"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2464">  fade(mode:out,dur:1.5,from:1,to:0)         → Fade out 1→0 over 1.5 s
+           id="tspan2465">  fade(mode:out,dur:1.5,from:1,to:0)         → Fade out 1→0 over 1.5 s
 </tspan></tspan><tspan
          x="13795.008"
          y="722.83137"
-         id="tspan2467"><tspan
+         id="tspan2468"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2466">  fade(mode:inout,dur:2,from:0,to:1)         → Fade in then out once (2 s total)
+           id="tspan2467">  fade(mode:inout,dur:2,from:0,to:1)         → Fade in then out once (2 s total)
 </tspan></tspan><tspan
          x="13795.008"
          y="756.16474"
-         id="tspan2469"><tspan
+         id="tspan2470"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2468">  fade(mode:in,dur:2,ease:easeOutQuad)       → Smooth fade-in with gentle deceleration 
+           id="tspan2469">  fade(mode:in,dur:2,ease:easeOutQuad)       → Smooth fade-in with gentle deceleration 
 </tspan></tspan><tspan
          x="13795.008"
          y="789.49812"
-         id="tspan2471"><tspan
+         id="tspan2472"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2470">  fade(mode:pulseSlow,from:0.3,to:1,time:10) → Smooth slow pulse for 10 s, then stop.
+           id="tspan2471">  fade(mode:pulseSlow,from:0.3,to:1,time:10) → Smooth slow pulse for 10 s, then stop.
 </tspan></tspan><tspan
          x="13795.008"
          y="822.83149"
-         id="tspan2473"><tspan
+         id="tspan2474"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2472">  fade(mode:pulseFast,ease:easeInOutSine)    → Fast rhythmic pulse with smooth curve
+           id="tspan2473">  fade(mode:pulseFast,ease:easeInOutSine)    → Fast rhythmic pulse with smooth curve
 </tspan></tspan><tspan
          x="13795.008"
          y="856.16487"
-         id="tspan2475"><tspan
+         id="tspan2476"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2474">  fade(mode:strobe,from:0,to:1)              → Rapid chaotic flicker (fixed speed)
+           id="tspan2475">  fade(mode:strobe,from:0,to:1)              → Rapid chaotic flicker (fixed speed)
 </tspan></tspan><tspan
          x="13795.008"
          y="889.49824"
-         id="tspan2477"><tspan
+         id="tspan2478"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2476">  fade(mode:blink,dur:0.5,from:0,to:1)       → Hard on/off blink every 0.5 s (120 BPM, no easing)
+           id="tspan2477">  fade(mode:blink,dur:0.5,from:0,to:1)       → Hard on/off blink every 0.5 s (120 BPM, no easing)
 </tspan></tspan><tspan
          x="13795.008"
          y="922.83161"
-         id="tspan2479"><tspan
+         id="tspan2480"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2478">  fade(mode:in,target:circle1)               → Fade element #circle1
+           id="tspan2479">  fade(mode:in,target:circle1)               → Fade element #circle1
 </tspan></tspan><tspan
          x="13795.008"
          y="956.16499"
-         id="tspan2481"><tspan
+         id="tspan2482"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2480">  fade(mode:blink,dur:0.5,delay:2,time:8)    → Start blinking after 2 s, run 8 s then stop  
+           id="tspan2481">  fade(mode:blink,dur:0.5,delay:2,time:8)    → Start blinking after 2 s, run 8 s then stop  
 </tspan></tspan><tspan
          x="13795.008"
          y="989.49836"
-         id="tspan2483"><tspan
+         id="tspan2484"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2482">  fade(mode:pulseFast,hold:0.2,delay:1)      → Wait 1s, then pulse with 0.2 s pause between cycles
+           id="tspan2483">  fade(mode:pulseFast,hold:0.2,delay:1)      → Wait 1s, then pulse with 0.2 s pause between cycles
 </tspan></tspan><tspan
          x="13795.008"
          y="1022.8317"
-         id="tspan2485"><tspan
+         id="tspan2486"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2484">  fade(mode:blink,dur:0.5,uid:blink37,osc:1) → Blink sending OSC updates for UID “blink37”
+           id="tspan2485">  fade(mode:blink,dur:0.5,uid:blink37,osc:1) → Blink sending OSC updates for UID “blink37”
 </tspan></tspan><tspan
          x="13795.008"
          y="1056.1651"
-         id="tspan2487"><tspan
+         id="tspan2488"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2486">  fade(mode:in,dur:2,uid:fadeA,osc:1)        → Fade in over 2 s and stream OSC fade values for UID “fadeA”
+           id="tspan2487">  fade(mode:in,dur:2,uid:fadeA,osc:1)        → Fade in over 2 s and stream OSC fade values for UID “fadeA”
 </tspan></tspan><tspan
          x="13795.008"
          y="1089.4985"
-         id="tspan2489"><tspan
+         id="tspan2490"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2488">
+           id="tspan2489">
 </tspan></tspan><tspan
          x="13795.008"
          y="1116.1706"
-         id="tspan2491"><tspan
+         id="tspan2492"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2490">
+           id="tspan2491">
 </tspan></tspan><tspan
          x="13795.008"
          y="1149.504"
-         id="tspan2493"><tspan
+         id="tspan2494"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2492">
+           id="tspan2493">
 </tspan></tspan><tspan
          x="13795.008"
          y="1182.8374"
-         id="tspan2495"><tspan
+         id="tspan2496"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2494">
+           id="tspan2495">
 </tspan></tspan><tspan
          x="13795.008"
          y="1216.1707"
-         id="tspan2497"><tspan
+         id="tspan2498"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono"
-           id="tspan2496">
+           id="tspan2497">
 </tspan></tspan><tspan
          x="13795.008"
          y="1249.5041"
-         id="tspan2499"><tspan
+         id="tspan2500"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono"
-           id="tspan2498">
+           id="tspan2499">
 </tspan></tspan><tspan
          x="13795.008"
          y="1282.8375"
-         id="tspan2501"><tspan
+         id="tspan2502"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono"
-           id="tspan2500">
+           id="tspan2501">
 </tspan></tspan><tspan
          x="13795.008"
          y="1316.1709"
-         id="tspan2503"><tspan
+         id="tspan2504"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono"
-           id="tspan2502">
+           id="tspan2503">
 </tspan></tspan><tspan
          x="13795.008"
          y="1349.5042"
-         id="tspan2505"><tspan
+         id="tspan2506"><tspan
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono"
-           id="tspan2504">
+           id="tspan2505">
 </tspan></tspan><tspan
          x="13795.008"
          y="1382.8376"
-         id="tspan2508"><tspan
+         id="tspan2509"><tspan
            dx="0 11.200027 11.200027 11.200027 11.200027 11.200027 11.200027 11.200027"
            style="font-weight:normal;font-size:18.6667px;-inkscape-font-specification:FreeMono"
-           id="tspan2506">Defaults</tspan><tspan
+           id="tspan2507">Defaults</tspan><tspan
            dx="11.200027 12.799988"
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono"
-           id="tspan2507">:
+           id="tspan2508">:
 </tspan></tspan><tspan
          x="13795.008"
          y="1416.171"
-         id="tspan2510"><tspan
+         id="tspan2511"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988"
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono"
-           id="tspan2509">  mode=in, dur=1, from=0, to=1, ease=linear,
+           id="tspan2510">  mode=in, dur=1, from=0, to=1, ease=linear,
 </tspan></tspan><tspan
          x="13795.008"
          y="1449.5044"
-         id="tspan2512"><tspan
+         id="tspan2513"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988"
            style="font-weight:normal;font-size:21.3333px;-inkscape-font-specification:FreeMono"
-           id="tspan2511">  delay=0, hold=0, target=self</tspan></tspan></text><circle
+           id="tspan2512">  delay=0, hold=0, target=self</tspan></tspan></text><circle
        style="fill:#ff0000;stroke-width:0.62766"
        id="fade(mode:blink,dur:0.75, time:15, uid:blink371)&#10;&#10;"
        cx="20218.281"
@@ -35996,140 +36005,140 @@
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect1201);display:inline;fill:#000000;stroke:#000000;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"><tspan
            x="15016.121"
            y="100.96836"
-           id="tspan2515"><tspan
+           id="tspan2516"><tspan
              style="font-size:48px;fill:#ff0000;stroke:none"
-             id="tspan2513">cue:stopwatch </tspan><tspan
+             id="tspan2514">cue:stopwatch </tspan><tspan
              style="font-size:42.6667px"
-             id="tspan2514">
+             id="tspan2515">
 </tspan></tspan><tspan
            x="15016.121"
            y="138.76836"
-           id="tspan2517"><tspan
+           id="tspan2518"><tspan
    style="font-size:24px"
-   id="tspan2516">— show a small time overlay</tspan>
+   id="tspan2517">— show a small time overlay</tspan>
 </tspan><tspan
            x="15016.121"
            y="166.30166"
-           id="tspan2519"><tspan
+           id="tspan2520"><tspan
              style="font-size:21.3333px"
-             id="tspan2518">-----------------------------------------
+             id="tspan2519">-----------------------------------------
 </tspan></tspan><tspan
            x="15016.121"
            y="192.96829"
-           id="tspan2521"><tspan
+           id="tspan2522"><tspan
              style="font-size:21.3333px"
-             id="tspan2520">Shows a stopwatch at the cue position, either mirroring the </tspan></tspan><tspan
+             id="tspan2521">Shows a stopwatch at the cue position, either mirroring the </tspan></tspan><tspan
            x="15016.121"
            y="219.63491"
-           id="tspan2523"><tspan
+           id="tspan2524"><tspan
              style="font-size:21.3333px"
-             id="tspan2522">main time
+             id="tspan2523">main time
 </tspan></tspan><tspan
            x="15016.121"
            y="246.30154"
-           id="tspan2525"><tspan
+           id="tspan2526"><tspan
              style="font-size:21.3333px"
-             id="tspan2524">or starting a new local timer. Can fade after a hold or stay </tspan></tspan><tspan
+             id="tspan2525">or starting a new local timer. Can fade after a hold or stay </tspan></tspan><tspan
            x="15016.121"
            y="272.96817"
-           id="tspan2527"><tspan
+           id="tspan2528"><tspan
              style="font-size:21.3333px"
-             id="tspan2526">until clicked.
+             id="tspan2527">until clicked.
 </tspan></tspan><tspan
            x="15016.121"
            y="299.63479"
-           id="tspan2529"><tspan
+           id="tspan2530"><tspan
              style="font-size:21.3333px"
-             id="tspan2528">
+             id="tspan2529">
 </tspan></tspan><tspan
            x="15016.121"
            y="326.30142"
-           id="tspan2531"><tspan
+           id="tspan2532"><tspan
              style="font-size:21.3333px"
-             id="tspan2530">Args:
+             id="tspan2531">Args:
 </tspan></tspan><tspan
            x="15016.121"
            y="352.96804"
-           id="tspan2533"><tspan
+           id="tspan2534"><tspan
              style="font-size:21.3333px"
-             id="tspan2532">  source: main|new (default=main)
+             id="tspan2533">  source: main|new (default=main)
 </tspan></tspan><tspan
            x="15016.121"
            y="379.63467"
-           id="tspan2535"><tspan
+           id="tspan2536"><tspan
              style="font-size:21.3333px"
-             id="tspan2534">  hold: &lt;sec&gt;  (0 = until click)
+             id="tspan2535">  hold: &lt;sec&gt;  (0 = until click)
 </tspan></tspan><tspan
            x="15016.121"
            y="406.3013"
-           id="tspan2537"><tspan
+           id="tspan2538"><tspan
              style="font-size:21.3333px"
-             id="tspan2536">  scroll: true|false (follow score)
+             id="tspan2537">  scroll: true|false (follow score)
 </tspan></tspan><tspan
            x="15016.121"
            y="432.96792"
-           id="tspan2539"><tspan
+           id="tspan2540"><tspan
              style="font-size:21.3333px"
-             id="tspan2538">  offsetX: &lt;px&gt;  (default 0)
+             id="tspan2539">  offsetX: &lt;px&gt;  (default 0)
 </tspan></tspan><tspan
            x="15016.121"
            y="459.63455"
-           id="tspan2541"><tspan
+           id="tspan2542"><tspan
              style="font-size:21.3333px"
-             id="tspan2540">  style: &quot;&lt;css rules&gt;&quot;
+             id="tspan2541">  style: &quot;&lt;css rules&gt;&quot;
 </tspan></tspan><tspan
            x="15016.121"
            y="486.30117"
-           id="tspan2543"><tspan
+           id="tspan2544"><tspan
              style="font-size:21.3333px"
-             id="tspan2542">
+             id="tspan2543">
 </tspan></tspan><tspan
            x="15016.121"
            y="512.9678"
-           id="tspan2545"><tspan
+           id="tspan2546"><tspan
              style="font-size:21.3333px"
-             id="tspan2544">Examples:
+             id="tspan2545">Examples:
 </tspan></tspan><tspan
            x="15016.121"
            y="539.63443"
-           id="tspan2547"><tspan
+           id="tspan2548"><tspan
              style="font-size:21.3333px"
-             id="tspan2546">  cue:stopwatch(source:main, hold:6)
+             id="tspan2547">  cue:stopwatch(source:main, hold:6)
 </tspan></tspan><tspan
            x="15016.121"
            y="566.30105"
-           id="tspan2549"><tspan
+           id="tspan2550"><tspan
              style="font-size:21.3333px"
-             id="tspan2548">  cue:stopwatch(source:new, scroll:true, offsetX:-40)
+             id="tspan2549">  cue:stopwatch(source:new, scroll:true, offsetX:-40)
 </tspan></tspan><tspan
            x="15016.121"
            y="592.96768"
-           id="tspan2551"><tspan
+           id="tspan2552"><tspan
              style="font-size:21.3333px"
-             id="tspan2550">  cue:stopwatch(source:new, style:&quot;color:#0f0;font-size:</tspan></tspan><tspan
+             id="tspan2551">  cue:stopwatch(source:new, style:&quot;color:#0f0;font-size:</tspan></tspan><tspan
            x="15016.121"
            y="619.6343"
-           id="tspan2553"><tspan
+           id="tspan2554"><tspan
              style="font-size:21.3333px"
-             id="tspan2552">1.3em;&quot;)
+             id="tspan2553">1.3em;&quot;)
 </tspan></tspan><tspan
            x="15016.121"
            y="646.30093"
-           id="tspan2555"><tspan
+           id="tspan2556"><tspan
              style="font-size:21.3333px"
-             id="tspan2554">
+             id="tspan2555">
 </tspan></tspan><tspan
            x="15016.121"
            y="672.96756"
-           id="tspan2557"><tspan
+           id="tspan2558"><tspan
              style="font-size:21.3333px"
-             id="tspan2556">Full docs:
+             id="tspan2557">Full docs:
 </tspan></tspan><tspan
            x="15016.121"
            y="699.63418"
-           id="tspan2559"><tspan
+           id="tspan2560"><tspan
    style="font-size:21.3333px"
-   id="tspan2558">  /md_docs/cue_stopwatch_docs.md</tspan>
+   id="tspan2559">  /md_docs/cue_stopwatch_docs.md</tspan>
 </tspan></text><text
          xml:space="preserve"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke:#000000;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
@@ -36198,9 +36207,9 @@
        transform="matrix(0.96800595,0,0,1.0000085,637.51243,179.60149)"><tspan
          x="17264.719"
          y="417.56926"
-         id="tspan2561"><tspan
+         id="tspan2562"><tspan
            dx="0 9.9023438 11.027344 9.9140625 6.0703125 16.394531 9.9140625 6.9257812 7.3242188"
-           id="tspan2560">cue:metro</tspan></tspan></text><text
+           id="tspan2561">cue:metro</tspan></tspan></text><text
        xml:space="preserve"
        style="font-weight:300;font-size:24px;font-family:Antonio;-inkscape-font-specification:'Antonio Light';text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke:#000000;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
        x="9392.3369"
@@ -36216,171 +36225,171 @@
        transform="matrix(0.96800595,0,0,1.0000085,-7868.6331,429.15722)"><tspan
          x="17171"
          y="302.54602"
-         id="tspan2563"><tspan
+         id="tspan2564"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2562">cue:metro(bpm:50,beats:4, </tspan></tspan><tspan
+           id="tspan2563">cue:metro(bpm:50,beats:4, </tspan></tspan><tspan
          x="17171"
          y="324.37726"
-         id="tspan2565"><tspan
+         id="tspan2566"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2564">visual:circle, audio:0, </tspan></tspan><tspan
+           id="tspan2565">visual:circle, audio:0, </tspan></tspan><tspan
          x="17171"
          y="346.2085"
-         id="tspan2567"><tspan
+         id="tspan2568"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2566">position:scrolling, </tspan></tspan><tspan
+           id="tspan2567">position:scrolling, </tspan></tspan><tspan
          x="17171"
          y="368.03973"
-         id="tspan2569"><tspan
+         id="tspan2570"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2568">uid:metro30bpm, 
+           id="tspan2569">uid:metro30bpm, 
 </tspan></tspan><tspan
          x="17171"
          y="389.87097"
-         id="tspan2571"><tspan
+         id="tspan2572"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2570">hideTarget:0)</tspan></tspan></text><text
+           id="tspan2571">hideTarget:0)</tspan></tspan></text><text
        xml:space="preserve"
        id="cue:metro(bpm:100,beats:5,visual:circle,audio:0, position:fixed,osc:1, size:125, colour:gray, uid:metroA100bpm, target:overhere, hold:15, hideTarget:0)"
        style="font-weight:300;font-size:17.9278px;font-family:Antonio;-inkscape-font-specification:'Antonio Light';text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect32-0);display:inline;fill:#000000;stroke:#000000;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
        transform="matrix(0.8571138,0,0,0.92928125,-5566.4073,421.32118)"><tspan
          x="17171"
          y="304.24069"
-         id="tspan2573"><tspan
+         id="tspan2574"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2572">cue:metro(bpm:100,beats:</tspan></tspan><tspan
+           id="tspan2573">cue:metro(bpm:100,beats:</tspan></tspan><tspan
          x="17171"
          y="328.30792"
-         id="tspan2575"><tspan
+         id="tspan2576"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2574">5,visual:circle,audio:0, </tspan></tspan><tspan
+           id="tspan2575">5,visual:circle,audio:0, </tspan></tspan><tspan
          x="17171"
          y="352.37515"
-         id="tspan2577"><tspan
+         id="tspan2578"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2576">position:fixed,osc:1, </tspan></tspan><tspan
+           id="tspan2577">position:fixed,osc:1, </tspan></tspan><tspan
          x="17171"
          y="376.44238"
-         id="tspan2579"><tspan
+         id="tspan2580"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2578">size:125, colour:gray, </tspan></tspan><tspan
+           id="tspan2579">size:125, colour:gray, </tspan></tspan><tspan
          x="17171"
          y="400.50961"
-         id="tspan2581"><tspan
+         id="tspan2582"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2580">uid:metroA100bpm, </tspan></tspan><tspan
+           id="tspan2581">uid:metroA100bpm, </tspan></tspan><tspan
          x="17171"
          y="424.57684"
-         id="tspan2583"><tspan
+         id="tspan2584"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2582">target:overhere, hold:15, </tspan></tspan><tspan
+           id="tspan2583">target:overhere, hold:15, </tspan></tspan><tspan
          x="17171"
          y="448.64407"
-         id="tspan2585"><tspan
+         id="tspan2586"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2584">hideTarget:0)</tspan></tspan></text><text
+           id="tspan2585">hideTarget:0)</tspan></tspan></text><text
        xml:space="preserve"
        id="text36"
        style="font-weight:300;font-size:24px;font-family:Antonio;-inkscape-font-specification:'Antonio Light';text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect36);display:inline;fill:#000000;stroke:#000000;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
        transform="translate(-8512.1,83.597971)"><tspan
          x="17166"
          y="96.4"
-         id="tspan2589"><tspan
+         id="tspan2590"><tspan
            style="font-weight:normal;font-size:48px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#ff0000;stroke:#b33939"
-           id="tspan2586">metro()</tspan><tspan
+           id="tspan2587">metro()</tspan><tspan
            style="font-weight:normal;font-size:48px;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2587"> </tspan><tspan
+           id="tspan2588"> </tspan><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2588">
+           id="tspan2589">
 </tspan></tspan><tspan
          x="17166"
          y="136.41887"
-         id="tspan2591"><tspan
+         id="tspan2592"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2590">visual and/or audible metronome marker
+           id="tspan2591">visual and/or audible metronome marker
 </tspan></tspan><tspan
          x="17166"
          y="168.63774"
-         id="tspan2593"><tspan
+         id="tspan2594"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2592">------------------------------------------------------
+           id="tspan2593">------------------------------------------------------
 </tspan></tspan><tspan
          x="17166"
          y="200.85661"
-         id="tspan2595"><tspan
+         id="tspan2596"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2594">Triggers a pulsing circle at the cue’s location or target element.
+           id="tspan2595">Triggers a pulsing circle at the cue’s location or target element.
 </tspan></tspan><tspan
          x="17166"
          y="233.07548"
-         id="tspan2597"><tspan
+         id="tspan2598"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2596">Supports bpm, beats, colour, size, audio click, OSC output, hold duration,
+           id="tspan2597">Supports bpm, beats, colour, size, audio click, OSC output, hold duration,
 </tspan></tspan><tspan
          x="17166"
          y="265.29436"
-         id="tspan2599"><tspan
+         id="tspan2600"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2598">and fixed or scrolling position. Each instance is identified by uid:.
+           id="tspan2599">and fixed or scrolling position. Each instance is identified by uid:.
 </tspan></tspan><tspan
          x="17166"
          y="297.51323"
-         id="tspan2601"><tspan
+         id="tspan2602"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2600">
+           id="tspan2601">
 </tspan></tspan><tspan
          x="17166"
          y="329.7321"
-         id="tspan2603"><tspan
+         id="tspan2604"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2602">Examples:
+           id="tspan2603">Examples:
 </tspan></tspan><tspan
          x="17166"
          y="361.95097"
-         id="tspan2605"><tspan
+         id="tspan2606"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2604">  cue:metro(bpm:100,beats:4,audio:1,uid:main)
+           id="tspan2605">  cue:metro(bpm:100,beats:4,audio:1,uid:main)
 </tspan></tspan><tspan
          x="17166"
          y="394.16984"
-         id="tspan2607"><tspan
+         id="tspan2608"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2606">  cue:metro(bpm:90,beats:6,colour:blue,size:80,target:noteA,hold:10)
+           id="tspan2607">  cue:metro(bpm:90,beats:6,colour:blue,size:80,target:noteA,hold:10)
 </tspan></tspan><tspan
          x="17166"
          y="426.38872"
-         id="tspan2609"><tspan
+         id="tspan2610"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2608">  cue:metro(bpm:120,beats:4,position:scrolling,target:beat1,uid:scrollA)
+           id="tspan2609">  cue:metro(bpm:120,beats:4,position:scrolling,target:beat1,uid:scrollA)
 </tspan></tspan><tspan
          x="17166"
          y="458.60759"
-         id="tspan2611"><tspan
+         id="tspan2612"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2610">  cue:metro(bpm:110,beats:3,colour:#33ff99,audio:1,osc:1,uid:green)
+           id="tspan2611">  cue:metro(bpm:110,beats:3,colour:#33ff99,audio:1,osc:1,uid:green)
 </tspan></tspan><tspan
          x="17166"
          y="490.82646"
-         id="tspan2613"><tspan
+         id="tspan2614"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2612">
+           id="tspan2613">
 </tspan></tspan><tspan
          x="17166"
          y="523.04533"
-         id="tspan2615"><tspan
+         id="tspan2616"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2614">Use this cue to provide a visual or audible tempo reference for </tspan></tspan><tspan
+           id="tspan2615">Use this cue to provide a visual or audible tempo reference for </tspan></tspan><tspan
          x="17166"
          y="555.2642"
-         id="tspan2617"><tspan
+         id="tspan2618"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2616">performers.
+           id="tspan2617">performers.
 </tspan></tspan><tspan
          x="17166"
          y="587.48308"
-         id="tspan2619"><tspan
+         id="tspan2620"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2618">See full documentation in md_docs/cue:metronome.md for detailed options.
+           id="tspan2619">See full documentation in md_docs/cue:metronome.md for detailed options.
 </tspan></tspan></text><text
        xml:space="preserve"
        id="text1192"
@@ -36388,125 +36397,125 @@
        transform="translate(942.98138,-26.142159)"><tspan
          x="16110.721"
          y="152.60341"
-         id="tspan2622"><tspan
+         id="tspan2623"><tspan
    style="font-size:42.6667px"
-   id="tspan2620">video()</tspan> <tspan
+   id="tspan2621">video()</tspan> <tspan
    style="fill:#1a1a1a"
-   id="tspan2621">
+   id="tspan2622">
 </tspan></tspan><tspan
          x="16110.721"
          y="188.67009"
-         id="tspan2624"><tspan
+         id="tspan2625"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2623">— add and control video overlays
+           id="tspan2624">— add and control video overlays
 </tspan></tspan><tspan
          x="16110.721"
          y="218.67009"
-         id="tspan2626"><tspan
+         id="tspan2627"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2625">------------------------------------------
+           id="tspan2626">------------------------------------------
 </tspan></tspan><tspan
          x="16110.721"
          y="248.67009"
-         id="tspan2628"><tspan
+         id="tspan2629"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2627">Required:
+           id="tspan2628">Required:
 </tspan></tspan><tspan
          x="16110.721"
          y="278.67009"
-         id="tspan2630"><tspan
+         id="tspan2631"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2629">  file:&lt;name&gt;   (mp4 default) 
+           id="tspan2630">  file:&lt;name&gt;   (mp4 default) 
 </tspan></tspan><tspan
          x="16110.721"
          y="308.67009"
-         id="tspan2632"><tspan
+         id="tspan2633"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2631">  size:fs|WxH   fs = fullscreen at 0,0
+           id="tspan2632">  size:fs|WxH   fs = fullscreen at 0,0
 </tspan></tspan><tspan
          x="16110.721"
          y="338.67009"
-         id="tspan2634"><tspan
+         id="tspan2635"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2633">  location:fixed|scroll (default=fixed)
+           id="tspan2634">  location:fixed|scroll (default=fixed)
 </tspan></tspan><tspan
          x="16110.721"
          y="368.67009"
-         id="tspan2636"><tspan
+         id="tspan2637"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2635">  target:&lt;id&gt;   center on target (non-fs)
+           id="tspan2636">  target:&lt;id&gt;   center on target (non-fs)
 </tspan></tspan><tspan
          x="16110.721"
          y="398.67009"
-         id="tspan2638"><tspan
+         id="tspan2639"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2637">  audio:1|0     (default=0 muted)
+           id="tspan2638">  audio:1|0     (default=0 muted)
 </tspan></tspan><tspan
          x="16110.721"
          y="428.67009"
-         id="tspan2640"><tspan
+         id="tspan2641"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2639">  uid:&lt;string&gt; or new:1 → spawn new video
+           id="tspan2640">  uid:&lt;string&gt; or new:1 → spawn new video
 </tspan></tspan><tspan
          x="16110.721"
          y="458.67009"
-         id="tspan2642"><tspan
+         id="tspan2643"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2641">  clickable:1   → allow click-to-close (fs)
+           id="tspan2642">  clickable:1   → allow click-to-close (fs)
 </tspan></tspan><tspan
          x="16110.721"
          y="488.67009"
-         id="tspan2644"><tspan
+         id="tspan2645"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2643">  fadeIn/out:&lt;sec&gt;  hold:&lt;sec&gt;  loop:N|0
+           id="tspan2644">  fadeIn/out:&lt;sec&gt;  hold:&lt;sec&gt;  loop:N|0
 </tspan></tspan><tspan
          x="16110.721"
          y="518.67009"
-         id="tspan2646"><tspan
+         id="tspan2647"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2645">
+           id="tspan2646">
 </tspan></tspan><tspan
          x="16110.721"
          y="548.67009"
-         id="tspan2648"><tspan
+         id="tspan2649"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2647">Examples:
+           id="tspan2648">Examples:
 </tspan></tspan><tspan
          x="16110.721"
          y="578.67009"
-         id="tspan2650"><tspan
+         id="tspan2651"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2649">  video(file:intro.mp4,size:fs,clickable:1,audio:1)
+           id="tspan2650">  video(file:intro.mp4,size:fs,clickable:1,audio:1)
 </tspan></tspan><tspan
          x="16110.721"
          y="608.67009"
-         id="tspan2652"><tspan
+         id="tspan2653"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2651">  video(file:cam.mp4,target:r1,size:640x360,loop:0)
+           id="tspan2652">  video(file:cam.mp4,target:r1,size:640x360,loop:0)
 </tspan></tspan><tspan
          x="16110.721"
          y="638.67009"
-         id="tspan2654"><tspan
+         id="tspan2655"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2653">  video(file:clip.mp4,new:1,in:2,out:10,fadeIn:1,hold:12)
+           id="tspan2654">  video(file:clip.mp4,new:1,in:2,out:10,fadeIn:1,hold:12)
 </tspan></tspan><tspan
          x="16110.721"
          y="668.67009"
-         id="tspan2656"><tspan
+         id="tspan2657"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2655">
+           id="tspan2656">
 </tspan></tspan><tspan
          x="16110.721"
          y="698.67009"
-         id="tspan2658"><tspan
+         id="tspan2659"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2657">Full reference:
+           id="tspan2658">Full reference:
 </tspan></tspan><tspan
          x="16110.721"
          y="728.67009"
-         id="tspan2660"><tspan
+         id="tspan2661"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2659">  /md_docs/cue_video_docs.md
+           id="tspan2660">  /md_docs/cue_video_docs.md
 </tspan></tspan></text><text
        xml:space="preserve"
        style="font-weight:300;font-size:16px;font-family:Antonio;-inkscape-font-specification:'Antonio Light';text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:424.274;display:inline;fill:#ffffff;stroke:#ffffff;stroke-width:1;stroke-dasharray:none"
@@ -36516,9 +36525,9 @@
        transform="translate(1078.2712,-61.295759)"><tspan
          x="16303.629"
          y="809.90729"
-         id="tspan2662"><tspan
+         id="tspan2663"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#000000;stroke:#000000"
-           id="tspan2661">video(file:lum.webm, offsetX:400)</tspan></tspan></text><text
+           id="tspan2662">video(file:lum.webm, offsetX:400)</tspan></tspan></text><text
        xml:space="preserve"
        style="font-weight:300;font-size:16px;font-family:Antonio;-inkscape-font-specification:'Antonio Light';text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:541.654;display:inline;fill:#ffffff;stroke:#ffffff;stroke-width:1;stroke-dasharray:none"
        x="16303.629"
@@ -36527,21 +36536,21 @@
        transform="translate(1295.4841,-150.01866)"><tspan
          x="16303.629"
          y="809.90729"
-         id="tspan2664"><tspan
+         id="tspan2665"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#000000;stroke:#000000"
-           id="tspan2663">video(file:lum.webm, 
+           id="tspan2664">video(file:lum.webm, 
 </tspan></tspan><tspan
          x="16303.629"
          y="831.38655"
-         id="tspan2666"><tspan
+         id="tspan2667"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#000000;stroke:#000000"
-           id="tspan2665">size:fs, hold:15, in:12, 
+           id="tspan2666">size:fs, hold:15, in:12, 
 </tspan></tspan><tspan
          x="16303.629"
          y="852.86579"
-         id="tspan2668"><tspan
+         id="tspan2669"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#000000;stroke:#000000"
-           id="tspan2667">opacity:0.3, uid:vid2)</tspan></tspan></text><text
+           id="tspan2668">opacity:0.3, uid:vid2)</tspan></tspan></text><text
        xml:space="preserve"
        style="font-weight:300;font-size:16px;font-family:Antonio;-inkscape-font-specification:'Antonio Light';text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:443.508;display:inline;fill:#000000;stroke:#000000;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
        x="16134.763"
@@ -36550,33 +36559,33 @@
        transform="translate(1408.0475,550.59933)"><tspan
          x="16134.763"
          y="239.00208"
-         id="tspan2670"><tspan
+         id="tspan2671"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2669">video(file:lum.webm, size:500,
+           id="tspan2670">video(file:lum.webm, size:500,
 </tspan></tspan><tspan
          x="16134.763"
          y="260.48132"
-         id="tspan2672"><tspan
+         id="tspan2673"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2671"> in:4, out:12, 
+           id="tspan2672"> in:4, out:12, 
 </tspan></tspan><tspan
          x="16134.763"
          y="281.96055"
-         id="tspan2674"><tspan
+         id="tspan2675"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2673">opacity:0.5, loop:0, speed:3.2, 
+           id="tspan2674">opacity:0.5, loop:0, speed:3.2, 
 </tspan></tspan><tspan
          x="16134.763"
          y="303.4398"
-         id="tspan2676"><tspan
+         id="tspan2677"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2675">target:abc123, location:scroll)
+           id="tspan2676">target:abc123, location:scroll)
 </tspan></tspan><tspan
          x="16134.763"
          y="324.91905"
-         id="tspan2678"><tspan
+         id="tspan2679"><tspan
            style="font-weight:normal;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2677">
+           id="tspan2678">
 </tspan></tspan></text><text
        xml:space="preserve"
        id="text1195"
@@ -36648,7 +36657,7 @@
        xml:space="preserve"
        style="font-size:10.6667px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:inline;fill:#ff0000;stroke:#000000"
        x="18705.32"
-       y="872.258"
+       y="text(src:tzara-cutup.txt, &#10;order:rnd, dur:1-3, gap:1-4, &#10;style:&quot;font-size:3em;color:white;&quot;)"
        id="text(src:tzara-cutup.txt, &#10;order:rnd, dur:1-3, gap:1-4, style:&quot;font-size:3em;color:white;&quot;)&#10;"><tspan
          sodipodi:role="line"
          x="18705.32"
@@ -36669,6 +36678,31 @@
          x="18705.32"
          y="912.25812"
          id="tspan23-8"
+         style="font-size:10.6667px" /></text><text
+       xml:space="preserve"
+       style="font-size:10.6667px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:inline;fill:#ff0000;stroke:#000000"
+       x="18373.51"
+       id="text(src:tzara-cutup.txt, &#10;order:rnd, dur:1-3, gap:1-4, autostart:true, &#10;style:&quot;font-size:3em;color:white;&quot;)&#10;"
+       y="917.69513"><tspan
+         sodipodi:role="line"
+         x="18373.51"
+         y="917.69513"
+         id="tspan19-0-8"
+         style="font-size:10.6667px">text(src:tzara-cutup.txt, </tspan><tspan
+         sodipodi:role="line"
+         x="18373.51"
+         y="931.0285"
+         id="tspan22-4"
+         style="font-size:10.6667px">order:rnd, dur:1-3, gap:1-4, </tspan><tspan
+         sodipodi:role="line"
+         x="18373.51"
+         y="944.36188"
+         id="tspan47-4-3"
+         style="font-size:10.6667px">style:&quot;font-size:3em;color:white;&quot;)</tspan><tspan
+         sodipodi:role="line"
+         x="18373.51"
+         y="957.69525"
+         id="tspan23-8-1"
          style="font-size:10.6667px" /></text><text
        xml:space="preserve"
        style="font-size:8px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#ff0000;stroke:#000000;stroke-width:0.799097"
@@ -36792,443 +36826,443 @@
        transform="translate(3235.7825,-14.828427)"><tspan
          x="7876"
          y="150"
-         id="tspan2681"><tspan
+         id="tspan2682"><tspan
            style="stroke:none"
-           id="tspan2679">speed()</tspan><tspan
+           id="tspan2680">speed()</tspan><tspan
            style="font-weight:normal;font-size:48px;font-family:FreeMono;-inkscape-font-specification:FreeMono"
-           id="tspan2680">
+           id="tspan2681">
 </tspan></tspan><tspan
          x="7876"
          y="185.33331"
-         id="tspan2683"><tspan
+         id="tspan2684"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2682">Controls playback scroll speed.
+           id="tspan2683">Controls playback scroll speed.
 </tspan></tspan><tspan
          x="7876"
          y="211.99993"
-         id="tspan2685"><tspan
+         id="tspan2686"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2684">
+           id="tspan2685">
 </tspan></tspan><tspan
          x="7876"
          y="238.66656"
-         id="tspan2687"><tspan
+         id="tspan2688"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2686">Syntax:
+           id="tspan2687">Syntax:
 </tspan></tspan><tspan
          x="7876"
          y="265.33319"
-         id="tspan2689"><tspan
+         id="tspan2690"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2688">  speed(value:&lt;multiplier&gt;, add:&lt;offset&gt;, dur:&lt;seconds&gt;, </tspan></tspan><tspan
+           id="tspan2689">  speed(value:&lt;multiplier&gt;, add:&lt;offset&gt;, dur:&lt;seconds&gt;, </tspan></tspan><tspan
          x="7876"
          y="291.99981"
-         id="tspan2691"><tspan
+         id="tspan2692"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2690">ease:&lt;easing&gt;, uid:&lt;id&gt;)
+           id="tspan2691">ease:&lt;easing&gt;, uid:&lt;id&gt;)
 </tspan></tspan><tspan
          x="7876"
          y="318.66644"
-         id="tspan2693"><tspan
+         id="tspan2694"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2692">
+           id="tspan2693">
 </tspan></tspan><tspan
          x="7876"
          y="345.33306"
-         id="tspan2695"><tspan
+         id="tspan2696"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2694">Parameters:
+           id="tspan2695">Parameters:
 </tspan></tspan><tspan
          x="7876"
          y="371.99969"
-         id="tspan2697"><tspan
+         id="tspan2698"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2696">  value    = speed multiplier (1 = normal, 0.5 = half, 2 = double)
+           id="tspan2697">  value    = speed multiplier (1 = normal, 0.5 = half, 2 = double)
 </tspan></tspan><tspan
          x="7876"
          y="398.66632"
-         id="tspan2699"><tspan
+         id="tspan2700"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2698">  add      = relative adjustment to current speed (+/-)
+           id="tspan2699">  add      = relative adjustment to current speed (+/-)
 </tspan></tspan><tspan
          x="7876"
          y="425.33294"
-         id="tspan2701"><tspan
+         id="tspan2702"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2700">  dur      = duration of ramp (seconds) — optional
+           id="tspan2701">  dur      = duration of ramp (seconds) — optional
 </tspan></tspan><tspan
          x="7876"
          y="451.99957"
-         id="tspan2703"><tspan
+         id="tspan2704"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2702">  ease     = easing curve for ramp (optional, defaults to linear)
+           id="tspan2703">  ease     = easing curve for ramp (optional, defaults to linear)
 </tspan></tspan><tspan
          x="7876"
          y="478.66619"
-         id="tspan2705"><tspan
+         id="tspan2706"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2704">  uid      = unique identifier required for synchronization
+           id="tspan2705">  uid      = unique identifier required for synchronization
 </tspan></tspan><tspan
          x="7876"
          y="505.33282"
-         id="tspan2707"><tspan
+         id="tspan2708"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2706">
+           id="tspan2707">
 </tspan></tspan><tspan
          x="7876"
          y="531.99942"
-         id="tspan2709"><tspan
+         id="tspan2710"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2708">Examples:
+           id="tspan2709">Examples:
 </tspan></tspan><tspan
          x="7876"
          y="558.66604"
-         id="tspan2711"><tspan
+         id="tspan2712"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2710">  speed(value:1, uid:s1)          // normal speed
+           id="tspan2711">  speed(value:1, uid:s1)          // normal speed
 </tspan></tspan><tspan
          x="7876"
          y="585.33267"
-         id="tspan2713"><tspan
+         id="tspan2714"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2712">  speed(value:0.5, uid:s2)        // half-speed
+           id="tspan2713">  speed(value:0.5, uid:s2)        // half-speed
 </tspan></tspan><tspan
          x="7876"
          y="611.99929"
-         id="tspan2715"><tspan
+         id="tspan2716"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2714">  speed(add:0.1, uid:s3)          // slightly + than current speed
+           id="tspan2715">  speed(add:0.1, uid:s3)          // slightly + than current speed
 </tspan></tspan><tspan
          x="7876"
          y="638.66592"
-         id="tspan2717"><tspan
+         id="tspan2718"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2716">  speed(value:1.3, dur:4, uid:s4) // ramp to 1.3× over 4 seconds
+           id="tspan2717">  speed(value:1.3, dur:4, uid:s4) // ramp to 1.3× over 4 seconds
 </tspan></tspan><tspan
          x="7876"
          y="665.33255"
-         id="tspan2719"><tspan
+         id="tspan2720"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2718">  speed(add:-0.2, dur:2, uid:s5)  // - gradually over 2 seconds
+           id="tspan2719">  speed(add:-0.2, dur:2, uid:s5)  // - gradually over 2 seconds
 </tspan></tspan><tspan
          x="7876"
          y="691.99917"
-         id="tspan2721"><tspan
+         id="tspan2722"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2720">  speed(value:1.4, dur:6, ease:inOutQuad, uid:s6)
+           id="tspan2721">  speed(value:1.4, dur:6, ease:inOutQuad, uid:s6)
 </tspan></tspan><tspan
          x="7876"
          y="718.6658"
-         id="tspan2723"><tspan
+         id="tspan2724"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2722">
+           id="tspan2723">
 </tspan></tspan><tspan
          x="7876"
          y="745.33242"
-         id="tspan2725"><tspan
+         id="tspan2726"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2724">Shorthand (positional):
+           id="tspan2725">Shorthand (positional):
 </tspan></tspan><tspan
          x="7876"
          y="771.99905"
-         id="tspan2727"><tspan
+         id="tspan2728"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2726">  speed(3, uid:s7)    // same as speed(value:3, uid:s7)
+           id="tspan2727">  speed(3, uid:s7)    // same as speed(value:3, uid:s7)
 </tspan></tspan><tspan
          x="7876"
          y="798.66568"
-         id="tspan2729"><tspan
+         id="tspan2730"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2728">
+           id="tspan2729">
 </tspan></tspan><tspan
          x="7876"
          y="825.3323"
-         id="tspan2731"><tspan
+         id="tspan2732"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2730">Note:
+           id="tspan2731">Note:
 </tspan></tspan><tspan
          x="7876"
          y="851.99893"
-         id="tspan2733"><tspan
+         id="tspan2734"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2732">  The performer sees only a cue symbol in the score.
+           id="tspan2733">  The performer sees only a cue symbol in the score.
 </tspan></tspan><tspan
          x="7876"
          y="878.66555"
-         id="tspan2735"><tspan
+         id="tspan2736"><tspan
            style="font-weight:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke:#000000"
-           id="tspan2734">  The microsyntax appears only in the SVG id field.</tspan></tspan></text><text
+           id="tspan2735">  The microsyntax appears only in the SVG id field.</tspan></tspan></text><text
        xml:space="preserve"
        id="text173"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect173);display:inline;fill:#ff0000;stroke:none;stroke-width:1;stroke-dasharray:none"
        transform="translate(-903.74893,-11.313708)"><tspan
          x="8784"
          y="134.4"
-         id="tspan2738"><tspan
+         id="tspan2739"><tspan
            style="font-size:48px;stroke:#ff0000"
-           id="tspan2736">button()</tspan><tspan
+           id="tspan2737">button()</tspan><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2737">
+           id="tspan2738">
 </tspan></tspan><tspan
          x="8784"
          y="169.7333"
-         id="tspan2740"><tspan
+         id="tspan2741"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2739">Creates an interactive HTML/CSS button in the score </tspan></tspan><tspan
+           id="tspan2740">Creates an interactive HTML/CSS button in the score </tspan></tspan><tspan
          x="8784"
          y="196.39993"
-         id="tspan2742"><tspan
+         id="tspan2743"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2741">that triggers a cue when clicked.
+           id="tspan2742">that triggers a cue when clicked.
 </tspan></tspan><tspan
          x="8784"
          y="223.06655"
-         id="tspan2744"><tspan
+         id="tspan2745"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2743">Buttons provide a manual activation method, in </tspan></tspan><tspan
+           id="tspan2744">Buttons provide a manual activation method, in </tspan></tspan><tspan
          x="8784"
          y="249.73318"
-         id="tspan2746"><tspan
+         id="tspan2747"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2745">contrast to playhead-triggered cues.
+           id="tspan2746">contrast to playhead-triggered cues.
 </tspan></tspan><tspan
          x="8784"
          y="276.39981"
-         id="tspan2748"><tspan
+         id="tspan2749"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2747">
+           id="tspan2748">
 </tspan></tspan><tspan
          x="8784"
          y="303.06643"
-         id="tspan2750"><tspan
+         id="tspan2751"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2749">Syntax:
+           id="tspan2750">Syntax:
 </tspan></tspan><tspan
          x="8784"
          y="329.73306"
-         id="tspan2752"><tspan
+         id="tspan2753"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2751">  button(
+           id="tspan2752">  button(
 </tspan></tspan><tspan
          x="8784"
          y="356.39968"
-         id="tspan2754"><tspan
+         id="tspan2755"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2753">    trigger:&lt;cue-expression&gt;,
+           id="tspan2754">    trigger:&lt;cue-expression&gt;,
 </tspan></tspan><tspan
          x="8784"
          y="383.06631"
-         id="tspan2756"><tspan
+         id="tspan2757"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2755">    style(size:&quot;&lt;WxH&gt;&quot;, color:&quot;&lt;#hex&gt;&quot;, </tspan></tspan><tspan
+           id="tspan2756">    style(size:&quot;&lt;WxH&gt;&quot;, color:&quot;&lt;#hex&gt;&quot;, </tspan></tspan><tspan
          x="8784"
          y="409.73294"
-         id="tspan2758"><tspan
+         id="tspan2759"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2757">textcolor:&quot;&lt;#hex&gt;&quot;, font:&quot;&lt;font&gt;&quot;, fontsize:&lt;px&gt;, </tspan></tspan><tspan
+           id="tspan2758">textcolor:&quot;&lt;#hex&gt;&quot;, font:&quot;&lt;font&gt;&quot;, fontsize:&lt;px&gt;, </tspan></tspan><tspan
          x="8784"
          y="436.39956"
-         id="tspan2760"><tspan
+         id="tspan2761"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2759">active:&quot;&lt;effect&gt;&quot;, toggle:&lt;true|false&gt;, uid:&lt;id&gt;)
+           id="tspan2760">active:&quot;&lt;effect&gt;&quot;, toggle:&lt;true|false&gt;, uid:&lt;id&gt;)
 </tspan></tspan><tspan
          x="8784"
          y="463.06619"
-         id="tspan2762"><tspan
+         id="tspan2763"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2761">  )
+           id="tspan2762">  )
 </tspan></tspan><tspan
          x="8784"
          y="489.73281"
-         id="tspan2764"><tspan
+         id="tspan2765"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2763">
+           id="tspan2764">
 </tspan></tspan><tspan
          x="8784"
          y="516.39944"
-         id="tspan2766"><tspan
+         id="tspan2767"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2765">Parameters:
+           id="tspan2766">Parameters:
 </tspan></tspan><tspan
          x="8784"
          y="543.06607"
-         id="tspan2768"><tspan
+         id="tspan2769"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2767">  trigger   = any cue expression (e.g., audio(...), </tspan></tspan><tspan
+           id="tspan2768">  trigger   = any cue expression (e.g., audio(...), </tspan></tspan><tspan
          x="8784"
          y="569.73269"
-         id="tspan2770"><tspan
+         id="tspan2771"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2769">stop(...), speed(...))
+           id="tspan2770">stop(...), speed(...))
 </tspan></tspan><tspan
          x="8784"
          y="596.39932"
-         id="tspan2772"><tspan
+         id="tspan2773"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2771">              The cue expression must include its </tspan></tspan><tspan
+           id="tspan2772">              The cue expression must include its </tspan></tspan><tspan
          x="8784"
          y="623.06594"
-         id="tspan2774"><tspan
+         id="tspan2775"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2773">own uid.
+           id="tspan2774">own uid.
 </tspan></tspan><tspan
          x="8784"
          y="649.73257"
-         id="tspan2776"><tspan
+         id="tspan2777"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2775">  style()   = visual and behavioral settings for the </tspan></tspan><tspan
+           id="tspan2776">  style()   = visual and behavioral settings for the </tspan></tspan><tspan
          x="8784"
          y="676.3992"
-         id="tspan2778"><tspan
+         id="tspan2779"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2777">button’s appearance and interaction
+           id="tspan2778">button’s appearance and interaction
 </tspan></tspan><tspan
          x="8784"
          y="703.06582"
-         id="tspan2780"><tspan
+         id="tspan2781"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2779">
+           id="tspan2780">
 </tspan></tspan><tspan
          x="8784"
          y="729.73245"
-         id="tspan2782"><tspan
+         id="tspan2783"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2781">style() fields:
+           id="tspan2782">style() fields:
 </tspan></tspan><tspan
          x="8784"
          y="756.39907"
-         id="tspan2784"><tspan
+         id="tspan2785"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2783">  size      = button dimensions (e.g., &quot;120x45&quot;)
+           id="tspan2784">  size      = button dimensions (e.g., &quot;120x45&quot;)
 </tspan></tspan><tspan
          x="8784"
          y="783.0657"
-         id="tspan2786"><tspan
+         id="tspan2787"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2785">  color     = background color
+           id="tspan2786">  color     = background color
 </tspan></tspan><tspan
          x="8784"
          y="809.73233"
-         id="tspan2788"><tspan
+         id="tspan2789"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2787">  textcolor = label text color
+           id="tspan2788">  textcolor = label text color
 </tspan></tspan><tspan
          x="8784"
          y="836.39895"
-         id="tspan2790"><tspan
+         id="tspan2791"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2789">  font      = font family (optional)
+           id="tspan2790">  font      = font family (optional)
 </tspan></tspan><tspan
          x="8784"
          y="863.06558"
-         id="tspan2792"><tspan
+         id="tspan2793"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2791">  fontsize  = label text size
+           id="tspan2792">  fontsize  = label text size
 </tspan></tspan><tspan
          x="8784"
          y="889.7322"
-         id="tspan2794"><tspan
+         id="tspan2795"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2793">  active    = visual effect when active (e.g., </tspan></tspan><tspan
+           id="tspan2794">  active    = visual effect when active (e.g., </tspan></tspan><tspan
          x="8784"
          y="916.39883"
-         id="tspan2796"><tspan
+         id="tspan2797"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2795">&quot;flash&quot;)
+           id="tspan2796">&quot;flash&quot;)
 </tspan></tspan><tspan
          x="8784"
          y="943.06546"
-         id="tspan2798"><tspan
+         id="tspan2799"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2797">  </tspan></tspan><tspan
+           id="tspan2798">  </tspan></tspan><tspan
          x="8784"
          y="959.7333"
-         id="tspan2800"><tspan
+         id="tspan2801"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.800049 12.799927 12.799927 12.800049 12.800049 12.799927 12.799927 12.800049 12.800049 12.799927 12.799927 12.800049 12.800049"
            style="fill:#000000;stroke:#000000"
-           id="tspan2799">toggle    = if true, clicking again sends a corresponding stop/toggle action (when supported)
+           id="tspan2800">toggle    = if true, clicking again sends a corresponding stop/toggle action (when supported)
 </tspan></tspan><tspan
          x="8784"
          y="986.39993"
-         id="tspan2802"><tspan
+         id="tspan2803"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.800049 12.799927 12.799927 12.800049 12.800049 12.799927 12.799927 12.800049 12.800049 12.799927 12.799927 12.800049 12.800049 12.799927 12.799927 12.800049 12.800049 12.799927 12.799927"
            style="fill:#000000;stroke:#000000"
-           id="tspan2801">  uid       = unique id for the button element itself (required for sync, logging, and OSC control)
+           id="tspan2802">  uid       = unique id for the button element itself (required for sync, logging, and OSC control)
 </tspan></tspan><tspan
          x="8784"
          y="1013.0666"
-         id="tspan2804"><tspan
+         id="tspan2805"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2803">
+           id="tspan2804">
 </tspan></tspan><tspan
          x="8784"
          y="1039.7332"
-         id="tspan2806"><tspan
+         id="tspan2807"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988"
            style="fill:#000000;stroke:#000000"
-           id="tspan2805">Example:
+           id="tspan2806">Example:
 </tspan></tspan><tspan
          x="8784"
          y="1066.3998"
-         id="tspan2808"><tspan
+         id="tspan2809"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988"
            style="fill:#000000;stroke:#000000"
-           id="tspan2807">  button(
+           id="tspan2808">  button(
 </tspan></tspan><tspan
          x="8784"
          y="1093.0664"
-         id="tspan2810"><tspan
+         id="tspan2811"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988"
            style="fill:#000000;stroke:#000000"
-           id="tspan2809">    trigger:audio(src:noise, amp:0.9, loop:6, toggle:false, uid:noiseA),
+           id="tspan2810">    trigger:audio(src:noise, amp:0.9, loop:6, toggle:false, uid:noiseA),
 </tspan></tspan><tspan
          x="8784"
          y="1119.733"
-         id="tspan2812"><tspan
+         id="tspan2813"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.800049 12.799927 12.799927 12.800049 12.800049 12.799927 12.799927 12.800049 12.800049 12.799927 12.799927 12.800049 12.800049 12.799927 12.799927 12.800049 12.800049 12.799927 12.799927"
            style="fill:#000000;stroke:#000000"
-           id="tspan2811">    style(size:&quot;120x45&quot;, color:&quot;#333&quot;, textcolor:&quot;#fff&quot;, fontsize:36, active:&quot;flash&quot;, uid:btnNoise)
+           id="tspan2812">    style(size:&quot;120x45&quot;, color:&quot;#333&quot;, textcolor:&quot;#fff&quot;, fontsize:36, active:&quot;flash&quot;, uid:btnNoise)
 </tspan></tspan><tspan
          x="8784"
          y="1146.3997"
-         id="tspan2814"><tspan
+         id="tspan2815"><tspan
            dx="0 12.799988 12.799988 12.799988"
            style="fill:#000000;stroke:#000000"
-           id="tspan2813">  )
+           id="tspan2814">  )
 </tspan></tspan><tspan
          x="8784"
          y="1173.0663"
-         id="tspan2816"><tspan
+         id="tspan2817"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2815">
+           id="tspan2816">
 </tspan></tspan><tspan
          x="8784"
          y="1199.7329"
-         id="tspan2818"><tspan
+         id="tspan2819"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988"
            style="fill:#000000;stroke:#000000"
-           id="tspan2817">Notes:
+           id="tspan2818">Notes:
 </tspan></tspan><tspan
          x="8784"
          y="1226.3995"
-         id="tspan2820"><tspan
+         id="tspan2821"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.800049 12.799927"
            style="fill:#000000;stroke:#000000"
-           id="tspan2819">  - The performer sees only the button graphic; microsyntax remains in the SVG id.
+           id="tspan2820">  - The performer sees only the button graphic; microsyntax remains in the SVG id.
 </tspan></tspan><tspan
          x="8784"
          y="1253.0662"
-         id="tspan2822"><tspan
+         id="tspan2823"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988"
            style="fill:#000000;stroke:#000000"
-           id="tspan2821">  - `toggle:true` is useful for start/stop pads or continuous textures.
+           id="tspan2822">  - `toggle:true` is useful for start/stop pads or continuous textures.
 </tspan></tspan><tspan
          x="8784"
          y="1279.7328"
-         id="tspan2824"><tspan
+         id="tspan2825"><tspan
            dx="0 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988 12.799988"
            style="fill:#000000;stroke:#000000"
-           id="tspan2823">  - Use Inkscape’s Align and Distribute to arrange multiple buttons cleanly.
+           id="tspan2824">  - Use Inkscape’s Align and Distribute to arrange multiple buttons cleanly.
 </tspan></tspan></text><text
        xml:space="preserve"
        id="text176"
@@ -37236,214 +37270,214 @@
        transform="translate(-22835.688,-0.68629468)"><tspan
          x="34858"
          y="108.4"
-         id="tspan2827"><tspan
+         id="tspan2828"><tspan
            style="font-size:48px"
-           id="tspan2825">nav()</tspan><tspan
+           id="tspan2826">nav()</tspan><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2826">
+           id="tspan2827">
 </tspan></tspan><tspan
          x="34858"
          y="141.2667"
-         id="tspan2829"><tspan
+         id="tspan2830"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2828">Navigates to a page, rehearsal mark, or scroll mode location.
+           id="tspan2829">Navigates to a page, rehearsal mark, or scroll mode location.
 </tspan></tspan><tspan
          x="34858"
          y="164.60007"
-         id="tspan2831"><tspan
+         id="tspan2832"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2830">
+           id="tspan2831">
 </tspan></tspan><tspan
          x="34858"
          y="187.93345"
-         id="tspan2833"><tspan
+         id="tspan2834"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2832">Syntax:
+           id="tspan2833">Syntax:
 </tspan></tspan><tspan
          x="34858"
          y="211.26682"
-         id="tspan2835"><tspan
+         id="tspan2836"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2834">  nav(&lt;actionOrPage&gt;[ @ &lt;target&gt; ], uid:&lt;id&gt;?)
+           id="tspan2835">  nav(&lt;actionOrPage&gt;[ @ &lt;target&gt; ], uid:&lt;id&gt;?)
 </tspan></tspan><tspan
          x="34858"
          y="234.60019"
-         id="tspan2837"><tspan
+         id="tspan2838"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2836">
+           id="tspan2837">
 </tspan></tspan><tspan
          x="34858"
          y="257.93357"
-         id="tspan2839"><tspan
+         id="tspan2840"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2838">The first argument determines the navigation action. It may be:
+           id="tspan2839">The first argument determines the navigation action. It may be:
 </tspan></tspan><tspan
          x="34858"
          y="281.26694"
-         id="tspan2841"><tspan
+         id="tspan2842"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2840">  scroll         = switch to scrolling mode and continue playback
+           id="tspan2841">  scroll         = switch to scrolling mode and continue playback
 </tspan></tspan><tspan
          x="34858"
          y="304.60032"
-         id="tspan2843"><tspan
+         id="tspan2844"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2842">  scrollPaused   = switch to scrolling mode but do not resume playback
+           id="tspan2843">  scrollPaused   = switch to scrolling mode but do not resume playback
 </tspan></tspan><tspan
          x="34858"
          y="327.93369"
-         id="tspan2845"><tspan
+         id="tspan2846"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2844">  &lt;pagename&gt;     = jump directly to a page or rehearsal mark
+           id="tspan2845">  &lt;pagename&gt;     = jump directly to a page or rehearsal mark
 </tspan></tspan><tspan
          x="34858"
          y="351.26706"
-         id="tspan2847"><tspan
+         id="tspan2848"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2846">
+           id="tspan2847">
 </tspan></tspan><tspan
          x="34858"
          y="374.60044"
-         id="tspan2849"><tspan
+         id="tspan2850"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2848">The optional @&lt;target&gt; is used when scroll mode needs to jump to a specific place.
+           id="tspan2849">The optional @&lt;target&gt; is used when scroll mode needs to jump to a specific place.
 </tspan></tspan><tspan
          x="34858"
          y="397.93381"
-         id="tspan2851"><tspan
+         id="tspan2852"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2850">
+           id="tspan2851">
 </tspan></tspan><tspan
          x="34858"
          y="421.26719"
-         id="tspan2853"><tspan
+         id="tspan2854"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2852">Parameters:
+           id="tspan2853">Parameters:
 </tspan></tspan><tspan
          x="34858"
          y="444.60056"
-         id="tspan2855"><tspan
+         id="tspan2856"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2854">  actionOrPage = &quot;scroll&quot;, &quot;scrollPaused&quot;, or a page/rehearsal name (e.g., page3, Coda, Intro)
+           id="tspan2855">  actionOrPage = &quot;scroll&quot;, &quot;scrollPaused&quot;, or a page/rehearsal name (e.g., page3, Coda, Intro)
 </tspan></tspan><tspan
          x="34858"
          y="467.93393"
-         id="tspan2857"><tspan
+         id="tspan2858"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2856">  target       = optional rehearsal/page anchor used only with scroll modes
+           id="tspan2857">  target       = optional rehearsal/page anchor used only with scroll modes
 </tspan></tspan><tspan
          x="34858"
          y="491.26731"
-         id="tspan2859"><tspan
+         id="tspan2860"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2858">  uid          = unique cue identifier (optional unless this exact nav expression appears more than </tspan></tspan><tspan
+           id="tspan2859">  uid          = unique cue identifier (optional unless this exact nav expression appears more than </tspan></tspan><tspan
          x="34858"
          y="514.60068"
-         id="tspan2861"><tspan
+         id="tspan2862"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2860">once)
+           id="tspan2861">once)
 </tspan></tspan><tspan
          x="34858"
          y="537.93406"
-         id="tspan2863"><tspan
+         id="tspan2864"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2862">
+           id="tspan2863">
 </tspan></tspan><tspan
          x="34858"
          y="561.26743"
-         id="tspan2865"><tspan
+         id="tspan2866"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2864">Examples:
+           id="tspan2865">Examples:
 </tspan></tspan><tspan
          x="34858"
          y="584.6008"
-         id="tspan2867"><tspan
+         id="tspan2868"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2866">  nav(page3)                      // jump to page/rehearsal mark &quot;page3&quot;
+           id="tspan2867">  nav(page3)                      // jump to page/rehearsal mark &quot;page3&quot;
 </tspan></tspan><tspan
          x="34858"
          y="607.93418"
-         id="tspan2869"><tspan
+         id="tspan2870"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2868">  nav(page3, uid:p3)              // same, with explicit uid
+           id="tspan2869">  nav(page3, uid:p3)              // same, with explicit uid
 </tspan></tspan><tspan
          x="34858"
          y="631.26755"
-         id="tspan2871"><tspan
+         id="tspan2872"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2870">  nav(Coda)                       // jump to &quot;Coda&quot;
+           id="tspan2871">  nav(Coda)                       // jump to &quot;Coda&quot;
 </tspan></tspan><tspan
          x="34858"
          y="654.60093"
-         id="tspan2873"><tspan
+         id="tspan2874"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2872">  nav(scroll@A)                   // enter scrolling mode and jump to A
+           id="tspan2873">  nav(scroll@A)                   // enter scrolling mode and jump to A
 </tspan></tspan><tspan
          x="34858"
          y="677.9343"
-         id="tspan2875"><tspan
+         id="tspan2876"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2874">  nav(scrollPaused@B)             // jump to B and hold playback (no auto-resume)
+           id="tspan2875">  nav(scrollPaused@B)             // jump to B and hold playback (no auto-resume)
 </tspan></tspan><tspan
          x="34858"
          y="701.26767"
-         id="tspan2877"><tspan
+         id="tspan2878"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2876">  nav(scroll)                     // switch to scroll mode, do not jump
+           id="tspan2877">  nav(scroll)                     // switch to scroll mode, do not jump
 </tspan></tspan><tspan
          x="34858"
          y="724.60105"
-         id="tspan2879"><tspan
+         id="tspan2880"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2878">  nav(scrollPaused)               // switch to paused scroll mode in place
+           id="tspan2879">  nav(scrollPaused)               // switch to paused scroll mode in place
 </tspan></tspan><tspan
          x="34858"
          y="747.93442"
-         id="tspan2881"><tspan
+         id="tspan2882"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2880">
+           id="tspan2881">
 </tspan></tspan><tspan
          x="34858"
          y="771.2678"
-         id="tspan2883"><tspan
+         id="tspan2884"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2882">UID rule:
+           id="tspan2883">UID rule:
 </tspan></tspan><tspan
          x="34858"
          y="794.60117"
-         id="tspan2885"><tspan
+         id="tspan2886"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2884">  UID is optional unless the same nav() expression is used more than once or in a button().
+           id="tspan2885">  UID is optional unless the same nav() expression is used more than once or in a button().
 </tspan></tspan><tspan
          x="34858"
          y="817.93454"
-         id="tspan2887"><tspan
+         id="tspan2888"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2886">  If a nav cue needs to be referenced, retriggered, or logged uniquely, add uid:&lt;name&gt;.
+           id="tspan2887">  If a nav cue needs to be referenced, retriggered, or logged uniquely, add uid:&lt;name&gt;.
 </tspan></tspan><tspan
          x="34858"
          y="841.26792"
-         id="tspan2889"><tspan
+         id="tspan2890"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2888">
+           id="tspan2889">
 </tspan></tspan><tspan
          x="34858"
          y="864.60129"
-         id="tspan2891"><tspan
+         id="tspan2892"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2890">Note:
+           id="tspan2891">Note:
 </tspan></tspan><tspan
          x="34858"
          y="887.93467"
-         id="tspan2893"><tspan
+         id="tspan2894"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2892">  The performer sees only the visual cue symbol in the score.
+           id="tspan2893">  The performer sees only the visual cue symbol in the score.
 </tspan></tspan><tspan
          x="34858"
          y="911.26804"
-         id="tspan2895"><tspan
+         id="tspan2896"><tspan
            style="fill:#000000;stroke:#000000"
-           id="tspan2894">  The microsyntax remains in the SVG id and is not shown in the visible notation.
+           id="tspan2895">  The microsyntax remains in the SVG id and is not shown in the visible notation.
 </tspan></tspan></text></g><g
      inkscape:groupmode="layer"
      id="layer6"

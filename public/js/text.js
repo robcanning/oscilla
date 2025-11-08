@@ -167,7 +167,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       background: transparent;
-      color: black;
+      color: white;
       z-index:999999;
       font-size: 4em;
       padding: 8px 12px;

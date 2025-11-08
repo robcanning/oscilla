@@ -1298,9 +1298,6 @@ export function handleStopCue(ast) {
 
 
 
-
-
-
 // =========================
 // 🎬 cueChoice Handler Logic
 // =========================
@@ -1879,10 +1876,22 @@ export async function handlePageCue(cueId, duration, cueParams = {}) {
   console.log(`initialising animations in ${pageName}.svg`);
   window.initializeSVG?.(svg);
 
-  if (typeof window.registerSvgGroups === "function") {
-    window.registerSvgGroups(svg);
-    console.log(`[cuePage] 📦 Registered groups in ${pageName}.svg`);
-  }
+// ✅ Register reusable blocks defined inside this page
+if (window.registerReuseBlocks) {
+  window.registerReuseBlocks(svg);
+  console.log(`[reuse] Registered local blocks in ${pageName}.svg`);
+}
+
+// ✅ Inject reusable blocks referenced via use(...)
+if (window.autoInjectUseBlocks) {
+  window.autoInjectUseBlocks(svg);
+  console.log(`[reuse] Injected use(...) blocks in ${pageName}.svg`);
+}
+
+  // if (typeof window.registerSvgGroups === "function") {
+  //   window.registerSvgGroups(svg);
+  //   console.log(`[cuePage] 📦 Registered groups in ${pageName}.svg`);
+  // }
 
   if (typeof window.propagate === "function") {
     console.log("[cuePage] ⚙️ Calling propagate() for page SVG");
@@ -1925,40 +1934,12 @@ autostartTextCues.forEach(el => {
 
 
 
-  window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
+  // window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
   // window._activePageButtons = assignCueButtonsIn(svg, container);
 
   window._currentPageSvg = svg;
 
 
-
-
-
-
-  // 🟢 Auto-inject globally registered UI groups on page load
-
-  if (window.groupRegistry) {
-    console.log(`[cueGroup] 🔍 Checking if page "${pageName}" requests any groups...`);
-
-    // Look inside the loaded SVG for cueGroup(...) references
-    const groupUses = [...svg.querySelectorAll('[id^="cueGroup("]')].map(el =>
-      el.id.match(/cueGroup\(([^)]+)\)/)?.[1]
-    ).filter(Boolean);
-
-    if (groupUses.length === 0) {
-      console.log(`[cueGroup] 🚫 No cueGroup() references found in "${pageName}"`);
-    } else {
-      console.log(`[cueGroup] 📋 Found cueGroup() references:`, groupUses);
-      for (const groupId of groupUses) {
-        if (window.groupRegistry[groupId]) {
-          console.log(`[cueGroup] 🚀 Injecting requested group "${groupId}" on page "${pageName}"`);
-          handleGroupCue(`cueGroup(${groupId})`, { choice: groupId });
-        } else {
-          console.warn(`[cueGroup] ⚠️ Group "${groupId}" referenced in "${pageName}" not found in registry.`);
-        }
-      }
-    }
-  }
 
 
   // -------------------------------------------------------------
@@ -2254,6 +2235,243 @@ export async function handlePageCueFromAST(ast) {
   // ------------------------------------------------------------
   handleAfterAction(ast);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // page.js — unified Page Cue System
+
+// // import { handleCueTrigger } from "./cues.js";
+// // import { startPlayback, pauseScrollScore } from "./transport.js";
+// // import { jumpToRehearsalMark } from "./nav.js";
+// // import { registerReuseBlocks, autoInjectUseBlocks } from "./reuse.js";
+
+// // ------------------------------------------------------------
+// // expandPattern(patternAST)
+// // ------------------------------------------------------------
+// // Converts page patterns (Pseq, Pshuf, Pxrand, Prand, literal, tuple shorthand)
+// // into a flat array of {page, dur} or string identifiers.
+// // ------------------------------------------------------------
+// function expandPattern(ast) {
+//   if (!ast) return [];
+
+//   // Literal page name
+//   if (ast.type === "Literal") return [ast.value];
+
+//   // page2:10 shorthand already parsed in tuple form:
+//   // { page: "page2", dur: 10 }
+//   if (ast.page) return [ast];
+
+//   switch (ast.type) {
+
+//     case "Identifier":
+//       return [ast.image || ast.value];
+
+//     case "Pseq": {
+//       const reps = ast.repeats === "inf" ? Infinity : Number(ast.repeats) || 1;
+//       const seq = ast.list.flatMap(expandPattern).filter(Boolean);
+//       return Array.from({ length: reps }, () => seq).flat();
+//     }
+
+//     case "Pshuf": {
+//       const reps = ast.repeats === "inf" ? 1 : Number(ast.repeats) || 1;
+//       const seq = ast.list.flatMap(expandPattern).filter(Boolean);
+//       const shuffled = [...seq].sort(() => Math.random() - 0.5);
+//       return Array.from({ length: reps }, () => shuffled).flat();
+//     }
+
+//     case "Pxrand": {
+//       const reps = ast.repeats === "inf" ? 1 : Number(ast.repeats) || 1;
+//       const seq = ast.list.flatMap(expandPattern).filter(Boolean);
+//       const out = [];
+//       for (let i = 0; i < reps; i++) {
+//         const shuffled = [...seq].sort(() => Math.random() - 0.5);
+//         out.push(...shuffled);
+//       }
+//       return out;
+//     }
+
+//     case "Prand": {
+//       const reps = ast.repeats === "inf" ? Infinity : Number(ast.repeats) || 1;
+//       const seq = ast.list.flatMap(expandPattern).filter(Boolean);
+//       const out = [];
+//       for (let i = 0; i < reps; i++) {
+//         out.push(seq[Math.floor(Math.random() * seq.length)]);
+//       }
+//       return out;
+//     }
+
+//     case "Pchoose": {
+//       const reps = ast.repeats === "inf" ? 1 : Number(ast.repeats) || 1;
+//       const seq = ast.list.flatMap(expandPattern).filter(Boolean);
+//       const out = [];
+//       for (let i = 0; i < reps; i++) {
+//         out.push(seq[Math.floor(Math.random() * seq.length)]);
+//       }
+//       return out;
+//     }
+
+//     default:
+//       return [];
+//   }
+// }
+
+// // ------------------------------------------------------------
+// // showPage()
+// // ------------------------------------------------------------
+// async function showPage(pageName, { duration = null, next = null, returnToScroll = false, wait = false } = {}) {
+
+//   pauseScrollScore();
+
+//   const container = document.getElementById("singlePage-container");
+//   const content = document.getElementById("singlePage-content");
+//   const countdownElement = document.getElementById("singlePage-countdown");
+//   if (!container || !content || !countdownElement) return;
+
+//   container.classList.remove("hidden");
+//   container.style.display = "flex";
+//   container.style.opacity = "1";
+//   content.innerHTML = "";
+
+//   const path = `${window.pagesDir}${pageName}.svg`;
+//   const res = await fetch(path);
+//   if (!res.ok) return console.error(`[page] ❌ Failed to load ${path}`);
+//   content.innerHTML = await res.text();
+
+//   const svg = content.querySelector("svg");
+//   if (!svg) return console.error("[page] ❌ No <svg> in loaded page.");
+
+//   svg.id = "pageSVG";
+//   svg.classList.add("oscilla-page");
+//   svg.setAttribute("width", "100vw");
+//   svg.setAttribute("height", "100vh");
+//   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+//   window.initializeSVG?.(svg);
+
+//   // ✅ Reuse block injection works here too
+//   registerReuseBlocks(svg);
+//   autoInjectUseBlocks(svg);
+
+//   // ✅ autostart text cues
+//   if (window.triggeredCues instanceof Set) window.triggeredCues.clear();
+//   svg.querySelectorAll('[id^="text("]').forEach(el => {
+//     if (/autostart\s*:\s*true/i.test(el.id)) handleCueTrigger(el.id, el);
+//   });
+
+//   // ✅ Countdown / auto-return
+//   countdownElement.style.display = duration && !wait ? "block" : "none";
+//   if (duration && duration > 0 && !wait) {
+//     countdownElement.textContent = duration;
+//     let t = duration;
+
+//     const timer = setInterval(() => {
+//       t -= 1;
+//       countdownElement.textContent = t;
+//       if (t <= 0) {
+//         clearInterval(timer);
+
+//         if (next) {
+//           handleCueTrigger(`page(${next})`);
+//           return;
+//         }
+
+//         // ✅ Your chosen default:
+//         // AUTO-RETURN → scroll + resume playback
+//         handleCueTrigger(`nav(scroll)`);
+//         startPlayback();
+//       }
+//     }, 1000);
+//   }
+// }
+
+// // ------------------------------------------------------------
+// // handlePage(ast) — unified page cue entry
+// // ------------------------------------------------------------
+// export async function handlePage(ast) {
+//   if (!ast || ast.func !== "page") return;
+
+//   // Pattern form → sequence of pages
+//   if (ast.pattern) {
+//     const sequence = expandPattern(ast.pattern).filter(Boolean);
+
+//     for (let item of sequence) {
+//       const pageName = item.page || item;
+//       const duration = item.dur || null;
+//       await showPage(pageName, { duration });
+//     }
+
+//     return;
+//   }
+
+//   // Direct call form
+//   let pageName = null;
+//   let duration = null;
+
+//   for (const arg of ast.args) {
+//     // ✅ shorthand page(page2:10)
+//     if (typeof arg === "string" && arg.includes(":")) {
+//       const [p, d] = arg.split(":");
+//       pageName = p.trim();
+//       duration = Number(d);
+//       continue;
+//     }
+//     // plain page(page2)
+//     if (typeof arg === "string") {
+//       pageName = arg.trim();
+//       continue;
+//     }
+//     if (arg.named?.dur != null) duration = Number(arg.named.dur);
+//   }
+
+//   if (!pageName) return console.warn("[page] ⚠️ Missing page name:", ast);
+
+//   return showPage(pageName, { duration });
+// }
+
+// window.handlePage = handlePage;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
