@@ -279,6 +279,8 @@ async function loadScrollMode(container) {
   console.log("[ScrollMode] ✅ Loaded score.svg into #scrollStage → #scoreInner → <svg>");
   if (typeof initializeSVG === "function") initializeSVG(svg);
 
+
+
   window.hideControls?.();
   window.toggleScoreNotes();
 

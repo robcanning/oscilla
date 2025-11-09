@@ -352,6 +352,11 @@ registerReuseBlocks(svgElement);
     observeAnimations();
 
 
+
+// After your reuse preload or general init:
+ buildPageRegistryFromDirIndex();
+refreshAllPagesMenu();
+
     // ✅ Run setupScore and cue assignment after the SVG has fully painted
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -425,9 +430,9 @@ registerReuseBlocks(svgElement);
 
 
     // Wait until the SVG is *actually* inserted and painted
-    requestAnimationFrame(() => {
-      requestAnimationFrame(applyWideScrollLayout);
-    });
+    // requestAnimationFrame(() => {
+    //   requestAnimationFrame(applyWideScrollLayout);
+    // });
 
     const container = window.scoreContainer;
     const svg = svgElement;
@@ -1820,6 +1825,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   initializeSvgInteractions();
+
+
 
 
   const handleSvgPopupClick = (event) => {

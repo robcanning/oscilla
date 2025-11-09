@@ -217,3 +217,111 @@ if (typeof window !== "undefined") {
     window.handleUse = handleUse;
     window.preloadReuseBlocksFromPages = preloadReuseBlocksFromPages;
 }
+
+
+
+// --- pages-discovery.js (or inside cues.js) ---
+
+
+
+/**
+ * Build window.pageRegistry by scraping the /pages/ directory index.
+ * - No assumptions about "page-" prefix; includes ANY *.svg in /pages/
+ * - Optional excludes via window.pageExclude (array of regex)
+ * - Optional explicit include list via window.pageInclude (array of strings w/o .svg)
+ */
+export async function buildPageRegistryFromDirIndex() {
+  const base = getPagesBase();
+  try {
+    const res = await fetch(base, { cache: "no-store" });
+    if (!res.ok) {
+      console.warn(`[allPages] ⚠️ Cannot read directory index at ${base} (HTTP ${res.status}).`);
+      return;
+    }
+    const html = await res.text();
+
+    // Extract *.svg names from directory listing
+    const files = [...html.matchAll(/href="([^"]+\.svg)"/gi)]
+      .map(m => decodeURIComponent(m[1]).split("/").pop());
+
+    if (!files.length) {
+      console.warn(`[allPages] ⚠️ No SVG files found in ${base}`);
+      return;
+    }
+
+    // Optional caller-controlled filters
+    const excludes = Array.isArray(window.pageExclude) ? window.pageExclude : [];
+    const includes = Array.isArray(window.pageInclude) ? new Set(window.pageInclude) : null;
+
+    // Normalize → { [nameWithoutExt]: url }
+    const registry = {};
+    for (const fname of files) {
+      const name = fname.replace(/\.svg$/i, "");
+
+      // include filter (if provided) takes precedence
+      if (includes && !includes.has(name)) continue;
+
+      // apply excludes (regexes)
+      if (excludes.some(rx => rx.test(name))) continue;
+
+      registry[name] = base + fname;
+    }
+
+    // Expose globally
+    window.pageRegistry = registry;
+    console.log("[allPages] ✅ pageRegistry:", Object.keys(registry));
+  } catch (err) {
+    console.warn("[allPages] ❌ Failed to build pageRegistry:", err);
+  }
+}
+
+window.buildPageRegistryFromDirIndex = buildPageRegistryFromDirIndex;
+export function refreshAllPagesMenu() {
+
+    if (!window.pageRegistry || !Object.keys(window.pageRegistry).length) {
+  console.warn("[allPages] ⏳ Registry not ready — deferring...");
+  requestAnimationFrame(() => refreshAllPagesMenu());
+  return;
+}
+
+  console.log("[allPages] 🔄 Refreshing menu…");
+
+  const submenu = document.getElementById("pages-submenu");
+  if (!submenu) {
+    console.warn("[allPages] ❌ submenu container not found.");
+    return;
+  }
+
+  // Ensure registry exists
+  const pages = window.pageRegistry && Array.isArray(window.pageRegistry)
+    ? window.pageRegistry
+    : Object.keys(window.pageRegistry || {});
+
+  if (!pages.length) {
+    console.warn("[allPages] ⚠ No pages found in registry.");
+    submenu.innerHTML = `<sl-menu-item disabled>(No pages)</sl-menu-item>`;
+    return;
+  }
+
+  console.log("[allPages] ✅ Pages:", pages);
+
+  // Clear existing items
+  submenu.innerHTML = "";
+
+  // Insert pages
+  pages.forEach(name => {
+    const item = document.createElement("sl-menu-item");
+    item.textContent = name;
+    item.value = name;
+    item.addEventListener("click", () => {
+      handleCueTrigger({ type: "cueNav", action: name, uid: name }, false, true);
+    });
+    submenu.appendChild(item);
+  });
+
+  console.log("[allPages] ✅ Submenu updated.");
+}
+
+
+
+window.refreshAllPagesMenu = refreshAllPagesMenu;
