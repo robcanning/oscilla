@@ -131,8 +131,6 @@
       <sl-dropdown>
         <sl-button id="hamburger-menu" slot="trigger">☰</sl-button>
         <sl-menu>
-          <sl-menu-item value="load">Load Score</sl-menu-item>
-          <sl-divider></sl-divider>
 
           <!-- Pages submenu -->
           <sl-menu-item id="pages-submenu-root">Pages
@@ -143,6 +141,9 @@
           <sl-menu-item id="projects-submenu-root">Projects
             <sl-menu slot="submenu" id="projects-submenu"></sl-menu>
           </sl-menu-item>
+                    <sl-divider></sl-divider>
+
+                    <sl-menu-item value="preferences">Preferences</sl-menu-item>
 
         </sl-menu>
       </sl-dropdown>
@@ -155,6 +156,28 @@
   <sl-dialog id="project-dialog" label="Load Score">
     <div id="project-list" class="project-list"></div>
   </sl-dialog>
+
+<sl-dialog id="preferences-dialog" label="Preferences">
+  <form id="preferences-form" class="prefs-form"></form>
+  <sl-button slot="footer" id="preferences-save" variant="primary">Save</sl-button>
+</sl-dialog>
+
+<style>
+  .prefs-form {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 6px 12px;
+    padding: 8px;
+    z-index: 99999;
+  }
+  .prefs-form input[type="text"],
+  .prefs-form input[type="number"] {
+    width: 100%;
+  }
+</style>
+
+
+
 
 
   <!-- Controls -->

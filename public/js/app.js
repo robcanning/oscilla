@@ -2218,6 +2218,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
+document.getElementById("hamburger-menu")
+  .addEventListener("sl-select", e => {
+    if (e.detail.item.value === "preferences") {
+      openPreferencesDialog();
+    }
+    if (e.detail.item.value === "load") {
+      document.getElementById("project-dialog").show();
+    }
+  });
+
+
+
+
   // Single keydown event listener
   document.addEventListener('keydown', (event) => {
     // console.log(`Key pressed: ${event.key}`);

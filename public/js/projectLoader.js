@@ -121,10 +121,16 @@ export async function loadProject(projectName, options = {}) {
     }
 
 
+    window.applyPreferences = function applyPreferences(prefs) {
+      console.log("[Prefs] (noop) applyPreferences called with:", prefs);
+    };
 
     // 2️⃣ Load and apply preferences
     const prefs = await loadPreferences(window.projectBase);
 
+    // ✅ Make available to Preferences dialog and runtime
+    window.currentProjectPrefs = prefs;
+    window.currentProjectName = projectName;
 
     // ✅ Duration normalization (minutes → ms)
     if (prefs.duration_minutes && prefs.duration_minutes > 0) {
@@ -139,8 +145,119 @@ export async function loadProject(projectName, options = {}) {
     if (prefs.defaultPlaybackSpeed) setSpeed(prefs.defaultPlaybackSpeed);
 
 
+
+    // create preferences dialog from json
+    window.openPreferencesDialog = function openPreferencesDialog() {
+      console.log("[Prefs] openPreferencesDialog() called");
+
+      const dlg = document.getElementById("preferences-dialog");
+      const form = document.getElementById("preferences-form");
+
+      console.log("[Prefs] dialog:", dlg);
+      console.log("[Prefs] form:", form);
+
+      // Where prefs should come from
+      const prefs = window.currentProjectPrefs;
+      const projectName = window.currentProjectName;
+
+      console.log("[Prefs] currentProjectName:", projectName);
+      console.log("[Prefs] currentProjectPrefs:", prefs);
+
+      if (!prefs) {
+        console.warn("[Prefs] ❌ No preferences loaded — aborting UI build");
+        dlg.show();
+        return;
+      }
+
+      form.innerHTML = ""; // clear
+
+      for (const [key, value] of Object.entries(prefs)) {
+        if (key.startsWith("_")) {
+          console.log(`[Prefs] Skipping metadata key: ${key}`);
+          continue;
+        }
+
+        console.log(`[Prefs] Building field: ${key} =`, value);
+
+        const label = document.createElement("label");
+        label.textContent = key;
+
+        let input;
+        if (typeof value === "boolean") {
+          input = document.createElement("sl-switch");
+          input.checked = value;
+        } else if (typeof value === "number") {
+          input = document.createElement("input");
+          input.type = "number";
+          input.value = value;
+        } else {
+          input = document.createElement("input");
+          input.type = "text";
+          input.value = value;
+        }
+
+        input.dataset.prefKey = key;
+
+        form.appendChild(label);
+        form.appendChild(input);
+      }
+
+      console.log("[Prefs] ✅ UI build complete — now displaying dialog.");
+      dlg.show();
+    };
+
+
+
+    document.addEventListener("sl-select", (e) => {
+      console.log("[Menu] sl-select:", e.detail.item?.value);
+
+      if (e.detail.item?.value === "preferences") {
+        console.log("[Menu] → openPreferencesDialog() requested");
+        openPreferencesDialog?.();
+      }
+    });
+
+
+
+    document.getElementById("preferences-save").addEventListener("click", async () => {
+      const form = document.getElementById("preferences-form");
+      const prefs = { ...window.currentProjectPrefs };
+
+      form.querySelectorAll("[data-pref-key]").forEach(el => {
+        const key = el.dataset.prefKey;
+        if (el.tagName === "SL-SWITCH") {
+          prefs[key] = el.checked;
+        } else if (el.type === "number") {
+          prefs[key] = Number(el.value);
+        } else {
+          prefs[key] = el.value;
+        }
+      });
+
+      window.currentProjectPrefs = prefs;
+
+      // ✅ Save to server
+      await fetch(`/save-preferences/${window.currentProjectName}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(prefs, null, 2),
+      });
+
+      // ✅ Apply runtime relevant settings here:
+      applyPreferences(prefs);
+
+      document.getElementById("preferences-dialog").hide();
+    });
+
+
+
+
+
+
+
+
     // this clears the page and jumps back to scroll before new score load
-    window.returnToScrollingScore?.(); 
+    window.returnToScrollingScore?.();
 
     // 3️⃣ Prepare scroll container
     const container = document.getElementById("scoreContainer");
@@ -202,10 +319,10 @@ export async function loadProject(projectName, options = {}) {
       }
     });
 
-// ✅ Refresh Pages submenu after project load
-if (typeof window.refreshAllPagesMenu === "function") {
-  window.refreshAllPagesMenu();
-}
+    // ✅ Refresh Pages submenu after project load
+    if (typeof window.refreshAllPagesMenu === "function") {
+      window.refreshAllPagesMenu();
+    }
 
 
 

@@ -133,6 +133,33 @@ app.use('/docs', express.static(path.join(process.cwd(), 'public/docs/md_docs'))
 
 // app.use(express.static('dist'));
 
+
+app.post("/save-preferences/:project", express.json(), (req, res) => {
+  const project = req.params.project;
+  const prefs = req.body;
+
+  const file = path.join(__dirname, "public", "scores", project, "preferences.json");
+
+  try {
+    fs.writeFileSync(file, JSON.stringify(prefs, null, 2), "utf8");
+    console.log(`[Prefs] ✅ Saved preferences for ${project}`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[Prefs] ❌ Failed to save preferences:", err);
+    res.status(500).json({ error: "Failed to write preferences.json" });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
 const server = app.listen(port, () => {
   console.log(`HTTP server is running on http://localhost:${port}`);
   console.log(
