@@ -2729,12 +2729,6 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
 }
 
 
-
-
-
-
-
-
 // -------------------------------------------------------------
 // 🚀 Kick all animations inside a standalone page SVG
 // -------------------------------------------------------------
@@ -2832,39 +2826,50 @@ export function resolvePageTransition(opts = {}) {
     return;
   }
 
-  // -------------------------------------------------------------
-  // 2️⃣ Case: return to scrolling score (_return or popup)
-  // -------------------------------------------------------------
-  if (!window.isCuePagePlaylistActive && (ret || mode === "popup")) {
-    console.log("[cuePage] ✅ Returning to scrolling score.");
-    container.style.transition = "opacity 0.5s ease";
-    container.style.opacity = "0";
+// -------------------------------------------------------------
+// 2️⃣ Case: return to scrolling score (_return or popup)
+// -------------------------------------------------------------
+if (!window.isCuePagePlaylistActive && (ret || mode === "popup")) {
+  window.returnToScrollingScore?.();
+  return;
+}
 
-    setTimeout(() => {
-      window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
-      window._activePageButtons = [];
-      container.style.display = "none";
-      content.innerHTML = "";
-      ps.mode = "scroll";
-      ps.current = null;
-
-      // 🟢 Fade background back in
-      if (mainScore) {
-        mainScore.style.opacity = "1";
-        mainScore.style.pointerEvents = "auto";
-      }
-
-      resumeScrollScore();
-    }, 500);
-    return;
-  }
-
-  // -------------------------------------------------------------
   // 3️⃣ Case: persistent page mode
   // -------------------------------------------------------------
   console.log("[cuePage] Holding page mode.");
   ps.mode = "page";
 }
+
+
+
+window.returnToScrollingScore = function returnToScrollingScore() {
+  console.log("[cuePage] Returning to scrolling score.");
+
+  const container = document.getElementById("singlePage-container");
+  const content   = document.getElementById("singlePage-content");
+  const mainScore = document.getElementById("scoreInner");
+  const ps        = window.pageState;
+
+  container.style.transition = "opacity 0.5s ease";
+  container.style.opacity = "0";
+
+  setTimeout(() => {
+    window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
+    window._activePageButtons = [];
+    container.style.display = "none";
+    content.innerHTML = "";
+    ps.mode = "scroll";
+    ps.current = null;
+
+    if (mainScore) {
+      mainScore.style.opacity = "1";
+      mainScore.style.pointerEvents = "auto";
+    }
+
+    resumeScrollScore();
+  }, 500);
+};
+
 
 
 /**
@@ -3828,19 +3833,35 @@ export function handleNavCue(ast) {
 
   // SCROLL MODE (auto-resume)
   // ------------------------------------------------------------
-  if (action === "scroll") {
-    window._resumeAfterJump = true;
-    if (target) window.jumpToRehearsalMark?.(target);
-    return;
+// SCROLL MODE (auto-resume)
+if (action === "scroll") {
+  window._resumeAfterJump = true;
+
+  // ✅ Leave page-mode view if active
+  window.returnToScrollingScore?.();
+
+  // ✅ Jump if target provided
+  if (target) {
+    window.jumpToRehearsalMark?.(target);
   }
 
-  // SCROLL MODE PAUSED (no auto-resume)
-  // ------------------------------------------------------------
-  if (action === "scrollPaused") {
-    window._resumeAfterJump = false;
-    if (target) window.jumpToRehearsalMark?.(target);
-    return;
+  return;
+}
+
+// SCROLL MODE PAUSED (stay paused but show score)
+if (action === "scrollPaused") {
+  window._resumeAfterJump = false;
+
+  // ✅ Leave page-mode view if active
+  window.returnToScrollingScore?.();
+
+  if (target) {
+    window.jumpToRehearsalMark?.(target);
   }
+
+  // stays paused
+  return;
+}
 
   // DIRECT PAGE / REHEARSAL JUMP
   // ------------------------------------------------------------
@@ -3855,8 +3876,6 @@ export function handleNavCue(ast) {
   window._resumeAfterJump = true;
   window.jumpToRehearsalMark?.(action);
 }
-
-
 
 
 

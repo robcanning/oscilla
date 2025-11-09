@@ -1608,7 +1608,7 @@ body.inverted #stopwatch {
   /* ✅ Add this line */
   padding: 0 15px;
   font-size: 1rem;
-  z-index: 2000;
+  z-index: 99999;
   pointer-events: auto;
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
