@@ -1,158 +1,219 @@
-// reuse.js — ES Module (directory-index preload version)
+// ============================================================
+// reuse.js — ES Module
+// Reusable SVG block system with:
+//   <g id="reuse-thing"> … </g>       ← definition
+//   <g id="use(thing)">              ← inject at original source location
+//   <g id="use(thing)@self" ...>     ← inject at placeholder location
+// Works in scroll mode + page mode.
+// ============================================================
+
+
+import {
+    stripAllTransforms,
+    alignCloneAtPlaceholder_TopLeft,
+    uniqueReuseId
+} from "./utils.js";
 
 export let reuseRegistry = Object.create(null);
 
 /** Resolve the base URL for /pages/ */
 function getPagesBase(userProvided) {
-  if (userProvided) return userProvided.replace(/\/+$/, "") + "/";
-  if (typeof window !== "undefined" && window.pagesDir) {
-    // ensure trailing slash
-    return ("" + window.pagesDir).replace(/\/+$/, "") + "/";
-  }
-  return "/pages/"; // default
+    if (userProvided) return userProvided.replace(/\/+$/, "") + "/";
+    if (typeof window !== "undefined" && window.pagesDir) {
+        return ("" + window.pagesDir).replace(/\/+$/, "") + "/";
+    }
+    return "/pages/";
 }
 
-/**
- * Find reusable blocks *inside the currently loaded score SVG*.
- * <g id="reuse-XYZ">…</g>
- */
+// ------------------------------------------------------------
+// 1) Register reusable blocks in the currently loaded SVG
+// ------------------------------------------------------------
 export function registerReuseBlocks(svgRoot) {
-  if (!svgRoot) return;
+    if (!svgRoot) return;
+    window.reuseRegistry = window.reuseRegistry || {};
 
-  const blocks = svgRoot.querySelectorAll('g[id^="reuse-"]');
-  blocks.forEach(block => {
-    const name = block.id.replace(/^reuse-/, "");
-    reuseRegistry[name] = block.cloneNode(true);
-    console.log(`[reuse] Registered local block "${name}"`);
-  });
+    const defs = svgRoot.querySelectorAll('g[id^="reuse-"]');
+    defs.forEach(g => {
+        const name = g.id.replace(/^reuse-/, "").trim();
+        if (!name) return;
 
-  if (typeof window !== "undefined") {
-    window.reuseRegistry = reuseRegistry; // debug
-  }
-}
+        // Capture original transform for origin-placement use()
+        const originalTransform = g.getAttribute("transform") || "";
 
-/**
- * Preload ALL SVGs found in the /pages/ directory by scraping the directory index.
- * No manifest.json required. Works when the server exposes /pages/ as static with autoindex.
- */
-export async function preloadReuseBlocksFromPages(pagesUrl) {
-  const base = getPagesBase(pagesUrl);
+        reuseRegistry[name] = {
+            template: g.cloneNode(true),
+            sourceTransform: originalTransform
+        };
 
-  try {
-    // 1) Fetch directory index HTML (e.g., Apache/Express autoindex page)
-    const res = await fetch(base, { cache: "no-store" });
-    if (!res.ok) {
-      console.warn(`[reuse] ⚠️ Cannot read directory index at ${base} (HTTP ${res.status}).`);
-      return;
-    }
-    const html = await res.text();
+        console.log(`[reuse] ✅ registered "${name}" (origin="${originalTransform}")`);
+    });
 
-    // 2) Extract *.svg file names from hrefs
-const svgFiles = [...html.matchAll(/href="([^"]+\.svg)"/gi)]
-  .map(m => decodeURIComponent(m[1]).split('/').pop()) 
-      .filter(name => !name.startsWith("?") && !name.startsWith("."));
-
-    if (!svgFiles.length) {
-      console.warn(`[reuse] ⚠️ No SVGs found in ${base}`);
-      return;
-    }
-
-    console.log(`[reuse] 🌐 Found SVGs in ${base}:`, svgFiles);
-
-    // 3) Fetch each SVG and register any <g id="reuse-..."> blocks
-    await Promise.all(
-      svgFiles.map(async (fname) => {
-        const url = base + fname.replace(/^\/+/, "");
-        try {
-          const r = await fetch(url, { cache: "no-store" });
-          if (!r.ok) {
-            console.warn(`[reuse] ⚠️ Failed to fetch ${url} (HTTP ${r.status}).`);
-            return;
-          }
-          const svgText = await r.text();
-          const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
-          const parseErr = doc.querySelector("parsererror");
-          if (parseErr) {
-            console.warn(`[reuse] ⚠️ Parser error in ${url}`);
-            return;
-          }
-
-          const blocks = doc.querySelectorAll('g[id^="reuse-"]');
-          blocks.forEach(block => {
-            const name = block.id.replace(/^reuse-/, "");
-            reuseRegistry[name] = block.cloneNode(true);
-            reuseRegistry[name].setAttribute("data-reuse-source", url);
-            console.log(`[reuse] + "${name}" (from ${fname})`);
-          });
-        } catch (err) {
-          console.warn(`[reuse] ❌ Error reading ${url}:`, err);
-        }
-      })
-    );
-
-    console.log(`[reuse] ✅ External preload complete. Blocks:`, Object.keys(reuseRegistry));
-  } catch (e) {
-    console.warn("[reuse] ❌ preloadReuseBlocksFromPages() failed:", e);
-  }
-
-  if (typeof window !== "undefined") {
     window.reuseRegistry = reuseRegistry;
-  }
 }
 
-/** Insert a reusable block into the active SVG (default: original coords). */
-export function handleUse(name, anchorEl = null) {
-  if (!name) return;
-  const source = reuseRegistry[name];
+// ------------------------------------------------------------
+// 2) Preload reusable blocks from all SVGs in /pages/
+// (directory-index scraping; no manifest needed)
+// ------------------------------------------------------------
+export async function preloadReuseBlocksFromPages(pagesUrl) {
+    const base = getPagesBase(pagesUrl);
 
-  if (!source) {
-    console.warn(`[use] ⚠️ No reusable block named "${name}" found.`);
-    return;
-  }
+    try {
+        const res = await fetch(base, { cache: "no-store" });
+        if (!res.ok) {
+            console.warn(`[reuse] ⚠️ Cannot read directory index at ${base} (HTTP ${res.status}).`);
+            return;
+        }
+        const html = await res.text();
 
-  const clone = source.cloneNode(true);
+        const svgFiles = [...html.matchAll(/href="([^"]+\.svg)"/gi)]
+            .map(m => decodeURIComponent(m[1]).split('/').pop())
+            .filter(x => x && !x.startsWith(".") && !x.startsWith("?"));
 
-  const currentSvg =
-    window._currentPageSvg ||
-    document.querySelector('#singlePage-content svg') ||
-    document.querySelector('svg#pageSVG') ||
-    document.querySelector('svg#score') ||
-    document.querySelector('#scoreContainer svg');
+        if (!svgFiles.length) return console.warn(`[reuse] ⚠️ no .svg files in ${base}`);
 
-  if (!currentSvg) {
-    console.warn("[use] ⚠️ No SVG found to insert into.");
-    return;
-  }
+        console.log(`[reuse] 🌐 scanning pages for reuse-blocks →`, svgFiles);
 
-  currentSvg.appendChild(clone);
+        await Promise.all(svgFiles.map(async (fname) => {
+            const url = base + fname;
+            try {
+                const r = await fetch(url, { cache: "no-store" });
+                if (!r.ok) return;
 
-  // Allow internal button() to be discovered
-  window.assignCues?.(clone, window.cues);
+                const text = await r.text();
+                const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+                const parseErr = doc.querySelector("parsererror");
+                if (parseErr) return;
 
-  // Restart animations / observers
-  window.propagate?.(clone);
-  window.initializeObserver?.(clone);
+                doc.querySelectorAll('g[id^="reuse-"]').forEach(g => {
+                    const name = g.id.replace(/^reuse-/, "").trim();
+                    const originalTransform = g.getAttribute("transform") || "";
 
-  console.log(`[use] ✅ Inserted "${name}"`);
+                    reuseRegistry[name] = {
+                        template: g.cloneNode(true),
+                        sourceTransform: originalTransform
+                    };
+
+                    reuseRegistry[name].template.setAttribute("data-reuse-source", url);
+                    console.log(`[reuse] + "${name}" from ${fname}`);
+                });
+            } catch (err) {
+                console.warn(`[reuse] ❌ error reading ${url}:`, err);
+            }
+        }));
+
+        console.log(`[reuse] ✅ preload complete. blocks:`, Object.keys(reuseRegistry));
+    } catch (err) {
+        console.warn(`[reuse] ❌ preloadReuseBlocksFromPages() failed:`, err);
+    }
+
+    window.reuseRegistry = reuseRegistry;
 }
 
-/** Expand all <g id="use(NAME)"> in the given SVG. */
+// ------------------------------------------------------------
+// 3) Insert reusable blocks
+//
+// use(name)      → place at original transform from definition
+// use(name)@self → place at placeholder's transform
+// ------------------------------------------------------------
+
+export function handleUse(raw, placeholder, scopeSvg = null) {
+    const svg = scopeSvg || (placeholder && placeholder.ownerSVGElement);
+    if (!svg || !placeholder) return null;
+
+    const at = raw.indexOf('@');
+    const name = (at >= 0 ? raw.slice(0, at) : raw).trim();
+    const placement = (at >= 0 ? raw.slice(at + 1) : '').trim(); // 'self' or ''
+
+    const reg = (window && window.reuseRegistry) || {};
+    const def = reg[name];
+    if (!def || !def.template) {
+        console.warn(`[reuse] missing block "${name}"`);
+        try { placeholder.remove(); } catch { }
+        return null;
+    }
+
+    const parent = placeholder.parentNode;
+    if (!parent) return null;
+
+    // Clone template group
+    const clone = def.template.cloneNode(true);
+    // Ensure <g> wrapper; most reuse-* are already <g>
+    if (clone.tagName?.toLowerCase() !== 'g') {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.appendChild(clone);
+        clone = g;
+    }
+
+    // Unique id
+    const baseId = (def.template.id || `reuse-${name}`).replace(/__[a-z0-9]+$/i, "");
+    clone.id = uniqueReuseId(baseId);
+
+    // Insert before placeholder so CTMs/bboxes are valid
+    parent.insertBefore(clone, placeholder);
+
+    if (placement === "self") {
+        // Remove all transforms so clone is in pure local geometry
+        stripAllTransforms(clone);
+
+        // Visually align clone to the placeholder position
+        alignCloneAtPlaceholder_TopLeft(clone, placeholder);
+
+    } else {
+        // keep original authored transform for non-self case
+        const t = def.sourceTransform || def.template.getAttribute("transform") || "";
+        if (t) clone.setAttribute("transform", t);
+    }
+
+    // Remove placeholder
+    placeholder.remove();
+
+    // Done
+    return clone;
+}
+
+
+// ------------------------------------------------------------
+// 4) Auto-scan SVG and inject all use() references
+// ------------------------------------------------------------
 export function autoInjectUseBlocks(svgRoot) {
-  if (!svgRoot) return;
+    if (!svgRoot) return;
+    window.reuseRegistry = window.reuseRegistry || {};
 
-const directives = svgRoot.querySelectorAll('[id*="use("]');
-  directives.forEach(el => {
-    const match = el.id.match(/^use\(([^)]+)\)/);
-    const name = match?.[1]?.trim();
-    if (!name) return;
-    handleUse(name, el);
-  });
+    // Take static snapshot — allows safe removal while iterating
+    const placeholders = Array.from(svgRoot.querySelectorAll('[id^="use("]'));
+
+    placeholders.forEach(ph => {
+        const id = ph.id || "";
+
+        //   use(name)
+        //   use(name)@self
+        //   use(name)@self   (with transforms)
+        //
+        //   capture:
+        //     group1 = name
+        //     group2 = optional "@self"
+        //
+        const m = id.match(/^use\(\s*([^)]+)\s*\)(?:@(\w+))?$/);
+        if (!m) return;
+
+        const name = m[1].trim();
+        const placement = m[2]?.trim(); // "self" or undefined
+
+        handleUse(
+            placement ? `${name}@${placement}` : name,
+            ph,
+            svgRoot
+        );
+    });
 }
 
-// Optional globals for console debugging
+// ------------------------------------------------------------
+// Export globals (optional, convenient for console debugging)
+// ------------------------------------------------------------
 if (typeof window !== "undefined") {
-  window.handleUse = handleUse;
-  window.autoInjectUseBlocks = autoInjectUseBlocks;
-  window.registerReuseBlocks = registerReuseBlocks;
-  window.preloadReuseBlocksFromPages = preloadReuseBlocksFromPages;
+    window.registerReuseBlocks = registerReuseBlocks;
+    window.autoInjectUseBlocks = autoInjectUseBlocks;
+    window.handleUse = handleUse;
+    window.preloadReuseBlocksFromPages = preloadReuseBlocksFromPages;
 }
