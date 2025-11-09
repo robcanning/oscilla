@@ -222,8 +222,7 @@ export const initializeSVG = async (svgElement) => {
 
   // ✅ Replace <use> elements (already done here)
 
-
-  // assignCues(svgElement, window.cues);
+   assignCues(svgElement, window.cues);
 
   enableLiveInspector({
     startRotate,
@@ -255,18 +254,8 @@ export const initializeSVG = async (svgElement) => {
   }
 
   // // ✅ Register reusable cue groups (menus, UI clusters)
-  // window.cues = [];
+    window.cues = [];
   
-  // // registerSvgGroups(svgElement);
-
-  // console.log("[Debug] Total cues:", window.cues.length);
-
-  // for (const cue of window.cues) {
-  //   if (!cue.element) {
-  //     console.warn(`[Debug] Cue "${cue.id}" is missing element`);
-  //   }
-  // }
-
 registerReuseBlocks(svgElement);
 
 
@@ -363,12 +352,6 @@ registerReuseBlocks(svgElement);
     observeAnimations();
 
 
-
-
-
-
-
-
     // ✅ Run setupScore and cue assignment after the SVG has fully painted
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -385,6 +368,7 @@ registerReuseBlocks(svgElement);
         if (!window.cues) window.cues = [];
 
         console.log("[initializeSVG] Assigning cues after layout is fully ready...");
+        
         assignCues(svgReady, window.cues);
 
         if (typeof window.setupScore === "function") {
@@ -400,43 +384,43 @@ registerReuseBlocks(svgElement);
     });
 
 
-    // TODO CSS IN SCROLL MODE - HEIGHT NEEDS TO BE 95% OR SOMETHING
-    // BUT THEN THE JUMP2X ETC SYNC BREAKS . NEED TO SORT ORDER OF EX
-    // PROJECT LOADER ALSO DOES CSS STUFF LIKE THIS - WHAT IS REDUNDANT?
-    // 
+    // // TODO CSS IN SCROLL MODE - HEIGHT NEEDS TO BE 95% OR SOMETHING
+    // // BUT THEN THE JUMP2X ETC SYNC BREAKS . NEED TO SORT ORDER OF EX
+    // // PROJECT LOADER ALSO DOES CSS STUFF LIKE THIS - WHAT IS REDUNDANT?
+    // // 
 
-    // --- Wide-scroll layout correction ---
-    const applyWideScrollLayout = () => {
-      const cont = document.getElementById("scoreContainer");
-      const svg = svgElement;
-      if (!svg || !cont) return;
+    // // --- Wide-scroll layout correction ---
+    // const applyWideScrollLayout = () => {
+    //   const cont = document.getElementById("scoreContainer");
+    //   const svg = svgElement;
+    //   if (!svg || !cont) return;
 
-      Object.assign(cont.style, {
-        width: "100vw",
-        height: "100vh",
-        overflowX: "auto",
-        overflowY: "hidden",
-        whiteSpace: "nowrap",
-        display: "block",
-        position: "relative"
-      });
+    //   Object.assign(cont.style, {
+    //     width: "100vw",
+    //     height: "100vh",
+    //     overflowX: "auto",
+    //     overflowY: "hidden",
+    //     whiteSpace: "nowrap",
+    //     display: "block",
+    //     position: "relative"
+    //   });
 
-      svg.removeAttribute("width");
-      svg.removeAttribute("height");
-      Object.assign(svg.style, {
-        display: "inline-block",
-        height: "100vh",
-        width: "auto",
-        maxWidth: "none",
-        maxHeight: "100%",
-        verticalAlign: "top"
-      });
+    //   svg.removeAttribute("width");
+    //   svg.removeAttribute("height");
+    //   Object.assign(svg.style, {
+    //     display: "inline-block",
+    //     height: "100vh",
+    //     width: "auto",
+    //     maxWidth: "none",
+    //     maxHeight: "100%",
+    //     verticalAlign: "top"
+    //   });
 
-      svg.getBoundingClientRect(); // force reflow
-      console.log("[initializeSVG] Applied wide-scroll layout correction.");
-    };
+    //   svg.getBoundingClientRect(); // force reflow
+    //   console.log("[initializeSVG] Applied wide-scroll layout correction.");
+    // };
 
-    window.applyWideScrollLayout = applyWideScrollLayout;
+    // window.applyWideScrollLayout = applyWideScrollLayout;
 
 
 
@@ -529,14 +513,24 @@ window.triggeredCues = new Set();
 let lastJumpTime = 0;
 
 window.playheadX = 0;
+
+window.getPlayheadX = function () {
+  const playhead = document.getElementById("playhead");
+  const scoreContainer = window.scoreContainer;
+  if (!playhead || !scoreContainer) return null;
+
+  const containerRect = scoreContainer.getBoundingClientRect();
+  const playheadRect = playhead.getBoundingClientRect();
+  return playheadRect.left - containerRect.left;
+};
+
+
 window.estimatedPlayheadX = 0;
 window.speedMultiplier = 1;
 window.scoreContainer = document.getElementById('scoreContainer');
 
 // Duration of score in minutes (default = 30 minutes)
 // window.duration = 30;
-
-
 
 
 // ===========================
