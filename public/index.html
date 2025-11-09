@@ -131,19 +131,22 @@
       <sl-dropdown>
         <sl-button id="hamburger-menu" slot="trigger">☰</sl-button>
         <sl-menu>
-          <!-- <sl-menu-item value="settings">Settings</sl-menu-item> -->
           <sl-menu-item value="load">Load Score</sl-menu-item>
-          <!-- <sl-menu-item value="save">Save State</sl-menu-item> -->
           <sl-divider></sl-divider>
-          
-   <!-- ✅ Pages Submenu Placeholder -->
-    <sl-menu-item id="pages-submenu-root">Pages
-      <sl-menu slot="submenu" id="pages-submenu"></sl-menu>
-    </sl-menu-item>
 
-          <!-- <sl-menu-item value="quit">Quit</sl-menu-item> -->
+          <!-- Pages submenu -->
+          <sl-menu-item id="pages-submenu-root">Pages
+            <sl-menu slot="submenu" id="pages-submenu"></sl-menu>
+          </sl-menu-item>
+
+          <!-- ✅ Projects submenu -->
+          <sl-menu-item id="projects-submenu-root">Projects
+            <sl-menu slot="submenu" id="projects-submenu"></sl-menu>
+          </sl-menu-item>
+
         </sl-menu>
       </sl-dropdown>
+
     </div>
   </div>
 
@@ -309,18 +312,18 @@
 
   <div id="black-overlay"></div>
 
-<div id="oscilla-console">
-  <textarea id="oscilla-console-editor"></textarea>
-</div>
+  <div id="oscilla-console">
+    <textarea id="oscilla-console-editor"></textarea>
+  </div>
 
-<div id="oscilla-uid-sidebar">
-  <input id="oscilla-uid-search" placeholder="filter…" autocomplete="off">
-  <div id="oscilla-uid-list"></div>
-</div>
+  <div id="oscilla-uid-sidebar">
+    <input id="oscilla-uid-search" placeholder="filter…" autocomplete="off">
+    <div id="oscilla-uid-list"></div>
+  </div>
 
 
 
- 
+
   <script>
     fetch('/config')
       .then(response => response.json())

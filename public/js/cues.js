@@ -240,8 +240,8 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
     case "cueMetro":
       return handleMetronomeCue(ast, cueElement);
 
-case "cuePause":
-  return handlePauseCue(ast);
+    case "cuePause":
+      return handlePauseCue(ast);
 
 
     case "cueSpeed": {
@@ -917,38 +917,38 @@ export function assignCues(svgRoot, cuesArray = []) {
   // Walk SVG to register cues & build cueButtons
   // ----------------------------------------------------
   function walk(node) {
-  for (const child of node.children) {
-    const id = child.id;
-    if (!id || !/[()]/.test(id)) {
+    for (const child of node.children) {
+      const id = child.id;
+      if (!id || !/[()]/.test(id)) {
+        walk(child);
+        continue;
+      }
+
+      let ast = null;
+      try { ast = parseCueToAST(id.trim()); } catch { }
+
+      // --- ✅ Skip cueButtons here. Let buildCueButtonsIn() handle them.
+      if (ast && ast.type === "cueButton") {
+        walk(child);
+        continue;
+      }
+
+      // --- ✅ Normal scroll-trigger cue
+      if (ast && ast.type !== "cueButton") {
+        const box = child.getBBox?.();
+        cuesArray.push({
+          id,
+          ast,
+          element: child,
+          triggered: false,
+          ...(box && { x: box.x, width: box.width })
+        });
+        registerCueUid(id, "walk");
+      }
+
       walk(child);
-      continue;
     }
-
-    let ast = null;
-    try { ast = parseCueToAST(id.trim()); } catch {}
-
-    // --- ✅ Skip cueButtons here. Let buildCueButtonsIn() handle them.
-    if (ast && ast.type === "cueButton") {
-      walk(child);
-      continue;
-    }
-
-    // --- ✅ Normal scroll-trigger cue
-    if (ast && ast.type !== "cueButton") {
-      const box = child.getBBox?.();
-      cuesArray.push({
-        id,
-        ast,
-        element: child,
-        triggered: false,
-        ...(box && { x: box.x, width: box.width })
-      });
-      registerCueUid(id, "walk");
-    }
-
-    walk(child);
   }
-}
 
   walk(svgRoot);
 
@@ -957,7 +957,7 @@ export function assignCues(svgRoot, cuesArray = []) {
   // ----------------------------------------------------
   const scrollContainer = document.getElementById("scoreInner");
   if (scrollContainer) {
-     buildCueButtonsIn(svgRoot, scrollContainer);
+    buildCueButtonsIn(svgRoot, scrollContainer);
   }
 
   return cuesArray;
@@ -2050,7 +2050,6 @@ export async function handlePageCueFromAST(ast) {
     }
   };
 
-
   // ------------------------------------------------------------
   // Expand pattern and filter out nulls
   // ------------------------------------------------------------
@@ -2058,7 +2057,7 @@ export async function handlePageCueFromAST(ast) {
   console.log("[CueDSL] ▶ Page pattern expanded to:", pages);
 
   if (!pages.length) {
-    console.warn("[CueDSL] ⚠️ Empty or invalid page pattern:", ast.pattern);
+    console.warn("[CueDSL] Empty or invalid page pattern:", ast.pattern);
     return;
   }
 
@@ -2070,7 +2069,7 @@ export async function handlePageCueFromAST(ast) {
 
   for (let i = 0; i < pages.length; i++) {
     if (isCancelled()) {
-      console.log("[CueDSL] ⏹️ Sequence stopped due to mode change.");
+      console.log("[CueDSL] Sequence stopped due to mode change.");
       return;
     }
 
@@ -2084,14 +2083,13 @@ export async function handlePageCueFromAST(ast) {
     await handlePageCue(cue, durNum, commonParams);
   }
 
-  console.log("[CueDSL] ✅ cuePage pattern sequence finished.");
+  console.log("[CueDSL] cuePage pattern sequence finished.");
 
   // ------------------------------------------------------------
   // 🧩 Run global after: clause (if present)
   // ------------------------------------------------------------
   handleAfterAction(ast);
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////
 
@@ -2127,11 +2125,7 @@ function handleFadeCueFromAST(ast, cueElementId) {
     console.debug("[OSC] 🎚 Sent fade update:", message);
   }
 
-
-
-
-
-  // 🎯 Resolve target: "self" defaults to element containing this cue
+  //  Resolve target: "self" defaults to element containing this cue
   let target = null;
 
   if (targetId === "self") {
@@ -2149,7 +2143,7 @@ function handleFadeCueFromAST(ast, cueElementId) {
       window.svgElement?.getElementById?.(targetId);
   }
 
-  // 💡 Robust fallback chain
+  //  fallback
   if (!target) {
     target =
       document.querySelector(`[data-id="${ast.type}"]`) ||
@@ -2159,7 +2153,7 @@ function handleFadeCueFromAST(ast, cueElementId) {
   }
 
   if (!target || !(target instanceof Element)) {
-    console.warn(`[cueFade] ⚠️ No valid target found for ID '${targetId}', aborting.`);
+    console.warn(`[cueFade] No valid target found for ID '${targetId}', aborting.`);
     console.groupEnd();
     return;
   }
@@ -2173,8 +2167,7 @@ function handleFadeCueFromAST(ast, cueElementId) {
   target.style.opacity = from;
 
 
-
-  // 🔖 Resolve and normalize UID once for OSC and logging
+  //  Resolve and normalize UID once for OSC and logging
   let uid = params.uid || null;
 
   if (!uid) {
@@ -2208,11 +2201,7 @@ function handleFadeCueFromAST(ast, cueElementId) {
 
 
 
-
-
-
-
-  // 🎚 Switch by mode
+  // Switch by mode
   switch (mode) {
     case "in":
     case "out":
@@ -2444,17 +2433,14 @@ export function handleStopwatchCue(ast, cueElement = null) {
   );
 }
 
-
-
 // ------------------------------------------------------------
 //  handleVideoCueFromAST(ast, cueElement)
 // ------------------------------------------------------------
 // Plays a video from window.videoDir according to cue:video(...) params.
-//
 // Supported params:
 // file:, size:, loop:, hold:, speed:, offsetX:, offsetY:, location:(fixed|scroll),
 // target:(uid), in:, out:, fadeIn:, fadeOut:, opacity:, audio:(0|1)
-//
+
 export function handleVideoCueFromAST(ast, cueElement = null) {
   if (!ast?.params) return console.error("[cueVideo] ❌ Missing AST params.");
 
@@ -2624,9 +2610,9 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
   vid.style.visibility = "hidden"; // hide the element to prevent the first frame flash
 
   vid.addEventListener("loadedmetadata", () => {
-    // --------------------------
+
     //  SEEK TO START ("in:" parameter)
-    // --------------------------
+
     if (inTime > 0) {
       vid.pause(); // stop autoplay so we can seek safely
       vid.currentTime = inTime; // jump to desired start position in seconds
@@ -2638,9 +2624,8 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
           vid.style.visibility = "visible"; // show the video only after the seek is complete
           vid.play(); // now begin playback from the desired inTime
 
-          // --------------------------
           //  FADE IN
-          // --------------------------
+
           if (fadeInDur > 0) {
             vid.style.opacity = 0;
             vid.animate([{ opacity: 0 }, { opacity: opacityTarget }], {
@@ -2652,7 +2637,6 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
             vid.style.opacity = opacityTarget; // no fade → set opacity immediately
           }
 
-          // --------------------------
           //  FADE OUT (based on "out:" and "fadeOut:" parameters)
           // --------------------------
           if (outTime > 0) {
@@ -2671,7 +2655,6 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
       );
     }
 
-    // --------------------------
     //  NO "in:" PARAMETER — PLAY IMMEDIATELY
     // --------------------------
     else {
@@ -2705,7 +2688,6 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
   });
 
 
-
   // --- Looping & removal
   if (p.loop === 0 || p.loop === "0") {
     vid.loop = true;
@@ -2729,8 +2711,7 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
 }
 
 
-// -------------------------------------------------------------
-// 🚀 Kick all animations inside a standalone page SVG
+// Kick all animations inside a standalone page SVG
 // -------------------------------------------------------------
 function startPageAnimations(svg) {
   console.log("[cuePage] 🚀 startPageAnimations()");
@@ -2826,29 +2807,27 @@ export function resolvePageTransition(opts = {}) {
     return;
   }
 
-// -------------------------------------------------------------
-// 2️⃣ Case: return to scrolling score (_return or popup)
-// -------------------------------------------------------------
-if (!window.isCuePagePlaylistActive && (ret || mode === "popup")) {
-  window.returnToScrollingScore?.();
-  return;
-}
+  // Case: return to scrolling score (_return or popup)
+  // -------------------------------------------------------------
+  if (!window.isCuePagePlaylistActive && (ret || mode === "popup")) {
+    window.returnToScrollingScore?.();
+    return;
+  }
 
-  // 3️⃣ Case: persistent page mode
+  // Case: persistent page mode
   // -------------------------------------------------------------
   console.log("[cuePage] Holding page mode.");
   ps.mode = "page";
 }
 
 
-
 window.returnToScrollingScore = function returnToScrollingScore() {
   console.log("[cuePage] Returning to scrolling score.");
 
   const container = document.getElementById("singlePage-container");
-  const content   = document.getElementById("singlePage-content");
+  const content = document.getElementById("singlePage-content");
   const mainScore = document.getElementById("scoreInner");
-  const ps        = window.pageState;
+  const ps = window.pageState;
 
   container.style.transition = "opacity 0.5s ease";
   container.style.opacity = "0";
@@ -3491,7 +3470,7 @@ export async function checkCueTriggers() {
         false,         // isRemote
         true,          // force
         cue.element    // ✅ so UI flashes work later
-      );      
+      );
       window.triggeredCues.add(cue.id);
     }
 
@@ -3833,35 +3812,35 @@ export function handleNavCue(ast) {
 
   // SCROLL MODE (auto-resume)
   // ------------------------------------------------------------
-// SCROLL MODE (auto-resume)
-if (action === "scroll") {
-  window._resumeAfterJump = true;
+  // SCROLL MODE (auto-resume)
+  if (action === "scroll") {
+    window._resumeAfterJump = true;
 
-  // ✅ Leave page-mode view if active
-  window.returnToScrollingScore?.();
+    // ✅ Leave page-mode view if active
+    window.returnToScrollingScore?.();
 
-  // ✅ Jump if target provided
-  if (target) {
-    window.jumpToRehearsalMark?.(target);
+    // ✅ Jump if target provided
+    if (target) {
+      window.jumpToRehearsalMark?.(target);
+    }
+
+    return;
   }
 
-  return;
-}
+  // SCROLL MODE PAUSED (stay paused but show score)
+  if (action === "scrollPaused") {
+    window._resumeAfterJump = false;
 
-// SCROLL MODE PAUSED (stay paused but show score)
-if (action === "scrollPaused") {
-  window._resumeAfterJump = false;
+    // ✅ Leave page-mode view if active
+    window.returnToScrollingScore?.();
 
-  // ✅ Leave page-mode view if active
-  window.returnToScrollingScore?.();
+    if (target) {
+      window.jumpToRehearsalMark?.(target);
+    }
 
-  if (target) {
-    window.jumpToRehearsalMark?.(target);
+    // stays paused
+    return;
   }
-
-  // stays paused
-  return;
-}
 
   // DIRECT PAGE / REHEARSAL JUMP
   // ------------------------------------------------------------

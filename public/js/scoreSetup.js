@@ -458,8 +458,6 @@ export async function preloadSvgGroups() {
 }
 
 
-
-
 /**
  * propagate(svgRoot)
  * ------------------------------------------------------------
@@ -644,87 +642,6 @@ export function preloadSpeedCues() {
 
 window.preloadSpeedCues = preloadSpeedCues;
 
-
-
-// /**
-//  * Preload all reusable SVG groups (group-, menu-, ui-) from every page SVG
-//  * in the active project's pagesDir.
-//  */
-async function preloadAllSvgGroups() {
-  window.groupRegistry = {};
-  const baseDir = window.pagesDir || "scores/pages/";
-  const files = [];
-
-  try {
-    // 1️⃣ Request the directory listing
-    const res = await fetch(baseDir);
-    if (!res.ok) throw new Error(`Cannot list directory: ${baseDir}`);
-
-    const html = await res.text();
-
-    // 2️⃣ Extract all .svg links — supports relative or full hrefs
-    const regex = /href=["']([^"']+\.svg)["']/g;
-    let match;
-    while ((match = regex.exec(html)) !== null) {
-      let href = match[1].trim();
-
-      // Normalize: if href already contains the full baseDir path, don't prepend it again
-      if (href.startsWith(baseDir) || href.startsWith("/" + baseDir)) {
-        files.push(href);
-      } else if (href.startsWith("shared/") || href.startsWith("/shared/")) {
-        files.push(href); // for shared/help pages
-      } else if (!href.startsWith("http") && !href.startsWith("/")) {
-        files.push(`${baseDir}${href}`);
-      } else {
-        files.push(href); // fallback for any other case
-      }
-    }
-
-    console.log(`[groupRegistry] 📂 Found ${files.length} SVG pages in ${baseDir}`);
-  } catch (err) {
-    console.warn(`[groupRegistry] ⚠️ Directory listing failed for ${baseDir}:`, err);
-  }
-
-
-  // 3️⃣ Fallback — if no listing, assume at least one page
-  if (files.length === 0) {
-    files.push(`${baseDir}page0.svg`);
-    console.warn(`[groupRegistry] ⚠️ Fallback to ${files[0]}`);
-  }
-
-  // 4️⃣ Fetch and parse each discovered SVG
-  for (const file of files) {
-    try {
-      const res = await fetch(file);
-      if (!res.ok) continue;
-
-      const text = await res.text();
-      const doc = new DOMParser().parseFromString(text, "image/svg+xml");
-
-      const groups = doc.querySelectorAll('g[id^="group-"], g[id^="menu-"], g[id^="ui-"]');
-      groups.forEach(g => {
-        const id = g.id.replace(/^group-|^menu-|^ui-/, "").trim();
-        const src = file.split("/").slice(-1)[0]; // short filename
-        if (window.groupRegistry[id]) {
-          console.warn(`[groupRegistry] ⚠️ Duplicate ID "${id}" (was in ${window.groupRegistry[id]._source}, now in ${src})`);
-        }
-        const clone = g.cloneNode(true);
-        clone._source = src; // track origin for debugging
-        window.groupRegistry[id] = clone;
-        console.log(`[groupRegistry] ✅ Registered "${id}" from ${src}`);
-      });
-
-    } catch (err) {
-      console.warn(`[groupRegistry] ⚠️ Skipped ${file}:`, err);
-    }
-  }
-
-  console.log(`[groupRegistry] ✅ Total reusable groups: ${Object.keys(window.groupRegistry).length}`);
-}
-
-window.preloadAllSvgGroups = preloadAllSvgGroups;
-
-//////////////////////////////////////////////////
 //////////////////////////////////////////////////
 
 
@@ -759,8 +676,6 @@ export async function autoInjectGroupsInScroll(svgElement) {
 window.autoInjectGroupsInScroll = autoInjectGroupsInScroll;
 
 
-
-
 export async function setupScore(svgElement) {
 
   if (!svgElement) {
@@ -792,22 +707,6 @@ export async function setupScore(svgElement) {
 
   preloadSpeedCues();
 
-
-
-  // // 🟢 Preload all reusable group definitions from pages/
-  // // preloadSvgGroups();
-  // await preloadAllSvgGroups();
-  // console.log("[setupScore] ✅ All group definitions preloaded.");
-
-
-
-  // if (typeof window.autoInjectGroupsInScroll === "function") {
-  //   console.log("[cueGroup] 🧩 Running autoInjectGroupsInScroll() after group registry ready");
-  //   const svgElement = document.querySelector("#scoreContainer svg");
-  //   if (svgElement) window.autoInjectGroupsInScroll(svgElement);
-  // }
-
-
 // 1) Load reusable blocks from external .svg files (pages/manifest.json)
 await preloadReuseBlocksFromPages();
 // 2) Register any <g id="reuse-*"> blocks inside the main score SVG
@@ -820,10 +719,6 @@ if (svgElement) {
 
   console.log("[setupScore] ✅ Reusable blocks ready.");
 }
-
-
-
-
 
 
   console.groupEnd();

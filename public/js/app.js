@@ -210,7 +210,6 @@ export const initializeSVG = async (svgElement) => {
     }
   };
 
-
   // ✅ Apply transforms first (flatten <use> and group transforms)
   // applyInkscapeTransforms(svgElement);
 
@@ -222,7 +221,7 @@ export const initializeSVG = async (svgElement) => {
 
   // ✅ Replace <use> elements (already done here)
 
-   assignCues(svgElement, window.cues);
+  // assignCues(svgElement, window.cues);
 
   enableLiveInspector({
     startRotate,
@@ -230,40 +229,7 @@ export const initializeSVG = async (svgElement) => {
     // startObj2Path
   });
 
-  /**
-   * Scan and register reusable <g> groups with reserved prefixes.
-   * Stores them in window.groupRegistry for later cueGroup() recall.
-   */
-  function registerSvgGroups(svgRoot) {
-    if (!svgRoot) return;
-
-    // Ensure global registry exists
-    window.groupRegistry = window.groupRegistry || {};
-
-    const groupNodes = svgRoot.querySelectorAll('g[id^="group-"], g[id^="menu-"], g[id^="ui-"]');
-
-    groupNodes.forEach((group) => {
-      const groupId = group.id.replace(/^group-|^menu-|^ui-/, '');
-      const clone = group.cloneNode(true);
-
-      // Store deep clone in registry
-      window.groupRegistry[groupId] = clone;
-
-      console.log(`[groupRegistry] Registered group "${groupId}" from`, svgRoot?.baseURI || '(inline)');
-    });
-  }
-
-  // // ✅ Register reusable cue groups (menus, UI clusters)
-    window.cues = [];
-  
-registerReuseBlocks(svgElement);
-
-
-
-  // ✅ Attach globally
-  if (typeof window !== 'undefined') {
-    window.registerSvgGroups = registerSvgGroups;
-  }
+  registerReuseBlocks(svgElement);
 
   // 🧩 Build pathVariantsMap for o2p Case 5 animations —
   // groups related path IDs (e.g. path-9997-1,-2,…) so multi-path ghost motion works
@@ -337,7 +303,6 @@ registerReuseBlocks(svgElement);
       window.ensureWindowPlayheadX(); // 💡 ensure valid center before any jumping logic
       initializeObjectPathPairs(svgElement);
       initializeObserver();
-
     });
 
     propagate(svgElement);
@@ -345,17 +310,12 @@ registerReuseBlocks(svgElement);
     initializeScalingObjects(svgElement);
     initializeObserver();
 
-
-
     console.log("[DEBUG] Animation setup complete. Running detection and observer.");
     detectExistingAnimations();
     observeAnimations();
 
-
-
-// After your reuse preload or general init:
- buildPageRegistryFromDirIndex();
-refreshAllPagesMenu();
+    buildPageRegistryFromDirIndex(); // list of all pages for the menu
+    refreshAllPagesMenu();
 
     // ✅ Run setupScore and cue assignment after the SVG has fully painted
     requestAnimationFrame(() => {
@@ -373,7 +333,7 @@ refreshAllPagesMenu();
         if (!window.cues) window.cues = [];
 
         console.log("[initializeSVG] Assigning cues after layout is fully ready...");
-        
+
         assignCues(svgReady, window.cues);
 
         if (typeof window.setupScore === "function") {
@@ -387,47 +347,6 @@ refreshAllPagesMenu();
         console.groupEnd();
       });
     });
-
-
-    // // TODO CSS IN SCROLL MODE - HEIGHT NEEDS TO BE 95% OR SOMETHING
-    // // BUT THEN THE JUMP2X ETC SYNC BREAKS . NEED TO SORT ORDER OF EX
-    // // PROJECT LOADER ALSO DOES CSS STUFF LIKE THIS - WHAT IS REDUNDANT?
-    // // 
-
-    // // --- Wide-scroll layout correction ---
-    // const applyWideScrollLayout = () => {
-    //   const cont = document.getElementById("scoreContainer");
-    //   const svg = svgElement;
-    //   if (!svg || !cont) return;
-
-    //   Object.assign(cont.style, {
-    //     width: "100vw",
-    //     height: "100vh",
-    //     overflowX: "auto",
-    //     overflowY: "hidden",
-    //     whiteSpace: "nowrap",
-    //     display: "block",
-    //     position: "relative"
-    //   });
-
-    //   svg.removeAttribute("width");
-    //   svg.removeAttribute("height");
-    //   Object.assign(svg.style, {
-    //     display: "inline-block",
-    //     height: "100vh",
-    //     width: "auto",
-    //     maxWidth: "none",
-    //     maxHeight: "100%",
-    //     verticalAlign: "top"
-    //   });
-
-    //   svg.getBoundingClientRect(); // force reflow
-    //   console.log("[initializeSVG] Applied wide-scroll layout correction.");
-    // };
-
-    // window.applyWideScrollLayout = applyWideScrollLayout;
-
-
 
     // Wait until the SVG is *actually* inserted and painted
     // requestAnimationFrame(() => {
@@ -534,8 +453,11 @@ window.estimatedPlayheadX = 0;
 window.speedMultiplier = 1;
 window.scoreContainer = document.getElementById('scoreContainer');
 
-// Duration of score in minutes (default = 30 minutes)
-// window.duration = 30;
+
+document.addEventListener("DOMContentLoaded", () => {
+  populateProjectMenu();
+});
+
 
 
 // ===========================

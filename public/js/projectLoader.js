@@ -29,12 +29,12 @@ export function cleanupProjectOverlays() {
   document.querySelectorAll(".oscilla-cue-button").forEach(el => el.remove());
 
 
-// --- VIDEO CLEANUP ---
-document.querySelectorAll(".cue-video").forEach(vid => {
-  try { vid.pause(); } catch(e){}
-  try { vid.src = ""; } catch(e){}
-  vid.remove();
-});
+  // --- VIDEO CLEANUP ---
+  document.querySelectorAll(".cue-video").forEach(vid => {
+    try { vid.pause(); } catch (e) { }
+    try { vid.src = ""; } catch (e) { }
+    vid.remove();
+  });
 
 
   // ---------------------------------------------------
@@ -43,9 +43,9 @@ document.querySelectorAll(".cue-video").forEach(vid => {
   if (window.activeAudioCues) {
     console.log("[Cleanup] Stopping active audio cues…");
     for (const voice of window.activeAudioCues) {
-      try { voice.src.stop(); } catch(e){}
-      try { voice.src.disconnect(); } catch(e){}
-      try { voice.gainNode.disconnect(); } catch(e){}
+      try { voice.src.stop(); } catch (e) { }
+      try { voice.src.disconnect(); } catch (e) { }
+      try { voice.gainNode.disconnect(); } catch (e) { }
     }
     window.activeAudioCues.clear();
   }
@@ -116,7 +116,7 @@ export async function loadProject(projectName, options = {}) {
     if (window.socket) {
       window.socket.send(JSON.stringify({
         type: "reset_project_state",
-        project: projectName   
+        project: projectName
       }));
     }
 
@@ -135,9 +135,12 @@ export async function loadProject(projectName, options = {}) {
       console.log("[Duration] ⏱ Using default duration: 10 minutes");
     }
 
-
     applyDarkMode(!!prefs.darkMode);
     if (prefs.defaultPlaybackSpeed) setSpeed(prefs.defaultPlaybackSpeed);
+
+
+    // this clears the page and jumps back to scroll before new score load
+    window.returnToScrollingScore?.(); 
 
     // 3️⃣ Prepare scroll container
     const container = document.getElementById("scoreContainer");
@@ -162,7 +165,7 @@ export async function loadProject(projectName, options = {}) {
     const startPage = prefs.defaultPage || "home";
 
     if (mode === "page" || mode === "hybrid") {
-      const cue = `cue:page(${startPage})`;
+      const cue = `page(${startPage})`;
       console.log(`[ProjectLoader] 📄 Starting in ${mode} mode → ${cue}`);
       requestAnimationFrame(() =>
         requestAnimationFrame(() => window.handleCueTrigger?.(cue))
@@ -189,6 +192,23 @@ export async function loadProject(projectName, options = {}) {
         }
       }, 300);
     }
+
+    // populate the project menu
+    window.loadProject = new Proxy(window.loadProject, {
+      apply(target, thisArg, args) {
+        const result = Reflect.apply(target, thisArg, args);
+        requestAnimationFrame(populateProjectMenu);
+        return result;
+      }
+    });
+
+// ✅ Refresh Pages submenu after project load
+if (typeof window.refreshAllPagesMenu === "function") {
+  window.refreshAllPagesMenu();
+}
+
+
+
 
     console.log(`[loadProject] ✅ Project "${projectName}" fully loaded.`);
     hideSplashScreen();
@@ -288,34 +308,6 @@ async function loadScrollMode(container) {
 }
 
 // ------------------------------------------------------------
-// 📚 Preload reusable shared SVG groups
-// ------------------------------------------------------------
-export async function preloadSvgGroups(list = []) {
-  window.groupRegistry = window.groupRegistry || {};
-
-  for (const src of list) {
-    try {
-      const text = await fetch(src).then((r) => r.text());
-      const doc = new DOMParser().parseFromString(text, "image/svg+xml");
-      const groups = doc.querySelectorAll(
-        'g[id^="group-"], g[id^="menu-"], g[id^="ui-"]'
-      );
-      groups.forEach((g) => {
-        const id = g.id.replace(/^group-|^menu-|^ui-/, "");
-        window.groupRegistry[id] = g.cloneNode(true);
-      });
-      console.log(`[preloadSvgGroups] ✅ Loaded from ${src}`);
-    } catch (err) {
-      console.warn(`[preloadSvgGroups] ⚠️ Could not load ${src}: ${err}`);
-    }
-  }
-
-  console.log(
-    `[preloadSvgGroups] Registered ${Object.keys(window.groupRegistry).length} groups`
-  );
-}
-
-// ------------------------------------------------------------
 // 📂 Utility: resolve project path
 // ------------------------------------------------------------
 export function resolveProjectPath(type, filename) {
@@ -354,3 +346,68 @@ if (projectFromURL) {
   }
 }
 
+
+
+async function populateProjectMenu() {
+  console.log("[ProjectMenu] 🟡 Starting populateProjectMenu()");
+
+  const submenu = document.getElementById("projects-submenu");
+  if (!submenu) {
+    console.warn("[ProjectMenu] ❌ #projects-submenu not found in DOM");
+    return;
+  }
+
+  try {
+    console.log("[ProjectMenu] Fetching /scores/…");
+    const res = await fetch("/scores/");
+    const text = await res.text();
+
+    console.log("[ProjectMenu] Raw fetch response:\n", text.substring(0, 300), "…");
+
+    // ✅ Correct regex for href="/scores/NAME/"
+    const matches = [...text.matchAll(/href="\/scores\/([^"\/]+)\//g)];
+    const projects = matches.map(m => m[1]).filter(x => !x.startsWith("."));
+
+    console.log("[ProjectMenu] Extracted projects:", projects);
+
+    submenu.innerHTML = "";
+
+    if (projects.length === 0) {
+      const item = document.createElement("sl-menu-item");
+      item.disabled = true;
+      item.textContent = "(no projects found)";
+      submenu.appendChild(item);
+      return;
+    }
+
+    projects.forEach(name => {
+      const item = document.createElement("sl-menu-item");
+      item.textContent = name;
+      item.value = `project:${name}`;
+      submenu.appendChild(item);
+    });
+
+    submenu.addEventListener("sl-select", (e) => {
+      const v = e.detail.item.value;
+      if (v.startsWith("project:")) {
+        const project = v.split(":")[1];
+        console.log(`[ProjectMenu] 🟢 Loading project: ${project}`);
+        window.loadProject?.(project, { resetOnLoad: true });
+      }
+    });
+
+    console.log("[ProjectMenu] ✅ Project submenu updated:", projects);
+
+  } catch (err) {
+    console.error("[ProjectMenu] 🔥 ERROR while listing /scores/:", err);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", populateProjectMenu);
+
+document.addEventListener("DOMContentLoaded", populateProjectMenu);
+
+
+window.populateProjectMenu = populateProjectMenu;
+
+document.addEventListener("DOMContentLoaded", populateProjectMenu);
