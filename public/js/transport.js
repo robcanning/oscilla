@@ -663,6 +663,61 @@ export function resumePlayback() {
 
 
 
+// ---------------------------------------------------------------------------
+// Mode Toggle UI (Scroll ↔ Node/Page)
+// ---------------------------------------------------------------------------
+// Displays a small toggle in the top UI that shows where clicking will go next.
+//   • If currently in scrolling mode → label shows "→ node"
+//   • If currently in node/page mode → label shows "→ scroll"
+// Clicking switches between the two modes:
+//   → node : opens the first (or last-used) page view
+//   → scroll : returns to the continuous scrolling score
+// The label always reflects the *destination*, not the current state.
+// ---------------------------------------------------------------------------
+
+function updateModeToggleUI() {
+  const el = document.getElementById("mode-toggle");
+  if (!el) return;
+
+  const ps = window.pageState;
+  if (!ps) return;
+
+  // Display where clicking will go next
+  if (ps.mode === "page") {
+    el.textContent = "→ scroll";   // currently in page, link goes to scroll
+  } else {
+    el.textContent = "→ node";     // currently in scroll, link goes to page mode
+  }
+}
+
+function toggleMode() {
+  const ps = window.pageState;
+  if (!ps) return;
+
+  if (ps.mode === "page") {
+    // go to scroll mode
+    window.returnToScrollingScore?.();
+  } else {
+    // go to node mode — open last or first page
+    const firstPage = Object.keys(window.pageRegistry || {})[0];
+    if (firstPage) {
+      handleCueTrigger?.(`page(${firstPage})`);
+    }
+  }
+
+  // Update label shortly after UI shift
+  setTimeout(updateModeToggleUI, 50);
+}
+
+document.getElementById("mode-toggle")?.addEventListener("click", toggleMode);
+window.updateModeToggleUI = updateModeToggleUI;
+
+// -----------------------------------------------------
+
+
+
+
+
 //////////////////////////////////////////////////
 export const jumpToCueId = (id) => {
   let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"))

@@ -1436,6 +1436,8 @@ async function runCuePagePlaylist({ mode, items, waitFlag = false, returnFlag = 
     console.log("[cuePage] 🛑 Pausing scrolling score.");
     pauseScrollScore();
     ps.mode = "page";
+    updateModeToggleUI();
+
   }
 
   let index = 0;
@@ -1533,11 +1535,14 @@ async function runCuePagePlaylist({ mode, items, waitFlag = false, returnFlag = 
     if (returnFlag) {
       console.log("[cuePage] ✅ Playlist completed — returning to scrolling score.");
       ps.mode = "scroll";
+      updateModeToggleUI();
       ps.current = null;
       resumeScrollScore();
     } else {
       console.log("[cuePage] ⏹ Playlist stopped; holding current page.");
       ps.mode = "page";
+      updateModeToggleUI();
+
     }
   }
 
@@ -1654,6 +1659,8 @@ export async function handlePageCue(cueId, duration, cueParams = {}) {
 
   if (ps.mode === "scroll" && mode === "loop") ps.mode = "page";
   ps.mode = "page";
+  updateModeToggleUI();
+
   ps.current = pageName;
   ps.next = next || null;
 
@@ -2779,6 +2786,9 @@ export function resolvePageTransition(opts = {}) {
     if (mode === "loop") {
       console.log("[cuePage] 🔁 Loop mode — cutting directly to next page.");
       ps.mode = "page";
+
+      updateModeToggleUI();
+
       window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
       window._activePageButtons = [];
       content.innerHTML = "";
@@ -2799,6 +2809,7 @@ export function resolvePageTransition(opts = {}) {
 
     setTimeout(() => {
       ps.mode = "page";
+      updateModeToggleUI();
 
       // 🧹 Clean up and load next
       window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
@@ -2820,19 +2831,23 @@ export function resolvePageTransition(opts = {}) {
   // -------------------------------------------------------------
   console.log("[cuePage] Holding page mode.");
   ps.mode = "page";
+  updateModeToggleUI();
+
 }
 
 window.returnToScrollingScore = function returnToScrollingScore() {
   console.log("[cuePage] Returning to scrolling score.");
 
   const container = document.getElementById("singlePage-container");
-  const content   = document.getElementById("singlePage-content");
+  const content = document.getElementById("singlePage-content");
   const mainScore = document.getElementById("scoreInner");
-  const ps        = window.pageState || (window.pageState = { mode: "scroll", current: null });
+  const ps = window.pageState || (window.pageState = { mode: "scroll", current: null });
 
   if (!container || !content) {
     console.warn("[cuePage] ⚠️ No page overlay present — just resuming scroll.");
     ps.mode = "scroll";
+    updateModeToggleUI();
+
     ps.current = null;
     resumeScrollScore?.();
     return;
@@ -2850,6 +2865,8 @@ window.returnToScrollingScore = function returnToScrollingScore() {
     content.innerHTML = "";
 
     ps.mode = "scroll";
+    updateModeToggleUI();
+
     ps.current = null;
 
     if (mainScore) {
