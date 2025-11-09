@@ -241,7 +241,7 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
       return handleMetronomeCue(ast, cueElement);
 
     case "cuePause":
-      return handlePauseCue(ast);
+      return handlePauseCue(ast, cueElement);
 
 
     case "cueSpeed": {
@@ -374,8 +374,10 @@ export function emitCueComplete(id, type = "generic") {
  */
 export function handlePauseCue(ast) {
   const durationMs = (ast.dur ?? 0) * 1000;
-  const resumeTarget = ast.next || null;   // pattern: pause(4, next:nav(A))
-  const showCountdown = durationMs > 2000; // auto UI rule
+  const resumeTarget = ast.next || null;
+
+  // ✅ Only show countdown if NOT explicitly disabled
+  const showCountdown = (ast.count !== false) && (durationMs > 2000);
 
   console.log(`[cuePause] ⏸ Pausing for ${durationMs}ms`, ast);
 
@@ -2820,23 +2822,33 @@ export function resolvePageTransition(opts = {}) {
   ps.mode = "page";
 }
 
-
 window.returnToScrollingScore = function returnToScrollingScore() {
   console.log("[cuePage] Returning to scrolling score.");
 
   const container = document.getElementById("singlePage-container");
-  const content = document.getElementById("singlePage-content");
+  const content   = document.getElementById("singlePage-content");
   const mainScore = document.getElementById("scoreInner");
-  const ps = window.pageState;
+  const ps        = window.pageState || (window.pageState = { mode: "scroll", current: null });
+
+  if (!container || !content) {
+    console.warn("[cuePage] ⚠️ No page overlay present — just resuming scroll.");
+    ps.mode = "scroll";
+    ps.current = null;
+    resumeScrollScore?.();
+    return;
+  }
 
   container.style.transition = "opacity 0.5s ease";
   container.style.opacity = "0";
 
   setTimeout(() => {
+    // ✅ Remove any leftover cue buttons safely
     window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
     window._activePageButtons = [];
+
     container.style.display = "none";
     content.innerHTML = "";
+
     ps.mode = "scroll";
     ps.current = null;
 
@@ -2845,9 +2857,10 @@ window.returnToScrollingScore = function returnToScrollingScore() {
       mainScore.style.pointerEvents = "auto";
     }
 
-    resumeScrollScore();
+    resumeScrollScore?.();
   }, 500);
 };
+
 
 
 

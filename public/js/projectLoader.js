@@ -290,8 +290,10 @@ export async function loadProject(projectName, options = {}) {
     }
 
     // Update the URL to ?project=name without reloading
-    window.history.replaceState({}, "", `?project=${projectName}`);
-
+// ✅ Preserve all query params by only updating project=, not clearing others
+const url = new URL(window.location.href);
+url.searchParams.set("project", projectName);
+history.replaceState({}, "", url.toString());
     // ------------------------------------------------------------
     // 🕐 Restore last saved playhead (only when NOT a switch)
     // ------------------------------------------------------------
@@ -447,22 +449,31 @@ window.resolveProjectPath = resolveProjectPath;
 window.loadProject = loadProject;
 
 // ------------------------------------------------------------
-// 🔗 Auto-load project if specified in URL (?project=name)
+// 🔗 Auto-load project & optional page
 // ------------------------------------------------------------
 const urlParams = new URLSearchParams(window.location.search);
 const projectFromURL = urlParams.get("project");
+const pageFromURL = urlParams.get("page");
 
 if (projectFromURL) {
-  console.log(`[Oscilla] Loading project from URL: ${projectFromURL}`);
-  loadProject(projectFromURL);
-} else {
+  loadProject(projectFromURL).then(() => {
+    if (pageFromURL) {
+      const wait = setInterval(() => {
+        if (window.pageState?.mode === "scroll" && !window.isCuePagePlaylistActive) {
+          clearInterval(wait);
+          handleCueTrigger(`page(${pageFromURL})`, false, true);
+        }
+      }, 650);
+    }
+  });
+}
+ else {
   if (typeof window.showSplashScreen === "function") {
     window.showSplashScreen();
   } else {
     console.warn("[Oscilla] showSplashScreen() not available yet.");
   }
 }
-
 
 
 async function populateProjectMenu() {
