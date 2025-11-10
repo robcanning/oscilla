@@ -38,7 +38,7 @@
  *
  * The result is stable, resolution-independent, zero-drift visual synchronization.
  */
-  
+
 
 
 window.seekDebounceTime = 300;
@@ -721,7 +721,7 @@ window.updateModeToggleUI = updateModeToggleUI;
 //////////////////////////////////////////////////
 export const jumpToCueId = (id) => {
   let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"))
-             || document.getElementById(id);
+    || document.getElementById(id);
 
   if (!target) {
     console.warn(`[jumpToCueId] Cue not found: ${id}`);
@@ -759,10 +759,7 @@ export const jumpToCueId = (id) => {
   // updatePosition();
 };
 
-
 window.jumpToCueId = jumpToCueId;
-
-
 
 
 
@@ -777,78 +774,23 @@ document.addEventListener('fullscreenchange', () => {
 
   // Ensurewindow.playheadX is recalculated on fullscreen change
   // recalculatePlayheadPosition(window.scoreSVG);
-  calculateMaxScrollDistance();
+  // calculateMaxScrollDistance();
   requestAnimationFrame(scrollToPlayheadVisual);
 
   // extractScoreElements(svgElement);
 
-});
+})
 
 window.dispatchEvent(new Event("resize"));
 window.addEventListener('resize', () => {
   const startTime = performance.now();
-  extractScoreElements(window.scoreSVG);
+  // extractScoreElements(window.scoreSVG);
   const endTime = performance.now();
   console.log(`[DEBUG] extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
   console.log("[DEBUG] Extracted Score Elements. Now Checking Sync...");
-
-
   console.log("[DEBUG] Resize detected, recalculating maxScrollDistance and aligning playhead...");
-  calculateMaxScrollDistance();
+  // calculateMaxScrollDistance();
 });
-
-//document.addEventListener('fullscreenchange', adjustscoreContainerHeight);
-
-// // Show controls on user interaction in fullscreen mode
-// let hideControlsTimeout; // Store timeout reference
-
-// document.addEventListener('mousemove', () => {
-//   showControls(); // ✅ Show controls on mouse move
-
-//   // ✅ Clear any existing timeout before starting a new one
-//   clearTimeout(hideControlsTimeout);
-
-//   // ✅ Set a new timeout to hide controls after 5 seconds
-//   hideControlsTimeout = setTimeout(() => {
-//     hideControls();
-//   }, 5000);
-
-// });// document.addEventListener('keydown', showControls);   // Show controls on key press
-
-// // Show controls on user interaction in fullscreen mode
-
-// document.addEventListener('mousemove', () => {
-//   if (document.fullscreenElement) {
-//     showControls(); // ✅ Show controls on mouse move
-
-//     // ✅ Clear any existing timeout before starting a new one
-//     clearTimeout(hideControlsTimeout);
-
-//     // ✅ Set a new timeout to hide controls after 5 seconds
-//     hideControlsTimeout = setTimeout(() => {
-//       hideControls();
-//     }, 5000);
-//   }
-// // });
-
-// document.addEventListener('keydown', (event) => {
-//   // ✅ Ignore arrow keys & spacebar when seeking or pausing
-//   if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === " ") {
-//     return; // ✅ Do nothing, skip showing controls
-//   }
-
-//   // ✅ Show controls for other key presses
-//   showControls();
-
-//   // ✅ Hide controls after 5 seconds
-//   setTimeout(() => {
-//     hideControls();
-//   }, 5000);
-
-// });
-
-
-
 
 
 /* ---------------------------------------------------------------------------
@@ -891,9 +833,6 @@ function showControlsAndAutoHide() {
       hideControls();
     }, SHOW_DURATION);
   }
-
-
-
 
   let lastTapTime = 0;
   let tapTimeout;
@@ -1117,8 +1056,6 @@ export function initializeDarkModeToggle() {
   console.log("[DarkMode] 🌗 Toggle ready.");
 }
 
-// ------------------------------------------------------------
-
 // ======================================================
 // SPLASH SCREEN CONTROL
 // ======================================================
@@ -1139,23 +1076,23 @@ function setSplashVisibility(show) {
     splash.classList.remove('hidden');
     if (scoreContainer) scoreContainer.style.display = 'none';
     if (controls) controls.style.display = 'none';
-  }  else {
-  console.log('[Splash] Hiding splash screen.');
-  splash.style.display = 'none';
-  splash.classList.add('hidden');
+  } else {
+    console.log('[Splash] Hiding splash screen.');
+    splash.style.display = 'none';
+    splash.classList.add('hidden');
 
-  if (scoreContainer) scoreContainer.style.display = 'block';
-  if (controls) controls.style.display = 'flex';
+    if (scoreContainer) scoreContainer.style.display = 'block';
+    if (controls) controls.style.display = 'flex';
 
-  // ✅ Only reinitialize UI controls (not the SVG / score)
-  setTimeout(() => {
-    if (typeof initializeControlsPin === "function") {
-      console.log("[UI] Initializing pin controls after splash hide");
-      initializeControlsPin();
-    }
-  }, 300);
+    // ✅ Only reinitialize UI controls (not the SVG / score)
+    setTimeout(() => {
+      if (typeof initializeControlsPin === "function") {
+        console.log("[UI] Initializing pin controls after splash hide");
+        initializeControlsPin();
+      }
+    }, 300);
 
-}
+  }
 
 }
 

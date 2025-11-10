@@ -51,6 +51,10 @@ export const cueHandlers = {
 
 import { parseCueToAST } from "./parser.js";
 import { handleMetronomeCue } from "./metro.js";
+import { handleRotateCue } from "./rotate.js";
+import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
+
+
 
 // Emulate the rewind reset: clear every gating structure we might use
 export function resetCueTrigger() {
@@ -218,17 +222,18 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
   // ------------------------------------------------------------
   switch (ast.type) {
 
-    case "cuePage":
-      return handlePageCueFromAST(ast, cueElement);
 
-    case "cueFade":
-      return handleFadeCueFromAST(ast, cueElement);
+    // animation dispatchers
+case "cueRotate": return handleRotateCue(cueElement, ast.args);
+      case "cueScale": return handleScaleCue(ast, cueElement);
+    case "cueO2P": return handleO2PCue(ast, cueElement);
 
-    case "cueStopwatch":
-      return handleStopwatchCue(ast, cueElement);
+    // cue dispatchers 
 
-    case "cueVideo":
-      return handleVideoCueFromAST(ast, cueElement);
+    case "cuePage": return handlePageCueFromAST(ast, cueElement);
+    case "cueFade": return handleFadeCueFromAST(ast, cueElement);
+    case "cueStopwatch": return handleStopwatchCue(ast, cueElement);
+    case "cueVideo": return handleVideoCueFromAST(ast, cueElement);
 
     case "cueText":
       import("./text.js")
@@ -240,9 +245,7 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
     case "cueMetro":
       return handleMetronomeCue(ast, cueElement);
 
-    case "cuePause":
-      return handlePauseCue(ast, cueElement);
-
+    case "cuePause": return handlePauseCue(ast, cueElement);
 
     case "cueSpeed": {
       const start = window.speedMultiplier ?? 1.0;
@@ -256,11 +259,9 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
       }
     }
 
-    case "cueStop":
-      return handleStopCue(ast, cueElement);
+    case "cueStop": return handleStopCue(ast, cueElement);
+    case "cueNav": return handleNavCue(ast);
 
-    case "cueNav":
-      return handleNavCue(ast);
     case "cueAudio": {
       // `ast` here is the parsed AST: { type:'cueAudio', src:'noise', amp:0.9, loop:1, ... }
       if (!ast || ast.type !== "cueAudio") {
@@ -271,8 +272,7 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
       return handleAudioCue(ast);   // ✅ pass AST directly
     }
 
-    case "cueAudioStop":
-      return stopAudioCue(ast.filename || ast.file);
+    case "cueAudioStop": return stopAudioCue(ast.filename || ast.file);
 
     default:
       console.warn(`[CueDSL] ⚠ Unsupported cue type: ${ast.type}`);

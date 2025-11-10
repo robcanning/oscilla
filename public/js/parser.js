@@ -11,6 +11,7 @@
 // Chevrotain can distinguish branches by first token.
 //
 // ============================================================================
+const OSCILLA_DSL_DEBUG = true; // turn off by setting to false
 
 import {
   createToken,
@@ -78,6 +79,9 @@ const Stop = createToken({ name: "Stop", pattern: /\bstop\b/, longer_alt: Identi
 const Nav = createToken({ name: "Nav", pattern: /nav\b/, longer_alt: Identifier });
 const Audio = createToken({ name: "Audio", pattern: /audio\b/ });
 const Button = createToken({ name: "Button", pattern: /button\b/ });
+const Rotate = createToken({ name: "Rotate", pattern: /\brotate\b/, longer_alt: Identifier });
+const Scale = createToken({ name: "Scale", pattern: /\bscale\b/, longer_alt: Identifier });
+const O2P = createToken({ name: "O2P", pattern: /\bo2p\b/, longer_alt: Identifier });
 
 
 
@@ -119,6 +123,7 @@ export const PatternName = createToken({
 export const allTokens = [
   Cue, Fade, Page, Stopwatch, Video, Text, Pause, Speed, Stop,
   Audio, Button, Nav,
+  Rotate, Scale, O2P,
   After, PatternName, Choose,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
   RangeLiteral, NumberLiteral, StringLiteral, True, False,
@@ -172,9 +177,6 @@ export class CueParser extends CstParser {
     });
 
 
-
-
-
     $.RULE("value", () => {
       $.OR([
         { ALT: () => $.CONSUME(StringLiteral) },
@@ -184,6 +186,109 @@ export class CueParser extends CstParser {
         { ALT: () => $.CONSUME(Identifier) },
       ]);
     });
+
+
+    // ----USED FOR PATTERNING ANIMATION ROTATE SCALE ETC -------------------
+    $.RULE("animPatternCall", () => {
+      $.CONSUME(PatternName);   // Pseq, Prand, Pshuf, etc.
+      $.CONSUME(LParen);
+
+      $.OR([
+        // Case 1: Pseq([1,2,3], inf)
+        {
+          GATE: () => $.LA(1).tokenType.name === "LBracket",
+          ALT: () => {
+            $.CONSUME(LBracket);
+            $.MANY_SEP({
+              SEP: Comma,
+              DEF: () => $.SUBRULE1($.animValue)
+            });
+            $.CONSUME(RBracket);
+
+            // optional second arg e.g., Pseq([1,2], inf)
+            $.OPTION(() => {
+              $.CONSUME(Comma);
+              $.SUBRULE2($.animValue);
+            });
+          }
+        },
+
+        // Case 2: Pseq(1,2,3, inf)
+        {
+          ALT: () => {
+            $.AT_LEAST_ONE_SEP({
+              SEP: Comma,
+              DEF: () => $.SUBRULE3($.animValue)
+            });
+          }
+        }
+      ]);
+
+      $.CONSUME(RParen);
+    });
+
+
+
+
+    // Accepts arrays, animation pattern calls (Pseq/Prand/...),
+    // or plain literals.
+    $.RULE("animValue", () => {
+      return $.OR([
+        { ALT: () => $.SUBRULE($.arrayValue) },
+
+        {
+          GATE: () =>
+            $.LA(1).tokenType === PatternName,   // ✅ Fix
+          ALT: () => $.SUBRULE($.patternCall)
+        },
+
+        { ALT: () => $.CONSUME(NumberLiteral) },
+        { ALT: () => $.CONSUME(StringLiteral) },
+        { ALT: () => $.CONSUME(True) },
+        { ALT: () => $.CONSUME(False) },
+        { ALT: () => $.CONSUME(Identifier) },
+      ]);
+    });
+
+
+    // Simple recursive array that nests animValue (so arrays can hold patterns, pairs, etc.)
+    $.RULE("arrayValue", () => {
+      $.CONSUME(LBracket);
+      const items = [];
+      $.MANY_SEP({
+        SEP: Comma,
+        DEF: () => items.push($.SUBRULE($.animValue))
+      });
+      $.CONSUME(RBracket);
+      return items;
+    });
+
+
+    // Animation-specific key:value rule used in rotate(), scale(), o2p()
+    // value may be: number, string, true/false, identifier, array, or pattern call (Pseq, Prand…)
+    $.RULE("animGenericParam", () => {
+      const keyTok = $.CONSUME(Identifier, { LABEL: "key" });
+      $.CONSUME(Colon);
+
+      // ✅ animValue already covers all possible types, including patterns and arrays.
+      $.SUBRULE($.animValue, { LABEL: "value" });
+
+      return { key: keyTok.image };
+    });
+
+    // A list of animation params using the rule above.
+    $.RULE("animGenericParamList", () => {
+      $.CONSUME(LParen);
+      $.MANY_SEP({
+        SEP: Comma,
+        DEF: () => $.SUBRULE($.animGenericParam)
+      });
+      $.CONSUME(RParen);
+    });
+
+
+    // -----------------------
+
 
     // -----------------------
     // Generic key:value param list — reusable across cues
@@ -215,12 +320,12 @@ export class CueParser extends CstParser {
     });
 
 
-$.RULE("genericParamListNoParens", () => {
-  $.AT_LEAST_ONE_SEP({
-    SEP: Comma,
-    DEF: () => $.SUBRULE($.genericParam)
-  });
-});
+    $.RULE("genericParamListNoParens", () => {
+      $.AT_LEAST_ONE_SEP({
+        SEP: Comma,
+        DEF: () => $.SUBRULE($.genericParam)
+      });
+    });
 
     // -----------------------
     // Generic size pair (e.g. 480x270)
@@ -490,84 +595,84 @@ $.RULE("genericParamListNoParens", () => {
       this.CONSUME(Text);
       this.SUBRULE(this.genericParamList);
     });
-// ------------------------------------------------------------
-// cueSpeedTop (grammar) — supports speed(3) and keyed params
-// ------------------------------------------------------------
-$.RULE("cueSpeedTop", () => {
-  $.CONSUME(Speed);
-  $.CONSUME(LParen);
+    // ------------------------------------------------------------
+    // cueSpeedTop (grammar) — supports speed(3) and keyed params
+    // ------------------------------------------------------------
+    $.RULE("cueSpeedTop", () => {
+      $.CONSUME(Speed);
+      $.CONSUME(LParen);
 
-  $.OPTION(() => {
-    $.OR([
-      // speed(3) or speed(3, dur:4, ease:linear)
-      {
-        ALT: () => {
-          $.CONSUME(NumberLiteral, { LABEL: "shorthand" });
-          $.OPTION1(() => {
-            $.CONSUME(Comma);
-            $.AT_LEAST_ONE_SEP({
-              SEP: Comma,
-              DEF: () => $.SUBRULE($.genericParam)
-            });
-          });
-        }
-      },
-      // speed(value:..., add:..., dur:..., ease:..., uid:...)
-      {
-        ALT: () => {
-          $.AT_LEAST_ONE_SEP1({
-            SEP: Comma,
-            DEF: () => $.SUBRULE1($.genericParam)
-          });
-        }
-      }
-    ]);
-  });
-
-  $.CONSUME(RParen);
-});
-
-$.RULE("cueNavTop", () => {
-  $.CONSUME(Nav);
-  $.CONSUME(LParen);
-
-  // First token: scroll | scrollPaused | page names | rehearsal names
-  $.CONSUME(Identifier, { LABEL: "navAction" });
-
-  // Optional @Target
-  $.OPTION(() => {
-    $.CONSUME(At);
-    $.CONSUME1(Identifier, { LABEL: "navTarget" });
-  });
-
-  // Optional param list (uid, etc.)
-$.OPTION1(() => {
-  $.CONSUME(Comma);
-  $.SUBRULE($.genericParamListNoParens);
-});
-
-  $.CONSUME(RParen);
-});
-
-
-this.RULE("cueStopTop", () => {
-  this.CONSUME(Stop);
-
-  this.OPTION(() => {
-    this.CONSUME(LParen);
-
-    // --- allow zero or more params ---
-    this.OPTION1(() => {
-      this.SUBRULE(this.genericParam);
-      this.MANY(() => {
-        this.CONSUME(Comma);
-        this.SUBRULE2(this.genericParam);
+      $.OPTION(() => {
+        $.OR([
+          // speed(3) or speed(3, dur:4, ease:linear)
+          {
+            ALT: () => {
+              $.CONSUME(NumberLiteral, { LABEL: "shorthand" });
+              $.OPTION1(() => {
+                $.CONSUME(Comma);
+                $.AT_LEAST_ONE_SEP({
+                  SEP: Comma,
+                  DEF: () => $.SUBRULE($.genericParam)
+                });
+              });
+            }
+          },
+          // speed(value:..., add:..., dur:..., ease:..., uid:...)
+          {
+            ALT: () => {
+              $.AT_LEAST_ONE_SEP1({
+                SEP: Comma,
+                DEF: () => $.SUBRULE1($.genericParam)
+              });
+            }
+          }
+        ]);
       });
+
+      $.CONSUME(RParen);
     });
 
-    this.CONSUME(RParen);
-  });
-});
+    $.RULE("cueNavTop", () => {
+      $.CONSUME(Nav);
+      $.CONSUME(LParen);
+
+      // First token: scroll | scrollPaused | page names | rehearsal names
+      $.CONSUME(Identifier, { LABEL: "navAction" });
+
+      // Optional @Target
+      $.OPTION(() => {
+        $.CONSUME(At);
+        $.CONSUME1(Identifier, { LABEL: "navTarget" });
+      });
+
+      // Optional param list (uid, etc.)
+      $.OPTION1(() => {
+        $.CONSUME(Comma);
+        $.SUBRULE($.genericParamListNoParens);
+      });
+
+      $.CONSUME(RParen);
+    });
+
+
+    this.RULE("cueStopTop", () => {
+      this.CONSUME(Stop);
+
+      this.OPTION(() => {
+        this.CONSUME(LParen);
+
+        // --- allow zero or more params ---
+        this.OPTION1(() => {
+          this.SUBRULE(this.genericParam);
+          this.MANY(() => {
+            this.CONSUME(Comma);
+            this.SUBRULE2(this.genericParam);
+          });
+        });
+
+        this.CONSUME(RParen);
+      });
+    });
 
 
 
@@ -674,13 +779,38 @@ this.RULE("cueStopTop", () => {
       $.CONSUME2(RParen);
     });
 
-    // ------------------------------------------------------------
+    // ----ANIMATION CUE RULES ---------------------------------------
 
+    // rotate(...)
+    $.RULE("cueRotateTop", () => {
+      console.log("[PARSE] cueRotateTop matched!");
+
+      $.CONSUME(Rotate);
+      $.SUBRULE($.animGenericParamList);
+    });
+
+    // scale(...)
+    $.RULE("cueScaleTop", () => {
+      console.log("[PARSE] cueScaleTop matched!");
+
+      $.CONSUME(Scale);
+      $.SUBRULE($.animGenericParamList);
+    });
+
+    // o2p(...)
+    $.RULE("cueO2PTop", () => {
+      console.log("[PARSE] cueO2PTop matched!");
+
+      $.CONSUME(O2P);
+      $.SUBRULE($.animGenericParamList);
+    });
 
     // -----------------------
     // cueTop — only fade|page at top level
     // -----------------------
     $.RULE("cueTop", () => {
+      console.log("[cueTop] LA(1):", $.LA(1).image, $.LA(1).tokenType.name);
+
       // Allow optional cue: prefix (backwards compatible)
       $.OPTION(() => {
         $.CONSUME(Cue);
@@ -700,6 +830,9 @@ this.RULE("cueStopTop", () => {
         { ALT: () => $.SUBRULE($.cueStopTop) },
         { ALT: () => $.SUBRULE($.cueButtonTop) },
         { ALT: () => $.SUBRULE($.cueAudioTop) },
+        { ALT: () => $.SUBRULE($.cueRotateTop) },
+        { ALT: () => $.SUBRULE($.cueScaleTop) },
+        { ALT: () => $.SUBRULE($.cueO2PTop) },
 
       ]);
     });
@@ -773,6 +906,8 @@ export function debugTokens(inputText) {
 // into clean AST objects. Works with a single generic PatternName
 // token that matches any “Pxxx” form — no need for explicit Pseq/Prand definitions.
 // ------------------------------------------------------------
+
+
 function convertPatternNodeToAST(node) {
   if (!node) {
     console.warn("[convertPatternNodeToAST] ⚠️ Node is null");
@@ -1001,38 +1136,38 @@ export function cstToAst(cst) {
   // ------------------------------------------------------------
   // cueNav(...) AST builder
   // ------------------------------------------------------------
-const navNode =
-  cst.children?.cueNavTop?.[0] ||
-  (cst.name === "cueNavTop" ? cst : null);
+  const navNode =
+    cst.children?.cueNavTop?.[0] ||
+    (cst.name === "cueNavTop" ? cst : null);
 
-if (navNode) {
-  const ch = navNode.children;
+  if (navNode) {
+    const ch = navNode.children;
 
-  const action = ch.navAction?.[0]?.image ?? null;
-  const target = ch.navTarget?.[0]?.image ?? null;
+    const action = ch.navAction?.[0]?.image ?? null;
+    const target = ch.navTarget?.[0]?.image ?? null;
 
-  // extract uid if present
-  const params =
-    (ch.genericParamList || ch.genericParam || []).reduce((acc, p) => {
-      const key = p.children.key?.[0]?.image;
-      const raw = p.children.value?.[0]?.image;
-      if (key && raw != null) acc[key] = raw.replace(/^["']|["']$/g, '');
-      return acc;
-    }, {});
+    // extract uid if present
+    const params =
+      (ch.genericParamList || ch.genericParam || []).reduce((acc, p) => {
+        const key = p.children.key?.[0]?.image;
+        const raw = p.children.value?.[0]?.image;
+        if (key && raw != null) acc[key] = raw.replace(/^["']|["']$/g, '');
+        return acc;
+      }, {});
 
-let uid = params.uid;
-if (!uid) {
-  // Derive a stable default identity
-  uid = target ? `${action}@${target}` : action;
-}
+    let uid = params.uid;
+    if (!uid) {
+      // Derive a stable default identity
+      uid = target ? `${action}@${target}` : action;
+    }
 
-return {
-  type: "cueNav",
-  action,
-  target,
-  uid
-};
-}
+    return {
+      type: "cueNav",
+      action,
+      target,
+      uid
+    };
+  }
 
 
   // ------------------------------------------------------------
@@ -1164,53 +1299,53 @@ return {
 
 
   // ------------------------------------------------------------
-// cue:speed(...)  CST → AST
-// ------------------------------------------------------------
-const speedNode =
-  cst.children?.cueSpeedTop?.[0] ||
-  (cst.name === "cueSpeedTop" ? cst : null);
+  // cue:speed(...)  CST → AST
+  // ------------------------------------------------------------
+  const speedNode =
+    cst.children?.cueSpeedTop?.[0] ||
+    (cst.name === "cueSpeedTop" ? cst : null);
 
-if (speedNode) {
-  // shorthand: speed(3)
-  const shorthandTok =
-    speedNode.children?.shorthand?.[0] ||
-    speedNode.children?.NumberLiteral?.[0];
+  if (speedNode) {
+    // shorthand: speed(3)
+    const shorthandTok =
+      speedNode.children?.shorthand?.[0] ||
+      speedNode.children?.NumberLiteral?.[0];
 
-  let value = shorthandTok ? Number(shorthandTok.image) : null;
-  let add   = null;
-  let dur   = null;
-  let ease  = null;
-  let uid   = null;
+    let value = shorthandTok ? Number(shorthandTok.image) : null;
+    let add = null;
+    let dur = null;
+    let ease = null;
+    let uid = null;
 
-  const parseVal = (raw) => {
-    if (raw == null) return null;
-    const s = String(raw).trim();
-    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) return s.slice(1, -1);
-    if (/^(true|false)$/i.test(s)) return /^true$/i.test(s);
-    if (!isNaN(s) && s !== "") return Number(s);
-    return s;
-  };
+    const parseVal = (raw) => {
+      if (raw == null) return null;
+      const s = String(raw).trim();
+      if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) return s.slice(1, -1);
+      if (/^(true|false)$/i.test(s)) return /^true$/i.test(s);
+      if (!isNaN(s) && s !== "") return Number(s);
+      return s;
+    };
 
-  // optional param list (works with genericParamList or bare genericParam[])
-  const paramNodes =
-    speedNode.children.genericParamList ||
-    speedNode.children.genericParam || [];
+    // optional param list (works with genericParamList or bare genericParam[])
+    const paramNodes =
+      speedNode.children.genericParamList ||
+      speedNode.children.genericParam || [];
 
-  for (const p of paramNodes) {
-    const key = p.children.key?.[0]?.image;
-    const raw = p.children.value?.[0]?.image;
-    if (!key) continue;
-    const v = parseVal(raw);
+    for (const p of paramNodes) {
+      const key = p.children.key?.[0]?.image;
+      const raw = p.children.value?.[0]?.image;
+      if (!key) continue;
+      const v = parseVal(raw);
 
-    if (key === "value" || key === "speed" || key === "multiplier") value = Number(v);
-    else if (key === "add") add = Number(v);
-    else if (key === "dur") dur = Number(v);
-    else if (key === "ease" || key === "easing") ease = String(v);
-    else if (key === "uid") uid = v;
+      if (key === "value" || key === "speed" || key === "multiplier") value = Number(v);
+      else if (key === "add") add = Number(v);
+      else if (key === "dur") dur = Number(v);
+      else if (key === "ease" || key === "easing") ease = String(v);
+      else if (key === "uid") uid = v;
+    }
+
+    return { type: "cueSpeed", value, add, dur, ease, uid };
   }
-
-  return { type: "cueSpeed", value, add, dur, ease, uid };
-}
 
 
 
@@ -1237,18 +1372,18 @@ if (speedNode) {
       val = val.replace(/^"|"$/g, "");
       opt[key] = val;
     }
-    
+
     //  const triggerExpr = triggerAst.cueExpr;
-   
-return {
-  type: "cueButton",
-  label,
-  triggerAst: {
-    ...triggerAst,        // ✅ real code, this copies src, amp, loop, cueExpr, toggle, uid, etc.
-    uid: triggerAst.uid ?? null   // ✅ ensure uid exists (even if missing)
-  },
-  opt
-};
+
+    return {
+      type: "cueButton",
+      label,
+      triggerAst: {
+        ...triggerAst,        // ✅ real code, this copies src, amp, loop, cueExpr, toggle, uid, etc.
+        uid: triggerAst.uid ?? null   // ✅ ensure uid exists (even if missing)
+      },
+      opt
+    };
   }
 
 
@@ -1256,70 +1391,70 @@ return {
   // cueAudio(...) AST Builder
   // ------------------------------------------------------------
   const audioNode =
-  cst.children?.cueAudioTop?.[0] ||
-  (cst.name === "cueAudioTop" ? cst : null);
+    cst.children?.cueAudioTop?.[0] ||
+    (cst.name === "cueAudioTop" ? cst : null);
 
-if (audioNode) {
+  if (audioNode) {
 
-  const list = audioNode.children.genericParamList?.[0];
-  const items = list?.children?.genericParam || [];
+    const list = audioNode.children.genericParamList?.[0];
+    const items = list?.children?.genericParam || [];
 
-  // Generic dictionary
-  const params = {};
+    // Generic dictionary
+    const params = {};
 
-  for (const p of items) {
-    const key = p.children.key?.[0]?.image;
-    const token =
-      p.children.value?.[0] ||
-      p.children.NumberLiteral?.[0] ||
-      p.children.StringLiteral?.[0] ||
-      p.children.True?.[0] ||
-      p.children.False?.[0] ||
-      p.children.Identifier?.[0] ||
-      null;
+    for (const p of items) {
+      const key = p.children.key?.[0]?.image;
+      const token =
+        p.children.value?.[0] ||
+        p.children.NumberLiteral?.[0] ||
+        p.children.StringLiteral?.[0] ||
+        p.children.True?.[0] ||
+        p.children.False?.[0] ||
+        p.children.Identifier?.[0] ||
+        null;
 
-    if (!key || !token) continue;
+      if (!key || !token) continue;
 
-    let raw = token.image.replace(/^"|"$/g, ""); // strip quotes
+      let raw = token.image.replace(/^"|"$/g, ""); // strip quotes
 
-    // Convert common numerics / bools automatically:
-    let val =
-      raw === "true"  ? true  :
-      raw === "false" ? false :
-      isNaN(raw)       ? raw  :
-                        Number(raw);
+      // Convert common numerics / bools automatically:
+      let val =
+        raw === "true" ? true :
+          raw === "false" ? false :
+            isNaN(raw) ? raw :
+              Number(raw);
 
-    params[key] = val;  // ← store generically
+      params[key] = val;  // ← store generically
+    }
+
+    // ✅ Normalization layer — small & declarative
+    const {
+      src,
+      amp = 1,
+      loop = 1,
+      toggle = false,
+      fade,
+      fadeIn = fade,
+      fadeOut = fade,
+      uid = src // <— default uid to src if not provided
+    } = params;
+
+    // const cueExpr = `audio(${Object.entries(params)
+    //   .map(([k,v]) => `${k}:${v}`)
+    //   .join(",")})`;
+
+    return {
+      type: "cueAudio",
+      src,
+      amp,
+      loop,
+      fadeIn: fadeIn ?? 0,
+      fadeOut: fadeOut ?? 0,
+      toggle,
+      uid,
+      //  cueExpr
+    };
   }
-
-  // ✅ Normalization layer — small & declarative
-  const {
-    src,
-    amp = 1,
-    loop = 1,
-    toggle = false,
-    fade,
-    fadeIn = fade,
-    fadeOut = fade,
-    uid = src // <— default uid to src if not provided
-  } = params;
-
-  // const cueExpr = `audio(${Object.entries(params)
-  //   .map(([k,v]) => `${k}:${v}`)
-  //   .join(",")})`;
-
-  return {
-    type: "cueAudio",
-    src,
-    amp,
-    loop,
-    fadeIn: fadeIn ?? 0,
-    fadeOut: fadeOut ?? 0,
-    toggle,
-    uid,
-    //  cueExpr
-  };
-}
 
   // ------------------------------------------------------------
   // cue:pause(...)
@@ -1355,48 +1490,189 @@ if (audioNode) {
     return { type: "cuePause", dur, count, next };
   }
 
-// ------------------------------------------------------------
-// cueStopTop → AST
-// ------------------------------------------------------------
-if (cst.children?.cueStopTop?.[0]) {
-  const node = cst.children.cueStopTop[0];
+  // ------------------------------------------------------------
+  // cueStopTop → AST
+  // ------------------------------------------------------------
+  if (cst.children?.cueStopTop?.[0]) {
+    const node = cst.children.cueStopTop[0];
 
-  // --- Extract params (if any) from genericParamList ---
-  const params = {};
-  const paramNodes = node.children.genericParam || [];
+    // --- Extract params (if any) from genericParamList ---
+    const params = {};
+    const paramNodes = node.children.genericParam || [];
 
-  const parseRawValue = (raw) => {
-    if (raw === undefined || raw === null) return raw;
+    const parseRawValue = (raw) => {
+      if (raw === undefined || raw === null) return raw;
 
-    // Strip matching quotes if present
-    const s = String(raw).trim();
-    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-      return s.slice(1, -1);
+      // Strip matching quotes if present
+      const s = String(raw).trim();
+      if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+        return s.slice(1, -1);
+      }
+
+      // Booleans
+      if (/^(true|false)$/i.test(s)) return /^true$/i.test(s);
+
+      // Numbers (int/float)
+      if (!isNaN(s) && s !== '') return Number(s);
+
+      return s; // fallback as string
+    };
+
+    for (const p of paramNodes) {
+      const key = p.children.key?.[0]?.image;
+      const raw = p.children.value?.[0]?.image;
+      if (key) params[key] = parseRawValue(raw);
     }
 
-    // Booleans
-    if (/^(true|false)$/i.test(s)) return /^true$/i.test(s);
-
-    // Numbers (int/float)
-    if (!isNaN(s) && s !== '') return Number(s);
-
-    return s; // fallback as string
-  };
-
-  for (const p of paramNodes) {
-    const key = p.children.key?.[0]?.image;
-    const raw = p.children.value?.[0]?.image;
-    if (key) params[key] = parseRawValue(raw);
+    // Return all params so handlers can use uid, next, scope, etc.
+    return {
+      type: "cueStop",
+      ...params,        // e.g., uid, next, scope, all, label, etc.
+    };
   }
 
-  // Return all params so handlers can use uid, next, scope, etc.
-  return {
-    type: "cueStop",
-    ...params,        // e.g., uid, next, scope, all, label, etc.
-  };
-}
+  // ------------------------------------------------------------
+
+  // ------------------------------------------------------------
+  // extractValue(vNode) — unified value normalizer for animValue
+  // ------------------------------------------------------------
+  function extractValue(vNode) {
+    if (!vNode || !vNode.children) return null;
+
+    // --- NEW: unwrap nested animValue wrapper (this is the missing piece)
+    if (vNode.children.animValue) {
+      return extractValue(vNode.children.animValue[0]);
+    }
+
+    // --- NEW: unwrap value(...) wrapper
+    if (vNode.children.value && vNode.children.value[0]?.children?.animValue) {
+      return extractValue(vNode.children.value[0].children.animValue[0]);
+    }
+
+    // NumberLiteral
+    if (vNode.children.NumberLiteral) {
+      return Number(vNode.children.NumberLiteral[0].image);
+    }
+
+    // Identifier (including inf, true, false)
+    if (vNode.children.Identifier) {
+      const name = vNode.children.Identifier[0].image;
+      if (name === "inf") return "inf";
+      if (name === "true") return true;
+      if (name === "false") return false;
+      return name;
+    }
+
+    // ✅ LIST LITERAL (values:[0,120,240])
+    if (vNode.children.LBracket) {
+      const exprs = vNode.children.patternExpr || [];
+      return exprs.map(extractValue);
+    }
+
+    // ✅ ARRAY LITERAL via arrayValue (the real case in your CST)
+    if (vNode.children.arrayValue) {
+      const arr = vNode.children.arrayValue[0];
+      const items = arr.children.animValue || [];
+      return items.map(extractValue);
+    }
+
+    // Pattern call (Pseq, Prand, Pxrand, Pshuf)
+    if (vNode.children.patternCall) {
+      const call = vNode.children.patternCall[0];
+      const name = call.children.PatternName[0].image;
+
+      const values = extractValue({
+        children: {
+          LBracket: call.children.LBracket,
+          patternExpr: call.children.patternExpr,
+        }
+      });
+
+      const repeats =
+        extractValue(call.children.patternExpr?.slice(-1)[0]) ?? 1;
+
+      return {
+        type: "pattern",
+        name,
+        values,
+        repeats
+      };
+    }
+
+    return null;
+  }
 
 
+  // ============================================================================
+  // shared helper animation AST builders (with instrumentation)
+  // ============================================================================
+  function extractAnimKvArgs(node) {
+    if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() ENTER:", node);
+
+    const out = [];
+    const list = node.children.animGenericParamList?.[0];
+    const params = list?.children.animGenericParam || [];
+
+    for (const p of params) {
+      const key = p.children.key?.[0]?.image;
+
+      // ✅ Unified animValue extraction (works for pattern & literal lists & numbers)
+      let vNode =
+        p.children.value?.[0]?.children?.animValue?.[0] || // value(animValue)
+        p.children.animValue?.[0] ||                       // direct animValue
+        p.children.value?.[0] ||                           // bare literal
+        null;
+
+      // ✅ NEW: unwrap nested value nodes (literal list case)
+      if (vNode && vNode.children?.value?.[0]?.children?.animValue?.[0]) {
+        vNode = vNode.children.value[0].children.animValue[0];
+      }
+
+      if (OSCILLA_DSL_DEBUG) {
+        console.log("[OSCILLA_DSL] param:", p);
+        console.log("[OSCILLA_DSL] key:", key);
+        console.log("[OSCILLA_DSL] vNode:", vNode);
+      }
+
+      let val = null;
+      try {
+        val = extractValue(vNode);
+      } catch (err) {
+        console.warn("[OSCILLA_DSL] extractValue ERROR:", err);
+        val = null;
+      }
+
+      if (OSCILLA_DSL_DEBUG) {
+        console.log(`[OSCILLA_DSL] extracted "${key}" →`, val);
+      }
+
+      if (key) out.push({ type: key, value: val });
+    }
+
+    if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() RETURN:", out);
+    return out;
+  }
+
+  // ============================================================================
+  // Build AST for animation cues
+  // ============================================================================
+  const rotNode = cst.children?.cueRotateTop?.[0] || (cst.name === "cueRotateTop" ? cst : null);
+  if (rotNode) {
+    console.log("%c[cstToAst] MATCH cueRotateTop", "color:#ff0;background:#000;padding:3px;");
+    return { type: "cueRotate", args: extractAnimKvArgs(rotNode) };
+  }
+
+  const scNode = cst.children?.cueScaleTop?.[0] || (cst.name === "cueScaleTop" ? cst : null);
+  if (scNode) {
+    console.log("%c[cstToAst] MATCH cueScaleTop", "color:#ff0;background:#000;padding:3px;");
+    return { type: "cueScale", args: extractAnimKvArgs(scNode) };
+  }
+
+  const o2pNode = cst.children?.cueO2PTop?.[0] || (cst.name === "cueO2PTop" ? cst : null);
+  if (o2pNode) {
+    console.log("%c[cstToAst] MATCH cueO2PTop", "color:#ff0;background:#000;padding:3px;");
+    return { type: "cueO2P", args: extractAnimKvArgs(o2pNode) };
+  }
 
 
 
