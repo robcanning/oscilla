@@ -348,10 +348,52 @@ export const initializeSVG = async (svgElement) => {
       });
     });
 
+
+    // TODO CSS IN SCROLL MODE - HEIGHT NEEDS TO BE 95% OR SOMETHING
+    // BUT THEN THE JUMP2X ETC SYNC BREAKS . NEED TO SORT ORDER OF EX
+    // PROJECT LOADER ALSO DOES CSS STUFF LIKE THIS - WHAT IS REDUNDANT?
+    // 
+
+    // --- Wide-scroll layout correction ---
+    const applyWideScrollLayout = () => {
+      const cont = document.getElementById("scoreContainer");
+      const svg = svgElement;
+      if (!svg || !cont) return;
+
+      Object.assign(cont.style, {
+        width: "100vw",
+        height: "100vh",
+        overflowX: "auto",
+        overflowY: "hidden",
+        whiteSpace: "nowrap",
+        display: "block",
+        position: "relative"
+      });
+
+      svg.removeAttribute("width");
+      svg.removeAttribute("height");
+      Object.assign(svg.style, {
+        display: "inline-block",
+        height: "100vh",
+        width: "auto",
+        maxWidth: "none",
+        maxHeight: "100%",
+        verticalAlign: "top"
+      });
+
+      svg.getBoundingClientRect(); // force reflow
+      console.log("[initializeSVG] Applied wide-scroll layout correction.");
+    };
+
+    window.applyWideScrollLayout = applyWideScrollLayout;
+
+
+
     // Wait until the SVG is *actually* inserted and painted
-    // requestAnimationFrame(() => {
-    //   requestAnimationFrame(applyWideScrollLayout);
-    // });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(applyWideScrollLayout);
+    });
+
 
     const container = window.scoreContainer;
     const svg = svgElement;
@@ -2011,7 +2053,7 @@ document.addEventListener('DOMContentLoaded', () => {
           window.playheadX = window.serverSyncPlayheadX;
         } else {
           // Small discrepancy → invisible correction
-          const correctionRate = 1.4; // tune 1.2–1.7 to taste
+          const correctionRate = 1.3; // tune 1.2–1.7 to taste
           window.playheadX += drift * correctionRate * dt;
         }
       }
