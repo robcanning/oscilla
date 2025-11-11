@@ -1,120 +1,101 @@
-# rotate() Cue — OscillaScore
 
-`rotate()` controls rotation animations of SVG elements in OscillaScore. It supports step-wise snapping, smooth tweening, looping, alternating (bounce), one-shot playback, and pattern-based sequencing for both angle values and durations.
+# rotate() — OscillaScore Rotation Cue
+
+Controls visual rotation of any SVG object around its transform origin. Rotation may be continuous or driven by a list or pattern of angles. To use rotation, assign an object (usually a `<g>`) an id of the form:
+
+```
+rotate(...)
+```
+
+The first parameter may be given either explicitly:
+
+```
+rotate(values:[0,120,240], dur:4)
+```
+
+or implicitly:
+
+```
+rotate([0,120,240], dur:4)
+```
+
+In the implicit form, the first argument (a list or pattern) is treated as the `values` sequence.
+
+Rotation occurs in place. The pivot defaults to the object’s visual center, but may be adjusted in Inkscape via **Object → Transform → Center**, or by setting `transform-origin` in the style.
 
 ---
 
-## Syntax
+## Parameters
 
-```
-rotate(values:[...], dur:..., mode:..., interp:..., ease:..., hold:..., pauseOnExit:...)
-```
+| Parameter | Type | Meaning |
+|----------|------|---------|
+| values / first param | List or Pattern | Sequence of angles in degrees |
+| dur | Number or Pattern | Duration of each step, in seconds |
+| mode | loop / once / alternate | Sequence traversal behavior |
+| interp | smooth / step | Interpolation style |
+| ease | Easing string | (smooth mode only) anime.js easing |
+| hold | Number (seconds) | Pause after each step (smooth mode only) |
 
-### Parameters
+---
 
-| Name         | Type                          | Default   | Description |
-|--------------|-------------------------------|-----------|-------------|
-| `values`     | Array or Pattern               | *required*| Rotation target angles in degrees. Supports arrays and Pseq/Prand/Pxrand/Pshuf. |
-| `dur`        | Number, Array, or Pattern      | `1`       | Duration *per step* in seconds, or a duration pattern. |
-| `mode`       | `loop` \| `once` \| `alternate`| `loop`    | Loop behavior. `alternate` bounces forward/back over the sequence. |
-| `interp`     | `smooth` \| `step`             | `smooth`  | `smooth`: tween between angles. `step`: instant jumps and hold. |
-| `ease`       | Anime.js easing string         | `linear`  | Only used when `interp="smooth"`. |
-| `hold`       | Number (seconds)               | auto      | Hold time *between steps* in smooth mode. Ignored in step mode. |
-| `pauseOnExit`| Boolean                        | `true`    | If false + `mode:"once"`, returns to first value on finish. |
+## Sequence Modes
+
+- **mode:loop** (default) — cycle continuously
+- **mode:once** — play the sequence once and stop
+- **mode:alternate** — ping-pong (bounce) at sequence edges
+
+---
+
+## Interpolation Styles
+
+- **interp:smooth** — rotation animates over time (default)
+- **interp:step** — rotation snaps instantly; `dur` becomes the step interval
+
+In smooth mode, `hold` applies after reaching each step.  
+In step mode, `hold` is ignored.
+
+---
+
+## Pattern Support (for values and durations)
+
+| Pattern | Behavior |
+|--------|----------|
+| `Pseq([…], inf)` | loop sequence |
+| `Prand([…], inf)` | pick random each time |
+| `Pxrand([…], inf)` | random, no immediate repeat |
+| `Pshuf([…], inf)` | shuffled list repeating |
 
 ---
 
 ## Examples
 
-### 1. Simple Loop
 ```
-rotate(values:[0,120,240], dur:2)
-```
-Rotates smoothly through 3 angles, repeating every 2 seconds per step.
+rotate(dir:1, dur:1) 
+  ```
+CW one turn per second
 
-### 2. Stepwise (snap) Rotation
 ```
-rotate(values:[0,90,180,270], dur:0.4, interp:step)
+rotate([0,120,240], dur:4)
 ```
-Instant hops, each held for 0.4 seconds.
+Cycle three orientations every 4 seconds.
 
-### 3. Alternating Bounce
 ```
-rotate(values:[0,180], dur:1, mode:alternate)
+rotate([0,90,180,270], dur:0.5, interp:step)
 ```
-Goes 0 → 180 → 0 → 180 ...
+Snap through quarter-turns at 0.5s intervals.
 
-### 4. One-Shot (no looping)
 ```
-rotate(values:[0,45,0], dur:1, mode:once)
+rotate(Pseq([0,45,10],inf), dur:Pseq([2,0.4,1],inf), mode:alternate)
 ```
-Runs once and stops.
-
-### 5. Patterned Durations
-```
-rotate(values:[0,120,240], dur:Pseq([2,0.5,1], inf))
-```
-Durations per step cycle through 2s, 0.5s, 1s repeatedly.
-
-### 6. Patterned Angles + Step Mode
-```
-rotate(values:Pshuf([0,90,180,270], inf), dur:0.3, interp:step)
-```
-Random order, snapping between angles.
+Alternate rotation direction while durations follow a repeating rhythmic pattern.
 
 ---
 
-## Behavior Notes
+## Notes
 
-### Step Mode (`interp:"step"`)
-- No tweening.
-- The element instantly snaps to the next angle.
-- `dur` becomes the hold time.
-- `hold` is ignored.
-
-### Smooth Mode (`interp:"smooth"`)
-- Tweens between angles using `ease`.
-- After each tween completes, a hold period occurs:
-  - If `hold` is given → use it.
-  - Otherwise → defaults to `dur * 0.25`.
-
-### Pattern Generators
-`values:` and `dur:` both support:
-- `Pseq([...], repeats)`
-- `Prand([...], repeats)`
-- `Pxrand([...], repeats)`
-- `Pshuf([...], repeats)`
-- literal arrays (`[ ... ]`)
-
-Patterns continuously supply the next step value without resetting unless `mode:"once"` explicitly ends.
+- Rotation timing is independent of scroll speed.
+- State persists when seeking/jumping.
+- If the object visually jumps, set pivot explicitly.
+- Patterns allow non-repetitive rotational behavior.
 
 ---
-
-## Fallback (Continuous Rotation)
-
-If `values` is not provided:
-
-```
-rotate(dur:4)
-```
-
-→ rotates the object **360° every 4 seconds** in a continuous loop.
-
----
-
-## Summary
-
-| Mode | Effect |
-|------|--------|
-| `loop` | Sequence repeats indefinitely. |
-| `once` | Sequence plays once and stops. |
-| `alternate` | Sequence plays forward, then reverses at boundaries. |
-
-| Interp | Result |
-|--------|--------|
-| `smooth` | eased continuous rotation motion |
-| `step` | instant snaps between angles |
-
----
-
-End of document.
