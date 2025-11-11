@@ -277,14 +277,44 @@ export class CueParser extends CstParser {
     });
 
     // A list of animation params using the rule above.
-    $.RULE("animGenericParamList", () => {
-      $.CONSUME(LParen);
-      $.MANY_SEP({
-        SEP: Comma,
-        DEF: () => $.SUBRULE($.animGenericParam)
-      });
-      $.CONSUME(RParen);
-    });
+$.RULE("animGenericParamList", () => {
+  $.CONSUME(LParen);
+
+  $.OR([
+
+    // ---- Case 1: Unlabeled first argument ----
+    // Allowed only if next token is NOT "Identifier :"
+    {
+      GATE: () =>
+        // Lookahead 1 is not Identifier OR lookahead 2 is not Colon
+        !($.LA(1).tokenType === Identifier && $.LA(2).tokenType === Colon),
+
+      ALT: () => {
+        $.SUBRULE($.animValue, { LABEL: "firstValue" });
+
+        $.OPTION(() => $.CONSUME(Comma));
+
+        $.MANY_SEP({
+          SEP: Comma,
+          DEF: () => $.SUBRULE($.animGenericParam, { LABEL: "restParams" })
+        });
+      }
+    },
+
+    // ---- Case 2: Standard key:value list ----
+    {
+      ALT: () => {
+        $.AT_LEAST_ONE_SEP({
+          SEP: Comma,
+          DEF: () => $.SUBRULE2($.animGenericParam, { LABEL: "kvParams" })
+        });
+      }
+    }
+
+  ]);
+
+  $.CONSUME(RParen);
+});
 
 
     // -----------------------
@@ -1607,51 +1637,46 @@ export function cstToAst(cst) {
   // shared helper animation AST builders (with instrumentation)
   // ============================================================================
   function extractAnimKvArgs(node) {
-    if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() ENTER:", node);
+  if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() ENTER:", node);
 
-    const out = [];
-    const list = node.children.animGenericParamList?.[0];
-    const params = list?.children.animGenericParam || [];
+  const out = [];
 
-    for (const p of params) {
-      const key = p.children.key?.[0]?.image;
+  // Case: animGenericParamList(firstValue, restParams...)
+  const firstValueNode = node.children.animGenericParamList?.[0]?.children?.firstValue?.[0];
+  if (firstValueNode) {
+    const val = extractValue(firstValueNode);
+    out.push({ type: "values", value: val });
+  }
 
-      // ✅ Unified animValue extraction (works for pattern & literal lists & numbers)
-      let vNode =
-        p.children.value?.[0]?.children?.animValue?.[0] || // value(animValue)
-        p.children.animValue?.[0] ||                       // direct animValue
-        p.children.value?.[0] ||                           // bare literal
-        null;
+  // Case: named key:value params
+  const restParams = node.children.animGenericParamList?.[0]?.children?.restParams || 
+                     node.children.animGenericParamList?.[0]?.children?.kvParams || [];
 
-      // ✅ NEW: unwrap nested value nodes (literal list case)
-      if (vNode && vNode.children?.value?.[0]?.children?.animValue?.[0]) {
-        vNode = vNode.children.value[0].children.animValue[0];
-      }
+  for (const p of restParams) {
+    const key = p.children.key?.[0]?.image || p.key;
+    if (!key) continue;
 
-      if (OSCILLA_DSL_DEBUG) {
-        console.log("[OSCILLA_DSL] param:", p);
-        console.log("[OSCILLA_DSL] key:", key);
-        console.log("[OSCILLA_DSL] vNode:", vNode);
-      }
+    // Unified animValue extraction
+    let vNode =
+      p.children.value?.[0]?.children?.animValue?.[0] ||
+      p.children.value?.[0] ||
+      p.children.animValue?.[0] ||
+      null;
 
-      let val = null;
-      try {
-        val = extractValue(vNode);
-      } catch (err) {
-        console.warn("[OSCILLA_DSL] extractValue ERROR:", err);
-        val = null;
-      }
-
-      if (OSCILLA_DSL_DEBUG) {
-        console.log(`[OSCILLA_DSL] extracted "${key}" →`, val);
-      }
-
-      if (key) out.push({ type: key, value: val });
+    let val = null;
+    try {
+      val = extractValue(vNode);
+    } catch (err) {
+      console.warn("[OSCILLA_DSL] extractValue ERROR:", err);
     }
 
-    if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() RETURN:", out);
-    return out;
+    out.push({ type: key, value: val });
   }
+
+  if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() RETURN:", out);
+  return out;
+}
+
 
   // ============================================================================
   // Build AST for animation cues
