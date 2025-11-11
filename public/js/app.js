@@ -22,7 +22,7 @@ import {
 } from "./reuse.js";
 
 import {
-  forward, rewind, rewindToStart, getSpeedForPosition,
+  forward, rewind, rewindToStart,
   initializeSpeedControls, adjustSpeed, setSpeed, updateSpeedDisplay,
   sendSpeedUpdateToServer, togglePlay, togglePlayButton, startPlayback,
   pausePlayback, resumePlayback, jumpToCueId, hideControls, showControls

@@ -52,6 +52,8 @@ export const cueHandlers = {
 import { parseCueToAST } from "./parser.js";
 import { handleMetronomeCue } from "./metro.js";
 import { handleRotateCue } from "./rotate.js";
+import { handleSpeedCue, handleSpeedRamp } from "./speed.js";
+
 import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
 
 
@@ -1048,95 +1050,6 @@ export async function handleTraverseCue(cueId) {
   startTraverseAnimation(config);
 }
 
-
-
-// ⚡ Handles cueSpeed: updates playback speed and syncs
-// --- Speed Ramp State ---
-let activeSpeedRamp = null;
-
-// ------------------------------------------------------------
-// handleSpeedRamp(start, end, durationSeconds, easing = "linear")
-// ------------------------------------------------------------
-export function handleSpeedRamp(start, end, durSec, easing = "linear") {
-  if (!Number.isFinite(start) || !Number.isFinite(end) || !Number.isFinite(durSec) || durSec <= 0) {
-    console.warn("[cueSpeed] Invalid ramp params:", { start, end, durSec });
-    return;
-  }
-
-  console.log(`[cueSpeed] Starting ramp: ${start} → ${end} over ${durSec}s`);
-
-  const startTime = performance.now();
-  const durationMs = durSec * 1000;
-
-  // Cancel any existing ramp
-  activeSpeedRamp = { start, end, startTime, durationMs, easing };
-
-  // Ensure the animation loop is running
-  if (!window.speedRampLoopActive) {
-    window.speedRampLoopActive = true;
-    requestAnimationFrame(speedRampTick);
-  }
-}
-
-function easeLinear(t) { return t; }
-
-// Main ramp animation loop
-function speedRampTick(now) {
-  if (!activeSpeedRamp) {
-    window.speedRampLoopActive = false;
-    return;
-  }
-
-  const { start, end, startTime, durationMs, easing } = activeSpeedRamp;
-  const elapsed = now - startTime;
-  let t = Math.min(elapsed / durationMs, 1);
-
-  // Apply easing later — for now just linear:
-  t = easeLinear(t);
-
-  const value = start + (end - start) * t;
-
-  window.speedMultiplier = value;
-  window.updateSpeedDisplay?.();
-
-  // Broadcast to server smoothly
-  if (window.socket?.readyState === WebSocket.OPEN && !window.incomingServerUpdate) {
-    window.socket.send(JSON.stringify({
-      type: "set_speed_multiplier",
-      multiplier: value,
-      timestamp: Date.now()
-    }));
-  }
-
-  if (t < 1) {
-    requestAnimationFrame(speedRampTick);
-  } else {
-    console.log(`[cueSpeed] Ramp complete. Final multiplier = ${end}`);
-    activeSpeedRamp = null;
-    window.speedRampLoopActive = false;
-  }
-}
-
-
-
-// ⚡ Handles cueSpeed: updates playback speed and syncs
-export function handleSpeedCue(_id, newMultiplier) {
-  newMultiplier = Number(newMultiplier);
-  if (!newMultiplier || newMultiplier <= 0) return;
-  if (window.speedMultiplier === newMultiplier) return;
-
-  window.speedMultiplier = newMultiplier;
-  window.updateSpeedDisplay?.();
-
-  // broadcast only if not receiving
-  if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN && !window.incomingServerUpdate) {
-    window.socket.send(JSON.stringify({
-      type: "set_speed_multiplier",
-      multiplier: newMultiplier,
-      t: Date.now()
-    }));
-  }
-}
 
 
 

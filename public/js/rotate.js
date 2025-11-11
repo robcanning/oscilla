@@ -1,10 +1,36 @@
+// OSC send helper for ROTATE
+
+function sendOSCRotation(el, angle) {
+ if (!window.socket) return;
+
+    const uid = el.id || el.dataset.uid || null;
+    const radians = angle * (Math.PI / 180);
+    const norm = ((angle % 360) + 360) % 360 / 360;
+
+    const msg = {
+        type: "osc_rotate",
+        uid,
+        angle,
+        radians,
+        norm,
+        timestamp: Date.now()
+    };
+
+    try {
+        window.socket.send(JSON.stringify(msg));
+        console.log("[rotate][osc]:", msg);
+
+    } catch (e) {
+        console.warn("[rotate][osc] send failed:", e);
+    }
+}
 
 
 // ============================================================
 // Pattern Generator (Pseq, Prand, Pxrand, Pshuf)
 // ============================================================
 function makePatternGenerator(pattern) {
-    
+
     if (!pattern || !pattern.values || !Array.isArray(pattern.values)) {
         console.warn("[rotate] makePatternGenerator: invalid pattern:", pattern);
         return { next: () => null };
@@ -215,6 +241,8 @@ function handleRotateSequence(el, values, astArgs) {
     let interp = "smooth";   // "smooth" or "step"
     let ease = "linear";
     let hold = null;
+    let oscMode = 0; // 0 = off, 1 = continuous, 2 = per-step
+
 
     // ---- parse args ----
     for (const arg of astArgs) {
@@ -246,6 +274,8 @@ function handleRotateSequence(el, values, astArgs) {
         if (key === "interp") interp = String(val).trim().toLowerCase();
         if (key === "ease") ease = String(val).trim();
         if (key === "hold") hold = Number(val);
+        if (key === "osc") oscMode = Number(val) || 0;
+
     }
 
     // ---- default hold behavior ----
@@ -305,15 +335,17 @@ function handleRotateSequence(el, values, astArgs) {
 
         // ---- STEP MODE (immediate snap + wait) ----
         if (interp === "step") {
-            // Sync from actual DOM, then snap
-            driver.a = getCurrentAngle(el, driver.a);
             driver.a = target;
             el.style.transform = `rotate(${target}deg)`;
+
+            if (oscMode === 1 || oscMode === 2) {
+                sendOSCRotation(el, target);
+            }
+
             const stepDur = durGen ? durGen.next() : dur;
             el._oscillaRotateAnim = setTimeout(runNext, stepDur * 1000);
             return;
         }
-
         // ---- SMOOTH MODE ----
         // Always re-sync driver to actual rendered angle before calculating delta
         let current = getCurrentAngle(el, driver.a);
@@ -335,8 +367,17 @@ function handleRotateSequence(el, values, astArgs) {
             update: () => {
                 let a = ((driver.a % 360) + 360) % 360;
                 el.style.transform = `rotate(${a}deg)`;
+
+                if (oscMode === 1) { // continuous
+                    sendOSCRotation(el, a);
+                }
             },
             complete: () => {
+                if (oscMode === 2) { // step mode send only at step completion
+                    let finalA = ((driver.a % 360) + 360) % 360;
+                    sendOSCRotation(el, finalA);
+                }
+
                 if (hold > 0) {
                     el._oscillaRotateAnim = setTimeout(runNext, hold * 1000);
                 } else {
@@ -344,6 +385,7 @@ function handleRotateSequence(el, values, astArgs) {
                 }
             }
         });
+
 
         el._oscillaRotateAnim = anim;
     }

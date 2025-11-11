@@ -40,6 +40,7 @@
  */
 
 
+import { getSpeedForPosition } from "./speed.js";
 
 window.seekDebounceTime = 300;
 window.seekingTimeout = null;
@@ -270,35 +271,6 @@ export const forward = () => {
   }
 
 };
-
-
-
-/**
- * getSpeedForPosition(xPosition)
- * Determines the correct speed multiplier based on the nearest previous cueSpeed.
- * Defaults to the project's preferred speed (or 1.0 if undefined).
- */
-export function getSpeedForPosition(xPosition) {
-  const defaultSpeed = window.oscillaPrefs?.defaultPlaybackSpeed ?? 1.0;
-
-  if (!window.speedCueMap || window.speedCueMap.length === 0) {
-    setSpeed(defaultSpeed);
-    return defaultSpeed;
-  }
-
-  // Pure world-space comparison (no viewport mixing)
-  const lastSpeedCue = window.speedCueMap
-    .filter(cue => cue.position <= xPosition)
-    .slice(-1)[0];
-
-  if (lastSpeedCue) {
-    setSpeed(lastSpeedCue.multiplier);
-    return window.speedMultiplier;
-  } else {
-    setSpeed(defaultSpeed);
-    return defaultSpeed;
-  }
-}
 
 
 /**
@@ -596,6 +568,11 @@ export function startPlayback() {
 
   // --- Speed setup ---
   window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  console.log(
+    `[Playback] 🎚 Applying speed multiplier: ${window.speedMultiplier} (playheadX=${window.playheadX.toFixed(
+      2
+    )})`
+  );
   updateSpeedDisplay?.();
 
   // --- Initialize stopwatch + animation ---
@@ -605,14 +582,12 @@ export function startPlayback() {
   // --- Animation loop kickstart ---
   if (typeof window.animate === "function") {
     cancelAnimationFrame(window.animationFrameId);
-
     window.animationFrameId = requestAnimationFrame(window.animate);
   }
 
   // --- UI sync ---
   togglePlayButton?.();
   hideControls?.();
-  // updateSeekBar?.(); // visually sync progress bar immediately
 
   // --- Cue trigger sync ---
   checkCueTriggers?.();
@@ -629,8 +604,9 @@ export function startPlayback() {
     );
   }
 
-  console.log("[Playback] Playback initialized");
+  console.log("[Playback] ✅ Playback initialized");
 }
+
 
 // Pauses playback: sets state, stops animation + stopwatch, syncs with server
 export function pausePlayback() {

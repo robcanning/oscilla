@@ -4,6 +4,9 @@ import {
   preloadReuseBlocksFromPages
 } from "./reuse.js";
 
+import { extractSpeedCues } from "./speed.js";
+
+
 // Rehearsal mark logic ////////////////////////////////////////////////////////
 
 /**
@@ -370,34 +373,11 @@ export const extractScoreElements = (svgElement) => {
     console.log("[DEBUG] ✅ Cues updated.");
   }
 
-  // ✅ Only set `speedCueMap` if it's empty (first-time loading)
-  if (speedCueMap.length === 0) {
-    console.log("[DEBUG] Loading speed cues for the first time.");
-
-    elements.forEach((element) => {
-      if (element.id.startsWith("cueSpeed_")) {
-        const bbox = element.getBBox();
-        const matrix = element.getCTM();
-        let absoluteX = bbox.x;
-        if (matrix) {
-          absoluteX += matrix.e;
-        }
-
-        const match = element.id.match(/cueSpeed_([\d.]+)/);
-        if (match) {
-          const speedValue = parseFloat(match[1]);
-          speedCueMap.push({ position: absoluteX, multiplier: speedValue });
-          // console.log(`[DEBUG] Stored speed cue -> Position: ${absoluteX}, Speed: ${speedValue}`);
-        }
-      }
-    });
-
-    // ✅ Ensure `speedCueMap` is always sorted for correct lookups
-    speedCueMap.sort((a, b) => a.position - b.position);
-    console.log("[DEBUG] Final sorted speed cues:", speedCueMap);
-  }
 
 
+speedCueMap.length = 0; // clear old values
+speedCueMap.push(...extractSpeedCues(svgElement));
+speedCueMap = extractSpeedCues(svgElement);
 
 
 
