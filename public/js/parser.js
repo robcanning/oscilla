@@ -81,6 +81,8 @@ const Audio = createToken({ name: "Audio", pattern: /audio\b/ });
 const Button = createToken({ name: "Button", pattern: /button\b/ });
 const Rotate = createToken({ name: "Rotate", pattern: /\brotate\b/, longer_alt: Identifier });
 const Scale = createToken({ name: "Scale", pattern: /\bscale\b/, longer_alt: Identifier });
+const ScaleXY = createToken({ name: "Scale", pattern: /\bscaleXY\b/, longer_alt: Identifier });
+
 const O2P = createToken({ name: "O2P", pattern: /\bo2p\b/, longer_alt: Identifier });
 
 
@@ -123,7 +125,7 @@ export const PatternName = createToken({
 export const allTokens = [
   Cue, Fade, Page, Stopwatch, Video, Text, Pause, Speed, Stop,
   Audio, Button, Nav,
-  Rotate, Scale, O2P,
+  Rotate, Scale, ScaleXY, O2P,
   After, PatternName, Choose,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
   RangeLiteral, NumberLiteral, StringLiteral, True, False,
@@ -277,44 +279,44 @@ export class CueParser extends CstParser {
     });
 
     // A list of animation params using the rule above.
-$.RULE("animGenericParamList", () => {
-  $.CONSUME(LParen);
+    $.RULE("animGenericParamList", () => {
+      $.CONSUME(LParen);
 
-  $.OR([
+      $.OR([
 
-    // ---- Case 1: Unlabeled first argument ----
-    // Allowed only if next token is NOT "Identifier :"
-    {
-      GATE: () =>
-        // Lookahead 1 is not Identifier OR lookahead 2 is not Colon
-        !($.LA(1).tokenType === Identifier && $.LA(2).tokenType === Colon),
+        // ---- Case 1: Unlabeled first argument ----
+        // Allowed only if next token is NOT "Identifier :"
+        {
+          GATE: () =>
+            // Lookahead 1 is not Identifier OR lookahead 2 is not Colon
+            !($.LA(1).tokenType === Identifier && $.LA(2).tokenType === Colon),
 
-      ALT: () => {
-        $.SUBRULE($.animValue, { LABEL: "firstValue" });
+          ALT: () => {
+            $.SUBRULE($.animValue, { LABEL: "firstValue" });
 
-        $.OPTION(() => $.CONSUME(Comma));
+            $.OPTION(() => $.CONSUME(Comma));
 
-        $.MANY_SEP({
-          SEP: Comma,
-          DEF: () => $.SUBRULE($.animGenericParam, { LABEL: "restParams" })
-        });
-      }
-    },
+            $.MANY_SEP({
+              SEP: Comma,
+              DEF: () => $.SUBRULE($.animGenericParam, { LABEL: "restParams" })
+            });
+          }
+        },
 
-    // ---- Case 2: Standard key:value list ----
-    {
-      ALT: () => {
-        $.AT_LEAST_ONE_SEP({
-          SEP: Comma,
-          DEF: () => $.SUBRULE2($.animGenericParam, { LABEL: "kvParams" })
-        });
-      }
-    }
+        // ---- Case 2: Standard key:value list ----
+        {
+          ALT: () => {
+            $.AT_LEAST_ONE_SEP({
+              SEP: Comma,
+              DEF: () => $.SUBRULE2($.animGenericParam, { LABEL: "kvParams" })
+            });
+          }
+        }
 
-  ]);
+      ]);
 
-  $.CONSUME(RParen);
-});
+      $.CONSUME(RParen);
+    });
 
 
     // -----------------------
@@ -819,11 +821,14 @@ $.RULE("animGenericParamList", () => {
       $.SUBRULE($.animGenericParamList);
     });
 
-    // scale(...)
+    // scale(...) and scaleXY(...)
     $.RULE("cueScaleTop", () => {
       console.log("[PARSE] cueScaleTop matched!");
 
-      $.CONSUME(Scale);
+      $.OR([
+        { ALT: () => $.CONSUME(Scale) },
+        { ALT: () => $.CONSUME2(ScaleXY) }  // token for the scaleXY identifier
+      ]);
       $.SUBRULE($.animGenericParamList);
     });
 
@@ -1632,51 +1637,49 @@ export function cstToAst(cst) {
     return null;
   }
 
-
   // ============================================================================
   // shared helper animation AST builders (with instrumentation)
   // ============================================================================
   function extractAnimKvArgs(node) {
-  if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() ENTER:", node);
+    if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() ENTER:", node);
 
-  const out = [];
+    const out = [];
 
-  // Case: animGenericParamList(firstValue, restParams...)
-  const firstValueNode = node.children.animGenericParamList?.[0]?.children?.firstValue?.[0];
-  if (firstValueNode) {
-    const val = extractValue(firstValueNode);
-    out.push({ type: "values", value: val });
-  }
-
-  // Case: named key:value params
-  const restParams = node.children.animGenericParamList?.[0]?.children?.restParams || 
-                     node.children.animGenericParamList?.[0]?.children?.kvParams || [];
-
-  for (const p of restParams) {
-    const key = p.children.key?.[0]?.image || p.key;
-    if (!key) continue;
-
-    // Unified animValue extraction
-    let vNode =
-      p.children.value?.[0]?.children?.animValue?.[0] ||
-      p.children.value?.[0] ||
-      p.children.animValue?.[0] ||
-      null;
-
-    let val = null;
-    try {
-      val = extractValue(vNode);
-    } catch (err) {
-      console.warn("[OSCILLA_DSL] extractValue ERROR:", err);
+    // Case: animGenericParamList(firstValue, restParams...)
+    const firstValueNode = node.children.animGenericParamList?.[0]?.children?.firstValue?.[0];
+    if (firstValueNode) {
+      const val = extractValue(firstValueNode);
+      out.push({ type: "values", value: val });
     }
 
-    out.push({ type: key, value: val });
+    // Case: named key:value params
+    const restParams = node.children.animGenericParamList?.[0]?.children?.restParams ||
+      node.children.animGenericParamList?.[0]?.children?.kvParams || [];
+
+    for (const p of restParams) {
+      const key = p.children.key?.[0]?.image || p.key;
+      if (!key) continue;
+
+      // Unified animValue extraction
+      let vNode =
+        p.children.value?.[0]?.children?.animValue?.[0] ||
+        p.children.value?.[0] ||
+        p.children.animValue?.[0] ||
+        null;
+
+      let val = null;
+      try {
+        val = extractValue(vNode);
+      } catch (err) {
+        console.warn("[OSCILLA_DSL] extractValue ERROR:", err);
+      }
+
+      out.push({ type: key, value: val });
+    }
+
+    if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() RETURN:", out);
+    return out;
   }
-
-  if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() RETURN:", out);
-  return out;
-}
-
 
   // ============================================================================
   // Build AST for animation cues
@@ -1698,10 +1701,6 @@ export function cstToAst(cst) {
     console.log("%c[cstToAst] MATCH cueO2PTop", "color:#ff0;background:#000;padding:3px;");
     return { type: "cueO2P", args: extractAnimKvArgs(o2pNode) };
   }
-
-
-
-
 
   // ============================================================================
   // 🔹 Fallback (unknown cue)

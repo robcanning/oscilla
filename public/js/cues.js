@@ -52,9 +52,11 @@ export const cueHandlers = {
 import { parseCueToAST } from "./parser.js";
 import { handleMetronomeCue } from "./metro.js";
 import { handleRotateCue } from "./rotate.js";
+import { handleScaleCue } from "./scale.js";
+
 import { handleSpeedCue, handleSpeedRamp } from "./speed.js";
 
-import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
+// import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
 
 
 

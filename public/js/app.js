@@ -1272,14 +1272,34 @@ document.addEventListener('DOMContentLoaded', () => {
               break;
             }
 
+            
+/**  Jump to Rehearsal Mark */
+case "jump": {
+  // --- Ignore our own echo ---
+  if (window.ignoreNextSync) {
+    console.log("[Sync] Ignoring own jump echo");
+    window.ignoreNextSync = false; // reset flag immediately
+    break;
+  }
 
-            /**  Jump to Rehearsal Mark */
-            case "jump":
-              window.playheadX = data.playheadX;
-              //  Locally center the scroll view based on received absolute playheadX
-              scrollToPlayheadVisual();
-              lastJumpTime = now;
-              break;
+  // --- Ignore very recent local jumps / seeks ---
+  if (window.recentlyRecalculatedPlayhead) {
+    console.log("[Sync] Skipping jump (recent local recalculation)");
+    break;
+  }
+
+  // --- Apply remote jump normally ---
+  window.playheadX = data.playheadX;
+  window.elapsedTime = data.elapsedTime ?? 0;
+
+  //  Locally center the scroll view based on received absolute playheadX
+  scrollToPlayheadVisual?.();
+
+  lastJumpTime = now;
+
+  console.log(`[Sync] Remote jump applied → playheadX=${window.playheadX.toFixed(1)}`);
+  break;
+}
 
 
             /**  Handle Unknown Messages */

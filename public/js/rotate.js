@@ -357,6 +357,8 @@ function handleRotateSequence(el, values, astArgs) {
         if (delta > 180) delta -= 360;
         if (delta < -180) delta += 360;
 
+        if (tgt === driver.deg) { stepIndexAdvance(); return runNext(); }
+
         const stepDur = durGen ? durGen.next() : dur;
 
         const anim = anime({

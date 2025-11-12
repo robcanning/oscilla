@@ -844,42 +844,32 @@ wss.on('connection', (ws, req) => {
 
         console.log(`[DEBUG] Sent OSC cue: /cue/trigger ${cueNumber}`);
         break;
-      case "jump": {
-        // Prefer elapsedTime (because it is already timeline-based)
-        let newElapsed = Number(data.elapsedTime);
 
-        // If elapsedTime wasn't provided, fall back to world-coordinate translation
-        if (!Number.isFinite(newElapsed)) {
-          if (Number.isFinite(data.playheadX) && Number.isFinite(sharedState.scoreWidth) && sharedState.scoreWidth > 0) {
-            newElapsed = (data.playheadX / sharedState.scoreWidth) * sharedState.duration;
-          } else {
-            // fallback to current position
-            newElapsed = sharedState.elapsedTime;
-          }
-        }
 
-        // Clamp to valid timeline range
-        newElapsed = Math.max(0, Math.min(newElapsed, sharedState.duration));
+        
+ case "jump": {
+  // Update authoritative shared state
+  if (!isNaN(data.playheadX)) {
+    sharedState.playheadX = data.playheadX;
+    sharedState.elapsedTime = data.elapsedTime ?? sharedState.elapsedTime;
+  }
 
-        // Store new fixed position
-        sharedState.elapsedTime = newElapsed;
+  // Broadcast to all *other* clients only (not the sender)
+  const jumpMsg = JSON.stringify({
+    type: "jump",
+    playheadX: sharedState.playheadX,
+    elapsedTime: sharedState.elapsedTime,
+  });
 
-        // Maintain legacy world coordinate for older clients
-        if (sharedState.scoreWidth > 0) {
-          sharedState.playheadX = (newElapsed / sharedState.duration) * sharedState.scoreWidth;
-        }
+  wss.clients.forEach((client) => {
+    if (client !== ws && client.readyState === WebSocket.OPEN) {
+      client.send(jumpMsg);
+    }
+  });
 
-        if (sharedState.isPlaying) {
-          // ✅ Re-anchor the shared transport timeline to newElapsed
-          sharedState.startTimestamp = performance.now() - newElapsed;
-        } else {
-          // ✅ Frozen position (paused)
-          sharedState.startTimestamp = null;
-        }
-
-        broadcastState();
-        break;
-      }
+  console.log(`[SERVER] 🔁 Jump broadcast (x=${sharedState.playheadX})`);
+  break;
+}
 
 
 

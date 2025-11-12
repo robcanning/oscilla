@@ -493,6 +493,8 @@ export function initSeekBarListeners() {
       window.startStopwatch?.();
       window.startAnimation?.();
 
+      window.ignoreNextSync = true;
+
       // Send WebSocket sync to ensure all clients align
       if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
         window.socket.send(
@@ -591,6 +593,8 @@ export function startPlayback() {
 
   // --- Cue trigger sync ---
   checkCueTriggers?.();
+
+  window.ignoreNextSync = true;
 
   // --- Network sync ---
   if (window.socket && window.socket.readyState === WebSocket.OPEN) {
@@ -722,6 +726,8 @@ export const jumpToCueId = (id) => {
 
   // Convert world → screen (centering, padding, canonicalScale)
   scrollToPlayheadVisual();
+
+  window.ignoreNextSync = true;
 
   // Sync to other clients
   if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
