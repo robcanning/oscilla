@@ -846,19 +846,35 @@ wss.on('connection', (ws, req) => {
         break;
 
 
-        
- case "jump": {
-  // Update authoritative shared state
+    case "jump": {
+  // 1. Validate incoming position
   if (!isNaN(data.playheadX)) {
     sharedState.playheadX = data.playheadX;
-    sharedState.elapsedTime = data.elapsedTime ?? sharedState.elapsedTime;
   }
 
-  // Broadcast to all *other* clients only (not the sender)
+  // 2. Update elapsedTime based on world position (or client-sent value)
+  if (!isNaN(data.elapsedTime)) {
+    sharedState.elapsedTime = data.elapsedTime;
+  } else if (sharedState.scoreWidth > 0 && sharedState.duration > 0) {
+    sharedState.elapsedTime =
+      (sharedState.playheadX / sharedState.scoreWidth) * sharedState.duration;
+  }
+
+  // 3. IMPORTANT: Re-anchor transport clock if playback is active
+  if (sharedState.isPlaying) {
+    sharedState.startTimestamp = performance.now() - sharedState.elapsedTime;
+  }
+
+  console.log(
+    `[SERVER] 🎯 Jump received → x=${sharedState.playheadX}, ` +
+    `elapsed=${sharedState.elapsedTime}`
+  );
+
+  // 4. Broadcast jump to *other* clients (never to sender)
   const jumpMsg = JSON.stringify({
     type: "jump",
     playheadX: sharedState.playheadX,
-    elapsedTime: sharedState.elapsedTime,
+    elapsedTime: sharedState.elapsedTime
   });
 
   wss.clients.forEach((client) => {
@@ -867,7 +883,6 @@ wss.on('connection', (ws, req) => {
     }
   });
 
-  console.log(`[SERVER] 🔁 Jump broadcast (x=${sharedState.playheadX})`);
   break;
 }
 
