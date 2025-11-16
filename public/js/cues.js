@@ -53,6 +53,7 @@ import { parseCueToAST } from "./parser.js";
 import { handleMetronomeCue } from "./metro.js";
 import { handleRotateCue } from "./rotate.js";
 import { handleScaleCue } from "./scale.js";
+import { handleO2PCue } from "./o2p.js";
 
 import { handleSpeedCue, handleSpeedRamp } from "./speed.js";
 
@@ -228,9 +229,9 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
 
 
     // animation dispatchers
-case "cueRotate": return handleRotateCue(cueElement, ast.args);
-      case "cueScale": return handleScaleCue(ast, cueElement);
-    case "cueO2P": return handleO2PCue(ast, cueElement);
+    case "cueRotate": return handleRotateCue(cueElement, ast.args);
+    case "cueScale": return handleScaleCue(ast, cueElement);
+    case "cueO2P": return handleO2PCue(cueElement, ast.args);
 
     // cue dispatchers 
 

@@ -513,7 +513,6 @@ export function initSeekBarListeners() {
 }
 
 
-
 /**
  * Toggles playback state between play and pause.
  * - Delegates to startPlayback() or pausePlayback() for consistent logic.
