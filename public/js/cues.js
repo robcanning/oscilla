@@ -222,16 +222,21 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
 
   console.log(`[CueDSL] ✅ Resolved AST Cue Type: ${ast.type}`, ast);
 
+
+  
+
+
+
+
   // ------------------------------------------------------------
   // 🚀 Dispatch by AST type — This *is* the cue system now.
   // ------------------------------------------------------------
   switch (ast.type) {
 
-
     // animation dispatchers
-    case "cueRotate": return handleRotateCue(cueElement, ast.args);
-    case "cueScale": return handleScaleCue(ast, cueElement);
-    case "cueO2P": return handleO2PCue(cueElement, ast.args);
+    case "cueRotate": return handleRotateCue(cueElement, ast.args, { fromCueTrigger: true });
+    case "cueScale": return handleScaleCue(ast, cueElement, { fromCueTrigger: true });
+    case "cueO2P": return handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
 
     // cue dispatchers 
 

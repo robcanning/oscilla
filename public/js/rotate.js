@@ -1,43 +1,42 @@
-// OSC send helper for ROTATE
+// rotate.js — OscillaScore Rotate Cue (sequence + continuous)
 
+import { registerAnimation } from "./oscillaAnimation.js";
+
+// ============================================================
+// OSC send helper for ROTATION
+// ============================================================
 function sendOSCRotation(el, angle) {
- if (!window.socket) return;
+    if (!window.socket) return;
 
     const uid = el.id || el.dataset.uid || null;
-    const radians = angle * (Math.PI / 180);
-    const norm = ((angle % 360) + 360) % 360 / 360;
 
     const msg = {
         type: "osc_rotate",
         uid,
-        angle,
-        radians,
-        norm,
+        angle: Number(angle),
         timestamp: Date.now()
     };
 
     try {
         window.socket.send(JSON.stringify(msg));
         console.log("[rotate][osc]:", msg);
-
     } catch (e) {
         console.warn("[rotate][osc] send failed:", e);
     }
 }
 
-
 // ============================================================
-// Pattern Generator (Pseq, Prand, Pxrand, Pshuf)
+// Pattern Generators (Pseq, Prand, Pxrand, Pshuf)
+// — mirrors scale.js / previous rotate logic
 // ============================================================
 function makePatternGenerator(pattern) {
-
     if (!pattern || !pattern.values || !Array.isArray(pattern.values)) {
         console.warn("[rotate] makePatternGenerator: invalid pattern:", pattern);
         return { next: () => null };
     }
 
-    // Simple literal array case → treat as Pseq(..., inf)
-    if (Array.isArray(pattern.values) && !pattern.type) {
+    // Literal list → Pseq(..., inf)
+    if (Array.isArray(pattern.values) && !pattern.name) {
         let arr = pattern.values.slice();
         let i = 0;
         return {
@@ -49,11 +48,10 @@ function makePatternGenerator(pattern) {
         };
     }
 
-    const values = pattern.values.slice(); // shallow copy
+    const values = pattern.values.slice();
     let repeats = pattern.repeats;
-    if (repeats === "inf" || repeats === Infinity || repeats == null) {
-        repeats = Infinity;
-    } else {
+    if (repeats === "inf" || repeats === Infinity || repeats == null) repeats = Infinity;
+    else {
         repeats = Number(repeats);
         if (Number.isNaN(repeats)) repeats = 1;
     }
@@ -63,10 +61,6 @@ function makePatternGenerator(pattern) {
     let cycleCount = 0;
 
     switch (pattern.name) {
-
-        // --------------------------------------------------------
-        // Pseq([a,b,c], repeats)
-        // --------------------------------------------------------
         case "Pseq":
             return {
                 next() {
@@ -81,24 +75,16 @@ function makePatternGenerator(pattern) {
                 }
             };
 
-        // --------------------------------------------------------
-        // Prand([a,b,c], repeats)
-        // fully random, allows repeats
-        // --------------------------------------------------------
         case "Prand":
             return {
                 next() {
                     if (cycleCount >= repeats) return null;
                     const v = values[Math.floor(Math.random() * values.length)];
-                    cycleCount += 1 / values.length; // keeps approximate total length
+                    cycleCount += 1 / values.length;
                     return v;
                 }
             };
 
-        // --------------------------------------------------------
-        // Pxrand([a,b,c], repeats)
-        // random, but avoids immediate repetition
-        // --------------------------------------------------------
         case "Pxrand":
             return {
                 next() {
@@ -113,13 +99,8 @@ function makePatternGenerator(pattern) {
                 }
             };
 
-        // --------------------------------------------------------
-        // Pshuf([a,b,c], repeats)
-        // shuffle the array, walk through, reshuffle at end
-        // --------------------------------------------------------
         case "Pshuf": {
             let buf = shuffle(values);
-
             return {
                 next() {
                     if (index >= buf.length) {
@@ -140,7 +121,6 @@ function makePatternGenerator(pattern) {
     return { next: () => null };
 }
 
-// Utility: Fisher-Yates shuffle (pure)
 function shuffle(arr) {
     const a = arr.slice();
     for (let i = a.length - 1; i > 0; i--) {
@@ -150,143 +130,129 @@ function shuffle(arr) {
     return a;
 }
 
-
-// ---------------- VALUE PATTERN GENERATOR ----------------
-function makeValueGenerator(pattern) {
-    const { name, values } = pattern;
-    let i = 0;
-    let last = null;
-
-    if (name === "Pseq") {
-        return {
-            next() {
-                const v = values[i % values.length];
-                i++;
-                return v;
-            }
-        };
-    }
-
-    if (name === "Prand") {
-        return {
-            next() {
-                const idx = Math.floor(Math.random() * values.length);
-                return values[idx];
-            }
-        };
-    }
-
-    if (name === "Pxrand") {
-        return {
-            next() {
-                let choice;
-                do {
-                    choice = values[Math.floor(Math.random() * values.length)];
-                } while (choice === last && values.length > 1);
-                last = choice;
-                return choice;
-            }
-        };
-    }
-
-    if (name === "Pshuf") {
-        let bag = [...values];
-        return {
-            next() {
-                if (bag.length === 0) bag = [...values];
-                const idx = Math.floor(Math.random() * bag.length);
-                const choice = bag[idx];
-                bag.splice(idx, 1);
-                return choice;
-            }
-        };
-    }
-
-    console.warn("[rotate] Unknown pattern:", name);
-    return { next() { return values[0]; } };
-}
-
-
-
-// ---------------------- PIVOT (no flashing) ----------------------
+// ============================================================
+// Utilities: pivot + current angle
+// ============================================================
 function applySvgPivot(el) {
     if (!el.getBBox) return;
     const bb = el.getBBox();
     if (!bb || bb.width === 0 || bb.height === 0) return;
     const cx = bb.x + bb.width / 2;
     const cy = bb.y + bb.height / 2;
-    el.style.transformOrigin = `${cx}px ${cy}px`; // critical fix
+    el.style.transformOrigin = `${cx}px ${cy}px`;
 }
 
-// ---------------------- ANGLE READING ----------------------
-function getCurrentAngle(el, defaultDeg = 0) {
-    const t = el.style.transform;
-    if (!t) return defaultDeg;
-    const m = t.match(/rotate\(([-+0-9.]+)(deg|rad)\)/);
-    if (!m) return defaultDeg;
-
-    let val = parseFloat(m[1]);
-    if (m[2] === "rad") val = val * (180 / Math.PI);
-    return isNaN(val) ? defaultDeg : val;
+function getCurrentAngle(el, fallback = 0) {
+    const t = el.style.transform || "";
+    const m = t.match(/rotate\(\s*([-\d.+eE]+)deg/);
+    if (!m) return fallback;
+    const v = parseFloat(m[1]);
+    return Number.isFinite(v) ? v : fallback;
 }
 
-// ---------------------- SEQUENCE MODE ----------------------
-function handleRotateSequence(el, values, astArgs) {
+// ======================================================================
+//  ROTATION SEQUENCE ENGINE (sequence / patterns / lists)
+//  handleRotateSequence(el, cfg)
+// ======================================================================
+export function handleRotateSequence(el, cfg) {
+    const astArgs = cfg.astArgs || [];
 
+    // Value source
+    let values = cfg.values || null;      // literal list
+    let pattern = cfg.pattern || null;    // pattern object
+
+    // Duration
     let dur = 1;
-    let durGen = null;       // pattern generator for duration
-    let valueGen = null;     // pattern generator for values
-    let mode = "loop";       // "loop" | "once" | "alternate"
+    let durGen = null;
+
+    // Behaviour
+    let mode = "loop";                    // loop | once | alternate
     let pauseOnExit = true;
-    let interp = "smooth";   // "smooth" or "step"
+    let interp = "smooth";                // smooth | step
     let ease = "linear";
     let hold = null;
-    let oscMode = 0; // 0 = off, 1 = continuous, 2 = per-step
+    let oscMode = 0;                      // 0 off, 1 continuous, 2 per-step
 
+    // Pattern generator
+    let valueGen = null;
 
-    // ---- parse args ----
+    // ------------------------------------------------------------
+    // Parse AST args
+    // ------------------------------------------------------------
     for (const arg of astArgs) {
         const key = arg.key || arg.type;
         const val = arg.value;
 
-        // VALUES argument (list or pattern)
-        if (key === "values") {
-            if (val && typeof val === "object" && val.type === "pattern") {
-                valueGen = makePatternGenerator(val);   // pattern-based values
-            } else if (Array.isArray(val)) {
-                values = val.slice();                   // literal list
-            }
+        switch (key) {
+            case "values":
+                if (val && val.type === "pattern") {
+                    pattern = val;
+                } else if (Array.isArray(val)) {
+                    values = val.slice();
+                }
+                break;
+
+            case "dur":
+                if (val && val.type === "pattern") {
+                    durGen = makePatternGenerator(val);
+                } else if (Array.isArray(val)) {
+                    durGen = makePatternGenerator({ values: val });
+                } else {
+                    dur = Number(val) || 1;
+                }
+                break;
+
+            case "mode":
+                mode = String(val).trim().toLowerCase();
+                break;
+
+            case "pauseOnExit":
+                pauseOnExit = Boolean(val);
+                break;
+
+            case "interp":
+                interp = String(val).trim().toLowerCase();
+                break;
+
+            case "ease":
+                ease = String(val).trim();
+                break;
+
+            case "hold":
+                hold = Number(val);
+                break;
+
+            case "osc":
+                oscMode = Number(val) || 0;
+                break;
+
+            default:
+                break;
         }
-
-        // DUR argument (scalar, list, or pattern)
-        if (key === "dur") {
-            if (val && typeof val === "object" && val.type === "pattern") {
-                durGen = makePatternGenerator(val);
-            } else if (Array.isArray(val)) {
-                durGen = makePatternGenerator({ values: val });
-            } else {
-                dur = Number(val);
-            }
-        }
-
-        if (key === "mode") mode = String(val).trim().toLowerCase();
-        if (key === "pauseOnExit") pauseOnExit = Boolean(val);
-        if (key === "interp") interp = String(val).trim().toLowerCase();
-        if (key === "ease") ease = String(val).trim();
-        if (key === "hold") hold = Number(val);
-        if (key === "osc") oscMode = Number(val) || 0;
-
     }
 
-    // ---- default hold behavior ----
-    if (interp === "smooth" && (hold === null || Number.isNaN(hold))) {
-        hold = dur * 0.25;
+    // Determine value generator
+    if (pattern) {
+        valueGen = makePatternGenerator(pattern);
+        values = null;
+    }
+
+    if (!values && !valueGen) {
+        console.warn("[rotate] No value source (values:[] or pattern) for rotateSequence");
+        return;
+    }
+
+    // Default hold behaviour
+    if (interp === "smooth") {
+        if (hold === null || Number.isNaN(hold)) {
+            hold = dur * 0.25;
+        }
     }
     if (interp === "step") {
-        hold = 0; // not used in step mode
+        hold = 0;
     }
 
-    // ---- stop previous animation ----
+    // Stop previous
     if (el._oscillaRotateAnim) {
         el._oscillaRotateAnim.pause?.();
         clearTimeout(el._oscillaRotateAnim);
@@ -295,71 +261,105 @@ function handleRotateSequence(el, values, astArgs) {
 
     applySvgPivot(el);
 
+    // Literal list indexing
     const N = Array.isArray(values) ? values.length : Infinity;
     let index = 0;
     let direction = 1;
 
-    // driver holds the continuous angle value
-    let start = getCurrentAngle(el, values[0] ?? 0);
-    start = ((start % 360) + 360) % 360;
-    const driver = { a: start };
+    // Driver angle
+    const startAngle = getCurrentAngle(el, values?.[0] ?? 0);
+    const norm = ((startAngle % 360) + 360) % 360;
+    const driver = { a: norm };
 
+    // ------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------
+    function nextAngle() {
+        if (valueGen) {
+            const v = valueGen.next();
+            if (v == null) return null;
+            return Number(v);
+        }
+
+        if (Array.isArray(values) && N > 0) {
+            return Number(values[index % N]);
+        }
+
+        return driver.a;
+    }
+
+    function stepIndexAdvance() {
+        if (valueGen) return; // pattern generator drives repetition
+
+        const len = Array.isArray(values) ? values.length : 0;
+        const first = Array.isArray(values) ? values[0] : null;
+        const last = Array.isArray(values) ? values[len - 1] : null;
+        const pingpong = len >= 2 && first === last;
+
+        if (mode === "alternate" || pingpong) {
+            index += direction;
+            if (index >= N || index < 0) {
+                direction *= -1;
+                index += direction;
+            }
+        } else {
+            index = (index + 1) % N;
+        }
+    }
+
+    function atEndOnce() {
+        return (!valueGen && mode === "once" && index >= N);
+    }
+
+    // ------------------------------------------------------------
+    // Main step engine
+    // ------------------------------------------------------------
     function runNext() {
-
-        // ---- retrieve next angle ----
-        const target = valueGen ? valueGen.next() : values[index];
-
-        // ---- once-terminal condition ----
-        if (!valueGen && mode === "once" && index >= N) {
-            if (!pauseOnExit) {
+        const targetRaw = nextAngle();
+        if (targetRaw == null || atEndOnce()) {
+            if (!pauseOnExit && Array.isArray(values) && values.length > 0) {
                 el.style.transform = `rotate(${values[0]}deg)`;
             }
             el._oscillaRotateAnim = null;
             return;
         }
 
-        // ---- determine next index (literal list only) ----
-        if (!valueGen) {
-            let nextIndex = index + 1;
+        let tgt = ((Number(targetRaw) % 360) + 360) % 360;
 
-            if (mode === "alternate") {
-                nextIndex = index + direction;
-                if (nextIndex >= N || nextIndex < 0) {
-                    direction *= -1;
-                    nextIndex = index + direction;
-                }
-            }
+        // STEP MODE
+        const durRaw = durGen ? durGen.next() : dur;
+        const stepDur = Number(durRaw) || dur || 0.0001;
 
-            index = (mode === "loop" ? (nextIndex % N) : nextIndex);
-        }
-
-        // ---- STEP MODE (immediate snap + wait) ----
         if (interp === "step") {
-            driver.a = target;
-            el.style.transform = `rotate(${target}deg)`;
+            driver.a = tgt;
+            el.style.transform = `rotate(${tgt}deg)`;
 
             if (oscMode === 1 || oscMode === 2) {
-                sendOSCRotation(el, target);
+                sendOSCRotation(el, tgt);
             }
 
-            const stepDur = durGen ? durGen.next() : dur;
-            el._oscillaRotateAnim = setTimeout(runNext, stepDur * 1000);
+            stepIndexAdvance();
+            el._oscillaRotateAnim = setTimeout(
+                () => requestAnimationFrame(runNext),
+                stepDur * 1000
+            );
             return;
         }
-        // ---- SMOOTH MODE ----
-        // Always re-sync driver to actual rendered angle before calculating delta
+
+        // SMOOTH MODE — drift-compensated
         let current = getCurrentAngle(el, driver.a);
         current = ((current % 360) + 360) % 360;
-        driver.a = current; // authoritative sync        
-        // 
-        let tgt = ((target % 360) + 360) % 360;
-        let delta = tgt - current;
+        driver.a = current;
+
+        if (driver.a === tgt) {
+            stepIndexAdvance();
+            requestAnimationFrame(runNext);
+            return;
+        }
+
+        let delta = tgt - driver.a;
         if (delta > 180) delta -= 360;
         if (delta < -180) delta += 360;
-
-        if (tgt === driver.deg) { stepIndexAdvance(); return runNext(); }
-
-        const stepDur = durGen ? durGen.next() : dur;
 
         const anim = anime({
             targets: driver,
@@ -369,75 +369,48 @@ function handleRotateSequence(el, values, astArgs) {
             update: () => {
                 let a = ((driver.a % 360) + 360) % 360;
                 el.style.transform = `rotate(${a}deg)`;
-
-                if (oscMode === 1) { // continuous
+                if (oscMode === 1) {
                     sendOSCRotation(el, a);
                 }
             },
             complete: () => {
-                if (oscMode === 2) { // step mode send only at step completion
+                if (oscMode === 2) {
                     let finalA = ((driver.a % 360) + 360) % 360;
                     sendOSCRotation(el, finalA);
                 }
 
+                stepIndexAdvance();
+
                 if (hold > 0) {
-                    el._oscillaRotateAnim = setTimeout(runNext, hold * 1000);
+                    el._oscillaRotateAnim = setTimeout(
+                        () => requestAnimationFrame(runNext),
+                        hold * 1000
+                    );
                 } else {
-                    runNext();
+                    requestAnimationFrame(runNext);
                 }
             }
         });
 
-
         el._oscillaRotateAnim = anim;
     }
 
-    runNext();
+    requestAnimationFrame(runNext);
 }
 
-
-
-// ---------------------- MAIN ENTRY ----------------------
-export function handleRotateCue(el, astArgs) {
-    console.log("[rotate] raw astArgs:", astArgs);
-
-    if (!el) return;
-
-    // Locate the "values" argument (works whether arg is stored as key or type)
-    const valuesArg = astArgs.find(o =>
-        o.key === "values" ||
-        o.type === "values"
-    );
-
-    if (valuesArg) {
-        const v = valuesArg.value;
-
-        // Pattern object case (Pseq / Prand / Pxrand / Pshuf / others)
-        // We do NOT unpack here. We simply pass the pattern object onward.
-        if (v && v.type === "pattern" && Array.isArray(v.values)) {
-            return handleRotateSequence(el, v, astArgs);
-        }
-
-        // Literal array case
-        if (Array.isArray(v)) {
-            return handleRotateSequence(el, v, astArgs);
-        }
-    }
-
-    // --------------------------------------------------------------------
-    // Continuous rotation fallback (rotate(dir:-1, dur:2, loop:0, ...))
-    // This is only used when there is no values:[...] provided.
-    // --------------------------------------------------------------------
+// ============================================================
+// Continuous fallback rotation (no values:[] provided)
+// ============================================================
+export function handleRotateContinuous(el, cfg) {
+    const astArgs = cfg.astArgs || [];
 
     let dir = 1;
     let dur = 2;
-    let loop = 0;       // 0 = infinite
-    let interp = "smooth";
+    let loop = 0;
     let ease = "linear";
-    let mode = "loop";        // included to properly read mode even though fallback ignores it
-    let pauseOnExit = true;
+    let mode = "loop";  // kept for completeness
+    let oscMode = 0;    // future expansion if needed
 
-    // Parse remaining args
     for (const arg of astArgs) {
         const key = arg.key || arg.type;
         const value = arg.value;
@@ -445,20 +418,17 @@ export function handleRotateCue(el, astArgs) {
         if (key === "dir") dir = Number(value);
         if (key === "dur") dur = Number(value);
         if (key === "loop") loop = Number(value);
-        if (key === "mode") mode = String(value).trim().toLowerCase();
-        if (key === "pauseOnExit") pauseOnExit = Boolean(value);
-        if (key === "interp") interp = String(value).trim().toLowerCase();
         if (key === "ease") ease = String(value).trim();
+        if (key === "mode") mode = String(value).trim().toLowerCase();
+        if (key === "osc") oscMode = Number(value) || 0;
     }
 
-    // Cancel previous animation if still running
     if (el._oscillaRotateAnim) el._oscillaRotateAnim.pause?.();
     applySvgPivot(el);
 
     const fullTurn = dir * 360;
     const ms = dur * 1000;
 
-    // Continuous rotation via anime.js
     const anim = anime({
         targets: el,
         rotate: `+=${fullTurn}`,
@@ -469,18 +439,119 @@ export function handleRotateCue(el, astArgs) {
 
     el._oscillaRotateAnim = anim;
 
-    console.log(`[rotate] start fallback`, {
+    console.log("[rotate] fallback continuous start", {
         id: el.id,
         dir,
         dur,
         loop,
-        interp,
         ease,
+        mode,
+        oscMode,
         pivot: el.style.transformOrigin
     });
 }
 
+// ============================================================
+// MAIN ENTRY — used by:
+//   • animationAssign(svgRoot) for id="rotate(...)"
+//   • cue system for cueRotate(...)
+// Signature: handleRotateCue(el, astArgs, options)
+// ============================================================
+export function handleRotateCue(el, astArgs, options = {}) {
+    if (!el) return;
 
+    const { fromCueTrigger = false } = options;
 
+    console.log("[rotate] raw astArgs:", astArgs);
 
+    // -----------------------------
+    // Trigger + UID
+    // -----------------------------
+    let trig = "auto";
+    let uid = el.id || ("rotate_" + Math.random().toString(36).slice(2));
+
+    for (const a of astArgs) {
+        const key = a.key || a.type;
+        const val = a.value;
+
+        if (key === "trig") {
+            trig = String(val).toLowerCase();
+        }
+        if (key === "uid") {
+            uid = String(val).trim();
+        }
+    }
+
+    // -----------------------------
+    // CASE 1 — Sequence mode if values:[...] present
+    // -----------------------------
+    const valuesArg = astArgs.find(o =>
+        o.key === "values" || o.type === "values"
+    );
+
+    if (valuesArg) {
+        const v = valuesArg.value;
+
+        // ---------- Pattern sequence ----------
+        if (v && v.type === "pattern") {
+            const cfg = {
+                uid,
+                trig,
+                pattern: v,
+                astArgs,
+                fromCueTrigger
+            };
+
+            const start = () => handleRotateSequence(el, cfg);
+
+            registerAnimation(el, "rotate-sequence", cfg, start);
+
+            // ✅ Start immediately if triggered by cue + trig:playhead
+            if (fromCueTrigger && trig === "playhead") {
+                start();
+            }
+            return;
+        }
+
+        // ---------- Literal list sequence ----------
+        if (Array.isArray(v)) {
+            const cfg = {
+                uid,
+                trig,
+                values: v,
+                astArgs,
+                fromCueTrigger
+            };
+
+            const start = () => handleRotateSequence(el, cfg);
+
+            registerAnimation(el, "rotate-sequence", cfg, start);
+
+            // ✅ Start immediately if triggered by cue + trig:playhead
+            if (fromCueTrigger && trig === "playhead") {
+                start();
+            }
+            return;
+        }
+    }
+
+    // -----------------------------
+    // CASE 2 — Continuous fallback
+    // -----------------------------
+    const cfg = {
+        uid,
+        trig,
+        astArgs,
+        fromCueTrigger
+    };
+
+    const start = () => handleRotateContinuous(el, cfg);
+
+    registerAnimation(el, "rotate-fallback", cfg, start);
+
+    // ✅ Start immediately on cue (not during animationAssign)
+    if (fromCueTrigger && trig === "playhead") {
+        start();
+    }
+}
 

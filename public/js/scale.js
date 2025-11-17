@@ -1,5 +1,7 @@
 // scale.js — OscillaScore Scale Cue (uniform & non-uniform)
 
+import { registerAnimation } from "./oscillaAnimation.js";
+
 // ============================================================
 // OSC send helper for SCALE
 // ============================================================
@@ -192,87 +194,124 @@ function getCurrentScale(el, fallback = { sx: 1, sy: 1 }) {
     return { sx: okx, sy: oky };
 }
 
-// ============================================================
-// Sequence mode (lists/patterns)
-// ============================================================
-function handleScaleSequence(el, ax, ay, astArgs) {
-    // ax/ay = either array of numbers or pattern object (or null to mirror the other)
+// ======================================================================
+//  SCALE SEQUENCE ENGINE (new architecture)
+//  handleScaleSequence(el, cfg)
+// ======================================================================
+export function handleScaleSequence(el, cfg) {
+    const astArgs = cfg.astArgs || [];
 
+    // Value sources (uniform or XY)
+    let ax = cfg.xValues || null;         // literal array for X
+    let ay = cfg.yValues || null;         // literal array for Y
+    let xPattern = cfg.xPattern || null;  // pattern objects
+    let yPattern = cfg.yPattern || null;
+    let uniformPattern = cfg.pattern || null;
+
+    // Duration
     let dur = 1;
     let durGen = null;
+
+    // Mode / behaviour
     let mode = "loop";          // loop | once | alternate
     let pauseOnExit = true;
     let interp = "smooth";      // smooth | step
     let ease = "linear";
     let hold = null;
-    let oscMode = 0;            // 0 off, 1 continuous, 2 per-step
+    let oscMode = 0;
 
-    // Optional: allow patterns for axes via named keys in args
-    let axGen = null, ayGen = null;
+    // Pattern generators
+    let axGen = null;
+    let ayGen = null;
 
-    // Parse arguments
+    // ------------------------------------------------------------
+    // Parse AST arguments
+    // ------------------------------------------------------------
     for (const arg of astArgs) {
         const key = arg.key || arg.type;
         const val = arg.value;
 
-        // Uniform values: `values:[…]` or first positional pattern/list
-        if (key === "values") {
-            if (val && typeof val === "object" && val.type === "pattern") {
-                axGen = makePatternGenerator(val);
-                ayGen = makePatternGenerator(val);
-                ax = null; ay = null;
-            } else if (Array.isArray(val)) {
-                ax = val.slice();
-                ay = val.slice();
-            }
-        }
+        switch (key) {
+            // UNIFORM values
+            case "values":
+                if (val && val.type === "pattern") {
+                    uniformPattern = val;
+                    axGen = makePatternGenerator(val);
+                    ayGen = makePatternGenerator(val);
+                    ax = null;
+                    ay = null;
+                } else if (Array.isArray(val)) {
+                    ax = val.slice();
+                    ay = val.slice();
+                }
+                break;
 
-        // Non-uniform via named keys (supported in addition to scaleXY form)
-        if (key === "x" || key === "valuesX") {
-            if (val && typeof val === "object" && val.type === "pattern") {
-                axGen = makePatternGenerator(val); ax = null;
-            } else if (Array.isArray(val)) {
-                ax = val.slice();
-            } else if (Number.isFinite(Number(val))) {
-                ax = [Number(val)];
-            }
-        }
-        if (key === "y" || key === "valuesY") {
-            if (val && typeof val === "object" && val.type === "pattern") {
-                ayGen = makePatternGenerator(val); ay = null;
-            } else if (Array.isArray(val)) {
-                ay = val.slice();
-            } else if (Number.isFinite(Number(val))) {
-                ay = [Number(val)];
-            }
-        }
+            // X axis
+            case "x":
+            case "valuesX":
+                if (val && val.type === "pattern") {
+                    xPattern = val;
+                    axGen = makePatternGenerator(val);
+                    ax = null;
+                } else if (Array.isArray(val)) {
+                    ax = val.slice();
+                } else if (Number.isFinite(Number(val))) {
+                    ax = [Number(val)];
+                }
+                break;
 
-        // Duration
-        if (key === "dur") {
-            if (val && typeof val === "object" && val.type === "pattern") {
-                durGen = makePatternGenerator(val);
-            } else if (Array.isArray(val)) {
-                durGen = makePatternGenerator({ values: val });
-            } else {
-                dur = Number(val);
-            }
-        }
+            // Y axis
+            case "y":
+            case "valuesY":
+                if (val && val.type === "pattern") {
+                    yPattern = val;
+                    ayGen = makePatternGenerator(val);
+                    ay = null;
+                } else if (Array.isArray(val)) {
+                    ay = val.slice();
+                } else if (Number.isFinite(Number(val))) {
+                    ay = [Number(val)];
+                }
+                break;
 
-        if (key === "mode") mode = String(val).trim().toLowerCase();
-        if (key === "pauseOnExit") pauseOnExit = Boolean(val);
-        if (key === "interp") interp = String(val).trim().toLowerCase();
-        if (key === "ease") ease = String(val).trim();
-        if (key === "hold") hold = Number(val);
-        if (key === "osc") oscMode = Number(val) || 0;
+            // Duration
+            case "dur":
+                if (val && val.type === "pattern") {
+                    durGen = makePatternGenerator(val);
+                } else if (Array.isArray(val)) {
+                    durGen = makePatternGenerator({ values: val });
+                } else {
+                    dur = Number(val) || 1;
+                }
+                break;
+
+            case "mode": mode = String(val).trim().toLowerCase(); break;
+            case "pauseOnExit": pauseOnExit = Boolean(val); break;
+            case "interp": interp = String(val).trim().toLowerCase(); break;
+            case "ease": ease = String(val).trim(); break;
+            case "hold": hold = Number(val); break;
+            case "osc": oscMode = Number(val) || 0; break;
+
+            default: break;
+        }
     }
 
-    // Defaults
-    if (interp === "smooth" && (hold === null || Number.isNaN(hold))) {
-        hold = 0;
+    // Determine generators if not already set
+    if (xPattern && !axGen) axGen = makePatternGenerator(xPattern);
+    if (yPattern && !ayGen) ayGen = makePatternGenerator(yPattern);
+
+    if (uniformPattern && !axGen && !ayGen) {
+        axGen = makePatternGenerator(uniformPattern);
+        ayGen = makePatternGenerator(uniformPattern);
+    }
+
+    // Defaults for hold
+    if (interp === "smooth") {
+        if (hold === null || Number.isNaN(hold)) hold = 0;
     }
     if (interp === "step") hold = 0;
 
-    // Stop previous
+    // Stop previous animation safely
     if (el._oscillaScaleAnim) {
         el._oscillaScaleAnim.pause?.();
         clearTimeout(el._oscillaScaleAnim);
@@ -281,7 +320,7 @@ function handleScaleSequence(el, ax, ay, astArgs) {
 
     applySvgPivot(el);
 
-    // Determine sequence length only for literal lists
+    // Sequence length (for literal lists)
     const NX = Array.isArray(ax) ? ax.length : Infinity;
     const NY = Array.isArray(ay) ? ay.length : Infinity;
     const N = Math.max(NX, NY);
@@ -289,125 +328,137 @@ function handleScaleSequence(el, ax, ay, astArgs) {
     let index = 0;
     let direction = 1;
 
-    // Start driver from current scale
+    // Driver object for tweening
     const cur = getCurrentScale(el, {
         sx: Array.isArray(ax) ? ax[0] ?? 1 : 1,
         sy: Array.isArray(ay) ? ay[0] ?? 1 : 1
     });
     const driver = { sx: cur.sx, sy: cur.sy };
 
+    // ------------------------------------------------------------
+    // Helper functions
+    // ------------------------------------------------------------
     function nextPair() {
-        // pattern generators take precedence when present
-        const sx = axGen ? axGen.next() : Array.isArray(ax) ? ax[index % NX] : driver.sx;
-        const sy = ayGen ? ayGen.next() : Array.isArray(ay) ? ay[index % NY] : (axGen || Array.isArray(ax) ? sx : driver.sy);
+        let sx, sy;
 
-        // If patterns terminate (null) under once-mode semantics
-        if ((axGen && sx == null) || (ayGen && sy == null)) return null;
-        return [Number(sx), Number(sy)];
-    }
-    
-function stepIndexAdvance() {
-  if (axGen || ayGen) return; // pattern generators handle repetition
-
-  const len = Array.isArray(ax) ? ax.length : 0;
-  const first = Array.isArray(ax) ? ax[0] : null;
-  const last = Array.isArray(ax) ? ax[len - 1] : null;
-  const isPingPongShape = len >= 2 && first === last;
-
-  // Ping-pong or alternate → bounce back and forth
-  if (mode === "alternate" || isPingPongShape) {
-    index += direction;
-    if (index >= N || index < 0) {
-      direction *= -1;
-      index += direction;
-    }
-  }
-  // Restart loop → just wrap around to 0
-  else {
-    index = (index + 1) % N;
-  }
-}
-
-
-
-
-    function atEndOnce() {
-        if (axGen || ayGen) return false; // not applicable
-        return (mode === "once" && index >= N);
-    }
-
-    function runNext() {
-        const pair = nextPair();
-        if (!pair || atEndOnce()) { /* ...existing exit... */ return; }
-
-        const [tgtX, tgtY] = pair;
-
-        // ✅ Skip redundant first tween (prevents initial stall)
-        if (driver.sx === tgtX && driver.sy === tgtY) {
-            stepIndexAdvance();
-            return runNext();
+        if (axGen) {
+            sx = axGen.next();
+        } else if (Array.isArray(ax) && NX > 0) {
+            sx = ax[index % NX];
+        } else {
+            sx = driver.sx;
         }
 
-        // --- detect restart vs ping-pong just once per step ---
+        if (ayGen) {
+            sy = ayGen.next();
+        } else if (Array.isArray(ay) && NY > 0) {
+            sy = ay[index % NY];
+        } else if (axGen || Array.isArray(ax)) {
+            sy = sx;
+        } else {
+            sy = driver.sy;
+        }
+
+        if (sx == null || sy == null) return null;
+        return [Number(sx), Number(sy)];
+    }
+
+    function stepIndexAdvance() {
+        if (axGen || ayGen) return; // patterns handle their own progression
+
         const len = Array.isArray(ax) ? ax.length : 0;
         const first = Array.isArray(ax) ? ax[0] : null;
         const last = Array.isArray(ax) ? ax[len - 1] : null;
-        const isPingPongShape = len >= 2 && first === last;   // e.g. [1,2,1]
-        const isRestartLoop = !isPingPongShape && !axGen && !ayGen && len >= 2;
-        const isLastStep = !axGen && !ayGen && index === (N - 1);
+        const pingpong = len >= 2 && first === last;
 
-        // STEP MODE (unchanged)
-        if (interp === "step") {
-            driver.sx = tgtX; driver.sy = tgtY;
-            el.style.transform = `scale(${driver.sx}, ${driver.sy})`;
-            if (oscMode === 1 || oscMode === 2) sendOSCScale(el, driver.sx, driver.sy);
+        if (mode === "alternate" || pingpong) {
+            index += direction;
+            if (index >= N || index < 0) {
+                direction *= -1;
+                index += direction;
+            }
+        } else {
+            index = (index + 1) % N;
+        }
+    }
 
-            // 🔁 snap at end of restart-type sequences
-            if (isRestartLoop && isLastStep) {
-                const sx0 = Array.isArray(ax) ? ax[0] : 1;
-                const sy0 = Array.isArray(ay) ? ay[0] : sx0;
-                driver.sx = sx0; driver.sy = sy0;
+    function atEndOnce() {
+        return (!axGen && !ayGen && mode === "once" && index >= N);
+    }
+
+    // ------------------------------------------------------------
+    // Main step engine
+    // ------------------------------------------------------------
+    function runNext() {
+        const pair = nextPair();
+        if (!pair || atEndOnce()) {
+            if (!pauseOnExit && Array.isArray(ax) && ax.length > 0) {
+                const sx0 = ax[0];
+                const sy0 = Array.isArray(ay) && ay.length > 0 ? ay[0] : sx0;
                 el.style.transform = `scale(${sx0}, ${sy0})`;
-                index = 0;
-            } else {
-                stepIndexAdvance();
+            }
+            return;
+        }
+
+        let [tgtX, tgtY] = pair;
+
+        // Skip redundant tween, but avoid recursion by scheduling via RAF
+        if (driver.sx === tgtX && driver.sy === tgtY) {
+            stepIndexAdvance();
+            requestAnimationFrame(runNext);
+            return;
+        }
+
+        const durRaw = durGen ? durGen.next() : dur;
+        const stepDur = Number(durRaw) || dur || 0.0001;
+
+        // STEP MODE
+        if (interp === "step") {
+            driver.sx = tgtX;
+            driver.sy = tgtY;
+            el.style.transform = `scale(${tgtX}, ${tgtY})`;
+
+            if (oscMode === 1 || oscMode === 2) {
+                sendOSCScale(el, tgtX, tgtY);
             }
 
-            const stepDur = durGen ? durGen.next() : dur;
-            el._oscillaScaleAnim = setTimeout(() => requestAnimationFrame(runNext), (stepDur ?? 0) * 1000);
+            stepIndexAdvance();
+
+            el._oscillaScaleAnim = setTimeout(
+                () => requestAnimationFrame(runNext),
+                stepDur * 1000
+            );
             return;
         }
 
         // SMOOTH MODE
-        const curNow = getCurrentScale(el, driver);
-        driver.sx = curNow.sx; driver.sy = curNow.sy;
-        const stepDur = durGen ? durGen.next() : dur;
+        const current = getCurrentScale(el, driver);
+        driver.sx = current.sx;
+        driver.sy = current.sy;
 
         const anim = anime({
             targets: driver,
-            sx: tgtX, sy: tgtY,
-            duration: (stepDur ?? 0) * 1000,
+            sx: tgtX,
+            sy: tgtY,
+            duration: stepDur * 1000,
             easing: ease,
             update: () => {
                 el.style.transform = `scale(${driver.sx}, ${driver.sy})`;
-                if (oscMode === 1) sendOSCScale(el, driver.sx, driver.sy);
+                if (oscMode === 1) {
+                    sendOSCScale(el, driver.sx, driver.sy);
+                }
             },
             complete: () => {
-                if (oscMode === 2) sendOSCScale(el, driver.sx, driver.sy);
-
-                // 🔁 snap at the exact moment the last tween finishes (restart-type only)
-                if (isRestartLoop && isLastStep) {
-                    const sx0 = Array.isArray(ax) ? ax[0] : 1;
-                    const sy0 = Array.isArray(ay) ? ay[0] : sx0;
-                    driver.sx = sx0; driver.sy = sy0;
-                    el.style.transform = `scale(${sx0}, ${sy0})`;
-                    index = 0;
-                } else {
-                    stepIndexAdvance();
+                if (oscMode === 2) {
+                    sendOSCScale(el, driver.sx, driver.sy);
                 }
+                stepIndexAdvance();
 
                 if (hold > 0) {
-                    el._oscillaScaleAnim = setTimeout(() => requestAnimationFrame(runNext), hold * 1000);
+                    el._oscillaScaleAnim = setTimeout(
+                        () => requestAnimationFrame(runNext),
+                        hold * 1000
+                    );
                 } else {
                     requestAnimationFrame(runNext);
                 }
@@ -417,14 +468,16 @@ function stepIndexAdvance() {
         el._oscillaScaleAnim = anim;
     }
 
-
-    runNext();
+    // Kick off
+    requestAnimationFrame(runNext);
 }
 
 // ============================================================
 // Continuous fallback (pulse) if no values provided
 // ============================================================
-function handleScaleContinuous(el, astArgs) {
+function handleScaleContinuous(el, cfg) {
+    const astArgs = cfg.astArgs || [];
+
     // Defaults
     let min = 1, max = 1.2;
     let minX = null, maxX = null, minY = null, maxY = null;
@@ -484,53 +537,167 @@ function handleScaleContinuous(el, astArgs) {
 // ============================================================
 // MAIN ENTRY — matches dispatcher usage: handleScaleCue(ast, cueElement)
 // ============================================================
-export function handleScaleCue(ast, cueElement = null) {
+export function handleScaleCue(ast, cueElement = null, options = {}) {
     const el = cueElement;
     if (!el) return;
+
+    const { fromCueTrigger = false } = options;
 
     const astArgs = ast?.args || [];
     console.log("[scale] raw astArgs:", astArgs);
 
-    // --- shorthand: scale(2) → scale(min:1, max:2, dur:2) ---
+    // --------------------------------------------------------
+    // 0. UID + Trigger
+    // --------------------------------------------------------
+    let uid = el.id || ("scale_" + Math.random().toString(36).slice(2));
+
+    let trig = "auto";  // default autostart
+    const trigArg = astArgs.find(a =>
+        a.key === "trig" || a.type === "trig"
+    );
+    if (trigArg) trig = String(trigArg.value).toLowerCase();
+
+    // --------------------------------------------------------
+    // 1. Shorthand: scale(2)
+    // --------------------------------------------------------
     if (astArgs.length === 1 && typeof astArgs[0].value === "number") {
         const val = Number(astArgs[0].value);
-        return handleScaleContinuous(el, [
-            { key: "min", value: 1 },
-            { key: "max", value: val },
-            { key: "dur", value: 2 }
-        ]);
+
+        const cfg = {
+            uid,
+            trig,
+            mode: "continuous",
+            min: 1,
+            max: val,
+            dur: 2,
+            astArgs,
+            fromCueTrigger
+        };
+
+        const start = () => handleScaleContinuous(el, cfg);
+
+        registerAnimation(el, "scale-continuous", cfg, start);
+
+        if (fromCueTrigger && trig === "playhead") start();
+
+        return;
     }
 
-    // Extract uniform or XY lists/patterns
-    // 1) Try implicit/explicit uniform via `values`
+    // --------------------------------------------------------
+    // 2. Extract uniform values:[...]
+    // --------------------------------------------------------
     let values = null;
-    const valuesArg = astArgs.find(o => o.key === "values" || o.type === "values");
+    const valuesArg = astArgs.find(o =>
+        o.key === "values" || o.type === "values"
+    );
     if (valuesArg) values = valuesArg.value;
 
-    // 2) Try non-uniform named x/y
+    // --------------------------------------------------------
+    // 3. Extract non-uniform x:[...], y:[...]
+    // --------------------------------------------------------
     let xVals = null, yVals = null;
-    const xArg = astArgs.find(o => ["x", "valuesX"].includes(o.key || o.type));
-    const yArg = astArgs.find(o => ["y", "valuesY"].includes(o.key || o.type));
+    const xArg = astArgs.find(o =>
+        ["x", "valuesX"].includes(o.key || o.type)
+    );
+    const yArg = astArgs.find(o =>
+        ["y", "valuesY"].includes(o.key || o.type)
+    );
     if (xArg) xVals = xArg.value;
     if (yArg) yVals = yArg.value;
 
-    // Decide path
+    // --------------------------------------------------------
+    // 4. CASE A — Uniform pattern
+    // --------------------------------------------------------
     if (values && values.type === "pattern") {
-        // uniform pattern for both axes
-        return handleScaleSequence(el, null, null, astArgs); // generators inside will mirror
+        const cfg = {
+            uid,
+            trig,
+            mode: "sequence-pattern",
+            pattern: values,
+            astArgs,
+            fromCueTrigger
+        };
+
+        const start = () => handleScaleSequence(el, cfg);
+
+        registerAnimation(el, "scale-sequence-pattern", cfg, start);
+
+        if (fromCueTrigger && trig === "playhead") start();
+
+        return;
     }
+
+    // --------------------------------------------------------
+    // 5. CASE B — Uniform literal list
+    // --------------------------------------------------------
     if (Array.isArray(values)) {
-        // uniform list → mirror to Y
-        return handleScaleSequence(el, values, values, astArgs);
+        const cfg = {
+            uid,
+            trig,
+            mode: "sequence-uniform",
+            xValues: values,
+            yValues: values,
+            astArgs,
+            fromCueTrigger
+        };
+
+        const start = () => handleScaleSequence(el, cfg);
+
+        registerAnimation(el, "scale-sequence-uniform", cfg, start);
+
+        if (fromCueTrigger && trig === "playhead") start();
+
+        return;
     }
 
-    // If either x or y provided (list or pattern), treat as non-uniform
+    // --------------------------------------------------------
+    // 6. CASE C — Non-uniform XY
+    // --------------------------------------------------------
     if (xVals || yVals) {
-        const ax = xVals && xVals.type === "pattern" ? null : (Array.isArray(xVals) ? xVals : null);
-        const ay = yVals && yVals.type === "pattern" ? null : (Array.isArray(yVals) ? yVals : null);
-        return handleScaleSequence(el, ax, ay, astArgs);
+        const xList =
+            xVals?.type === "pattern" ? null :
+            Array.isArray(xVals) ? xVals : null;
+
+        const yList =
+            yVals?.type === "pattern" ? null :
+            Array.isArray(yVals) ? yVals : null;
+
+        const cfg = {
+            uid,
+            trig,
+            mode: "sequence-xy",
+            xValues: xList,
+            yValues: yList,
+            xPattern: xVals?.type === "pattern" ? xVals : null,
+            yPattern: yVals?.type === "pattern" ? yVals : null,
+            astArgs,
+            fromCueTrigger
+        };
+
+        const start = () => handleScaleSequence(el, cfg);
+
+        registerAnimation(el, "scale-sequence-xy", cfg, start);
+
+        if (fromCueTrigger && trig === "playhead") start();
+
+        return;
     }
 
-    // No explicit values — continuous pulse fallback
-    return handleScaleContinuous(el, astArgs);
+    // --------------------------------------------------------
+    // 7. CASE D — Continuous fallback pulse
+    // --------------------------------------------------------
+    const cfg = {
+        uid,
+        trig,
+        mode: "continuous",
+        astArgs,
+        fromCueTrigger
+    };
+
+    const start = () => handleScaleContinuous(el, cfg);
+
+    registerAnimation(el, "scale-continuous", cfg, start);
+
+    if (fromCueTrigger && trig === "playhead") start();
 }
+

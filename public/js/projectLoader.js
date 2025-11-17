@@ -5,8 +5,7 @@
  */
 
 import { initializeSVG } from "./app.js";
-
-
+import { initializeObserver } from "./oscillaObserver.js";
 import { setSpeed, applyDarkMode, toggleSplashScreen, hideSplashScreen } from "./transport.js";
 
 
@@ -330,6 +329,11 @@ history.replaceState({}, "", url.toString());
 
 
     console.log(`[loadProject] ✅ Project "${projectName}" fully loaded.`);
+   
+   
+   initializeObserver();
+
+   
     hideSplashScreen();
   } catch (err) {
     console.error(`[loadProject] ❌ Failed to load project "${projectName}":`, err);

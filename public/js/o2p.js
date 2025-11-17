@@ -1,5 +1,5 @@
 //
-// o2p.js — Clean Modern Rewrite
+// o2p.js — Clean Modern Rewrite (patched)
 // -----------------------------------------------------------
 // Modes:
 //   - forward
@@ -15,10 +15,13 @@
 //   - uid override
 // -----------------------------------------------------------
 
+import { registerAnimation } from "./oscillaAnimation.js";
+
 
 /* ---------------------------------------------------------
  *  1. normalizeOrigin(el)
  *     Centers ANY SVG element/group at (0,0)
+ *     NOTE: now intended to be called ONCE per element.
  * --------------------------------------------------------*/
 function normalizeOrigin(el) {
     function flatten(node) {
@@ -47,6 +50,14 @@ function normalizeOrigin(el) {
 
     // compute bbox center
     const bbox = el.getBBox();
+    // guard against zero-area / invalid bbox
+    if (!bbox || !isFinite(bbox.x) || !isFinite(bbox.y) ||
+        !isFinite(bbox.width) || !isFinite(bbox.height) ||
+        bbox.width === 0 || bbox.height === 0) {
+        console.warn("[o2p] normalizeOrigin: invalid or zero-area bbox for", el.id || el);
+        return;
+    }
+
     const cx = bbox.x + bbox.width / 2;
     const cy = bbox.y + bbox.height / 2;
     if (!isFinite(cx) || !isFinite(cy)) return;
@@ -157,7 +168,11 @@ class VirtualPath {
 
     // globalT: 0..1 mapped to concatenated paths
     sample(globalT) {
-        if (!this.totalLen || globalT < 0 || globalT > 1) return null;
+        if (!this.totalLen) return null;
+
+        // clamp to [0,1] to avoid null from tiny FP drift
+        if (!isFinite(globalT)) return null;
+        globalT = Math.max(0, Math.min(1, globalT));
 
         let target = globalT * this.totalLen;
         let acc = 0;
@@ -167,7 +182,7 @@ class VirtualPath {
             if (acc + L >= target) {
                 const local = target - acc;
                 const point = path.getPointAtLength(local);
-                const pathT = local / L;
+                const pathT = L > 0 ? (local / L) : 0;
                 return { path, point, pathT, distance: local };
             }
             acc += L;
@@ -194,6 +209,7 @@ function makeTMapper(start, end) {
 function applyTransform(el, point, angleDeg, rotate) {
     let t = `translate(${point.x}, ${point.y})`;
     if (rotate === true) {
+        if (!isFinite(angleDeg)) angleDeg = 0;
         t += ` rotate(${angleDeg})`;
     }
     el.setAttribute("transform", t);
@@ -212,13 +228,21 @@ function emitO2POsc({ uid, path, point, pathT, oscCfg }) {
     oscCfg.lastSent = now;
 
     const bbox = path.getBBox();
+    if (!bbox || bbox.width === 0 || bbox.height === 0) {
+        // avoid NaNs in normalisation
+        return;
+    }
+
     const normX = (point.x - bbox.x) / bbox.width;
     const normY = (point.y - bbox.y) / bbox.height;
 
     const length = path.getTotalLength();
+    const EPS = 0.1;
     const localL = pathT * length;
-    const ahead = path.getPointAtLength(Math.min(length, localL + 0.1));
-    const angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
+    const aheadLen = Math.min(length - EPS, Math.max(0, localL + EPS));
+    const ahead = path.getPointAtLength(aheadLen);
+    let angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
+    if (!isFinite(angle)) angle = 0;
 
     if (!window.socket || window.socket.readyState !== WebSocket.OPEN) return;
 
@@ -239,7 +263,12 @@ function emitO2POsc({ uid, path, point, pathT, oscCfg }) {
  * --------------------------------------------------------*/
 function startContinuousO2P(el, cfg, virtual, uid) {
     const { dur, loop, rotate, oscCfg, start, end, next, nextOn } = cfg;
-    normalizeOrigin(el);
+
+    // normalize origin ONCE only to avoid cumulative shifts
+    if (!el._originNormalized) {
+        normalizeOrigin(el);
+        el._originNormalized = true;
+    }
 
     if (el._o2pAnim) el._o2pAnim.pause?.();
 
@@ -281,12 +310,14 @@ function startContinuousO2P(el, cfg, virtual, uid) {
             const { path, point, pathT } = sample;
 
             const length = path.getTotalLength();
+            const EPS = 0.1;
             const localL = pathT * length;
-            const ahead = path.getPointAtLength(Math.min(length, localL + 0.1));
-            const angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
+            const aheadLen = Math.min(length - EPS, Math.max(0, localL + EPS));
+            const ahead = path.getPointAtLength(aheadLen);
+            let angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
+            if (!isFinite(angle)) angle = 0;
 
             applyTransform(el, point, angle, rotate);
-
             emitO2POsc({ uid, path, point, pathT, oscCfg });
         },
 
@@ -312,7 +343,12 @@ function startContinuousO2P(el, cfg, virtual, uid) {
  * --------------------------------------------------------*/
 function startAlternateO2P(el, cfg, virtual, uid) {
     const { dur, loop, rotate, oscCfg, start, end, next, nextOn } = cfg;
-    normalizeOrigin(el);
+
+    // normalize origin ONCE only to avoid cumulative shifts
+    if (!el._originNormalized) {
+        normalizeOrigin(el);
+        el._originNormalized = true;
+    }
 
     if (el._o2pAnim) el._o2pAnim.pause?.();
     el.style.transformBox = "fill-box";
@@ -354,9 +390,12 @@ function startAlternateO2P(el, cfg, virtual, uid) {
                     const { path, point, pathT } = sample;
 
                     const length = path.getTotalLength();
+                    const EPS = 0.1;
                     const localL = pathT * length;
-                    const ahead = path.getPointAtLength(Math.min(length, localL + 0.1));
-                    const angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
+                    const aheadLen = Math.min(length - EPS, Math.max(0, localL + EPS));
+                    const ahead = path.getPointAtLength(aheadLen);
+                    let angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
+                    if (!isFinite(angle)) angle = 0;
 
                     applyTransform(el, point, angle, rotate);
                     emitO2POsc({ uid, path, point, pathT, oscCfg });
@@ -439,9 +478,11 @@ function startO2PForElement(el, cfg) {
         startContinuousO2P(el, cfg, virtual, uid);
     }
 }
-export function handleO2PCue(el, args) {
+
+export function handleO2PCue(el, args, options = {}) {
+    const { fromCueTrigger = false } = options;
+
     try {
-        // args may be missing or malformed → normalize it
         if (!Array.isArray(args)) args = [];
 
         const cfg = {
@@ -456,10 +497,13 @@ export function handleO2PCue(el, args) {
             end: 1,
             uid: null,
             next: null,
-            nextOn: null
+            nextOn: null,
+            trig: "auto",
+            astArgs: args,
+            fromCueTrigger
         };
 
-        // Parse args (from DSL AST)
+        // Parse DSL args
         for (const a of args) {
             const key = a.type;
             const val = a.value;
@@ -477,9 +521,11 @@ export function handleO2PCue(el, args) {
                 case "uid": cfg.uid = val; break;
                 case "next": cfg.next = val; break;
                 case "nextOn": cfg.nextOn = val; break;
+                case "trig": cfg.trig = String(val).toLowerCase(); break;
             }
         }
-        // Alias support
+
+        // Aliases
         if (cfg.mode === "fwd") cfg.mode = "forward";
         if (cfg.mode === "rev") cfg.mode = "reverse";
         if (cfg.mode === "alt") cfg.mode = "alternate";
@@ -495,9 +541,24 @@ export function handleO2PCue(el, args) {
             return;
         }
 
-        startO2PForElement(el, cfg);
+        // Assign UID if missing
+        if (!cfg.uid) {
+            cfg.uid = el.id || ("o2p_" + Math.random().toString(36).slice(2));
+        }
+
+        const startFn = () => {
+            startO2PForElement(el, cfg);
+        };
+
+        registerAnimation(el, "o2p", cfg, startFn);
+
+        // ✅ If triggered via cue and trig:playhead → start now
+        if (fromCueTrigger && cfg.trig === "playhead") {
+            startFn();
+        }
 
     } catch (err) {
         console.error("[o2p] ERROR in handleO2PCue:", err);
     }
 }
+

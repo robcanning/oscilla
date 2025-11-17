@@ -1,96 +1,83 @@
-# cue:scale — Scale Animation Cue
+# cue:scale — Scale Animation Cue (Updated)
 
-Controls visual scaling of any SVG object around its transform origin. Scaling may be continuous or driven by a list or pattern of scale values.
+This version fully documents support for Pseq, Prand, Pxrand, and Pshuf patterns.
 
-To use scaling, assign an object (usually a <g>) an id or cue expression of the form:
+## Overview
+`scale()` and `scaleXY()` control visual scaling of SVG objects. Scaling may be smooth, stepped, patterned, pulsed, uniform, or non‑uniform (independent X/Y).
 
-```js
-scale([1, 1.5, 1], dur:2)
+Both explicit and implicit forms work:
 ```
-
-The first parameter may be given either explicitly:
-
-```js
 scale(values:[1,1.5,1], dur:2)
-```
-
-or implicitly:
-
-```js
 scale([1,1.5,1], dur:2)
 ```
 
-### Uniform vs. Non‑uniform Scaling
-
-Uniform scaling applies the same factor to both axes:
-
-```js
-scale([1, 1.5, 1], dur:2)
+## Uniform vs Non‑Uniform
 ```
-
-Non‑uniform scaling applies independent sequences to X and Y:
-
-```js
+scale([1,1.5,1], dur:2)
 scaleXY([1,1.5],[1,0.5], dur:2)
-```
-
-You can also use named parameters:
-
-```js
 scaleXY(x:[1,1.5], y:[1,0.5], dur:2)
 ```
 
-### Sequence Modes
+## Pattern Support (rotate‑equivalent)
+Scale fully supports SuperCollider‑style patterns:
 
-| Mode | Description |
-|------|--------------|
-| `mode:loop` | cycle continuously (default) |
-| `mode:once` | play the sequence once |
-| `mode:alternate` | bounce back and forth |
+- **Pseq([…], inf)** deterministic looping  
+- **Prand([…], inf)** random selection  
+- **Pxrand([…], inf)** random, no immediate repeats  
+- **Pshuf([…], inf)** shuffled list repeating  
 
-### Interpolation Modes
+Patterns are valid for:
+- **values** in `scale()`
+- **x:** and **y:** in `scaleXY()`
+- **dur:** (patterned duration)
 
-| Mode | Description |
-|------|--------------|
-| `interp:smooth` | interpolate smoothly between scale values (default) |
-| `interp:step` | jump instantly and hold for duration |
+Examples:
+```
+scale(Pseq([1,1.5,1], inf), dur:1)
+scale(Prand([1,2,0.8], inf), dur:0.5)
+scaleXY(x:Pxrand([1,1.3,1.6],inf), y:Pshuf([1,0.8,1.2],inf), dur:1)
+scale([1,2,1], dur:Prand([0.5,1,2],inf))
+```
 
-### Parameters
+## Sequence Modes
+- `mode:loop` — continuous (default)  
+- `mode:once` — play once  
+- `mode:alternate` — bounce/ping‑pong  
 
+## Interpolation
+- `interp:smooth` — tween between values (default)  
+- `interp:step` — instantaneous jumps  
+
+`hold:` applies only to smooth interpolation.
+
+## Parameters
 | Key | Description | Default |
-|-----|--------------|----------|
-| `dur` | duration per step in seconds | `1` |
-| `hold` | pause duration after each tween | `dur * 0.25` (smooth only) |
-| `ease` | easing function (Anime.js) | `linear` |
-| `osc` | OSC output mode (0=off, 1=continuous, 2=per‑step) | `0` |
-| `pauseOnExit` | if `false`, returns to first value after once‑mode end | `true` |
+|-----|-------------|---------|
+| `dur` | seconds per step or pattern element | `1` |
+| `hold` | pause after tween (smooth only) | `dur * 0.25` |
+| `ease` | Anime.js easing | `linear` |
+| `osc` | 0=off, 1=continuous, 2=per‑step | `0` |
+| `pauseOnExit` | in once‑mode, stay at final value | `true` |
 
-### Continuous Pulse Form
-
-If no explicit values are given, `scale()` falls back to a continuous pulse animation:
-
-```js
+## Continuous Pulse Form
+```
 scale(min:1, max:1.3, dur:2, loop:0, ease:"easeInOutSine")
 ```
 
-### OSC Output
-
-When `osc:1` or `osc:2` is set, each frame (or step) emits an OSC JSON message of the form:
-
-```json
+## OSC Output
+```
 {
-  "type": "osc_scale",
-  "uid": "objectID",
-  "sx": 1.25,
-  "sy": 0.75,
-  "avg": 1.0,
-  "timestamp": 1736730000000
+  "type":"osc_scale",
+  "uid":"objectID",
+  "sx":1.25, "sy":0.75,
+  "avg":1.0,
+  "timestamp":1736730000000
 }
 ```
 
-### Typical Usage
-
-```js
-scale([1,1.5,1], dur:2, interp:smooth, ease:"easeInOutSine", osc:1)
+## Typical Usage
+```
+scale([1,1.5,1], dur:2, ease:"easeInOutSine", osc:1)
 scaleXY([1,1.5],[1,0.5], dur:3, mode:alternate, interp:step)
+scale(Pseq([1,2,1],inf), dur:Prand([0.5,1,2],inf))
 ```

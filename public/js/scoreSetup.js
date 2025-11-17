@@ -591,8 +591,6 @@ export function evaluateExpr(expr) {
 }
 
 
-
-
 /**
  * preloadSpeedCues()
  * 
@@ -600,6 +598,7 @@ export function evaluateExpr(expr) {
  * Cues must use ID format like `speed_1.2`, `speed_0.75`, etc.
  * Used to enable accurate speed restoration during seek or jump.
  */
+
 export function preloadSpeedCues() {
   window.speedCueMap = [];
 

@@ -15,6 +15,11 @@ import { initializeDarkModeToggle, scrollToPlayheadVisual } from "./transport.js
 import { loadProject } from './projectLoader.js';
 import { setupScore, extractScoreElements, propagate, autoInjectGroupsInScroll } from './scoreSetup.js';
 
+
+import { registerAnimation, animationAssign } from "./oscillaAnimation.js";
+import { initializeObserver } from "./oscillaObserver.js";
+
+
 import {
   registerReuseBlocks,
   autoInjectUseBlocks,
@@ -76,19 +81,19 @@ import {
 
 
 import {
-  startRotate,
-  startRotation,
-  startScale,
-  initializeObjectPathPairs,
-  parseO2PCompact,
-  animateObjToPath,
-  extractTagValue,
-  getEasingFromId,
-  applyPivotFromId,
-  setTransformOriginToCenter,
-  parseCompactAnimationValues,
-  checkAnimationVisibility,
-  initializeObserver
+  // startRotate,
+  // startRotation,
+  // startScale,
+  // initializeObjectPathPairs,
+  // parseO2PCompact,
+  // animateObjToPath,
+  // extractTagValue,
+  // getEasingFromId,
+  // applyPivotFromId,
+  // setTransformOriginToCenter,
+  // parseCompactAnimationValues,
+  // checkAnimationVisibility,
+  // initializeObserver
 } from './anim.js';
 
 
@@ -294,65 +299,61 @@ export const initializeSVG = async (svgElement) => {
     window.playheadX = 0;  // safe world origin default
   }
 
-  // 🚀 Continue with full original animation setup
   console.log("[DEBUG] Initializing SVG element:", svgElement);
 
+  // First paint tick so layout is stable
+requestAnimationFrame(() => {
+
   requestAnimationFrame(() => {
+    window.ensureWindowPlayheadX(); 
+  });
 
+  // ----- PAGE REGISTRY FIRST -----
+  buildPageRegistryFromDirIndex();
+  refreshAllPagesMenu();
+
+  // -----  animationAssign   -----
+  console.log("[initializeSVG] Running animationAssign()…");
+  animationAssign(svgElement);
+  initializeObserver();  
+
+  // ---------------------------------------------
+
+  requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      window.ensureWindowPlayheadX(); // 💡 ensure valid center before any jumping logic
-      initializeObjectPathPairs(svgElement);
-      initializeObserver();
+      const svgReady = svgElement || document.querySelector("#scoreContainer svg");
+      if (!svgReady) {
+        console.warn("[initializeSVG] ⚠️ setupScore(): SVG still not found after paint.");
+        return;
+      }
+
+      console.group("[initializeSVG] Final SVG paint phase");
+      console.time("[initializeSVG] cue+setup total");
+
+      if (!window.cues) window.cues = [];
+
+      console.log("[initializeSVG] Assigning cues after layout is fully ready…");
+
+      assignCues(svgReady, window.cues);
+
+      if (typeof window.setupScore === "function") {
+        console.log("[initializeSVG] Running setupScore…");
+        window.setupScore(svgReady);
+      } else {
+        console.warn("[initializeSVG] ⚠️ setupScore() not available yet.");
+      }
+
+      console.timeEnd("[initializeSVG] cue+setup total");
+      console.groupEnd();
     });
+  });
 
-    propagate(svgElement);
-    initializeRotatingObjects(svgElement);
-    initializeScalingObjects(svgElement);
-    initializeObserver();
 
-    console.log("[DEBUG] Animation setup complete. Running detection and observer.");
-    detectExistingAnimations();
-    observeAnimations();
-
-    buildPageRegistryFromDirIndex(); // list of all pages for the menu
-    refreshAllPagesMenu();
-
-    // ✅ Run setupScore and cue assignment after the SVG has fully painted
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const svgReady = svgElement || document.querySelector("#scoreContainer svg");
-        if (!svgReady) {
-          console.warn("[initializeSVG] ⚠️ setupScore(): SVG still not found after paint.");
-          return;
-        }
-
-        console.group("[initializeSVG] ✅ Final SVG paint phase");
-        console.time("[initializeSVG] cue+setup total");
-
-        // 🧩 Always ensure window.cues exists before assigning
-        if (!window.cues) window.cues = [];
-
-        console.log("[initializeSVG] Assigning cues after layout is fully ready...");
-
-        assignCues(svgReady, window.cues);
-
-        if (typeof window.setupScore === "function") {
-          console.log("[initializeSVG] Running setupScore...");
-          window.setupScore(svgReady);
-        } else {
-          console.warn("[initializeSVG] ⚠️ setupScore() not available yet.");
-        }
-
-        console.timeEnd("[initializeSVG] cue+setup total");
-        console.groupEnd();
-      });
-    });
 
 
     // TODO CSS IN SCROLL MODE - HEIGHT NEEDS TO BE 95% OR SOMETHING
     // BUT THEN THE JUMP2X ETC SYNC BREAKS . NEED TO SORT ORDER OF EX
     // PROJECT LOADER ALSO DOES CSS STUFF LIKE THIS - WHAT IS REDUNDANT?
-    // 
 
     // --- Wide-scroll layout correction ---
     const applyWideScrollLayout = () => {
@@ -1484,200 +1485,200 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  //////////////////////////////////////////////////////
-  // Ensures Anime.js animations are detected and tracked dynamically
-  // Pauses animations when they are not visible and resumes them when they reappear
-  // Supports path-based (obj2path-*), rotation (obj_*_rotate_*), and other Anime.js animations
-  // Uses Intersection Observer to optimize performance by stopping off-screen animations
-  // Ensures the observer starts only after animations are fully initialized
+  // //////////////////////////////////////////////////////
+  // // Ensures Anime.js animations are detected and tracked dynamically
+  // // Pauses animations when they are not visible and resumes them when they reappear
+  // // Supports path-based (obj2path-*), rotation (obj_*_rotate_*), and other Anime.js animations
+  // // Uses Intersection Observer to optimize performance by stopping off-screen animations
+  // // Ensures the observer starts only after animations are fully initialized
 
-  window.runningAnimations = {}; // Store active animations globally
+  // window.runningAnimations = {}; // Store active animations globally
 
-  // Function to detect and track existing animations (including rotation)
-  window.detectExistingAnimations = function () {
-    console.log("[DEBUG] Checking currently running Anime.js animations...");
+  // // Function to detect and track existing animations (including rotation)
+  // window.detectExistingAnimations = function () {
+  //   console.log("[DEBUG] Checking currently running Anime.js animations...");
 
-    anime.running.forEach(anim => {
-      anim.animatables.forEach(animatable => {
-        const target = animatable.target;
-        if (target && target.getAttribute) {
-          const id = target.getAttribute("id");
+  //   anime.running.forEach(anim => {
+  //     anim.animatables.forEach(animatable => {
+  //       const target = animatable.target;
+  //       if (target && target.getAttribute) {
+  //         const id = target.getAttribute("id");
 
-          // Ensure we track both path-based and rotation-based animations
-          if (id && (id.startsWith('obj2path') || id.startsWith('obj_') || id.includes('_rotate_'))) {
-            if (!window.runningAnimations[id]) {
-              // console.log("[DEBUG] Tracking new animation for: " + id);
-              window.runningAnimations[id] = anim;
-            }
-          }
-        }
-      });
-    });
+  //         // Ensure we track both path-based and rotation-based animations
+  //         if (id && (id.startsWith('obj2path') || id.startsWith('obj_') || id.includes('_rotate_'))) {
+  //           if (!window.runningAnimations[id]) {
+  //             // console.log("[DEBUG] Tracking new animation for: " + id);
+  //             window.runningAnimations[id] = anim;
+  //           }
+  //         }
+  //       }
+  //     });
+  //   });
 
-    // console.log("[DEBUG] Updated running animations:", Object.keys(window.runningAnimations));
-  };
+  //   // console.log("[DEBUG] Updated running animations:", Object.keys(window.runningAnimations));
+  // };
 
-  /**
-  *  Optimized Function: checkAnimationVisibility (with state change logging)
-  *
-  * - Checks both the object and its associated path for visibility.
-  * - If the path is visible but the object is off-screen, the animation **continues**.
-  * - Logs when an animation starts playing for the first time.
-  * - Logs when an animation pauses for the first time after it has been playing.
-  * - Uses `window.runningAnimations` to manage active animations.
-  * - Removes redundant event listeners and interval (handled elsewhere in app.js).
-  */
+  // /**
+  // *  Optimized Function: checkAnimationVisibility (with state change logging)
+  // *
+  // * - Checks both the object and its associated path for visibility.
+  // * - If the path is visible but the object is off-screen, the animation **continues**.
+  // * - Logs when an animation starts playing for the first time.
+  // * - Logs when an animation pauses for the first time after it has been playing.
+  // * - Uses `window.runningAnimations` to manage active animations.
+  // * - Removes redundant event listeners and interval (handled elsewhere in app.js).
+  // */
 
-  window.checkAnimationVisibility = function () {
-    Object.entries(window.runningAnimations).forEach(([id, instance]) => {
-      const el = document.getElementById(id);
-      if (!el) return;
+  // window.checkAnimationVisibility = function () {
+  //   Object.entries(window.runningAnimations).forEach(([id, instance]) => {
+  //     const el = document.getElementById(id);
+  //     if (!el) return;
 
-      const rect = el.getBoundingClientRect();
-      const isVisible = rect.top < window.innerHeight &&
-        rect.bottom > 0 &&
-        rect.left < window.innerWidth &&
-        rect.right > 0;
+  //     const rect = el.getBoundingClientRect();
+  //     const isVisible = rect.top < window.innerHeight &&
+  //       rect.bottom > 0 &&
+  //       rect.left < window.innerWidth &&
+  //       rect.right > 0;
 
-      if (isVisible) {
-        if (instance.wasPaused) {
-          // console.log(`[CHECK] ${id} became visible — resuming`);
-          if (typeof instance.resume === "function") instance.resume();
-          else if (typeof instance.play === "function") instance.play();
-          instance.wasPaused = false;
-        }
-      } else {
-        if (!instance.wasPaused) {
-          // console.log(`[CHECK] ${id} is off-screen — pausing`);
-          if (typeof instance.pause === "function") instance.pause();
-          instance.wasPaused = true;
-        }
-      }
-    });
-  };
-
-
-  window.initializeObserver = function () {
-    if (window.observer) window.observer.disconnect();
-
-    window.observer = new IntersectionObserver((entries) => {
-      if (window.disableObserver) return; // Skip all observer logic
-
-      for (const entry of entries) {
-        const el = entry.target;
-        const id = el.id;
-        const instance = window.runningAnimations[id];
-
-        if (!instance) continue;
-
-        if (entry.isIntersecting) {
-          if (instance.wasPaused || instance.autoStart) {
-            if (typeof instance.resume === "function") instance.resume();
-            else if (typeof instance.play === "function") instance.play();
-            // console.log(`[OBSERVER] ${id} entered view — resumed`);
-            instance.wasPaused = false;
-            instance.autoStart = false;
-          }
-        } else {
-          if (typeof instance.pause === "function") instance.pause();
-          instance.wasPaused = true;
-          // console.log(`[OBSERVER] ${id} left view — paused`);
-        }
-      }
-    }, {
-      root: null,
-      threshold: 0.01,
-      rootMargin: "0px", //  Use full viewport width for visibility detection.
-      // This ensures that any object visually inside the screen 
-      // (not just near the center) will trigger IntersectionObserver.
-      // Narrow values like "-45%" were previously used to simulate a 
-      // central "playhead zone", but caused false negatives on pause, 
-      // reload, or cue jumps. Defaulting to full view is more robust.    
-    });
+  //     if (isVisible) {
+  //       if (instance.wasPaused) {
+  //         // console.log(`[CHECK] ${id} became visible — resuming`);
+  //         if (typeof instance.resume === "function") instance.resume();
+  //         else if (typeof instance.play === "function") instance.play();
+  //         instance.wasPaused = false;
+  //       }
+  //     } else {
+  //       if (!instance.wasPaused) {
+  //         // console.log(`[CHECK] ${id} is off-screen — pausing`);
+  //         if (typeof instance.pause === "function") instance.pause();
+  //         instance.wasPaused = true;
+  //       }
+  //     }
+  //   });
+  // };
 
 
-    // Global OBSERVER DISABLE for dubugging
-    // window.disableObserver = true;
+  // window.initializeObserver = function () {
+  //   if (window.observer) window.observer.disconnect();
 
-    Object.entries(window.runningAnimations).forEach(([id, instance]) => {
-      const el = document.getElementById(id);
-      if (el instanceof Element) {
-        window.observer.observe(el);
-      }
-    });
+  //   window.observer = new IntersectionObserver((entries) => {
+  //     if (window.disableObserver) return; // Skip all observer logic
 
-    //  Immediately check visibility
-    requestAnimationFrame(() => {
-      window.checkAnimationVisibility();
-    });
-  };
+  //     for (const entry of entries) {
+  //       const el = entry.target;
+  //       const id = el.id;
+  //       const instance = window.runningAnimations[id];
 
-  window.startAllVisibleAnimations = () => {
-    console.log(`[DEBUG] Checking ${Object.keys(window.runningAnimations).length} animations for visibility`);
+  //       if (!instance) continue;
 
-    Object.entries(window.runningAnimations).forEach(([id, instance]) => {
-      const el = document.getElementById(id);
+  //       if (entry.isIntersecting) {
+  //         if (instance.wasPaused || instance.autoStart) {
+  //           if (typeof instance.resume === "function") instance.resume();
+  //           else if (typeof instance.play === "function") instance.play();
+  //           // console.log(`[OBSERVER] ${id} entered view — resumed`);
+  //           instance.wasPaused = false;
+  //           instance.autoStart = false;
+  //         }
+  //       } else {
+  //         if (typeof instance.pause === "function") instance.pause();
+  //         instance.wasPaused = true;
+  //         // console.log(`[OBSERVER] ${id} left view — paused`);
+  //       }
+  //     }
+  //   }, {
+  //     root: null,
+  //     threshold: 0.01,
+  //     rootMargin: "0px", //  Use full viewport width for visibility detection.
+  //     // This ensures that any object visually inside the screen 
+  //     // (not just near the center) will trigger IntersectionObserver.
+  //     // Narrow values like "-45%" were previously used to simulate a 
+  //     // central "playhead zone", but caused false negatives on pause, 
+  //     // reload, or cue jumps. Defaulting to full view is more robust.    
+  //   });
 
-      if (!el) {
-        console.warn(`[MISSING] No DOM element for ${id}`);
-        return;
-      }
 
-      const rect = el.getBoundingClientRect();
-      const isVisible =
-        rect.top < window.innerHeight &&
-        rect.bottom > 0 &&
-        rect.left < window.innerWidth &&
-        rect.right > 0;
+  //   // Global OBSERVER DISABLE for dubugging
+  //   // window.disableObserver = true;
 
-      // console.log(`[CHECK] ${id}: visible=${isVisible}, rect=${JSON.stringify(rect)}`);
+  //   Object.entries(window.runningAnimations).forEach(([id, instance]) => {
+  //     const el = document.getElementById(id);
+  //     if (el instanceof Element) {
+  //       window.observer.observe(el);
+  //     }
+  //   });
 
-      if (isVisible) {
-        // console.log(`[FORCE PLAY] ${id}`);
-        if (typeof instance.resume === "function") {
-          instance.resume();
-          // console.log(`[DEBUG] Called resume() on ${id}`);
-        } else if (typeof instance.play === "function") {
-          instance.play();
-          // console.log(`[DEBUG] Called play() on ${id}`);
-        } else {
-          console.warn(`[WARN] No resume() or play() method on ${id}`);
-        }
-      }
-    });
-  };
+  //   //  Immediately check visibility
+  //   requestAnimationFrame(() => {
+  //     window.checkAnimationVisibility();
+  //   });
+  // };
 
-  // Function to apply observer and visibility tracking
-  window.observeAnimations = function () {
-    if (!window.observer) {
-      window.initializeObserver();
-    }
+  // window.startAllVisibleAnimations = () => {
+  //   console.log(`[DEBUG] Checking ${Object.keys(window.runningAnimations).length} animations for visibility`);
 
-    document.querySelectorAll(window.ANIM_SELECTOR).forEach((element) => {
-      const id = element.id;
-      if (window.runningAnimations[id]) {
-        window.observer.observe(element);
-        console.log(`[DEBUG] Observer attached to: ${id}`);
-      } else {
-        console.warn(`[SKIPPED] ${id} exists but has no registered animation.`);
-      }
-    });
-  };
+  //   Object.entries(window.runningAnimations).forEach(([id, instance]) => {
+  //     const el = document.getElementById(id);
 
-  // // Function to wait for animations to be initialized before starting detection
-  function waitForAnimationsToInitialize() {
-    //console.log("[DEBUG] Waiting for animations to initialize...");
+  //     if (!el) {
+  //       console.warn(`[MISSING] No DOM element for ${id}`);
+  //       return;
+  //     }
 
-    const checkAnimations = setInterval(() => {
-      if (anime.running.length > 0) { // Ensure at least one animation is running
-        //      console.log("[DEBUG] Animations are initialized. Running detection and observer.");
-        clearInterval(checkAnimations);
+  //     const rect = el.getBoundingClientRect();
+  //     const isVisible =
+  //       rect.top < window.innerHeight &&
+  //       rect.bottom > 0 &&
+  //       rect.left < window.innerWidth &&
+  //       rect.right > 0;
 
-        detectExistingAnimations();
-        observeAnimations();
-      }
-    }, 500);
-  }
+  //     // console.log(`[CHECK] ${id}: visible=${isVisible}, rect=${JSON.stringify(rect)}`);
+
+  //     if (isVisible) {
+  //       // console.log(`[FORCE PLAY] ${id}`);
+  //       if (typeof instance.resume === "function") {
+  //         instance.resume();
+  //         // console.log(`[DEBUG] Called resume() on ${id}`);
+  //       } else if (typeof instance.play === "function") {
+  //         instance.play();
+  //         // console.log(`[DEBUG] Called play() on ${id}`);
+  //       } else {
+  //         console.warn(`[WARN] No resume() or play() method on ${id}`);
+  //       }
+  //     }
+  //   });
+  // };
+
+  // // Function to apply observer and visibility tracking
+  // window.observeAnimations = function () {
+  //   if (!window.observer) {
+  //     window.initializeObserver();
+  //   }
+
+  //   document.querySelectorAll(window.ANIM_SELECTOR).forEach((element) => {
+  //     const id = element.id;
+  //     if (window.runningAnimations[id]) {
+  //       window.observer.observe(element);
+  //       console.log(`[DEBUG] Observer attached to: ${id}`);
+  //     } else {
+  //       console.warn(`[SKIPPED] ${id} exists but has no registered animation.`);
+  //     }
+  //   });
+  // };
+
+  // // // Function to wait for animations to be initialized before starting detection
+  // function waitForAnimationsToInitialize() {
+  //   //console.log("[DEBUG] Waiting for animations to initialize...");
+
+  //   const checkAnimations = setInterval(() => {
+  //     if (anime.running.length > 0) { // Ensure at least one animation is running
+  //       //      console.log("[DEBUG] Animations are initialized. Running detection and observer.");
+  //       clearInterval(checkAnimations);
+
+  //       detectExistingAnimations();
+  //       observeAnimations();
+  //     }
+  //   }, 500);
+  // }
 
   /**
    * storePathVariants(svgElement)
@@ -2111,10 +2112,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.startAnimation = () => {
 
-    console.log("[DEBUG] startAnimation check:",
-      "animationPaused=", window.animationPaused,
-      "animationStopped=", window.animationStopped,
-      "isSeeking=", window.isSeeking);
+    // console.log("[DEBUG] startAnimation check:",
+    //   "animationPaused=", window.animationPaused,
+    //   "animationStopped=", window.animationStopped,
+    //   "isSeeking=", window.isSeeking);
 
     if (!window.isPlaying || window.animationPaused || window.isSeeking) {
       console.log("[DEBUG] Animation paused, stopped, or seeking, skipping start.");
