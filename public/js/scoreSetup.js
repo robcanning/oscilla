@@ -438,96 +438,96 @@ export async function preloadSvgGroups() {
 }
 
 
-/**
- * propagate(svgRoot)
- * ------------------------------------------------------------
- * Generalised group-level operator for Oscilla microsyntax with
- * per-element parameter substitution.
- *
- * Usage (in SVG):
- *   <g id="propagate(s(rnd(10x0.2-1.8x))_mode(loop)_seqdur($1)_ease(step)_uid(123), rnd(0.4,3.0))">
- *     <circle ... />
- *     <circle ... />
- *   </g>
- *
- * Behaviour:
- *   - Detects <g> elements whose IDs start with "propagate(".
- *   - Extracts the first argument as a microsyntax template
- *     (e.g., any Oscilla animation or cue definition).
- *   - Treats subsequent comma-separated arguments as expressions
- *     (supports rnd(min,max), numeric literals, etc.).
- *   - For each child inside the group:
- *       • Evaluates all argument expressions individually so each
- *         child receives unique random values.
- *       • Substitutes placeholders ($1, $2, …) in the template
- *         with those evaluated results.
- *       • Appends a unique _uid(base_index) suffix to the ID.
- *   - Assigns the expanded ID string to each child element,
- *     leaving the parent group untouched.
- */
-export function propagate(svgRoot) {
-  const groups = svgRoot.querySelectorAll('[id^="propagate("]');
-  if (!groups.length) return;
+// /**
+//  * propagate(svgRoot)
+//  * ------------------------------------------------------------
+//  * Generalised group-level operator for Oscilla microsyntax with
+//  * per-element parameter substitution.
+//  *
+//  * Usage (in SVG):
+//  *   <g id="propagate(s(rnd(10x0.2-1.8x))_mode(loop)_seqdur($1)_ease(step)_uid(123), rnd(0.4,3.0))">
+//  *     <circle ... />
+//  *     <circle ... />
+//  *   </g>
+//  *
+//  * Behaviour:
+//  *   - Detects <g> elements whose IDs start with "propagate(".
+//  *   - Extracts the first argument as a microsyntax template
+//  *     (e.g., any Oscilla animation or cue definition).
+//  *   - Treats subsequent comma-separated arguments as expressions
+//  *     (supports rnd(min,max), numeric literals, etc.).
+//  *   - For each child inside the group:
+//  *       • Evaluates all argument expressions individually so each
+//  *         child receives unique random values.
+//  *       • Substitutes placeholders ($1, $2, …) in the template
+//  *         with those evaluated results.
+//  *       • Appends a unique _uid(base_index) suffix to the ID.
+//  *   - Assigns the expanded ID string to each child element,
+//  *     leaving the parent group untouched.
+//  */
+// export function propagate(svgRoot) {
+//   const groups = svgRoot.querySelectorAll('[id^="propagate("]');
+//   if (!groups.length) return;
 
-  console.info(`[propagate] Found ${groups.length} groups to process`);
+//   console.info(`[propagate] Found ${groups.length} groups to process`);
 
-  groups.forEach((group, groupIndex) => {
-    const id = group.id;
+//   groups.forEach((group, groupIndex) => {
+//     const id = group.id;
 
-    // Extract the full contents inside propagate(...)
-    const match = id.match(/^propagate\((.*)\)$/);
-    if (!match) return;
+//     // Extract the full contents inside propagate(...)
+//     const match = id.match(/^propagate\((.*)\)$/);
+//     if (!match) return;
 
-    const inner = match[1];
-    const parts = [];
-    let depth = 0, current = '';
+//     const inner = match[1];
+//     const parts = [];
+//     let depth = 0, current = '';
 
-    // Split on commas that are not inside parentheses
-    for (const ch of inner) {
-      if (ch === '(') depth++;
-      if (ch === ')') depth--;
-      if (ch === ',' && depth === 0) {
-        parts.push(current.trim());
-        current = '';
-      } else {
-        current += ch;
-      }
-    }
-    if (current.trim()) parts.push(current.trim());
+//     // Split on commas that are not inside parentheses
+//     for (const ch of inner) {
+//       if (ch === '(') depth++;
+//       if (ch === ')') depth--;
+//       if (ch === ',' && depth === 0) {
+//         parts.push(current.trim());
+//         current = '';
+//       } else {
+//         current += ch;
+//       }
+//     }
+//     if (current.trim()) parts.push(current.trim());
 
-    const template = parts[0];
-    const argExprs = parts.slice(1);
-    const uidMatch = template.match(/_uid\((.*?)\)/);
-    const baseUID = uidMatch ? uidMatch[1] : `${groupIndex}`;
+//     const template = parts[0];
+//     const argExprs = parts.slice(1);
+//     const uidMatch = template.match(/_uid\((.*?)\)/);
+//     const baseUID = uidMatch ? uidMatch[1] : `${groupIndex}`;
 
-    const children = Array.from(group.children);
-    if (!children.length) {
-      console.warn(`[propagate] ⚠️ No children found in group ${id}`);
-      return;
-    }
+//     const children = Array.from(group.children);
+//     if (!children.length) {
+//       console.warn(`[propagate] ⚠️ No children found in group ${id}`);
+//       return;
+//     }
 
-    children.forEach((child, i) => {
-      // Evaluate argument expressions separately for each child
-      const argValues = argExprs.map(expr => evaluateExpr(expr));
+//     children.forEach((child, i) => {
+//       // Evaluate argument expressions separately for each child
+//       const argValues = argExprs.map(expr => evaluateExpr(expr));
 
-      // Substitute $1, $2, ... in template with evaluated results
-      let expanded = template;
-      argValues.forEach((val, idx) => {
-        expanded = expanded.replace(new RegExp(`\\$${idx + 1}`, 'g'), val);
-      });
+//       // Substitute $1, $2, ... in template with evaluated results
+//       let expanded = template;
+//       argValues.forEach((val, idx) => {
+//         expanded = expanded.replace(new RegExp(`\\$${idx + 1}`, 'g'), val);
+//       });
 
-      // Replace or append _uid(...)
-      const uniqueUID = `${baseUID}_${i}`;
-      expanded = expanded.replace(/_uid\([^)]*\)/, `_uid(${uniqueUID})`);
-      if (!expanded.includes('_uid(')) expanded += `_uid(${uniqueUID})`;
+//       // Replace or append _uid(...)
+//       const uniqueUID = `${baseUID}_${i}`;
+//       expanded = expanded.replace(/_uid\([^)]*\)/, `_uid(${uniqueUID})`);
+//       if (!expanded.includes('_uid(')) expanded += `_uid(${uniqueUID})`;
 
-      child.id = expanded;
-    });
-  });
-}
+//       child.id = expanded;
+//     });
+//   });
+// }
 
-// parse for cuePropagate / propagate()
-window.propagate = propagate;
+// // parse for cuePropagate / propagate()
+// window.propagate = propagate;
 
 
 

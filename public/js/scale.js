@@ -282,7 +282,11 @@ export function handleScaleSequence(el, cfg) {
                 }
                 break;
 
-            case "mode": mode = String(val).trim().toLowerCase(); break;
+            case "mode": {
+                mode = String(val).trim().toLowerCase();
+                if (mode === "alt") mode = "alternate";   // ← alias support restored
+                break;
+            } 
             case "pauseOnExit": pauseOnExit = Boolean(val); break;
             case "interp": interp = String(val).trim().toLowerCase(); break;
             case "ease": ease = String(val).trim(); break;

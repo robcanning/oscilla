@@ -55,6 +55,8 @@ import { handleRotateCue } from "./rotate.js";
 import { handleScaleCue } from "./scale.js";
 import { handleO2PCue } from "./o2p.js";
 
+import { propagate } from "./oscillaPropagate.js";
+
 import { handleSpeedCue, handleSpeedRamp } from "./speed.js";
 
 // import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
@@ -1684,10 +1686,9 @@ export async function handlePageCue(cueId, duration, cueParams = {}) {
   //   console.log(`[cuePage] 📦 Registered groups in ${pageName}.svg`);
   // }
 
-  if (typeof window.propagate === "function") {
-    console.log("[cuePage] ⚙️ Calling propagate() for page SVG");
-    window.propagate(svg);
-  }
+
+console.log("[cuePage] ⚙️ Calling propagate() for page SVG");
+propagate(svg);
 
   window.initializeRotatingObjects?.(svg);
   window.initializeScalingObjects?.(svg);

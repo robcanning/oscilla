@@ -13,8 +13,9 @@ import { enableLiveInspector } from "./oscillaLive.js";
 
 import { initializeDarkModeToggle, scrollToPlayheadVisual } from "./transport.js";
 import { loadProject } from './projectLoader.js';
-import { setupScore, extractScoreElements, propagate, autoInjectGroupsInScroll } from './scoreSetup.js';
+import { setupScore, extractScoreElements, autoInjectGroupsInScroll } from './scoreSetup.js';
 
+import { propagate } from "./oscillaPropagate.js";
 
 import { registerAnimation, animationAssign } from "./oscillaAnimation.js";
 import { initializeObserver } from "./oscillaObserver.js";
@@ -101,54 +102,50 @@ import {
 
 export const initializeSVG = async (svgElement) => {
 
-
   console.group("[initializeSVG]");
   console.time("[initializeSVG] total");
-  console.log("SVG element:", svgElement);
-  console.log("Bounding box:", svgElement.getBoundingClientRect());
+
+  //   // Ensure we received a valid SVG element before continuing
+  // if (!svgElement) {
+  //   console.error("[ERROR] No SVG element provided to initializeSVG.");
+  //   return;
+  // }
+
+
+  // console.log("SVG element:", svgElement);
+  // console.log("Bounding box:", svgElement.getBoundingClientRect());
 
 
   /////////////////////////////////////////////////////////////////////////////
 
 
-  window.DEBUG_COORDS = true;
+  // window.DEBUG_COORDS = true;
 
-  function getSVG() { return document.querySelector("#score"); }
-  function getCTM() { const s = getSVG(); return s ? s.getScreenCTM() : null; }
+  // function getSVG() { return document.querySelector("#score"); }
+  // function getCTM() { const s = getSVG(); return s ? s.getScreenCTM() : null; }
 
-  function svgToClientX(svgX) {
-    const s = getSVG(), c = getCTM(); if (!s || !c) return null;
-    const pt = s.createSVGPoint(); pt.x = svgX; pt.y = 0; return pt.matrixTransform(c).x;
-  }
-  function clientToSvgX(clientX) {
-    const s = getSVG(), c = getCTM(); if (!s || !c) return null;
-    const inv = c.inverse(); const pt = s.createSVGPoint(); pt.x = clientX; pt.y = 0;
-    return pt.matrixTransform(inv).x;
-  }
-  function logCoord(tag, obj = {}) { if (window.DEBUG_COORDS) console.log(`[COORD] ${tag}`, obj); }
+  // function svgToClientX(svgX) {
+  //   const s = getSVG(), c = getCTM(); if (!s || !c) return null;
+  //   const pt = s.createSVGPoint(); pt.x = svgX; pt.y = 0; return pt.matrixTransform(c).x;
+  // }
+  // function clientToSvgX(clientX) {
+  //   const s = getSVG(), c = getCTM(); if (!s || !c) return null;
+  //   const inv = c.inverse(); const pt = s.createSVGPoint(); pt.x = clientX; pt.y = 0;
+  //   return pt.matrixTransform(inv).x;
+  // }
+  // function logCoord(tag, obj = {}) { if (window.DEBUG_COORDS) console.log(`[COORD] ${tag}`, obj); }
 
-
-
-  // 🛡️ Ensure r(...) rotations use correct transform origin
-  // console.log("[initializeSVG]  ensureRotationCSSGuard called .");
-
-  // ensureRotationCSSGuard(svgElement);
-
+  // Expand all propagate(...) group IDs into per-child animation/cue IDs before parsing
+  propagate(svgElement);
 
   // 🧩 Skip global reinit for embedded page overlays
   if (svgElement?.id === "pageSVG" || svgElement?.classList.contains("oscilla-page")) {
     console.log("[initializeSVG] ⚠️ Skipping global reset for page overlay SVG.");
     window.extractScoreElements?.(svgElement);
-    window.propagate?.(svgElement);
     return;
   }
 
 
-  // 🔍 Ensure we received a valid SVG element before continuing
-  if (!svgElement) {
-    console.error("[ERROR] No SVG element provided to initializeSVG.");
-    return;
-  }
 
   const flattenPathTranslate = (path, dx, dy) => {
     const d = path.getAttribute('d');
@@ -299,14 +296,14 @@ export const initializeSVG = async (svgElement) => {
     window.playheadX = 0;  // safe world origin default
   }
 
-  console.log("[DEBUG] Initializing SVG element:", svgElement);
+  // console.log("[DEBUG] Initializing SVG element:", svgElement);
 
   // First paint tick so layout is stable
 requestAnimationFrame(() => {
 
-  requestAnimationFrame(() => {
-    window.ensureWindowPlayheadX(); 
-  });
+  // requestAnimationFrame(() => {
+  //   window.ensureWindowPlayheadX(); 
+  // });
 
   // // ----- PAGE REGISTRY FIRST -----
   buildPageRegistryFromDirIndex();
@@ -316,7 +313,6 @@ requestAnimationFrame(() => {
   console.log("[initializeSVG] Running animationAssign()…");
   animationAssign(svgElement);
   initializeObserver();  
-
   // ---------------------------------------------
 
   requestAnimationFrame(() => {
@@ -333,7 +329,6 @@ requestAnimationFrame(() => {
       if (!window.cues) window.cues = [];
 
       console.log("[initializeSVG] Assigning cues after layout is fully ready…");
-
       assignCues(svgReady, window.cues);
 
       if (typeof window.setupScore === "function") {
@@ -347,7 +342,6 @@ requestAnimationFrame(() => {
       console.groupEnd();
     });
   });
-
 
 
 
@@ -387,8 +381,6 @@ requestAnimationFrame(() => {
     };
 
     window.applyWideScrollLayout = applyWideScrollLayout;
-
-
 
     // Wait until the SVG is *actually* inserted and painted
     requestAnimationFrame(() => {
@@ -452,6 +444,11 @@ requestAnimationFrame(() => {
 window.addEventListener("DOMContentLoaded", () => {
 
 });
+
+
+
+
+
 
 
 // ===========================
