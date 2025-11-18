@@ -276,6 +276,7 @@ export async function buildPageRegistryFromDirIndex() {
 }
 
 window.buildPageRegistryFromDirIndex = buildPageRegistryFromDirIndex;
+
 export function refreshAllPagesMenu() {
 
     if (!window.pageRegistry || !Object.keys(window.pageRegistry).length) {

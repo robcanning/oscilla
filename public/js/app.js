@@ -80,24 +80,24 @@ import {
 
 
 
-import {
-  // startRotate,
-  // startRotation,
-  // startScale,
-  // initializeObjectPathPairs,
-  // parseO2PCompact,
-  // animateObjToPath,
-  // extractTagValue,
-  // getEasingFromId,
-  // applyPivotFromId,
-  // setTransformOriginToCenter,
-  // parseCompactAnimationValues,
-  // checkAnimationVisibility,
-  // initializeObserver
-} from './anim.js';
+// import {
+//   // startRotate,
+//   // startRotation,
+//   // startScale,
+//   // initializeObjectPathPairs,
+//   // parseO2PCompact,
+//   // animateObjToPath,
+//   // extractTagValue,
+//   // getEasingFromId,
+//   // applyPivotFromId,
+//   // setTransformOriginToCenter,
+//   // parseCompactAnimationValues,
+//   // checkAnimationVisibility,
+//   // initializeObserver
+// } from './anim.js';
 
 
-import { ensureRotationCSSGuard } from './anim.js';
+// import { ensureRotationCSSGuard } from './anim.js';
 
 export const initializeSVG = async (svgElement) => {
 
@@ -130,9 +130,9 @@ export const initializeSVG = async (svgElement) => {
 
 
   // 🛡️ Ensure r(...) rotations use correct transform origin
-  console.log("[initializeSVG]  ensureRotationCSSGuard called .");
+  // console.log("[initializeSVG]  ensureRotationCSSGuard called .");
 
-  ensureRotationCSSGuard(svgElement);
+  // ensureRotationCSSGuard(svgElement);
 
 
   // 🧩 Skip global reinit for embedded page overlays
@@ -173,47 +173,47 @@ export const initializeSVG = async (svgElement) => {
     }
   };
 
-  const applyTranslationToShape = (el, dx, dy) => {
-    const tag = el.tagName.toLowerCase();
+  // const applyTranslationToShape = (el, dx, dy) => {
+  //   const tag = el.tagName.toLowerCase();
 
-    if (tag === 'path') {
-      flattenPathTranslate(el, dx, dy);
-    } else if (tag === 'rect' || tag === 'use') {
-      const x = parseFloat(el.getAttribute('x') || 0);
-      const y = parseFloat(el.getAttribute('y') || 0);
-      el.setAttribute('x', x + dx);
-      el.setAttribute('y', y + dy);
-      // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''} to (${x + dx}, ${y + dy})`);
-    } else if (tag === 'circle' || tag === 'ellipse') {
-      const cx = parseFloat(el.getAttribute('cx') || 0);
-      const cy = parseFloat(el.getAttribute('cy') || 0);
-      el.setAttribute('cx', cx + dx);
-      el.setAttribute('cy', cy + dy);
-      // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''} to (${cx + dx}, ${cy + dy})`);
-    } else if (tag === 'line') {
-      ['x1', 'y1', 'x2', 'y2'].forEach(attr => {
-        const val = parseFloat(el.getAttribute(attr) || 0);
-        el.setAttribute(attr, val + (attr.startsWith('x') ? dx : dy));
-      });
-      // console.debug(`[TRANSFORM-FIX] Moved <line> ${el.id || ''}`);
-    } else if (tag === 'polyline' || tag === 'polygon') {
-      const points = el.getAttribute('points') || '';
-      const newPoints = points
-        .trim()
-        .split(/\s+/)
-        .map(pair => {
-          const [px, py] = pair.split(',').map(Number);
-          return `${px + dx},${py + dy}`;
-        })
-        .join(' ');
-      el.setAttribute('points', newPoints);
-      // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''}`);
-    } else if (tag === 'g') {
-      Array.from(el.children).forEach(child => applyTranslationToShape(child, dx, dy));
-    } else {
-      // console.debug(`[TRANSFORM-FIX] Skipped unsupported element: <${tag}> ${el.id || ''}`);
-    }
-  };
+  //   if (tag === 'path') {
+  //     flattenPathTranslate(el, dx, dy);
+  //   } else if (tag === 'rect' || tag === 'use') {
+  //     const x = parseFloat(el.getAttribute('x') || 0);
+  //     const y = parseFloat(el.getAttribute('y') || 0);
+  //     el.setAttribute('x', x + dx);
+  //     el.setAttribute('y', y + dy);
+  //     // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''} to (${x + dx}, ${y + dy})`);
+  //   } else if (tag === 'circle' || tag === 'ellipse') {
+  //     const cx = parseFloat(el.getAttribute('cx') || 0);
+  //     const cy = parseFloat(el.getAttribute('cy') || 0);
+  //     el.setAttribute('cx', cx + dx);
+  //     el.setAttribute('cy', cy + dy);
+  //     // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''} to (${cx + dx}, ${cy + dy})`);
+  //   } else if (tag === 'line') {
+  //     ['x1', 'y1', 'x2', 'y2'].forEach(attr => {
+  //       const val = parseFloat(el.getAttribute(attr) || 0);
+  //       el.setAttribute(attr, val + (attr.startsWith('x') ? dx : dy));
+  //     });
+  //     // console.debug(`[TRANSFORM-FIX] Moved <line> ${el.id || ''}`);
+  //   } else if (tag === 'polyline' || tag === 'polygon') {
+  //     const points = el.getAttribute('points') || '';
+  //     const newPoints = points
+  //       .trim()
+  //       .split(/\s+/)
+  //       .map(pair => {
+  //         const [px, py] = pair.split(',').map(Number);
+  //         return `${px + dx},${py + dy}`;
+  //       })
+  //       .join(' ');
+  //     el.setAttribute('points', newPoints);
+  //     // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''}`);
+  //   } else if (tag === 'g') {
+  //     Array.from(el.children).forEach(child => applyTranslationToShape(child, dx, dy));
+  //   } else {
+  //     // console.debug(`[TRANSFORM-FIX] Skipped unsupported element: <${tag}> ${el.id || ''}`);
+  //   }
+  // };
 
   // ✅ Apply transforms first (flatten <use> and group transforms)
   // applyInkscapeTransforms(svgElement);
@@ -228,11 +228,11 @@ export const initializeSVG = async (svgElement) => {
 
   // assignCues(svgElement, window.cues);
 
-  enableLiveInspector({
-    startRotate,
-    startScale,
-    // startObj2Path
-  });
+  // enableLiveInspector({
+  //   startRotate,
+  //   startScale,
+  //   // startObj2Path
+  // });
 
   registerReuseBlocks(svgElement);
 
@@ -243,57 +243,57 @@ export const initializeSVG = async (svgElement) => {
 
   // preloadSpeedCues();
 
-  // Handle all <use> clones
-  const useElements = svgElement.querySelectorAll('use');
+  // // Handle all <use> clones
+  // const useElements = svgElement.querySelectorAll('use');
 
-  useElements.forEach(clone => {
-    // Skip <use> if it is already inside a <g id^="obj_rotate_">
-    if (clone.closest('[id^="obj_rotate_"]')) {
-      // console.log(`[SKIP] Skipping <use id="${clone.id}"> because it's already wrapped`);
-      return;
-    }
+  // useElements.forEach(clone => {
+  //   // Skip <use> if it is already inside a <g id^="obj_rotate_">
+  //   if (clone.closest('[id^="obj_rotate_"]')) {
+  //     // console.log(`[SKIP] Skipping <use id="${clone.id}"> because it's already wrapped`);
+  //     return;
+  //   }
 
-    const href = clone.getAttribute('xlink:href') || clone.getAttribute('href');
-    if (!href) return;
+  //   const href = clone.getAttribute('xlink:href') || clone.getAttribute('href');
+  //   if (!href) return;
 
-    const refId = href.replace(/^#/, '');
-    const original = svgElement.querySelector(`#${CSS.escape(refId)}`);
-    if (!original) return;
+  //   const refId = href.replace(/^#/, '');
+  //   const original = svgElement.querySelector(`#${CSS.escape(refId)}`);
+  //   if (!original) return;
 
-    // Clone the original
-    const deepClone = original.cloneNode(true);
-    deepClone.removeAttribute("transform"); // prevent double-transform
+  //   // Clone the original
+  //   const deepClone = original.cloneNode(true);
+  //   deepClone.removeAttribute("transform"); // prevent double-transform
 
-    // Generate a unique obj_rotate_* ID
-    const uidMatch = clone.id.match(/uid(\d+)/);
-    const uid = uidMatch ? uidMatch[1] : Math.floor(Math.random() * 10000);
-    const rpm = (Math.random() * 2 + 0.5).toFixed(2);
-    const dir = Math.random() > 0.5 ? 1 : -1;
-    const rotateId = `obj_rotate_rpm_${rpm}_dir_${dir}_ease_easeInOutSine-${uid}`;
+  //   // Generate a unique obj_rotate_* ID
+  //   const uidMatch = clone.id.match(/uid(\d+)/);
+  //   const uid = uidMatch ? uidMatch[1] : Math.floor(Math.random() * 10000);
+  //   const rpm = (Math.random() * 2 + 0.5).toFixed(2);
+  //   const dir = Math.random() > 0.5 ? 1 : -1;
+  //   const rotateId = `obj_rotate_rpm_${rpm}_dir_${dir}_ease_easeInOutSine-${uid}`;
 
-    //  Wrap the cloned content in a new rotation group
-    const rotateWrapper = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    rotateWrapper.setAttribute("id", rotateId);
-    rotateWrapper.appendChild(deepClone);
+  //   //  Wrap the cloned content in a new rotation group
+  //   const rotateWrapper = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  //   rotateWrapper.setAttribute("id", rotateId);
+  //   rotateWrapper.appendChild(deepClone);
 
-    //  Wrap the rotator in a group with the original <use>'s ID (for s_seq animation)
-    const animatedGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    animatedGroup.setAttribute("id", clone.id);
-    animatedGroup.appendChild(rotateWrapper);
+  //   //  Wrap the rotator in a group with the original <use>'s ID (for s_seq animation)
+  //   const animatedGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  //   animatedGroup.setAttribute("id", clone.id);
+  //   animatedGroup.appendChild(rotateWrapper);
 
-    //  Wrap everything in a positioned group using <use>'s transform
-    const positionedGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    const transform = clone.getAttribute("transform");
-    if (transform) {
-      positionedGroup.setAttribute("transform", transform);
-    }
-    positionedGroup.appendChild(animatedGroup);
+  //   //  Wrap everything in a positioned group using <use>'s transform
+  //   const positionedGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  //   const transform = clone.getAttribute("transform");
+  //   if (transform) {
+  //     positionedGroup.setAttribute("transform", transform);
+  //   }
+  //   positionedGroup.appendChild(animatedGroup);
 
-    //  Replace the <use> with the real structure
-    clone.parentNode.insertBefore(positionedGroup, clone);
-    clone.remove();
+  //   //  Replace the <use> with the real structure
+  //   clone.parentNode.insertBefore(positionedGroup, clone);
+  //   clone.remove();
 
-  });
+  // });
 
   if (window.playheadX === undefined) {
     window.playheadX = 0;  // safe world origin default
@@ -308,7 +308,7 @@ requestAnimationFrame(() => {
     window.ensureWindowPlayheadX(); 
   });
 
-  // ----- PAGE REGISTRY FIRST -----
+  // // ----- PAGE REGISTRY FIRST -----
   buildPageRegistryFromDirIndex();
   refreshAllPagesMenu();
 
@@ -2088,13 +2088,13 @@ document.addEventListener('DOMContentLoaded', () => {
       window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
     }
 
-    // --- Periodic visibility optimization ---
-    const visibilityCheckInterval = 150;
-    window.lastVisibilityCheckTime = window.lastVisibilityCheckTime || 0;
-    if (currentTime - window.lastVisibilityCheckTime > visibilityCheckInterval) {
-      window.checkAnimationVisibility?.();
-      window.lastVisibilityCheckTime = currentTime;
-    }
+    // // --- Periodic visibility optimization ---
+    // const visibilityCheckInterval = 150;
+    // window.lastVisibilityCheckTime = window.lastVisibilityCheckTime || 0;
+    // if (currentTime - window.lastVisibilityCheckTime > visibilityCheckInterval) {
+    //   window.checkAnimationVisibility?.();
+    //   window.lastVisibilityCheckTime = currentTime;
+    // }
 
     // --- Cues ---
     await checkCueTriggers?.(window.elapsedTime);

@@ -202,9 +202,9 @@ export function handleScaleSequence(el, cfg) {
     const astArgs = cfg.astArgs || [];
 
     // Value sources (uniform or XY)
-    let ax = cfg.xValues || null;         // literal array for X
-    let ay = cfg.yValues || null;         // literal array for Y
-    let xPattern = cfg.xPattern || null;  // pattern objects
+    let ax = cfg.xValues || null;
+    let ay = cfg.yValues || null;
+    let xPattern = cfg.xPattern || null;
     let yPattern = cfg.yPattern || null;
     let uniformPattern = cfg.pattern || null;
 
@@ -212,7 +212,7 @@ export function handleScaleSequence(el, cfg) {
     let dur = 1;
     let durGen = null;
 
-    // Mode / behaviour
+    // Modes / behaviour
     let mode = "loop";          // loop | once | alternate
     let pauseOnExit = true;
     let interp = "smooth";      // smooth | step
@@ -232,7 +232,7 @@ export function handleScaleSequence(el, cfg) {
         const val = arg.value;
 
         switch (key) {
-            // UNIFORM values
+
             case "values":
                 if (val && val.type === "pattern") {
                     uniformPattern = val;
@@ -246,7 +246,6 @@ export function handleScaleSequence(el, cfg) {
                 }
                 break;
 
-            // X axis
             case "x":
             case "valuesX":
                 if (val && val.type === "pattern") {
@@ -260,7 +259,6 @@ export function handleScaleSequence(el, cfg) {
                 }
                 break;
 
-            // Y axis
             case "y":
             case "valuesY":
                 if (val && val.type === "pattern") {
@@ -274,7 +272,6 @@ export function handleScaleSequence(el, cfg) {
                 }
                 break;
 
-            // Duration
             case "dur":
                 if (val && val.type === "pattern") {
                     durGen = makePatternGenerator(val);
@@ -336,7 +333,7 @@ export function handleScaleSequence(el, cfg) {
     const driver = { sx: cur.sx, sy: cur.sy };
 
     // ------------------------------------------------------------
-    // Helper functions
+    // Next value helper
     // ------------------------------------------------------------
     function nextPair() {
         let sx, sy;
@@ -363,15 +360,13 @@ export function handleScaleSequence(el, cfg) {
         return [Number(sx), Number(sy)];
     }
 
+    // ------------------------------------------------------------
+    // Index stepping (fixed)
+    // ------------------------------------------------------------
     function stepIndexAdvance() {
-        if (axGen || ayGen) return; // patterns handle their own progression
+        if (axGen || ayGen) return;
 
-        const len = Array.isArray(ax) ? ax.length : 0;
-        const first = Array.isArray(ax) ? ax[0] : null;
-        const last = Array.isArray(ax) ? ax[len - 1] : null;
-        const pingpong = len >= 2 && first === last;
-
-        if (mode === "alternate" || pingpong) {
+        if (mode === "alternate") {
             index += direction;
             if (index >= N || index < 0) {
                 direction *= -1;
@@ -387,7 +382,7 @@ export function handleScaleSequence(el, cfg) {
     }
 
     // ------------------------------------------------------------
-    // Main step engine
+    // Main tick
     // ------------------------------------------------------------
     function runNext() {
         const pair = nextPair();
@@ -402,7 +397,29 @@ export function handleScaleSequence(el, cfg) {
 
         let [tgtX, tgtY] = pair;
 
-        // Skip redundant tween, but avoid recursion by scheduling via RAF
+        // ------------------------------------------------------------
+        //  Wrap-around fix — prevents reverse tweening
+        // ------------------------------------------------------------
+        const wrapping =
+            mode !== "alternate" &&      // loop-only
+            !axGen && !ayGen &&          // not patterns
+            index === 0 &&               // we wrapped
+            (driver.sx !== tgtX || driver.sy !== tgtY);
+
+        if (wrapping) {
+            driver.sx = tgtX;
+            driver.sy = tgtY;
+            el.style.transform = `scale(${tgtX}, ${tgtY})`;
+
+            stepIndexAdvance();
+
+            const next = nextPair();
+            if (!next) return;
+            [tgtX, tgtY] = next;
+        }
+        // ------------------------------------------------------------
+
+        // Skip redundant tween
         if (driver.sx === tgtX && driver.sy === tgtY) {
             stepIndexAdvance();
             requestAnimationFrame(runNext);
@@ -431,11 +448,7 @@ export function handleScaleSequence(el, cfg) {
             return;
         }
 
-        // SMOOTH MODE
-        const current = getCurrentScale(el, driver);
-        driver.sx = current.sx;
-        driver.sy = current.sy;
-
+        // SMOOTH MODE (do NOT sample element transform)
         const anim = anime({
             targets: driver,
             sx: tgtX,
@@ -471,6 +484,7 @@ export function handleScaleSequence(el, cfg) {
     // Kick off
     requestAnimationFrame(runNext);
 }
+
 
 // ============================================================
 // Continuous fallback (pulse) if no values provided
@@ -656,11 +670,11 @@ export function handleScaleCue(ast, cueElement = null, options = {}) {
     if (xVals || yVals) {
         const xList =
             xVals?.type === "pattern" ? null :
-            Array.isArray(xVals) ? xVals : null;
+                Array.isArray(xVals) ? xVals : null;
 
         const yList =
             yVals?.type === "pattern" ? null :
-            Array.isArray(yVals) ? yVals : null;
+                Array.isArray(yVals) ? yVals : null;
 
         const cfg = {
             uid,
