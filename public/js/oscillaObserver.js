@@ -1,14 +1,22 @@
 //////////////////////////////////////////////////////////
-// OscillaScore — Clean Animation Observer System
-// ----------------------------------------------------
-// Supports:
-//   - trig:auto     → start when visible (first time only)
-//   - trig:playhead → start ONLY via cue (never autostart)
-//   - pause/resume  → when leaving/entering viewport
+// OscillaScore — Animation Observer System 
+//
+// Behaviour:
+//   - trig:auto
+//       • autostart when element becomes visible
+//   - trig:playhead
+//       • NEVER autostart via observer (only via cue handler)
+//   - Page overlay (window.isPageOverlay === true)
+//       • forceVisible: animations autostart once, never paused
+//   - O2P (kind === "o2p")
+//       • always forceVisible: autostart once, never paused/resumed
+//   - Pause/Resume
+//       • ONLY for kind "rotate" or "scale" in scroll mode
+//       • O2P is excluded from pause/resume to avoid teleport bugs
 //
 // Requires:
-//   - window.oscillaAnimRegistry = { uid → { el, trig, startFn, started } }
-//   - window.runningAnimations = { uid → animeInstance }
+//   - window.oscillaAnimRegistry = { uid → { el, kind, trig, startFn, started, forceVisible? } }
+//   - window.runningAnimations   = { uid → animeInstance }
 //   - each animated element has data-anim-uid="<uid>"
 //////////////////////////////////////////////////////////
 
@@ -16,7 +24,7 @@
 window.oscillaAnimRegistry = window.oscillaAnimRegistry || {};
 window.runningAnimations = window.runningAnimations || {};
 
-// Utility: element visibility
+// Utility: element visibility in viewport
 function isVisible(el) {
   const rect = el.getBoundingClientRect();
   return (
@@ -31,8 +39,7 @@ function isVisible(el) {
 // 1. Initialize IntersectionObserver
 //////////////////////////////////////////////////////////
 export function initializeObserver() {
-
-  // Disconnect older observer
+  // Disconnect older observer instance if any
   if (window.oscillaObserver) window.oscillaObserver.disconnect();
 
   const rootContainer =
@@ -56,19 +63,26 @@ export function initializeObserver() {
         if (!anim) continue;
 
         const instance = window.runningAnimations[uid];
+        const kind = anim.kind; // "rotate" | "scale" | "o2p" | ...
+        const isO2P = kind === "o2p";
+
+        // forceVisible:
+        //   - explicit anim.forceVisible (page overlay etc.)
+        //   - OR any O2P animation (always treated as "always visible")
+        const forceVisible = anim.forceVisible === true || isO2P;
 
         ////////////////////////////////////////////////////////
-        // A) PAGE OVERLAY MODE → animations always visible
+        // A) FORCE-VISIBLE (page overlay OR O2P)
+        //    → autostart once, NO pause/resume
         ////////////////////////////////////////////////////////
-        const forceVisible = anim.forceVisible === true;
-
         if (forceVisible) {
           if (!anim.started) {
-            console.log(`[Observer] ▶ forceVisible autostart "${uid}"`);
+            console.log(`[Observer] ▶ forceVisible autostart "${uid}" (kind="${kind}")`);
             anim.started = true;
             anim.startFn?.();
           }
-          continue;   // ← VALID HERE because inside loop
+          // No pause/resume for forceVisible animations.
+          continue;
         }
 
         ////////////////////////////////////////////////////////
@@ -79,25 +93,40 @@ export function initializeObserver() {
           !anim.started &&
           entry.isIntersecting
         ) {
-          console.log(`[Observer] ▶ autostart "${uid}"`);
+          console.log(`[Observer] ▶ autostart "${uid}" (kind="${kind}")`);
           anim.startFn?.();
           anim.started = true;
-          continue;
+          // fall through to pause/resume logic below if needed
         }
 
         ////////////////////////////////////////////////////////
         // C) PAUSE/RESUME on visibility
+        //    Only for rotate/scale, never for O2P or forceVisible
         ////////////////////////////////////////////////////////
-        if (instance) {
-          if (entry.isIntersecting && instance.paused) {
-            console.log(`[Observer] ▶ resume "${uid}"`);
+        if (!instance) continue;
+
+        const supportsPauseResume =
+          (kind === "rotate" || kind === "scale");
+
+        if (!supportsPauseResume) {
+          // O2P and any other kinds are left running continuously.
+          continue;
+        }
+
+        if (entry.isIntersecting && instance.wasPaused) {
+          console.log(`[Observer] ▶ resume "${uid}" (kind="${kind}")`);
+          if (typeof instance.play === "function") {
             instance.play();
-            instance.paused = false;
-          } else if (!entry.isIntersecting && !instance.paused) {
-            console.log(`[Observer] ▶ pause "${uid}"`);
-            instance.pause();
-            instance.paused = true;
+          } else if (typeof instance.resume === "function") {
+            instance.resume();
           }
+          instance.wasPaused = false;
+        } else if (!entry.isIntersecting && !instance.wasPaused) {
+          console.log(`[Observer] ▶ pause "${uid}" (kind="${kind}")`);
+          if (typeof instance.pause === "function") {
+            instance.pause();
+          }
+          instance.wasPaused = true;
         }
       }
     },
@@ -106,8 +135,6 @@ export function initializeObserver() {
       threshold: 0.01
     }
   );
-
-
 
   ////////////////////////////////////////////////////////
   // Attach observer to every animation element
@@ -119,7 +146,7 @@ export function initializeObserver() {
     }
   }
 
-  console.log("[Observer] Initialized.");
+  console.log("[Observer] Initialized (auto-start, rotate/scale pause-resume, O2P forceVisible).");
 }
 
 //////////////////////////////////////////////////////////
@@ -127,12 +154,16 @@ export function initializeObserver() {
 //////////////////////////////////////////////////////////
 
 window.refreshObserver = function () {
-  console.log("[Observer] Refresh request");
-  initializeObserver({ forceVisible: window.isPageOverlay });
+  console.log("[Observer] Refresh request → reinitializing observer");
+  initializeObserver();
 };
 
 //////////////////////////////////////////////////////////
 // 3. Manual visibility pass (after load / jump)
+//    Mirrors the same rules as the IntersectionObserver:
+//      - autostart for trig:auto
+//      - forceVisible (page overlay + O2P) autostarts, no pause/resume
+//      - pause/resume only for rotate/scale
 //////////////////////////////////////////////////////////
 
 window.checkAnimationVisibility = function () {
@@ -140,26 +171,58 @@ window.checkAnimationVisibility = function () {
 
   for (const uid in window.oscillaAnimRegistry) {
     const anim = window.oscillaAnimRegistry[uid];
-    const el = anim.el;
-    const instance = window.runningAnimations[uid];
+    if (!anim) continue;
 
-    // AUTOSTART only if trig:auto
-    if (anim.trig === "auto" && !anim.started && isVisible(el)) {
-      console.log(`[Observer] ▶ autostart (manual) "${uid}"`);
-      anim.startFn?.();
-      anim.started = true;
+    const el = anim.el;
+    if (!(el instanceof Element)) continue;
+
+    const instance = window.runningAnimations[uid];
+    const kind = anim.kind;
+    const isO2P = kind === "o2p";
+    const forceVisible = anim.forceVisible === true || isO2P;
+    const visible = isVisible(el);
+
+    ////////////////////////////////////////////////////////
+    // Autostart for trig:auto and/or forceVisible
+    ////////////////////////////////////////////////////////
+    if (!anim.started) {
+      if (forceVisible && !anim.started) {
+        console.log(`[Observer] ▶ manual forceVisible autostart "${uid}" (kind="${kind}")`);
+        anim.startFn?.();
+        anim.started = true;
+      } else if (anim.trig === "auto" && visible) {
+        console.log(`[Observer] ▶ manual autostart "${uid}" (kind="${kind}")`);
+        anim.startFn?.();
+        anim.started = true;
+      }
     }
 
-    // PAUSE / RESUME
-    if (instance) {
-      const vis = isVisible(el);
-      if (vis && instance.wasPaused) {
-        instance.resume?.();
-        instance.wasPaused = false;
-      } else if (!vis && !instance.wasPaused) {
-        instance.pause?.();
-        instance.wasPaused = true;
+    ////////////////////////////////////////////////////////
+    // Pause/Resume only for rotate/scale, never for O2P or forceVisible
+    ////////////////////////////////////////////////////////
+    if (!instance) continue;
+
+    const supportsPauseResume =
+      (kind === "rotate" || kind === "scale");
+
+    if (!supportsPauseResume || forceVisible) {
+      continue;
+    }
+
+    if (visible && instance.wasPaused) {
+      console.log(`[Observer] ▶ manual resume "${uid}" (kind="${kind}")`);
+      if (typeof instance.play === "function") {
+        instance.play();
+      } else if (typeof instance.resume === "function") {
+        instance.resume();
       }
+      instance.wasPaused = false;
+    } else if (!visible && !instance.wasPaused) {
+      console.log(`[Observer] ▶ manual pause "${uid}" (kind="${kind}")`);
+      if (typeof instance.pause === "function") {
+        instance.pause();
+      }
+      instance.wasPaused = true;
     }
   }
 };

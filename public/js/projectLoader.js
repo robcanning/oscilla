@@ -333,7 +333,7 @@ export async function loadProject(projectName, options = {}) {
     console.log(`[loadProject] ✅ Project "${projectName}" fully loaded.`);
 
 
-    initializeObserver();
+    // initializeObserver();
 
 
     hideSplashScreen();

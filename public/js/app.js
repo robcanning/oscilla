@@ -125,7 +125,7 @@ export const initializeSVG = async (svgElement) => {
     console.log("[initializeSVG][page] 🔧 animationAssign()");
     animationAssign(svgElement);
 
-    console.log("[initializeSVG][page] 🔧 initializeObserver()");
+    // console.log("[initializeSVG][page] 🔧 initializeObserver()");
     initializeObserver();
 
     if (!window.cues) window.cues = [];
@@ -167,10 +167,10 @@ export const initializeSVG = async (svgElement) => {
   // 2A. FIRST RAF — run animationAssign + observer
   /////////////////////////////////////////////////////////////////////////////
   requestAnimationFrame(() => {
-    console.log("[initializeSVG] 🔧 animationAssign()");
+    console.log("[initializeSVG]  animationAssign()");
     animationAssign(svgElement);
 
-    console.log("[initializeSVG] 🔧 initializeObserver()");
+    // console.log("[initializeSVG]  initializeObserver()");
     initializeObserver();
 
     ///////////////////////////////////////////////////////////////////////////
