@@ -22,9 +22,9 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="0.59"
-     inkscape:cx="919.49153"
-     inkscape:cy="544.0678"
-     inkscape:window-width="1854"
+     inkscape:cx="815.25424"
+     inkscape:cy="538.98305"
+     inkscape:window-width="1920"
      inkscape:window-height="1011"
      inkscape:window-x="0"
      inkscape:window-y="0"
@@ -154,13 +154,13 @@
      style="font-weight:bold;font-size:18.9076px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:1.0129"
      x="46.350792"
      y="1067.7323"
-     id="cueGroup(mainMenu)"
+     id="use(mainMenu)"
      transform="scale(1.0129041,0.98726031)"><tspan
        sodipodi:role="line"
        id="tspan1-7"
        x="46.350792"
        y="1067.7323"
-       style="stroke-width:1.0129">cueGroup(mainMenu)</tspan><tspan
+       style="stroke-width:1.0129">use(mainMenu)</tspan><tspan
        sodipodi:role="line"
        x="46.350792"
        y="1091.3668"
@@ -191,7 +191,7 @@
        id="tspan519768"
        x="523.15991"
        y="641.71283"
-       style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:48px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Italic';fill:#000000">v0.2.4_beta</tspan></text>
+       style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:48px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Italic';fill:#000000">v0.2.8_beta</tspan></text>
   <g
      id="g740458-2"
      transform="matrix(0.4222218,0,0,1.951416,-3556.0683,-1283.463)"
@@ -223,7 +223,7 @@
        sodipodi:nodetypes="cc" />
   </g>
   <g
-     id="propagate(s(rnd(10x0.2-1.8x))_mode(loop)_seqdur($1)_ease(0)_uid(13235), rnd([20,30,40]))"
+     id="propagate(&#10;  scale(values:[${1}, ${2}], mode:alternate,  dur:${3}, uid:circs2, trig:auto),&#10;  rnd(0.7,0.9),&#10;  rnd(1,1.4),&#10;  rnd(1.4,2.2)&#10;)"
      style="display:inline;fill:#000000"
      transform="translate(-9057.6323,-354.81078)">
     <ellipse
@@ -270,7 +270,7 @@
        ry="11.746256" />
   </g>
   <g
-     id="r(1)_rpm(15)-7"
+     id="rotate(dir:-1, dur:1, uid:pagelogo1)"
      style="display:inline"
      transform="translate(153.40723,64.194621)">
     <path

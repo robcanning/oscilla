@@ -57,10 +57,15 @@ export const createRehearsalMarkButtons = () => {
 
   container.innerHTML = ""; // ✅ Clear existing buttons only when needed
 
-  // ✅ Sort marks by X position **(Global Update)**
+  // ✅ Sort marks by X position 
   markEntries.sort((a, b) => a[1].x - b[1].x);
-  sortedMarks = markEntries.map(([mark]) => mark); // ✅ Store globally
 
+  // Add virtual rehearsal mark "0" at the start ---
+  markEntries.unshift(["0", { x: 0 }]);
+  sortedMarks = markEntries.map(([mark]) => mark);
+  rehearsalMarks["0"] = { x: 0 };
+
+  console.log("[DEBUG] 🎭 Final Sorted Rehearsal Marks:", sortedMarks);
   console.log("[DEBUG] 🎭 Final Sorted Rehearsal Marks:", sortedMarks);
 
   let rowContainer = null;
@@ -375,9 +380,9 @@ export const extractScoreElements = (svgElement) => {
 
 
 
-speedCueMap.length = 0; // clear old values
-speedCueMap.push(...extractSpeedCues(svgElement));
-speedCueMap = extractSpeedCues(svgElement);
+  speedCueMap.length = 0; // clear old values
+  speedCueMap.push(...extractSpeedCues(svgElement));
+  speedCueMap = extractSpeedCues(svgElement);
 
 
 
@@ -686,18 +691,18 @@ export async function setupScore(svgElement) {
 
   preloadSpeedCues();
 
-// 1) Load reusable blocks from external .svg files (pages/manifest.json)
-await preloadReuseBlocksFromPages();
-// 2) Register any <g id="reuse-*"> blocks inside the main score SVG
-// const svgElement = document.querySelector("#scoreContainer svg");
-if (svgElement) {
-  registerReuseBlocks(svgElement);
+  // 1) Load reusable blocks from external .svg files (pages/manifest.json)
+  await preloadReuseBlocksFromPages();
+  // 2) Register any <g id="reuse-*"> blocks inside the main score SVG
+  // const svgElement = document.querySelector("#scoreContainer svg");
+  if (svgElement) {
+    registerReuseBlocks(svgElement);
 
-  // 3) Expand <g id="use(name)"> inclusions
-  autoInjectUseBlocks(svgElement);
+    // 3) Expand <g id="use(name)"> inclusions
+    autoInjectUseBlocks(svgElement);
 
-  console.log("[setupScore] ✅ Reusable blocks ready.");
-}
+    console.log("[setupScore] ✅ Reusable blocks ready.");
+  }
 
 
   console.groupEnd();

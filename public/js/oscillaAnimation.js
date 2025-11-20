@@ -69,7 +69,7 @@ export function animationAssign(svgRoot) {
 
     elements.forEach(el => {
         const id = el.id;
-        console.groupCollapsed(`[animationAssign] 🎯 Checking id="${id}"`);
+        // console.groupCollapsed(`[animationAssign] 🎯 Checking id="${id}"`);
 
         if (!id) {
             console.warn("• Skipped: element has no ID");
@@ -135,7 +135,6 @@ export function animationAssign(svgRoot) {
 // registerAnimation()
 // ------------------------------------------------------------
 export function registerAnimation(el, kind, cfg, startFn) {
-
     if (!window.oscillaAnimRegistry) {
         console.warn("[oscillaAnim] ⚠️ Registry not initialized — creating new one.");
         window.oscillaAnimRegistry = {};
@@ -152,10 +151,8 @@ export function registerAnimation(el, kind, cfg, startFn) {
     console.log("• Trigger:", cfg.trig || "auto");
     console.log("• Full cfg:", cfg);
 
-    // Attach UID
     if (el.dataset) el.dataset.animUid = cfg.uid;
 
-    // Warn on duplicates
     if (window.oscillaAnimRegistry[cfg.uid]) {
         console.warn(`[oscillaAnim] ⚠️ Duplicate UID "${cfg.uid}"`);
     }
@@ -169,16 +166,18 @@ export function registerAnimation(el, kind, cfg, startFn) {
         trig,
         startFn,
 
-        // If it's trig:playhead → mark as started so observer will NOT autostart it
+        // ✅ In playhead mode, observer should never autostart it
         started: (trig === "playhead"),
 
-        uid: cfg.uid
+        uid: cfg.uid,
+
+        // ✅ NEW: in page overlay mode, always treat as visible
+        forceVisible: window.isPageOverlay === true
     };
 
     console.log("• Registry size:", Object.keys(window.oscillaAnimRegistry).length);
     console.groupEnd();
 
-    // Refresh observer attachment
     if (window.refreshObserver) window.refreshObserver();
 }
 

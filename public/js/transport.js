@@ -678,10 +678,10 @@ function toggleMode() {
     window.returnToScrollingScore?.();
   } else {
     // go to node mode — open last or first page
-    const firstPage = Object.keys(window.pageRegistry || {})[0];
-    if (firstPage) {
-      handleCueTrigger?.(`page(${firstPage})`);
-    }
+    // const firstPage = Object.keys(window.pageRegistry || {})[0];
+    // if (firstPage) {
+      handleCueTrigger?.(`nav(home)`);
+    // }
   }
 
   // Update label shortly after UI shift

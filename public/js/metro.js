@@ -7,7 +7,6 @@
 
 import { sendMetronomeOsc } from "./oscUtils.js";
 
-
 export const QuantiseRegistry = {
   actions: [],
   register(fn, options = {}) {
@@ -90,7 +89,6 @@ export function startPreciseMetronome(bpm = 120, beats = 4, onBeat = () => { }) 
       if (now > nextBeatTime + beatMs) nextBeatTime = now + beatMs; // drift correction
     }
 
-    const timeUntilNext = Math.max(0, nextBeatTime - performance.now() - 1);
     setTimeout(loop, 8); // ~120Hz
   }
 
@@ -144,7 +142,6 @@ export function startNetworkMetronome(socket, onBeat) {
       nextBeatTime += beatMs;
     }
 
-    const timeUntilNext = Math.max(0, nextBeatTime - (performance.now() + offset) - 1);
     setTimeout(loop, 8);
   }
 
@@ -152,10 +149,10 @@ export function startNetworkMetronome(socket, onBeat) {
   return { stop: () => (running = false) };
 }
 
-// ===========================================================================
-// cue:metronome(...) / cue:metro(...)
-// Precise visual metronome using performance.now() timing.
-// ============================================================================
+/* -------------------------------------------------------------------- */
+/* cue:metronome(...)                                                   */
+/* -------------------------------------------------------------------- */
+
 export function handleMetronomeCue(ast, cueElement = null) {
   const params = {};
   for (const p of (ast.args || [])) params[p.type] = p.value;
@@ -169,34 +166,149 @@ export function handleMetronomeCue(ast, cueElement = null) {
   const uid          = String(params.uid || "default");
   const showCount    = params.showcount !== "0" && params.showcount !== 0;
   const targetUid    = params.target || null;
+
+  // 🔄 NEW NAME
+  const hideTrigger  = Number(params.hideTrigger ?? 1) === 1;
+
   const holdSeconds  = Number(params.hold || 0);
-  const hideTarget   = Number(params.hideTarget ?? 1) === 1;  // ✅ fixed logic
   const colour       = params.colour || "red";
   const size         = Number(params.size || 50);
 
   console.log("[cue:metro] Params →", params);
 
-  // 🎯 Determine target or fallback to cue element
+  // 🎯 Resolve target
   let targetEl = null;
   if (targetUid) {
     targetEl = document.querySelector(
       `[id='${targetUid}'], [data-uid='${targetUid}']`
     );
     if (!targetEl) {
-      console.warn(`[cue:metro] ⚠️ target '${targetUid}' not found — using cue element`);
+      console.warn(`[cue:metro] target '${targetUid}' not found — using cue element`);
     }
   }
-
-  const anchorEl = targetEl || cueElement;
-  if (!anchorEl) return console.warn("[cue:metro] No valid anchor element found.");
 
   const score = document.getElementById("scoreContainer");
   if (!score) return console.warn("[cue:metro] No score container found.");
 
-  const bbox          = anchorEl.getBoundingClientRect();
-  const containerBox  = score.getBoundingClientRect();
-  const scrollX       = score.scrollLeft || 0;
-  const scrollY       = score.scrollTop || 0;
+  const anchorEl = targetEl || cueElement;
+  if (!anchorEl) return console.warn("[cue:metro] No anchor element found.");
+
+  // --------------------------------------------------------------------
+  // 👍 New rule: If visual:self AND hideTrigger=true → ignore + warn
+  // --------------------------------------------------------------------
+  if (visual === "self" && hideTrigger) {
+    console.warn(
+      "[cue:metro] hideTrigger ignored because visual:self requires the trigger to remain visible."
+    );
+  }
+
+  // --------------------------------------------------------------------
+  // hideTrigger → hide cue element only (never target)
+  // --------------------------------------------------------------------
+  if (hideTrigger && visual !== "self" && cueElement) {
+    cueElement.style.opacity = "0";
+    cueElement.style.pointerEvents = "none";
+    cueElement.style.visibility = "hidden";
+  }
+
+  // ====================================================================
+  // VISUAL:SELF — flash the target element OR cue element if no target
+  // ====================================================================
+  if (visual === "self") {
+
+    const flashEl = targetEl || cueElement;
+    if (!flashEl) {
+      console.warn("[cue:metro] visual:self but no element to flash");
+      return;
+    }
+
+    // Cache original fill/stroke once
+    if (!flashEl.dataset._metroOrigFill) {
+      const attrFill  = flashEl.getAttribute("fill");
+      const compFill  = window.getComputedStyle(flashEl).fill;
+      flashEl.dataset._metroOrigFill = attrFill || compFill || "#000";
+    }
+    if (!flashEl.dataset._metroOrigStroke) {
+      const attrStroke = flashEl.getAttribute("stroke");
+      const compStroke = window.getComputedStyle(flashEl).stroke;
+      flashEl.dataset._metroOrigStroke = attrStroke || compStroke || "none";
+    }
+
+    const origFill   = flashEl.dataset._metroOrigFill;
+    const origStroke = flashEl.dataset._metroOrigStroke;
+
+    // Colour inversion helper
+    function invertColor(col) {
+      if (!col || col === "none") return null;
+      if (col === "black") return "white";
+      if (col === "white") return "black";
+      if (/^#?[0-9A-Fa-f]{6}$/.test(col)) {
+        const hex = col.replace("#","");
+        const r = 255 - parseInt(hex.slice(0,2),16);
+        const g = 255 - parseInt(hex.slice(2,4),16);
+        const b = 255 - parseInt(hex.slice(4,6),16);
+        return `rgb(${r},${g},${b})`;
+      }
+      return "#fff";
+    }
+
+    const interval = (60 / bpm) * 1000;
+    let currentBeat = 0;
+    let nextBeatTime = performance.now();
+    let stopped = false;
+
+    if (holdSeconds > 0) {
+      setTimeout(() => (stopped = true), holdSeconds * 1000);
+    }
+
+    function loop(now) {
+      if (stopped) return;
+
+      if (now >= nextBeatTime) {
+        currentBeat = (currentBeat % beats) + 1;
+
+        // FLASH
+        const invFill   = invertColor(origFill)   || origFill;
+        const invStroke = invertColor(origStroke) || origStroke;
+
+        flashEl.setAttribute("fill", invFill);
+        if (origStroke !== "none") flashEl.setAttribute("stroke", invStroke);
+
+        flashEl.style.transition = "opacity 80ms ease";
+        flashEl.style.opacity = "0.35";
+
+        setTimeout(() => {
+          flashEl.setAttribute("fill", origFill);
+          if (origStroke !== "none") flashEl.setAttribute("stroke", origStroke);
+          flashEl.style.opacity = "1.0";
+        }, 120);
+
+        // audio + OSC
+        if (audioEnabled) clickBeat(currentBeat);
+        if (oscEnabled && window.OSC_ENABLED) {
+          sendMetronomeOsc(uid, currentBeat, bpm);
+        }
+
+        nextBeatTime += interval;
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+
+    console.log(`[cue:metro] visual:self flashing element id="${flashEl.id}"`);
+    return;
+  }
+
+  // ====================================================================
+  // DEFAULT OVERLAY METRONOME (circle/square/diamond/triangle/hex)
+  // ====================================================================
+
+  const bbox         = anchorEl.getBoundingClientRect();
+  const containerBox = score.getBoundingClientRect();
+  const scrollX      = score.scrollLeft || 0;
+  const scrollY      = score.scrollTop  || 0;
 
   const x = (positionMode === "scrolling"
     ? bbox.left - containerBox.left + scrollX
@@ -205,76 +317,86 @@ export function handleMetronomeCue(ast, cueElement = null) {
     ? bbox.top - containerBox.top + scrollY - 10
     : bbox.top - 10);
 
-  // 🫥 Hide cue and/or target depending on hideTarget
-  if (hideTarget) {
-    if (cueElement) {
-      cueElement.style.opacity = "0";
-      cueElement.style.pointerEvents = "none";
-      cueElement.style.visibility = "hidden";
-      cueElement.dataset._hiddenByCue = "metro";
-      console.log(`[cue:metro] Hiding cue element for ${ast.type}`);
-    }
-
-    if (targetEl) {
-      targetEl.style.opacity = "0";
-      targetEl.style.pointerEvents = "none";
-      targetEl.style.visibility = "hidden";
-      targetEl.dataset._hiddenByCue = "metroTarget";
-      console.log(`[cue:metro] Hiding target element '${targetUid}'`);
-    }
-  }
-
-  // 🎨 Prepare overlay element (one per uid)
   const divId = `cue-metro-${uid}`;
   let div = document.getElementById(divId);
+
   if (!div) {
     div = document.createElement("div");
     div.id = divId;
     div.className = "cue-metronome";
     div.style.position = positionMode === "scrolling" ? "absolute" : "fixed";
-    div.style.left = `${x}px`;
-    div.style.top = `${y}px`;
-    div.style.width = `${size}px`;
+    div.style.left   = `${x}px`;
+    div.style.top    = `${y}px`;
+    div.style.width  = `${size}px`;
     div.style.height = `${size}px`;
-    div.style.borderRadius = "50%";
-    div.style.background = colour;
-    div.style.opacity = "0.8";
     div.style.display = "flex";
     div.style.alignItems = "center";
     div.style.justifyContent = "center";
     div.style.color = "white";
     div.style.fontSize = `${size / 2.5}px`;
     div.style.textAlign = "center";
+    div.style.opacity = "0.8";
     div.style.transform = "translate(-50%, -50%)";
     div.style.transition = "opacity 300ms ease, transform 100ms ease";
+    div.style.background = colour;
+
+    // SHAPES
+    switch (visual) {
+      case "circle":
+        div.style.borderRadius = "50%";
+        break;
+      case "square":
+        div.style.borderRadius = "0";
+        break;
+      case "diamond":
+        div.style.borderRadius = "0";
+        div.style.transform += " rotate(45deg)";
+        break;
+      case "triangle":
+        div.style.width = "0";
+        div.style.height = "0";
+        div.style.borderRadius = "0";
+        div.style.borderLeft   = `${size/2}px solid transparent`;
+        div.style.borderRight  = `${size/2}px solid transparent`;
+        div.style.borderBottom = `${size}px solid ${colour}`;
+        div.style.background = "transparent";
+        div.textContent = "";
+        break;
+      case "hex":
+        div.style.clipPath =
+          "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)";
+        div.style.borderRadius = "0";
+        break;
+      default:
+        div.style.borderRadius = "50%";
+    }
 
     if (positionMode === "scrolling") score.appendChild(div);
     else document.body.appendChild(div);
   }
 
-  // 🧠 UID → base frequency (deterministic)
+  // UID → deterministic frequency
   function uidToFreq(id) {
     if (!id) return 440;
     let hash = 0;
-    for (let i = 0; i < id.length; i++) {
+    for (let i = 0; i < id.length; i++)
       hash = id.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return 300 + (Math.abs(hash) % 400); // 300–700 Hz
+    return 300 + (Math.abs(hash) % 400);
   }
 
-  // 🕒 Beat timing (performance.now)
-  let currentBeat   = 0;
-  const interval    = (60 / bpm) * 1000;
-  let nextBeatTime  = performance.now();
+  // Beat timing
+  let currentBeat = 0;
+  const interval = (60 / bpm) * 1000;
+  let nextBeatTime = performance.now();
 
   if (div._beatTimer) cancelAnimationFrame(div._beatTimer);
 
-  // 🔊 Shared AudioContext click
   function clickBeat(beat) {
     if (!audioEnabled) return;
     try {
       if (!window.oscillaAudioCtx) {
-        window.oscillaAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        window.oscillaAudioCtx =
+          new (window.AudioContext || window.webkitAudioContext)();
       }
       const ctx = window.oscillaAudioCtx;
       if (ctx.state === "suspended") ctx.resume();
@@ -292,11 +414,10 @@ export function handleMetronomeCue(ast, cueElement = null) {
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.05);
     } catch (err) {
-      console.warn("[cue:metro] ⚠️ Audio click error:", err?.message || err);
+      console.warn("[cue:metro] Audio click error:", err);
     }
   }
 
-  // 🧹 Stop + fade out
   let stopped = false;
   function stopMetronome() {
     if (stopped) return;
@@ -308,31 +429,28 @@ export function handleMetronomeCue(ast, cueElement = null) {
     div.style.opacity = "0";
     setTimeout(() => div.remove(), 300);
 
-    console.log(`[cue:metro] ⏹️ Stopped uid=${uid}`);
+    console.log(`[cue:metro] Stopped uid=${uid}`);
   }
 
-  // ⏲️ Hold auto-stop
-  if (holdSeconds > 0) {
-    setTimeout(stopMetronome, holdSeconds * 1000);
-  }
+  if (holdSeconds > 0) setTimeout(stopMetronome, holdSeconds * 1000);
 
-  // 🎵 Beat animation
   const animateBeat = (now) => {
     if (stopped) return;
 
     if (now >= nextBeatTime) {
       currentBeat = (currentBeat % beats) + 1;
 
-      // 💥 Pulse
-      div.style.transform = "translate(-50%, -50%) scale(1.3)";
-      setTimeout(() => {
-        div.style.transform = "translate(-50%, -50%) scale(1.0)";
-      }, 100);
+      if (visual !== "triangle") {
+        div.style.transform = "translate(-50%, -50%) scale(1.3)";
+        setTimeout(() => {
+          div.style.transform = "translate(-50%, -50%) scale(1.0)";
+        }, 100);
+      }
 
-      // 🔢 Count
-      div.textContent = showCount ? currentBeat : "";
+      if (visual !== "triangle") {
+        div.textContent = showCount ? currentBeat : "";
+      }
 
-      // 🔊 Audio + OSC
       clickBeat(currentBeat);
       if (oscEnabled && window.OSC_ENABLED) {
         sendMetronomeOsc(uid, currentBeat, bpm);
@@ -341,11 +459,12 @@ export function handleMetronomeCue(ast, cueElement = null) {
       nextBeatTime += interval;
     }
 
-    // 🌀 Scroll-following logic
+    // scroll-following
     if (positionMode === "scrolling" && anchorEl) {
       const b  = anchorEl.getBoundingClientRect();
       const sx = score.scrollLeft || 0;
       const sy = score.scrollTop  || 0;
+      const containerBox = score.getBoundingClientRect();
       const lx = b.left - containerBox.left + sx;
       const ty = b.top  - containerBox.top  + sy - 10;
       div.style.left = `${isFinite(lx) ? lx : 50}px`;
@@ -356,16 +475,15 @@ export function handleMetronomeCue(ast, cueElement = null) {
   };
 
   div._beatTimer = requestAnimationFrame(animateBeat);
-  div._stopMetro = stopMetronome;
 
-  console.log(`[cue:metro] 🎵 Started metronome uid=${uid} bpm=${bpm} beats=${beats} position=${positionMode} hold=${holdSeconds}s colour=${colour} size=${size}px`);
+  console.log(
+    `[cue:metro] Started metronome uid=${uid} bpm=${bpm} beats=${beats} visual=${visual}`
+  );
 }
 
 
-
-
 /* -------------------------------------------------------------------- */
-/* 🧩  Quantised Cue Registration Helper                                 */
+/* Quantised Cue Registration                                            */
 /* -------------------------------------------------------------------- */
 
 export function registerQuantisedCue(fn, options = {}) {
@@ -373,7 +491,7 @@ export function registerQuantisedCue(fn, options = {}) {
 }
 
 /* -------------------------------------------------------------------- */
-/* 🔊  Simple Audio Click (optional)                                    */
+/* Simple Audio Click                                                    */
 /* -------------------------------------------------------------------- */
 
 export function playClick(beat, beats) {
@@ -391,7 +509,6 @@ export function playClick(beat, beats) {
 
 /* -------------------------------------------------------------------- */
 console.log("[metro.js] Loaded: networked metronome + quantisation ready");
-
 
 
 

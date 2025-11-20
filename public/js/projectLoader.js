@@ -289,10 +289,10 @@ export async function loadProject(projectName, options = {}) {
     }
 
     // Update the URL to ?project=name without reloading
-// ✅ Preserve all query params by only updating project=, not clearing others
-const url = new URL(window.location.href);
-url.searchParams.set("project", projectName);
-history.replaceState({}, "", url.toString());
+    // ✅ Preserve all query params by only updating project=, not clearing others
+    const url = new URL(window.location.href);
+    url.searchParams.set("project", projectName);
+    history.replaceState({}, "", url.toString());
     // ------------------------------------------------------------
     // 🕐 Restore last saved playhead (only when NOT a switch)
     // ------------------------------------------------------------
@@ -320,20 +320,22 @@ history.replaceState({}, "", url.toString());
       }
     });
 
-    // ✅ Refresh Pages submenu after project load
+    // ✅ Build page registry FIRST, then refresh menu
+    if (typeof window.buildPageRegistryFromDirIndex === "function") {
+      await window.buildPageRegistryFromDirIndex();
+    }
+
     if (typeof window.refreshAllPagesMenu === "function") {
       window.refreshAllPagesMenu();
     }
 
 
-
-
     console.log(`[loadProject] ✅ Project "${projectName}" fully loaded.`);
-   
-   
-   initializeObserver();
 
-   
+
+    initializeObserver();
+
+
     hideSplashScreen();
   } catch (err) {
     console.error(`[loadProject] ❌ Failed to load project "${projectName}":`, err);
@@ -471,7 +473,7 @@ if (projectFromURL) {
     }
   });
 }
- else {
+else {
   if (typeof window.showSplashScreen === "function") {
     window.showSplashScreen();
   } else {

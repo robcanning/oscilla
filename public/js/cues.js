@@ -55,6 +55,10 @@ import { handleRotateCue } from "./rotate.js";
 import { handleScaleCue } from "./scale.js";
 import { handleO2PCue } from "./o2p.js";
 
+import { handlePageCue } from "./oscillaPage.js";
+
+
+
 import { propagate } from "./oscillaPropagate.js";
 
 import { handleSpeedCue, handleSpeedRamp } from "./speed.js";
@@ -225,7 +229,7 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
   console.log(`[CueDSL] ✅ Resolved AST Cue Type: ${ast.type}`, ast);
 
 
-  
+
 
 
 
@@ -242,7 +246,10 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
 
     // cue dispatchers 
 
-    case "cuePage": return handlePageCueFromAST(ast, cueElement);
+    case "cuePage":
+    case "page":
+      return handlePageCue(ast, cueElement);
+    
     case "cueFade": return handleFadeCueFromAST(ast, cueElement);
     case "cueStopwatch": return handleStopwatchCue(ast, cueElement);
     case "cueVideo": return handleVideoCueFromAST(ast, cueElement);
@@ -629,16 +636,17 @@ export function pauseDismissClickHandler() {
     event.stopImmediatePropagation();
   });
 
-  // ✅ Press Spacebar to dismiss
-  document.addEventListener("keydown", (event) => {
-    if (event.code === "Space" || event.key === " ") {
-      if (!pauseCountdown.classList.contains("hidden")) {
-        console.log("[DEBUG] Spacebar pressed. Dismissing pause countdown.");
-        dismissPauseCountdown(false);
-        event.preventDefault(); // Optional: prevent page scroll
-      }
-    }
-  });
+//   // ✅ Press Spacebar to dismiss
+//   document.addEventListener("keydown", (event) => {
+//     if (event.code === "Space" || event.key === " ") {
+//       if (!pauseCountdown.classList.contains("hidden")) {
+//         console.log("[DEBUG] Spacebar pressed. Dismissing pause countdown.");
+//         dismissPauseCountdown(false);
+//         event.preventDefault(); // Optional: prevent page scroll
+//       }
+//     }
+//   });
+
 }
 
 
@@ -1065,6 +1073,12 @@ export async function handleTraverseCue(cueId) {
 
 export function handleStopCue(ast) {
   console.log("[cueStop] Triggered:", ast);
+  /* Ignore the next sync broadcast — it's our own jump being echoed */
+  window.ignoreNextSync = true;
+
+  /*  Prevent server from overriding our new position for a short window */
+  window.recentlyRecalculatedPlayhead = true;
+  setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
 
   // Toggle playback:
   if (window.isPlaying) {
@@ -1479,548 +1493,548 @@ async function runCuePagePlaylist({ mode, items, waitFlag = false, returnFlag = 
 
 
 
-/**
- * handlePageCue(cueId, animationPath, duration)
- * ---------------------------------------------
- * State-driven single-page cue handler.
- * Supports seamless transitions between pages and controlled return
- * to the scrolling score.
- *
- * Example cues:
- *   cuePage(page0)_dur(20)_mode(page)_next(page1)
- *   cuePage(page1)_dur(10)_mode(page)
- *   cuePage(page2)_dur(15)_mode(popup)_return(1)
- *
- * HTML:
- *   <div id="singlePage-container" class="popup hidden">
- *     <div id="singlePage-content"></div>
- *     <div id="singlePage-countdown"></div>
- *   </div>
- */
-
-export async function handlePageCue(cueId, duration, cueParams = {}) {
-  console.log(`[cuePage] Handling page cue: ${cueId}`);
-
-  // Always ensure scrolling score is paused before page mode
-  if (window.isPlaying) {
-    console.log("[cuePage] 🛑 Pausing scrolling score.");
-    pauseScrollScore();
-  }
-
-  // 🧹 Stop all active cueText overlays when entering page mode
-  document.querySelectorAll('[id^="cueText-"]').forEach(el => el.remove());
-
-  // -------------------------------------------------------------
-  // 0️⃣ Parse parameters (self-contained)
-  // -------------------------------------------------------------
-  let pageName = cueId.match(/cuePage\(([\s\S]+?)\)/)?.[1]?.trim();
-
-  if (pageName) {
-    const compact = pageName.replace(/\s+/g, "");
-    // 🧩 Detect and guard against single-item loops
-    if (compact.startsWith("loop(")) {
-      // Normalize whitespace but preserve commas and colons
-      const normalized = compact
-        .replace(/\s*,\s*/g, ",")  // clean spaces around commas
-        .replace(/\s*:\s*/g, ":")  // clean spaces around colons
-        .trim();
-
-      // Extract inside of parentheses, even multiline
-      const inner = normalized.match(/\(([\s\S]*?)\)\s*$/)?.[1];
-      const innerPages = inner
-        ?.split(",")
-        .map(p => p.trim())
-        .filter(p => p.length > 0);
-
-      console.log("[cuePage] 🔍 Parsed inner loop pages:", innerPages);
-
-      if (!innerPages || innerPages.length <= 1) {
-        console.warn(
-          `[cuePage] ⚠️ Ignoring single-item loop to avoid infinite recursion: ${pageName}`
-        );
-        return;
-      }
-
-      console.log("[cuePage] 🎬 Detected loop expression from pageName:", normalized);
-      return handleCuePagePlaylist(cueId, normalized);
-    }
-
-
-
-
-    pageName = compact.replace(/\)+$/, "");
-  }
-
-  if (!pageName) {
-    console.error(`[cuePage] ❌ Invalid or empty page name extracted from: ${cueId}`);
-    return;
-  }
-
-  const dur = cueId.match(/_dur\(([^)]+)\)/)?.[1];
-  const next = cueId.match(/_next\(([^)]+)\)/)?.[1];
-  const mode = cueId.match(/_mode\(([^)]+)\)/)?.[1]?.toLowerCase() || "popup";
-  const ret = cueId.match(/_return\(([^)]+)\)/)?.[1] === "1";
-  const wait = cueId.match(/_wait\(([^)]+)\)/)?.[1] === "1";
-  const durationSec = dur ? Number(dur) : duration || 0;
-
-
-  // -------------------------------------------------------------
-  // 1️⃣ Global state
-  // -------------------------------------------------------------
-  if (!window.pageState) {
-    window.pageState = { mode: "scroll", current: null, next: null, countdown: null };
-  }
-  const ps = window.pageState;
-
-  // -------------------------------------------------------------
-  // 2️⃣ Pause scroll if entering page mode
-  // -------------------------------------------------------------
-  if (ps.mode === "scroll") {
-    console.log("[cuePage] → Pausing scrolling score.");
-    pauseScrollScore();
-  }
-
-  if (ps.mode === "scroll" && mode === "loop") ps.mode = "page";
-  ps.mode = "page";
-  updateModeToggleUI();
-
-  ps.current = pageName;
-  ps.next = next || null;
-
-  // -------------------------------------------------------------
-  // 3️⃣ Handle loop/sequence expressions
-  // -------------------------------------------------------------
-  if (cueParams.choice && cueParams.choice.replace(/\s+/g, "").startsWith("loop(")) {
-    console.log("[cuePage] 🎬 Detected loop/sequence expression:", cueParams.choice);
-    return handleCuePagePlaylist(cueId, cueParams.choice);
-  }
-
-  // -------------------------------------------------------------
-  // 4️⃣ Prepare DOM
-  // -------------------------------------------------------------
-  const container = document.getElementById("singlePage-container");
-  const content = document.getElementById("singlePage-content");
-  const countdownElement = document.getElementById("singlePage-countdown");
-  if (!container || !content || !countdownElement) {
-    console.error("[cuePage] Missing DOM container elements.");
-    return;
-  }
-
-  container.classList.remove("hidden");
-  container.style.display = "flex";
-  container.style.opacity = "1";
-  content.innerHTML = "";
-
-
-  // -------------------------------------------------------------
-  // 4️⃣ Load SVG page (project-local only)
-  // -------------------------------------------------------------
-  if (!window.pagesDir) {
-    console.error("[cuePage] ❌ Missing window.pagesDir — run loadProject() first.");
-    return;
-  }
-
-  const projectPath = `${window.pagesDir}${pageName}.svg`;
-
-  console.groupCollapsed(`[cuePage] 📄 Loading page: "${pageName}"`);
-  console.log("🌍 Current project:", window.currentProject);
-  console.log("📂 Base directory:", window.projectBase);
-  console.log("📁 Pages directory:", window.pagesDir);
-  console.log("📜 Full SVG path:", projectPath);
-
-  async function fetchSvgOrThrow(path) {
-    console.log(`[cuePage] 🔍 Fetching SVG from: ${path}`);
-    const res = await fetch(path);
-    if (!res.ok) throw new Error(`HTTP ${res.status} at ${path}`);
-    const text = await res.text();
-    console.log(`[cuePage] ✅ Successfully fetched SVG (${text.length} chars)`);
-    return text;
-  }
-
-  let svgText;
-  try {
-    svgText = await fetchSvgOrThrow(projectPath);
-    console.log(`[cuePage] ✅ Page loaded successfully: ${projectPath}`);
-  } catch (err) {
-    console.error(`[cuePage] ❌ Failed to load page "${pageName}" from: ${projectPath}`);
-    console.error("Error details:", err.message);
-    console.groupEnd();
-    return;
-  }
-
-  console.groupEnd();
-
-  // -------------------------------------------------------------
-  // 5️⃣ Inject SVG and initialize
-  // -------------------------------------------------------------
-  content.innerHTML = svgText;
-  const svg = content.querySelector("svg");
-  if (!svg) {
-    console.error("[cuePage] ❌ No <svg> in loaded page.");
-    return;
-  }
-
-  svg.id = "pageSVG";
-  svg.classList.add("oscilla-page");
-  svg.setAttribute("width", "100vw");
-  svg.setAttribute("height", "100vh");
-  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-
-  console.log(`initialising animations in ${pageName}.svg`);
-  window.initializeSVG?.(svg);
-
-  // ✅ Register reusable blocks defined inside this page
-  if (window.registerReuseBlocks) {
-    window.registerReuseBlocks(svg);
-    console.log(`[reuse] Registered local blocks in ${pageName}.svg`);
-  }
-
-  // ✅ Inject reusable blocks referenced via use(...)
-  if (window.autoInjectUseBlocks) {
-    window.autoInjectUseBlocks(svg);
-    console.log(`[reuse] Injected use(...) blocks in ${pageName}.svg`);
-  }
-
-  // if (typeof window.registerSvgGroups === "function") {
-  //   window.registerSvgGroups(svg);
-  //   console.log(`[cuePage] 📦 Registered groups in ${pageName}.svg`);
-  // }
-
-
-console.log("[cuePage] ⚙️ Calling propagate() for page SVG");
-propagate(svg);
-
-  window.initializeRotatingObjects?.(svg);
-  window.initializeScalingObjects?.(svg);
-  window.initializePathFollowers?.(svg);
-  window.initializeObserver?.(svg);
-
-  console.log(`[cuePage] ✅ Loaded ${pageName}.svg`);
-  startPageAnimations(svg);
-
-
-  // Reset triggered state so page reload / revisit replays cues
-  if (window.triggeredCues instanceof Set) {
-    window.triggeredCues.clear();
-  }
-
-  // Auto-start any text() cue that includes autostart:true
-  const autostartTextCues = svg.querySelectorAll('[id^="text("]');
-
-  autostartTextCues.forEach(el => {
-    if (/autostart\s*:\s*true/i.test(el.id)) {
-      console.log("[page] ▶ Auto-starting text cue:", el.id);
-      handleCueTrigger(el.id, el);   // ✅ FIX: pass the cueElement
-    }
-  });
-
-  window._currentPageSvg = svg;
-
-  // ✅ Rebuild cueButtons for this page
-  const pageContainer =
-    document.getElementById("singlePage-content") ||
-    document.getElementById("singlePage-container");
-
-  if (pageContainer) {
-    // remove old page buttons if any
-    window._activePageButtons?.forEach(btn => btn.remove?.());
-    window._activePageButtons = buildCueButtonsIn(svg, pageContainer);
-    console.log(`[cuePage] 🎛 Built ${window._activePageButtons.length} cueButtons for page ${pageName}`);
-  }
-
-
-  // -------------------------------------------------------------
-  // 6️⃣ Countdown and transition logic
-  // -------------------------------------------------------------
-
-  // For sequenced or loop pages, we’ll return a promise that resolves
-  // when this countdown finishes.
-  let pageDoneResolve = null;
-  let pageDonePromise = null;
-  if (cueParams?.suppressTransition || cueParams?.fromLoop) {
-    pageDonePromise = new Promise((res) => (pageDoneResolve = res));
-  }
-
-  // Stop any old countdown immediately when starting a new page
-  if (ps.countdown) {
-    clearInterval(ps.countdown);
-    ps.countdown = null;
-  }
-
-  countdownElement.style.display = "block";
-
-  if (wait || !durationSec || durationSec <= 0) {
-    countdownElement.style.display = "none";
-
-    // countdownElement.textContent = "▶"; // visually indicate "ready / play"
-    // countdownElement.style.opacity = "0.7";
-    console.log("[cuePage] ⏸ No duration set — showing pause symbol.");
-  } else {
-    countdownElement.style.opacity = "1";
-    countdownElement.textContent = durationSec;
-  }
-
-  if (!wait && durationSec > 0) {
-    let timeLeft = durationSec;
-    ps.countdown = setInterval(() => {
-      timeLeft -= 1;
-      countdownElement.textContent = timeLeft;
-
-      if (timeLeft <= 0) {
-        clearInterval(ps.countdown);
-        ps.countdown = null;
-
-        // ✅ For sequenced/looped pages: finish without transition
-        if (cueParams?.suppressTransition || cueParams?.fromLoop) {
-          console.log("[cuePage] ✅ Page countdown finished (sequenced) — returning control.");
-          if (pageDoneResolve) pageDoneResolve();
-          return;
-        }
-
-        // Normal single-page behaviour
-        resolvePageTransition({ mode, next, ret });
-      }
-    }, 1000);
-  } else {
-    console.log("[cuePage] Waiting indefinitely for user trigger or external event.");
-  }
-
-  // If part of a sequence or loop, return the promise so driver can await
-  return pageDonePromise;
-
-
-}
-
-
-// helper
-// ------------------------------------------------------------
-// handleAfterAction(ast)
-// ------------------------------------------------------------
-// 🔍 Purpose:
-//   Executes the post-cue action defined via `after:`
-//   (internally normalised as `onCompletion`).
-// ------------------------------------------------------------
-export function handleAfterAction(ast) {
-  if (!ast?.onCompletion) return;
-
-  const raw = ast.onCompletion;
-  const control = raw.control;
-  const arg = raw.arg;
-  const target = raw.target;
-
-  if (!control) return;
-  console.log(`[CueDSL] 🎬 Running after-action → ${control}(${arg}${target ? "@" + target : ""})`);
-
-  try {
-    // --- Case 1: mode(scroll) ---
-    if ((arg === "scroll" || arg === "scrollPaused") && target) {
-      console.log(`[CueDSL] ⚙️ Exiting to scroll mode at rehearsal mark: ${target}`);
-
-      // 1️⃣ Switch to scroll mode
-      handleCueTrigger(`cueNav(mode(scroll))`);
-
-      // 2️⃣ Wait for DOM to update, then jump
-      requestAnimationFrame(() => {
-        const sc = document.getElementById("scoreContainer");
-        if (!sc) return;
-
-        console.log(`[CueDSL] 🎯 Jumping to rehearsal mark after page teardown: ${target}`);
-        jumpToRehearsalMark(target);
-
-        // 3️⃣ Only resume playback if not explicitly paused
-        if (arg !== "scrollPaused") {
-          startPlayback();
-          console.log("[CueDSL] ▶ Resuming playback (scroll mode)");
-        } else {
-          console.log("[CueDSL] ⏸ Scroll mode entered paused");
-          window.pausePlayback?.();
-        }
-      });
-      return;
-    }
-
-
-    // --- Case 2: nav(scroll) ---
-    if (control === "nav") {
-      console.log(`[CueDSL] 🧭 Triggering cueNav(mode(${arg}))`);
-      handleCueTrigger(`cueNav(mode(${arg}))`);
-
-      if (target) {
-        console.log(`[CueDSL] 🎯 Jumping to rehearsal mark: ${target}`);
-        requestAnimationFrame(() => {
-          jumpToRehearsalMark(target);
-          startPlayback();
-        });
-      }
-      return;
-    }
-
-    // --- Case 3: cue(page(...)) — chained cue ---
-    if (control === "cue") {
-      console.log(`[CueDSL] 🔗 Triggering chained cue → ${arg}`);
-      handleCueTrigger(arg);
-      return;
-    }
-
-    // --- Default: pass raw to handler ---
-    handleCueTrigger(`${control}(${arg})`);
-  } catch (err) {
-    console.warn("[CueDSL] ⚠️ Failed to execute after-action:", err);
-  }
-}
-
-
-
-
-// ------------------------------------------------------------
-// handlePageCueFromAST(ast)
-// ------------------------------------------------------------
-// Handles cue:page(...) pattern-based ASTs.
-// Supports both simple identifiers (cue:page(page1)) and full
-// SuperCollider-style pattern expressions (Pseq, Prand, Pshuf...),
-// including page:duration pairs and global `after:` actions.
-// ------------------------------------------------------------
-export async function handlePageCueFromAST(ast) {
-  const commonParams = { suppressTransition: true };
-
-  if (!ast || !ast.pattern) {
-    console.warn("[CueDSL] ⚠️ Invalid or empty AST passed to handlePageCueFromAST:", ast);
-    return;
-  }
-
-  console.log("[CueDSL] 🚀 Handling cue:page AST", ast);
-
-  // ------------------------------------------------------------
-  // Helper: recursively flatten pattern AST → array of pages or {page,dur} objects
-  // ------------------------------------------------------------
-  const expandPattern = (patternAST) => {
-    if (!patternAST) return [];
-
-    // --- Literal ---
-    if (patternAST.type === "Literal") {
-      const v = patternAST.value;
-      if (v && typeof v === "object" && v.page) return [v];
-      if (v != null && typeof v !== "object") return [v];
-      return [];
-    }
-
-    // --- Identifier wrapped in Pseq ---
-    if (patternAST.type === "Pseq" && patternAST.list?.length === 1 && typeof patternAST.list[0] === "string") {
-      return Array(patternAST.repeats || 1).fill(patternAST.list[0]);
-    }
-
-    // --- Pattern types ---
-    switch (patternAST.type) {
-      case "Pseq": {
-        // Filter out stray numeric literals or nulls
-        const list = patternAST.list
-          .flatMap(expandPattern)
-          .filter(v => v && (typeof v === "string" || v.page)); // keep only pages or ids
-        const reps = patternAST.repeats === "inf" ? Infinity : Number(patternAST.repeats) || 1;
-        return Array.from({ length: reps }, () => list).flat();
-      }
-      case "Pshuf": {
-        const reps = patternAST.repeats === "inf" ? 1 : Number(patternAST.repeats) || 1;
-        const list = patternAST.list
-          .flatMap(expandPattern)
-          .filter(v => v && (typeof v === "string" || v.page));
-
-        // Shuffle ONCE
-        const shuffled = [...list].sort(() => Math.random() - 0.5);
-        const out = Array.from({ length: reps }, () => shuffled).flat();
-        return out;
-      }
-
-      case "Pxrand": {
-        const reps = patternAST.repeats === "inf" ? 1 : Number(patternAST.repeats) || 1;
-        const list = patternAST.list
-          .flatMap(expandPattern)
-          .filter(v => v && (typeof v === "string" || v.page));
-
-        // Shuffle EACH REPEAT
-        const out = [];
-        for (let i = 0; i < reps; i++) {
-          const shuffled = [...list].sort(() => Math.random() - 0.5);
-          out.push(...shuffled);
-        }
-        return out;
-      }
-
-      case "Prand": {
-        const reps = patternAST.repeats === "inf" ? Infinity : Number(patternAST.repeats) || 1;
-        const list = patternAST.list
-          .flatMap(expandPattern)
-          .filter(v => v && (typeof v === "string" || v.page));
-
-        const out = [];
-        for (let i = 0; i < reps; i++) {
-          out.push(list[Math.floor(Math.random() * list.length)]);
-        }
-        return out;
-      }
-
-      case "Pchoose": {
-        const reps = patternAST.repeats === "inf" ? 1 : Number(patternAST.repeats) || 1;
-        const list = patternAST.list
-          .flatMap(expandPattern)
-          .filter(v => v && (typeof v === "string" || v.page));
-
-        const out = [];
-        for (let i = 0; i < reps; i++) {
-          out.push(list[Math.floor(Math.random() * list.length)]);
-        }
-        return out;
-      }
-
-      case "Identifier": {
-        const id = patternAST.image || patternAST.value || null;
-        return id ? [id] : [];
-      }
-      default:
-        return [];
-    }
-  };
-
-  // ------------------------------------------------------------
-  // Expand pattern and filter out nulls
-  // ------------------------------------------------------------
-  const pages = expandPattern(ast.pattern).filter(x => x != null);
-  console.log("[CueDSL] ▶ Page pattern expanded to:", pages);
-
-  if (!pages.length) {
-    console.warn("[CueDSL] Empty or invalid page pattern:", ast.pattern);
-    return;
-  }
-
-  // ------------------------------------------------------------
-  // Sequentially play through all pages
-  // ------------------------------------------------------------
-  const isCancelled = () =>
-    window._cuePageRunning && window.pageState?.mode === "scroll";
-
-  for (let i = 0; i < pages.length; i++) {
-    if (isCancelled()) {
-      console.log("[CueDSL] Sequence stopped due to mode change.");
-      return;
-    }
-
-    const item = pages[i];
-    const pageId = typeof item === "object" && item.page ? item.page : item;
-    const durNum = typeof item === "object" && item.dur ? Number(item.dur) : 0;
-
-    const cue = `cuePage(${pageId})_dur(${durNum})`;
-    console.log(`[CueDSL] ▶ Page ${i + 1}/${pages.length} → ${cue}`);
-
-    await handlePageCue(cue, durNum, commonParams);
-  }
-
-  console.log("[CueDSL] cuePage pattern sequence finished.");
-
-  // ------------------------------------------------------------
-  // 🧩 Run global after: clause (if present)
-  // ------------------------------------------------------------
-  handleAfterAction(ast);
-}
+// /**
+//  * handlePageCue(cueId, animationPath, duration)
+//  * ---------------------------------------------
+//  * State-driven single-page cue handler.
+//  * Supports seamless transitions between pages and controlled return
+//  * to the scrolling score.
+//  *
+//  * Example cues:
+//  *   cuePage(page0)_dur(20)_mode(page)_next(page1)
+//  *   cuePage(page1)_dur(10)_mode(page)
+//  *   cuePage(page2)_dur(15)_mode(popup)_return(1)
+//  *
+//  * HTML:
+//  *   <div id="singlePage-container" class="popup hidden">
+//  *     <div id="singlePage-content"></div>
+//  *     <div id="singlePage-countdown"></div>
+//  *   </div>
+//  */
+
+// export async function handlePageCue(cueId, duration, cueParams = {}) {
+//   console.log(`[cuePage] Handling page cue: ${cueId}`);
+
+//   // Always ensure scrolling score is paused before page mode
+//   if (window.isPlaying) {
+//     console.log("[cuePage] 🛑 Pausing scrolling score.");
+//     pauseScrollScore();
+//   }
+
+//   // 🧹 Stop all active cueText overlays when entering page mode
+//   document.querySelectorAll('[id^="cueText-"]').forEach(el => el.remove());
+
+//   // -------------------------------------------------------------
+//   // 0️⃣ Parse parameters (self-contained)
+//   // -------------------------------------------------------------
+//   let pageName = cueId.match(/cuePage\(([\s\S]+?)\)/)?.[1]?.trim();
+
+//   if (pageName) {
+//     const compact = pageName.replace(/\s+/g, "");
+//     // 🧩 Detect and guard against single-item loops
+//     if (compact.startsWith("loop(")) {
+//       // Normalize whitespace but preserve commas and colons
+//       const normalized = compact
+//         .replace(/\s*,\s*/g, ",")  // clean spaces around commas
+//         .replace(/\s*:\s*/g, ":")  // clean spaces around colons
+//         .trim();
+
+//       // Extract inside of parentheses, even multiline
+//       const inner = normalized.match(/\(([\s\S]*?)\)\s*$/)?.[1];
+//       const innerPages = inner
+//         ?.split(",")
+//         .map(p => p.trim())
+//         .filter(p => p.length > 0);
+
+//       console.log("[cuePage] 🔍 Parsed inner loop pages:", innerPages);
+
+//       if (!innerPages || innerPages.length <= 1) {
+//         console.warn(
+//           `[cuePage] ⚠️ Ignoring single-item loop to avoid infinite recursion: ${pageName}`
+//         );
+//         return;
+//       }
+
+//       console.log("[cuePage] 🎬 Detected loop expression from pageName:", normalized);
+//       return handleCuePagePlaylist(cueId, normalized);
+//     }
+
+
+
+
+//     pageName = compact.replace(/\)+$/, "");
+//   }
+
+//   if (!pageName) {
+//     console.error(`[cuePage] ❌ Invalid or empty page name extracted from: ${cueId}`);
+//     return;
+//   }
+
+//   const dur = cueId.match(/_dur\(([^)]+)\)/)?.[1];
+//   const next = cueId.match(/_next\(([^)]+)\)/)?.[1];
+//   const mode = cueId.match(/_mode\(([^)]+)\)/)?.[1]?.toLowerCase() || "popup";
+//   const ret = cueId.match(/_return\(([^)]+)\)/)?.[1] === "1";
+//   const wait = cueId.match(/_wait\(([^)]+)\)/)?.[1] === "1";
+//   const durationSec = dur ? Number(dur) : duration || 0;
+
+
+//   // -------------------------------------------------------------
+//   // 1️⃣ Global state
+//   // -------------------------------------------------------------
+//   if (!window.pageState) {
+//     window.pageState = { mode: "scroll", current: null, next: null, countdown: null };
+//   }
+//   const ps = window.pageState;
+
+//   // -------------------------------------------------------------
+//   // 2️⃣ Pause scroll if entering page mode
+//   // -------------------------------------------------------------
+//   if (ps.mode === "scroll") {
+//     console.log("[cuePage] → Pausing scrolling score.");
+//     pauseScrollScore();
+//   }
+
+//   if (ps.mode === "scroll" && mode === "loop") ps.mode = "page";
+//   ps.mode = "page";
+//   updateModeToggleUI();
+
+//   ps.current = pageName;
+//   ps.next = next || null;
+
+//   // -------------------------------------------------------------
+//   // 3️⃣ Handle loop/sequence expressions
+//   // -------------------------------------------------------------
+//   if (cueParams.choice && cueParams.choice.replace(/\s+/g, "").startsWith("loop(")) {
+//     console.log("[cuePage] 🎬 Detected loop/sequence expression:", cueParams.choice);
+//     return handleCuePagePlaylist(cueId, cueParams.choice);
+//   }
+
+//   // -------------------------------------------------------------
+//   // 4️⃣ Prepare DOM
+//   // -------------------------------------------------------------
+//   const container = document.getElementById("singlePage-container");
+//   const content = document.getElementById("singlePage-content");
+//   const countdownElement = document.getElementById("singlePage-countdown");
+//   if (!container || !content || !countdownElement) {
+//     console.error("[cuePage] Missing DOM container elements.");
+//     return;
+//   }
+
+//   container.classList.remove("hidden");
+//   container.style.display = "flex";
+//   container.style.opacity = "1";
+//   content.innerHTML = "";
+
+
+//   // -------------------------------------------------------------
+//   // 4️⃣ Load SVG page (project-local only)
+//   // -------------------------------------------------------------
+//   if (!window.pagesDir) {
+//     console.error("[cuePage] ❌ Missing window.pagesDir — run loadProject() first.");
+//     return;
+//   }
+
+//   const projectPath = `${window.pagesDir}${pageName}.svg`;
+
+//   console.groupCollapsed(`[cuePage] 📄 Loading page: "${pageName}"`);
+//   console.log("🌍 Current project:", window.currentProject);
+//   console.log("📂 Base directory:", window.projectBase);
+//   console.log("📁 Pages directory:", window.pagesDir);
+//   console.log("📜 Full SVG path:", projectPath);
+
+//   async function fetchSvgOrThrow(path) {
+//     console.log(`[cuePage] 🔍 Fetching SVG from: ${path}`);
+//     const res = await fetch(path);
+//     if (!res.ok) throw new Error(`HTTP ${res.status} at ${path}`);
+//     const text = await res.text();
+//     console.log(`[cuePage] ✅ Successfully fetched SVG (${text.length} chars)`);
+//     return text;
+//   }
+
+//   let svgText;
+//   try {
+//     svgText = await fetchSvgOrThrow(projectPath);
+//     console.log(`[cuePage] ✅ Page loaded successfully: ${projectPath}`);
+//   } catch (err) {
+//     console.error(`[cuePage] ❌ Failed to load page "${pageName}" from: ${projectPath}`);
+//     console.error("Error details:", err.message);
+//     console.groupEnd();
+//     return;
+//   }
+
+//   console.groupEnd();
+
+//   // -------------------------------------------------------------
+//   // 5️⃣ Inject SVG and initialize
+//   // -------------------------------------------------------------
+//   content.innerHTML = svgText;
+//   const svg = content.querySelector("svg");
+//   if (!svg) {
+//     console.error("[cuePage] ❌ No <svg> in loaded page.");
+//     return;
+//   }
+
+//   svg.id = "pageSVG";
+//   svg.classList.add("oscilla-page");
+//   svg.setAttribute("width", "100vw");
+//   svg.setAttribute("height", "100vh");
+//   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+//   console.log(`initialising animations in ${pageName}.svg`);
+//   window.initializeSVG?.(svg);
+
+//   // ✅ Register reusable blocks defined inside this page
+//   if (window.registerReuseBlocks) {
+//     window.registerReuseBlocks(svg);
+//     console.log(`[reuse] Registered local blocks in ${pageName}.svg`);
+//   }
+
+//   // ✅ Inject reusable blocks referenced via use(...)
+//   if (window.autoInjectUseBlocks) {
+//     window.autoInjectUseBlocks(svg);
+//     console.log(`[reuse] Injected use(...) blocks in ${pageName}.svg`);
+//   }
+
+//   // if (typeof window.registerSvgGroups === "function") {
+//   //   window.registerSvgGroups(svg);
+//   //   console.log(`[cuePage] 📦 Registered groups in ${pageName}.svg`);
+//   // }
+
+
+//   console.log("[cuePage] ⚙️ Calling propagate() for page SVG");
+//   propagate(svg);
+
+//   window.initializeRotatingObjects?.(svg);
+//   window.initializeScalingObjects?.(svg);
+//   window.initializePathFollowers?.(svg);
+//   window.initializeObserver?.(svg);
+
+//   console.log(`[cuePage] ✅ Loaded ${pageName}.svg`);
+//   startPageAnimations(svg);
+
+
+//   // Reset triggered state so page reload / revisit replays cues
+//   if (window.triggeredCues instanceof Set) {
+//     window.triggeredCues.clear();
+//   }
+
+//   // Auto-start any text() cue that includes autostart:true
+//   const autostartTextCues = svg.querySelectorAll('[id^="text("]');
+
+//   autostartTextCues.forEach(el => {
+//     if (/autostart\s*:\s*true/i.test(el.id)) {
+//       console.log("[page] ▶ Auto-starting text cue:", el.id);
+//       handleCueTrigger(el.id, el);   // ✅ FIX: pass the cueElement
+//     }
+//   });
+
+//   window._currentPageSvg = svg;
+
+//   // ✅ Rebuild cueButtons for this page
+//   const pageContainer =
+//     document.getElementById("singlePage-content") ||
+//     document.getElementById("singlePage-container");
+
+//   if (pageContainer) {
+//     // remove old page buttons if any
+//     window._activePageButtons?.forEach(btn => btn.remove?.());
+//     window._activePageButtons = buildCueButtonsIn(svg, pageContainer);
+//     console.log(`[cuePage] 🎛 Built ${window._activePageButtons.length} cueButtons for page ${pageName}`);
+//   }
+
+
+//   // -------------------------------------------------------------
+//   // 6️⃣ Countdown and transition logic
+//   // -------------------------------------------------------------
+
+//   // For sequenced or loop pages, we’ll return a promise that resolves
+//   // when this countdown finishes.
+//   let pageDoneResolve = null;
+//   let pageDonePromise = null;
+//   if (cueParams?.suppressTransition || cueParams?.fromLoop) {
+//     pageDonePromise = new Promise((res) => (pageDoneResolve = res));
+//   }
+
+//   // Stop any old countdown immediately when starting a new page
+//   if (ps.countdown) {
+//     clearInterval(ps.countdown);
+//     ps.countdown = null;
+//   }
+
+//   countdownElement.style.display = "block";
+
+//   if (wait || !durationSec || durationSec <= 0) {
+//     countdownElement.style.display = "none";
+
+//     // countdownElement.textContent = "▶"; // visually indicate "ready / play"
+//     // countdownElement.style.opacity = "0.7";
+//     console.log("[cuePage] ⏸ No duration set — showing pause symbol.");
+//   } else {
+//     countdownElement.style.opacity = "1";
+//     countdownElement.textContent = durationSec;
+//   }
+
+//   if (!wait && durationSec > 0) {
+//     let timeLeft = durationSec;
+//     ps.countdown = setInterval(() => {
+//       timeLeft -= 1;
+//       countdownElement.textContent = timeLeft;
+
+//       if (timeLeft <= 0) {
+//         clearInterval(ps.countdown);
+//         ps.countdown = null;
+
+//         // ✅ For sequenced/looped pages: finish without transition
+//         if (cueParams?.suppressTransition || cueParams?.fromLoop) {
+//           console.log("[cuePage] ✅ Page countdown finished (sequenced) — returning control.");
+//           if (pageDoneResolve) pageDoneResolve();
+//           return;
+//         }
+
+//         // Normal single-page behaviour
+//         resolvePageTransition({ mode, next, ret });
+//       }
+//     }, 1000);
+//   } else {
+//     console.log("[cuePage] Waiting indefinitely for user trigger or external event.");
+//   }
+
+//   // If part of a sequence or loop, return the promise so driver can await
+//   return pageDonePromise;
+
+
+// }
+
+
+// // helper
+// // ------------------------------------------------------------
+// // handleAfterAction(ast)
+// // ------------------------------------------------------------
+// // 🔍 Purpose:
+// //   Executes the post-cue action defined via `after:`
+// //   (internally normalised as `onCompletion`).
+// // ------------------------------------------------------------
+// export function handleAfterAction(ast) {
+//   if (!ast?.onCompletion) return;
+
+//   const raw = ast.onCompletion;
+//   const control = raw.control;
+//   const arg = raw.arg;
+//   const target = raw.target;
+
+//   if (!control) return;
+//   console.log(`[CueDSL] 🎬 Running after-action → ${control}(${arg}${target ? "@" + target : ""})`);
+
+//   try {
+//     // --- Case 1: mode(scroll) ---
+//     if ((arg === "scroll" || arg === "scrollPaused") && target) {
+//       console.log(`[CueDSL] ⚙️ Exiting to scroll mode at rehearsal mark: ${target}`);
+
+//       // 1️⃣ Switch to scroll mode
+//       handleCueTrigger(`cueNav(mode(scroll))`);
+
+//       // 2️⃣ Wait for DOM to update, then jump
+//       requestAnimationFrame(() => {
+//         const sc = document.getElementById("scoreContainer");
+//         if (!sc) return;
+
+//         console.log(`[CueDSL] 🎯 Jumping to rehearsal mark after page teardown: ${target}`);
+//         jumpToRehearsalMark(target);
+
+//         // 3️⃣ Only resume playback if not explicitly paused
+//         if (arg !== "scrollPaused") {
+//           startPlayback();
+//           console.log("[CueDSL] ▶ Resuming playback (scroll mode)");
+//         } else {
+//           console.log("[CueDSL] ⏸ Scroll mode entered paused");
+//           window.pausePlayback?.();
+//         }
+//       });
+//       return;
+//     }
+
+
+//     // --- Case 2: nav(scroll) ---
+//     if (control === "nav") {
+//       console.log(`[CueDSL] 🧭 Triggering cueNav(mode(${arg}))`);
+//       handleCueTrigger(`cueNav(mode(${arg}))`);
+
+//       if (target) {
+//         console.log(`[CueDSL] 🎯 Jumping to rehearsal mark: ${target}`);
+//         requestAnimationFrame(() => {
+//           jumpToRehearsalMark(target);
+//           startPlayback();
+//         });
+//       }
+//       return;
+//     }
+
+//     // --- Case 3: cue(page(...)) — chained cue ---
+//     if (control === "cue") {
+//       console.log(`[CueDSL] 🔗 Triggering chained cue → ${arg}`);
+//       handleCueTrigger(arg);
+//       return;
+//     }
+
+//     // --- Default: pass raw to handler ---
+//     handleCueTrigger(`${control}(${arg})`);
+//   } catch (err) {
+//     console.warn("[CueDSL] ⚠️ Failed to execute after-action:", err);
+//   }
+// }
+
+
+
+
+// // ------------------------------------------------------------
+// // handlePageCueFromAST(ast)
+// // ------------------------------------------------------------
+// // Handles cue:page(...) pattern-based ASTs.
+// // Supports both simple identifiers (cue:page(page1)) and full
+// // SuperCollider-style pattern expressions (Pseq, Prand, Pshuf...),
+// // including page:duration pairs and global `after:` actions.
+// // ------------------------------------------------------------
+// export async function handlePageCueFromAST(ast) {
+//   const commonParams = { suppressTransition: true };
+
+//   if (!ast || !ast.pattern) {
+//     console.warn("[CueDSL] ⚠️ Invalid or empty AST passed to handlePageCueFromAST:", ast);
+//     return;
+//   }
+
+//   console.log("[CueDSL] 🚀 Handling cue:page AST", ast);
+
+//   // ------------------------------------------------------------
+//   // Helper: recursively flatten pattern AST → array of pages or {page,dur} objects
+//   // ------------------------------------------------------------
+//   const expandPattern = (patternAST) => {
+//     if (!patternAST) return [];
+
+//     // --- Literal ---
+//     if (patternAST.type === "Literal") {
+//       const v = patternAST.value;
+//       if (v && typeof v === "object" && v.page) return [v];
+//       if (v != null && typeof v !== "object") return [v];
+//       return [];
+//     }
+
+//     // --- Identifier wrapped in Pseq ---
+//     if (patternAST.type === "Pseq" && patternAST.list?.length === 1 && typeof patternAST.list[0] === "string") {
+//       return Array(patternAST.repeats || 1).fill(patternAST.list[0]);
+//     }
+
+//     // --- Pattern types ---
+//     switch (patternAST.type) {
+//       case "Pseq": {
+//         // Filter out stray numeric literals or nulls
+//         const list = patternAST.list
+//           .flatMap(expandPattern)
+//           .filter(v => v && (typeof v === "string" || v.page)); // keep only pages or ids
+//         const reps = patternAST.repeats === "inf" ? Infinity : Number(patternAST.repeats) || 1;
+//         return Array.from({ length: reps }, () => list).flat();
+//       }
+//       case "Pshuf": {
+//         const reps = patternAST.repeats === "inf" ? 1 : Number(patternAST.repeats) || 1;
+//         const list = patternAST.list
+//           .flatMap(expandPattern)
+//           .filter(v => v && (typeof v === "string" || v.page));
+
+//         // Shuffle ONCE
+//         const shuffled = [...list].sort(() => Math.random() - 0.5);
+//         const out = Array.from({ length: reps }, () => shuffled).flat();
+//         return out;
+//       }
+
+//       case "Pxrand": {
+//         const reps = patternAST.repeats === "inf" ? 1 : Number(patternAST.repeats) || 1;
+//         const list = patternAST.list
+//           .flatMap(expandPattern)
+//           .filter(v => v && (typeof v === "string" || v.page));
+
+//         // Shuffle EACH REPEAT
+//         const out = [];
+//         for (let i = 0; i < reps; i++) {
+//           const shuffled = [...list].sort(() => Math.random() - 0.5);
+//           out.push(...shuffled);
+//         }
+//         return out;
+//       }
+
+//       case "Prand": {
+//         const reps = patternAST.repeats === "inf" ? Infinity : Number(patternAST.repeats) || 1;
+//         const list = patternAST.list
+//           .flatMap(expandPattern)
+//           .filter(v => v && (typeof v === "string" || v.page));
+
+//         const out = [];
+//         for (let i = 0; i < reps; i++) {
+//           out.push(list[Math.floor(Math.random() * list.length)]);
+//         }
+//         return out;
+//       }
+
+//       case "Pchoose": {
+//         const reps = patternAST.repeats === "inf" ? 1 : Number(patternAST.repeats) || 1;
+//         const list = patternAST.list
+//           .flatMap(expandPattern)
+//           .filter(v => v && (typeof v === "string" || v.page));
+
+//         const out = [];
+//         for (let i = 0; i < reps; i++) {
+//           out.push(list[Math.floor(Math.random() * list.length)]);
+//         }
+//         return out;
+//       }
+
+//       case "Identifier": {
+//         const id = patternAST.image || patternAST.value || null;
+//         return id ? [id] : [];
+//       }
+//       default:
+//         return [];
+//     }
+//   };
+
+//   // ------------------------------------------------------------
+//   // Expand pattern and filter out nulls
+//   // ------------------------------------------------------------
+//   const pages = expandPattern(ast.pattern).filter(x => x != null);
+//   console.log("[CueDSL] ▶ Page pattern expanded to:", pages);
+
+//   if (!pages.length) {
+//     console.warn("[CueDSL] Empty or invalid page pattern:", ast.pattern);
+//     return;
+//   }
+
+//   // ------------------------------------------------------------
+//   // Sequentially play through all pages
+//   // ------------------------------------------------------------
+//   const isCancelled = () =>
+//     window._cuePageRunning && window.pageState?.mode === "scroll";
+
+//   for (let i = 0; i < pages.length; i++) {
+//     if (isCancelled()) {
+//       console.log("[CueDSL] Sequence stopped due to mode change.");
+//       return;
+//     }
+
+//     const item = pages[i];
+//     const pageId = typeof item === "object" && item.page ? item.page : item;
+//     const durNum = typeof item === "object" && item.dur ? Number(item.dur) : 0;
+
+//     const cue = `cuePage(${pageId})_dur(${durNum})`;
+//     console.log(`[CueDSL] ▶ Page ${i + 1}/${pages.length} → ${cue}`);
+
+//     await handlePageCue(cue, durNum, commonParams);
+//   }
+
+//   console.log("[CueDSL] cuePage pattern sequence finished.");
+
+//   // ------------------------------------------------------------
+//   // 🧩 Run global after: clause (if present)
+//   // ------------------------------------------------------------
+//   handleAfterAction(ast);
+// }
 
 /////////////////////////////////////////////////////////////////////////////////
 
@@ -2642,120 +2656,120 @@ export function handleVideoCueFromAST(ast, cueElement = null) {
 }
 
 
-// Kick all animations inside a standalone page SVG
-// -------------------------------------------------------------
-function startPageAnimations(svg) {
-  console.log("[cuePage] 🚀 startPageAnimations()");
-  const prevDisable = window.disableObserver;
-  window.disableObserver = true;
+// // Kick all animations inside a standalone page SVG
+// // -------------------------------------------------------------
+// function startPageAnimations(svg) {
+//   console.log("[cuePage] 🚀 startPageAnimations()");
+//   const prevDisable = window.disableObserver;
+//   window.disableObserver = true;
 
-  try {
-    window.initializeObjectPathPairs?.(svg);
-    window.initializeRotatingObjects?.(svg);
-    window.initializeScalingObjects?.(svg);
-    window.detectExistingAnimations?.();
-    window.startAllVisibleAnimations?.();
+//   try {
+//     window.initializeObjectPathPairs?.(svg);
+//     window.initializeRotatingObjects?.(svg);
+//     window.initializeScalingObjects?.(svg);
+//     window.detectExistingAnimations?.();
+//     window.startAllVisibleAnimations?.();
 
-    if (typeof window.startRotation === "function") {
-      svg.querySelectorAll('[id*="_rotate_"], [id^="obj_rotate_"]').forEach(el => {
-        try { window.startRotation(el); } catch (_) { }
-      });
-    }
-    if (typeof window.startScale === "function") {
-      svg.querySelectorAll('[id^="s_"]').forEach(el => {
-        try { window.startScale(el); } catch (_) { }
-      });
-    }
+//     if (typeof window.startRotation === "function") {
+//       svg.querySelectorAll('[id*="_rotate_"], [id^="obj_rotate_"]').forEach(el => {
+//         try { window.startRotation(el); } catch (_) { }
+//       });
+//     }
+//     if (typeof window.startScale === "function") {
+//       svg.querySelectorAll('[id^="s_"]').forEach(el => {
+//         try { window.startScale(el); } catch (_) { }
+//       });
+//     }
 
-    console.log("[cuePage] ✅ Page animations started (observer disabled).");
-  } finally {
-    // keep observers disabled during page mode
-    // window.disableObserver = prevDisable ?? false;
-  }
-}
-
-
-
-export function resolvePageTransition(opts = {}) {
-  const { mode, next, ret } = opts;
-  console.log(
-    "[resolvePageTransition]",
-    "called with:",
-    JSON.stringify({ mode, next, ret }),
-    "pageState:", window.pageState
-  );
-
-  const ps = window.pageState;
-  const container = document.getElementById("singlePage-container");
-  const content = document.getElementById("singlePage-content");
-  const countdown = document.getElementById("singlePage-countdown");
-  const mainScore = document.getElementById("scoreContainer");
-
-  console.log(`[resolvePageTransition] mode=${mode}, ps.mode=${ps.mode}, next=${next}`);
+//     console.log("[cuePage] ✅ Page animations started (observer disabled).");
+//   } finally {
+//     // keep observers disabled during page mode
+//     // window.disableObserver = prevDisable ?? false;
+//   }
+// }
 
 
-  if (!ps) return;
-  clearInterval(ps.countdown);
-  if (countdown) countdown.style.display = "none";
 
-  // -------------------------------------------------------------
-  // 1️⃣ Case: chain to next page (_next or loop)
-  // -------------------------------------------------------------
-  if (next) {
-    console.log(`[cuePage] ⏭ Transitioning directly to next page: ${next}`);
+// export function resolvePageTransition(opts = {}) {
+//   const { mode, next, ret } = opts;
+//   console.log(
+//     "[resolvePageTransition]",
+//     "called with:",
+//     JSON.stringify({ mode, next, ret }),
+//     "pageState:", window.pageState
+//   );
 
-    // If we're looping, skip fades entirely for immediate cut
-    if (mode === "loop") {
-      console.log("[cuePage] 🔁 Loop mode — cutting directly to next page.");
-      ps.mode = "page";
+//   const ps = window.pageState;
+//   const container = document.getElementById("singlePage-container");
+//   const content = document.getElementById("singlePage-content");
+//   const countdown = document.getElementById("singlePage-countdown");
+//   const mainScore = document.getElementById("scoreContainer");
 
-      updateModeToggleUI();
+//   console.log(`[resolvePageTransition] mode=${mode}, ps.mode=${ps.mode}, next=${next}`);
 
-      window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
-      window._activePageButtons = [];
-      content.innerHTML = "";
-      handleCueTrigger(`cuePage(${next})`);
-      return;
-    }
 
-    // Otherwise, do a fade transition
-    ps.mode = "transition";
-    container.style.transition = "opacity 0.5s ease";
-    container.style.opacity = "0";
+//   if (!ps) return;
+//   clearInterval(ps.countdown);
+//   if (countdown) countdown.style.display = "none";
 
-    // 🧩 Keep background hidden during transition
-    if (mainScore) {
-      mainScore.style.opacity = "0";
-      mainScore.style.pointerEvents = "none";
-    }
+//   // -------------------------------------------------------------
+//   // 1️⃣ Case: chain to next page (_next or loop)
+//   // -------------------------------------------------------------
+//   if (next) {
+//     console.log(`[cuePage] ⏭ Transitioning directly to next page: ${next}`);
 
-    setTimeout(() => {
-      ps.mode = "page";
-      updateModeToggleUI();
+//     // If we're looping, skip fades entirely for immediate cut
+//     if (mode === "loop") {
+//       console.log("[cuePage] 🔁 Loop mode — cutting directly to next page.");
+//       ps.mode = "page";
 
-      // 🧹 Clean up and load next
-      window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
-      window._activePageButtons = [];
-      content.innerHTML = "";
-      handleCueTrigger(`cuePage(${next})`);
-    }, 500);
-    return;
-  }
+//       updateModeToggleUI();
 
-  // Case: return to scrolling score (_return or popup)
-  // -------------------------------------------------------------
-  if (!window.isCuePagePlaylistActive && (ret || mode === "popup")) {
-    window.returnToScrollingScore?.();
-    return;
-  }
+//       window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
+//       window._activePageButtons = [];
+//       content.innerHTML = "";
+//       handleCueTrigger(`cuePage(${next})`);
+//       return;
+//     }
 
-  // Case: persistent page mode
-  // -------------------------------------------------------------
-  console.log("[cuePage] Holding page mode.");
-  ps.mode = "page";
-  updateModeToggleUI();
+//     // Otherwise, do a fade transition
+//     ps.mode = "transition";
+//     container.style.transition = "opacity 0.5s ease";
+//     container.style.opacity = "0";
 
-}
+//     // 🧩 Keep background hidden during transition
+//     if (mainScore) {
+//       mainScore.style.opacity = "0";
+//       mainScore.style.pointerEvents = "none";
+//     }
+
+//     setTimeout(() => {
+//       ps.mode = "page";
+//       updateModeToggleUI();
+
+//       // 🧹 Clean up and load next
+//       window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
+//       window._activePageButtons = [];
+//       content.innerHTML = "";
+//       handleCueTrigger(`cuePage(${next})`);
+//     }, 500);
+//     return;
+//   }
+
+//   // Case: return to scrolling score (_return or popup)
+//   // -------------------------------------------------------------
+//   if (!window.isCuePagePlaylistActive && (ret || mode === "popup")) {
+//     window.returnToScrollingScore?.();
+//     return;
+//   }
+
+//   // Case: persistent page mode
+//   // -------------------------------------------------------------
+//   console.log("[cuePage] Holding page mode.");
+//   ps.mode = "page";
+//   updateModeToggleUI();
+
+// }
 
 window.returnToScrollingScore = function returnToScrollingScore() {
   console.log("[cuePage] Returning to scrolling score.");

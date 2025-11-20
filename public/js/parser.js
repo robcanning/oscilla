@@ -11,7 +11,7 @@
 // Chevrotain can distinguish branches by first token.
 //
 // ============================================================================
-const OSCILLA_DSL_DEBUG = true; // turn off by setting to false
+const OSCILLA_DSL_DEBUG = false; // turn off by setting to false
 
 import {
   createToken,
@@ -26,13 +26,13 @@ export function printCST(node, depth = 0) {
   if (!node) return;
   const pad = " ".repeat(depth * 2);
   if (node.image !== undefined && node.tokenType) {
-    console.log(`${pad}- ${node.tokenType.name}: "${node.image}"`);
+    // console.log(`${pad}- ${node.tokenType.name}: "${node.image}"`);
     return;
   }
   if (node.name) console.log(`${pad}${node.name}`);
   if (node.children) {
     for (const [k, v] of Object.entries(node.children)) {
-      console.log(`${pad}  ${k}:`);
+      // console.log(`${pad}  ${k}:`);
       if (Array.isArray(v)) v.forEach((c) => printCST(c, depth + 2));
       else printCST(v, depth + 2);
     }
@@ -528,11 +528,11 @@ export class CueParser extends CstParser {
     // cuePageTop — full cue:page(...) rule
     // ------------------------------------------------------------
     $.RULE("cuePageTop", () => {
-      const dbg = {
-        enter: () => console.log(`➡️ Enter cuePageTop (next: ${$.LA(1)?.image || "EOF"})`),
-        exit: () => console.log(`⬅️ Exit  cuePageTop (next: ${$.LA(1)?.image || "EOF"})`)
-      };
-      dbg.enter();
+      // const dbg = {
+      //   enter: () => console.log(`➡️ Enter cuePageTop (next: ${$.LA(1)?.image || "EOF"})`),
+      //   exit: () => console.log(`⬅️ Exit  cuePageTop (next: ${$.LA(1)?.image || "EOF"})`)
+      // };
+      // dbg.enter();
 
       $.CONSUME(Page);          // cue:page
       $.CONSUME(LParen);        // open (
@@ -541,7 +541,7 @@ export class CueParser extends CstParser {
       $.SUBRULE($.pageBody, { LABEL: "body" });
 
       $.CONSUME(RParen);        // close )
-      dbg.exit();
+      // dbg.exit();
     });
 
 
@@ -549,11 +549,11 @@ export class CueParser extends CstParser {
     // pageBody — handles pattern + optional after clause
     // ------------------------------------------------------------
     $.RULE("pageBody", () => {
-      const dbg = {
-        enter: () => console.log(`  ↳ Enter pageBody (lookahead: ${$.LA(1)?.image || "EOF"})`),
-        exit: () => console.log(`  ↲ Exit  pageBody (lookahead: ${$.LA(1)?.image || "EOF"})`)
-      };
-      dbg.enter();
+      // const dbg = {
+      //   enter: () => console.log(`  ↳ Enter pageBody (lookahead: ${$.LA(1)?.image || "EOF"})`),
+      //   exit: () => console.log(`  ↲ Exit  pageBody (lookahead: ${$.LA(1)?.image || "EOF"})`)
+      // };
+      // dbg.enter();
 
       // Main pattern expression (Pseq(...), simple identifier, etc.)
       // console.log(`[TRACE] patternExpr start — lookahead: ${$.LA(1)?.image || "EOF"}`);
@@ -568,7 +568,7 @@ export class CueParser extends CstParser {
         // console.log(`[TRACE] afterClause end   — lookahead: ${$.LA(1)?.image || "EOF"}`);
       });
 
-      dbg.exit();
+      // dbg.exit();
     });
 
 
@@ -815,7 +815,7 @@ export class CueParser extends CstParser {
 
     // rotate(...)
     $.RULE("cueRotateTop", () => {
-      console.log("[PARSE] cueRotateTop matched!");
+      // console.log("[PARSE] cueRotateTop matched!");
 
       $.CONSUME(Rotate);
       $.SUBRULE($.animGenericParamList);
@@ -823,7 +823,7 @@ export class CueParser extends CstParser {
 
     // scale(...) and scaleXY(...)
     $.RULE("cueScaleTop", () => {
-      console.log("[PARSE] cueScaleTop matched!");
+      // console.log("[PARSE] cueScaleTop matched!");
 
       $.OR([
         { ALT: () => $.CONSUME(Scale) },
@@ -834,7 +834,7 @@ export class CueParser extends CstParser {
 
     // o2p(...)
     $.RULE("cueO2PTop", () => {
-      console.log("[PARSE] cueO2PTop matched!");
+      // console.log("[PARSE] cueO2PTop matched!");
 
       $.CONSUME(O2P);
       $.SUBRULE($.animGenericParamList);
@@ -844,7 +844,7 @@ export class CueParser extends CstParser {
     // cueTop — only fade|page at top level
     // -----------------------
     $.RULE("cueTop", () => {
-      console.log("[cueTop] LA(1):", $.LA(1).image, $.LA(1).tokenType.name);
+      // console.log("[cueTop] LA(1):", $.LA(1).image, $.LA(1).tokenType.name);
 
       // Allow optional cue: prefix (backwards compatible)
       $.OPTION(() => {
@@ -950,7 +950,7 @@ function convertPatternNodeToAST(node) {
   }
 
   // Debug (optional, can comment out later)
-  console.log("[convertPatternNodeToAST] 🧩 Node:", node.name || node.type, node.children);
+  // console.log("[convertPatternNodeToAST] 🧩 Node:", node.name || node.type, node.children);
 
   // --- patternExpr wrapper ---
   if (node.name === "patternExpr") {
@@ -1077,7 +1077,7 @@ export function extractAfterClause(children) {
   const target = ctrl.children.targetUid?.[0]?.image || null;
 
   if (!control) return null;
-  console.log("[extractAfterClause] ✅ control:", control, "arg:", arg, "target:", target);
+  // console.log("[extractAfterClause] ✅ control:", control, "arg:", arg, "target:", target);
   return { control, arg, target };
 }
 
@@ -1641,7 +1641,7 @@ export function cstToAst(cst) {
   // shared helper animation AST builders (with instrumentation)
   // ============================================================================
   function extractAnimKvArgs(node) {
-    if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() ENTER:", node);
+    // if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() ENTER:", node);
 
     const out = [];
 
@@ -1686,19 +1686,19 @@ export function cstToAst(cst) {
   // ============================================================================
   const rotNode = cst.children?.cueRotateTop?.[0] || (cst.name === "cueRotateTop" ? cst : null);
   if (rotNode) {
-    console.log("%c[cstToAst] MATCH cueRotateTop", "color:#ff0;background:#000;padding:3px;");
+    // console.log("%c[cstToAst] MATCH cueRotateTop", "color:#ff0;background:#000;padding:3px;");
     return { type: "cueRotate", args: extractAnimKvArgs(rotNode) };
   }
 
   const scNode = cst.children?.cueScaleTop?.[0] || (cst.name === "cueScaleTop" ? cst : null);
   if (scNode) {
-    console.log("%c[cstToAst] MATCH cueScaleTop", "color:#ff0;background:#000;padding:3px;");
+    // console.log("%c[cstToAst] MATCH cueScaleTop", "color:#ff0;background:#000;padding:3px;");
     return { type: "cueScale", args: extractAnimKvArgs(scNode) };
   }
 
   const o2pNode = cst.children?.cueO2PTop?.[0] || (cst.name === "cueO2PTop" ? cst : null);
   if (o2pNode) {
-    console.log("%c[cstToAst] MATCH cueO2PTop", "color:#ff0;background:#000;padding:3px;");
+    // console.log("%c[cstToAst] MATCH cueO2PTop", "color:#ff0;background:#000;padding:3px;");
     return { type: "cueO2P", args: extractAnimKvArgs(o2pNode) };
   }
 
@@ -1715,9 +1715,9 @@ export function cstToAst(cst) {
 // ============================================================================
 export function parseCueToAST(input) {
   const lexResult = CueLexer.tokenize(input);
-  debugTokens(input);  // 👈 add this
+  // debugTokens(input);  //
 
-  console.log("[LexerDebug] Tokens:", lexResult.tokens.map(t => t.image));
+  // console.log("[LexerDebug] Tokens:", lexResult.tokens.map(t => t.image));
   console.log("[LexerDebug] Errors:", lexResult.errors);
 
   const parser = new CueParser();
@@ -1730,9 +1730,9 @@ export function parseCueToAST(input) {
   }
 
   console.log("✅ Parsed CST structure ↓↓↓");
-  printCST(cst);
+  // printCST(cst);
   const ast = cstToAst(cst);
-  console.log("[CueDSL] ✅ Parsed AST:", ast);
+  // console.log("[CueDSL] ✅ Parsed AST:", ast);
   return ast;
 }
 

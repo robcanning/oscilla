@@ -78,282 +78,143 @@ import {
   handleRestoredRepeatState,
   assignCues
 } from './cues.js';
-
-
-
-// import {
-//   // startRotate,
-//   // startRotation,
-//   // startScale,
-//   // initializeObjectPathPairs,
-//   // parseO2PCompact,
-//   // animateObjToPath,
-//   // extractTagValue,
-//   // getEasingFromId,
-//   // applyPivotFromId,
-//   // setTransformOriginToCenter,
-//   // parseCompactAnimationValues,
-//   // checkAnimationVisibility,
-//   // initializeObserver
-// } from './anim.js';
-
-
+// app.js
 // import { ensureRotationCSSGuard } from './anim.js';
 
 export const initializeSVG = async (svgElement) => {
-
   console.group("[initializeSVG]");
-  console.time("[initializeSVG] total");
+  console.log("→ Incoming SVG:", svgElement?.id || "(no id)");
 
-  //   // Ensure we received a valid SVG element before continuing
-  // if (!svgElement) {
-  //   console.error("[ERROR] No SVG element provided to initializeSVG.");
-  //   return;
-  // }
-
-
-  // console.log("SVG element:", svgElement);
-  // console.log("Bounding box:", svgElement.getBoundingClientRect());
-
-
-  /////////////////////////////////////////////////////////////////////////////
-
-
-  // window.DEBUG_COORDS = true;
-
-  // function getSVG() { return document.querySelector("#score"); }
-  // function getCTM() { const s = getSVG(); return s ? s.getScreenCTM() : null; }
-
-  // function svgToClientX(svgX) {
-  //   const s = getSVG(), c = getCTM(); if (!s || !c) return null;
-  //   const pt = s.createSVGPoint(); pt.x = svgX; pt.y = 0; return pt.matrixTransform(c).x;
-  // }
-  // function clientToSvgX(clientX) {
-  //   const s = getSVG(), c = getCTM(); if (!s || !c) return null;
-  //   const inv = c.inverse(); const pt = s.createSVGPoint(); pt.x = clientX; pt.y = 0;
-  //   return pt.matrixTransform(inv).x;
-  // }
-  // function logCoord(tag, obj = {}) { if (window.DEBUG_COORDS) console.log(`[COORD] ${tag}`, obj); }
-
-  // Expand all propagate(...) group IDs into per-child animation/cue IDs before parsing
-  propagate(svgElement);
-
-  // 🧩 Skip global reinit for embedded page overlays
-  if (svgElement?.id === "pageSVG" || svgElement?.classList.contains("oscilla-page")) {
-    console.log("[initializeSVG] ⚠️ Skipping global reset for page overlay SVG.");
-    window.extractScoreElements?.(svgElement);
+  if (!svgElement) {
+    console.warn("[initializeSVG] ❌ No SVG element provided");
+    console.groupEnd();
     return;
   }
 
+  /////////////////////////////////////////////////////////////////////////////
+  // 0. Expand propagate(...) sequences before anything else
+  /////////////////////////////////////////////////////////////////////////////
+  await settleDomForPropagate();
+  console.log("[initializeSVG] 🔧 propagate() after FULL DOM settle");
+  propagate(svgElement);
 
+  /////////////////////////////////////////////////////////////////////////////
+  // 1. PAGE OVERLAY LIGHT INITIALISATION
+  /////////////////////////////////////////////////////////////////////////////
+  const isPageOverlay =
+    svgElement.id === "pageSVG" ||
+    svgElement.classList.contains("oscilla-page");
 
-  const flattenPathTranslate = (path, dx, dy) => {
-    const d = path.getAttribute('d');
-    if (!d) {
-      //console.warn(`[TRANSFORM-FIX] Skipped path with no 'd': ${path.id}`);
-      return;
+  window.isPageOverlay = isPageOverlay;
+
+  if (isPageOverlay) {
+    console.log("[initializeSVG] 🟦 Page overlay detected → light init");
+
+    // Ensure registry exists for menus & reuse-blocks
+    if (!window.pageRegistry || Object.keys(window.pageRegistry).length === 0) {
+      console.log("[initializeSVG][page] 🔧 Building page registry for overlays");
+      buildPageRegistryFromDirIndex();
     }
 
-    if (typeof SVGPathCommander === 'undefined') {
-      //console.error("[TRANSFORM-FIX] ❌ SVGPathCommander not loaded. Please include it via CDN.");
-      return;
-    }
+    console.log("[initializeSVG][page] 🔧 registerReuseBlocks()");
+    registerReuseBlocks(svgElement);
 
-    try {
-      const shape = new SVGPathCommander(d);
-      shape.transform({ translate: [dx, dy] });
-      const newD = shape.toString();
-      path.setAttribute('d', newD);
+    console.log("[initializeSVG][page] 🔧 storePathVariants()");
+    window.storePathVariants(svgElement);
 
-    } catch (err) {
-      // console.warn(`[TRANSFORM-FIX] ❌ Failed to translate path ${path.id}`, err);
-    }
-  };
+    console.log("[initializeSVG][page] 🔧 animationAssign()");
+    animationAssign(svgElement);
 
-  // const applyTranslationToShape = (el, dx, dy) => {
-  //   const tag = el.tagName.toLowerCase();
+    console.log("[initializeSVG][page] 🔧 initializeObserver()");
+    initializeObserver();
 
-  //   if (tag === 'path') {
-  //     flattenPathTranslate(el, dx, dy);
-  //   } else if (tag === 'rect' || tag === 'use') {
-  //     const x = parseFloat(el.getAttribute('x') || 0);
-  //     const y = parseFloat(el.getAttribute('y') || 0);
-  //     el.setAttribute('x', x + dx);
-  //     el.setAttribute('y', y + dy);
-  //     // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''} to (${x + dx}, ${y + dy})`);
-  //   } else if (tag === 'circle' || tag === 'ellipse') {
-  //     const cx = parseFloat(el.getAttribute('cx') || 0);
-  //     const cy = parseFloat(el.getAttribute('cy') || 0);
-  //     el.setAttribute('cx', cx + dx);
-  //     el.setAttribute('cy', cy + dy);
-  //     // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''} to (${cx + dx}, ${cy + dy})`);
-  //   } else if (tag === 'line') {
-  //     ['x1', 'y1', 'x2', 'y2'].forEach(attr => {
-  //       const val = parseFloat(el.getAttribute(attr) || 0);
-  //       el.setAttribute(attr, val + (attr.startsWith('x') ? dx : dy));
-  //     });
-  //     // console.debug(`[TRANSFORM-FIX] Moved <line> ${el.id || ''}`);
-  //   } else if (tag === 'polyline' || tag === 'polygon') {
-  //     const points = el.getAttribute('points') || '';
-  //     const newPoints = points
-  //       .trim()
-  //       .split(/\s+/)
-  //       .map(pair => {
-  //         const [px, py] = pair.split(',').map(Number);
-  //         return `${px + dx},${py + dy}`;
-  //       })
-  //       .join(' ');
-  //     el.setAttribute('points', newPoints);
-  //     // console.debug(`[TRANSFORM-FIX] Moved <${tag}> ${el.id || ''}`);
-  //   } else if (tag === 'g') {
-  //     Array.from(el.children).forEach(child => applyTranslationToShape(child, dx, dy));
-  //   } else {
-  //     // console.debug(`[TRANSFORM-FIX] Skipped unsupported element: <${tag}> ${el.id || ''}`);
-  //   }
-  // };
+    if (!window.cues) window.cues = [];
+    console.log("[initializeSVG][page] 🔧 assignCues()");
+    assignCues(svgElement, window.cues);
 
-  // ✅ Apply transforms first (flatten <use> and group transforms)
-  // applyInkscapeTransforms(svgElement);
+    console.log("[initializeSVG][page] 🔧 setupScore()");
+    window.setupScore?.(svgElement);
 
-  // 📦 Store global reference to the SVG for later use
-  window.scoreSVG = svgElement;
-
-  // ✅ Flatten transforms (already done here)
-  // svgElement.querySelectorAll('g[transform]').forEach(flattenGroupTransform);
-
-  // ✅ Replace <use> elements (already done here)
-
-  // assignCues(svgElement, window.cues);
-
-  // enableLiveInspector({
-  //   startRotate,
-  //   startScale,
-  //   // startObj2Path
-  // });
-
-  registerReuseBlocks(svgElement);
-
-  // 🧩 Build pathVariantsMap for o2p Case 5 animations —
-  // groups related path IDs (e.g. path-9997-1,-2,…) so multi-path ghost motion works
-
-  window.storePathVariants(svgElement)
-
-  // preloadSpeedCues();
-
-  // // Handle all <use> clones
-  // const useElements = svgElement.querySelectorAll('use');
-
-  // useElements.forEach(clone => {
-  //   // Skip <use> if it is already inside a <g id^="obj_rotate_">
-  //   if (clone.closest('[id^="obj_rotate_"]')) {
-  //     // console.log(`[SKIP] Skipping <use id="${clone.id}"> because it's already wrapped`);
-  //     return;
-  //   }
-
-  //   const href = clone.getAttribute('xlink:href') || clone.getAttribute('href');
-  //   if (!href) return;
-
-  //   const refId = href.replace(/^#/, '');
-  //   const original = svgElement.querySelector(`#${CSS.escape(refId)}`);
-  //   if (!original) return;
-
-  //   // Clone the original
-  //   const deepClone = original.cloneNode(true);
-  //   deepClone.removeAttribute("transform"); // prevent double-transform
-
-  //   // Generate a unique obj_rotate_* ID
-  //   const uidMatch = clone.id.match(/uid(\d+)/);
-  //   const uid = uidMatch ? uidMatch[1] : Math.floor(Math.random() * 10000);
-  //   const rpm = (Math.random() * 2 + 0.5).toFixed(2);
-  //   const dir = Math.random() > 0.5 ? 1 : -1;
-  //   const rotateId = `obj_rotate_rpm_${rpm}_dir_${dir}_ease_easeInOutSine-${uid}`;
-
-  //   //  Wrap the cloned content in a new rotation group
-  //   const rotateWrapper = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  //   rotateWrapper.setAttribute("id", rotateId);
-  //   rotateWrapper.appendChild(deepClone);
-
-  //   //  Wrap the rotator in a group with the original <use>'s ID (for s_seq animation)
-  //   const animatedGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  //   animatedGroup.setAttribute("id", clone.id);
-  //   animatedGroup.appendChild(rotateWrapper);
-
-  //   //  Wrap everything in a positioned group using <use>'s transform
-  //   const positionedGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  //   const transform = clone.getAttribute("transform");
-  //   if (transform) {
-  //     positionedGroup.setAttribute("transform", transform);
-  //   }
-  //   positionedGroup.appendChild(animatedGroup);
-
-  //   //  Replace the <use> with the real structure
-  //   clone.parentNode.insertBefore(positionedGroup, clone);
-  //   clone.remove();
-
-  // });
-
-  if (window.playheadX === undefined) {
-    window.playheadX = 0;  // safe world origin default
+    console.log("[initializeSVG][page] ✅ Page overlay initialisation complete.");
+    console.groupEnd();
+    return;
   }
 
-  // console.log("[DEBUG] Initializing SVG element:", svgElement);
+  /////////////////////////////////////////////////////////////////////////////
+  // 2. SCROLL-MODE INITIALISATION
+  /////////////////////////////////////////////////////////////////////////////
+  console.log("[initializeSVG] 🟩 Scroll-mode initialisation");
 
-  // First paint tick so layout is stable
-requestAnimationFrame(() => {
-
-  // requestAnimationFrame(() => {
-  //   window.ensureWindowPlayheadX(); 
-  // });
-
-  // // ----- PAGE REGISTRY FIRST -----
+  // Ensure registry exists BEFORE reuse.js tries to use it
+  console.log("[initializeSVG] 🔧 buildPageRegistryFromDirIndex() (pre-RAF)");
   buildPageRegistryFromDirIndex();
+
+  console.log("[initializeSVG] 🔧 refreshAllPagesMenu() (pre-RAF)");
   refreshAllPagesMenu();
 
-  // -----  animationAssign   -----
-  console.log("[initializeSVG] Running animationAssign()…");
-  animationAssign(svgElement);
-  initializeObserver();  
-  // ---------------------------------------------
+  console.log("[initializeSVG] 🔧 registerReuseBlocks()");
+  registerReuseBlocks(svgElement);
 
+  console.log("[initializeSVG] 🔧 storePathVariants()");
+  window.storePathVariants(svgElement);
+
+  if (window.playheadX === undefined) {
+    window.playheadX = 0;
+    console.log("[initializeSVG] playheadX defaulted to 0");
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // 2A. FIRST RAF — run animationAssign + observer
+  /////////////////////////////////////////////////////////////////////////////
   requestAnimationFrame(() => {
+    console.log("[initializeSVG] 🔧 animationAssign()");
+    animationAssign(svgElement);
+
+    console.log("[initializeSVG] 🔧 initializeObserver()");
+    initializeObserver();
+
+    ///////////////////////////////////////////////////////////////////////////
+    // 2B. SECOND + THIRD RAF — final paint → assign cues + setupScore
+    ///////////////////////////////////////////////////////////////////////////
     requestAnimationFrame(() => {
-      const svgReady = svgElement || document.querySelector("#scoreContainer svg");
-      if (!svgReady) {
-        console.warn("[initializeSVG] ⚠️ setupScore(): SVG still not found after paint.");
-        return;
-      }
+      requestAnimationFrame(() => {
+        const svgReady = svgElement || document.querySelector("#scoreContainer svg");
+        if (!svgReady) {
+          console.warn("[initializeSVG] ⚠️ setupScore(): SVG still not ready after paint");
+          return;
+        }
 
-      console.group("[initializeSVG] Final SVG paint phase");
-      console.time("[initializeSVG] cue+setup total");
+        console.group("[initializeSVG] Final SVG paint phase");
+        console.time("[initializeSVG] cue+setup total");
 
-      if (!window.cues) window.cues = [];
+        if (!window.cues) window.cues = [];
 
-      console.log("[initializeSVG] Assigning cues after layout is fully ready…");
-      assignCues(svgReady, window.cues);
+        console.log("[initializeSVG] 🔧 assignCues()");
+        assignCues(svgReady, window.cues);
 
-      if (typeof window.setupScore === "function") {
-        console.log("[initializeSVG] Running setupScore…");
-        window.setupScore(svgReady);
-      } else {
-        console.warn("[initializeSVG] ⚠️ setupScore() not available yet.");
-      }
+        if (typeof window.setupScore === "function") {
+          console.log("[initializeSVG] 🔧 setupScore()");
+          window.setupScore(svgReady);
+        } else {
+          console.warn("[initializeSVG] ⚠️ setupScore() missing");
+        }
 
-      console.timeEnd("[initializeSVG] cue+setup total");
-      console.groupEnd();
+        console.timeEnd("[initializeSVG] cue+setup total");
+        console.groupEnd();
+      });
     });
-  });
 
-
-
-    // TODO CSS IN SCROLL MODE - HEIGHT NEEDS TO BE 95% OR SOMETHING
-    // BUT THEN THE JUMP2X ETC SYNC BREAKS . NEED TO SORT ORDER OF EX
-    // PROJECT LOADER ALSO DOES CSS STUFF LIKE THIS - WHAT IS REDUNDANT?
-
-    // --- Wide-scroll layout correction ---
+    ///////////////////////////////////////////////////////////////////////////
+    // 2C. Wide-scroll layout correction
+    ///////////////////////////////////////////////////////////////////////////
     const applyWideScrollLayout = () => {
       const cont = document.getElementById("scoreContainer");
       const svg = svgElement;
-      if (!svg || !cont) return;
+
+      if (!svg || !cont) {
+        console.warn("[initializeSVG] ⚠️ Wide-scroll layout skipped — missing container or SVG");
+        return;
+      }
 
       Object.assign(cont.style, {
         width: "100vw",
@@ -362,83 +223,112 @@ requestAnimationFrame(() => {
         overflowY: "hidden",
         whiteSpace: "nowrap",
         display: "block",
-        position: "relative"
+        position: "relative",
       });
 
       svg.removeAttribute("width");
       svg.removeAttribute("height");
+
       Object.assign(svg.style, {
         display: "inline-block",
         height: "100vh",
         width: "auto",
         maxWidth: "none",
         maxHeight: "100%",
-        verticalAlign: "top"
+        verticalAlign: "top",
       });
 
-      svg.getBoundingClientRect(); // force reflow
-      console.log("[initializeSVG] Applied wide-scroll layout correction.");
+      svg.getBoundingClientRect();
+      console.log("[initializeSVG] 🟩 Wide-scroll layout applied");
     };
 
     window.applyWideScrollLayout = applyWideScrollLayout;
 
-    // Wait until the SVG is *actually* inserted and painted
     requestAnimationFrame(() => {
       requestAnimationFrame(applyWideScrollLayout);
     });
 
-
+    ///////////////////////////////////////////////////////////////////////////
+    // 2D. Disable native scrolling + measure world width + score_meta
+    ///////////////////////////////////////////////////////////////////////////
     const container = window.scoreContainer;
     const svg = svgElement;
 
-    if (!container || !svg) return;
+    if (!container || !svg) {
+      console.warn("[initializeSVG] ⚠️ Missing container/SVG for scroll-mode setup");
+      return;
+    }
 
-    //  Step 2: Hard-disable native scroll BEFORE doing any measurement
     container.style.overflow = "hidden";
 
-    //  Block wheel/touch gestures that cause momentum scroll
-    const stopScroll = e => { e.preventDefault(); e.stopPropagation(); return false; };
-    ["wheel", "touchmove", "gesturestart", "gesturechange", "gestureend"].forEach(ev =>
+    const stopScroll = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    };
+
+    ["wheel", "touchmove", "gesturestart", "gesturechange", "gestureend"].forEach((ev) =>
       container.addEventListener(ev, stopScroll, { passive: false })
     );
 
-    //  Zero any scroll offsets immediately and forever
-    container.addEventListener("scroll", () => {
-      if (container.scrollLeft !== 0 || container.scrollTop !== 0) {
-        container.scrollLeft = 0;
-        container.scrollTop = 0;
-      }
-    }, { passive: true });
+    container.addEventListener(
+      "scroll",
+      () => {
+        if (container.scrollLeft !== 0 || container.scrollTop !== 0) {
+          container.scrollLeft = 0;
+          container.scrollTop = 0;
+        }
+      },
+      { passive: true }
+    );
 
-    // --- Align world coordinate width (your existing code) ---
+    // Determine score width
     let width = null;
     const attrWidth = svg.getAttribute("width");
+
     if (attrWidth && !attrWidth.includes("%")) width = parseFloat(attrWidth);
     if (!width && svg.viewBox?.baseVal) width = svg.viewBox.baseVal.width;
     if (!width && svg.getBBox) width = svg.getBBox().width;
-    window.scoreWidth = width || 40960;
-    console.log(`[Oscilla] scoreWidth = ${window.scoreWidth}`);
 
-    //  Now measure — guaranteed not polluted by scroll offsets
+    window.scoreWidth = width || 40960;
+    console.log(`[initializeSVG] 🧭 scoreWidth = ${window.scoreWidth}`);
+
+    // Sync with server
     if (window.socket && window.scoreWidth) {
       const renderedWidth = svg.getBoundingClientRect().width;
-      const worldWidth = window.scoreWidth;
 
-      console.log("[initializeSVG] score_meta sent to server.");
-      window.socket.send(JSON.stringify({
-        type: "score_meta",
-        project: window.currentProject,
-        scoreWidth: worldWidth,
-        renderedWidth: renderedWidth,
-        duration: window.duration  // ✅ send ms to server
-
-      }));
+      console.log("[initializeSVG] 🔧 Sending score_meta to server");
+      window.socket.send(
+        JSON.stringify({
+          type: "score_meta",
+          project: window.currentProject,
+          scoreWidth: window.scoreWidth,
+          renderedWidth: renderedWidth,
+          duration: window.duration,
+        })
+      );
     }
 
-    console.log("\n [DEBUG] Page Loaded - Initial State:");
-
+    console.log("[initializeSVG] 🟩 Scroll-mode initialisation complete");
   });
+
+  console.groupEnd();
 };
+
+// Helper: keep your existing “FULL DOM settle” dance
+async function settleDomForPropagate() {
+  // Allow DOM to stabilise before propagate begins
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  // Now safely expand propagate(...) groups
+  // FULL DOM settle
+  await Promise.resolve(); // flush microtasks
+  await new Promise((r) => requestAnimationFrame(r)); // 1st frame
+  await new Promise((r) => requestAnimationFrame(r)); // 2nd frame (children attached)
+  await new Promise((r) => setTimeout(r, 0)); // defs/use resolution
+}
+
+
 
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -790,77 +680,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // document.addEventListener('keydown', clearPopupsOnInteraction);
   // document.addEventListener('touchstart', clearPopupsOnInteraction);
 
-
-
-
-
-
-  // function handleRestoredRepeatState(repeatStateMap, cues) {
-  //   console.log("[CLIENT]  Restoring repeat state now...", repeatStateMap);
-
-  //   for (const [cueId, repeat] of Object.entries(repeatStateMap)) {
-  //     if (!repeat || typeof repeat !== "object") {
-  //       console.warn(`[restore] Skipping invalid repeat entry for cueId: ${cueId}`);
-  //       continue;
-  //     }
-
-  //     if (repeat.active && !repeat.initialJumpDone) {
-  //       console.log(`[CLIENT] ⏮ Evaluating active repeat: ${cueId}`);
-
-  //       const startCue = cues.find(c => c.id === repeat.startId);
-  //       const endCue = repeat.endId === 'self'
-  //         ? cues.find(c => c.id === cueId)
-  //         : cues.find(c => c.id === repeat.endId);
-
-  //       if (startCue && endCue) {
-  //         const playheadCenter =window.playheadX + (window.scoreContainer.offsetWidth / 2);
-  //         const inRange = playheadCenter >= startCue.x && playheadCenter <= endCue.x + endCue.width;
-
-  //         if (inRange) {
-  //           console.log(`[CLIENT] Already inside repeat range for ${cueId}. Skipping jump.`);
-
-  //           repeat.initialJumpDone = true;
-  //           repeat.ready = true;
-
-  //           if (!repeat.recovered) {
-  //             repeat.currentCount = (repeat.currentCount || 0) + 1;
-  //           } else {
-  //             // already bumped during recovery, clear flag
-  //             delete repeat.recovered;
-  //           }
-
-  //           repeat.recovered = true;
-  //           jumpToCueId(repeat.startId); // Force visual re-alignment
-
-  //           repeatStateMap[cueId] = repeat;
-
-  //           updateRepeatCountDisplay(repeat.currentCount + 1);
-  //           document.getElementById("repeat-count-box").classList.remove("hidden");
-  //           document.getElementById("repeat-count-box").classList.add("pulse");
-  //           document.getElementById("playhead").classList.add("repeating");
-
-
-  //         } else {
-  //           console.log(`[CLIENT]  Outside repeat range — jumping to start for ${cueId}.`);
-
-  //           repeat.ready = false;
-  //           repeat.initialJumpDone = true;
-  //           repeatStateMap[cueId] = repeat;
-
-  //           executeRepeatJump(repeat, cueId).then(() => {
-  //             setTimeout(() => {
-  //               repeat.ready = true;
-  //               repeatStateMap[cueId] = repeat;
-  //               console.log(`[CLIENT]  Repeat ${cueId} now ready to detect end cue.`);
-  //             }, 300);
-  //           });
-  //         }
-  //       } else {
-  //         console.warn(`[CLIENT]  Could not resolve start or end cue for ${cueId}. Skipping recovery.`);
-  //       }
-  //     }
-  //   }
-  // }
 
 
   ///////START OF WEBSOCKET SETUP LOGIC ///////////////////////////////////////////
@@ -1481,201 +1300,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
-
-  // //////////////////////////////////////////////////////
-  // // Ensures Anime.js animations are detected and tracked dynamically
-  // // Pauses animations when they are not visible and resumes them when they reappear
-  // // Supports path-based (obj2path-*), rotation (obj_*_rotate_*), and other Anime.js animations
-  // // Uses Intersection Observer to optimize performance by stopping off-screen animations
-  // // Ensures the observer starts only after animations are fully initialized
-
-  // window.runningAnimations = {}; // Store active animations globally
-
-  // // Function to detect and track existing animations (including rotation)
-  // window.detectExistingAnimations = function () {
-  //   console.log("[DEBUG] Checking currently running Anime.js animations...");
-
-  //   anime.running.forEach(anim => {
-  //     anim.animatables.forEach(animatable => {
-  //       const target = animatable.target;
-  //       if (target && target.getAttribute) {
-  //         const id = target.getAttribute("id");
-
-  //         // Ensure we track both path-based and rotation-based animations
-  //         if (id && (id.startsWith('obj2path') || id.startsWith('obj_') || id.includes('_rotate_'))) {
-  //           if (!window.runningAnimations[id]) {
-  //             // console.log("[DEBUG] Tracking new animation for: " + id);
-  //             window.runningAnimations[id] = anim;
-  //           }
-  //         }
-  //       }
-  //     });
-  //   });
-
-  //   // console.log("[DEBUG] Updated running animations:", Object.keys(window.runningAnimations));
-  // };
-
-  // /**
-  // *  Optimized Function: checkAnimationVisibility (with state change logging)
-  // *
-  // * - Checks both the object and its associated path for visibility.
-  // * - If the path is visible but the object is off-screen, the animation **continues**.
-  // * - Logs when an animation starts playing for the first time.
-  // * - Logs when an animation pauses for the first time after it has been playing.
-  // * - Uses `window.runningAnimations` to manage active animations.
-  // * - Removes redundant event listeners and interval (handled elsewhere in app.js).
-  // */
-
-  // window.checkAnimationVisibility = function () {
-  //   Object.entries(window.runningAnimations).forEach(([id, instance]) => {
-  //     const el = document.getElementById(id);
-  //     if (!el) return;
-
-  //     const rect = el.getBoundingClientRect();
-  //     const isVisible = rect.top < window.innerHeight &&
-  //       rect.bottom > 0 &&
-  //       rect.left < window.innerWidth &&
-  //       rect.right > 0;
-
-  //     if (isVisible) {
-  //       if (instance.wasPaused) {
-  //         // console.log(`[CHECK] ${id} became visible — resuming`);
-  //         if (typeof instance.resume === "function") instance.resume();
-  //         else if (typeof instance.play === "function") instance.play();
-  //         instance.wasPaused = false;
-  //       }
-  //     } else {
-  //       if (!instance.wasPaused) {
-  //         // console.log(`[CHECK] ${id} is off-screen — pausing`);
-  //         if (typeof instance.pause === "function") instance.pause();
-  //         instance.wasPaused = true;
-  //       }
-  //     }
-  //   });
-  // };
-
-
-  // window.initializeObserver = function () {
-  //   if (window.observer) window.observer.disconnect();
-
-  //   window.observer = new IntersectionObserver((entries) => {
-  //     if (window.disableObserver) return; // Skip all observer logic
-
-  //     for (const entry of entries) {
-  //       const el = entry.target;
-  //       const id = el.id;
-  //       const instance = window.runningAnimations[id];
-
-  //       if (!instance) continue;
-
-  //       if (entry.isIntersecting) {
-  //         if (instance.wasPaused || instance.autoStart) {
-  //           if (typeof instance.resume === "function") instance.resume();
-  //           else if (typeof instance.play === "function") instance.play();
-  //           // console.log(`[OBSERVER] ${id} entered view — resumed`);
-  //           instance.wasPaused = false;
-  //           instance.autoStart = false;
-  //         }
-  //       } else {
-  //         if (typeof instance.pause === "function") instance.pause();
-  //         instance.wasPaused = true;
-  //         // console.log(`[OBSERVER] ${id} left view — paused`);
-  //       }
-  //     }
-  //   }, {
-  //     root: null,
-  //     threshold: 0.01,
-  //     rootMargin: "0px", //  Use full viewport width for visibility detection.
-  //     // This ensures that any object visually inside the screen 
-  //     // (not just near the center) will trigger IntersectionObserver.
-  //     // Narrow values like "-45%" were previously used to simulate a 
-  //     // central "playhead zone", but caused false negatives on pause, 
-  //     // reload, or cue jumps. Defaulting to full view is more robust.    
-  //   });
-
-
-  //   // Global OBSERVER DISABLE for dubugging
-  //   // window.disableObserver = true;
-
-  //   Object.entries(window.runningAnimations).forEach(([id, instance]) => {
-  //     const el = document.getElementById(id);
-  //     if (el instanceof Element) {
-  //       window.observer.observe(el);
-  //     }
-  //   });
-
-  //   //  Immediately check visibility
-  //   requestAnimationFrame(() => {
-  //     window.checkAnimationVisibility();
-  //   });
-  // };
-
-  // window.startAllVisibleAnimations = () => {
-  //   console.log(`[DEBUG] Checking ${Object.keys(window.runningAnimations).length} animations for visibility`);
-
-  //   Object.entries(window.runningAnimations).forEach(([id, instance]) => {
-  //     const el = document.getElementById(id);
-
-  //     if (!el) {
-  //       console.warn(`[MISSING] No DOM element for ${id}`);
-  //       return;
-  //     }
-
-  //     const rect = el.getBoundingClientRect();
-  //     const isVisible =
-  //       rect.top < window.innerHeight &&
-  //       rect.bottom > 0 &&
-  //       rect.left < window.innerWidth &&
-  //       rect.right > 0;
-
-  //     // console.log(`[CHECK] ${id}: visible=${isVisible}, rect=${JSON.stringify(rect)}`);
-
-  //     if (isVisible) {
-  //       // console.log(`[FORCE PLAY] ${id}`);
-  //       if (typeof instance.resume === "function") {
-  //         instance.resume();
-  //         // console.log(`[DEBUG] Called resume() on ${id}`);
-  //       } else if (typeof instance.play === "function") {
-  //         instance.play();
-  //         // console.log(`[DEBUG] Called play() on ${id}`);
-  //       } else {
-  //         console.warn(`[WARN] No resume() or play() method on ${id}`);
-  //       }
-  //     }
-  //   });
-  // };
-
-  // // Function to apply observer and visibility tracking
-  // window.observeAnimations = function () {
-  //   if (!window.observer) {
-  //     window.initializeObserver();
-  //   }
-
-  //   document.querySelectorAll(window.ANIM_SELECTOR).forEach((element) => {
-  //     const id = element.id;
-  //     if (window.runningAnimations[id]) {
-  //       window.observer.observe(element);
-  //       console.log(`[DEBUG] Observer attached to: ${id}`);
-  //     } else {
-  //       console.warn(`[SKIPPED] ${id} exists but has no registered animation.`);
-  //     }
-  //   });
-  // };
-
-  // // // Function to wait for animations to be initialized before starting detection
-  // function waitForAnimationsToInitialize() {
-  //   //console.log("[DEBUG] Waiting for animations to initialize...");
-
-  //   const checkAnimations = setInterval(() => {
-  //     if (anime.running.length > 0) { // Ensure at least one animation is running
-  //       //      console.log("[DEBUG] Animations are initialized. Running detection and observer.");
-  //       clearInterval(checkAnimations);
-
-  //       detectExistingAnimations();
-  //       observeAnimations();
-  //     }
-  //   }, 500);
-  // }
 
   /**
    * storePathVariants(svgElement)
@@ -2362,6 +1986,4 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('// EOF');
 
 });
-
-
 
