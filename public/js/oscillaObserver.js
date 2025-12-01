@@ -77,7 +77,7 @@ export function initializeObserver() {
         ////////////////////////////////////////////////////////
         if (forceVisible) {
           if (!anim.started) {
-            console.log(`[Observer] ▶ forceVisible autostart "${uid}" (kind="${kind}")`);
+            // console.log(`[Observer] ▶ forceVisible autostart "${uid}" (kind="${kind}")`);
             anim.started = true;
             anim.startFn?.();
           }
@@ -93,7 +93,7 @@ export function initializeObserver() {
           !anim.started &&
           entry.isIntersecting
         ) {
-          console.log(`[Observer] ▶ autostart "${uid}" (kind="${kind}")`);
+          // console.log(`[Observer] ▶ autostart "${uid}" (kind="${kind}")`);
           anim.startFn?.();
           anim.started = true;
           // fall through to pause/resume logic below if needed
@@ -114,7 +114,7 @@ export function initializeObserver() {
         }
 
         if (entry.isIntersecting && instance.wasPaused) {
-          console.log(`[Observer] ▶ resume "${uid}" (kind="${kind}")`);
+          // console.log(`[Observer] ▶ resume "${uid}" (kind="${kind}")`);
           if (typeof instance.play === "function") {
             instance.play();
           } else if (typeof instance.resume === "function") {
@@ -122,7 +122,7 @@ export function initializeObserver() {
           }
           instance.wasPaused = false;
         } else if (!entry.isIntersecting && !instance.wasPaused) {
-          console.log(`[Observer] ▶ pause "${uid}" (kind="${kind}")`);
+          // console.log(`[Observer] ▶ pause "${uid}" (kind="${kind}")`);
           if (typeof instance.pause === "function") {
             instance.pause();
           }
@@ -146,7 +146,7 @@ export function initializeObserver() {
     }
   }
 
-  console.log("[Observer] Initialized (auto-start, rotate/scale pause-resume, O2P forceVisible).");
+  // console.log("[Observer] Initialized (auto-start, rotate/scale pause-resume, O2P forceVisible).");
 }
 
 //////////////////////////////////////////////////////////
@@ -154,7 +154,7 @@ export function initializeObserver() {
 //////////////////////////////////////////////////////////
 
 window.refreshObserver = function () {
-  console.log("[Observer] Refresh request → reinitializing observer");
+  // console.log("[Observer] Refresh request → reinitializing observer");
   initializeObserver();
 };
 
@@ -167,7 +167,7 @@ window.refreshObserver = function () {
 //////////////////////////////////////////////////////////
 
 window.checkAnimationVisibility = function () {
-  console.log("[Observer] Manual visibility scan…");
+  // console.log("[Observer] Manual visibility scan…");
 
   for (const uid in window.oscillaAnimRegistry) {
     const anim = window.oscillaAnimRegistry[uid];
@@ -187,11 +187,11 @@ window.checkAnimationVisibility = function () {
     ////////////////////////////////////////////////////////
     if (!anim.started) {
       if (forceVisible && !anim.started) {
-        console.log(`[Observer] ▶ manual forceVisible autostart "${uid}" (kind="${kind}")`);
+        // console.log(`[Observer] ▶ manual forceVisible autostart "${uid}" (kind="${kind}")`);
         anim.startFn?.();
         anim.started = true;
       } else if (anim.trig === "auto" && visible) {
-        console.log(`[Observer] ▶ manual autostart "${uid}" (kind="${kind}")`);
+        // console.log(`[Observer] ▶ manual autostart "${uid}" (kind="${kind}")`);
         anim.startFn?.();
         anim.started = true;
       }
@@ -210,7 +210,7 @@ window.checkAnimationVisibility = function () {
     }
 
     if (visible && instance.wasPaused) {
-      console.log(`[Observer] ▶ manual resume "${uid}" (kind="${kind}")`);
+      // console.log(`[Observer] ▶ manual resume "${uid}" (kind="${kind}")`);
       if (typeof instance.play === "function") {
         instance.play();
       } else if (typeof instance.resume === "function") {
@@ -218,7 +218,7 @@ window.checkAnimationVisibility = function () {
       }
       instance.wasPaused = false;
     } else if (!visible && !instance.wasPaused) {
-      console.log(`[Observer] ▶ manual pause "${uid}" (kind="${kind}")`);
+      // console.log(`[Observer] ▶ manual pause "${uid}" (kind="${kind}")`);
       if (typeof instance.pause === "function") {
         instance.pause();
       }

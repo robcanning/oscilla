@@ -22,10 +22,10 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="0.295"
-     inkscape:cx="-81.355932"
-     inkscape:cy="389.83051"
-     inkscape:window-width="1854"
+     inkscape:zoom="0.834386"
+     inkscape:cx="75.504622"
+     inkscape:cy="861.71148"
+     inkscape:window-width="1920"
      inkscape:window-height="1011"
      inkscape:window-x="0"
      inkscape:window-y="0"
@@ -137,9 +137,9 @@
      transform="matrix(0.23659034,0,0,0.23659034,-69.542768,-84.140528)"><tspan
        x="366.70773"
        y="569.79199"
-       id="tspan3"><tspan
+       id="tspan5"><tspan
          style="font-family:FreeMono;-inkscape-font-specification:FreeMono"
-         id="tspan2">PAGE 3</tspan></tspan></text>
+         id="tspan4">PAGE 3</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:192px;font-family:FreeMono;-inkscape-font-specification:FreeMono;fill:#808000"
@@ -176,9 +176,9 @@
      style="font-weight:bold;font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000"
      x="64.406776"
      y="1083.0508"
-     id="cueGroup(mainMenu)"><tspan
+     id="use(mainMenu)"><tspan
        sodipodi:role="line"
        id="tspan1"
        x="64.406776"
-       y="1083.0508">cueGroup(mainMenu)</tspan></text>
+       y="1083.0508">use(mainMenu)</tspan></text>
 </svg>

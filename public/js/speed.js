@@ -11,15 +11,15 @@
  */
 export function extractSpeedCues(svgElement) {
   if (!svgElement) {
-    console.warn("[extractSpeedCues] No SVG element provided.");
+    // console.warn("[extractSpeedCues] No SVG element provided.");
     return [];
   }
 
-  console.log("------------------------------------------------------------");
-  console.log("[extractSpeedCues] 🔍 Scanning for speed() cues in SVG...");
+  // console.log("------------------------------------------------------------");
+  // console.log("[extractSpeedCues] 🔍 Scanning for speed() cues in SVG...");
 
   const matches = svgElement.querySelectorAll("[id^='speed(']");
-  console.log(`[extractSpeedCues] Found ${matches.length} candidate elements.`);
+  // console.log(`[extractSpeedCues] Found ${matches.length} candidate elements.`);
 
   let newSpeedMap = [];
 
@@ -28,13 +28,13 @@ export function extractSpeedCues(svgElement) {
     const match = rawId.match(/^speed\(\s*([0-9.]+)/);
 
     if (!match) {
-      console.log(`[extractSpeedCues] ⚠️ Skipping non-matching ID: ${rawId}`);
+      // console.log(`[extractSpeedCues] ⚠️ Skipping non-matching ID: ${rawId}`);
       return;
     }
 
     const speedValue = parseFloat(match[1]);
     if (isNaN(speedValue)) {
-      console.log(`[extractSpeedCues] ⚠️ Invalid number in: ${rawId}`);
+      // console.log(`[extractSpeedCues] ⚠️ Invalid number in: ${rawId}`);
       return;
     }
 
@@ -44,9 +44,9 @@ export function extractSpeedCues(svgElement) {
     let x = bbox.x;
     if (matrix) x += matrix.e;
 
-    console.log(
-      `[extractSpeedCues] 🎚 Found speed cue: id="${rawId}" → speed=${speedValue}, x=${x.toFixed(2)}`
-    );
+    // console.log(
+    //   `[extractSpeedCues] 🎚 Found speed cue: id="${rawId}" → speed=${speedValue}, x=${x.toFixed(2)}`
+    // );
 
     newSpeedMap.push({
       position: x,
@@ -57,8 +57,8 @@ export function extractSpeedCues(svgElement) {
 
   newSpeedMap.sort((a, b) => a.position - b.position);
 
-  console.log("[extractSpeedCues] ✅ Final sorted speed map:", newSpeedMap);
-  console.log("------------------------------------------------------------");
+  // console.log("[extractSpeedCues] ✅ Final sorted speed map:", newSpeedMap);
+  // console.log("------------------------------------------------------------");
 
   return newSpeedMap;
 }

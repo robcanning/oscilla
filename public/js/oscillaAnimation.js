@@ -48,7 +48,6 @@ export function resolveAnimationUid(el, kind, astArgs = []) {
 }
 
 
-
 // ------------------------------------------------------------
 // animationAssign(svgRoot)
 //   • Parses IDs
@@ -59,62 +58,87 @@ export function animationAssign(svgRoot) {
     console.group("[animationAssign] 🚀 Scanning SVG for animation expressions");
 
     if (!svgRoot) {
-        console.warn("[animationAssign] ❌ svgRoot is null/undefined.");
+        // console.warn("[animationAssign] ❌ svgRoot is null/undefined.");
         console.groupEnd();
         return;
     }
 
     const elements = svgRoot.querySelectorAll("[id*='(']");
-    console.log(`[animationAssign] Found ${elements.length} candidate elements`);
+    // console.log(`[animationAssign] Found ${elements.length} candidate elements`);
 
     elements.forEach(el => {
-        const id = el.id;
-        // console.groupCollapsed(`[animationAssign] 🎯 Checking id="${id}"`);
+        const id = el.id?.trim();
+        if (!id) return;
 
-        if (!id) {
-            console.warn("• Skipped: element has no ID");
-            console.groupEnd();
+        // ------------------------------------------------------------
+        // ❌ SKIP NON-ANIMATION IDS
+        // ------------------------------------------------------------
+        if (/^propagate\s*\(/.test(id)) {
+            // console.log("[animationAssign] ⏭ skipping propagate():", id);
             return;
         }
 
-        let ast = null;
+        if (/^reuse\s*\(/.test(id)) {
+            // console.log("[animationAssign] ⏭ skipping reuse():", id);
+            return;
+        }
 
+        if (/^use\s*\(/.test(id)) {
+            // console.log("[animationAssign] ⏭ skipping use():", id);
+            return;
+        }
+
+        if (/^assignCues\s*\(/.test(id)) {
+            // console.log("[animationAssign] ⏭ skipping assignCues():", id);
+            return;
+        }
+
+        if (/^button\s*\(/.test(id)) {
+            // console.log("[animationAssign] ⏭ skipping button():", id);
+            return;
+        }
+
+        // console.groupCollapsed(`[animationAssign] 🎯 Checking id="${id}"`);
+
+        let ast = null;
         try {
-            console.log("• Parsing →", id);
+            // console.log("• Parsing →", id);
             ast = parseCueToAST(id);
         } catch (err) {
-            console.warn("• ❌ parseCueToAST failed — probably not a cue:", err.message);
+            // console.warn("• ❌ parseCueToAST failed — probably not a cue:", err.message);
             console.groupEnd();
             return;
         }
 
         if (!ast || !ast.type) {
-            console.warn("• ❌ No AST returned — ignoring element");
+            // console.warn("• ❌ No AST returned — ignoring element");
             console.groupEnd();
             return;
         }
 
-        console.log("• AST:", ast);
+        // console.log("• AST:", ast);
 
+        // ------------------------------------------------------------
+        // DISPATCH
+        // ------------------------------------------------------------
         switch (ast.type) {
-
             case "cueScale":
-                console.log("• 📐 Dispatch → handleScaleCue()");
+                // console.log("• 📐 Dispatch → handleScaleCue()");
                 handleScaleCue(ast, el);
                 break;
 
             case "cueRotate":
-                console.log("• 🔄 Dispatch → handleRotateCue()");
+                // console.log("• 🔄 Dispatch → handleRotateCue()");
                 handleRotateCue(el, ast.args);
                 break;
 
             case "cueO2P":
-                console.log("• 🛤 Dispatch → handleO2PCue()");
+                // console.log("• 🛤 Dispatch → handleO2PCue()");
                 handleO2PCue(el, ast.args);
                 break;
 
             default:
-                console.log(`• ⚠️ Not an animation cue → type="${ast.type}"`);
+                // console.log(`• ⚠️ Not an animation cue → type="${ast.type}"`);
                 break;
         }
 
@@ -136,20 +160,20 @@ export function animationAssign(svgRoot) {
 // ------------------------------------------------------------
 export function registerAnimation(el, kind, cfg, startFn) {
     if (!window.oscillaAnimRegistry) {
-        console.warn("[oscillaAnim] ⚠️ Registry not initialized — creating new one.");
+        // console.warn("[oscillaAnim] ⚠️ Registry not initialized — creating new one.");
         window.oscillaAnimRegistry = {};
     }
 
-    console.groupCollapsed(
-        `[oscillaAnim] 🆕 Register animation`,
-        `uid="${cfg.uid}"`,
-        `kind="${kind}"`,
-        `trig="${cfg.trig || "auto"}"`
-    );
+    // console.groupCollapsed(
+    //     `[oscillaAnim] 🆕 Register animation`,
+    //     `uid="${cfg.uid}"`,
+    //     `kind="${kind}"`,
+    //     `trig="${cfg.trig || "auto"}"`
+    // );
 
-    console.log("• Element:", el);
-    console.log("• Trigger:", cfg.trig || "auto");
-    console.log("• Full cfg:", cfg);
+    // console.log("• Element:", el);
+    // console.log("• Trigger:", cfg.trig || "auto");
+    // console.log("• Full cfg:", cfg);
 
     if (el.dataset) el.dataset.animUid = cfg.uid;
 
@@ -175,7 +199,7 @@ export function registerAnimation(el, kind, cfg, startFn) {
         forceVisible: window.isPageOverlay === true
     };
 
-    console.log("• Registry size:", Object.keys(window.oscillaAnimRegistry).length);
+    // console.log("• Registry size:", Object.keys(window.oscillaAnimRegistry).length);
     console.groupEnd();
 
     if (window.refreshObserver) window.refreshObserver();
@@ -192,7 +216,7 @@ export function registerRunningAnimation(uid, instance) {
     window.runningAnimations[uid] = instance;
     window.runningAnimations[uid].wasPaused = false;
 
-    console.log(`[oscillaAnim] 🟢 Running instance registered for uid="${uid}"`);
+    // console.log(`[oscillaAnim] 🟢 Running instance registered for uid="${uid}"`);
 }
 
 

@@ -131,10 +131,10 @@ export function parseCueParams(cueId) {
   if (cueId.includes(":") && cueId.includes("{")) {
     try {
       const result = parseCueDSL(cueId);
-      console.log("[CueDSL] JSON-style DSL parsed successfully:", result);
+      // console.log("[CueDSL] JSON-style DSL parsed successfully:", result);
       return result;
     } catch (err) {
-      console.warn("[CueDSL] JSON-style DSL failed → fallback to legacy:", err);
+      // console.warn("[CueDSL] JSON-style DSL failed → fallback to legacy:", err);
     }
   }
 
@@ -190,25 +190,57 @@ function capitalize(s) {
 
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
-
 export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, cueElement = null) {
   console.log(`[DEBUG] Attempting to trigger cue:`, cueExprOrAst);
 
-  // ✅ If already parsed AST is passed (e.g., from cueButton click)
+  // ---------------------------
+  // 🔍 STEP 1: Normalise AST
+  // ---------------------------
   let ast = null;
-  if (typeof cueExprOrAst === "object" && cueExprOrAst.type) {
-    ast = cueExprOrAst;
-  } else {
-    // Otherwise parse as string cue expression
-    const cueId = String(cueExprOrAst).trim();
+  let cueId = null;
 
+  const isAstObject = typeof cueExprOrAst === "object" && cueExprOrAst.type;
+
+  if (isAstObject) {
+    ast = cueExprOrAst;
+    cueId = ast.raw || ast.id || null;
+  } else {
+    cueId = String(cueExprOrAst).trim();
+  }
+
+  // ---------------------------
+  // 🚫 STEP 2: DEDUPE RULES
+  // ---------------------------
+  // Buttons pass force=true → retrigger always
+  // Page cues → retrigger always
+  // Scroll cues → dedupe normally
+  // ---------------------------
+
+  // Page / nav cues must ALWAYS retrigger
+  const isPageCue =
+    cueId?.startsWith("page(") ||
+    cueId?.startsWith("page:") ||
+    cueId?.includes("nav(") ||
+    cueId?.includes("nav:");
+
+  if (!force && !isAstObject && !isPageCue) {
+    // Initialise registry
     if (!window.triggeredCues) window.triggeredCues = new Set();
-    if (window.triggeredCues.has(cueId) && !force) {
+
+    // If already triggered, skip
+    if (window.triggeredCues.has(cueId)) {
       console.debug("[DEBUG] Skipping already-triggered cue:", cueId);
       return;
     }
-    window.triggeredCues.add(cueId);
 
+    // Track only non-button, non-page cues
+    window.triggeredCues.add(cueId);
+  }
+
+  // ---------------------------
+  // 🔍 STEP 3: Parse cue into AST if needed
+  // ---------------------------
+  if (!ast) {
     try {
       ast = parseCueToAST(cueId);
     } catch {
@@ -226,33 +258,26 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
     return;
   }
 
-  console.log(`[CueDSL] ✅ Resolved AST Cue Type: ${ast.type}`, ast);
+  // console.log(`[CueDSL] ✅ Resolved AST Cue Type: ${ast.type}`, ast);
 
-
-
-
-
-
-
-  // ------------------------------------------------------------
-  // 🚀 Dispatch by AST type — This *is* the cue system now.
-  // ------------------------------------------------------------
+  // ---------------------------
+  // 🚀 STEP 4: DISPATCH
+  // ---------------------------
   switch (ast.type) {
 
-    // animation dispatchers
+    // Animation handlers
     case "cueRotate": return handleRotateCue(cueElement, ast.args, { fromCueTrigger: true });
-    case "cueScale": return handleScaleCue(ast, cueElement, { fromCueTrigger: true });
-    case "cueO2P": return handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
+    case "cueScale":  return handleScaleCue(ast, cueElement, { fromCueTrigger: true });
+    case "cueO2P":    return handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
 
-    // cue dispatchers 
-
+    // Page navigation — ALWAYS retrigger
     case "cuePage":
     case "page":
       return handlePageCue(ast, cueElement);
-    
-    case "cueFade": return handleFadeCueFromAST(ast, cueElement);
-    case "cueStopwatch": return handleStopwatchCue(ast, cueElement);
-    case "cueVideo": return handleVideoCueFromAST(ast, cueElement);
+
+    case "cueFade":       return handleFadeCueFromAST(ast, cueElement);
+    case "cueStopwatch":  return handleStopwatchCue(ast, cueElement);
+    case "cueVideo":      return handleVideoCueFromAST(ast, cueElement);
 
     case "cueText":
       import("./text.js")
@@ -266,6 +291,7 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
 
     case "cuePause": return handlePauseCue(ast, cueElement);
 
+    // Speed cues support ramps
     case "cueSpeed": {
       const start = window.speedMultiplier ?? 1.0;
       const end = ast.value ?? start;
@@ -279,19 +305,21 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
     }
 
     case "cueStop": return handleStopCue(ast, cueElement);
+
+    // NAVIGATION (uses page system)
     case "cueNav": return handleNavCue(ast);
 
-    case "cueAudio": {
-      // `ast` here is the parsed AST: { type:'cueAudio', src:'noise', amp:0.9, loop:1, ... }
+    // AUDIO
+    case "cueAudio":
       if (!ast || ast.type !== "cueAudio") {
         console.warn("[cueAudio] Missing/invalid AST:", ast);
         return;
       }
       console.log("[dispatch] cueAudio AST →", ast);
-      return handleAudioCue(ast);   // ✅ pass AST directly
-    }
+      return handleAudioCue(ast);
 
-    case "cueAudioStop": return stopAudioCue(ast.filename || ast.file);
+    case "cueAudioStop":
+      return stopAudioCue(ast.filename || ast.file);
 
     default:
       console.warn(`[CueDSL] ⚠ Unsupported cue type: ${ast.type}`);
@@ -300,6 +328,8 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
 }
 
 window.handleCueTrigger = handleCueTrigger;
+
+
 
 // =========================
 //  Universal UID Registry
@@ -636,16 +666,16 @@ export function pauseDismissClickHandler() {
     event.stopImmediatePropagation();
   });
 
-//   // ✅ Press Spacebar to dismiss
-//   document.addEventListener("keydown", (event) => {
-//     if (event.code === "Space" || event.key === " ") {
-//       if (!pauseCountdown.classList.contains("hidden")) {
-//         console.log("[DEBUG] Spacebar pressed. Dismissing pause countdown.");
-//         dismissPauseCountdown(false);
-//         event.preventDefault(); // Optional: prevent page scroll
-//       }
-//     }
-//   });
+  //   // ✅ Press Spacebar to dismiss
+  //   document.addEventListener("keydown", (event) => {
+  //     if (event.code === "Space" || event.key === " ") {
+  //       if (!pauseCountdown.classList.contains("hidden")) {
+  //         console.log("[DEBUG] Spacebar pressed. Dismissing pause countdown.");
+  //         dismissPauseCountdown(false);
+  //         event.preventDefault(); // Optional: prevent page scroll
+  //       }
+  //     }
+  //   });
 
 }
 
@@ -923,70 +953,131 @@ export function handleRestoredRepeatState(repeatStateMap, cues) {
  * Also walks the entire SVG tree to catch other cue(...) elements.
  */
 export function assignCues(svgRoot, cuesArray = []) {
+  console.group("[assignCues]");
+  // console.log("[assignCues] → svgRoot:", svgRoot?.id);
 
+
+  // Count children for basic sanity
+  // console.log("[assignCues] Child element count:", svgRoot.querySelectorAll("*").length);
+
+  // ----------------------------------------------------
+  // Handle assignCues(...) groups (unchanged logic)
+  // ----------------------------------------------------
   const cueGroups = svgRoot.querySelectorAll('g[id^="assignCues("]');
+  // console.log(`[assignCues] assignCues() groups found: ${cueGroups.length}`);
+
   cueGroups.forEach(group => {
     const baseId = group.id.split('-')[0];
+    // console.log(`[assignCues] → Processing assignCues group id="${group.id}" (baseId="${baseId}")`);
+
     const match = baseId.match(/^assignCues\((.+)\)$/);
-    if (!match) return;
-
+    if (!match) {
+      // console.warn(`[assignCues] ⚠ Bad assignCues() block id="${group.id}"`);
+      return;
+    }
     const instruction = match[1].trim();
-
-    // --- cueOscSet(...) and cueType(rnd[]) omitted for clarity (unchanged) ---
+    // console.log(`[assignCues] assignCues() instruction:`, instruction);
+    // … your original assignCues instruction logic …
   });
 
   // ----------------------------------------------------
-  // Walk SVG to register cues & build cueButtons
+  // Walk SVG to register cues & button() elements
   // ----------------------------------------------------
+
   function walk(node) {
     for (const child of node.children) {
       const id = child.id;
+
+      // no id or no cue syntax → dive deeper
       if (!id || !/[()]/.test(id)) {
         walk(child);
         continue;
       }
 
-      let ast = null;
-      try { ast = parseCueToAST(id.trim()); } catch { }
-
-      // --- ✅ Skip cueButtons here. Let buildCueButtonsIn() handle them.
-      if (ast && ast.type === "cueButton") {
+      // --- 🔥 Ignore reuse(...) clones entirely ---
+      if (/^reuse\s*\(/.test(id)) {
+        // console.log(`[assignCues] ⏭ Ignoring reuse() clone id="${id}"`);
+        walk(child);
+        continue;
+      }
+      // --------------------------------------------------------
+      // Skip propagate(...) because it's NOT a cue — it's a generator
+      // --------------------------------------------------------
+      if (/^propagate\(/.test(id.trim())) {
+        // console.log("[assignCues] ⏭ Skipping propagate():", id);
         walk(child);
         continue;
       }
 
-      // --- ✅ Normal scroll-trigger cue
-      if (ast && ast.type !== "cueButton") {
-        const box = child.getBBox?.();
-        cuesArray.push({
-          id,
-          ast,
-          element: child,
-          triggered: false,
-          ...(box && { x: box.x, width: box.width })
-        });
-        registerCueUid(id, "walk");
+      let ast = null;
+      try {
+        ast = parseCueToAST(id.trim());
+      } catch (e) {
+        // console.warn("[assignCues] parse failed for:", id);
+        walk(child);
+        continue;
       }
+
+      // Skip cue buttons — they are built elsewhere
+      if (ast.type === "cueButton") {
+        walk(child);
+        continue;
+      }
+
+      // Normal cue (including scale, rotate, o2p, etc.)
+      const box = child.getBBox?.();
+      cuesArray.push({
+        id,
+        ast,
+        element: child,
+        triggered: false,
+        ...(box && { x: box.x, width: box.width })
+      });
+      registerCueUid(id, "walk");
 
       walk(child);
     }
   }
 
-  walk(svgRoot);
+  // console.log("[assignCues] 🌳 Starting deep walk...");
+  walk(svgRoot, 0);
 
-  // ----------------------------------------------------
-  // ✅ Build cueButtons when in scroll mode
-  // ----------------------------------------------------
-  const scrollContainer = document.getElementById("scoreInner");
-  if (scrollContainer) {
-    buildCueButtonsIn(svgRoot, scrollContainer);
+  // console.log("[assignCues] Total cues registered:", cuesArray.length);
+
+  // --------------------------------------------------------
+  // BUILD CUE BUTTONS — PAGE vs SCROLL MODE
+  // --------------------------------------------------------
+  if (window.isPageOverlay) {
+    // ------------------------------
+    // PAGE OVERLAY MODE (correct!)
+    // ------------------------------
+    // console.log("[assignCues] Page overlay mode — building cueButtons inside overlay SVG.");
+
+    const result = buildCueButtonsIn(svgRoot, svgRoot);
+    // console.log(`[assignCues] cueButtons created in page overlay: ${result?.length}`);
+
+  } else {
+    // ------------------------------
+    // SCROLL MODE
+    // ------------------------------
+    // console.log("[assignCues] Scroll-mode detected. Page overlay? ", window.isPageOverlay);
+
+    const scrollContainer = document.getElementById("scoreInner");
+    // console.log("[assignCues] scrollContainer:", scrollContainer);
+
+    if (scrollContainer) {
+      // console.log("[assignCues] 🛠 Building cueButtons in #scoreInner…");
+      const result = buildCueButtonsIn(svgRoot, scrollContainer);
+      // console.log(`[assignCues] cueButtons created: ${result?.length}`);
+    } else {
+      // console.warn("[assignCues] ⚠ scrollContainer not found — no cueButtons built in scroll mode.");
+    }
   }
 
+  console.groupEnd();
   return cuesArray;
+
 }
-
-
-
 
 
 
@@ -3636,45 +3727,55 @@ export function destroyAllCueButtons() {
 
   console.log("[cueButtons] 🧹 Cleared all cue buttons");
 }
+
 export function buildCueButtonsIn(svgRoot, containerEl) {
-  if (!svgRoot || !containerEl) return [];
+  if (!svgRoot) return [];
+
+  // ✔ Select correct container for PAGE MODE
+  if (!containerEl) {
+    containerEl =
+      document.getElementById("singlePage-content") ||
+      document.getElementById("pageOverlay") ||
+      document.getElementById("scoreInner");
+  }
+
+  if (containerEl instanceof SVGElement) {
+    console.warn("[cueButton] ❌ Container was SVG — overriding to singlePage-content");
+    containerEl = document.getElementById("singlePage-content");
+  }
+
+  if (!containerEl) {
+    console.warn("[cueButtons] ⚠ No containerEl found for button placement.");
+    return [];
+  }
 
   const built = [];
   const elements = svgRoot.querySelectorAll('[id^="button("]');
 
-  console.log("[cueButton:build] Found", elements.length, "button() element(s)");
+  // console.log("[cueButton:build] Found", elements.length, "button() element(s)");
 
   elements.forEach(el => {
     const cueExpr = el.id.trim();
-    console.log("\n[cueButton:scan] id=", cueExpr);
+    // console.log("\n[cueButton:scan] id=", cueExpr);
 
     let ast;
     try {
       ast = parseCueToAST(cueExpr);
     } catch (e) {
-      console.warn("[cueButton] ❌ parse failed:", cueExpr, e);
+      // console.warn("[cueButton] ❌ parse failed:", cueExpr, e);
       return;
     }
-
-    console.log("[cueButton] Parsed AST:", ast);
 
     if (!ast || ast.type !== "cueButton") return;
 
     const triggerAst = ast.triggerAst || ast.trigger;
-    if (!triggerAst) {
-      console.warn("[cueButton] ❌ Missing triggerAst:", cueExpr);
-      return;
-    }
 
-    // ✅ FIXED LABEL LOGIC (NO TEXTCONTENT, NO RAW ID FALLBACK)
     const label =
       (ast.label && ast.label.trim()) ||
-      (triggerAst.uid && String(triggerAst.uid).trim()) ||
-      (triggerAst.action && String(triggerAst.action).trim()) ||
-      (triggerAst.page && String(triggerAst.page).trim()) ||
+      (triggerAst.uid && String(triggerAst.uid)) ||
+      (triggerAst.action && String(triggerAst.action)) ||
+      (triggerAst.page && String(triggerAst.page)) ||
       "button";
-
-    console.log("[cueButton] label resolved →", label);
 
     const btn = createCueButtonForElement(el, {
       triggerAst,
@@ -3685,68 +3786,231 @@ export function buildCueButtonsIn(svgRoot, containerEl) {
     if (btn) built.push(btn);
   });
 
-  console.log("[cueButton:build] ✅ Finished. Total created:", built.length);
+  // console.log("[cueButton:build] ✅ Finished. Total created:", built.length);
   return built;
 }
 
+export function createCueButtonForElement(
+  cueSvgEl,
+  { triggerAst, label = "", opt = {} }
+) {
+  // console.log("\n[cueButton:create] =====================================");
+  // console.log("[cueButton:create] marker element:", cueSvgEl);
 
-
-export function createCueButtonForElement(cueSvgEl, { triggerAst, label = "", opt = {} }) {
   if (!triggerAst) {
-    console.warn("[cueButton] ⚠ Missing triggerAst — cannot build button:", cueSvgEl?.id);
+    // console.warn("[cueButton] ❌ Missing triggerAst for:", cueSvgEl?.id);
     return null;
   }
-  const containerEl = opt.containerEl ||
+
+  // ------------------------------------------------------------
+  // 1. Resolve container
+  // ------------------------------------------------------------
+  let containerEl =
+    opt.containerEl ||
     document.getElementById("singlePage-content") ||
+    document.getElementById("pageOverlay") ||
     document.getElementById("scoreInner");
 
+  // console.log("[cueButton:create] containerEl:", containerEl);
+
+  if (containerEl instanceof SVGElement) {
+    // console.warn("[cueButton] ❌ Container was SVG — overriding to singlePage-content");
+    containerEl = document.getElementById("singlePage-content");
+  }
+
   if (!containerEl) {
-    console.warn("[cueButton] ⚠ No container available for cueButton:", cueSvgEl?.id);
+    // console.warn("[cueButton:create] ❌ No container for cueButton:", cueSvgEl?.id);
     return null;
   }
 
-  // hide source marker
-  cueSvgEl.style.visibility = "hidden";
-  cueSvgEl.style.pointerEvents = "none";
+  // ------------------------------------------------------------
+  // 2. Hide SVG marker unless part of reuse clone
+  // ------------------------------------------------------------
+  const insideReuse = !!cueSvgEl.closest('g[id^="reuse("]');
+  // console.log("[cueButton:create] insideReuse:", insideReuse);
 
-  // create button
+  if (!insideReuse) {
+    cueSvgEl.style.visibility = "hidden";
+    // console.log("[cueButton:create] SVG marker hidden (normal mode)");
+  } else {
+    // console.log("[cueButton:create] SVG marker NOT hidden (reuse clone)");
+  }
+
+  // ------------------------------------------------------------
+  // 3. Create HTML button
+  // ------------------------------------------------------------
   const btn = document.createElement("button");
   btn.type = "button";
   btn.textContent = label;
   btn.className = "oscilla-cue-button";
-
-  // apply sizing
-  const toPx = (v, fallback) => (v == null ? fallback : (Number.isFinite(+v) ? `${+v}px` : String(v)));
-  Object.assign(btn.style, {
-    position: "absolute",
-    width: toPx(opt.width, "100px"),
-    height: toPx(opt.height, "40px"),
-    fontSize: toPx(opt.fontSize ?? 14, "14px"),
-    borderRadius: toPx(opt.radius ?? 4, "4px"),
-    cursor: "pointer",
-    zIndex: 2000
-  });
+  btn.style.position = "absolute";
 
   containerEl.appendChild(btn);
 
-  // place button
+  // console.log("[cueButton:create] HTML button created:", btn);
+
+  // ------------------------------------------------------------
+  // 4. Normalize style block (opt.key → opt.style.key)
+  // ------------------------------------------------------------
+  if (!opt.style) {
+    const styleKeys = [
+      "size",
+      "label",
+      "font",
+      "fontsize",
+      "color",
+      "textcolor",
+      "active",
+      "uid"
+    ];
+    const styleObj = {};
+    let found = false;
+
+    for (const k of styleKeys) {
+      if (opt[k] !== undefined) {
+        styleObj[k] = opt[k];
+        found = true;
+      }
+    }
+
+    if (found) {
+      opt.style = styleObj;
+      // console.log(
+      //   "[cueButton:create] 🟦 Normalized flat style keys into opt.style:",
+      //   styleObj
+      // );
+    }
+  }
+
+  // ------------------------------------------------------------
+  // 5. Apply style() block
+  // ------------------------------------------------------------
+  if (opt.style) {
+    const s = opt.style;
+    // console.log("[cueButton:create] Applying style:", s);
+    // Label override
+
+    if (s.label) btn.textContent = s.label;
+
+    // Size: "120x45"
+    if (typeof s.size === "string") {
+      const [w, h] = s.size.split("x").map(Number);
+      if (!isNaN(w)) btn.style.width = `${w}px`;
+      if (!isNaN(h)) btn.style.height = `${h}px`;
+    }
+
+    // Background color
+    if (s.color) {
+      btn.style.backgroundColor = s.color;
+    }
+
+    // Text color
+    if (s.textcolor) {
+      btn.style.color = s.textcolor;
+    }
+
+    // Font family
+    if (s.font) {
+      btn.style.fontFamily = s.font;
+    }
+
+    // Font size
+    if (s.fontsize) {
+      btn.style.fontSize = `${s.fontsize}px`;
+    }
+
+    // Active effect: flash
+    if (s.active === "flash") {
+      btn.classList.add("oscilla-button-flashable");
+    }
+  }
+
+  // ------------------------------------------------------------
+  // 6. Debug geometry
+  // ------------------------------------------------------------
+  // const debugCTM = () => {
+  //   const ctm = cueSvgEl.getScreenCTM();
+  //   const ctmLocal = cueSvgEl.getCTM();
+  //   const bbox = cueSvgEl.getBBox?.();
+  //   const containerRect = containerEl.getBoundingClientRect();
+
+  //   console.log("\n[cueButton:geometry]");
+  //   console.log("  cueSvgEl.getScreenCTM():", ctm);
+  //   console.log("  cueSvgEl.getCTM():", ctmLocal);
+  //   console.log("  cueSvgEl.getBBox():", bbox);
+  //   console.log("  container rect:", containerRect);
+  //   console.log("  marker visibility:", cueSvgEl.style.visibility);
+  // };
+
+  // debugCTM();
+
+  // ------------------------------------------------------------
+  // 7. Placement using BCR
+  // ------------------------------------------------------------
   const place = () => {
-    const r = cueSvgEl.getBoundingClientRect();
-    const c = containerEl.getBoundingClientRect();
-    btn.style.left = `${r.left - c.left + (opt.offsetX || 0)}px`;
-    btn.style.top = `${r.top - c.top + (opt.offsetY || 0)}px`;
+    const bbox = cueSvgEl.getBBox();
+    const ctm = cueSvgEl.getScreenCTM();
+    const container = containerEl.getBoundingClientRect();
+
+    // Screen coordinates of the SVG placeholder's true top-left
+    const screenX = ctm.e + bbox.x * ctm.a;
+    const screenY = ctm.f + bbox.y * ctm.d;
+
+    // Convert to container-local coords
+    const left = screenX - container.left + (opt.offsetX || 0);
+    const top = screenY - container.top + (opt.offsetY || 0);
+
+    btn.style.left = `${left}px`;
+    btn.style.top = `${top}px`;
   };
-  requestAnimationFrame(place);
+
+
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        // console.log("[cueButton:create] 🔄 3×RAF reached — placing now");
+        // debugCTM();
+        place();
+      }
+      )
+    )
+  );
+
   window.addEventListener("resize", place);
 
-  // handle trigger
+  // ------------------------------------------------------------
+  // 8. Button click → trigger cue
+  // ------------------------------------------------------------
   btn.addEventListener("click", (e) => {
+    console.log("[cueButton:CLICK]", label, triggerAst);
     e.preventDefault();
     e.stopPropagation();
-    handleCueTrigger(triggerAst, false, true, cueSvgEl);
+
+    if (opt.style?.active === "flash") {
+      btn.classList.add("flash");
+      setTimeout(() => btn.classList.remove("flash"), 150);
+    }
+
+    try {
+      handleCueTrigger(triggerAst, false, true, cueSvgEl);
+    } catch (err) {
+      console.error("[cueButton] ❌ Error in handleCueTrigger:", err);
+    }
   });
 
+  btn._cueMarkerEl = cueSvgEl;
+
   return btn;
+}
+
+
+export function hideAllButtonPlaceholders(svgRoot) {
+  const markers = svgRoot.querySelectorAll('[id^="button("]');
+  markers.forEach(el => {
+    el.style.opacity = "0";
+    el.style.pointerEvents = "none";
+  });
+  console.log(`[cueButton] 🔒 Hidden ${markers.length} button() placeholders (original + clones)`);
 }
 
 

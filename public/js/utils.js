@@ -32,6 +32,11 @@ export function stripAllTransforms(root) {
   root.querySelectorAll('[transform]').forEach(n => n.removeAttribute('transform'));
 }
 
+// Remove ONLY the root transform — preserve child transforms.
+// This keeps the authored coordinate system intact.
+export function stripRootTransform(root) {
+  root.removeAttribute("transform");
+}
 
 // Compute screen-space bbox (important: getScreenCTM maps local coords → screen)
 export function bboxInScreen(el) {

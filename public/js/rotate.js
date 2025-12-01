@@ -439,16 +439,16 @@ export function handleRotateContinuous(el, cfg) {
 
     el._oscillaRotateAnim = anim;
 
-    console.log("[rotate] fallback continuous start", {
-        id: el.id,
-        dir,
-        dur,
-        loop,
-        ease,
-        mode,
-        oscMode,
-        pivot: el.style.transformOrigin
-    });
+    // console.log("[rotate] fallback continuous start", {
+    //     id: el.id,
+    //     dir,
+    //     dur,
+    //     loop,
+    //     ease,
+    //     mode,
+    //     oscMode,
+    //     pivot: el.style.transformOrigin
+    // });
 }
 
 // ============================================================
@@ -462,7 +462,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
 
     const { fromCueTrigger = false } = options;
 
-    console.log("[rotate] raw astArgs:", astArgs);
+    // console.log("[rotate] raw astArgs:", astArgs);
 
     // -----------------------------
     // Trigger + UID

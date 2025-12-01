@@ -1383,43 +1383,63 @@ export function cstToAst(cst) {
   }
 
 
+// ------------------------------------------------------------
+// cue:button(...) AST Builder
+// ------------------------------------------------------------
+const buttonNode =
+  cst.children?.cueButtonTop?.[0] ||
+  (cst.name === "cueButtonTop" ? cst : null);
 
-  // ------------------------------------------------------------
-  // cue:button(...) AST Builder
-  // ------------------------------------------------------------
-  const buttonNode =
-    cst.children?.cueButtonTop?.[0] ||
-    (cst.name === "cueButtonTop" ? cst : null);
+if (buttonNode) {
+  const labelTok = buttonNode.children.labelValue?.[0];
+  const label = labelTok ? labelTok.image.replace(/^"|"$/g, "") : "";
 
-  if (buttonNode) {
-    const labelTok = buttonNode.children.labelValue?.[0];
-    const label = labelTok ? labelTok.image.replace(/^"|"$/g, "") : "";
+  const triggerAst = buttonNode.children.triggerValue?.[0]
+    ? cstToAst(buttonNode.children.triggerValue[0])
+    : null;
 
-    const triggerAst = buttonNode.children.triggerValue?.[0]
-      ? cstToAst(buttonNode.children.triggerValue[0])
-      : null;
+// ------------------------------------------------------------
+// Extract style(...) params from flat styleParam[] nodes
+// ------------------------------------------------------------
+// console.log("[cueButton:AST] Begin flat styleParam extraction");
 
-    const opt = {};
-    const styleList = buttonNode.children.styleParam || [];
-    for (const p of styleList) {
-      const key = p.children.key?.[0]?.image;
-      let val = p.children.value?.[0]?.image || "";
-      val = val.replace(/^"|"$/g, "");
-      opt[key] = val;
-    }
+const opt = {};
+const params = buttonNode.children.styleParam || [];
 
-    //  const triggerExpr = triggerAst.cueExpr;
+// console.log(`[cueButton:AST] Found styleParam count = ${params.length}`);
 
-    return {
-      type: "cueButton",
-      label,
-      triggerAst: {
-        ...triggerAst,        // ✅ real code, this copies src, amp, loop, cueExpr, toggle, uid, etc.
-        uid: triggerAst.uid ?? null   // ✅ ensure uid exists (even if missing)
-      },
-      opt
-    };
+params.forEach((p, idx) => {
+  // console.log(`[cueButton:AST]   styleParam[${idx}] node:`, p);
+
+  const keyNode = p.children.key?.[0];
+  const valNode = p.children.value?.[0];
+
+  if (!keyNode || !valNode) {
+    // console.warn(`[cueButton:AST]   styleParam[${idx}] missing key or value`);
+    return;
   }
+
+  const key = keyNode.image;
+  let val = valNode.image.replace(/^"|"$/g, "");
+
+  // console.log(`[cueButton:AST]   → key="${key}" val="${val}"`);
+
+  opt[key] = val;
+});
+
+// console.log("[cueButton:AST] Final extracted style opt=", JSON.stringify(opt, null, 2));
+
+
+  return {
+    type: "cueButton",
+    label,
+    triggerAst: {
+      ...triggerAst,
+      uid: triggerAst?.uid ?? null
+    },
+    opt
+  };
+}
 
 
   // ------------------------------------------------------------
@@ -1705,7 +1725,7 @@ export function cstToAst(cst) {
   // ============================================================================
   // 🔹 Fallback (unknown cue)
   // ============================================================================
-  console.warn("[CueDSL] ⚠️ Unrecognized CST structure:", cst.name);
+  // console.warn("[CueDSL] ⚠️ Unrecognized CST structure:", cst.name);
   return { type: "cueUnknown", args: [] };
 }
 
@@ -1714,22 +1734,25 @@ export function cstToAst(cst) {
 // 4️⃣ MAIN ENTRY
 // ============================================================================
 export function parseCueToAST(input) {
+  
+  
   const lexResult = CueLexer.tokenize(input);
+
   // debugTokens(input);  //
 
   // console.log("[LexerDebug] Tokens:", lexResult.tokens.map(t => t.image));
-  console.log("[LexerDebug] Errors:", lexResult.errors);
+  // console.log("[LexerDebug] Errors:", lexResult.errors);
 
   const parser = new CueParser();
   parser.input = lexResult.tokens;
   const cst = parser.cueTop();
 
   if (parser.errors.length) {
-    console.error("[CueDSL] ❌ Parse errors:", parser.errors);
+    // console.error("[CueDSL] ❌ Parse errors:", parser.errors);
     throw new Error("Parsing failed");
   }
 
-  console.log("✅ Parsed CST structure ↓↓↓");
+  // console.log("✅ Parsed CST structure ↓↓↓");
   // printCST(cst);
   const ast = cstToAst(cst);
   // console.log("[CueDSL] ✅ Parsed AST:", ast);

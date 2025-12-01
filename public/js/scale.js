@@ -546,10 +546,10 @@ function handleScaleContinuous(el, cfg) {
 
     el._oscillaScaleAnim = anim;
 
-    console.log(`[scale] start fallback pulse`, {
-        id: el.id,
-        useX, useY, dur, loop, ease, pivot: el.style.transformOrigin
-    });
+    // console.log(`[scale] start fallback pulse`, {
+    //     id: el.id,
+    //     useX, useY, dur, loop, ease, pivot: el.style.transformOrigin
+    // });
 }
 
 // ============================================================
@@ -562,7 +562,7 @@ export function handleScaleCue(ast, cueElement = null, options = {}) {
     const { fromCueTrigger = false } = options;
 
     const astArgs = ast?.args || [];
-    console.log("[scale] raw astArgs:", astArgs);
+    // console.log("[scale] raw astArgs:", astArgs);
 
     // --------------------------------------------------------
     // 0. UID + Trigger

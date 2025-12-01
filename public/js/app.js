@@ -63,6 +63,7 @@ import {
   dismissPauseCountdown,
   pauseDismissClickHandler,
   handleAudioCue,
+  buildCueButtonsIn,
   activeAudioCues,
   handleOscCue,
   parseTraverseCueId,
@@ -76,7 +77,8 @@ import {
   executeRepeatJump,
   repeatStateMap,
   handleRestoredRepeatState,
-  assignCues
+  assignCues,
+  hideAllButtonPlaceholders
 } from './cues.js';
 // app.js
 // import { ensureRotationCSSGuard } from './anim.js';
@@ -90,6 +92,8 @@ export const initializeSVG = async (svgElement) => {
     console.groupEnd();
     return;
   }
+
+
 
   /////////////////////////////////////////////////////////////////////////////
   // 0. Expand propagate(...) sequences before anything else
@@ -116,14 +120,34 @@ export const initializeSVG = async (svgElement) => {
       buildPageRegistryFromDirIndex();
     }
 
+
+
     console.log("[initializeSVG][page] 🔧 registerReuseBlocks()");
     registerReuseBlocks(svgElement);
+
+
+    // Inject all use(name) placeholders NOW
+    autoInjectUseBlocks(svgElement);
+
+    hideAllButtonPlaceholders(svgElement);
+
+    console.log("[initializeSVG][page] injecting reuse() blocks");
+    console.log("[initializeSVG][page] reuse injection complete");
+
+
+
 
     console.log("[initializeSVG][page] 🔧 storePathVariants()");
     window.storePathVariants(svgElement);
 
     console.log("[initializeSVG][page] 🔧 animationAssign()");
     animationAssign(svgElement);
+
+    // // ⭐ Correct final fix: rebuild *all* cueButtons after all transforms
+    console.log("[initializeSVG][page] 🔧 Rebuilding cueButtons for final geometry");
+    // window._activePageButtons?.forEach(btn => btn.remove?.());
+    
+    buildCueButtonsIn(svgElement, svgElement);  // or page content container
 
     // console.log("[initializeSVG][page] 🔧 initializeObserver()");
     initializeObserver();

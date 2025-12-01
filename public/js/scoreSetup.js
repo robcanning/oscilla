@@ -4,7 +4,11 @@ import {
   preloadReuseBlocksFromPages
 } from "./reuse.js";
 
+
+
+
 import { extractSpeedCues } from "./speed.js";
+import { hideAllButtonPlaceholders } from "./cues.js";
 
 
 // Rehearsal mark logic ////////////////////////////////////////////////////////
@@ -700,9 +704,10 @@ export async function setupScore(svgElement) {
 
     // 3) Expand <g id="use(name)"> inclusions
     autoInjectUseBlocks(svgElement);
-
     console.log("[setupScore] ✅ Reusable blocks ready.");
   }
+      hideAllButtonPlaceholders(svgElement);
+  
 
 
   console.groupEnd();

@@ -22,7 +22,7 @@
 import { propagate } from "./oscillaPropagate.js";
 import { animationAssign } from "./oscillaAnimation.js";
 import { initializeObserver } from "./oscillaObserver.js";
-import { registerReuseBlocks, autoInjectUseBlocks } from "./reuse.js";
+// import { registerReuseBlocks, autoInjectUseBlocks } from "./reuse.js";
 import { buildCueButtonsIn } from "./cues.js";
 import { handleCueTrigger } from "./cues.js";
 
@@ -165,7 +165,7 @@ async function showPageOverlay(pageId, durSeconds = null) {
     // DOM containers
     // ---------------------------------------------------------
     const container = document.getElementById("singlePage-container");
-    const content   = document.getElementById("singlePage-content");
+    const content = document.getElementById("singlePage-content");
     const countdown = document.getElementById("singlePage-countdown");
 
     if (!container || !content || !countdown) {
@@ -219,18 +219,18 @@ async function showPageOverlay(pageId, durSeconds = null) {
     // ⭐ FULL MODERN INITIALIZER — SAME AS MAIN SVG
     // ---------------------------------------------------------
     // Important: pass flag to avoid resetting global score state
-console.log("[Page] 🔧 initializeSVG() pipeline (delayed)");
+    console.log("[Page] 🔧 initializeSVG() pipeline (delayed)");
 
-requestAnimationFrame(() => {
-  requestAnimationFrame(() => {
-    if (typeof window.initializeSVG === "function") {
-      // EXACT SAME INIT PATH AS SCROLL MODE
-      window.initializeSVG(svg);
-    } else {
-      console.error("[Page] ❌ initializeSVG() not found.");
-    }
-  });
-});
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (typeof window.initializeSVG === "function") {
+                // EXACT SAME INIT PATH AS SCROLL MODE
+                window.initializeSVG(svg);
+            } else {
+                console.error("[Page] ❌ initializeSVG() not found.");
+            }
+        });
+    });
 
     // ---------------------------------------------------------
     // Cue Buttons inside page overlay
@@ -285,12 +285,21 @@ export async function handlePageCue(ast, cueElement) {
     // 2) Run each page sequentially
     for (const item of pages) {
         const pageId = item.page;
-        const dur    = item.dur ?? null;
+        const dur = item.dur ?? null;
 
         console.log(`[cuePage] ▶ Page "${pageId}" dur=${dur ?? "∞"}`);
 
         await showPageOverlay(pageId, dur);
     }
+
+    console.log("[cuePage] ✔ Pattern finished");
+
+    //  run after-action if present
+if (ast.onCompletion) {
+        console.log("[cuePage] ▶ Running after-action");
+        handleAfterAction(ast);
+    }
+
 
     console.groupEnd();
 }
@@ -300,14 +309,18 @@ export async function handlePageCue(ast, cueElement) {
 // Minimal after-action handler (kept for future expansion)
 // =============================================================
 export function handleAfterAction(ast) {
-    if (!ast?.onCompletion) return;
+    console.warn("[Page] 🔎 handleAfterAction CALLED:", ast);
+
+    if (!ast?.onCompletion) {
+        console.warn("[Page] ❌ No onCompletion found");
+        return;
+    }
 
     const control = ast.onCompletion.control;
-    const arg     = ast.onCompletion.arg;
-    const target  = ast.onCompletion.target;
+    const arg = ast.onCompletion.arg;
+    const target = ast.onCompletion.target;
 
-    console.log(`[Page] after-action → ${control}(${arg}${target ? "@"+target : ""})`);
+    console.log(`[Page] after-action → ${control}(${arg}${target ? "@" + target : ""})`);
 
-    // Prefer nav()
     handleCueTrigger(`nav(${arg}${target ? `@${target}` : ""})`);
 }

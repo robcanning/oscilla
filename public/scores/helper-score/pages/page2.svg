@@ -22,7 +22,7 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="0.59"
-     inkscape:cx="841.52542"
+     inkscape:cx="840.67797"
      inkscape:cy="569.49153"
      inkscape:window-width="1920"
      inkscape:window-height="1011"
@@ -177,19 +177,19 @@
      transform="translate(-13346.878,-119.00124)"><tspan
        x="13743.035"
        y="554.47253"
-       id="tspan4"><tspan
+       id="tspan9"><tspan
          style="fill:none"
-         id="tspan3">cueText(&quot;texts/tzara-cutup.txt&quot;)  </tspan></tspan><tspan
+         id="tspan2">cueText(&quot;texts/tzara-cutup.txt&quot;)  </tspan></tspan><tspan
        x="13743.035"
        y="587.80592"
-       id="tspan6"><tspan
+       id="tspan11"><tspan
          style="fill:none"
-         id="tspan5">_anim(&quot;fade&quot;)  _dur(2)  _pos(self)  </tspan></tspan><tspan
+         id="tspan10">_anim(&quot;fade&quot;)  _dur(2)  _pos(self)  </tspan></tspan><tspan
        x="13743.035"
        y="621.13929"
-       id="tspan8"><tspan
+       id="tspan13"><tspan
          style="fill:none"
-         id="tspan7">_random(1)  _loop(0)  _autostart(1)</tspan></tspan></text>
+         id="tspan12">_random(1)  _loop(0)  _autostart(1)</tspan></tspan></text>
   <text
      xml:space="preserve"
      id="text1"
@@ -203,16 +203,26 @@
      style="font-weight:bold;font-size:33.6148px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:1.80078"
      x="44.801617"
      y="618.61902"
-     id="cueGroup(mainMenu)"
+     id="use(mainMenu)"
      transform="scale(0.56973739,1.7551946)"><tspan
        sodipodi:role="line"
        id="tspan1-7"
        x="44.801617"
        y="618.61902"
-       style="stroke-width:1.80078">cueGroup(mainMenu)</tspan><tspan
+       style="stroke-width:1.80078">use(mainMenu)</tspan><tspan
        sodipodi:role="line"
        x="44.801617"
        y="660.63751"
        id="tspan2-5"
        style="stroke-width:1.80078" /></text>
+  <text
+     xml:space="preserve"
+     style="font-size:85.33333333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:none;stroke:#ff0000"
+     x="279.66101"
+     y="394.91525"
+     id="text2"><tspan
+       sodipodi:role="line"
+       id="tspan1"
+       x="279.66101"
+       y="394.91525">page 2</tspan></text>
 </svg>
