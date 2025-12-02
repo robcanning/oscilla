@@ -63,8 +63,6 @@ import {
   handleStopCue,
   dismissPauseCountdown,
   pauseDismissClickHandler,
-  handleAudioCue,
-  activeAudioCues,
   handleOscCue,
   parseTraverseCueId,
   startTraverseAnimation,
@@ -79,6 +77,10 @@ import {
   handleRestoredRepeatState,
   assignCues
 } from './cues.js';
+
+import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues } from "./oscillaAudio.js";
+
+
 // app.js
 // import { ensureRotationCSSGuard } from './anim.js';
 

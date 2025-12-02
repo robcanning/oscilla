@@ -19,7 +19,7 @@ function sendOSCRotation(el, angle) {
 
     try {
         window.socket.send(JSON.stringify(msg));
-        console.log("[rotate][osc]:", msg);
+        // console.log("[rotate][osc]:", msg);
     } catch (e) {
         console.warn("[rotate][osc] send failed:", e);
     }
