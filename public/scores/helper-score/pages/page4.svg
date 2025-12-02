@@ -22,14 +22,14 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="0.834386"
-     inkscape:cx="688.53025"
-     inkscape:cy="493.77626"
+     inkscape:cx="687.93101"
+     inkscape:cy="685.53403"
      inkscape:window-width="1920"
      inkscape:window-height="1011"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg5125" />
+     inkscape:current-layer="reuse(mainMenu)" />
   <defs
      id="defs5129">
     <rect
@@ -140,17 +140,17 @@
     <rect
        style="fill:#e3e2db;stroke-width:1.3499"
        id="rect1"
-       width="1366.2742"
-       height="98.275871"
+       width="1362.6787"
+       height="81.49707"
        x="79.100082"
-       y="448.63837" />
+       y="464.63837" />
     <text
        xml:space="preserve"
        style="font-weight:bold;font-size:13.3333px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:1076.43;display:inline;fill:#000000"
        x="546.50964"
        y="1004.3314"
        id="text8"
-       transform="translate(-434.56211,-502.43941)"><tspan
+       transform="translate(-14.373737,-477.2712)"><tspan
          x="546.50964"
          y="1004.3314"
          id="tspan1">::: oscilla  - interactive graphic score system ::: https://robcanning.github.io/oscilla :::</tspan></text>
@@ -160,28 +160,28 @@
        width="103.03322"
        height="29.825405"
        x="117.12781"
-       y="451.79648" />
+       y="473.79648" />
     <rect
        style="fill:#ff0000;stroke:#ff0000;stroke-width:0"
-       id="button(target:nav(page1, uid:123), style(label:&quot;page 1&quot;))"
+       id="button(target:nav(page1, uid:123), style(label:&quot;sequencing pages&quot;, size:&quot;120x50&quot;, fontsize:14))"
        width="103.03322"
        height="29.825405"
-       x="477.94379"
-       y="451.79648" />
+       x="413.94379"
+       y="473.79648" />
     <rect
        style="fill:#ff0000;stroke:#ff0000;stroke-width:0"
        id="button(target:nav(page2, uid:123),  style(label:&quot;Page 2&quot;))"
        width="103.03322"
        height="29.825405"
-       x="616.75977"
-       y="451.79648" />
+       x="552.75977"
+       y="473.79648" />
     <rect
        style="fill:#ff0000;stroke:#ff0000;stroke-width:0"
        id="button(target:nav(page3, uid:123),  style(label:&quot;Page 3&quot;))"
        width="103.03322"
        height="29.825405"
-       x="756.77423"
-       y="450.59799"
+       x="692.77423"
+       y="472.59799"
        inkscape:transform-center-x="-42.026703"
        inkscape:transform-center-y="6.7785005" />
     <rect
@@ -189,8 +189,8 @@
        id="button(target:nav(page4, uid:123),  style(label:&quot;Page 4&quot;))"
        width="103.03322"
        height="29.825405"
-       x="894.39166"
-       y="451.79648"
+       x="830.39166"
+       y="473.79648"
        inkscape:transform-center-x="35.248203"
        inkscape:transform-center-y="18.979802" />
     <rect
@@ -198,17 +198,17 @@
        id="button(target:nav(page5, uid:123), style(label:&quot;Page 5&quot;) )"
        width="103.03322"
        height="29.825405"
-       x="1033.2075"
-       y="451.79648"
+       x="969.20752"
+       y="473.79648"
        inkscape:transform-center-x="35.248203"
        inkscape:transform-center-y="18.979802" />
     <rect
        style="fill:#ff0000;stroke:#ff0000;stroke-width:0"
-       id="button(target:nav(scrollPaused@A, uid:1234), style(label:&quot;SCROLLPaused@A&quot;))"
+       id="button(target:nav(scrollPaused@H, uid:1234), style(label:&quot;SCROLLPaused@H&quot;))"
        width="103.03322"
        height="29.825405"
-       x="1258.0237"
-       y="451.79648"
+       x="1168.0237"
+       y="473.79648"
        inkscape:transform-center-x="35.248203"
        inkscape:transform-center-y="18.979802" />
   </g>

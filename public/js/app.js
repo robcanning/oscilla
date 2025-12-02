@@ -19,6 +19,7 @@ import { propagate } from "./oscillaPropagate.js";
 
 import { registerAnimation, animationAssign } from "./oscillaAnimation.js";
 import { initializeObserver } from "./oscillaObserver.js";
+import { buildCueButtonsIn, hideAllButtonPlaceholders } from "./oscillaButton.js";
 
 
 import {
@@ -63,7 +64,6 @@ import {
   dismissPauseCountdown,
   pauseDismissClickHandler,
   handleAudioCue,
-  buildCueButtonsIn,
   activeAudioCues,
   handleOscCue,
   parseTraverseCueId,
@@ -77,8 +77,7 @@ import {
   executeRepeatJump,
   repeatStateMap,
   handleRestoredRepeatState,
-  assignCues,
-  hideAllButtonPlaceholders
+  assignCues
 } from './cues.js';
 // app.js
 // import { ensureRotationCSSGuard } from './anim.js';

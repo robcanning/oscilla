@@ -300,11 +300,11 @@ const broadcastState = () => {
     }
   });
 
-const frames = ["·", "•", " ● ", "•"];
-if (!global._hb) global._hb = 0;
+  const frames = ["·", "•", " ● ", "•"];
+  if (!global._hb) global._hb = 0;
 
-process.stdout.write(`\x1b[32m${frames[global._hb++ % frames.length]}\x1b[0m`);
-process.stdout.write(""); // flush
+  process.stdout.write(`\x1b[32m${frames[global._hb++ % frames.length]}\x1b[0m`);
+  process.stdout.write(""); // flush
 };
 
 
@@ -416,20 +416,23 @@ wss.on('connection', (ws, req) => {
         broadcastState();
         break;
 
+
       case "osc_rotate": {
-        const { uid, angle, radians, norm } = data;
-        console.log(`[OSC] 🔁 ROTATE ${uid}: ${angle.toFixed(1)}°`);
+        const { uid, angle } = data;
+
+        console.log(`[OSC] 🔁 ROTATE ${uid}: ${Number(angle).toFixed(1)}°`);
+
         oscPort.send({
           address: `/oscilla/rotate/${uid}`,
           args: [
-            { type: "f", value: angle },
-            { type: "f", value: radians },
-            { type: "f", value: norm },
-          ],
+            { type: "f", value: Number(angle) }
+          ]
         });
+
         break;
       }
 
+      
       // -----------------------------------------------------------
       // 🎚️ OSC Fade updates from client
       // -----------------------------------------------------------
@@ -846,45 +849,45 @@ wss.on('connection', (ws, req) => {
         break;
 
 
-    case "jump": {
-  // 1. Validate incoming position
-  if (!isNaN(data.playheadX)) {
-    sharedState.playheadX = data.playheadX;
-  }
+      case "jump": {
+        // 1. Validate incoming position
+        if (!isNaN(data.playheadX)) {
+          sharedState.playheadX = data.playheadX;
+        }
 
-  // 2. Update elapsedTime based on world position (or client-sent value)
-  if (!isNaN(data.elapsedTime)) {
-    sharedState.elapsedTime = data.elapsedTime;
-  } else if (sharedState.scoreWidth > 0 && sharedState.duration > 0) {
-    sharedState.elapsedTime =
-      (sharedState.playheadX / sharedState.scoreWidth) * sharedState.duration;
-  }
+        // 2. Update elapsedTime based on world position (or client-sent value)
+        if (!isNaN(data.elapsedTime)) {
+          sharedState.elapsedTime = data.elapsedTime;
+        } else if (sharedState.scoreWidth > 0 && sharedState.duration > 0) {
+          sharedState.elapsedTime =
+            (sharedState.playheadX / sharedState.scoreWidth) * sharedState.duration;
+        }
 
-  // 3. IMPORTANT: Re-anchor transport clock if playback is active
-  if (sharedState.isPlaying) {
-    sharedState.startTimestamp = performance.now() - sharedState.elapsedTime;
-  }
+        // 3. IMPORTANT: Re-anchor transport clock if playback is active
+        if (sharedState.isPlaying) {
+          sharedState.startTimestamp = performance.now() - sharedState.elapsedTime;
+        }
 
-  console.log(
-    `[SERVER] 🎯 Jump received → x=${sharedState.playheadX}, ` +
-    `elapsed=${sharedState.elapsedTime}`
-  );
+        console.log(
+          `[SERVER] 🎯 Jump received → x=${sharedState.playheadX}, ` +
+          `elapsed=${sharedState.elapsedTime}`
+        );
 
-  // 4. Broadcast jump to *other* clients (never to sender)
-  const jumpMsg = JSON.stringify({
-    type: "jump",
-    playheadX: sharedState.playheadX,
-    elapsedTime: sharedState.elapsedTime
-  });
+        // 4. Broadcast jump to *other* clients (never to sender)
+        const jumpMsg = JSON.stringify({
+          type: "jump",
+          playheadX: sharedState.playheadX,
+          elapsedTime: sharedState.elapsedTime
+        });
 
-  wss.clients.forEach((client) => {
-    if (client !== ws && client.readyState === WebSocket.OPEN) {
-      client.send(jumpMsg);
-    }
-  });
+        wss.clients.forEach((client) => {
+          if (client !== ws && client.readyState === WebSocket.OPEN) {
+            client.send(jumpMsg);
+          }
+        });
 
-  break;
-}
+        break;
+      }
 
 
 

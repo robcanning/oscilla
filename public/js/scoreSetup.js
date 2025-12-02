@@ -8,7 +8,7 @@ import {
 
 
 import { extractSpeedCues } from "./speed.js";
-import { hideAllButtonPlaceholders } from "./cues.js";
+import { hideAllButtonPlaceholders } from "./oscillaButton.js";
 
 
 // Rehearsal mark logic ////////////////////////////////////////////////////////

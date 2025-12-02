@@ -549,26 +549,17 @@ export class CueParser extends CstParser {
     // pageBody — handles pattern + optional after clause
     // ------------------------------------------------------------
     $.RULE("pageBody", () => {
-      // const dbg = {
-      //   enter: () => console.log(`  ↳ Enter pageBody (lookahead: ${$.LA(1)?.image || "EOF"})`),
-      //   exit: () => console.log(`  ↲ Exit  pageBody (lookahead: ${$.LA(1)?.image || "EOF"})`)
-      // };
-      // dbg.enter();
-
-      // Main pattern expression (Pseq(...), simple identifier, etc.)
-      // console.log(`[TRACE] patternExpr start — lookahead: ${$.LA(1)?.image || "EOF"}`);
+      // 1️⃣ Required pattern argument
       $.SUBRULE($.patternExpr, { LABEL: "pattern" });
-      // console.log(`[TRACE] patternExpr end   — lookahead: ${$.LA(1)?.image || "EOF"}`);
 
-      // Optional comma + after clause
-      $.OPTION(() => {
+      // 2️⃣ Zero or more named arguments in ANY order
+      $.MANY(() => {
         $.CONSUME(Comma);
-        // console.log(`[TRACE] afterClause start — lookahead: ${$.LA(1)?.image || "EOF"}`);
-        $.SUBRULE($.afterClause, { LABEL: "afterClause" });
-        // console.log(`[TRACE] afterClause end   — lookahead: ${$.LA(1)?.image || "EOF"}`);
+        $.OR([
+          { ALT: () => $.SUBRULE($.afterClause, { LABEL: "afterClause" }) },
+          { ALT: () => $.SUBRULE($.genericParam, { LABEL: "param" }) },
+        ]);
       });
-
-      // dbg.exit();
     });
 
 
@@ -1077,7 +1068,7 @@ export function extractAfterClause(children) {
   const target = ctrl.children.targetUid?.[0]?.image || null;
 
   if (!control) return null;
-  // console.log("[extractAfterClause] ✅ control:", control, "arg:", arg, "target:", target);
+   console.log("[extractAfterClause] ✅ control:", control, "arg:", arg, "target:", target);
   return { control, arg, target };
 }
 

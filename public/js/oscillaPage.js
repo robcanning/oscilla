@@ -23,7 +23,7 @@ import { propagate } from "./oscillaPropagate.js";
 import { animationAssign } from "./oscillaAnimation.js";
 import { initializeObserver } from "./oscillaObserver.js";
 // import { registerReuseBlocks, autoInjectUseBlocks } from "./reuse.js";
-import { buildCueButtonsIn } from "./cues.js";
+import { buildCueButtonsIn } from "./oscillaButton.js";
 import { handleCueTrigger } from "./cues.js";
 
 
