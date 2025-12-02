@@ -68,9 +68,8 @@ export function generateToneBuffer(ctx, freq = 440, dur = 0.3, amp = 0.3) {
   return buf;
 }
 
-// =========================================================
-// 🎧 handleAudioCue() — fully instrumented
-// =========================================================
+
+
 // ------------------------------------------------------------
 // cueAudio(): play sound natively (Web Audio API)
 // ------------------------------------------------------------
@@ -81,14 +80,8 @@ function normalizeAudioSource(src) {
   if (/\.(wav|ogg|mp3|m4a)$/i.test(src)) return src;
   return `${src}.wav`;
 }
-// ============================================================
-// 🎧 cueAudio — Play / Toggle / Loop with UID-scoped control
-// ============================================================
-// ============================================================
-// 🎧 cueAudio — UID-scoped playback with pending safety,
-//               proper toggle-off, and clean retrigger
-//               Events: { uid, file, state: "play" | "stop" }
-// ============================================================
+
+
 export async function handleAudioCue(ast) {
   const ctx =
     window.sharedAudioCtx ||
@@ -243,7 +236,6 @@ export async function handleAudioCue(ast) {
   }
 }
 
-
 // ============================================================
 // 🛑 stopAllAudio — Global fade-out stop (filename scoped)
 // ============================================================
@@ -264,8 +256,6 @@ export function stopAllAudio(filename, fadeOutSec = 1.0) {
     }));
   }
 }
-
-
 
 // ========================================================
 // 🌐 Send OSC audio trigger via WebSocket

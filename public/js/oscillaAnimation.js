@@ -137,6 +137,33 @@ export function animationAssign(svgRoot) {
                 handleO2PCue(el, ast.args);
                 break;
 
+            case "cueText": {
+
+                // Hide the element that declares the text cue
+                // but keep it in DOM for geometry reference if needed.
+                el.style.opacity = "0";
+                el.style.visibility = "hidden";
+                el.style.pointerEvents = "none";
+                
+                const isPageMode = (window.navMode === "page" || window.mode === "page");
+
+                // read autostart:<1|0>
+                const autostartFlag = ast.args?.some(a =>
+                    a.type === "autostart" && String(a.value).trim() === "1"
+                );
+
+                if (isPageMode || autostartFlag) {
+                    console.log("[animationAssign] 🟣 Autostart cue:text →", el.id, ast);
+
+                    import("./oscillaText.js")
+                        .then(mod => mod.handleCueTextFromAST(ast, el))
+                        .catch(err => console.error("[animationAssign] cue:text autostart failed", err));
+                }
+
+                // otherwise: do nothing here → scroll mode will trigger via intersection
+                break;
+            }
+
             default:
                 // console.log(`• ⚠️ Not an animation cue → type="${ast.type}"`);
                 break;

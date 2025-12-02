@@ -176,10 +176,14 @@ export const rewind = () => {
     // console.log("[DEBUG] Cleared triggered cues due to rewind.");
   }
 
+  window.resetCueEdgeTracking();
+
+
   //  Apply and store correct speed based on the new playhead position
   window.speedMultiplier = getSpeedForPosition(window.playheadX);
   // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
   window.updateSpeedDisplay();
+
 
   // updatePosition();
   // updateSeekBar();
@@ -203,7 +207,7 @@ export const rewind = () => {
   if (window.isPlaying) {
     console.log("[DEBUG] Freewheel continue after seek");
     window.animationPaused = false;
-    window.isSeeking = false;
+    window.isSeeking = true;
 
     window.startAnimation?.();
     window.startStopwatch?.();
@@ -219,9 +223,11 @@ export const rewind = () => {
 */
 
 export const forward = () => {
-  const FORWARD_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // Convert time step into X coordinate shift
-  window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
 
+  const FORWARD_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // Convert time step into X coordinate shift
+  
+  window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
+  
   scrollToPlayheadVisual();
   // console.log(`[DEBUG] Forward applied. Newwindow.playheadX: ${window.playheadX}`);
 
@@ -235,16 +241,15 @@ export const forward = () => {
     // console.log("[DEBUG] Cleared triggered cues due to forward.");
   }
 
+  window.resetCueEdgeTracking();
+
   //  Apply and store correct speed based on the new playhead position
   window.speedMultiplier = getSpeedForPosition(window.playheadX);
-  // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
   window.updateSpeedDisplay();
-
 
   // updatePosition();
   // updateSeekBar();
-  //updatestopwatch();
-
+  // updatestopwatch();
 
   if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
     window.socket?.send(JSON.stringify({
@@ -264,7 +269,7 @@ export const forward = () => {
   if (window.isPlaying) {
     console.log("[DEBUG] Freewheel continue after seek");
     window.animationPaused = false;
-    window.isSeeking = false;
+    window.isSeeking = true;
 
     window.startAnimation?.();
     window.startStopwatch?.();
@@ -680,7 +685,7 @@ function toggleMode() {
     // go to node mode — open last or first page
     // const firstPage = Object.keys(window.pageRegistry || {})[0];
     // if (firstPage) {
-      handleCueTrigger?.(`nav(home)`);
+    handleCueTrigger?.(`nav(home)`);
     // }
   }
 

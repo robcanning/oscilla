@@ -18,13 +18,13 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     const unquote = (v) => (typeof v === "string" ? v.replace(/^["'`](.*)["'`]$/, "$1") : v);
 
     // Core params with safe defaults
-    let content  = unquote(params.src || params.content || "");
-    let style    = unquote(params.style || "");
+    let content = unquote(params.src || params.content || "");
+    let style = unquote(params.style || "");
     const targetId = unquote(params.target || "self");
-    const offsetX  = Number(params.offsetX || 0);
-    const offsetY  = Number(params.offsetY || 0);
-    const order    = unquote(params.order || "seq");   // "seq" | "rnd"
-    const mode     = unquote(params.mode  || "line");  // "line" | "word" | "char"
+    const offsetX = Number(params.offsetX || 0);
+    const offsetY = Number(params.offsetY || 0);
+    const order = unquote(params.order || "seq");   // "seq" | "rnd"
+    const mode = unquote(params.mode || "line");  // "line" | "word" | "char"
     const loopRaw0 = (params.loop ?? (order === "rnd" ? "0" : "1")).toString().trim().toLowerCase();
 
     // Ranges (dur/gap/hold)
@@ -36,8 +36,8 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       if (parts.length === 1) return [parts[0], parts[0]];
       return [parts[0], parts[1]];
     }
-    const [durMin,  durMax ] = parseRange(params.dur,  2);
-    const [gapMin,  gapMax ] = parseRange(params.gap,  0);
+    const [durMin, durMax] = parseRange(params.dur, 2);
+    const [gapMin, gapMax] = parseRange(params.gap, 0);
     const [holdMin, holdMax] = parseRange(params.hold, 0);
 
     // Fade (absolute ms or % of dur)
@@ -45,7 +45,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     let fadePercent = 0.25;
     let fadeTimeBase = null;
     if (fadeParam) {
-      if (fadeParam.endsWith("%")) fadePercent = Math.max(0, Math.min(1, Number(fadeParam.replace("%","")) / 100));
+      if (fadeParam.endsWith("%")) fadePercent = Math.max(0, Math.min(1, Number(fadeParam.replace("%", "")) / 100));
       else fadeTimeBase = Math.max(0, Number(fadeParam) || 0);
     }
 
@@ -89,8 +89,8 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
         return str.split(/\s+/).filter(Boolean).map((tok) => {
           const parts = tok.split(":").map((p) => p.trim());
           const text = parts[0];
-          const dur  = parts[1] && !isNaN(parseFloat(parts[1])) ? parseFloat(parts[1]) : null;
-          const gap  = parts[2] && !isNaN(parseFloat(parts[2])) ? parseFloat(parts[2]) : null;
+          const dur = parts[1] && !isNaN(parseFloat(parts[1])) ? parseFloat(parts[1]) : null;
+          const gap = parts[2] && !isNaN(parseFloat(parts[2])) ? parseFloat(parts[2]) : null;
           return { text, dur, gap };
         });
       } else if (mode === "char") {
@@ -107,8 +107,8 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     if (/\.txt$/i.test(content)) {
       const baseTextDir =
         (typeof window !== "undefined" && window.textDir) ? window.textDir :
-        (typeof window !== "undefined" && window.sharedDir) ? `${window.sharedDir}texts/` :
-        "/texts/";
+          (typeof window !== "undefined" && window.sharedDir) ? `${window.sharedDir}texts/` :
+            "/texts/";
       filePath = content.startsWith("/") ? content : `${baseTextDir}${content}`;
 
       console.log("[cueText] loading file:", { filePath, baseTextDir, content });
@@ -145,7 +145,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     if (window.activeCueTexts.has(uid)) {
       const prev = window.activeCueTexts.get(uid);
       prev.cancel = true;
-      try { prev.div?.remove(); } catch {}
+      try { prev.div?.remove(); } catch { }
       window.activeCueTexts.delete(uid);
       console.log("[cueText] canceled previous overlay with uid:", uid);
     }
@@ -180,15 +180,17 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       pointer-events: auto; /* allow click to cancel */
       ${style}
     `;
+    
     document.body.appendChild(div);
     console.log("[cueText] overlay appended to body. initial style:", div.style.cssText);
 
     // Cancel token & registry
-    const token = { cancel: false, div };
-    window.activeCueTexts.set(uid, token);
 
-    const onClickCancel = () => { token.cancel = true; console.log("[cueText] user clicked overlay → cancel requested"); };
-    div.addEventListener("click", onClickCancel);
+    // detect persist flag
+    const persistFlag = params.persist == 1 || params.persist === "1";
+
+    const token = { cancel: false, div, persist: persistFlag };
+    window.activeCueTexts.set(uid, token);
 
     // ───────────────────────────────────────────────
     // Positioning: center | self | elementId
@@ -198,7 +200,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       const box = cueElement.getBoundingClientRect();
       div.style.position = "absolute";
       div.style.left = `${box.x + offsetX}px`;
-      div.style.top  = `${box.y + offsetY}px`;
+      div.style.top = `${box.y + offsetY}px`;
       div.style.transform = "translate(0,0)";
       placed = true;
       console.log("[cueText] positioned at self:", { box, offsetX, offsetY });
@@ -208,7 +210,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
         const box = target.getBoundingClientRect();
         div.style.position = "absolute";
         div.style.left = `${box.x + offsetX}px`;
-        div.style.top  = `${box.y + offsetY}px`;
+        div.style.top = `${box.y + offsetY}px`;
         div.style.transform = "translate(0,0)";
         placed = true;
         console.log("[cueText] positioned at element:", { targetId, box, offsetX, offsetY });
@@ -219,7 +221,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     if (!placed) {
       div.style.position = "fixed";
       div.style.left = `calc(50% + ${offsetX}px)`;
-      div.style.top  = `calc(50% + ${offsetY}px)`;
+      div.style.top = `calc(50% + ${offsetY}px)`;
       div.style.transform = "translate(-50%, -50%)";
       console.log("[cueText] positioned at center:", { offsetX, offsetY });
     }
@@ -271,7 +273,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       void div.offsetHeight;
       div.style.opacity = 0;
       setTimeout(() => {
-        try { div.remove(); } catch {}
+        try { div.remove(); } catch { }
         window.activeCueTexts.delete(uid);
         console.log("[cueText] overlay removed, uid cleared:", uid);
         console.groupEnd();
@@ -320,7 +322,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
         console.log("[cueText] finite sequential playback; loopCount:", loopCount);
         let pass = 0;
         while (!token.cancel && pass < loopCount) {
-          console.log(`[cueText] pass ${pass+1}/${loopCount}`);
+          console.log(`[cueText] pass ${pass + 1}/${loopCount}`);
           await playSequenceOnce();
           pass++;
         }
@@ -332,12 +334,27 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
         fadeAndRemove();
       } catch (playErr) {
         console.error("[cueText] playback error:", playErr);
-        try { fadeAndRemove(); } catch {}
+        try { fadeAndRemove(); } catch { }
       }
     })();
 
   } catch (err) {
     console.error("[cueText] FATAL in handler:", err);
     console.groupEnd?.();
+  }
+}
+
+
+export function stopAllCueTexts() {
+  if (!window.activeCueTexts) return;
+
+  for (const [uid, token] of window.activeCueTexts.entries()) {
+    const hasPersist = token.persist === true;
+
+    if (!hasPersist) {
+      token.cancel = true;
+      try { token.div?.remove(); } catch { }
+      window.activeCueTexts.delete(uid);
+    }
   }
 }

@@ -25,6 +25,7 @@ import { initializeObserver } from "./oscillaObserver.js";
 // import { registerReuseBlocks, autoInjectUseBlocks } from "./reuse.js";
 import { buildCueButtonsIn } from "./oscillaButton.js";
 import { handleCueTrigger } from "./cues.js";
+import { stopAllCueTexts } from "./oscillaText.js";
 
 
 // =============================================================
@@ -274,6 +275,10 @@ export async function handlePageCue(ast, cueElement) {
     console.group("[cuePage] 🚀 handlePageCue (AST mode)");
     console.log("AST:", ast);
 
+
+    // before rendering new page:
+    stopAllCueTexts();
+
     // 1) Expand pattern
     const pages = expandPattern(ast.pattern).filter(x => x?.page);
     if (!pages.length) {
@@ -295,7 +300,7 @@ export async function handlePageCue(ast, cueElement) {
     console.log("[cuePage] ✔ Pattern finished");
 
     //  run after-action if present
-if (ast.onCompletion) {
+    if (ast.onCompletion) {
         console.log("[cuePage] ▶ Running after-action");
         handleAfterAction(ast);
     }

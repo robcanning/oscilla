@@ -2073,3 +2073,13 @@ body.inverted #stopwatch {
   pointer-events: none;   /* prevent blocking overlay interaction */
   object-fit: cover;      /* fill frame gracefully */
 }
+
+
+
+
+/* Before JS runs, hide any element declaring a cue text(...) */
+[id^="text("] {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}

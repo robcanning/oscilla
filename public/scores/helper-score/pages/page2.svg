@@ -217,12 +217,33 @@
        style="stroke-width:1.80078" /></text>
   <text
      xml:space="preserve"
-     style="font-size:85.33333333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:none;stroke:#ff0000"
-     x="279.66101"
-     y="394.91525"
+     style="font-size:85.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:none;stroke:#ff0000"
+     x="330.50845"
+     y="218.64407"
      id="text2"><tspan
        sodipodi:role="line"
        id="tspan1"
-       x="279.66101"
-       y="394.91525">page 2</tspan></text>
+       x="330.50845"
+       y="218.64407">page 2</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18.6667px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:inline;fill:#000000;stroke:#d73838;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
+     x="465.25641"
+     y="378.97806"
+     id="text(src:tzara-cutup.txt, &#10;order:rnd, dur:2, target:center, autostart:1,&#10;style:&quot;font-size:6em;&quot;)"><tspan
+       sodipodi:role="line"
+       x="465.25641"
+       y="378.97806"
+       id="tspan1299"
+       style="font-size:18.6667px">text(src:tzara-cutup.txt, </tspan><tspan
+       sodipodi:role="line"
+       x="465.25641"
+       y="402.31143"
+       id="tspan40"
+       style="font-size:18.6667px">order:rnd, dur:2, target:center, autostart:1,</tspan><tspan
+       sodipodi:role="line"
+       x="465.25641"
+       y="425.64481"
+       id="tspan44"
+       style="font-size:18.6667px">style:&quot;font-size:6em;&quot;)</tspan></text>
 </svg>
