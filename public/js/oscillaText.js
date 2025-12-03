@@ -3,6 +3,7 @@
 // cue:text(...) — AST-based text overlay handler
 // Instrumented for deep debugging
 // -----------------------------------------------
+
 export async function handleCueTextFromAST(ast, cueElement = null) {
   try {
     console.groupCollapsed("%c[cueText] ENTER handler", "color:#6cf;font-weight:bold");
@@ -180,11 +181,17 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       pointer-events: auto; /* allow click to cancel */
       ${style}
     `;
-    
+
     document.body.appendChild(div);
     console.log("[cueText] overlay appended to body. initial style:", div.style.cssText);
 
     // Cancel token & registry
+
+    const onClickCancel = () => {
+      token.cancel = true;
+      console.log("[cueText] user clicked overlay → cancel requested");
+    };
+    div.addEventListener("click", onClickCancel);
 
     // detect persist flag
     const persistFlag = params.persist == 1 || params.persist === "1";
@@ -192,6 +199,8 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     const token = { cancel: false, div, persist: persistFlag };
     window.activeCueTexts.set(uid, token);
 
+
+    
     // ───────────────────────────────────────────────
     // Positioning: center | self | elementId
     // ───────────────────────────────────────────────
@@ -231,40 +240,93 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     // ───────────────────────────────────────────────
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-    const crossFadeUnit = async (newText, duration) => {
-      if (token.cancel) return;
-      const minDur = 0.05; // 50ms guard
-      const durSec = Math.max(minDur, Number(duration) || minDur);
+// ───────────────────────────────────────────────
+// Improved crossFadeUnit with overlap support
+// fade can be ms or %; overlap allowed
+// ───────────────────────────────────────────────
+const crossFadeUnit = async (newText, duration) => {
+  if (token.cancel) return;
 
-      const fadeMsRaw = fadeTimeBase ?? (fadePercent * durSec * 1000);
-      const fadeApplied = clamp(fadeMsRaw, 50, durSec * 1000 * 0.8);
+  const minDur = 0.05;
+  const durSec = Math.max(minDur, Number(duration) || minDur);
+  const durMs = durSec * 1000;
 
-      console.log("[cueText] crossFadeUnit →", { newText, durSec, fadeApplied, fadePercent, fadeTimeBase });
+  // compute fadeIn + fadeOut
+  let fadeMs = 0;
 
-      // fade out current
-      div.style.transition = `opacity ${fadeApplied}ms ease`;
-      void div.offsetHeight; // reflow
-      div.style.opacity = 0;
-      await rafWait(fadeApplied, token);
-      if (token.cancel) return;
+  if (fadeTimeBase != null) {
+    fadeMs = fadeTimeBase;
+  } else {
+    fadeMs = fadePercent * durMs;
+  }
 
-      // set new text and fade in
-      div.textContent = newText;
-      await nextFrame(token);
-      div.style.transition = `opacity ${fadeApplied}ms ease`;
-      void div.offsetHeight;
-      div.style.opacity = 1;
+  // clamp but allow overlap if cross=1
+  const cross = params.cross == 1;
 
-      // display duration (content visible)
-      await rafWait(durSec * 1000, token);
-      if (token.cancel) return;
+  if (!cross) fadeMs = clamp(fadeMs, 20, durMs * 0.5);
 
-      // fade out after display (prepare next)
-      div.style.transition = `opacity ${fadeApplied}ms ease`;
-      void div.offsetHeight;
-      div.style.opacity = 0;
-      await rafWait(fadeApplied, token);
-    };
+  console.log("[cueText] improved crossFadeUnit", {
+    newText, durMs, fadeMs, cross
+  });
+
+  if (cross) {
+    // OVERLAPPING CROSSFADE
+    const ghost = div.cloneNode(true);
+    ghost.textContent = div.textContent;
+    ghost.style.opacity = 1;
+    ghost.style.position = "fixed";
+    ghost.style.pointerEvents = "none";
+    ghost.dataset.uid = uid + "_ghost";
+
+    div.parentNode.insertBefore(ghost, div);
+
+    // new text appears immediately at opacity 0
+    div.textContent = newText;
+    div.style.opacity = 0;
+
+    await nextFrame(token);
+
+    // fade new text in
+    div.style.transition = `opacity ${fadeMs}ms ease`;
+    void div.offsetHeight;
+    div.style.opacity = 1;
+
+    // fade ghost out in parallel
+    ghost.style.transition = `opacity ${fadeMs}ms ease`;
+    void ghost.offsetHeight;
+    ghost.style.opacity = 0;
+
+    // wait display time
+    await rafWait(durMs, token);
+
+    // cleanup
+    ghost.remove();
+    return;
+  }
+
+  // NON-OVERLAPPING (legacy)
+  div.style.transition = `opacity ${fadeMs}ms ease`;
+  void div.offsetHeight;
+  div.style.opacity = 0;
+  await rafWait(fadeMs, token);
+  if (token.cancel) return;
+
+  div.textContent = newText;
+  await nextFrame(token);
+
+  div.style.transition = `opacity ${fadeMs}ms ease`;
+  void div.offsetHeight;
+  div.style.opacity = 1;
+
+  await rafWait(durMs, token);
+  if (token.cancel) return;
+
+  div.style.transition = `opacity ${fadeMs}ms ease`;
+  void div.offsetHeight;
+  div.style.opacity = 0;
+  await rafWait(fadeMs, token);
+};
+
 
     const fadeAndRemove = () => {
       console.log("[cueText] fadeAndRemove()");

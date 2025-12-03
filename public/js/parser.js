@@ -74,7 +74,7 @@ const Stopwatch = createToken({ name: "Stopwatch", pattern: /\bstopwatch\b/ });
 const Video = createToken({ name: "Video", pattern: /\bvideo\b/ });
 const Text = createToken({ name: "Text", pattern: /\btext\b/, longer_alt: Identifier });
 const Pause = createToken({ name: "Pause", pattern: /\bpause\b/, longer_alt: Identifier });
-const Speed = createToken({ name: "Speed", pattern: /\bspeed\b/, longer_alt: Identifier });
+// const Speed = createToken({ name: "Speed", pattern: /\bspeed\b/, longer_alt: Identifier });
 const Stop = createToken({ name: "Stop", pattern: /\bstop\b/, longer_alt: Identifier });
 const Nav = createToken({ name: "Nav", pattern: /nav\b/, longer_alt: Identifier });
 const Audio = createToken({ name: "Audio", pattern: /audio\b/ });
@@ -123,7 +123,7 @@ export const PatternName = createToken({
 
 
 export const allTokens = [
-  Cue, Fade, Page, Stopwatch, Video, Text, Pause, Speed, Stop,
+  Cue, Fade, Page, Stopwatch, Video, Text, Pause, Stop,
   Audio, Button, Nav,
   Rotate, Scale, ScaleXY, O2P,
   After, PatternName, Choose,
@@ -501,6 +501,7 @@ export class CueParser extends CstParser {
       $.OR1([
         { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "num" }) },
         { ALT: () => $.CONSUME1(Identifier, { LABEL: "ident" }) },
+        { ALT: () => $.CONSUME(Stop, { LABEL: "kwStop" }) },   // <── NEW
       ]);
     });
 
@@ -596,20 +597,30 @@ export class CueParser extends CstParser {
     this.RULE("videoParamList", () => {
       this.AT_LEAST_ONE_SEP({
         SEP: Comma,
-        DEF: () => $.SUBRULE(this.videoParam)
+        DEF: () => {
+          this.SUBRULE(this.videoParam);
+        }
       });
     });
 
     this.RULE("videoParam", () => {
-      this.CONSUME(Identifier);
+      this.CONSUME(Identifier);   // file | size | opacity | speed | etc.
       this.CONSUME(Colon);
+
       this.OR([
-        { ALT: () => $.SUBRULE($.sizePair) },
-        { ALT: () => $.CONSUME(NumberLiteral) },
-        { ALT: () => $.CONSUME(StringLiteral) },
-        { ALT: () => $.CONSUME1(Identifier) }
+        { ALT: () => this.SUBRULE(this.sizePair) },
+
+        // number (int, float)
+        { ALT: () => this.CONSUME(NumberLiteral) },
+
+        // string e.g. filename
+        { ALT: () => this.CONSUME(StringLiteral) },
+
+        // identifiers for keyword-based values (scroll, fixed, fullscreen, center, etc.)
+        { ALT: () => this.CONSUME1(Identifier) }
       ]);
     });
+
 
     // ------------------------------------------------------------
     // cue:text(...)
@@ -618,11 +629,15 @@ export class CueParser extends CstParser {
       this.CONSUME(Text);
       this.SUBRULE(this.genericParamList);
     });
+
+
+
     // ------------------------------------------------------------
     // cueSpeedTop (grammar) — supports speed(3) and keyed params
     // ------------------------------------------------------------
     $.RULE("cueSpeedTop", () => {
-      $.CONSUME(Speed);
+      // now 'speed' is just an Identifier; we label it for AST sanity
+      $.CONSUME(Identifier, { LABEL: "speedFn" });
       $.CONSUME(LParen);
 
       $.OPTION(() => {
@@ -654,6 +669,8 @@ export class CueParser extends CstParser {
 
       $.CONSUME(RParen);
     });
+
+
 
     $.RULE("cueNavTop", () => {
       $.CONSUME(Nav);
@@ -835,7 +852,6 @@ export class CueParser extends CstParser {
     // cueTop — only fade|page at top level
     // -----------------------
     $.RULE("cueTop", () => {
-      // console.log("[cueTop] LA(1):", $.LA(1).image, $.LA(1).tokenType.name);
 
       // Allow optional cue: prefix (backwards compatible)
       $.OPTION(() => {
@@ -844,24 +860,41 @@ export class CueParser extends CstParser {
       });
 
       $.OR([
+        { ALT: () => $.SUBRULE($.cueTextTop) },
         { ALT: () => $.SUBRULE($.cueFadeTop) },
         { ALT: () => $.SUBRULE($.cueNavTop) },
         { ALT: () => $.SUBRULE($.cuePageTop) },
         { ALT: () => $.SUBRULE($.cueStopwatchTop) },
         { ALT: () => $.SUBRULE($.cueVideoTop) },
-        { ALT: () => $.SUBRULE($.cueTextTop) },
-        { ALT: () => $.SUBRULE($.cueMetronomeTop) },
+
+        // 🔹 only treat metro/metronome(...) as cueMetronomeTop
+        {
+          GATE: () =>
+            $.LA(1).tokenType === Identifier &&
+            ($.LA(1).image === "metro" || $.LA(1).image === "metronome"),
+          ALT: () => $.SUBRULE($.cueMetronomeTop)
+        },
+
         { ALT: () => $.SUBRULE($.cuePauseTop) },
-        { ALT: () => $.SUBRULE($.cueSpeedTop) },
+
+        // 🔹 specifically route speed(...) calls here
+        {
+          GATE: () =>
+            $.LA(1).tokenType === Identifier &&
+            $.LA(1).image === "speed",
+          ALT: () => $.SUBRULE($.cueSpeedTop)
+        },
+
         { ALT: () => $.SUBRULE($.cueStopTop) },
         { ALT: () => $.SUBRULE($.cueButtonTop) },
         { ALT: () => $.SUBRULE($.cueAudioTop) },
         { ALT: () => $.SUBRULE($.cueRotateTop) },
         { ALT: () => $.SUBRULE($.cueScaleTop) },
         { ALT: () => $.SUBRULE($.cueO2PTop) },
-
       ]);
+
     });
+
 
     this.performSelfAnalysis();
   }
@@ -1068,7 +1101,7 @@ export function extractAfterClause(children) {
   const target = ctrl.children.targetUid?.[0]?.image || null;
 
   if (!control) return null;
-   console.log("[extractAfterClause] ✅ control:", control, "arg:", arg, "target:", target);
+  console.log("[extractAfterClause] ✅ control:", control, "arg:", arg, "target:", target);
   return { control, arg, target };
 }
 
@@ -1323,19 +1356,20 @@ export function cstToAst(cst) {
 
 
 
-
   // ------------------------------------------------------------
-  // cue:speed(...)  CST → AST
+  // cue:speed(...)  CST → AST (patched for Identifier-based speed)
   // ------------------------------------------------------------
   const speedNode =
     cst.children?.cueSpeedTop?.[0] ||
     (cst.name === "cueSpeedTop" ? cst : null);
 
   if (speedNode) {
+    // Confirm the function name really is "speed"
+    const fnName = speedNode.children?.speedFn?.[0]?.image;
+    if (fnName !== "speed") return null;
+
     // shorthand: speed(3)
-    const shorthandTok =
-      speedNode.children?.shorthand?.[0] ||
-      speedNode.children?.NumberLiteral?.[0];
+    const shorthandTok = speedNode.children?.shorthand?.[0] || null;
 
     let value = shorthandTok ? Number(shorthandTok.image) : null;
     let add = null;
@@ -1346,13 +1380,14 @@ export function cstToAst(cst) {
     const parseVal = (raw) => {
       if (raw == null) return null;
       const s = String(raw).trim();
-      if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) return s.slice(1, -1);
+      if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'")))
+        return s.slice(1, -1);
       if (/^(true|false)$/i.test(s)) return /^true$/i.test(s);
       if (!isNaN(s) && s !== "") return Number(s);
       return s;
     };
 
-    // optional param list (works with genericParamList or bare genericParam[])
+    // optional param list (genericParamList or bare genericParam)
     const paramNodes =
       speedNode.children.genericParamList ||
       speedNode.children.genericParam || [];
@@ -1361,76 +1396,83 @@ export function cstToAst(cst) {
       const key = p.children.key?.[0]?.image;
       const raw = p.children.value?.[0]?.image;
       if (!key) continue;
+
       const v = parseVal(raw);
 
-      if (key === "value" || key === "speed" || key === "multiplier") value = Number(v);
-      else if (key === "add") add = Number(v);
-      else if (key === "dur") dur = Number(v);
-      else if (key === "ease" || key === "easing") ease = String(v);
-      else if (key === "uid") uid = v;
+      if (key === "value" || key === "speed" || key === "multiplier") {
+        value = Number(v);
+      } else if (key === "add") {
+        add = Number(v);
+      } else if (key === "dur") {
+        dur = Number(v);
+      } else if (key === "ease" || key === "easing") {
+        ease = String(v);
+      } else if (key === "uid") {
+        uid = v;
+      }
     }
 
     return { type: "cueSpeed", value, add, dur, ease, uid };
   }
 
 
-// ------------------------------------------------------------
-// cue:button(...) AST Builder
-// ------------------------------------------------------------
-const buttonNode =
-  cst.children?.cueButtonTop?.[0] ||
-  (cst.name === "cueButtonTop" ? cst : null);
+  // ------------------------------------------------------------
+  // cue:button(...) AST Builder
+  // ------------------------------------------------------------
+  const buttonNode =
+    cst.children?.cueButtonTop?.[0] ||
+    (cst.name === "cueButtonTop" ? cst : null);
 
-if (buttonNode) {
-  const labelTok = buttonNode.children.labelValue?.[0];
-  const label = labelTok ? labelTok.image.replace(/^"|"$/g, "") : "";
+  if (buttonNode) {
+    const labelTok = buttonNode.children.labelValue?.[0];
+    const label = labelTok ? labelTok.image.replace(/^"|"$/g, "") : "";
 
-  const triggerAst = buttonNode.children.triggerValue?.[0]
-    ? cstToAst(buttonNode.children.triggerValue[0])
-    : null;
+    const triggerAst = buttonNode.children.triggerValue?.[0]
+      ? cstToAst(buttonNode.children.triggerValue[0])
+      : null;
 
-// ------------------------------------------------------------
-// Extract style(...) params from flat styleParam[] nodes
-// ------------------------------------------------------------
-// console.log("[cueButton:AST] Begin flat styleParam extraction");
+    // ------------------------------------------------------------
+    // Extract style(...) params from flat styleParam[] nodes
+    // ------------------------------------------------------------
+    // console.log("[cueButton:AST] Begin flat styleParam extraction");
 
-const opt = {};
-const params = buttonNode.children.styleParam || [];
+    const opt = {};
+    const params = buttonNode.children.styleParam || [];
 
-// console.log(`[cueButton:AST] Found styleParam count = ${params.length}`);
+    // console.log(`[cueButton:AST] Found styleParam count = ${params.length}`);
 
-params.forEach((p, idx) => {
-  // console.log(`[cueButton:AST]   styleParam[${idx}] node:`, p);
+    params.forEach((p, idx) => {
+      // console.log(`[cueButton:AST]   styleParam[${idx}] node:`, p);
 
-  const keyNode = p.children.key?.[0];
-  const valNode = p.children.value?.[0];
+      const keyNode = p.children.key?.[0];
+      const valNode = p.children.value?.[0];
 
-  if (!keyNode || !valNode) {
-    // console.warn(`[cueButton:AST]   styleParam[${idx}] missing key or value`);
-    return;
+      if (!keyNode || !valNode) {
+        // console.warn(`[cueButton:AST]   styleParam[${idx}] missing key or value`);
+        return;
+      }
+
+      const key = keyNode.image;
+      let val = valNode.image.replace(/^"|"$/g, "");
+
+      // console.log(`[cueButton:AST]   → key="${key}" val="${val}"`);
+
+      opt[key] = val;
+    });
+
+    // console.log("[cueButton:AST] Final extracted style opt=", JSON.stringify(opt, null, 2));
+
+
+    return {
+      type: "cueButton",
+      label,
+      triggerAst: {
+        ...triggerAst,
+        uid: triggerAst?.uid ?? null
+      },
+      opt
+    };
   }
-
-  const key = keyNode.image;
-  let val = valNode.image.replace(/^"|"$/g, "");
-
-  // console.log(`[cueButton:AST]   → key="${key}" val="${val}"`);
-
-  opt[key] = val;
-});
-
-// console.log("[cueButton:AST] Final extracted style opt=", JSON.stringify(opt, null, 2));
-
-
-  return {
-    type: "cueButton",
-    label,
-    triggerAst: {
-      ...triggerAst,
-      uid: triggerAst?.uid ?? null
-    },
-    opt
-  };
-}
 
 
   // ------------------------------------------------------------
@@ -1725,28 +1767,28 @@ params.forEach((p, idx) => {
 // 4️⃣ MAIN ENTRY
 // ============================================================================
 export function parseCueToAST(input) {
-  
-  
+
+
   const lexResult = CueLexer.tokenize(input);
 
-  // debugTokens(input);  //
+  debugTokens(input);  //
 
-  // console.log("[LexerDebug] Tokens:", lexResult.tokens.map(t => t.image));
-  // console.log("[LexerDebug] Errors:", lexResult.errors);
+  console.log("[LexerDebug] Tokens:", lexResult.tokens.map(t => t.image));
+  console.log("[LexerDebug] Errors:", lexResult.errors);
 
   const parser = new CueParser();
   parser.input = lexResult.tokens;
   const cst = parser.cueTop();
 
   if (parser.errors.length) {
-    // console.error("[CueDSL] ❌ Parse errors:", parser.errors);
+    console.error("[CueDSL] ❌ Parse errors:", parser.errors);
     throw new Error("Parsing failed");
   }
 
-  // console.log("✅ Parsed CST structure ↓↓↓");
-  // printCST(cst);
+  console.log("✅ Parsed CST structure ↓↓↓");
+  printCST(cst);
   const ast = cstToAst(cst);
-  // console.log("[CueDSL] ✅ Parsed AST:", ast);
+  console.log("[CueDSL] ✅ Parsed AST:", ast);
   return ast;
 }
 
