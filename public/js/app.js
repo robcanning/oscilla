@@ -1685,69 +1685,63 @@ document.addEventListener('DOMContentLoaded', () => {
    * This is a stable real-time score transport model:
    *   freewheel motion + low-pass drift convergence.
    */
+window.animate = async (currentTime) => {
+  if (!window.isPlaying || window.isSeeking) return;
 
-  window.lastAnimationFrameTime = null;
+  // --- Compute dt ---
+  let dt = 0;
+  if (window.lastAnimationFrameTime !== null) {
+    dt = (currentTime - window.lastAnimationFrameTime) / 1000; // seconds
+  }
+  window.lastAnimationFrameTime = currentTime;
 
-  window.animate = async (currentTime) => {
-    // Stop animation when paused or seeking
-    if (!window.isPlaying || window.isSeeking) return;
+  const refWidth = window.remoteScoreWidth || window.scoreWidth;
 
-    // --- Compute dt *before* using it ---
-    let dt = 0;
-    if (window.lastAnimationFrameTime !== null) {
-      dt = (currentTime - window.lastAnimationFrameTime) / 1000; // seconds
-    }
-    window.lastAnimationFrameTime = currentTime;
+  if (dt > 0 && refWidth && window.duration) {
 
-    const refWidth = window.remoteScoreWidth || window.scoreWidth;
+    // ---------------------------
+    // 🔥 CORRECT SPEED MODEL
+    // dt = seconds
+    // window.speedMultiplier = ACTUAL speed
+    // ---------------------------
 
-    if (dt > 0 && refWidth && window.duration) {
+    const deltaMs = dt * 1000;
+    const effectiveDeltaMs = deltaMs * (window.speedMultiplier || 1);
 
-      // --- Freewheeling scroll increment ---
-      const delta = (dt * 1000) * playbackSpeed;  // restore your original scaling
-      const estimatedIncrement =
-        ((delta * window.speedMultiplier) / window.duration) * refWidth;
+    const estimatedIncrement =
+      (effectiveDeltaMs / window.duration) * refWidth;
 
-      // Advance playhead in world units
-      window.playheadX = Math.min(window.playheadX + estimatedIncrement, refWidth);
+    window.playheadX = Math.min(
+      window.playheadX + estimatedIncrement,
+      refWidth
+    );
 
-      // --- Smooth drift correction from server position ---
-      if (window.serverSyncPlayheadX !== undefined && window.serverSyncPlayheadX != null) {
-        const drift = window.serverSyncPlayheadX - window.playheadX;
+    // ---- drift correction ----
+    if (window.serverSyncPlayheadX !== undefined && window.serverSyncPlayheadX != null) {
+      const drift = window.serverSyncPlayheadX - window.playheadX;
 
-        // Large discrepancy = jump case → snap
-        if (Math.abs(drift) > (refWidth * 0.05)) {
-          window.playheadX = window.serverSyncPlayheadX;
-        } else {
-          // Small discrepancy → invisible correction
-          const correctionRate = 1.3; // tune 1.2–1.7 to taste
-          window.playheadX += drift * correctionRate * dt;
-        }
+      if (Math.abs(drift) > (refWidth * 0.05)) {
+        window.playheadX = window.serverSyncPlayheadX;
+      } else {
+        const correctionRate = 1.3;
+        window.playheadX += drift * correctionRate * dt;
       }
-
-      // Apply to visual scroll
-      scrollToPlayheadVisual();
     }
 
-    // --- Update elapsed time for cue & UI systems ---
-    if (window.duration && window.scoreWidth) {
-      window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-    }
+    scrollToPlayheadVisual();
+  }
 
-    // // --- Periodic visibility optimization ---
-    // const visibilityCheckInterval = 150;
-    // window.lastVisibilityCheckTime = window.lastVisibilityCheckTime || 0;
-    // if (currentTime - window.lastVisibilityCheckTime > visibilityCheckInterval) {
-    //   window.checkAnimationVisibility?.();
-    //   window.lastVisibilityCheckTime = currentTime;
-    // }
+  // Update elapsed time
+  if (window.duration && window.scoreWidth) {
+    window.elapsedTime =
+      (window.playheadX / window.scoreWidth) * window.duration;
+  }
 
-    // --- Cues ---
-    await checkCueTriggers?.(window.elapsedTime);
+  await checkCueTriggers?.(window.elapsedTime);
 
-    // Continue animation
-    window.animationFrameId = requestAnimationFrame(window.animate);
-  };
+  window.animationFrameId = requestAnimationFrame(window.animate);
+};
+
 
 
   //////////////////////////////////////////////////////////////////////////////

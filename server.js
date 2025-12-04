@@ -432,7 +432,7 @@ wss.on('connection', (ws, req) => {
         break;
       }
 
-      
+
       // -----------------------------------------------------------
       // 🎚️ OSC Fade updates from client
       // -----------------------------------------------------------
@@ -941,15 +941,16 @@ wss.on('connection', (ws, req) => {
         const { project, scoreWidth, renderedWidth, duration } = data;
 
         if (!project) {
-          console.warn("[SERVER] ⚠️ score_meta missing project name");
+          console.warn("[SERVER] score_meta missing project name");
           break;
         }
 
         // ✅ duration (minutes converted to ms by client)
-        if (!durationByProject[project] && duration > 0) {
+        if (duration > 0) {
           durationByProject[project] = duration;
-          console.log(`[SERVER] ⏱ duration for ${project} = ${duration}ms`);
+          console.log(`[SERVER] ⏱ duration for ${project} = ${duration}ms (updated)`);
         }
+
 
         // ✅ Set project-specific scoreWidth if not already stored
         if (!scoreWidthByProject[project] && typeof scoreWidth === "number" && scoreWidth > 0) {

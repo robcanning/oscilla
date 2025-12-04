@@ -40,7 +40,7 @@
  */
 
 
-import { getSpeedForPosition } from "./speed.js";
+import { getSpeedForPosition } from "./oscillaSpeed.js";
 
 window.seekDebounceTime = 300;
 window.seekingTimeout = null;
@@ -315,12 +315,21 @@ export function adjustSpeed(delta) {
  * Sets the speed multiplier and syncs it.
  * @param {number} newSpeed - The new speed multiplier
  */
-export function setSpeed(newSpeed) {
-  window.speedMultiplier = parseFloat(newSpeed.toFixed(1));
-  updateSpeedDisplay();
-  sendSpeedUpdateToServer(window.speedMultiplier);
-}
+export function setSpeed(relativeMultiplier) {
+  // fallback for safety
+  if (!window.baseSpeedMultiplier) {
+    window.baseSpeedMultiplier = 1;
+  }
 
+  const actual = relativeMultiplier * window.baseSpeedMultiplier;
+
+  window.speedMultiplier = actual;
+
+  console.log(
+    `[Speed] base=${window.baseSpeedMultiplier}, `
+    + `relative=${relativeMultiplier}, actual=${actual}`
+  );
+}
 /**
  * Updates the on-screen speed display.
  */
@@ -557,6 +566,7 @@ import { checkCueTriggers } from "./cues.js";
  * - Ensures speed and seekbar are in sync
  */
 export function startPlayback() {
+ 
   if (window.isPlaying) return;
 
   if (window.userScrolling) {
@@ -573,7 +583,7 @@ export function startPlayback() {
   window.isPaused = false;
 
   // --- Speed setup ---
-  window.speedMultiplier = getSpeedForPosition(window.playheadX);
+window.speedMultiplier = getSpeedForPosition(window.playheadX) * (window.baseSpeedMultiplier || 1);
   console.log(
     `[Playback] 🎚 Applying speed multiplier: ${window.speedMultiplier} (playheadX=${window.playheadX.toFixed(
       2

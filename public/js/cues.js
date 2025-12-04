@@ -44,6 +44,7 @@ export const cueHandlers = {
 
 import { parseCueToAST } from "./parser.js";
 
+import { handleNavCue } from "./oscillaNav.js";
 import { handleFadeCueFromAST } from "./oscillaFade.js";
 import { handleVideoCueFromAST } from "./oscillaVideo.js";
 import { buildCueButtonsIn } from "./oscillaButton.js";
@@ -59,7 +60,7 @@ import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues } fro
 
 import { propagate } from "./oscillaPropagate.js";
 
-import { handleSpeedCue, handleSpeedRamp } from "./speed.js";
+import { handleSpeedCue, handleSpeedRamp } from "./oscillaSpeed.js";
 import { stopAllCueTexts } from "./oscillaText.js";
 
 // import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
@@ -266,17 +267,17 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
 
     // Animation handlers
     case "cueRotate": return handleRotateCue(cueElement, ast.args, { fromCueTrigger: true });
-    case "cueScale":  return handleScaleCue(ast, cueElement, { fromCueTrigger: true });
-    case "cueO2P":    return handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
+    case "cueScale": return handleScaleCue(ast, cueElement, { fromCueTrigger: true });
+    case "cueO2P": return handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
 
     // Page navigation — ALWAYS retrigger
     case "cuePage":
     case "page":
       return handlePageCue(ast, cueElement);
 
-    case "cueFade":       return handleFadeCueFromAST(ast, cueElement);
-    case "cueStopwatch":  return handleStopwatchCue(ast, cueElement);
-    case "cueVideo":      return handleVideoCueFromAST(ast, cueElement);
+    case "cueFade": return handleFadeCueFromAST(ast, cueElement);
+    case "cueStopwatch": return handleStopwatchCue(ast, cueElement);
+    case "cueVideo": return handleVideoCueFromAST(ast, cueElement);
 
     case "cueText":
       import("./oscillaText.js")
@@ -981,7 +982,9 @@ export function assignCues(svgRoot, cuesArray = []) {
   // Walk SVG to register cues & button() elements
   // ----------------------------------------------------
 
+
   function walk(node) {
+
     for (const child of node.children) {
       const id = child.id;
 
@@ -1011,6 +1014,12 @@ export function assignCues(svgRoot, cuesArray = []) {
         ast = parseCueToAST(id.trim());
       } catch (e) {
         // console.warn("[assignCues] parse failed for:", id);
+        walk(child);
+        continue;
+      }
+
+      // Skip non-cue directives like use(...), propagate(...), comments, or anything that returns null
+      if (!ast) {
         walk(child);
         continue;
       }
@@ -1701,7 +1710,7 @@ export function handleStopwatchCue(ast, cueElement = null) {
 
 
 window.returnToScrollingScore = function returnToScrollingScore() {
-  
+
   console.log("[cuePage] Returning to scrolling score.");
   stopAllCueTexts();
 
@@ -1771,11 +1780,11 @@ function pauseScrollScore() {
 }
 
 function resumeScrollScore() {
-  console.log("[cuePage] ▶ Resuming scrolling score...");
+  console.log(" Resuming scrolling score...");
 
   // ✅ If we arrived here from nav(mode:scrollPaused@X)
   if (window._resumeAfterJump === false) {
-    console.log("[cuePage] ⏸ Staying paused after jump (scrollPaused mode).");
+    console.log(" ⏸ Staying paused after jump (scrollPaused mode).");
 
     // Ensure playback remains paused
     window.isPlaying = false;
@@ -1821,7 +1830,7 @@ function resumeScrollScore() {
   // ✅ Reset flag so future scroll resumes behave normally
   window._resumeAfterJump = null;
 
-  console.log("[cuePage] ▶ Scroll resume complete.");
+  console.log("▶ Scroll resume complete.");
 }
 
 
@@ -2209,78 +2218,6 @@ window._cueInsideState?.clear();
 
 
 
-
-
-export function handleNavCue(ast) {
-  const dbg = (...a) => console.log("[cueNav]", ...a);
-
-  // --- Normalize AST (support legacy key/value) ---
-  // New form: { action, target }
-  // Old form: { key, value, target }  (e.g., key:"page", value:"page3")
-  let action = ast.action ?? null;
-  let target = ast.target ?? null;
-
-  if (!action && ast.key) {
-    if (ast.key === "mode") {
-      // legacy nav(mode:scroll@X)
-      action = ast.value || "scroll";
-      target = ast.target ?? null;
-    } else if (ast.key === "page") {
-      // legacy nav(page:page3)
-      action = ast.value || null; // becomes the page/rehearsal name
-      target = ast.target ?? null;
-    }
-  }
-
-  dbg("→", { action, target, uid: ast.uid ?? null });
-
-  if (!action) return;   // Guard: nothing to do
-
-  // SCROLL MODE (auto-resume)
-  // ------------------------------------------------------------
-  // SCROLL MODE (auto-resume)
-  if (action === "scroll") {
-    window._resumeAfterJump = true;
-
-    // ✅ Leave page-mode view if active
-    window.returnToScrollingScore?.();
-
-    // ✅ Jump if target provided
-    if (target) {
-      window.jumpToRehearsalMark?.(target);
-    }
-
-    return;
-  }
-
-  // SCROLL MODE PAUSED (stay paused but show score)
-  if (action === "scrollPaused") {
-    window._resumeAfterJump = false;
-
-    // ✅ Leave page-mode view if active
-    window.returnToScrollingScore?.();
-
-    if (target) {
-      window.jumpToRehearsalMark?.(target);
-    }
-
-    // stays paused
-    return;
-  }
-
-  // DIRECT PAGE / REHEARSAL JUMP
-  // ------------------------------------------------------------
-  if (typeof window.handleCueTrigger === "function") {
-    // Treat `action` as the page/marker name
-    window._resumeAfterJump = true;
-    window.handleCueTrigger(`page(${action})`);
-    return;
-  }
-
-  // Fallback: jump directly if no cue dispatcher is available
-  window._resumeAfterJump = true;
-  window.jumpToRehearsalMark?.(action);
-}
 
 
 

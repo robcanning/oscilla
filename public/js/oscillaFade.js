@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////
+
 
 export function handleFadeCueFromAST(ast, cueElementId) {
   console.group("[cueFade] 🎛 Handling fade cue");
@@ -14,8 +14,7 @@ export function handleFadeCueFromAST(ast, cueElementId) {
   const hold = Number(params.hold ?? 0); // ⏸ pause between loops
   const targetId = params.target || "self";
 
-
-
+  
   function sendFadeOSC(value) {
     const oscFlag = Number(params.osc ?? 1);
     if (!window.OSC_ENABLED || !oscFlag) return;

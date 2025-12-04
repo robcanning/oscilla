@@ -52,6 +52,26 @@ export function cleanupProjectOverlays() {
   console.log("[Cleanup] ✅ Done.");
 }
 
+window.applyPreferences = function applyPreferences(prefs) {
+  console.log("[Prefs] applyPreferences() called:", prefs);
+
+  // 1. Dark mode
+  applyDarkMode?.(!!prefs.darkMode);
+
+  // 2. Duration (your baseline speed control)
+  if (prefs.duration_minutes > 0) {
+    window.duration = prefs.duration_minutes * 60 * 1000;
+    console.log(`[Prefs] duration set to ${window.duration} ms`);
+  }
+
+  // 3. OSC + audio sync toggles
+  window.oscOutputEnabled = !!prefs.oscOutput;
+  window.audioSyncEnabled = !!prefs.audioSync;
+
+  // 4. Loop playback
+  window.loopPlayback = !!prefs.loopPlayback;
+};
+
 
 // ------------------------------------------------------------
 // 🚀 Main entry point
@@ -120,12 +140,12 @@ export async function loadProject(projectName, options = {}) {
     }
 
 
-    window.applyPreferences = function applyPreferences(prefs) {
-      console.log("[Prefs] (noop) applyPreferences called with:", prefs);
-    };
-
     // 2️⃣ Load and apply preferences
     const prefs = await loadPreferences(window.projectBase);
+
+    applyPreferences(prefs);
+
+
 
     // ✅ Make available to Preferences dialog and runtime
     window.currentProjectPrefs = prefs;

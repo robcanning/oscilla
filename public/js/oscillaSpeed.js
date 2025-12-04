@@ -9,6 +9,9 @@
  * @param {SVGElement} svgElement
  * @returns {Array<{ position: number, multiplier: number }>}
  */
+
+
+
 export function extractSpeedCues(svgElement) {
   if (!svgElement) {
     // console.warn("[extractSpeedCues] No SVG element provided.");

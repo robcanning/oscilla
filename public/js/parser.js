@@ -504,7 +504,7 @@ export class CueParser extends CstParser {
         { ALT: () => $.CONSUME(Stop, { LABEL: "kwStop" }) },   // <── NEW
       ]);
     });
-
+// 
     $.RULE("fadeParamList", () => {
       $.AT_LEAST_ONE_SEP({
         SEP: Comma,
@@ -1769,6 +1769,11 @@ export function cstToAst(cst) {
 export function parseCueToAST(input) {
 
 
+  if (input.trim().startsWith("use(")) {
+    console.warn("[CueDSL] Skipping 'use(...)' directive");
+    return null;
+}
+
   const lexResult = CueLexer.tokenize(input);
 
   debugTokens(input);  //
@@ -1785,8 +1790,8 @@ export function parseCueToAST(input) {
     throw new Error("Parsing failed");
   }
 
-  console.log("✅ Parsed CST structure ↓↓↓");
-  printCST(cst);
+  // console.log("✅ Parsed CST structure ↓↓↓");
+  // printCST(cst);
   const ast = cstToAst(cst);
   console.log("[CueDSL] ✅ Parsed AST:", ast);
   return ast;

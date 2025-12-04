@@ -5,7 +5,7 @@ import {
 } from "./reuse.js";
 
 
-import { extractSpeedCues } from "./speed.js";
+import { extractSpeedCues } from "./oscillaSpeed.js";
 import { hideAllButtonPlaceholders } from "./oscillaButton.js";
 
 
@@ -131,57 +131,45 @@ document.addEventListener("keydown", (event) => {
     openRehearsalPopup();
   }
 });
+
+
+
 window.jumpToRehearsalMark = function (mark) {
+  console.log(`[JUMP] Requested jump to: ${mark}`);
+
   const entry = rehearsalMarks[mark];
   if (!entry) {
-    console.error(`[jumpToRehearsalMark] Mark "${mark}" not found.`);
+    console.error(`[JUMP] ❌ Mark "${mark}" not found.`);
     return;
   }
 
-  //  Temporarily disable cue triggers
+  // Disable cues during jump
   window.suppressCueTriggers = true;
 
-  //  Stop playback *always* during jump
+  // Pause during teleport
   window.isPlaying = false;
   window.animationPaused = true;
 
-  //  Teleport playhead without scrolling through cues
+  // Teleport playhead
   window.playheadX = entry.x;
   scrollToPlayheadVisual?.();
+
+  // Prevent drift glitch
   window.lastAnimationFrameTime = null;
 
-  //  Reset cue-edge tracking
+  // Reset cue state
   window._prevCueLefts = new Map();
   window._cueInsideState = new Map();
   window.triggeredCues = new Set();
 
-  //  Sync across clients
+  // Notify server
   if (window.socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ type: "jump", playheadX: entry.x }));
   }
 
-  //  Re-enable cues only after DOM settles
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      window.suppressCueTriggers = false;
+  window.suppressCueTriggers = false;
 
-      // ✅ Explicit final resume logic only
-      if (window._resumeAfterJump === true) {
-        window.animationPaused = false;
-        window.isPlaying = true;
-        window.startPlayback?.();
-      } else {
-        window.animationPaused = true;
-        window.isPlaying = false;
-      }
-
-      window._resumeAfterJump = null;
-    });
-  });
 };
-
-
-
 
 window.jumpToRehearsalMark = jumpToRehearsalMark;
 
@@ -221,8 +209,6 @@ document.addEventListener('keydown', (event) => {
 
   console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
 });
-
-
 
 
 
