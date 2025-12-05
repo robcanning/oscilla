@@ -1,59 +1,49 @@
-## cueNav(...) — control global navigation and playback modes
+# nav() — Navigation and Structural Movement
 
-Handles mode switching, page navigation, and structural movement  
-within the Oscilla score. It can toggle between scroll and page modes,  
-jump to rehearsal marks, or trigger specific navigation actions such as  
-pause, resume, or mode transitions. `cueNav` is the central handler used  
-by after-actions (e.g. `after:mode(scroll@F)` from `cue:page`).
+Navigates to a page, rehearsal mark, or scroll mode location.
 
-### Syntax
-cueNav(mode(scroll))
-cueNav(mode(page))
-cueNav(mode(scrollPaused))
-cueNav(mode(scroll@F))
-cueNav(page(page2))
-cueNav(jump(F))
-cueNav(resume)
-cueNav(pause)
+## Syntax
+```
+nav(<actionOrPage>[ @ <target> ], repeats:<N>?, uid:<id>?)
+```
 
-### Arguments
-| Argument | Description |
-|-----------|-------------|
-| **mode(...)** | Switch display and playback mode (`scroll`, `page`, or `scrollPaused`) |
-| **page(...)** | Jump directly to a named SVG page (e.g. `page(page2)`) |
-| **jump(...)** | Jump to a rehearsal mark or cue ID in scroll mode |
-| **pause** | Pause global playback |
-| **resume** | Resume global playback after pause or stop |
-| **scroll@uid** | Combined mode change and jump to a target mark |
-| **scrollPaused@uid** | Switch to scroll mode, jump to target, remain paused |
+The first argument determines the navigation behavior. It may be:
+- `scroll`         = switch to scrolling mode and continue playback
+- `scrollPaused`   = switch to scrolling mode but do not resume playback
+- `<pagename>`     = jump directly to a page or rehearsal mark
 
-### Behavior
-- `cueNav(mode(scroll))` switches the interface into scroll mode.  
-- `cueNav(mode(page))` switches to page mode.  
-- `cueNav(mode(scroll@F))` switches to scroll mode and jumps to rehearsal mark F.  
-- `cueNav(mode(scrollPaused@F))` does the same but keeps playback paused.  
-- `cueNav(page(page3))` loads a specific page directly.  
-- `cueNav(pause)` pauses all synchronized playback across clients.  
-- `cueNav(resume)` resumes from the last stopped or paused position.  
-- All navigation and mode changes are synchronized across connected clients.  
+The optional `@<target>` is used when scroll mode needs to jump to a specific place.
 
-### Examples
-cueNav(mode(scroll))
-cueNav(mode(scroll@A))
-cueNav(mode(scrollPaused@B))
-cueNav(mode(page))
-cueNav(page(page1))
-cueNav(jump(C))
-cueNav(pause)
-cueNav(resume)
+## Parameters
+| Parameter     | Description |
+|---------------|-------------|
+| `actionOrPage`| `"scroll"`, `"scrollPaused"`, or a page/rehearsal name (e.g., `page3`, `Coda`) |
+| `target`      | Optional rehearsal/page anchor used only with scroll modes |
+| `repeats`     | Optional number of times to re-trigger a scroll jump before traversal continues |
+| `uid`         | Unique cue identifier required for repeats; recommended whenever nav() may re-trigger |
 
+## Examples
+```
+// direct page navigation
+nav(page3)
+nav(page3, uid:p3)
+nav(Coda)
 
-### Notes
-- `cueNav` commands are used internally by `cue:page` and other cues  
-  to manage transitions between modes and structural sections.  
-- The `@` syntax specifies a target rehearsal mark or cue ID.  
-- `scrollPaused` mode allows pre-positioning the score before playback resumes.  
-- All mode changes are deferred until the main container (`#scoreContainer`)  
-  is ready, preventing visual or sync glitches.  
-- Future extensions will include support for timed resume (e.g. `:hold(n)`)  
-  and OSC-triggered navigation.
+// scroll navigation
+nav(scroll@A)
+nav(scrollPaused@B)
+nav(scroll)
+nav(scrollPaused)
+
+// repeatable scroll navigation
+nav(scroll@G, repeats:3, uid:g1)
+// jump to G three times; afterwards traversal continues normally
+```
+
+## UID rule
+UID is optional unless repeats are used or multiple identical `nav()` expressions appear.
+It uniquely identifies navigation state across jump cycles.
+
+## Notes
+- The performer sees only the visual cue symbol in the score.
+- The microsyntax remains in the SVG id and is not shown in the visible notation.

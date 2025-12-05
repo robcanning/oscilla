@@ -1499,11 +1499,11 @@ function resumeScrollScore() {
   }
 
   window.startStopwatch?.();
-  
-if (resumeReason === "scroll-mode-switch") {
+
+  if (resumeReason === "scroll-mode-switch") {
     window.lastSyncTime = performance.now();
     window.lastElapsedTime = window.elapsedTime ?? 0;
-}
+  }
 
   const socket = window.socket;
   if (window.wsEnabled && socket?.readyState === WebSocket.OPEN) {
@@ -1698,7 +1698,7 @@ export async function checkCueTriggers() {
   if (!window.triggeredCues) window.triggeredCues = new Set();
 
   const tolerance = 8; // px (tweak 5–10)
-  
+
   const containerRect = window.scoreContainer.getBoundingClientRect();
 
   for (const cue of window.cues) {
@@ -1725,22 +1725,37 @@ export async function checkCueTriggers() {
     // Forward scroll = cues move LEFT (cueLeft decreases)
     const movingForward = cueLeft < prevLeft;
 
-    // Trigger when the LEFT edge crosses the playhead from right -> left (with tolerance)
+
     const crossedLeftEdgeForward =
       movingForward &&
       prevLeft > (playheadX + tolerance) &&
       cueLeft <= (playheadX + tolerance);
 
-    if (crossedLeftEdgeForward && !window.triggeredCues.has(cue.id)) {
-      console.log(`[cueTrigger] ✅ Left-edge crossing → ${cue.id}`);
-      handleCueTrigger(
-        cue.ast,       // ✅ the real cue data for scroll-triggered cues
-        false,         // isRemote
-        true,          // force
-        cue.element    // ✅ so UI flashes work later
-      );
-      window.triggeredCues.add(cue.id);
+    const isRepeatNavCue =
+      cue.ast?.type === "cueNav" &&
+      cue.ast?.params &&
+      cue.ast.params.repeats !== undefined;
+
+    if (crossedLeftEdgeForward) {
+      // For normal cues: fire once, then suppress via triggeredCues
+      if (!isRepeatNavCue && window.triggeredCues.has(cue.id)) {
+        // already fired once → skip
+      } else {
+        console.log(`[cueTrigger] ✅ Left-edge crossing → ${cue.id}`);
+        handleCueTrigger(
+          cue.ast,
+          false,      // isRemote
+          true,       // force
+          cue.element // element for UI
+        );
+
+        // Only "lock" normal cues; repeat-nav cues must be allowed to trigger again
+        if (!isRepeatNavCue) {
+          window.triggeredCues.add(cue.id);
+        }
+      }
     }
+
 
     // Update per-cue state for next frame
     window._prevCueLefts.set(cue.id, cueLeft);

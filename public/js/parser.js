@@ -504,7 +504,7 @@ export class CueParser extends CstParser {
         { ALT: () => $.CONSUME(Stop, { LABEL: "kwStop" }) },   // <── NEW
       ]);
     });
-// 
+    // 
     $.RULE("fadeParamList", () => {
       $.AT_LEAST_ONE_SEP({
         SEP: Comma,
@@ -688,7 +688,7 @@ export class CueParser extends CstParser {
       // Optional param list (uid, etc.)
       $.OPTION1(() => {
         $.CONSUME(Comma);
-        $.SUBRULE($.genericParamListNoParens);
+        $.SUBRULE($.genericParamListNoParens, { LABEL: "params" });
       });
 
       $.CONSUME(RParen);
@@ -1196,23 +1196,36 @@ export function cstToAst(cst) {
   // cueNav(...) AST builder
   // ------------------------------------------------------------
   const navNode =
+
     cst.children?.cueNavTop?.[0] ||
     (cst.name === "cueNavTop" ? cst : null);
 
   if (navNode) {
     const ch = navNode.children;
-
+    console.log("==== [NAV CST CHILDREN DUMP] ====");
+    console.log(JSON.parse(JSON.stringify(ch)));
+    console.log("=================================");
     const action = ch.navAction?.[0]?.image ?? null;
     const target = ch.navTarget?.[0]?.image ?? null;
 
-    // extract uid if present
-    const params =
-      (ch.genericParamList || ch.genericParam || []).reduce((acc, p) => {
+    // Extract params from CST (label: "params" from cueNavTop)
+    // Extract nav(...) parameters directly from CST genericParam nodes
+    let params = {};
+
+    if (ch.params && ch.params[0] && ch.params[0].children.genericParam) {
+      const paramNodes = ch.params[0].children.genericParam;
+      for (const p of paramNodes) {
         const key = p.children.key?.[0]?.image;
         const raw = p.children.value?.[0]?.image;
-        if (key && raw != null) acc[key] = raw.replace(/^["']|["']$/g, '');
-        return acc;
-      }, {});
+        if (key && raw !== undefined) {
+          params[key] = raw.replace(/^["']|["']$/g, "");
+        }
+      }
+    }
+
+
+
+    console.log("[AST UID params]", params);
 
     let uid = params.uid;
     if (!uid) {
@@ -1220,11 +1233,13 @@ export function cstToAst(cst) {
       uid = target ? `${action}@${target}` : action;
     }
 
+
     return {
       type: "cueNav",
       action,
       target,
-      uid
+      uid: params.uid || uid,
+      params
     };
   }
 
@@ -1772,7 +1787,7 @@ export function parseCueToAST(input) {
   if (input.trim().startsWith("use(")) {
     console.warn("[CueDSL] Skipping 'use(...)' directive");
     return null;
-}
+  }
 
   const lexResult = CueLexer.tokenize(input);
 

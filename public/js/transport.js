@@ -131,6 +131,8 @@ export const rewindToStart = () => {
   if (triggeredCues) {
     triggeredCues.clear(); //  Ensure cues retrigger after rewind
     window._cueInsideState?.clear();
+    window.navRepeatMap?.clear();
+
     // console.log("[DEBUG] Cleared triggered cues due to rewind.");
   }
 
@@ -173,6 +175,8 @@ export const rewind = () => {
   if (triggeredCues) {
     triggeredCues.clear(); //  Ensure cues retrigger after rewind
     window._cueInsideState?.clear();
+    window.navRepeatMap?.clear();
+
     // console.log("[DEBUG] Cleared triggered cues due to rewind.");
   }
 
@@ -238,6 +242,8 @@ export const forward = () => {
   if (triggeredCues) {
     triggeredCues.clear(); // Ensure cues retrigger after forward
     window._cueInsideState?.clear();
+    window.navRepeatMap?.clear();
+
     // console.log("[DEBUG] Cleared triggered cues due to forward.");
   }
 

@@ -169,6 +169,8 @@ window.jumpToRehearsalMark = function (mark) {
 
   window.suppressCueTriggers = false;
 
+
+
 };
 
 window.jumpToRehearsalMark = jumpToRehearsalMark;
