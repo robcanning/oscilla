@@ -1286,17 +1286,13 @@ body.inverted #stopwatch {
 }
 
 
-
-
-
-
 #pause-countdown {
   position: fixed;
   top: 20px;
   right: 20px;
   width: 70px;
   height: 70px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.8);
   color: white;
   font-size: 3vw;
   font-weight: bold;

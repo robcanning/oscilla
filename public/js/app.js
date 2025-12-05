@@ -59,10 +59,7 @@ import {
   checkCueTriggers,
   parseCueParams,
   resetTriggeredCues,
-  handlePauseCue,
   handleStopCue,
-  dismissPauseCountdown,
-  pauseDismissClickHandler,
   handleOscCue,
   parseTraverseCueId,
   startTraverseAnimation,
@@ -79,6 +76,9 @@ import {
 } from './cues.js';
 
 import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues } from "./oscillaAudio.js";
+import { dismissPauseCountdown, pauseDismissClickHandler,  handlePauseCue } from "./oscillaPause.js";
+ 
+
 
 
 // app.js
@@ -1685,7 +1685,9 @@ document.addEventListener('DOMContentLoaded', () => {
    * This is a stable real-time score transport model:
    *   freewheel motion + low-pass drift convergence.
    */
-window.animate = async (currentTime) => {
+  
+  window.animate = async (currentTime) => {
+
   if (!window.isPlaying || window.isSeeking) return;
 
   // --- Compute dt ---
@@ -1698,12 +1700,6 @@ window.animate = async (currentTime) => {
   const refWidth = window.remoteScoreWidth || window.scoreWidth;
 
   if (dt > 0 && refWidth && window.duration) {
-
-    // ---------------------------
-    // 🔥 CORRECT SPEED MODEL
-    // dt = seconds
-    // window.speedMultiplier = ACTUAL speed
-    // ---------------------------
 
     const deltaMs = dt * 1000;
     const effectiveDeltaMs = deltaMs * (window.speedMultiplier || 1);
@@ -1737,7 +1733,15 @@ window.animate = async (currentTime) => {
       (window.playheadX / window.scoreWidth) * window.duration;
   }
 
-  await checkCueTriggers?.(window.elapsedTime);
+
+  // -----------------------------------------------------------
+  // 🔥 SINGLE PROTECTED TRIGGER
+  // -----------------------------------------------------------
+  if (window._skipTriggerFrame > 0) {
+    window._skipTriggerFrame--;
+  } else {
+    await checkCueTriggers?.(window.elapsedTime);
+  }
 
   window.animationFrameId = requestAnimationFrame(window.animate);
 };

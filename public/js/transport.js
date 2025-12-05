@@ -566,7 +566,9 @@ import { checkCueTriggers } from "./cues.js";
  * - Ensures speed and seekbar are in sync
  */
 export function startPlayback() {
- 
+
+  window._skipTriggerFrame = 2;
+
   if (window.isPlaying) return;
 
   if (window.userScrolling) {
