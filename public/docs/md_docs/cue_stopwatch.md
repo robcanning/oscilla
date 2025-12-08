@@ -1,37 +1,118 @@
-## cue:stopwatch(...) — display live stopwatch overlay
+# stopwatch _(with autostart support)_
 
-Displays a stopwatch time overlay at the location of the triggering SVG object.  
-The overlay updates every second and can either show the main stopwatch time  
-or start a new independent stopwatch. If `hold` is given, it fades out after  
-that duration; otherwise it remains visible until dismissed by click.
+Displays a stopwatch overlay above the score.
+Stopwatch overlays may show the **main stopwatch time** or create their own **independent stopwatch**.
 
-### Syntax
+This cue now supports **autostart**, meaning it can begin running automatically when the SVG is loaded — in both page and scroll modes — without requiring the playhead to cross.
+
+---
+
+### 🧭 Syntax
+
 ```
-cue:stopwatch(source:<main|new>, hold:<seconds>, scroll:<true|false>,
-              offsetX:<pixels>, style:"<css rules>")
+stopwatch(source:<main|new>, hold:<seconds>, scroll:<true|false>,
+          offsetX:<pixels>, style:"<css rules>", trig:<auto|edge>)
 ```
 
-### Arguments
-| Argument | Description |
-|-----------|--------------|
-| **source** | `"main"` = show the main stopwatch time (default)  <br> `"new"` = create or reset a new independent stopwatch |
-| **hold**   | duration in seconds before fading out (`0` = stays visible) |
-| **scroll** | `true` = overlay moves with the score, `false` = fixed on screen |
-| **offsetX**| horizontal offset in pixels from cue position (default: 0) |
-| **style**  | optional inline CSS rules in quotes (use `;` to separate) |
+---
 
-### Behavior
-- `cue:stopwatch(source:main)` shows the main stopwatch already running  
-- `cue:stopwatch(source:new)` starts or resets its own timer from `00:00`  
-- When `hold > 0`, the overlay fades and removes after that time  
-- When `hold` is omitted (and `source:new`), click the overlay to dismiss  
-- Each individual cue triggers at most one stopwatch instance; retriggering the same cue resets it rather than creating duplicates, but multiple different `source:new` stopwatches can coexist across cues.
+### ⚙️ Arguments
 
-### Examples
+| Arg | Values | Default | Behaviour |
+|-----|--------|---------|-----------|
+| **source** | `"main"` / `"new"` | `"main"` | Use global clock or create/reset local stopwatch |
+| **hold** | seconds | `0` | When >0, overlay fades+removes at timeout |
+| **scroll** | `true` / `false` | `false` | Follows scrolling score or fixed overlay |
+| **offsetX** | px | `0` | X-offset from cue location |
+| **style** | CSS | — | Inline CSS, use `;` separated |
+| **trig** | `"auto"` / `"edge"` | `"edge"` | `auto` means autostart on load |
+
+---
+
+### 🪄 Behaviour
+
+- `source:main` displays the **global** stopwatch time
+- `source:new` starts (or resets) a **private timer**
+- If `hold > 0`, the stopwatch fades after expiry
+- If `hold = 0`, click dismisses it
+- Multiple independent stopwatches can run concurrently
+- Autostart requires no playhead crossing
+
+---
+
+## 🚀 Autostart (NEW)
+
+Autostart activates when:
+
 ```
-cue:stopwatch(source:main)
-cue:stopwatch(source:new, hold:8)
-cue:stopwatch(source:new, scroll:true, offsetX:-40)
-cue:stopwatch(source:new, style:"color:#0f0;font-size:1.3em;")
-cue:stopwatch(source:new, hold:0, scroll:false)
+trig:auto
 ```
+
+Example:
+
+```
+stopwatch(source:new,style:"font-size:3em;color:red",trig:auto)
+```
+
+Autostart behaviour:
+
+- Works in **page overlay** and **scroll** modes
+- Executed **after SVG and DOM are fully initialized**
+- Overlay appears immediately
+- Does not require playhead position
+- Does not use trigger dedupe
+
+---
+
+### 🧪 Autostart Examples
+
+**Main stopwatch, always visible**
+```
+stopwatch(source:main,style:"font-size:2.5em;",trig:auto)
+```
+
+**Independent timer with 10s hold**
+```
+stopwatch(source:new,hold:10,style:"font-size:2em;",trig:auto)
+```
+
+**Scrolling stopwatch**
+```
+stopwatch(source:new,scroll:true,trig:auto)
+```
+
+**Stylised overlay**
+```
+stopwatch(source:new,
+          style:"font-size:4em;color:#0ff;text-shadow:0 0 5px #000;",
+          trig:auto)
+```
+
+---
+
+### 🎯 Edge-triggered Examples (non-autostart)
+
+```
+stopwatch(source:new)
+stopwatch(source:main,scroll:true)
+stopwatch(source:new,hold:8,offsetX:-30)
+```
+
+---
+
+### 🎛️ Developer Notes
+
+- Autostart runs **once**, after initialization
+- Stopwatch overlay is a **DOM absolute positioned element**
+- High stacking ensured using:
+  ```
+  div.style.zIndex = "99999"
+  ```
+- Autostart does not use `triggeredCues`
+
+---
+
+### 🚫 Known Limitations
+
+- Overlap of multiple autostarts is a user-design choice
+- Very large fonts may clip on small screens

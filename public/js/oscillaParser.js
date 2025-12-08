@@ -46,7 +46,8 @@ export function printCST(node, depth = 0) {
 // Literals
 const NumberLiteral = createToken({
   name: "NumberLiteral",
-  pattern: /[0-9]+(\.[0-9]+)?/,
+  // allow leading - or +
+  pattern: /[-+]?[0-9]+(?:\.[0-9]+)?/,
 });
 
 const StringLiteral = createToken({
