@@ -562,7 +562,7 @@ export const togglePlayButton = () => {
 // import { getSpeedForPosition, updateSpeedDisplay } from "./cues.js";
 // import { updateSeekBar } from "./transport.js"; // safe circular import; only function refs used
 // import { togglePlayButton } from "./ui.js"; // if you have a UI helper
-import { checkCueTriggers } from "./cues.js";
+import { checkCueTriggers } from "./oscillaCueDispatcher.js";
 
 /**
  *  Starts playback

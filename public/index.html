@@ -347,9 +347,6 @@
     <div id="oscilla-uid-list"></div>
   </div>
 
-
-
-
   <script>
     fetch('/config')
       .then(response => response.json())
@@ -362,17 +359,16 @@
   </script>
 
   <script type="module">
-    import { initStopwatch } from './js/stopwatch.js';
+    import { initStopwatch } from './js/oscillaTimers.js';
     initStopwatch();
   </script>
 
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js" crossorigin="anonymous"></script> -->
   <script src="js/anime.min.js"></script>
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script> -->
-  <script src="js/p5.min.js"></script>
+  <!-- <script src="js/p5.min.js"></script> -->
   <!-- <script src="js/app.js"></script> -->
   <script src="js/svg-path-commander.js"></script>
-
   <script type="module" src="./js/scoreSetup.js"></script>
   <script type="module" src="js/app.js"></script>
   <!-- <script src="js/playback_diagnostics.js"></script> -->

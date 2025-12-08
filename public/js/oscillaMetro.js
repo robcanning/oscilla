@@ -157,22 +157,23 @@ export function handleMetronomeCue(ast, cueElement = null) {
   const params = {};
   for (const p of (ast.args || [])) params[p.type] = p.value;
 
-  const bpm          = Number(params.bpm || 120);
-  const beats        = Number(params.beats || 4);
-  const visual       = params.visual || "circle";
+  const bpm = Number(params.bpm || 120);
+  const beats = Number(params.beats || 4);
+  const visual = params.visual || "circle";
   const audioEnabled = Number(params.audio || 0) === 1;
   const positionMode = params.position || "fixed";
-  const oscEnabled   = Number(params.osc || 0) === 1;
-  const uid          = String(params.uid || "default");
-  const showCount    = params.showcount !== "0" && params.showcount !== 0;
-  const targetUid    = params.target || null;
+  const oscEnabled = Number(params.osc || 0) === 1;
+  const uid = String(params.uid || "default");
+  const showCount = params.showcount !== "0" && params.showcount !== 0;
+  const targetUid = params.target || null;
+  const trig = (params.trig || "manual").toLowerCase();
 
   // 🔄 NEW NAME
-  const hideTrigger  = Number(params.hideTrigger ?? 1) === 1;
+  const hideTrigger = Number(params.hideTrigger ?? 1) === 1;
 
-  const holdSeconds  = Number(params.hold || 0);
-  const colour       = params.colour || "red";
-  const size         = Number(params.size || 50);
+  const holdSeconds = Number(params.hold || 0);
+  const colour = params.colour || "red";
+  const size = Number(params.size || 50);
 
   console.log("[cue:metro] Params →", params);
 
@@ -224,8 +225,8 @@ export function handleMetronomeCue(ast, cueElement = null) {
 
     // Cache original fill/stroke once
     if (!flashEl.dataset._metroOrigFill) {
-      const attrFill  = flashEl.getAttribute("fill");
-      const compFill  = window.getComputedStyle(flashEl).fill;
+      const attrFill = flashEl.getAttribute("fill");
+      const compFill = window.getComputedStyle(flashEl).fill;
       flashEl.dataset._metroOrigFill = attrFill || compFill || "#000";
     }
     if (!flashEl.dataset._metroOrigStroke) {
@@ -234,7 +235,7 @@ export function handleMetronomeCue(ast, cueElement = null) {
       flashEl.dataset._metroOrigStroke = attrStroke || compStroke || "none";
     }
 
-    const origFill   = flashEl.dataset._metroOrigFill;
+    const origFill = flashEl.dataset._metroOrigFill;
     const origStroke = flashEl.dataset._metroOrigStroke;
 
     // Colour inversion helper
@@ -243,10 +244,10 @@ export function handleMetronomeCue(ast, cueElement = null) {
       if (col === "black") return "white";
       if (col === "white") return "black";
       if (/^#?[0-9A-Fa-f]{6}$/.test(col)) {
-        const hex = col.replace("#","");
-        const r = 255 - parseInt(hex.slice(0,2),16);
-        const g = 255 - parseInt(hex.slice(2,4),16);
-        const b = 255 - parseInt(hex.slice(4,6),16);
+        const hex = col.replace("#", "");
+        const r = 255 - parseInt(hex.slice(0, 2), 16);
+        const g = 255 - parseInt(hex.slice(2, 4), 16);
+        const b = 255 - parseInt(hex.slice(4, 6), 16);
         return `rgb(${r},${g},${b})`;
       }
       return "#fff";
@@ -268,7 +269,7 @@ export function handleMetronomeCue(ast, cueElement = null) {
         currentBeat = (currentBeat % beats) + 1;
 
         // FLASH
-        const invFill   = invertColor(origFill)   || origFill;
+        const invFill = invertColor(origFill) || origFill;
         const invStroke = invertColor(origStroke) || origStroke;
 
         flashEl.setAttribute("fill", invFill);
@@ -301,14 +302,16 @@ export function handleMetronomeCue(ast, cueElement = null) {
     return;
   }
 
+  console.warn("[cue:metro] visual overlay mode →", visual);
+
   // ====================================================================
   // DEFAULT OVERLAY METRONOME (circle/square/diamond/triangle/hex)
   // ====================================================================
 
-  const bbox         = anchorEl.getBoundingClientRect();
+  const bbox = anchorEl.getBoundingClientRect();
   const containerBox = score.getBoundingClientRect();
-  const scrollX      = score.scrollLeft || 0;
-  const scrollY      = score.scrollTop  || 0;
+  const scrollX = score.scrollLeft || 0;
+  const scrollY = score.scrollTop || 0;
 
   const x = (positionMode === "scrolling"
     ? bbox.left - containerBox.left + scrollX
@@ -325,9 +328,9 @@ export function handleMetronomeCue(ast, cueElement = null) {
     div.id = divId;
     div.className = "cue-metronome";
     div.style.position = positionMode === "scrolling" ? "absolute" : "fixed";
-    div.style.left   = `${x}px`;
-    div.style.top    = `${y}px`;
-    div.style.width  = `${size}px`;
+    div.style.left = `${x}px`;
+    div.style.top = `${y}px`;
+    div.style.width = `${size}px`;
     div.style.height = `${size}px`;
     div.style.display = "flex";
     div.style.alignItems = "center";
@@ -339,6 +342,12 @@ export function handleMetronomeCue(ast, cueElement = null) {
     div.style.transform = "translate(-50%, -50%)";
     div.style.transition = "opacity 300ms ease, transform 100ms ease";
     div.style.background = colour;
+    div.style.zIndex = "99999";
+
+
+
+  console.warn("[cue:metro] Creating overlay DOM:", divId, "visual:", visual);
+
 
     // SHAPES
     switch (visual) {
@@ -356,8 +365,8 @@ export function handleMetronomeCue(ast, cueElement = null) {
         div.style.width = "0";
         div.style.height = "0";
         div.style.borderRadius = "0";
-        div.style.borderLeft   = `${size/2}px solid transparent`;
-        div.style.borderRight  = `${size/2}px solid transparent`;
+        div.style.borderLeft = `${size / 2}px solid transparent`;
+        div.style.borderRight = `${size / 2}px solid transparent`;
         div.style.borderBottom = `${size}px solid ${colour}`;
         div.style.background = "transparent";
         div.textContent = "";
@@ -371,8 +380,14 @@ export function handleMetronomeCue(ast, cueElement = null) {
         div.style.borderRadius = "50%";
     }
 
-    if (positionMode === "scrolling") score.appendChild(div);
-    else document.body.appendChild(div);
+    // DOM target: prefer overlay, fall back to scroll, then body
+    const overlay = document.getElementById("pageOverlayScore");
+    const scrollArea = score;
+    const root = overlay || scrollArea || document.body;
+
+    root.appendChild(div);
+    console.warn("[cue:metro] Overlay DOM attached:", root);
+
   }
 
   // UID → deterministic frequency
@@ -404,7 +419,7 @@ export function handleMetronomeCue(ast, cueElement = null) {
       const base = uidToFreq(uid);
       const freq = beat === 1 ? base * 2 : base;
 
-      const osc  = ctx.createOscillator();
+      const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
@@ -461,14 +476,14 @@ export function handleMetronomeCue(ast, cueElement = null) {
 
     // scroll-following
     if (positionMode === "scrolling" && anchorEl) {
-      const b  = anchorEl.getBoundingClientRect();
+      const b = anchorEl.getBoundingClientRect();
       const sx = score.scrollLeft || 0;
-      const sy = score.scrollTop  || 0;
+      const sy = score.scrollTop || 0;
       const containerBox = score.getBoundingClientRect();
       const lx = b.left - containerBox.left + sx;
-      const ty = b.top  - containerBox.top  + sy - 10;
+      const ty = b.top - containerBox.top + sy - 10;
       div.style.left = `${isFinite(lx) ? lx : 50}px`;
-      div.style.top  = `${isFinite(ty) ? ty : 50}px`;
+      div.style.top = `${isFinite(ty) ? ty : 50}px`;
     }
 
     div._beatTimer = requestAnimationFrame(animateBeat);
@@ -480,6 +495,30 @@ export function handleMetronomeCue(ast, cueElement = null) {
     `[cue:metro] Started metronome uid=${uid} bpm=${bpm} beats=${beats} visual=${visual}`
   );
 }
+
+
+window.autostartMetronomes = () => {
+  if (!window.cues) return;
+
+  for (const c of window.cues) {
+    if (c.ast?.type !== "cueMetronome" && c.ast?.type !== "cueMetro")
+      continue;
+
+    const trigPair = c.ast.args?.find(p => p.type === "trig");
+    const trig = (trigPair?.value || "manual").toLowerCase();
+    if (trig !== "auto") continue;
+
+    if (c._autoStarted) continue;
+    c._autoStarted = true;
+
+    console.warn("[cue:metro] AUTOSTART →", c.id);
+    handleMetronomeCue(c.ast, c.element);
+  }
+};
+
+
+
+
 
 
 /* -------------------------------------------------------------------- */

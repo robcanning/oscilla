@@ -21,17 +21,29 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="0.834386"
-     inkscape:cx="750.85152"
-     inkscape:cy="416.47391"
-     inkscape:window-width="1196"
-     inkscape:window-height="610"
-     inkscape:window-x="26"
-     inkscape:window-y="23"
-     inkscape:window-maximized="0"
+     inkscape:zoom="0.59"
+     inkscape:cx="1161.8644"
+     inkscape:cy="384.74576"
+     inkscape:window-width="1920"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
      inkscape:current-layer="svg5125" />
   <defs
      id="defs5129">
+    <rect
+       x="-3620.339"
+       y="-2386.4407"
+       width="6467.7966"
+       height="1233.8983"
+       id="rect108" />
+    <rect
+       x="-2320.269"
+       y="-1016.3162"
+       width="3669.222"
+       height="1310.5329"
+       id="rect107" />
     <rect
        x="662.71186"
        y="903.38983"
@@ -136,6 +148,12 @@
        id="path-effect389"
        is_visible="true"
        lpeversion="1" />
+    <rect
+       x="-2320.269"
+       y="-1016.3162"
+       width="2435.3237"
+       height="1419.0074"
+       id="rect107-0" />
   </defs>
   <!-- Outer Circle -->
   <!-- Animated Object -->
@@ -465,57 +483,65 @@
      style="font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:none;stroke:#ff0000"
      x="448.28122"
      y="352.71878"
-     id="text(&#10;  src:tzara-cutup.txt,&#10;  order:rnd,&#10;  dur:1,&#10;  gap:0,&#10;  cross:1,&#10;  crossfade:&quot;60%&quot;,&#10;  yslots:3,&#10;  yoffset:50,&#10;  yslotmode:sequence,&#10;  autostart:1,&#10;  style:&quot;font-size:3em; color:black; background:white;&quot;&#10;)"><tspan
+     id="text(&#10;  src:tzara-cutup.txt,&#10;uid:test1,&#10;  order:rnd,&#10;  dur:3,&#10;  gap:0,&#10;  cross:1,&#10;  crossfade:&quot;90%&quot;,&#10;  yslots:3,&#10;  yoffset:50,&#10;  yslotmode:sequence,&#10;  autostart:1,&#10;  style:&quot;font-size:3em; color:black; background:none;&quot;&#10;)"><tspan
        sodipodi:role="line"
        x="448.28122"
        y="352.71878"
-       id="tspan85">text(</tspan><tspan
+       id="tspan155">text(</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="379.38541"
-       id="tspan96">  src:tzara-cutup.txt,</tspan><tspan
+       id="tspan167">  src:tzara-cutup.txt,</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="406.05203"
-       id="tspan97">  order:rnd,</tspan><tspan
+       id="tspan168">  order:rnd,</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="432.71866"
-       id="tspan98">  dur:1,</tspan><tspan
+       id="tspan169">  dur:3,</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="459.38528"
-       id="tspan99">  gap:0,</tspan><tspan
+       id="tspan170">  gap:0,</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="486.05191"
-       id="tspan100">  cross:1,</tspan><tspan
+       id="tspan171">  cross:1,</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="512.71851"
-       id="tspan101">  crossfade:&quot;60%&quot;,</tspan><tspan
+       id="tspan172">  crossfade:&quot;70%&quot;,</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="539.38513"
-       id="tspan102">  yslots:3,</tspan><tspan
+       id="tspan173">linger:1,</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="566.05176"
-       id="tspan103">  yoffset:50,</tspan><tspan
+       id="tspan174">  yslots:3,</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="592.71838"
-       id="tspan104">  yslotmode:sequence,</tspan><tspan
+       id="tspan175">  yoffset:50,</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="619.38501"
-       id="tspan105">  autostart:1,</tspan><tspan
+       id="tspan176">  yslotmode:sequence,</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="646.05164"
-       id="tspan106">  style:&quot;font-size:3em; color:black; background:white;&quot;</tspan><tspan
+       id="tspan177">  autostart:1,</tspan><tspan
        sodipodi:role="line"
        x="448.28122"
        y="672.71826"
-       id="tspan107">)</tspan></text>
+       id="tspan178">  style:&quot;font-size:3em; color:black; background:white;&quot;</tspan><tspan
+       sodipodi:role="line"
+       x="448.28122"
+       y="699.38489"
+       id="tspan179">)</tspan></text>
+  <text
+     xml:space="preserve"
+     id="text108"
+     style="font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect108);display:inline;fill:none;stroke:#ff0000" />
 </svg>

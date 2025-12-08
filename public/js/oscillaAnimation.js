@@ -19,10 +19,10 @@ function warn(...args) { console.warn(TAG, ...args); }
 // -----------------------------
 // Imports
 // -----------------------------
-import { handleScaleCue } from "./scale.js";
-import { handleRotateCue } from "./rotate.js";
-import { handleO2PCue } from "./o2p.js";
-import { parseCueToAST } from "./parser.js";
+import { handleScaleCue } from "./oscillaAnimationScale.js";
+import { handleRotateCue } from "./oscillaAnimationRotate.js";
+import { handleO2PCue } from "./oscillaAnimationO2p.js";
+import { parseCueToAST } from "./oscillaParser.js";
 
 // Ensure global registries exist
 window.oscillaAnimRegistry = window.oscillaAnimRegistry || {};

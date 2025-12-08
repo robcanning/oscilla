@@ -45,7 +45,7 @@ import {
   resetStopwatch,
   resumeStopwatch,
   setupStopwatchFullscreenToggle
-} from './stopwatch.js';
+} from './oscillaTimers.js';
 
 
 
@@ -73,7 +73,7 @@ import {
   repeatStateMap,
   handleRestoredRepeatState,
   assignCues
-} from './cues.js';
+} from './oscillaCueDispatcher.js';
 
 import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues } from "./oscillaAudio.js";
 import { dismissPauseCountdown, pauseDismissClickHandler,  handlePauseCue } from "./oscillaPause.js";
@@ -153,12 +153,21 @@ export const initializeSVG = async (svgElement) => {
     // console.log("[initializeSVG][page] 🔧 initializeObserver()");
     initializeObserver();
 
+
     if (!window.cues) window.cues = [];
     console.log("[initializeSVG][page] 🔧 assignCues()");
     assignCues(svgElement, window.cues);
 
+
     console.log("[initializeSVG][page] 🔧 setupScore()");
     window.setupScore?.(svgElement);
+
+
+    console.log("[initializeSVG][page] autostart stopwatch timers metronomes etc");
+    window.autostartStopwatchCues();
+    window.autostartMetronomes();
+
+
 
     console.log("[initializeSVG][page] ✅ Page overlay initialisation complete.");
     console.groupEnd();
