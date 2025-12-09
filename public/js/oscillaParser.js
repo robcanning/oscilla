@@ -270,7 +270,12 @@ export class CueParser extends CstParser {
     // Animation-specific key:value rule used in rotate(), scale(), o2p()
     // value may be: number, string, true/false, identifier, array, or pattern call (Pseq, Prand…)
     $.RULE("animGenericParam", () => {
-      const keyTok = $.CONSUME(Identifier, { LABEL: "key" });
+
+      const keyTok = $.OR([
+        { ALT: () => $.CONSUME(Identifier, { LABEL: "key" }) },
+        { ALT: () => $.CONSUME(Rotate, { LABEL: "key" }) },
+      ]);
+
       $.CONSUME(Colon);
 
       // ✅ animValue already covers all possible types, including patterns and arrays.
@@ -1657,6 +1662,7 @@ export function cstToAst(cst) {
     if (vNode.children.NumberLiteral) {
       return Number(vNode.children.NumberLiteral[0].image);
     }
+
 
     // Identifier (including inf, true, false)
     if (vNode.children.Identifier) {
