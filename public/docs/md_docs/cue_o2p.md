@@ -1,244 +1,176 @@
-# cue_o2p — Object-to-Path Animation
+# cue:o2p — Object-to-Path Animation
 
-`o2p(...)` animates any SVG object along a named `<path>` element.  
-It supports directional motion, ping-pong motion, rotation, OSC output, live updating, path subranges, easing, and chained cue triggers.
-
----
-
-## Basic Examples
-
-```
-// Move around path “orbit1” (defaults: forward, 1s, no rotation)
-o2p(path:orbit1)
-
-// Move in 8 seconds
-o2p(path:orbit1, dur:8)
-
-// Move reverse
-o2p(path:orbit1, mode:rev)
-
-// Ping–pong motion
-o2p(path:orbit1, mode:alt, dur:5)
-
-// Loop indefinitely
-o2p(path:orbit1, loop:0)
-```
+`o2p(...)` animates an SVG object along a named `<path>`.  
+It supports path traversal, directional modes, rotation modes, looping, OSC output,
+partial-path motion, trigger-based activation, delayed start, and visual pre-start states.
 
 ---
 
-## Required Parameter
-
-| Key | Type | Meaning |
-|---|---|---|
-| `path` | string | Name of the `<path>` element to follow |
+# BASIC FORM
 
 ```
-o2p(path:mainOrbit)
+o2p(path:<id>, dur:<seconds>, mode:fwd)
 ```
 
----
-
-## Timing: `dur:`
-**Seconds per full traversal.**
-
-```
-o2p(path:orbit1, dur:4)       // 4 seconds per cycle
-o2p(path:orbit1, dur:12)      // slower
-```
-
-For `mode:alternate`, `dur` is **A→B→A**, not A→B.
-
----
-
-## Direction Modes
-
-| Full | Alias | Meaning |
-|-----|------|--------|
-| `forward` | `fwd` | 0 → 1 along the curve |
-| `reverse` | `rev` | 1 → 0 along the curve |
-| `alternate` | `alt` | back and forth |
-| (future) `jumpNodes` | — | jumps between path nodes |
-
-Examples:
-```
-o2p(path:orbit1, mode:fwd)
-o2p(path:orbit1, mode:rev)
-o2p(path:orbit1, mode:alt)
-```
-
----
-
-## Rotation Modes (`rotate:`)
-
-Objects may:
-- stay visually fixed
-- align to motion direction
-- lock to a heading
-- spin independently
-
-| Mode | Meaning |
-|------|---------|
-| `none` | No rotation at all |
-| `aligned` | Face direction of motion (`angleDeg + rotoffset`) |
-| `locked` | Fixed heading (`rotlock`) |
-| `spin` | Free rotation independent of travel |
-
-### Rotation Offsets/Direction
+Required:
 
 | Key | Meaning |
 |-----|---------|
-| `rotoffset` | Angle added to aligned mode |
-| `rotlock` | Heading for locked mode |
-| `rotspeed` | Seconds per full revolution (spin) |
-| `rotdir` | `1` or `-1` (spin direction) |
+| `path` | The ID of the `<path>` element to follow |
 
-### Examples
+---
+
+# TIMING
+
+### `dur:<seconds>`
+Duration of one full traversal of the path.
 
 ```
-// Follow gesture heading
-o2p(path:orbit1, rotate:aligned)
+o2p(path:orbit, dur:6)
+```
 
-// Aligned but upright visually
-o2p(path:orbit1, rotate:aligned, rotoffset:-90)
+In `mode:alt`, the full A→B→A cycle lasts `dur` seconds.
 
-// Fixed heading
-o2p(path:orbit1, rotate:locked, rotlock:0)
+### `tdelay:<seconds>`
+Delays the start of the animation after the cue triggers.
 
-// Free spin: 3s per rotation
-o2p(path:orbit1, rotate:spin, rotspeed:3)
+```
+o2p(path:orbit, tdelay:3)
+```
 
-// Reverse spinning
-o2p(path:orbit1, rotate:spin, rotspeed:2, rotdir:-1)
+`tdelay` is real-time and independent of score position.
+
+---
+
+# PRESTART VISIBILITY
+
+### `prestate:<show|hide|ghost>`
+
+Controls how the object looks before the animation begins:
+
+- `show`  — fully visible immediately  
+- `hide`  — invisible until start  
+- `ghost` — semi-transparent until start  
+
+The object is positioned at its correct starting location before motion begins.
+
+```
+o2p(path:orbit, tdelay:4, prestate:hide)
 ```
 
 ---
 
-## Path Subranges
+# DIRECTION MODES
 
-Animate only a segment of the path:
-
-```
-o2p(path:orbit1, start:0.25, end:0.75)
-```
-
----
-
-## Looping
+| Mode | Meaning |
+|------|---------|
+| `forward` / `fwd` | 0 → 1 along path |
+| `reverse` / `rev` | 1 → 0 |
+| `alternate` / `alt` | back-and-forth motion |
 
 ```
-o2p(path:orbit1, loop:3)   // exactly 3 cycles
-o2p(path:orbit1, loop:0)   // infinite
+o2p(path:curve, mode:alt, dur:8)
 ```
 
 ---
 
-## Easing (`ease:`)
+# PATH SEGMENTS
 
-Maps to the same easing model as rotate/scale:
 ```
-o2p(path:orbit1, ease:3)
+o2p(path:ring, start:0.2, end:0.8)
+```
+
+The object travels only between normalized positions `start` and `end`.
+
+---
+
+# ROTATION
+
+| `rotate:` | Description |
+|-----------|-------------|
+| `none` | no rotation |
+| `aligned` | align to tangent direction |
+| `locked` | fixed heading using `rotlock` |
+| `spin` | continuous rotation (`rotspeed`, `rotdir`) |
+
+Additional keys:
+
+| Key | Meaning |
+|------|--------|
+| `rotoffset` | add angular offset |
+| `rotlock` | fixed heading in degrees |
+| `rotspeed` | seconds per full rotation |
+| `rotdir` | ±1 direction multiplier |
+
+---
+
+# LOOPING
+
+```
+o2p(path:orbit, loop:3)
+o2p(path:orbit, loop:0)   // infinite
 ```
 
 ---
 
-## Closed Paths (Orbits)
-
-If the `<path>` is closed:
-
-- Motion wraps seamlessly
-- Aligned mode matches geometric tangent
-- Spin/lock behave consistently
-- Useful for circular speaker arrays, kinetic routing, light rigs
-
-Example:
-```
-o2p(path:orbit1, rotate:aligned, rotspeed:2)
-```
-
----
-
-## OSC Output
-
-Enable OSC emission during motion:
+# OSC OUTPUT
 
 ```
-o2p(path:orbit1, osc:true)
+o2p(path:orbit, osc:true)
 ```
 
-Format:
+Emits:
 ```
 /obj2path <uid> <normX> <normY> <angle>
 ```
 
-- Position normalised 0–1
-- Angle in degrees
-- ~30Hz throttled output
+---
+
+# TRIGGERING
+
+- `trig:auto` — starts automatically in page mode  
+- `trig:edge` — starts when the playhead intersects in scroll mode  
+- cues may also be activated programmatically  
+- `tdelay` applies after the trigger is detected  
 
 ---
 
-## Live Updating With `uid:`
+# LIVE UPDATE (`uid:`)
 
-Start animation:
 ```
-o2p(path:ring, uid:a1, dur:6, mode:fwd, rotate:aligned)
+o2p(path:ring, uid:a1)
+o2p(uid:a1, mode:alt)
 ```
 
-Update on the fly:
-```
-o2p(uid:a1, mode:alt, dur:9)
-```
+Later cues with the same `uid` modify running animations.
 
 ---
 
-## Chaining (`next:`)
+# FULL PARAMETER LIST
 
-Start another cue on completion:
+| Key | Description |
+|------|-------------|
+`path` | required path reference  
+`dur` | motion duration  
+`mode` | direction mode  
+`loop` | repeat count (`0` = infinite)  
+`start`, `end` | normalized path range  
+`rotate` | rotation behavior  
+`rotoffset`, `rotlock`, `rotspeed`, `rotdir` | rotation parameters  
+`ease` | easing preset  
+`osc` | OSC emission  
+`uid` | animation identity tag  
+`trig` | trigger mode  
+`tdelay` | time delay after trigger  
+`prestate` | show/hide/ghost before start  
+
+---
+
+# EXAMPLES
 
 ```
-o2p(path:a, uid:seg1, next:seg2)
-o2p(path:b, uid:seg2, next:seg3)
+o2p(path:orbitA, dur:8, tdelay:3, prestate:hide)
+o2p(path:spiral, rotate:aligned, rotoffset:-90)
+o2p(path:ring, start:0.2, end:0.9, mode:alt)
+o2p(path:circle, rotate:spin, rotspeed:2, rotdir:-1)
 ```
-
----
-
-## Trigger Semantics
-
-Behaves like any cue:
-
-- Triggered by cue collisions
-- Triggered by explicit cue statements
-- Paused/resumed by IntersectionObserver
-- Multiple o2p processes can run simultaneously
-- `uid:` lets you reconfigure animation in realtime
-
----
-
-## Parameter Summary
-
-| Key | Meaning |
-|-----|---------|
-`path` | ID of `<path>` to follow (required)  
-`mode` | forward / reverse / alternate  
-`dur` | seconds per traversal  
-`loop` | number of loops (0 = infinite)  
-`start`/`end` | 0–1 segment of path  
-`rotate` | none / aligned / locked / spin  
-`rotoffset` | add visual rotation to aligned mode  
-`rotlock` | heading for locked mode  
-`rotspeed` | seconds per rotation (spin)  
-`rotdir` | ±1 direction (spin)  
-`osc` | emit OSC messages  
-`uid` | live-update ID  
-`next` | chained cue  
-
----
-
-## Best Practices
-
-- `rotate:aligned, rotoffset:-90` keeps icons upright
-- `rotspeed:2–3` gives readable spins
-- Use `loop:0` for continuous orbit
-- Consider `osc:true` for spatialisation
-- `uid:` enables interactive score changes
-
----

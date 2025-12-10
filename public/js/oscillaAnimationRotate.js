@@ -1,6 +1,7 @@
 // rotate.js — OscillaScore Rotate Cue (sequence + continuous)
 
 import { registerAnimation } from "./oscillaAnimation.js";
+import { scheduleCueStart } from "./oscillaCueDispatcher.js";
 
 // ============================================================
 // OSC send helper for ROTATION
@@ -450,108 +451,203 @@ export function handleRotateContinuous(el, cfg) {
     //     pivot: el.style.transformOrigin
     // });
 }
-
 // ============================================================
 // MAIN ENTRY — used by:
 //   • animationAssign(svgRoot) for id="rotate(...)"
 //   • cue system for cueRotate(...)
 // Signature: handleRotateCue(el, astArgs, options)
 // ============================================================
+// ============================================================
+// MAIN ENTRY — used by animationAssign() & cue system
+// Supports: tdelay, prestate (show|hide|ghost)
+// ============================================================
 export function handleRotateCue(el, astArgs, options = {}) {
     if (!el) return;
 
+    console.log("[rotateCue] ⬇️ ENTER", { el, astArgs, options });
+
     const { fromCueTrigger = false } = options;
 
-    // console.log("[rotate] raw astArgs:", astArgs);
-
-    // -----------------------------
-    // Trigger + UID
-    // -----------------------------
+    // ---------------------------------
+    // Parse trig, uid, tdelay, prestate
+    // ---------------------------------
     let trig = "auto";
     let uid = el.id || ("rotate_" + Math.random().toString(36).slice(2));
+    let cfgStartDelay = 0;
+    let prestate = "show";
 
     for (const a of astArgs) {
         const key = a.key || a.type;
         const val = a.value;
 
-        if (key === "trig") {
-            trig = String(val).toLowerCase();
-        }
-        if (key === "uid") {
-            uid = String(val).trim();
-        }
+        if (key === "trig") trig = String(val).toLowerCase();
+        if (key === "uid") uid = String(val).trim();
+        if (key === "tdelay") cfgStartDelay = Number(val) || 0;
+        if (key === "prestate") prestate = String(val).toLowerCase();
     }
 
-    // -----------------------------
-    // CASE 1 — Sequence mode if values:[...] present
-    // -----------------------------
+    console.log("[rotateCue] Parsed →", {
+        trig,
+        uid,
+        tdelay: cfgStartDelay,
+        prestate
+    });
+
+    // unified autostart logic
+    const shouldStartNow =
+        fromCueTrigger || trig === "auto" || trig === "playhead";
+
+    // ---------------------------------
+    // Apply prestate before animation
+    // ---------------------------------
+    if (prestate === "hide") {
+        el.style.opacity = "0";
+    } else if (prestate === "ghost") {
+        el.style.opacity = "0.3";
+    } else {
+        el.style.opacity = "1";
+    }
+
+    // ---------------------------------
+    // Determine if sequence-mode
+    // ---------------------------------
     const valuesArg = astArgs.find(o =>
         o.key === "values" || o.type === "values"
     );
 
+    // Helper: apply initial angle now (before delayed start)
+    function applyInitialRotation(cfg) {
+        try {
+            // only applies to simple rotation patterns
+            if (cfg.values && cfg.values.length > 0) {
+                const angle = cfg.values[0];
+                el.style.transform = `rotate(${angle}deg)`;
+            }
+        } catch (e) {
+            console.warn("[rotateCue] could not set initial rotation:", e);
+        }
+    }
+
+    // ============================================================
+    // CASE 1 — Sequence mode (patterns or literal lists)
+    // ============================================================
     if (valuesArg) {
         const v = valuesArg.value;
 
-        // ---------- Pattern sequence ----------
+        // Pattern case
         if (v && v.type === "pattern") {
             const cfg = {
                 uid,
                 trig,
+                start: cfgStartDelay,
+                prestate,
                 pattern: v,
                 astArgs,
                 fromCueTrigger
             };
 
-            const start = () => handleRotateSequence(el, cfg);
+            const start = () => {
+                if (cfg.start > 0) {
+                    console.log(`[rotateCue] tdelay ${cfg.start}s → uid=${cfg.uid}`);
+                    scheduleCueStart(
+                        cfg,
+                        el,
+                        () => {
+                            el.style.opacity = "1";
+                            handleRotateSequence(el, { ...cfg, start: 0 });
+                        },
+                        cfg.uid
+                    );
+                } else {
+                    el.style.opacity = "1";
+                    handleRotateSequence(el, cfg);
+                }
+            };
+
+            // initial orientation before delay
+            applyInitialRotation({ values: v.values ?? [] });
 
             registerAnimation(el, "rotate-sequence", cfg, start);
-
-            // ✅ Start immediately if triggered by cue + trig:playhead
-            if (fromCueTrigger && trig === "playhead") {
-                start();
-            }
+            if (shouldStartNow) start();
             return;
         }
 
-        // ---------- Literal list sequence ----------
+        // Literal list case
         if (Array.isArray(v)) {
             const cfg = {
                 uid,
                 trig,
+                start: cfgStartDelay,
+                prestate,
                 values: v,
                 astArgs,
                 fromCueTrigger
             };
 
-            const start = () => handleRotateSequence(el, cfg);
+            const start = () => {
+                if (cfg.start > 0) {
+                    console.log(`[rotateCue] tdelay ${cfg.start}s → uid=${cfg.uid}`);
+                    scheduleCueStart(
+                        cfg,
+                        el,
+                        () => {
+                            el.style.opacity = "1";
+                            handleRotateSequence(el, { ...cfg, start: 0 });
+                        },
+                        cfg.uid
+                    );
+                } else {
+                    el.style.opacity = "1";
+                    handleRotateSequence(el, cfg);
+                }
+            };
+
+            // position initial angle
+            applyInitialRotation(cfg);
 
             registerAnimation(el, "rotate-sequence", cfg, start);
-
-            // ✅ Start immediately if triggered by cue + trig:playhead
-            if (fromCueTrigger && trig === "playhead") {
-                start();
-            }
+            if (shouldStartNow) start();
             return;
         }
     }
 
-    // -----------------------------
+    // ============================================================
     // CASE 2 — Continuous fallback
-    // -----------------------------
+    // ============================================================
+    console.log("[rotateCue] Fallback rotate mode");
+
     const cfg = {
         uid,
         trig,
+        start: cfgStartDelay,
+        prestate,
         astArgs,
         fromCueTrigger
     };
 
-    const start = () => handleRotateContinuous(el, cfg);
+    const start = () => {
+        if (cfg.start > 0) {
+            console.log(`[rotateCue] tdelay ${cfg.start}s → uid=${cfg.uid}`);
+            scheduleCueStart(
+                cfg,
+                el,
+                () => {
+                    el.style.opacity = "1";
+                    handleRotateContinuous(el, { ...cfg, start: 0 });
+                },
+                cfg.uid
+            );
+        } else {
+            el.style.opacity = "1";
+            handleRotateContinuous(el, cfg);
+        }
+    };
+
+    // No initial angle known for fallback, so skip applyInitialRotation
 
     registerAnimation(el, "rotate-fallback", cfg, start);
 
-    // ✅ Start immediately on cue (not during animationAssign)
-    if (fromCueTrigger && trig === "playhead") {
-        start();
-    }
+    if (shouldStartNow) start();
 }
+
 

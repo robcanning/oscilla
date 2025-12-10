@@ -1,101 +1,114 @@
+# rotate() — Rotation Cue
 
-# rotate() — OscillaScore Rotation Cue
-
-Controls visual rotation of any SVG object around its transform origin. Rotation may be continuous or driven by a list or pattern of angles. To use rotation, assign an object (usually a `<g>`) an id of the form:
-
-```
-rotate(...)
-```
-
-The first parameter may be given either explicitly:
-
-```
-rotate(values:[0,120,240], dur:4)
-```
-
-or implicitly:
-
-```
-rotate([0,120,240], dur:4)
-```
-
-In the implicit form, the first argument (a list or pattern) is treated as the `values` sequence.
-
-Rotation occurs in place. The pivot defaults to the object’s visual center, but may be adjusted in Inkscape via **Object → Transform → Center**, or by setting `transform-origin` in the style.
+`rotate(...)` rotates an SVG element using continuous rotation or a sequence
+of angle values. Rotation may be smooth or stepped, repeating or alternating.
 
 ---
 
-## Parameters
+# BASIC FORMS
 
-| Parameter | Type | Meaning |
-|----------|------|---------|
-| values / first param | List or Pattern | Sequence of angles in degrees |
-| dur | Number or Pattern | Duration of each step, in seconds |
-| mode | loop / once / alternate | Sequence traversal behavior |
-| interp | smooth / step | Interpolation style |
-| ease | Easing string | (smooth mode only) anime.js easing |
-| hold | Number (seconds) | Pause after each step (smooth mode only) |
+### Continuous
+```
+rotate(dir:1, dur:1)
+```
+
+### Sequence
+```
+rotate(values:[0,120,240], dur:2)
+```
+
+### Pattern sequences
+```
+rotate(values:Pseq([0,45,10],inf), dur:Pseq([1,0.2,2],inf))
+```
 
 ---
 
-## Sequence Modes
+# TRIGGERING
 
-- **mode:loop** (default) — cycle continuously
-- **mode:once** — play the sequence once and stop
-- **mode:alternate** — ping-pong (bounce) at sequence edges
-
----
-
-## Interpolation Styles
-
-- **interp:smooth** — rotation animates over time (default)
-- **interp:step** — rotation snaps instantly; `dur` becomes the step interval
-
-In smooth mode, `hold` applies after reaching each step.  
-In step mode, `hold` is ignored.
+- `auto` (page mode)
+- `edge` (scroll collision)
+- cue activation
 
 ---
 
-## Pattern Support (for values and durations)
+# TRIGGER DELAY
 
-| Pattern | Behavior |
-|--------|----------|
-| `Pseq([…], inf)` | loop sequence |
-| `Prand([…], inf)` | pick random each time |
-| `Pxrand([…], inf)` | random, no immediate repeat |
-| `Pshuf([…], inf)` | shuffled list repeating |
+### `tdelay:<seconds>`
+Delays motion after trigger.
+
+```
+rotate(values:[0,120,240], tdelay:2)
+```
 
 ---
 
-## Examples
+# PRESTART VISIBILITY
+
+### `prestate:<show|hide|ghost>`
+
+Controls appearance before rotation begins.
 
 ```
-rotate(dir:1, dur:1) 
-  ```
-CW one turn per second
+rotate(values:[0,90,180], tdelay:4, prestate:ghost)
+```
 
-```
-rotate([0,120,240], dur:4)
-```
-Cycle three orientations every 4 seconds.
-
-```
-rotate([0,90,180,270], dur:0.5, interp:step)
-```
-Snap through quarter-turns at 0.5s intervals.
-
-```
-rotate(Pseq([0,45,10],inf), dur:Pseq([2,0.4,1],inf), mode:alternate)
-```
-Alternate rotation direction while durations follow a repeating rhythmic pattern.
+Element adopts initial angle immediately.
 
 ---
 
-## Notes
+# SEQUENCE PARAMETERS
 
-- Rotation timing is independent of scroll speed.
-- State persists when seeking/jumping.
-- If the object visually jumps, set pivot explicitly.
-- Patterns allow non-repetitive rotational behavior.
+| Key | Meaning |
+|------|---------|
+`values` | list of angles  
+`dur` | seconds per step  
+`mode` | `loop`, `once`, `alternate`  
+`interp` | `smooth` or `step`  
+`hold` | pause after tween (smooth mode)  
 
 ---
+
+# CONTINUOUS ROTATION
+
+```
+rotate(dir:1, dur:2)
+rotate(dir:-1, dur:3, ease:"easeInOutSine")
+```
+
+---
+
+# UID — Live Updates
+
+```
+rotate(values:[0,90,180], uid:r1)
+rotate(uid:r1, dur:0.5)
+```
+
+---
+
+# FULL PARAMETER LIST
+
+| Key | Description |
+|------|-------------|
+`values` | angle sequence or pattern  
+`dur` | duration  
+`mode` | loop logic  
+`interp` | step or smooth  
+`hold` | pause  
+`dir` | direction for continuous  
+`ease` | easing curve  
+`uid` | animation identity  
+`trig` | trigger mode  
+`tdelay` | trigger delay  
+`prestate` | visual pre-start state  
+
+---
+
+# EXAMPLES
+
+```
+rotate(values:[0,120,240], dur:4, tdelay:2)
+rotate(values:Pshuf([0,180],inf), dur:1, mode:alternate)
+rotate(dir:-1, dur:3, prestate:hide, tdelay:1)
+```

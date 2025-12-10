@@ -25,7 +25,6 @@ export const cueHandlers = {
   cueSpeed: handleSpeedCue,
   cuePause: handlePauseCue,
   cueStop: handleStopCue,
-  cueChoice: handleCueChoice,
   cuePage: handlePageCue,
   cueNav: handleNavCue,
   cueAudio: handleAudioCue,
@@ -37,8 +36,6 @@ export const cueHandlers = {
   cueOscBurst: handleOscCue,
   cueOscPulse: handleOscCue,
   cueRepeat: handleRepeatCue,
-  cueTraverse: handleTraverseCue,
-  "c-t": handleTraverseCue,
   cueSeq: handleSeqCue,
 };
 
@@ -61,6 +58,8 @@ import { handleSpeedCue, handleSpeedRamp } from "./oscillaSpeed.js";
 import { stopAllCueTexts } from "./oscillaText.js";
 
 // import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
+
+
 
 
 
@@ -814,64 +813,6 @@ export function parseTraverseCueId(cueId) {
   return params.objId ? params : null;
 }
 
-/**
- * Starts animation for a cueTraverse (c-t) cue.
- * Looks up an object by objId, reads its data-id, and triggers animation if _t(1).
- * Animation is triggered using the data-id as the key in all pending*Animations maps.
- * @param {Object} config - Parsed traverse config with objId and triggerable flag
- */
-export function startTraverseAnimation(config) {
-  if (!config || !config.objId) {
-    console.warn("[startTraverseAnimation] ❌ Invalid config or missing objId");
-    return;
-  }
-
-  const target = document.getElementById(config.objId);
-  if (!target) {
-    console.warn(`[startTraverseAnimation] ❌ No object found with id ${config.objId}`);
-    return;
-  }
-
-  const dataId = target.getAttribute("data-id");
-  if (!dataId) {
-    console.warn(`[startTraverseAnimation] ⚠️ Object ${config.objId} missing data-id attribute`);
-    return;
-  }
-
-  if (!dataId.includes("_t(1)")) {
-    console.warn(`[startTraverseAnimation] ⚠️ data-id for ${config.objId} is not triggerable (_t(1) missing)`);
-    return;
-  }
-
-  // 🔁 Look up in animation registry (if any)
-  const pending =
-    window.pendingScaleAnimations?.get(dataId) ||
-    window.pendingScaleAnimations?.get(config.objId); // fallback
-
-  if (pending) {
-    console.log(`[startTraverseAnimation] ✅ Triggering deferred animation for data-id: ${dataId}`);
-    pending();  // ✅ Call the stored function
-    console.log(`[scale:_t] 🔴 timeline.play() called for ${dataId}`);
-  } else {
-    console.warn(`[startTraverseAnimation] ⚠️ No pending animation found for data-id: ${dataId}`);
-  }
-}
-
-/**
- * Main cue handler for cueTraverse (c-t) cues.
- * @param {string} cueId - Full cue ID from score
- */
-
-export async function handleTraverseCue(cueId) {
-  const config = parseTraverseCueId(cueId);
-  if (!config) return;
-
-  console.log("[handleTraverseCue] 🚶 Triggered cueTraverse:", config);
-
-  startTraverseAnimation(config);
-}
-
-
 
 
 export function handleStopCue(ast) {
@@ -900,168 +841,6 @@ export function handleStopCue(ast) {
 }
 
 
-
-// =========================
-// 🎬 cueChoice Handler Logic
-// =========================
-
-/**
- * Handles cue selection by displaying available animation choices.
- * Extracts animation files and durations dynamically from the cue ID.
- * Ensures score playback pauses when cue choices appear.
- * Applies UI changes, including background blur and animation previews.
- * Allows users to select an animation, triggering enlargement and playback.
- * Cleans up and restores UI after a selection is made.
- */
-export function handleCueChoice(cueId) {
-  console.log(`[DEBUG] Handling cue choice: ${cueId}`);
-
-  setTimeout(() => {
-    const gridContainer = document.getElementById("cue-choice-container");
-    const header = document.getElementById("cue-choice-header");
-
-    if (!gridContainer || !header) {
-      console.error("[ERROR] cue-choice-container or header not found in HTML.");
-      return;
-    }
-
-    // ✅ Restore visibility
-    gridContainer.classList.remove("hidden");
-    gridContainer.style.display = "flex";
-    header.classList.remove("hidden");
-
-    // ✅ Extract animation files and durations dynamically
-    const animations = parseCueChoiceVariants(cueId);
-    if (!animations.length) {
-      console.error("[DEBUG] No valid animations found in cue namespace.");
-      return;
-    }
-
-    console.log("[DEBUG] `animations` at start:", animations);
-
-    // ✅ Ensure score pauses when the cueChoice appears
-    if (window.isPlaying) {
-      console.log('[DEBUG] Pausing score for cue choice.');
-      window.isPlaying = false;
-      window.isMusicalPause = true;
-
-      window.stopAnimation?.();
-
-      if (window.wsEnabled && window.socket) {
-        const msg = JSON.stringify({ type: "pause", playheadX: window.playheadX, elapsedTime: window.elapsedTime });
-        window.socket.send(msg);
-        console.log(`[DEBUG] Sent pause message to server. Elapsed Time: ${window.elapsedTime}`);
-      }
-    } else {
-      console.warn("[DEBUG] Score was already paused.");
-    }
-
-    // ✅ Blur all other elements except the choice grid
-    document.body.querySelectorAll(':scope > *').forEach((el) => {
-      if (el.id !== 'cue-choice-container' && el.id !== 'controls') {
-        el.classList.add('blur-background');
-      }
-    });
-
-    // ✅ Populate choices dynamically with SVG thumbnails
-    animations.forEach(({ choice, dur }) => {
-      console.log(`[DEBUG] Loading animation: ${choice} (${dur}s)`);
-
-      const div = document.createElement("div");
-      div.classList.add("cue-choice-item");
-      div.dataset.choice = choice;
-      div.textContent = `${choice} (${dur}s)`;
-
-      const svgThumbnail = document.createElement("object");
-      svgThumbnail.type = "image/svg+xml";
-      svgThumbnail.data = `scores/pages/${choice}.svg`;
-      svgThumbnail.classList.add("cue-choice-thumbnail");
-
-      svgThumbnail.onload = () => {
-        console.log(`[DEBUG] Successfully loaded SVG thumbnail: ${choice}`);
-      };
-
-      svgThumbnail.onerror = () => {
-        console.error(`[ERROR] Failed to load SVG thumbnail: ${choice}`);
-      };
-
-      div.appendChild(svgThumbnail);
-
-      div.addEventListener("click", () => {
-        console.log(`[DEBUG] Animation ${choice} clicked. Dismissing choice grid.`);
-        dismissCueChoice();
-        window.handleEnlargeAnimation?.(choice, dur);
-      });
-
-      gridContainer.appendChild(div);
-    });
-
-    console.log("[DEBUG] cue-choice-container and header restored with new choices.");
-  }, 200);
-}
-
-/**
- * Helper to extract choices and durations from cue ID format
- * Format: cueChoice_[choice]_dur_[duration]_...
- */
-export function parseCueChoiceVariants(cueId) {
-  const cueParams = cueId.split('_').slice(2); // Skip 'cueChoice'
-  const animations = [];
-  let i = 0;
-
-  console.log("[DEBUG] Raw cueParams:", cueParams);
-
-  while (i < cueParams.length) {
-    const param = cueParams[i];
-
-    if (!param || param === "dur" || !isNaN(param)) {
-      console.warn(`[DEBUG] Skipping invalid param: ${param}`);
-      i++;
-      continue;
-    }
-
-    const file = param;
-    let duration = 30;
-
-    if (i + 2 < cueParams.length && cueParams[i + 1] === "dur" && !isNaN(cueParams[i + 2])) {
-      duration = parseInt(cueParams[i + 2], 10);
-      i += 2;
-    }
-
-    animations.push({ choice: file, dur: duration });
-    console.log(`[DEBUG] Added animation: ${file} with duration: ${duration}`);
-    i++;
-  }
-
-  console.log('[DEBUG] Final extracted animations:', animations);
-  return animations;
-}
-
-/**
- * Dismisses the cue choice grid and restores UI state.
- */
-export function dismissCueChoice() {
-  console.log("[DEBUG] Dismissing cue choice container.");
-
-  const gridContainer = document.getElementById("cue-choice-container");
-  if (gridContainer) {
-    gridContainer.classList.add("hidden");
-    const choices = gridContainer.querySelectorAll(".cue-choice-item");
-    choices.forEach((choice) => choice.remove());
-  }
-
-  const header = document.getElementById("cue-choice-header");
-  if (header) {
-    header.classList.add("hidden");
-  }
-
-  // ✅ Remove all background blur classes
-  document.body.querySelectorAll(".blur-background").forEach((el) => {
-    el.classList.remove("blur-background");
-  });
-
-  console.log("[DEBUG] Cue choice dismissed and reset.");
-}
 
 
 
@@ -2033,6 +1812,123 @@ export function triggerCueByRef(ref, extraParams = {}) {
 
 
 
+
+/* ============================================================================
+ *  Unified Delayed Start System  (start:N)
+ *  -------------------------------------------------
+ *  Purpose:
+ *    Allows any cue-triggered animation (rotate, scale, o2p, text, video, audio)
+ *    to specify start:N meaning “begin N seconds after the cue triggers.”
+ *
+ *  Behavior:
+ *    • start:N is optional (default = immediate).
+ *    • start:0 behaves as immediate.
+ *    • Works for both trig:auto and trig:edge.
+ *    • Delay is real-time (independent of playback speed).
+ *    • Multiple calls for same cue-UID overwrite the previous pending trigger.
+ *
+ *  Registry:
+ *    window.pendingCueStarts : Map(uid → { timeoutId, cfg, element, startFn })
+ *      • Allows cancellation (on jump, mode change, rewind, etc.)
+ *      • Prevents double-starts.
+ *
+ *  Usage:
+ *    scheduleCueStart(cfg, element, () => { ...animation start... }, uid)
+ *
+ *  Cancellation:
+ *    cancelPendingStartByUid(uid)
+ *    cancelAllPendingStarts()
+ *
+ *  Debugging:
+ *    console.table([...window.pendingCueStarts.keys()])
+ *    console.log(window.pendingCueStarts)
+ *
+ * ============================================================================
+ */
+
+//////////////////////////////////////////////////////////////////////
+// Unified delayed animation scheduling
+window.pendingCueStarts ??= new Map();
+
+/**
+ * scheduleCueStart()
+ * ------------------
+ * Unified start:N delay mechanism for all animation cues.
+ *
+ * cfg.start  = delay in seconds (optional, 0 = immediate)
+ * el         = target element for this animation
+ * startFn    = callback that actually starts the animation
+ * cueUid     = unique key identifying this animation instance
+ */
+// ============================================================================
+// Unified delayed-start scheduler (start:N)
+// ============================================================================
+
+window.pendingCueStarts ??= new Map();
+
+export function scheduleCueStart(cfg, el, startFn, uid) {
+    const delay = Number(cfg.start ?? 0);
+
+    console.log("[startScheduler] ENTER", { uid, delay, cfg, el });
+
+    // Cancel any previous pending start
+    if (window.pendingCueStarts.has(uid)) {
+        const old = window.pendingCueStarts.get(uid);
+        console.log("[startScheduler] Cancelling old pending start", { uid });
+        clearTimeout(old.timeoutId);
+        window.pendingCueStarts.delete(uid);
+    }
+
+    // Immediate start?
+    if (!delay || delay <= 0) {
+        console.log("[startScheduler] Immediate start → uid:", uid);
+        startFn();
+        return;
+    }
+
+    console.log(`[startScheduler] Scheduling start in ${delay}s → uid=${uid}`);
+
+    const timeoutId = setTimeout(() => {
+        console.log("[startScheduler] 🔥 FIRING delayed start → uid:", uid);
+        window.pendingCueStarts.delete(uid);
+        try {
+            startFn();
+        } catch (err) {
+            console.error("[startScheduler] ERROR in startFn:", err);
+        }
+    }, delay * 1000);
+
+    window.pendingCueStarts.set(uid, {
+        timeoutId,
+        cfg,
+        el,
+        startFn,
+        createdAt: performance.now(),
+    });
+
+    console.log("[startScheduler] stored pending", [...window.pendingCueStarts.keys()]);
+}
+
+
+export function cancelAllPendingStarts() {
+    for (const [uid, entry] of window.pendingCueStarts.entries()) {
+        clearTimeout(entry.timeoutId);
+    }
+    window.pendingCueStarts.clear();
+    console.log("[start] All pending delayed-starts cancelled.");
+}
+
+export function cancelPendingStartByUid(uid) {
+    const e = window.pendingCueStarts.get(uid);
+    if (!e) return;
+    clearTimeout(e.timeoutId);
+    window.pendingCueStarts.delete(uid);
+    console.log(`[start] cancelled pending start for ${uid}`);
+}
+
+
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 
 
 

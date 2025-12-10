@@ -1,83 +1,113 @@
-# cue:scale — Scale Animation Cue (Updated)
+# cue:scale — Scaling Animation
 
-This version fully documents support for Pseq, Prand, Pxrand, and Pshuf patterns.
+`scale()` adjusts the size of SVG objects using sequences, patterns, continuous pulsing, or independent X/Y scaling.
 
-## Overview
-`scale()` and `scaleXY()` control visual scaling of SVG objects. Scaling may be smooth, stepped, patterned, pulsed, uniform, or non‑uniform (independent X/Y).
+---
 
-Both explicit and implicit forms work:
+# BASIC FORMS
+
+### Uniform scaling
 ```
 scale(values:[1,1.5,1], dur:2)
-scale([1,1.5,1], dur:2)
 ```
 
-## Uniform vs Non‑Uniform
+### Non-uniform (XY)
 ```
-scale([1,1.5,1], dur:2)
-scaleXY([1,1.5],[1,0.5], dur:2)
-scaleXY(x:[1,1.5], y:[1,0.5], dur:2)
+scaleXY([1,1.3],[1,0.6], dur:1)
 ```
 
-## Pattern Support (rotate‑equivalent)
-Scale fully supports SuperCollider‑style patterns:
-
-- **Pseq([…], inf)** deterministic looping  
-- **Prand([…], inf)** random selection  
-- **Pxrand([…], inf)** random, no immediate repeats  
-- **Pshuf([…], inf)** shuffled list repeating  
-
-Patterns are valid for:
-- **values** in `scale()`
-- **x:** and **y:** in `scaleXY()`
-- **dur:** (patterned duration)
-
-Examples:
+### Continuous pulse
 ```
-scale(Pseq([1,1.5,1], inf), dur:1)
-scale(Prand([1,2,0.8], inf), dur:0.5)
-scaleXY(x:Pxrand([1,1.3,1.6],inf), y:Pshuf([1,0.8,1.2],inf), dur:1)
-scale([1,2,1], dur:Prand([0.5,1,2],inf))
+scale(min:1, max:1.3, dur:2)
 ```
 
-## Sequence Modes
-- `mode:loop` — continuous (default)  
-- `mode:once` — play once  
-- `mode:alternate` — bounce/ping‑pong  
+---
 
-## Interpolation
-- `interp:smooth` — tween between values (default)  
-- `interp:step` — instantaneous jumps  
+# TRIGGERING
 
-`hold:` applies only to smooth interpolation.
+- automatic page-mode  
+- scroll edge  
+- cue activation  
 
-## Parameters
-| Key | Description | Default |
-|-----|-------------|---------|
-| `dur` | seconds per step or pattern element | `1` |
-| `hold` | pause after tween (smooth only) | `dur * 0.25` |
-| `ease` | Anime.js easing | `linear` |
-| `osc` | 0=off, 1=continuous, 2=per‑step | `0` |
-| `pauseOnExit` | in once‑mode, stay at final value | `true` |
+---
 
-## Continuous Pulse Form
+# TRIGGER DELAY
+
+### `tdelay:<seconds>`
+Delays scaling start.
+
 ```
-scale(min:1, max:1.3, dur:2, loop:0, ease:"easeInOutSine")
+scale(values:[1,1.4,1], tdelay:3)
 ```
 
-## OSC Output
+---
+
+# PRESTART VISIBILITY
+
+### `prestate:<show|hide|ghost>`
+
 ```
-{
-  "type":"osc_scale",
-  "uid":"objectID",
-  "sx":1.25, "sy":0.75,
-  "avg":1.0,
-  "timestamp":1736730000000
-}
+scale([1,1.5,1], tdelay:4, prestate:ghost)
 ```
 
-## Typical Usage
+Initial scale is applied immediately.
+
+---
+
+# SEQUENCES
+
+| Key | Meaning |
+|------|--------|
+`values` | uniform scale list  
+`x`, `y` | independent XY sequences  
+`dur` | duration per step  
+`mode` | loop / once / alternate  
+`interp` | smooth / step  
+`hold` | pause (smooth only)  
+
+Pattern forms (`Pseq`, `Prand`, etc.) supported for all parameters.
+
+---
+
+# CONTINUOUS SCALING
+
 ```
-scale([1,1.5,1], dur:2, ease:"easeInOutSine", osc:1)
-scaleXY([1,1.5],[1,0.5], dur:3, mode:alternate, interp:step)
-scale(Pseq([1,2,1],inf), dur:Prand([0.5,1,2],inf))
+scale(min:1, max:1.4, dur:1.5, loop:0)
+```
+
+---
+
+# UID — Live Updates
+
+```
+scale(values:[1,1.2,1], uid:s1)
+scale(uid:s1, dur:0.5)
+```
+
+---
+
+# FULL PARAMETER LIST
+
+| Key | Description |
+|------|-------------|
+`values` | scalar sequence  
+`x`, `y` | axis-specific sequences  
+`dur` | step duration  
+`hold` | pause  
+`ease` | tween curve  
+`mode` | loop logic  
+`interp` | smooth/step  
+`uid` | animation identity  
+`trig` | trigger  
+`tdelay` | delay after trigger  
+`prestate` | pre-start visual state  
+
+---
+
+# EXAMPLES
+
+```
+scale([1,2,1], dur:2, tdelay:3)
+scaleXY([1,1.4],[1,0.6], dur:1)
+scale(Pseq([1,1.5,1],inf), dur:Prand([0.5,1],inf))
 ```
