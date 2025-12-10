@@ -271,29 +271,29 @@ function applyTransform(el, point, angleDeg, cfg) {
     let mode = cfg.rotate;
 
     // Log raw input
-    console.log(`[ROT_MODE] raw=${cfg.rotate}`);
+    // console.log(`[ROT_MODE] raw=${cfg.rotate}`);
 
     // If rotate is a string, map it to numeric
     if (typeof mode === "string") {
         const key = mode.toLowerCase().trim();
-        console.log(`[ROT_MODE] received string="${key}"`);
+        // console.log(`[ROT_MODE] received string="${key}"`);
         if (rotateModeLookup[key] !== undefined) {
-            console.log(`[ROT_MODE] mapped to numeric=${rotateModeLookup[key]}`);
+            // console.log(`[ROT_MODE] mapped to numeric=${rotateModeLookup[key]}`);
             mode = rotateModeLookup[key];
         } else {
-            console.warn(`[ROT_MODE] WARNING: unknown mode "${key}" — using fallback 0`);
+            // console.warn(`[ROT_MODE] WARNING: unknown mode "${key}" — using fallback 0`);
             mode = 0;
         }
     }
 
     // Fallback if it failed
     if (!Number.isFinite(mode)) {
-        console.warn(`[ROT_MODE] WARNING: mode not numeric (${mode}) — using fallback 0`);
+        // console.warn(`[ROT_MODE] WARNING: mode not numeric (${mode}) — using fallback 0`);
         mode = 0;
     }
 
     // Final output for diagnostics
-    console.log(`[ROT_MODE] final internal mode=${mode}`);
+    // console.log(`[ROT_MODE] final internal mode=${mode}`);
 
 
     let tx = point.x;
@@ -358,10 +358,10 @@ function applyTransform(el, point, angleDeg, cfg) {
 
                 // debug
                 if (!window._o2p_lastSpin || (now - window._o2p_lastSpin) > 800) {
-                    console.log(
-                        `[o2p-spin] ${el.id || cfg.uid}: ` +
-                        `${(360 / secPerRev).toFixed(1)}°/sec  (dt=${dt.toFixed(3)}s)`
-                    );
+                    // console.log(
+                    //     `[o2p-spin] ${el.id || cfg.uid}: ` +
+                    //     `${(360 / secPerRev).toFixed(1)}°/sec  (dt=${dt.toFixed(3)}s)`
+                    // );
                     window._o2p_lastSpin = now;
                 }
             }
@@ -374,7 +374,7 @@ function applyTransform(el, point, angleDeg, cfg) {
     el.style.transform = "";
 
     if (!window._o2p_lastXformLog || (now - window._o2p_lastXformLog) > 1500) {
-        console.log(`[o2p-xform] ${el.id || cfg.uid}: ${t}`);
+        // console.log(`[o2p-xform] ${el.id || cfg.uid}: ${t}`);
         window._o2p_lastXformLog = now;
     }
 }
@@ -420,7 +420,6 @@ function emitO2POsc({ uid, path, point, pathT, oscCfg }) {
     );
 }
 
-
 /* ---------------------------------------------------------
  *  7. Continuous mode (forward/reverse)
  * --------------------------------------------------------*/
@@ -463,15 +462,47 @@ function startContinuousO2P(el, cfg, virtual, uid) {
         direction: "normal",
 
         update: () => {
-            // free-spin timing
+
+            // free-spin timing support (dt)
             const nowTime = performance.now();
             window._o2p_dt = window._o2p_lastTime ? (nowTime - window._o2p_lastTime) / 1000 : 0.016;
             window._o2p_lastTime = nowTime;
 
-            let phase = driver.u;
-            if (cfg.mode === "reverse") phase = 1 - phase;
+            let phase = driver.u;  // 0..1 progression
+            let globalT;
 
-            const globalT = tMap(phase);
+            const hasCustomStart = (cfg.start !== 0);
+            const hasCustomEnd = (cfg.end !== 1);
+
+            if (cfg.mode === "forward") {
+
+                // start-only forward → orbit shift
+                if (hasCustomStart && !hasCustomEnd) {
+                    globalT = (cfg.start + phase) % 1;
+                }
+                // segment
+                else {
+                    globalT = tMap(phase);
+                }
+            }
+
+            else if (cfg.mode === "reverse") {
+
+                // start-only reverse → orbit shift backward
+                if (hasCustomStart && !hasCustomEnd) {
+                    globalT = (cfg.start - phase + 1) % 1;
+                }
+                // segment
+                else {
+                    const phaseRev = 1 - phase;
+                    globalT = tMap(phaseRev);
+                }
+            }
+
+
+            // --------------------------------------
+            //   SAMPLE FROM PATH
+            // --------------------------------------
             const sample = virtual.sample(globalT);
             if (!sample) return;
 
@@ -504,6 +535,7 @@ function startContinuousO2P(el, cfg, virtual, uid) {
 
     el._o2pAnim = anim;
 }
+
 
 
 /* ---------------------------------------------------------
@@ -553,8 +585,22 @@ function startAlternateO2P(el, cfg, virtual, uid) {
                     window._o2p_dt = window._o2p_lastTime ? (nowTime - window._o2p_lastTime) / 1000 : 0.016;
                     window._o2p_lastTime = nowTime;
 
-                    const phase = directionSign === 1 ? driver.u : 1 - driver.u;
-                    const globalT = tMap(phase);
+                    let phase = driver.u;
+                    let globalT = tMap(phase);
+
+                    const isRev = (cfg.mode === "reverse");
+                    const firstFrame = (phase === 0);
+
+                    // If reverse but at first frame → start at `cfg.start`
+                    if (isRev && firstFrame) {
+                        globalT = cfg.start;
+                    }
+                    // Otherwise reverse works as reflection across segment
+                    else if (isRev) {
+                        globalT = cfg.end + cfg.start - globalT;
+                    }
+
+
                     const sample = virtual.sample(globalT);
                     if (!sample) return;
 
@@ -694,7 +740,7 @@ export function handleO2PCue(el, args, options = {}) {
                 case "mode": if (val != null) cfg.mode = String(val).toLowerCase(); break;
                 case "dur": cfg.dur = Number(val) || 1; break;
                 case "loop": cfg.loop = Number(val) || 0; break;
-                
+
                 case "rotate": {
                     // preserve textual rotate modes (spin, aligned, locked, none)
                     if (typeof val === "string") {
@@ -709,8 +755,8 @@ export function handleO2PCue(el, args, options = {}) {
                         cfg.rotate = val;    // boolean or numeric
                     }
                     break;
-                } 
-                
+                }
+
                 case "rotoffset": cfg.rotoffset = Number(val) || 0; break;
                 case "rotlock": cfg.rotlock = Number(val) || 0; break;
                 case "rotspeed": cfg.rotspeed = Number(val) || 0; break;
@@ -730,6 +776,8 @@ export function handleO2PCue(el, args, options = {}) {
         if (cfg.mode === "fwd") cfg.mode = "forward";
         if (cfg.mode === "rev") cfg.mode = "reverse";
         if (cfg.mode === "alt") cfg.mode = "alternate";
+
+
 
         // Fallback: first arg is path if unlabeled
         if (!cfg.path && args.length > 0) {
