@@ -2,10 +2,11 @@
 
 import { registerAnimation } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
+import { createHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
 
 import {
-  applyPrestateBeforeStart,
-  applyPrestateOnStart
+    applyPrestateBeforeStart,
+    applyPrestateOnStart
 } from "./oscillaAnimationShared.js";
 
 // ============================================================
@@ -373,6 +374,8 @@ export function handleRotateSequence(el, cfg) {
             duration: stepDur * 1000,
             easing: ease,
             update: () => {
+                    repositionAllHitLabels();
+
                 let a = ((driver.a % 360) + 360) % 360;
                 el.style.transform = `rotate(${a}deg)`;
                 if (oscMode === 1) {
@@ -415,7 +418,7 @@ export function handleRotateContinuous(el, cfg) {
     let loop = 0;
     let ease = "linear";
     let mode = "loop";  // kept for completeness
-    let oscMode = 0;    // future expansion if needed
+    let oscMode = 0;
 
     for (const arg of astArgs) {
         const key = arg.key || arg.type;
@@ -426,10 +429,12 @@ export function handleRotateContinuous(el, cfg) {
         if (key === "loop") loop = Number(value);
         if (key === "ease") ease = String(value).trim();
         if (key === "mode") mode = String(value).trim().toLowerCase();
-        if (key === "osc") oscMode = Number(value) || 0;
+        if (key === "osc")  oscMode = Number(value) || 0;
     }
 
+    // stop existing animation if active
     if (el._oscillaRotateAnim) el._oscillaRotateAnim.pause?.();
+
     applySvgPivot(el);
 
     const fullTurn = dir * 360;
@@ -440,10 +445,16 @@ export function handleRotateContinuous(el, cfg) {
         rotate: `+=${fullTurn}`,
         duration: ms,
         easing: ease,
-        loop: loop === 0 ? true : loop
+        loop: loop === 0 ? true : loop,
+
+        // glue hit-circles to object while rotating
+        update: () => {
+            try { repositionAllHitLabels(); } catch (e) {}
+        }
     });
 
     el._oscillaRotateAnim = anim;
+
 
     // console.log("[rotate] fallback continuous start", {
     //     id: el.id,
@@ -482,20 +493,18 @@ export function handleRotateCue(el, astArgs, options = {}) {
     let trig = "auto";
     let uid = el.id || ("rotate_" + Math.random().toString(36).slice(2));
     let cfgStartDelay = 0;
-    let prestate = "show";   // ⚠ default, but replaced if AST contains func object
+    let prestate = "show";
 
     for (const a of astArgs) {
         const key = a.key || a.type;
         const val = a.value;
 
-        if (key === "trig")    trig = String(val).toLowerCase();
-        if (key === "uid")     uid = String(val).trim();
-        if (key === "tdelay")  cfgStartDelay = Number(val) || 0;
+        if (key === "trig") trig = String(val).toLowerCase();
+        if (key === "uid") uid = String(val).trim();
+        if (key === "tdelay") cfgStartDelay = Number(val) || 0;
 
-        // IMPORTANT FIX:
-        // Do NOT convert prestate object to string!
         if (key === "prestate") {
-            prestate = val;  // may be "hide", "ghost", "show" OR {type:"func",name:"fadein",args:[...]}
+            prestate = val; // may be string or func object
         }
     }
 
@@ -510,7 +519,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
         fromCueTrigger || trig === "auto" || trig === "playhead";
 
     // ----------------------------------------------------
-    // BASE CFG (used everywhere)
+    // BASE CFG (shared across modes)
     // ----------------------------------------------------
     const baseCfg = {
         uid,
@@ -518,36 +527,91 @@ export function handleRotateCue(el, astArgs, options = {}) {
         start: cfgStartDelay,
         prestate,
         astArgs,
-        fromCueTrigger
+        fromCueTrigger,
+
+        _ghostState: "waiting",    // ★ NEW: waiting → running → paused
     };
 
     // ----------------------------------------------------
-    // Apply pre-start visibility (hide/ghost/fadein)
+    // Apply PRESTATE (fadein / ghost / hide / ghostClickable)
     // ----------------------------------------------------
     applyPrestateBeforeStart(el, baseCfg);
+    // ★ FIX: ensure the element actually receives clicks
+    el.style.pointerEvents = "all";
+    // Bring to front so clicks are reachable
+    try { el.parentNode.appendChild(el); } catch (e) { }
 
     // ----------------------------------------------------
-    // Helper: initial rotation (only for sequences)
+    // DEFINE RAW START FOR ALL ROTATION MODES
     // ----------------------------------------------------
-    function applyInitialRotation(cfg) {
-        try {
-            if (cfg.values && cfg.values.length > 0) {
-                const angle = cfg.values[0];
-                el.style.transform = `rotate(${angle}deg)`;
-            }
-        } catch (err) {
-            console.warn("[rotateCue] Could not apply initial rotation:", err);
-        }
+    function makeRawStart(cfg, modeFn) {
+        return () => {
+            console.log("[rotateCue] ▶ START ROTATION", cfg.uid);
+            modeFn(el, cfg);
+        };
     }
 
     // ----------------------------------------------------
-    // Helper: wrap start with tdelay + prestate restore
+    // INSTALL GHOST-CLICKABLE TOGGLE
+    // Works for all rotate modes (sequence & continuous)
+    // ----------------------------------------------------
+    function installGhostToggle(cfg, rawStartFn) {
+        if (!cfg._ghostClickable) return;
+
+        function onClick() {
+            // waiting → running
+            if (cfg._ghostState === "waiting") {
+                cfg._ghostState = "running";
+                el.style.transition = "opacity 400ms ease";
+                el.style.opacity = "1";
+                rawStartFn();
+                return;
+            }
+
+            // running → paused
+            if (cfg._ghostState === "running") {
+                cfg._ghostState = "paused";
+                el.style.transition = "opacity 400ms ease";
+                el.style.opacity = cfg._ghostOpacity ?? 0.3;
+
+                // Pause animation if registered
+                if (window.runningAnimations?.has(cfg.uid)) {
+                    window.runningAnimations.get(cfg.uid).pause();
+                }
+
+                return;
+            }
+
+            // paused → running
+            if (cfg._ghostState === "paused") {
+                cfg._ghostState = "running";
+                el.style.transition = "opacity 400ms ease";
+                el.style.opacity = "1";
+
+                if (window.runningAnimations?.has(cfg.uid)) {
+                    window.runningAnimations.get(cfg.uid).play();
+                } else {
+                    rawStartFn();
+                }
+                return;
+            }
+        }
+
+        cfg._ghostToggle = onClick;
+        el.addEventListener("click", onClick);
+    }
+
+    // ----------------------------------------------------
+    // WRAP START (tdelay + prestates)
     // ----------------------------------------------------
     function wrapStart(cfg, rawStartFn) {
+        // expose to ghostClickable system
+        cfg._start = rawStartFn;
+        cfg._applyPrestateOnStart = () => applyPrestateOnStart(el, cfg);
+
         return () => {
             if (cfg.start > 0) {
                 console.log(`[rotateCue] ⏳ tdelay ${cfg.start}s → uid=${cfg.uid}`);
-
                 scheduleCueStart(
                     cfg,
                     el,
@@ -557,7 +621,6 @@ export function handleRotateCue(el, astArgs, options = {}) {
                     },
                     cfg.uid
                 );
-
             } else {
                 applyPrestateOnStart(el, cfg);
                 rawStartFn();
@@ -566,53 +629,66 @@ export function handleRotateCue(el, astArgs, options = {}) {
     }
 
     // ----------------------------------------------------
-    // Sequence mode
+    // SEQUENCE MODE 1: Pattern sequence
     // ----------------------------------------------------
     const valuesArg = astArgs.find(o =>
         o.key === "values" || o.type === "values"
     );
 
-    if (valuesArg) {
+    if (valuesArg && valuesArg.value?.type === "pattern") {
         const v = valuesArg.value;
 
-        // ---------- PATTERN SEQUENCE ----------
-        if (v && v.type === "pattern") {
-            const cfg = {
-                ...baseCfg,
-                pattern: v,
-                mode: "sequence-pattern"
-            };
+        const cfg = {
+            ...baseCfg,
+            pattern: v,
+            mode: "sequence-pattern"
+        };
 
-            if (Array.isArray(v.values))
-                applyInitialRotation({ values: v.values });
-
-            const start = wrapStart(cfg, () =>
-                handleRotateSequence(el, cfg)
-            );
-
-            registerAnimation(el, "rotate-sequence", cfg, start);
-            if (shouldStartNow) start();
-            return;
+        if (Array.isArray(v.values)) {
+            try {
+                const angle = v.values[0];
+                el.style.transform = `rotate(${angle}deg)`;
+            } catch { }
         }
 
-        // ---------- LITERAL SEQUENCE ----------
-        if (Array.isArray(v)) {
-            const cfg = {
-                ...baseCfg,
-                values: v,
-                mode: "sequence"
-            };
+        const rawStart = makeRawStart(cfg, handleRotateSequence);
+        const start = wrapStart(cfg, rawStart);
 
-            applyInitialRotation(cfg);
+        // install ghost toggle
+        installGhostToggle(cfg, rawStart);
 
-            const start = wrapStart(cfg, () =>
-                handleRotateSequence(el, cfg)
-            );
+        registerAnimation(el, "rotate-sequence", cfg, start);
+        // createHitLabel(el, "rotate", cfg.uid);   // for rotate cue
 
-            registerAnimation(el, "rotate-sequence", cfg, start);
-            if (shouldStartNow) start();
-            return;
-        }
+        if (shouldStartNow) start();
+        return;
+    }
+
+    // ----------------------------------------------------
+    // SEQUENCE MODE 2: Literal sequence
+    // ----------------------------------------------------
+    if (valuesArg && Array.isArray(valuesArg.value)) {
+        const cfg = {
+            ...baseCfg,
+            values: valuesArg.value,
+            mode: "sequence"
+        };
+
+        try {
+            const angle = cfg.values[0];
+            el.style.transform = `rotate(${angle}deg)`;
+        } catch { }
+
+        const rawStart = makeRawStart(cfg, handleRotateSequence);
+        const start = wrapStart(cfg, rawStart);
+
+        installGhostToggle(cfg, rawStart);
+
+        registerAnimation(el, "rotate-sequence", cfg, start);
+        // createHitLabel(el, "rotate", cfg.uid);   // for rotate cue
+
+        if (shouldStartNow) start();
+        return;
     }
 
     // ----------------------------------------------------
@@ -625,14 +701,19 @@ export function handleRotateCue(el, astArgs, options = {}) {
         mode: "continuous"
     };
 
-    const start = wrapStart(cfg, () =>
-        handleRotateContinuous(el, cfg)
-    );
+    const rawStart = makeRawStart(cfg, handleRotateContinuous);
+    const start = wrapStart(cfg, rawStart);
+
+    installGhostToggle(cfg, rawStart);
 
     registerAnimation(el, "rotate-fallback", cfg, start);
 
+
+createHitLabel(el, "rotate", cfg.uid);
+
     if (shouldStartNow) start();
 }
+
 
 
 

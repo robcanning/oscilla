@@ -22,6 +22,7 @@ import { initializeObserver } from "./oscillaObserver.js";
 import { buildCueButtonsIn, hideAllButtonPlaceholders } from "./oscillaButton.js";
 
 
+
 import {
   registerReuseBlocks,
   autoInjectUseBlocks,
@@ -155,7 +156,6 @@ export const initializeSVG = async (svgElement) => {
 
     console.log("[initializeSVG][page] 🔧 setupScore()");
     window.setupScore?.(svgElement);
-
 
     console.log("[initializeSVG][page] autostart stopwatch timers metronomes etc");
     window.autostartStopwatchCues();
@@ -1691,6 +1691,8 @@ document.addEventListener('DOMContentLoaded', () => {
   
   window.animate = async (currentTime) => {
 
+
+
   if (!window.isPlaying || window.isSeeking) return;
 
   // --- Compute dt ---
@@ -1772,6 +1774,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.animationFrameId === null) {
       requestAnimationFrame((time) => {
         window.lastAnimationFrameTime = time;
+        
         window.animationFrameId = requestAnimationFrame(window.animate); // Track it from the start
       });
     }

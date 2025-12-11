@@ -25,9 +25,9 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="px"
      showgrid="false"
-     inkscape:zoom="1.8101934"
-     inkscape:cx="21846.285"
-     inkscape:cy="373.44077"
+     inkscape:zoom="0.90509668"
+     inkscape:cx="22076.095"
+     inkscape:cy="738.0427"
      inkscape:window-width="1920"
      inkscape:window-height="1011"
      inkscape:window-x="0"
@@ -35435,7 +35435,7 @@
          y="829.79999"
          id="tspan27" /></text><rect
        style="fill:#ff0000;stroke:#ff0000;stroke-width:2.3;stroke-dasharray:none"
-       id="rotate(values:Pxrand([0, 120, 240, 60, 45, 180], inf),&#10;  dur:Pseq([2, 0.6, 1], inf),&#10;  interp:smooth,&#10;  hold:0.4&#10;)"
+       id="rotate(values:Pxrand([0, 120, 240, 60, 45, 180], inf),&#10;  dur:1,&#10;  interp:smooth,&#10;  hold:0.4, trig:edge&#10;)"
        width="4.7575593"
        height="107.83801"
        x="21634.807"
@@ -35445,7 +35445,7 @@
        id="rotate(values:Pxrand([0, 120, 240, 60, 45, 180], inf),&#10;  dur:Pseq([2, 0.4, 1], inf),&#10;  interp:smooth,&#10;  hold:0.4&#10;)" /><path
        style="fill:none;stroke:#ff0000;stroke-width:1;stroke-dasharray:none;marker-start:url(#marker51758-7-9)"
        d="m 21516.111,663.17792 11.698,24.35845 -16.183,34.72422"
-       id="rotate(values:Pxrand([0, 120, 240, 60, 45, 180], inf),&#10;  dur:Pseq([2, 0.4, 1.2], inf),&#10;  interp:smooth,&#10;  hold:0.4&#10;)"
+       id="rotate(values:Pxrand([0, 120, 240, 60, 45, 180], inf),&#10;  dur:Pseq([2, 0.4, 1.2], inf),&#10;  interp:smooth,&#10;  hold:0.4, trig:edge, uid:1772&#10;)"
        sodipodi:nodetypes="ccc" /><text
        xml:space="preserve"
        style="font-size:13.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:none;stroke:#ff0000;stroke-width:1;stroke-dasharray:none"
@@ -36567,7 +36567,7 @@
          id="tspan1673">Black&quot;, fontsize:22))</tspan></text><path
        sodipodi:type="star"
        style="fill:none;stroke:#ff0000"
-       id="rotate(values:Pxrand([0, 120, 240, 60, 45, 180], inf),&#10;  dur:Pseq([2, 0.6, 1], inf),&#10;  interp:smooth,&#10;  hold:0.4,&#10;  uid:barrot2,&#10;  trig:playhead&#10;)"
+       id="rotate(values:Pxrand([0, 120, 240, 60, 45, 180], inf),&#10;  dur:Pseq([2, 0.6, 1], inf),&#10;  interp:smooth,&#10;  hold:0.4,&#10;  uid:barrot2,&#10;  trig:auto&#10;)"
        inkscape:flatsided="false"
        sodipodi:sides="5"
        sodipodi:cx="21874.516"

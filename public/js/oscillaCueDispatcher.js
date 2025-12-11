@@ -1849,55 +1849,109 @@ export function triggerCueByRef(ref, extraParams = {}) {
 //////////////////////////////////////////////////////////////////////
 // Unified delayed animation scheduling
 window.pendingCueStarts ??= new Map();
-
 /**
  * scheduleCueStart()
  * ------------------
  * Unified start:N delay mechanism for all animation cues.
  *
- * cfg.start  = delay in seconds (optional, 0 = immediate)
- * el         = target element for this animation
- * startFn    = callback that actually starts the animation
- * cueUid     = unique key identifying this animation instance
+ * cfg.start   = delay in seconds (optional, 0 = immediate)
+ * cfg._ghostClickable = true when prestate:ghostClickable was parsed
+ * cfg._startBlocked   = true until user clicks
+ * cfg._startCallback  = the callback invoked when user activates ghostClickable
+ *
+ * el        = target element for this animation
+ * startFn   = callback that actually starts the animation
+ * uid       = unique key identifying this animation instance
  */
 // ============================================================================
-// Unified delayed-start scheduler (start:N)
+// Unified delayed-start scheduler (start:N) + ghostClickable handling
 // ============================================================================
-
+// ============================================================================
+// Unified delayed-start scheduler (start:N / tdelay)
+// Supports:
+//   - ghostClickable(ms)
+//   - fadein(ms)
+//   - all other prestates
+//   - immediate and delayed starts
+//
+// RULES:
+//   • If ghostClickable && delay == 0 → FADE NOW, DO NOT AUTOSTART
+//   • If ghostClickable && delay > 0  → WAIT, THEN FADE, STILL DO NOT AUTOSTART
+//   • Only start animation when cfg._startBlocked === false
+// ============================================================================
 window.pendingCueStarts ??= new Map();
 
 export function scheduleCueStart(cfg, el, startFn, uid) {
     const delay = Number(cfg.start ?? 0);
 
-    console.log("[startScheduler] ENTER", { uid, delay, cfg, el });
+    console.log("[startScheduler] ENTER", {
+        uid,
+        delay,
+        ghostClickable: cfg._ghostClickable,
+        blocked: cfg._startBlocked,
+        el
+    });
 
-    // Cancel any previous pending start
+    // Cancel previous pending start for this uid
     if (window.pendingCueStarts.has(uid)) {
         const old = window.pendingCueStarts.get(uid);
-        console.log("[startScheduler] Cancelling old pending start", { uid });
         clearTimeout(old.timeoutId);
         window.pendingCueStarts.delete(uid);
     }
 
-    // Immediate start?
+    // ========================================================================
+    // IMMEDIATE START (delay=0)
+    // ========================================================================
     if (!delay || delay <= 0) {
+
+        // ---------------- ghostClickable immediate fade ----------------
+        if (cfg._ghostClickable && cfg._startBlocked) {
+            console.log("[startScheduler] ghostClickable immediate → fade to ghost only", { uid });
+
+            if (typeof cfg._applyPrestateOnStart === "function") {
+                cfg._applyPrestateOnStart();   // fade to ghostOpacity
+            }
+
+            return; // DO NOT START ANIMATION
+        }
+
+        // ---------------- normal immediate start ----------------
         console.log("[startScheduler] Immediate start → uid:", uid);
         startFn();
         return;
     }
 
+    // ========================================================================
+    // DELAYED START (delay > 0)
+    // ========================================================================
     console.log(`[startScheduler] Scheduling start in ${delay}s → uid=${uid}`);
 
     const timeoutId = setTimeout(() => {
+
         console.log("[startScheduler] 🔥 FIRING delayed start → uid:", uid);
         window.pendingCueStarts.delete(uid);
+
+        // ---------------- ghostClickable delayed fade ----------------
+        if (cfg._ghostClickable && cfg._startBlocked) {
+            console.log("[startScheduler] ghostClickable delay done → fade to ghost only", { uid });
+
+            if (typeof cfg._applyPrestateOnStart === "function") {
+                cfg._applyPrestateOnStart();   // fade to ghostOpacity
+            }
+
+            return; // DO NOT START ANIMATION YET
+        }
+
+        // ---------------- normal delayed start ----------------
         try {
             startFn();
         } catch (err) {
             console.error("[startScheduler] ERROR in startFn:", err);
         }
+
     }, delay * 1000);
 
+    // register pending start
     window.pendingCueStarts.set(uid, {
         timeoutId,
         cfg,
@@ -1909,21 +1963,26 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
     console.log("[startScheduler] stored pending", [...window.pendingCueStarts.keys()]);
 }
 
-
+// ============================================================================
+// Cancel all pending starts
+// ============================================================================
 export function cancelAllPendingStarts() {
     for (const [uid, entry] of window.pendingCueStarts.entries()) {
         clearTimeout(entry.timeoutId);
     }
     window.pendingCueStarts.clear();
-    console.log("[start] All pending delayed-starts cancelled.");
+    console.log("[startScheduler] All pending delayed-starts cancelled.");
 }
 
+// ============================================================================
+// Cancel one pending start
+// ============================================================================
 export function cancelPendingStartByUid(uid) {
     const e = window.pendingCueStarts.get(uid);
     if (!e) return;
     clearTimeout(e.timeoutId);
     window.pendingCueStarts.delete(uid);
-    console.log(`[start] cancelled pending start for ${uid}`);
+    console.log(`[startScheduler] cancelled pending start for ${uid}`);
 }
 
 

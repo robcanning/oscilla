@@ -40,31 +40,66 @@ function shuffleInPlace(arr) {
 -------------------------------------------------------------------------*/
 function parseCueTextParams(ast, cueElement) {
   const params = {};
-  for (const p of (ast?.args || [])) params[p.type] = p.value;
+  for (const p of (ast?.args || [])) {
+    params[p.type] = p.value;
+  }
 
-  // Core params
+  // -----------------------------
+  // Extract simple fields
+  // -----------------------------
   const order = unquote(params.order || "seq");
   const mode  = unquote(params.mode  || "line");
 
+  // Loop logic (unchanged)
   const loopRaw0 = (params.loop ?? (order === "rnd" ? "0" : "1"))
     .toString()
     .trim()
     .toLowerCase();
 
-  const infinite = (loopRaw0 === "0" || loopRaw0 === "inf" || loopRaw0 === "infinite");
+  const infinite  = (loopRaw0 === "0" || loopRaw0 === "inf" || loopRaw0 === "infinite");
   const loopCount = infinite ? 0 : Math.max(1, parseInt(loopRaw0, 10) || 1);
 
-  // summarise in a struct
+  // -----------------------------
+  // NEW: tdelay / prestate
+  // -----------------------------
+  let tdelay = 0;
+  if (params.tdelay != null) {
+    tdelay = Number(params.tdelay) || 0;
+  }
+
+  // Example: prestate:"fadein(1200)" → we store the whole string "fadein(1200)"
+  let prestate = "show";
+  if (params.prestate != null) {
+    prestate = unquote(String(params.prestate));
+  }
+
+  // -----------------------------
+  // Compose return structure
+  // -----------------------------
   return {
     rawParams: params,
+
+    // content
     content:   unquote(params.src || params.content || ""),
     style:     unquote(params.style || ""),
+
+    // target placement
     targetId:  unquote(params.target || "self"),
     offsetX:   Number(params.offsetX || 0),
     offsetY:   Number(params.offsetY || 0),
-    order, mode,
-    infinite, loopCount,
-    cueUid: String(params.uid || cueElement?.id || `cueText_${unquote(params.target||"center")}`),
+
+    // sequencing
+    order,
+    mode,
+    infinite,
+    loopCount,
+
+    // NEW unified cue-start behaviour
+    tdelay,
+    prestate,
+
+    // uid fallback
+    cueUid: String(params.uid || cueElement?.id || `cueText_${unquote(params.target || "center")}`),
   };
 }
 
@@ -360,7 +395,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       }
     }
 
-    if (slotState.active) {
+     if (slotState.active) {
       applySlotPosition(div, slotState.index, {
         offsetX: parsed.offsetX, offsetY: parsed.offsetY,
         yoffset, yslots
@@ -369,10 +404,55 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       positionBase(div);
     }
 
+
+    // -------------------------------------------------
+    // NEW: prestate handling for text()
+    // -------------------------------------------------
+    if (parsed.prestate) {
+      const s = parsed.prestate.toLowerCase().trim();
+
+      if (s === "hide") {
+        div.style.opacity = 0;
+      }
+      else if (s.startsWith("fadein(")) {
+        const ms = parseInt(s.match(/\((\d+)\)/)?.[1] ?? "500");
+        div.style.opacity = 0;
+        setTimeout(() => {
+          div.style.transition = `opacity ${ms}ms ease`;
+          div.style.opacity = 1;
+        }, 20);
+      }
+    }
+
+    // -------------------------------------------------
+    // NEW: tdelay handling for text()
+    // -------------------------------------------------
+    if (parsed.tdelay && parsed.tdelay > 0) {
+      console.log(
+        `[cueText] ⏳ tdelay=${parsed.tdelay}s before showing text uid=${parsed.cueUid}`
+      );
+
+      await rafWait(parsed.tdelay * 1000, token);
+
+      if (token.cancel) {
+        console.log("[cueText] canceled during tdelay, aborting.");
+        try {
+          div.removeEventListener("click", onClickCancel);
+        } catch {}
+        try {
+          div.remove();
+        } catch {}
+        window.activeCueTexts.delete(parsed.cueUid);
+        console.groupEnd();
+        return;
+      }
+    }
+
     // -------------------------------------------------
     // 4) Transition logic
     // -------------------------------------------------
     async function playSequenceOnce() {
+
       let currentLayer = null;
       let hasCurrent = false;
 

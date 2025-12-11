@@ -716,7 +716,7 @@ export function handleO2PCue(el, args, options = {}) {
         if (!Array.isArray(args)) args = [];
 
         // -----------------------------------------------------------
-        // BASE CFG — build *first* so shared handlers can use it
+        // BASE CFG — shared prestate and scheduling system
         // -----------------------------------------------------------
         const cfg = {
             path: null,
@@ -732,15 +732,14 @@ export function handleO2PCue(el, args, options = {}) {
             ease: 3,
             osc: false,
 
-            // Path normalized range (0–1)
             start: 0,
             end: 1,
 
-            // unified name for tdelay
-            startDelay: 0,   // we will alias this to cfg.start for scheduler
+            // unified tdelay/start:N
+            startDelay: 0,
 
-            // unified prestate handler
-            prestate: "show",   // show | hide | ghost | fadein(ms)
+            // unified prestates (show | hide | ghost | fadein(ms) | ghostClickable(ms))
+            prestate: "show",
 
             uid: null,
             next: null,
@@ -751,9 +750,9 @@ export function handleO2PCue(el, args, options = {}) {
             fromCueTrigger
         };
 
-        // -------------------------------
+        // -----------------------------------------------------------
         // Parse DSL arguments
-        // -------------------------------
+        // -----------------------------------------------------------
         for (const a of args) {
             const key = a.type;
             const val = a.value;
@@ -761,9 +760,7 @@ export function handleO2PCue(el, args, options = {}) {
             switch (key) {
                 case "path": cfg.path = val; break;
 
-                case "mode":
-                    cfg.mode = String(val).toLowerCase();
-                    break;
+                case "mode": cfg.mode = String(val).toLowerCase(); break;
 
                 case "dur": cfg.dur = Number(val) || 1; break;
                 case "loop": cfg.loop = Number(val) || 0; break;
@@ -787,39 +784,38 @@ export function handleO2PCue(el, args, options = {}) {
                 case "start": cfg.start = Number(val) || 0; break;
                 case "end": cfg.end = Number(val) || 1; break;
 
-                // unified trigger-delay
+                // unified trigger delay
                 case "tdelay": cfg.startDelay = Number(val) || 0; break;
 
                 case "prestate": cfg.prestate = val; break;
-                
+
                 case "uid": cfg.uid = val; break;
                 case "next": cfg.next = val; break;
                 case "nextOn": cfg.nextOn = val; break;
+
                 case "trig": cfg.trig = String(val).toLowerCase(); break;
             }
         }
 
-        // alias for scheduler
+        // scheduler uses cfg.start as the field
         cfg.start = cfg.startDelay;
 
-        // Mode aliases
+        // mode aliases
         if (cfg.mode === "fwd") cfg.mode = "forward";
         if (cfg.mode === "rev") cfg.mode = "reverse";
         if (cfg.mode === "alt") cfg.mode = "alternate";
 
-        // UID fallback
+        // uid fallback
         if (!cfg.uid) {
             cfg.uid = el.id || ("o2p_" + Math.random().toString(36).slice(2));
         }
 
-        console.log("[o2pCue] Parsed →", {
+        console.log("[o2pCue] Parsed:", {
             uid: cfg.uid,
             path: cfg.path,
             trig: cfg.trig,
             tdelay: cfg.start,
             prestate: cfg.prestate,
-            pathRangeStart: cfg.start,
-            pathRangeEnd: cfg.end
         });
 
         if (!cfg.path) {
@@ -830,65 +826,87 @@ export function handleO2PCue(el, args, options = {}) {
         const shouldStartNow =
             fromCueTrigger || cfg.trig === "auto" || cfg.trig === "playhead";
 
-        // -------------------------------------------------------
-        // Apply prestate BEFORE positioning or animation
-        // -------------------------------------------------------
+
+        // -----------------------------------------------------------
+        // PRESTATE BEFORE START (sets initial opacity, block flags, etc.)
+        // -----------------------------------------------------------
         applyPrestateBeforeStart(el, cfg);
 
-        // -------------------------------------------------------
-        // Pre-position object on the path (does NOT animate)
-        // -------------------------------------------------------
+        // Bring element above others so clicks reach it.
+        try { el.parentNode.appendChild(el); } catch (e) { }
+
+        // -----------------------------------------------------------
+        // Pre-position object along the path (no animation)
+        // -----------------------------------------------------------
         positionO2PInitial(el, cfg);
 
-        // -------------------------------------------------------
-        // Wrap animation start with tdelay + prestate restore
-        // -------------------------------------------------------
-        function wrapStart(cfg, rawStartFn) {
-            return () => {
-                if (cfg.start > 0) {
-                    console.log(`[o2pCue] ⏳ tdelay ${cfg.start}s → uid=${cfg.uid}`);
 
-                    scheduleCueStart(
-                        cfg,
-                        el,
-                        () => {
-                            applyPrestateOnStart(el, cfg);
-                            rawStartFn();
-                        },
-                        cfg.uid
-                    );
-
-                } else {
-                    applyPrestateOnStart(el, cfg);
-                    rawStartFn();
-                }
-            };
-        }
-
-        // -------------------------------------------------------
+        // -----------------------------------------------------------
         // Real animation start function
-        // -------------------------------------------------------
+        // IMPORTANT: cfg._start must be set so ghostClickable can trigger it.
+        // -----------------------------------------------------------
         const rawStart = () => {
-            console.log("[o2pCue] ▶ Starting O2P now →", cfg.uid);
+            console.log("[o2pCue] ▶ Starting O2P animation →", cfg.uid);
             startO2PForElement(el, cfg);
         };
 
-        const startFn = wrapStart(cfg, rawStart);
+        cfg._start = rawStart;  // required for ghostClickable click activation
 
-        // -------------------------------------------------------
-        // Register for pause/resume visibility management
-        // -------------------------------------------------------
-        registerAnimation(el, "o2p", cfg, startFn);
 
-        // -------------------------------------------------------
-        // Autostart?
-        // -------------------------------------------------------
-        if (shouldStartNow) startFn();
+        // -----------------------------------------------------------
+        // Provide applyPrestateOnStart to scheduler and ghostClickable logic
+        // -----------------------------------------------------------
+        cfg._applyPrestateOnStart = () => applyPrestateOnStart(el, cfg);
+
+
+        // -----------------------------------------------------------
+        // Register for visibility/pause/resume system
+        // -----------------------------------------------------------
+        registerAnimation(el, "o2p", cfg, () => {
+
+            // ghostClickable: block animation until user clicks
+            if (cfg._ghostClickable && cfg._startBlocked) {
+                console.log("[o2pCue] start blocked — ghostClickable waiting for user click");
+                return;
+            }
+
+            // normal case
+            applyPrestateOnStart(el, cfg);
+            rawStart();
+        });
+
+
+        // -----------------------------------------------------------
+        // AUTO-START (tdelay / start:N)
+        // -----------------------------------------------------------
+        if (shouldStartNow) {
+            console.log("[o2pCue] auto-start requested → scheduling", cfg.uid);
+
+            scheduleCueStart(cfg, el, () => {
+
+                // ghostClickable: run prestates only, don't start animation
+                if (cfg._ghostClickable && cfg._startBlocked) {
+                    console.log("[o2pCue] delayed start reached — ghostClickable fade in only", cfg.uid);
+
+                    if (cfg._applyPrestateOnStart)
+                        cfg._applyPrestateOnStart();
+
+                    return;  // wait for user click
+                }
+
+                // normal animation start
+                applyPrestateOnStart(el, cfg);
+                rawStart();
+
+            }, cfg.uid);
+        }
 
     } catch (err) {
         console.error("[o2p] ERROR in handleO2PCue:", err);
     }
 }
+
+
 
 
 
