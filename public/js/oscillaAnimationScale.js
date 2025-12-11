@@ -3,6 +3,11 @@
 import { registerAnimation } from "./oscillaAnimation.js";
 import { scheduleCueStart} from "./oscillaCueDispatcher.js";
 
+import {
+  applyPrestateBeforeStart,
+  applyPrestateOnStart
+} from "./oscillaAnimationShared.js";
+
 // ============================================================
 // OSC send helper for SCALE
 // ============================================================
@@ -557,7 +562,7 @@ function handleScaleContinuous(el, cfg) {
 // MAIN ENTRY — matches dispatcher usage: handleScaleCue(ast, cueElement)
 // ============================================================
 // ============================================================================
-// SCALE cue handler — supports: tdelay, prestate(show|hide|ghost)
+// SCALE cue handler — supports: tdelay, prestate(show|hide|ghost|fadein)
 // ============================================================================
 export function handleScaleCue(ast, el, options = {}) {
     if (!el) return;
@@ -582,7 +587,7 @@ export function handleScaleCue(ast, el, options = {}) {
         if (key === "uid") uid = String(val).trim();
         if (key === "trig") trig = String(val).toLowerCase();
         if (key === "tdelay") cfgStartDelay = Number(val) || 0;
-        if (key === "prestate") prestate = String(val).toLowerCase();
+        if (key === "prestate") prestate = val; 
     }
 
     console.log("[scaleCue] Parsed →", {
@@ -596,15 +601,21 @@ export function handleScaleCue(ast, el, options = {}) {
         fromCueTrigger || trig === "auto" || trig === "playhead";
 
     // ------------------------------------------------------------------------
+    // CREATE BASE CFG *BEFORE* USING IT
+    // ------------------------------------------------------------------------
+    const baseCfg = {
+        uid,
+        trig,
+        start: cfgStartDelay,
+        prestate,
+        astArgs,
+        fromCueTrigger
+    };
+
+    // ------------------------------------------------------------------------
     // PRESTATE (visibility before animation starts)
     // ------------------------------------------------------------------------
-    if (prestate === "hide") {
-        el.style.opacity = "0";
-    } else if (prestate === "ghost") {
-        el.style.opacity = "0.3";
-    } else {
-        el.style.opacity = "1";
-    }
+    applyPrestateBeforeStart(el, baseCfg);
 
     // ------------------------------------------------------------------------
     // EXTRACT sequences
@@ -620,21 +631,15 @@ export function handleScaleCue(ast, el, options = {}) {
         ["y", "valuesY"].includes(o.key || o.type)
     );
 
-    // Convenience getter
-    const getInitialScaleValue = cfg => {
-        if (cfg.xValues && cfg.xValues.length > 0) return cfg.xValues[0];
-        if (cfg.yValues && cfg.yValues.length > 0) return cfg.yValues[0];
-        if (cfg.values && cfg.values.length > 0) return cfg.values[0];
-        return 1;
-    };
-
     // ------------------------------------------------------------------------
-    // Apply initial scale BEFORE animation begins
+    // INITIAL SCALE APPLY
     // ------------------------------------------------------------------------
     function applyInitialScale(cfg) {
         try {
-            const sx = cfg.xValues ? cfg.xValues[0] : cfg.values ? cfg.values[0] : 1;
-            const sy = cfg.yValues ? cfg.yValues[0] : cfg.values ? cfg.values[0] : sx;
+            const sx = cfg.xValues ? cfg.xValues[0] :
+                       cfg.values  ? cfg.values[0]  : 1;
+            const sy = cfg.yValues ? cfg.yValues[0] :
+                       cfg.values ? cfg.values[0] : sx;
             el.style.transform = `scale(${sx}, ${sy})`;
         } catch (e) {
             console.warn("[scaleCue] Could not apply initial scale:", e);
@@ -642,7 +647,7 @@ export function handleScaleCue(ast, el, options = {}) {
     }
 
     // ------------------------------------------------------------------------
-    // Helper: wrap start with tdelay + prestate restore
+    // DELAY + PRESTATE RESTORE WRAPPER
     // ------------------------------------------------------------------------
     function wrapStart(cfg, rawStartFn) {
         return () => {
@@ -653,75 +658,36 @@ export function handleScaleCue(ast, el, options = {}) {
                     cfg,
                     el,
                     () => {
-                        // Restore visibility
-                        if (cfg.prestate !== "show") {
-                            el.style.transition = "opacity 200ms ease";
-                            el.style.opacity = "1";
-                        }
+                        applyPrestateOnStart(el, cfg);
                         rawStartFn();
                     },
                     cfg.uid
                 );
 
             } else {
-                if (cfg.prestate !== "show") {
-                    el.style.opacity = "1";
-                }
+                applyPrestateOnStart(el, cfg);
                 rawStartFn();
             }
         };
     }
 
     // ------------------------------------------------------------------------
-    // SHORTHAND: scale(2)
+    // SEQUENCE MODES — UNIFORM VALUES
     // ------------------------------------------------------------------------
-    if (astArgs.length === 1 && typeof astArgs[0].value === "number") {
-        const val = Number(astArgs[0].value);
-
-        const cfg = {
-            uid,
-            trig,
-            start: cfgStartDelay,
-            prestate,
-            mode: "continuous",
-            min: 1,
-            max: val,
-            dur: 2,
-            astArgs,
-            fromCueTrigger
-        };
-
-        applyInitialScale({ values: [val] });
-
-        const start = wrapStart(cfg, () => handleScaleContinuous(el, cfg));
-
-        registerAnimation(el, "scale-continuous", cfg, start);
-        if (shouldStartNow) start();
-        return;
-    }
-
-    // ------------------------------------------------------------------------
-    // SEQUENCE MODES
-    // ------------------------------------------------------------------------
-    // Uniform values:[...]
     if (valuesArg) {
         const v = valuesArg.value;
 
-        // Pattern sequence
+        // Pattern
         if (v && v.type === "pattern") {
             const cfg = {
-                uid,
-                trig,
-                start: cfgStartDelay,
-                prestate,
-                pattern: v,
+                ...baseCfg,
                 mode: "sequence-pattern",
-                astArgs,
-                fromCueTrigger
+                pattern: v
             };
 
-            // cannot know initial numeric scale from pattern, so skip initial scale
-            const start = wrapStart(cfg, () => handleScaleSequence(el, cfg));
+            const start = wrapStart(cfg, () =>
+                handleScaleSequence(el, cfg)
+            );
 
             registerAnimation(el, "scale-sequence-pattern", cfg, start);
             if (shouldStartNow) start();
@@ -731,19 +697,16 @@ export function handleScaleCue(ast, el, options = {}) {
         // Literal list
         if (Array.isArray(v)) {
             const cfg = {
-                uid,
-                trig,
-                start: cfgStartDelay,
-                prestate,
-                values: v,
+                ...baseCfg,
                 mode: "sequence-uniform",
-                astArgs,
-                fromCueTrigger
+                values: v
             };
 
             applyInitialScale(cfg);
 
-            const start = wrapStart(cfg, () => handleScaleSequence(el, cfg));
+            const start = wrapStart(cfg, () =>
+                handleScaleSequence(el, cfg)
+            );
 
             registerAnimation(el, "scale-sequence-uniform", cfg, start);
             if (shouldStartNow) start();
@@ -752,33 +715,55 @@ export function handleScaleCue(ast, el, options = {}) {
     }
 
     // ------------------------------------------------------------------------
-    // NON-UNIFORM XY
+    // XY MODE
     // ------------------------------------------------------------------------
     if (xArg || yArg) {
         const xVals = xArg ? xArg.value : null;
         const yVals = yArg ? yArg.value : null;
 
         const cfg = {
-            uid,
-            trig,
-            start: cfgStartDelay,
-            prestate,
+            ...baseCfg,
             mode: "sequence-xy",
             xValues: Array.isArray(xVals) ? xVals : null,
             yValues: Array.isArray(yVals) ? yVals : null,
             xPattern: xVals?.type === "pattern" ? xVals : null,
-            yPattern: yVals?.type === "pattern" ? yVals : null,
-            astArgs,
-            fromCueTrigger
+            yPattern: yVals?.type === "pattern" ? yVals : null
         };
 
         if (cfg.xValues || cfg.yValues) {
             applyInitialScale(cfg);
         }
 
-        const start = wrapStart(cfg, () => handleScaleSequence(el, cfg));
+        const start = wrapStart(cfg, () =>
+            handleScaleSequence(el, cfg)
+        );
 
         registerAnimation(el, "scale-sequence-xy", cfg, start);
+        if (shouldStartNow) start();
+        return;
+    }
+
+    // ------------------------------------------------------------------------
+    // SHORTHAND: scale(2)
+    // ------------------------------------------------------------------------
+    if (astArgs.length === 1 && typeof astArgs[0].value === "number") {
+        const val = Number(astArgs[0].value);
+
+        const cfg = {
+            ...baseCfg,
+            mode: "continuous",
+            min: 1,
+            max: val,
+            dur: 2
+        };
+
+        applyInitialScale({ values: [val] });
+
+        const start = wrapStart(cfg, () =>
+            handleScaleContinuous(el, cfg)
+        );
+
+        registerAnimation(el, "scale-continuous", cfg, start);
         if (shouldStartNow) start();
         return;
     }
@@ -787,22 +772,16 @@ export function handleScaleCue(ast, el, options = {}) {
     // FALLBACK CONTINUOUS MODE
     // ------------------------------------------------------------------------
     const cfg = {
-        uid,
-        trig,
-        start: cfgStartDelay,
-        prestate,
-        mode: "continuous",
-        astArgs,
-        fromCueTrigger
+        ...baseCfg,
+        mode: "continuous"
     };
 
-    // fallback has no explicit initial value → skip applyInitialScale()
-
-    const start = wrapStart(cfg, () => handleScaleContinuous(el, cfg));
+    const start = wrapStart(cfg, () =>
+        handleScaleContinuous(el, cfg)
+    );
 
     registerAnimation(el, "scale-continuous", cfg, start);
     if (shouldStartNow) start();
 }
-
 
 

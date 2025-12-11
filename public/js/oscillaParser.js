@@ -117,10 +117,11 @@ const XParam = createToken({ name: "XParam", pattern: /x/ });
 const True = createToken({ name: "True", pattern: /\btrue\b/ });
 const False = createToken({ name: "False", pattern: /\bfalse\b/ });
 
-export const PatternName = createToken({
-  name: "PatternName",
-  pattern: /P[A-Za-z_]\w*/,
+const PatternName = createToken({
+    name: "PatternName",
+    pattern: /P(seq|rand|xrand|shuf|scale|every)\b/
 });
+
 
 
 export const allTokens = [
@@ -249,6 +250,7 @@ export class CueParser extends CstParser {
         { ALT: () => $.CONSUME(StringLiteral) },
         { ALT: () => $.CONSUME(True) },
         { ALT: () => $.CONSUME(False) },
+        { ALT: () => $.SUBRULE($.simpleFuncCall) },
         { ALT: () => $.CONSUME(Identifier) },
       ]);
     });
@@ -381,6 +383,26 @@ export class CueParser extends CstParser {
       $.CONSUME(Colon);
       $.CONSUME(NumberLiteral, { LABEL: "dur" });
     });
+
+
+$.RULE("simpleFuncCall", () => {
+    const name = $.CONSUME(Identifier).image;
+    $.CONSUME(LParen);
+
+    const args = [];
+    $.OPTION(() => {
+        args.push($.SUBRULE($.animValue));
+        $.MANY(() => {
+            $.CONSUME(Comma);
+            args.push($.SUBRULE2($.animValue));
+        });
+    });
+
+    $.CONSUME(RParen);
+
+    return { type: "funcCall", name, args };
+});
+
 
     // ------------------------------------------------------------
     // patternExpr — handles identifiers, numbers, page:dur, patterns, etc.
@@ -1645,72 +1667,75 @@ export function cstToAst(cst) {
   // ------------------------------------------------------------
   // extractValue(vNode) — unified value normalizer for animValue
   // ------------------------------------------------------------
-  function extractValue(vNode) {
-    if (!vNode || !vNode.children) return null;
+ // ---------------------------------------------------------------------------
+// Extract a value from animValue (numbers, strings, identifiers, arrays,
+// pattern calls, AND simple function calls like fadein(500))
+// ---------------------------------------------------------------------------
+function extractValue(vNode) {
+    if (!vNode) return null;
 
-    // --- NEW: unwrap nested animValue wrapper (this is the missing piece)
-    if (vNode.children.animValue) {
-      return extractValue(vNode.children.animValue[0]);
+    // Number
+    if (vNode.children?.NumberLiteral) {
+        return Number(vNode.children.NumberLiteral[0].image);
     }
 
-    // --- NEW: unwrap value(...) wrapper
-    if (vNode.children.value && vNode.children.value[0]?.children?.animValue) {
-      return extractValue(vNode.children.value[0].children.animValue[0]);
+    // String
+    if (vNode.children?.StringLiteral) {
+        let raw = vNode.children.StringLiteral[0].image;
+        return raw.slice(1, -1);  // strip quotes
     }
 
-    // NumberLiteral
-    if (vNode.children.NumberLiteral) {
-      return Number(vNode.children.NumberLiteral[0].image);
+    // Boolean
+    if (vNode.children?.True) return true;
+    if (vNode.children?.False) return false;
+
+    // Array (recursive)
+    if (vNode.children?.arrayValue) {
+        const arr = vNode.children.arrayValue[0].children;
+        const items = arr?.animValue || [];
+        return items.map(extractValue);
     }
 
-
-    // Identifier (including inf, true, false)
-    if (vNode.children.Identifier) {
-      const name = vNode.children.Identifier[0].image;
-      if (name === "inf") return "inf";
-      if (name === "true") return true;
-      if (name === "false") return false;
-      return name;
+    // Pattern call (Pseq, Prand, etc.)
+    if (vNode.children?.patternCall) {
+        return extractPatternCall(vNode.children.patternCall[0]);
     }
 
-    // ✅ LIST LITERAL (values:[0,120,240])
-    if (vNode.children.LBracket) {
-      const exprs = vNode.children.patternExpr || [];
-      return exprs.map(extractValue);
+    // FUNCTION CALL: fadein(500), foo(12), bar(a,b)
+    if (vNode.children?.simpleFuncCall) {
+        return extractFuncCall(vNode.children.simpleFuncCall[0]);
     }
 
-    // ✅ ARRAY LITERAL via arrayValue (the real case in your CST)
-    if (vNode.children.arrayValue) {
-      const arr = vNode.children.arrayValue[0];
-      const items = arr.children.animValue || [];
-      return items.map(extractValue);
-    }
-
-    // Pattern call (Pseq, Prand, Pxrand, Pshuf)
-    if (vNode.children.patternCall) {
-      const call = vNode.children.patternCall[0];
-      const name = call.children.PatternName[0].image;
-
-      const values = extractValue({
-        children: {
-          LBracket: call.children.LBracket,
-          patternExpr: call.children.patternExpr,
-        }
-      });
-
-      const repeats =
-        extractValue(call.children.patternExpr?.slice(-1)[0]) ?? 1;
-
-      return {
-        type: "pattern",
-        name,
-        values,
-        repeats
-      };
+    // Identifier (fallback)
+    if (vNode.children?.Identifier) {
+        return vNode.children.Identifier[0].image;
     }
 
     return null;
-  }
+}
+
+
+// ---------------------------------------------------------------------------
+// Simple function-call extractor: fadein(500) → { type:"func", name:"fadein", args:[500] }
+// ---------------------------------------------------------------------------
+function extractFuncCall(callNode) {
+    const name = callNode.children.Identifier[0].image;
+
+    const args = [];
+    const argNodes = callNode.children.animValue || [];
+
+    for (const n of argNodes) {
+        args.push(extractValue(n));
+    }
+
+    return {
+        type: "func",
+        name,
+        args
+    };
+}
+
+
 
   // ============================================================================
   // shared helper animation AST builders (with instrumentation)

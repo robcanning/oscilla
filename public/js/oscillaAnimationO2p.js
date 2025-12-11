@@ -17,7 +17,10 @@
 
 import { registerAnimation } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
-
+import {
+    applyPrestateBeforeStart,
+    applyPrestateOnStart
+} from "./oscillaAnimationShared.js";
 
 /* ---------------------------------------------------------
  *  1. normalizeOrigin(el)
@@ -703,26 +706,24 @@ function startO2PForElement(el, cfg) {
 /* ---------------------------------------------------------
  *  10. Cue handler: handleO2PCue
  * --------------------------------------------------------*/
-/* ---------------------------------------------------------
- * 10. Cue handler: handleO2PCue  (patched for start:N)
- * --------------------------------------------------------*/
-// ---------------------------------------------------------
-// Cue handler: handleO2PCue  (with tdelay support)
-// ---------------------------------------------------------
-// ---------------------------------------------------------
-// Cue handler: handleO2PCue  (tdelay + prestate support)
-// ---------------------------------------------------------
+// ============================================================================
+// O2P cue handler — supports tdelay + prestate(show|hide|ghost|fadein)
+// ============================================================================
 export function handleO2PCue(el, args, options = {}) {
     const { fromCueTrigger = false } = options;
 
     try {
         if (!Array.isArray(args)) args = [];
 
+        // -----------------------------------------------------------
+        // BASE CFG — build *first* so shared handlers can use it
+        // -----------------------------------------------------------
         const cfg = {
             path: null,
             mode: "forward",
             dur: 1,
             loop: 0,
+
             rotate: 0,
             rotoffset: 0,
             rotlock: 0,
@@ -731,15 +732,15 @@ export function handleO2PCue(el, args, options = {}) {
             ease: 3,
             osc: false,
 
-            // O2P path-range along the path (0–1)
+            // Path normalized range (0–1)
             start: 0,
             end: 1,
 
-            // NEW: trigger-delay value
-            delayStart: 0,
+            // unified name for tdelay
+            startDelay: 0,   // we will alias this to cfg.start for scheduler
 
-            // NEW: what to do visually before the cue starts
-            prestate: "show",   // show | hide | ghost
+            // unified prestate handler
+            prestate: "show",   // show | hide | ghost | fadein(ms)
 
             uid: null,
             next: null,
@@ -759,7 +760,11 @@ export function handleO2PCue(el, args, options = {}) {
 
             switch (key) {
                 case "path": cfg.path = val; break;
-                case "mode": cfg.mode = String(val).toLowerCase(); break;
+
+                case "mode":
+                    cfg.mode = String(val).toLowerCase();
+                    break;
+
                 case "dur": cfg.dur = Number(val) || 1; break;
                 case "loop": cfg.loop = Number(val) || 0; break;
 
@@ -767,7 +772,7 @@ export function handleO2PCue(el, args, options = {}) {
                     if (typeof val === "string") {
                         const v = val.toLowerCase().trim();
                         if (/^-?\d+(\.\d+)?$/.test(v)) cfg.rotate = Number(v);
-                        else cfg.rotate = v;   // "spin" | "aligned" etc.
+                        else cfg.rotate = v;
                     } else cfg.rotate = val;
                     break;
 
@@ -779,16 +784,14 @@ export function handleO2PCue(el, args, options = {}) {
                 case "ease": cfg.ease = val; break;
                 case "osc": cfg.osc = val; break;
 
-                // O2P path-range
                 case "start": cfg.start = Number(val) || 0; break;
                 case "end": cfg.end = Number(val) || 1; break;
 
-                // NEW — trigger delay
-                case "tdelay": cfg.delayStart = Number(val) || 0; break;
+                // unified trigger-delay
+                case "tdelay": cfg.startDelay = Number(val) || 0; break;
 
-                // NEW — pre-start visibility
-                case "prestate": cfg.prestate = String(val).toLowerCase(); break;
-
+                case "prestate": cfg.prestate = val; break;
+                
                 case "uid": cfg.uid = val; break;
                 case "next": cfg.next = val; break;
                 case "nextOn": cfg.nextOn = val; break;
@@ -796,12 +799,15 @@ export function handleO2PCue(el, args, options = {}) {
             }
         }
 
+        // alias for scheduler
+        cfg.start = cfg.startDelay;
+
         // Mode aliases
         if (cfg.mode === "fwd") cfg.mode = "forward";
         if (cfg.mode === "rev") cfg.mode = "reverse";
         if (cfg.mode === "alt") cfg.mode = "alternate";
 
-        // Default uid
+        // UID fallback
         if (!cfg.uid) {
             cfg.uid = el.id || ("o2p_" + Math.random().toString(36).slice(2));
         }
@@ -810,13 +816,12 @@ export function handleO2PCue(el, args, options = {}) {
             uid: cfg.uid,
             path: cfg.path,
             trig: cfg.trig,
-            tdelay: cfg.delayStart,
+            tdelay: cfg.start,
             prestate: cfg.prestate,
             pathRangeStart: cfg.start,
             pathRangeEnd: cfg.end
         });
 
-        // prevent "undefined path"
         if (!cfg.path) {
             console.warn("[o2p] Missing path argument.");
             return;
@@ -826,62 +831,57 @@ export function handleO2PCue(el, args, options = {}) {
             fromCueTrigger || cfg.trig === "auto" || cfg.trig === "playhead";
 
         // -------------------------------------------------------
-        // Apply prestate (hide / ghost / show)
+        // Apply prestate BEFORE positioning or animation
         // -------------------------------------------------------
-        if (cfg.prestate === "hide") {
-            el.style.opacity = "0";
-        } else if (cfg.prestate === "ghost") {
-            el.style.opacity = "0.3";
-        } else {
-            el.style.opacity = "1";
+        applyPrestateBeforeStart(el, cfg);
+
+        // -------------------------------------------------------
+        // Pre-position object on the path (does NOT animate)
+        // -------------------------------------------------------
+        positionO2PInitial(el, cfg);
+
+        // -------------------------------------------------------
+        // Wrap animation start with tdelay + prestate restore
+        // -------------------------------------------------------
+        function wrapStart(cfg, rawStartFn) {
+            return () => {
+                if (cfg.start > 0) {
+                    console.log(`[o2pCue] ⏳ tdelay ${cfg.start}s → uid=${cfg.uid}`);
+
+                    scheduleCueStart(
+                        cfg,
+                        el,
+                        () => {
+                            applyPrestateOnStart(el, cfg);
+                            rawStartFn();
+                        },
+                        cfg.uid
+                    );
+
+                } else {
+                    applyPrestateOnStart(el, cfg);
+                    rawStartFn();
+                }
+            };
         }
 
         // -------------------------------------------------------
-        // Pre-position object **correctly** on the path
-        // using internal safe transform logic
+        // Real animation start function
         // -------------------------------------------------------
-        positionO2PInitial(el, cfg);  // ← this uses normalizeOrigin + applyTransform safely
-
-        // -------------------------------------------------------
-        // Animation start function
-        // -------------------------------------------------------
-        const startFnImmediate = () => {
-            // restore visibility if hidden
-            if (cfg.prestate !== "show") {
-                el.style.transition = "opacity 200ms ease";
-                el.style.opacity = "1";
-            }
-
+        const rawStart = () => {
             console.log("[o2pCue] ▶ Starting O2P now →", cfg.uid);
             startO2PForElement(el, cfg);
         };
 
-        const startFn = () => {
-            if (cfg.delayStart > 0) {
-                console.log(`[o2pCue] ⏳ Delaying start by ${cfg.delayStart}s → uid=${cfg.uid}`);
-
-                scheduleCueStart(
-                    { ...cfg, start: cfg.delayStart },   // scheduler expects .start
-                    el,
-                    () => {
-                        console.log("[o2pCue] 🔥 Delayed trigger fired →", cfg.uid);
-                        startFnImmediate();
-                    },
-                    cfg.uid
-                );
-
-            } else {
-                startFnImmediate();
-            }
-        };
+        const startFn = wrapStart(cfg, rawStart);
 
         // -------------------------------------------------------
-        // Register animation for visibility/suspend/resume logic
+        // Register for pause/resume visibility management
         // -------------------------------------------------------
         registerAnimation(el, "o2p", cfg, startFn);
 
         // -------------------------------------------------------
-        // Auto-start if relevant (respect tdelay)
+        // Autostart?
         // -------------------------------------------------------
         if (shouldStartNow) startFn();
 
@@ -889,6 +889,7 @@ export function handleO2PCue(el, args, options = {}) {
         console.error("[o2p] ERROR in handleO2PCue:", err);
     }
 }
+
 
 
 
