@@ -1,11 +1,12 @@
 // scale.js — OscillaScore Scale Cue (uniform & non-uniform)
 
 import { registerAnimation } from "./oscillaAnimation.js";
-import { scheduleCueStart} from "./oscillaCueDispatcher.js";
+import { scheduleCueStart } from "./oscillaCueDispatcher.js";
+import { createHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
 
 import {
-  applyPrestateBeforeStart,
-  applyPrestateOnStart
+    applyPrestateBeforeStart,
+    applyPrestateOnStart
 } from "./oscillaAnimationShared.js";
 
 // ============================================================
@@ -292,7 +293,7 @@ export function handleScaleSequence(el, cfg) {
                 mode = String(val).trim().toLowerCase();
                 if (mode === "alt") mode = "alternate";   // ← alias support restored
                 break;
-            } 
+            }
             case "pauseOnExit": pauseOnExit = Boolean(val); break;
             case "interp": interp = String(val).trim().toLowerCase(); break;
             case "ease": ease = String(val).trim(); break;
@@ -587,7 +588,7 @@ export function handleScaleCue(ast, el, options = {}) {
         if (key === "uid") uid = String(val).trim();
         if (key === "trig") trig = String(val).toLowerCase();
         if (key === "tdelay") cfgStartDelay = Number(val) || 0;
-        if (key === "prestate") prestate = val; 
+        if (key === "prestate") prestate = val;
     }
 
     console.log("[scaleCue] Parsed →", {
@@ -637,9 +638,9 @@ export function handleScaleCue(ast, el, options = {}) {
     function applyInitialScale(cfg) {
         try {
             const sx = cfg.xValues ? cfg.xValues[0] :
-                       cfg.values  ? cfg.values[0]  : 1;
+                cfg.values ? cfg.values[0] : 1;
             const sy = cfg.yValues ? cfg.yValues[0] :
-                       cfg.values ? cfg.values[0] : sx;
+                cfg.values ? cfg.values[0] : sx;
             el.style.transform = `scale(${sx}, ${sy})`;
         } catch (e) {
             console.warn("[scaleCue] Could not apply initial scale:", e);
@@ -690,6 +691,11 @@ export function handleScaleCue(ast, el, options = {}) {
             );
 
             registerAnimation(el, "scale-sequence-pattern", cfg, start);
+            createHitLabel(el, "scale", cfg.uid, {
+                anchorMode: "midpoint",
+                color: "lime"
+            });
+
             if (shouldStartNow) start();
             return;
         }
@@ -709,6 +715,11 @@ export function handleScaleCue(ast, el, options = {}) {
             );
 
             registerAnimation(el, "scale-sequence-uniform", cfg, start);
+            createHitLabel(el, "scale", cfg.uid, {
+                anchorMode: "midpoint",
+                color: "lime"
+            });
+
             if (shouldStartNow) start();
             return;
         }
@@ -739,6 +750,11 @@ export function handleScaleCue(ast, el, options = {}) {
         );
 
         registerAnimation(el, "scale-sequence-xy", cfg, start);
+        createHitLabel(el, "scale", cfg.uid, {
+            anchorMode: "midpoint",
+            color: "lime"
+        });
+
         if (shouldStartNow) start();
         return;
     }
@@ -764,6 +780,11 @@ export function handleScaleCue(ast, el, options = {}) {
         );
 
         registerAnimation(el, "scale-continuous", cfg, start);
+        createHitLabel(el, "scale", cfg.uid, {
+            anchorMode: "midpoint",
+            color: "lime"
+        });
+
         if (shouldStartNow) start();
         return;
     }
@@ -781,6 +802,11 @@ export function handleScaleCue(ast, el, options = {}) {
     );
 
     registerAnimation(el, "scale-continuous", cfg, start);
+    createHitLabel(el, "scale", cfg.uid, {
+        anchorMode: "midpoint",
+        color: "lime"
+    });
+
     if (shouldStartNow) start();
 }
 

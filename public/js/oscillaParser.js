@@ -118,8 +118,8 @@ const True = createToken({ name: "True", pattern: /\btrue\b/ });
 const False = createToken({ name: "False", pattern: /\bfalse\b/ });
 
 const PatternName = createToken({
-    name: "PatternName",
-    pattern: /P(seq|rand|xrand|shuf|scale|every)\b/
+  name: "PatternName",
+  pattern: /P(seq|rand|xrand|shuf|scale|every)\b/
 });
 
 
@@ -385,23 +385,23 @@ export class CueParser extends CstParser {
     });
 
 
-$.RULE("simpleFuncCall", () => {
-    const name = $.CONSUME(Identifier).image;
-    $.CONSUME(LParen);
+    $.RULE("simpleFuncCall", () => {
+      const name = $.CONSUME(Identifier).image;
+      $.CONSUME(LParen);
 
-    const args = [];
-    $.OPTION(() => {
+      const args = [];
+      $.OPTION(() => {
         args.push($.SUBRULE($.animValue));
         $.MANY(() => {
-            $.CONSUME(Comma);
-            args.push($.SUBRULE2($.animValue));
+          $.CONSUME(Comma);
+          args.push($.SUBRULE2($.animValue));
         });
+      });
+
+      $.CONSUME(RParen);
+
+      return { type: "funcCall", name, args };
     });
-
-    $.CONSUME(RParen);
-
-    return { type: "funcCall", name, args };
-});
 
 
     // ------------------------------------------------------------
@@ -1667,73 +1667,107 @@ export function cstToAst(cst) {
   // ------------------------------------------------------------
   // extractValue(vNode) — unified value normalizer for animValue
   // ------------------------------------------------------------
- // ---------------------------------------------------------------------------
-// Extract a value from animValue (numbers, strings, identifiers, arrays,
-// pattern calls, AND simple function calls like fadein(500))
-// ---------------------------------------------------------------------------
-function extractValue(vNode) {
-    if (!vNode) return null;
+  // ---------------------------------------------------------------------------
+  // Extract a value from animValue (numbers, strings, identifiers, arrays,
+  // pattern calls, AND simple function calls like fadein(500))
+  // ---------------------------------------------------------------------------
+  // 
+  function extractValue(vNode) {
+    if (!vNode || !vNode.children) return null;
+
+    // unwrap
+    if (vNode.children.animValue) {
+      return extractValue(vNode.children.animValue[0]);
+    }
+    if (vNode.children.value && vNode.children.value[0]?.children?.animValue) {
+      return extractValue(vNode.children.value[0].children.animValue[0]);
+    }
 
     // Number
-    if (vNode.children?.NumberLiteral) {
-        return Number(vNode.children.NumberLiteral[0].image);
+    if (vNode.children.NumberLiteral) {
+      return Number(vNode.children.NumberLiteral[0].image);
     }
 
-    // String
-    if (vNode.children?.StringLiteral) {
-        let raw = vNode.children.StringLiteral[0].image;
-        return raw.slice(1, -1);  // strip quotes
+    // Identifier (inf, true, false, or just a name)
+    if (vNode.children.Identifier) {
+      const name = vNode.children.Identifier[0].image;
+      if (name === "inf") return "inf";
+      if (name === "true") return true;
+      if (name === "false") return false;
+      return name;
     }
 
-    // Boolean
-    if (vNode.children?.True) return true;
-    if (vNode.children?.False) return false;
-
-    // Array (recursive)
-    if (vNode.children?.arrayValue) {
-        const arr = vNode.children.arrayValue[0].children;
-        const items = arr?.animValue || [];
-        return items.map(extractValue);
+    // Array literal [ ... ]
+    if (vNode.children.arrayValue) {
+      const arr = vNode.children.arrayValue[0];
+      const items = arr.children.animValue || [];
+      return items.map(extractValue);
     }
 
     // Pattern call (Pseq, Prand, etc.)
-    if (vNode.children?.patternCall) {
-        return extractPatternCall(vNode.children.patternCall[0]);
+    if (vNode.children.patternCall) {
+      const call = vNode.children.patternCall[0];
+      const name = call.children.PatternName[0].image;
+
+      // Extract values from inside [...]
+      const exprs = call.children.patternExpr || [];
+      const values = exprs.slice(0, -1).map(extractValue);
+
+      // Extract repeats (last expression, ONLY if second argument exists)
+      let repeats = 1;
+      if (exprs.length > values.length) {
+        repeats = extractValue(exprs[exprs.length - 1]);
+      }
+
+      return {
+        type: "pattern",
+        name,
+        values,
+        repeats
+      };
     }
 
-    // FUNCTION CALL: fadein(500), foo(12), bar(a,b)
-    if (vNode.children?.simpleFuncCall) {
-        return extractFuncCall(vNode.children.simpleFuncCall[0]);
-    }
 
-    // Identifier (fallback)
-    if (vNode.children?.Identifier) {
-        return vNode.children.Identifier[0].image;
-    }
 
     return null;
-}
+  }
 
 
-// ---------------------------------------------------------------------------
-// Simple function-call extractor: fadein(500) → { type:"func", name:"fadein", args:[500] }
-// ---------------------------------------------------------------------------
-function extractFuncCall(callNode) {
+
+
+  // ---------------------------------------------------------------------------
+  // extractPatternCall(node) — wrapper around convertPatternNodeToAST()
+  // ---------------------------------------------------------------------------
+  function extractPatternCall(node) {
+    if (!node) return null;
+    try {
+      return convertPatternNodeToAST(node);
+    } catch (err) {
+      console.warn("[extractPatternCall] ERROR:", err);
+      return null;
+    }
+  }
+
+
+  // ---------------------------------------------------------------------------
+  // Simple function-call extractor: fadein(500) → { type:"func", name:"fadein", args:[500] }
+  // ---------------------------------------------------------------------------
+  function extractFuncCall(callNode) {
     const name = callNode.children.Identifier[0].image;
 
     const args = [];
     const argNodes = callNode.children.animValue || [];
 
     for (const n of argNodes) {
-        args.push(extractValue(n));
+      args.push(extractValue(n));
     }
 
     return {
-        type: "func",
-        name,
-        args
+      type: "func",
+      name,
+      args
     };
-}
+  }
 
 
 
@@ -1762,19 +1796,25 @@ function extractFuncCall(callNode) {
 
       // Unified animValue extraction
       let vNode =
-        p.children.value?.[0]?.children?.animValue?.[0] ||
         p.children.value?.[0] ||
         p.children.animValue?.[0] ||
         null;
 
-      let val = null;
-      try {
-        val = extractValue(vNode);
-      } catch (err) {
-        console.warn("[OSCILLA_DSL] extractValue ERROR:", err);
+      // NEW: direct tokens (NumberLiteral / StringLiteral / Identifier)
+      if (!vNode && p.children.NumberLiteral) vNode = p.children.NumberLiteral[0];
+      if (!vNode && p.children.StringLiteral) vNode = p.children.StringLiteral[0];
+      if (!vNode && p.children.Identifier) vNode = p.children.Identifier[0];
+
+      let val = extractValue({ children: vNode ? { ...(vNode.children || {}), [vNode.tokenType?.name]: [vNode] } : {} });
+
+      // Simple fallback for plain literals (common case)
+      if (!val && vNode?.image) {
+        if (!isNaN(vNode.image)) val = Number(vNode.image);
+        else val = vNode.image;
       }
 
       out.push({ type: key, value: val });
+
     }
 
     if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() RETURN:", out);

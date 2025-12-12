@@ -1,17 +1,19 @@
 // oscillaHitLabels.js
 // ============================================================
-// Hit-circles for animation objects (rotate/scale/o2p/etc)
-// Each animation group gets a red circle drawn at the geometric
-// *path start point* exactly like o2p does.
-// Stays glued even while rotation/scale transforms run.
+// Hit-circles for animation groups (rotate, scale, o2p, etc).
+// Each animation gets a floating HTML circle that:
+//   • is always clickable
+//   • stays glued to geometric anchor (path start or midpoint)
+//   • updates every frame using CTM transforms
+//   • mirrors SVG element opacity (ghost, fadein, hidden)
 // ============================================================
 
 window._oscillaHitLabels = window._oscillaHitLabels || [];
 window.oscillaShowHitLabels = true;
 
-// ============================================================
-// 0. Helper: get full CTM → screen coordinates
-// ============================================================
+// ------------------------------------------------------------
+// 0. Convert (localX, localY) in element coords → screen coords
+// ------------------------------------------------------------
 function localToScreen(el, x, y) {
     const svg = el.ownerSVGElement;
     if (!svg) return { x, y };
@@ -19,211 +21,268 @@ function localToScreen(el, x, y) {
     const pt = svg.createSVGPoint();
     pt.x = x;
     pt.y = y;
-    const screen = pt.matrixTransform(el.getScreenCTM());
-    return { x: screen.x, y: screen.y };
+
+    const m = el.getScreenCTM();
+    if (!m) return { x, y };
+
+    const res = pt.matrixTransform(m);
+    return { x: res.x, y: res.y };
 }
 
-// ============================================================
-// 1. Helper: flatten SVG shapes into path-like logic
-// (lightweight duplicate of o2p logic — per Option B)
-// ============================================================
-function flattenShapeToStartPoint(el) {
-    const tag = el.tagName.toLowerCase();
+// ------------------------------------------------------------
+// 1. Flatten a shape into its "path-start" coordinate
+// ------------------------------------------------------------
+function flattenShapeStart(shape) {
+    if (!shape) return null;
+    const tag = shape.tagName.toLowerCase();
 
-    // ---- CIRCLE ----
     if (tag === "circle") {
-        const cx = parseFloat(el.getAttribute("cx")) || 0;
-        const cy = parseFloat(el.getAttribute("cy")) || 0;
-        const r  = parseFloat(el.getAttribute("r")) || 0;
-        // o2p convention: start point is (cx + r, cy)
+        const cx = parseFloat(shape.getAttribute("cx")) || 0;
+        const cy = parseFloat(shape.getAttribute("cy")) || 0;
+        const r = parseFloat(shape.getAttribute("r")) || 0;
         return { x: cx + r, y: cy };
     }
 
-    // ---- ELLIPSE ----
     if (tag === "ellipse") {
-        const cx = parseFloat(el.getAttribute("cx")) || 0;
-        const cy = parseFloat(el.getAttribute("cy")) || 0;
-        const rx = parseFloat(el.getAttribute("rx")) || 0;
-        // o2p convention for ellipses: rightmost point
+        const cx = parseFloat(shape.getAttribute("cx")) || 0;
+        const cy = parseFloat(shape.getAttribute("cy")) || 0;
+        const rx = parseFloat(shape.getAttribute("rx")) || 0;
         return { x: cx + rx, y: cy };
     }
 
-    // ---- RECT ----
     if (tag === "rect") {
-        const x = parseFloat(el.getAttribute("x")) || 0;
-        const y = parseFloat(el.getAttribute("y")) || 0;
+        const x = parseFloat(shape.getAttribute("x")) || 0;
+        const y = parseFloat(shape.getAttribute("y")) || 0;
         return { x, y };
     }
 
-    // ---- LINE ----
     if (tag === "line") {
-        const x1 = parseFloat(el.getAttribute("x1")) || 0;
-        const y1 = parseFloat(el.getAttribute("y1")) || 0;
-        return { x: x1, y: y1 };
+        return {
+            x: parseFloat(shape.getAttribute("x1")) || 0,
+            y: parseFloat(shape.getAttribute("y1")) || 0
+        };
     }
 
-    // ---- POLYLINE / POLYGON ----
     if (tag === "polyline" || tag === "polygon") {
-        const pts = el.getAttribute("points");
+        const pts = shape.getAttribute("points");
         if (!pts) return null;
-
-        const first = pts.trim().split(/[\s,]+/);
-        if (first.length < 2) return null;
-
-        return { x: parseFloat(first[0]), y: parseFloat(first[1]) };
+        const parts = pts.trim().split(/[\s,]+/);
+        if (parts.length < 2) return null;
+        return { x: parseFloat(parts[0]), y: parseFloat(parts[1]) };
     }
 
-    // ---- PATH ----
     if (tag === "path") {
         try {
-            const len = el.getTotalLength();
-            const p = el.getPointAtLength(0);
+            const p = shape.getPointAtLength(0);
             return { x: p.x, y: p.y };
-        } catch {
-            return null;
-        }
+        } catch { return null; }
     }
 
-    // Unsupported shape
     return null;
 }
 
-// ============================================================
-// 2. Helper: if group, choose largest child shape
-// ============================================================
-function chooseBestChildShape(groupEl) {
-    if (groupEl.tagName.toLowerCase() !== "g")
-        return groupEl;
+// ------------------------------------------------------------
+// 2. New: TRUE PATH MIDPOINT (for scale hit-circles)
+// ------------------------------------------------------------
+function flattenShapeMidpoint(shape) {
+    if (!shape) return null;
+    const tag = shape.tagName.toLowerCase();
+
+    // Path → sample via totalLength/2
+    if (tag === "path") {
+        try {
+            const len = shape.getTotalLength();
+            const p = shape.getPointAtLength(len / 2);
+            return { x: p.x, y: p.y };
+        } catch { return null; }
+    }
+
+    // Approximate midpoint for simple shapes
+    const box = shape.getBBox();
+    return {
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 2
+    };
+}
+
+// ------------------------------------------------------------
+// 3. Choose largest shape in group (rotate/scale/o2p anchor base)
+// ------------------------------------------------------------
+function chooseLargestShape(groupEl) {
+    if (groupEl.tagName.toLowerCase() !== "g") return groupEl;
 
     let best = null;
     let bestArea = -1;
 
-    const shapes = groupEl.querySelectorAll("circle, ellipse, rect, line, polyline, polygon, path");
+    const shapes = groupEl.querySelectorAll(
+        "circle, ellipse, rect, line, polyline, polygon, path"
+    );
 
     shapes.forEach(shape => {
-        const box = shape.getBBox();
-        const area = box.width * box.height;
+        const b = shape.getBBox();
+        const area = b.width * b.height;
         if (area > bestArea) {
             bestArea = area;
             best = shape;
         }
     });
 
-    // Fallback: groupEl itself
     return best || groupEl;
 }
 
-// ============================================================
-// 3. Compute anchor (path start) for any animation element
-// ============================================================
-function computeAnchorScreenPosition(el) {
-    const svg = el.ownerSVGElement;
-    if (!svg) return null;
 
-    const shape = chooseBestChildShape(el);
+
+
+
+// ------------------------------------------------------------
+// 4A. Path-start for rotate + o2p
+// ------------------------------------------------------------
+function computePathStartScreenPosition(groupEl) {
+    const shape = chooseLargestShape(groupEl);
     if (!shape) return null;
 
-    const p = flattenShapeToStartPoint(shape);
+    const p = flattenShapeStart(shape);
     if (!p) return null;
 
-    // Step 1: start point in local shape coords
-    const pt = svg.createSVGPoint();
-    pt.x = p.x;
-    pt.y = p.y;
-
-    // Step 2: transform through shape CTM (to global SVG coords)
-    const global = pt.matrixTransform(shape.getCTM());
-
-    // Step 3: transform through SVG → screen CTM
-    const screen = svg.createSVGPoint();
-    screen.x = global.x;
-    screen.y = global.y;
-
-    const scr = screen.matrixTransform(svg.getScreenCTM());
-
-    return { x: scr.x, y: scr.y };
+    return localToScreen(shape, p.x, p.y);
 }
 
+// ------------------------------------------------------------
+// 4B. Path-midpoint for scale
+// ------------------------------------------------------------
+function computePathMidScreenPosition(groupEl) {
+    const shape = chooseLargestShape(groupEl);
+    if (!shape) return null;
 
+    const p = flattenShapeMidpoint(shape);
+    if (!p) return null;
 
+    return localToScreen(shape, p.x, p.y);
+}
 
-// ============================================================
-// 4. Create hit-circle
-// ============================================================
-export function createHitLabel(groupEl, kind, uid) {
-    console.group("[HitCircle] createHitLabel");
-    console.log("groupEl:", groupEl, "kind:", kind, "uid:", uid);
+// ------------------------------------------------------------
+// 5. CREATE HIT CIRCLE
+// ------------------------------------------------------------
+export function createHitLabel(groupEl, kind, uid, opts = {}) {
+    const anchorMode = opts.anchorMode || "pathStart"; // "pathStart" | "midpoint"
+    const color = opts.color || "red";
 
-    if (!groupEl) {
-        console.warn("[HitCircle] ❌ No groupEl.");
-        console.groupEnd();
-        return;
-    }
-
-    // Create fixed-position red circle
     const div = document.createElement("div");
     div.dataset.uid = uid;
-    div.style.position = "fixed";
-    div.style.width = "16px";
-    div.style.height = "16px";
-    div.style.borderRadius = "50%";
-    div.style.background = "red";
-    div.style.zIndex = "2147483647";
-    div.style.pointerEvents = "auto";
 
-    div.style.left = "0px";
-    div.style.top = "0px";
+    Object.assign(div.style, {
+        position: "fixed",
+        width: "14px",
+        height: "14px",
+        borderRadius: "50%",
+        background: color,
+        zIndex: 2147483647,
+        pointerEvents: "auto",
+        left: "0px",
+        top: "0px"
+    });
 
-    document.body.appendChild(div);
+    // First-frame opacity sync
+    div.style.opacity = getComputedStyle(groupEl).opacity;
 
-    // clicking the hit-circle forwards click to the animation group
-    div.addEventListener("click", (e) => {
+    div.addEventListener("click", e => {
         e.stopPropagation();
-        console.log(`[HitCircle] CLICK on ${kind}:${uid}`);
         groupEl.dispatchEvent(new Event("click", { bubbles: true }));
     });
 
-    const record = { groupEl, div, uid };
+    document.body.appendChild(div);
+
+    const record = { groupEl, div, uid, anchorMode };
     window._oscillaHitLabels.push(record);
 
-    // Initial placement
     updateHitCircle(record);
-
-    console.groupEnd();
 }
 
-// ============================================================
-// 5. Update 1 hit-circle
-// ============================================================
-export function updateHitCircle(record) {
-    const { groupEl, div } = record;
+
+// ------------------------------------------------------------
+// TRUE GEOMETRIC MIDPOINT (screen space)
+// ------------------------------------------------------------
+function computeObjectMidpointScreen(groupEl) {
+    const box = groupEl.getBoundingClientRect();
+    return {
+        x: box.left + box.width / 2,
+        y: box.top  + box.height / 2
+    };
+}
+
+
+// ------------------------------------------------------------
+// 6. UPDATE POSITION + OPACITY for one hit circle
+// ------------------------------------------------------------
+export function updateHitCircle(rec) {
+    const { groupEl, div, anchorMode } = rec;
     if (!groupEl || !div) return;
 
-    const pos = computeAnchorScreenPosition(groupEl);
-    if (!pos) return;
+    // 🔥 SYNC OPACITY WITH SVG ELEMENT
+    try {
+        const svgOpacity = parseFloat(getComputedStyle(groupEl).opacity/2);
+        div.style.opacity = isNaN(svgOpacity) ? "1" : String(svgOpacity);
+    } catch {
+        div.style.opacity = "1";
+    }
 
-    div.style.left = `${pos.x - 8}px`;  // center the 16px circle
-    div.style.top  = `${pos.y - 8}px`;
+    // Compute anchor
+    let pos = null;
+   if (anchorMode === "followSizeMidPoint") {
+    const box = groupEl.getBoundingClientRect();
+
+    const radius = Math.max(box.width, box.height) / 2;
+    const padding = 12; // extra ring padding
+    const size = radius * 2 + padding;
+
+    div.style.width  = `${size}px`;
+    div.style.height = `${size}px`;
+
+    // Convert midpoint to screen coords
+    pos = {
+        x: box.left + box.width / 2,
+        y: box.top  + box.height / 2,
+    };
+
+    // STYLE: ring instead of filled circle
+    div.style.background = "transparent";
+    div.style.border = `1px solid ${rec.color || "purple"}`;
+    div.style.borderRadius = "50%";
+
+    // center the ring on object
+    div.style.left = `${pos.x - size/2}px`;
+    div.style.top  = `${pos.y - size/2}px`;
+    return; // prevent fallback behaviour
 }
 
-// ============================================================
-// 6. Update ALL hit-circles — call once per animation frame
-// ============================================================
+else {
+        pos = computePathStartScreenPosition(groupEl);
+    }
+
+    if (!pos) return;
+
+    div.style.left = `${pos.x - 7}px`;
+    div.style.top = `${pos.y - 7}px`;
+}
+
+// ------------------------------------------------------------
+// 7. UPDATE ALL
+// ------------------------------------------------------------
 export function repositionAllHitLabels() {
     for (const rec of window._oscillaHitLabels) {
         updateHitCircle(rec);
     }
 }
 
-// ============================================================
-// 7. Simple show/hide toggle
-// ============================================================
+// ------------------------------------------------------------
+// 8. GLOBAL SHOW/HIDE
+// ------------------------------------------------------------
 export function toggleHitLabels() {
     window.oscillaShowHitLabels = !window.oscillaShowHitLabels;
     const show = window.oscillaShowHitLabels;
 
     window._oscillaHitLabels.forEach(rec => {
-        rec.div.style.opacity = show ? "1" : "0";
+        rec.div.style.opacity = show ? rec.div.style.opacity : "0";
         rec.div.style.pointerEvents = show ? "auto" : "none";
     });
 }

@@ -17,6 +17,8 @@
 
 import { registerAnimation } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
+import { createHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
+
 import {
     applyPrestateBeforeStart,
     applyPrestateOnStart
@@ -873,6 +875,11 @@ export function handleO2PCue(el, args, options = {}) {
             // normal case
             applyPrestateOnStart(el, cfg);
             rawStart();
+        });
+
+        createHitLabel(el, "o2p", cfg.uid, {
+            anchorMode: "followSizeMidPoint",
+            color: "purple"
         });
 
 

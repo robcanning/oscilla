@@ -374,7 +374,7 @@ export function handleRotateSequence(el, cfg) {
             duration: stepDur * 1000,
             easing: ease,
             update: () => {
-                    repositionAllHitLabels();
+                repositionAllHitLabels();
 
                 let a = ((driver.a % 360) + 360) % 360;
                 el.style.transform = `rotate(${a}deg)`;
@@ -429,7 +429,7 @@ export function handleRotateContinuous(el, cfg) {
         if (key === "loop") loop = Number(value);
         if (key === "ease") ease = String(value).trim();
         if (key === "mode") mode = String(value).trim().toLowerCase();
-        if (key === "osc")  oscMode = Number(value) || 0;
+        if (key === "osc") oscMode = Number(value) || 0;
     }
 
     // stop existing animation if active
@@ -449,7 +449,7 @@ export function handleRotateContinuous(el, cfg) {
 
         // glue hit-circles to object while rotating
         update: () => {
-            try { repositionAllHitLabels(); } catch (e) {}
+            try { repositionAllHitLabels(); } catch (e) { }
         }
     });
 
@@ -655,11 +655,13 @@ export function handleRotateCue(el, astArgs, options = {}) {
         const start = wrapStart(cfg, rawStart);
 
         // install ghost toggle
-        installGhostToggle(cfg, rawStart);
+        // installGhostToggle(cfg, rawStart);
 
         registerAnimation(el, "rotate-sequence", cfg, start);
-        // createHitLabel(el, "rotate", cfg.uid);   // for rotate cue
-
+        createHitLabel(el, "rotate", cfg.uid, {
+            anchorMode: "pathStart",
+            color: "red"
+        });
         if (shouldStartNow) start();
         return;
     }
@@ -685,8 +687,10 @@ export function handleRotateCue(el, astArgs, options = {}) {
         installGhostToggle(cfg, rawStart);
 
         registerAnimation(el, "rotate-sequence", cfg, start);
-        // createHitLabel(el, "rotate", cfg.uid);   // for rotate cue
-
+        createHitLabel(el, "rotate", cfg.uid, {
+            anchorMode: "pathStart",
+            color: "red"
+        });
         if (shouldStartNow) start();
         return;
     }
@@ -709,7 +713,10 @@ export function handleRotateCue(el, astArgs, options = {}) {
     registerAnimation(el, "rotate-fallback", cfg, start);
 
 
-createHitLabel(el, "rotate", cfg.uid);
+    createHitLabel(el, "rotate", cfg.uid, {
+        anchorMode: "pathStart",
+        color: "red"
+    });
 
     if (shouldStartNow) start();
 }
