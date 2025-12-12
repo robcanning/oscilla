@@ -655,12 +655,13 @@ export function handleRotateCue(el, astArgs, options = {}) {
         const start = wrapStart(cfg, rawStart);
 
         // install ghost toggle
-        // installGhostToggle(cfg, rawStart);
+        installGhostToggle(cfg, rawStart);
 
         registerAnimation(el, "rotate-sequence", cfg, start);
         createHitLabel(el, "rotate", cfg.uid, {
             anchorMode: "pathStart",
-            color: "red"
+            color: "cyan",
+            sizeMode: "fixed"
         });
         if (shouldStartNow) start();
         return;
@@ -689,7 +690,8 @@ export function handleRotateCue(el, astArgs, options = {}) {
         registerAnimation(el, "rotate-sequence", cfg, start);
         createHitLabel(el, "rotate", cfg.uid, {
             anchorMode: "pathStart",
-            color: "red"
+            color: "cyan",
+            sizeMode: "fixed"
         });
         if (shouldStartNow) start();
         return;
@@ -715,7 +717,8 @@ export function handleRotateCue(el, astArgs, options = {}) {
 
     createHitLabel(el, "rotate", cfg.uid, {
         anchorMode: "pathStart",
-        color: "red"
+        color: "cyan",
+        sizeMode: "fixed"
     });
 
     if (shouldStartNow) start();

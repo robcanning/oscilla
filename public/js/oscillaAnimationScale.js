@@ -692,7 +692,7 @@ export function handleScaleCue(ast, el, options = {}) {
 
             registerAnimation(el, "scale-sequence-pattern", cfg, start);
             createHitLabel(el, "scale", cfg.uid, {
-                anchorMode: "midpoint",
+        anchorMode: "pathMidPoint",
                 color: "lime"
             });
 
@@ -716,7 +716,7 @@ export function handleScaleCue(ast, el, options = {}) {
 
             registerAnimation(el, "scale-sequence-uniform", cfg, start);
             createHitLabel(el, "scale", cfg.uid, {
-                anchorMode: "midpoint",
+        anchorMode: "pathMidPoint",
                 color: "lime"
             });
 
@@ -751,7 +751,7 @@ export function handleScaleCue(ast, el, options = {}) {
 
         registerAnimation(el, "scale-sequence-xy", cfg, start);
         createHitLabel(el, "scale", cfg.uid, {
-            anchorMode: "midpoint",
+        anchorMode: "pathMidPoint",
             color: "lime"
         });
 
@@ -781,7 +781,7 @@ export function handleScaleCue(ast, el, options = {}) {
 
         registerAnimation(el, "scale-continuous", cfg, start);
         createHitLabel(el, "scale", cfg.uid, {
-            anchorMode: "midpoint",
+        anchorMode: "pathMidPoint",
             color: "lime"
         });
 
@@ -803,7 +803,7 @@ export function handleScaleCue(ast, el, options = {}) {
 
     registerAnimation(el, "scale-continuous", cfg, start);
     createHitLabel(el, "scale", cfg.uid, {
-        anchorMode: "midpoint",
+        anchorMode: "pathMidPoint",
         color: "lime"
     });
 

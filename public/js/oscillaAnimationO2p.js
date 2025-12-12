@@ -878,8 +878,10 @@ export function handleO2PCue(el, args, options = {}) {
         });
 
         createHitLabel(el, "o2p", cfg.uid, {
-            anchorMode: "followSizeMidPoint",
-            color: "purple"
+            anchorMode: "center",
+            color: "purple",
+            sizeMode: "follow"
+
         });
 
 
