@@ -401,8 +401,11 @@ export function handleRotateSequence(el, cfg) {
             }
         });
 
+        // 🔑 CRITICAL FIX
         el._oscillaRotateAnim = anim;
+        cfg._anim = anim;
     }
+
 
     requestAnimationFrame(runNext);
 }
@@ -454,19 +457,10 @@ export function handleRotateContinuous(el, cfg) {
     });
 
     el._oscillaRotateAnim = anim;
-
-
-    // console.log("[rotate] fallback continuous start", {
-    //     id: el.id,
-    //     dir,
-    //     dur,
-    //     loop,
-    //     ease,
-    //     mode,
-    //     oscMode,
-    //     pivot: el.style.transformOrigin
-    // });
+    cfg._anim = anim;
 }
+
+
 // ============================================================
 // MAIN ENTRY — used by:
 //   • animationAssign(svgRoot) for id="rotate(...)"
@@ -481,6 +475,18 @@ export function handleRotateContinuous(el, cfg) {
 // ROTATE cue handler — supports tdelay + prestate(show|hide|ghost|fadein)
 // ============================================================================
 export function handleRotateCue(el, astArgs, options = {}) {
+
+    console.log(
+        "[rotateCue] ARG TYPES",
+        {
+            elType: typeof el,
+            astArgsIsArray: Array.isArray(astArgs),
+            astArgs,
+            options
+        }
+    );
+
+
     if (!el) return;
 
     console.log("[rotateCue] ⬇️ ENTER", { el, astArgs, options });
@@ -493,6 +499,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
     let trig = "auto";
     let uid = el.id || ("rotate_" + Math.random().toString(36).slice(2));
     let cfgStartDelay = 0;
+
     let prestate = "show";
 
     for (const a of astArgs) {
@@ -503,10 +510,24 @@ export function handleRotateCue(el, astArgs, options = {}) {
         if (key === "uid") uid = String(val).trim();
         if (key === "tdelay") cfgStartDelay = Number(val) || 0;
 
-        if (key === "prestate") {
-            prestate = val; // may be string or func object
+        // --------------------------------------------------
+        // STRING prestates: prestate:ghost | hide | show
+        // --------------------------------------------------
+        if (key === "prestate" && val != null) {
+            prestate = val;
         }
+
+        // --------------------------------------------------
+        // FUNCTION prestates: ghostClickable(), fadein()
+        // --------------------------------------------------
+        // if (a.type === "func") {
+        //     const fname = a.name || a.value?.name;
+        //     if (fname === "ghostClickable" || fname === "fadein") {
+        //         prestate = a.value ? { ...a.value, type: "func" } : a;
+        //     }
+        // }
     }
+
 
     console.log("[rotateCue] Parsed →", {
         trig,
@@ -528,14 +549,14 @@ export function handleRotateCue(el, astArgs, options = {}) {
         prestate,
         astArgs,
         fromCueTrigger,
-
-        _ghostState: "waiting",    // ★ NEW: waiting → running → paused
+        _ghostState: "waiting",
     };
 
-    // ----------------------------------------------------
-    // Apply PRESTATE (fadein / ghost / hide / ghostClickable)
-    // ----------------------------------------------------
-    applyPrestateBeforeStart(el, baseCfg);
+    // 🔥 IMPORTANT FIX
+    if (fromCueTrigger) {
+        applyPrestateBeforeStart(el, baseCfg);
+    }
+
     // ★ FIX: ensure the element actually receives clicks
     el.style.pointerEvents = "all";
     // Bring to front so clicks are reachable
@@ -551,55 +572,58 @@ export function handleRotateCue(el, astArgs, options = {}) {
         };
     }
 
-    // ----------------------------------------------------
-    // INSTALL GHOST-CLICKABLE TOGGLE
-    // Works for all rotate modes (sequence & continuous)
-    // ----------------------------------------------------
-    function installGhostToggle(cfg, rawStartFn) {
-        if (!cfg._ghostClickable) return;
+    // // ----------------------------------------------------
+    // // INSTALL GHOST-CLICKABLE TOGGLE
+    // // Works for all rotate modes (sequence & continuous)
+    // // ----------------------------------------------------
+    // function installGhostToggle(cfg, rawStartFn) {
+    //     if (!cfg._ghostClickable) return;
 
-        function onClick() {
-            // waiting → running
-            if (cfg._ghostState === "waiting") {
-                cfg._ghostState = "running";
-                el.style.transition = "opacity 400ms ease";
-                el.style.opacity = "1";
-                rawStartFn();
-                return;
-            }
+    //     function onClick() {
+    //         // waiting → running
+    //         if (cfg._ghostState === "waiting") {
+    //             cfg._ghostState = "running";
+    //             el.style.transition = "opacity 400ms ease";
+    //             el.style.opacity = "1";
 
-            // running → paused
-            if (cfg._ghostState === "running") {
-                cfg._ghostState = "paused";
-                el.style.transition = "opacity 400ms ease";
-                el.style.opacity = cfg._ghostOpacity ?? 0.3;
+    //             rawStartFn();
+    //             return;
+    //         }
 
-                // Pause animation if registered
-                if (window.runningAnimations?.has(cfg.uid)) {
-                    window.runningAnimations.get(cfg.uid).pause();
-                }
+    //         // running → paused
+    //         if (cfg._ghostState === "running") {
+    //             cfg._ghostState = "paused";
+    //             el.style.transition = "opacity 400ms ease";
+    //             el.style.opacity = cfg._ghostOpacity ?? 0.3;
 
-                return;
-            }
+    //             // ✅ pause the *actual* animation instance
+    //             if (cfg._anim) {
+    //                 cfg._anim.pause();
+    //             }
 
-            // paused → running
-            if (cfg._ghostState === "paused") {
-                cfg._ghostState = "running";
-                el.style.transition = "opacity 400ms ease";
-                el.style.opacity = "1";
+    //             return;
+    //         }
 
-                if (window.runningAnimations?.has(cfg.uid)) {
-                    window.runningAnimations.get(cfg.uid).play();
-                } else {
-                    rawStartFn();
-                }
-                return;
-            }
-        }
+    //         // paused → running
+    //         if (cfg._ghostState === "paused") {
+    //             cfg._ghostState = "running";
+    //             el.style.transition = "opacity 400ms ease";
+    //             el.style.opacity = "1";
 
-        cfg._ghostToggle = onClick;
-        el.addEventListener("click", onClick);
-    }
+    //             if (cfg._anim) {
+    //                 cfg._anim.play();
+    //             } else {
+    //                 rawStartFn();
+    //             }
+
+    //             return;
+    //         }
+    //     }
+
+    //     cfg._ghostToggle = onClick;
+    //     el.addEventListener("click", onClick);
+    // }
+
 
     // ----------------------------------------------------
     // WRAP START (tdelay + prestates)
@@ -612,21 +636,37 @@ export function handleRotateCue(el, astArgs, options = {}) {
         return () => {
             if (cfg.start > 0) {
                 console.log(`[rotateCue] ⏳ tdelay ${cfg.start}s → uid=${cfg.uid}`);
+
                 scheduleCueStart(
                     cfg,
                     el,
                     () => {
+                        // ✅ ghostClickable: run prestates only, don't start animation
+                        if (cfg._ghostClickable && cfg._startBlocked) {
+                            console.log("[rotateCue] delayed start reached — ghostClickable fade to ghost only", cfg.uid);
+                            applyPrestateOnStart(el, cfg);
+                            return; // wait for click
+                        }
+
+                        // normal start
                         applyPrestateOnStart(el, cfg);
                         rawStartFn();
                     },
                     cfg.uid
                 );
+
             } else {
+                // immediate case: still respect ghostClickable
+                if (cfg._ghostClickable && cfg._startBlocked) {
+                    applyPrestateOnStart(el, cfg);
+                    return;
+                }
                 applyPrestateOnStart(el, cfg);
                 rawStartFn();
             }
         };
     }
+
 
     // ----------------------------------------------------
     // SEQUENCE MODE 1: Pattern sequence
@@ -637,12 +677,15 @@ export function handleRotateCue(el, astArgs, options = {}) {
 
     if (valuesArg && valuesArg.value?.type === "pattern") {
         const v = valuesArg.value;
-
         const cfg = {
             ...baseCfg,
             pattern: v,
-            mode: "sequence-pattern"
+            mode: "sequence-pattern",
+            kind: "rotate"
         };
+
+        // ✅ APPLY PRESTATE TO FINAL CFG
+        applyPrestateBeforeStart(el, cfg);
 
         if (Array.isArray(v.values)) {
             try {
@@ -654,8 +697,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
         const rawStart = makeRawStart(cfg, handleRotateSequence);
         const start = wrapStart(cfg, rawStart);
 
-        // install ghost toggle
-        installGhostToggle(cfg, rawStart);
+        // installGhostToggle(cfg, rawStart);
 
         registerAnimation(el, "rotate-sequence", cfg, start);
         createHitLabel(el, "rotate", cfg.uid, {
@@ -663,8 +705,10 @@ export function handleRotateCue(el, astArgs, options = {}) {
             color: "cyan",
             sizeMode: "fixed"
         });
+
         if (shouldStartNow) start();
         return;
+
     }
 
     // ----------------------------------------------------
@@ -674,8 +718,13 @@ export function handleRotateCue(el, astArgs, options = {}) {
         const cfg = {
             ...baseCfg,
             values: valuesArg.value,
-            mode: "sequence"
+            mode: "sequence",
+            kind: "rotate"
+
         };
+
+        // ✅ APPLY PRESTATE TO FINAL CFG
+        applyPrestateBeforeStart(el, cfg);
 
         try {
             const angle = cfg.values[0];
@@ -685,7 +734,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
         const rawStart = makeRawStart(cfg, handleRotateSequence);
         const start = wrapStart(cfg, rawStart);
 
-        installGhostToggle(cfg, rawStart);
+        // installGhostToggle(cfg, rawStart);
 
         registerAnimation(el, "rotate-sequence", cfg, start);
         createHitLabel(el, "rotate", cfg.uid, {
@@ -693,8 +742,10 @@ export function handleRotateCue(el, astArgs, options = {}) {
             color: "cyan",
             sizeMode: "fixed"
         });
+
         if (shouldStartNow) start();
         return;
+
     }
 
     // ----------------------------------------------------
@@ -704,16 +755,20 @@ export function handleRotateCue(el, astArgs, options = {}) {
 
     const cfg = {
         ...baseCfg,
-        mode: "continuous"
+        mode: "continuous",
+        kind: "rotate"
+
     };
+
+    // ✅ APPLY PRESTATE TO FINAL CFG
+    applyPrestateBeforeStart(el, cfg);
 
     const rawStart = makeRawStart(cfg, handleRotateContinuous);
     const start = wrapStart(cfg, rawStart);
 
-    installGhostToggle(cfg, rawStart);
+    // installGhostToggle(cfg, rawStart);
 
     registerAnimation(el, "rotate-fallback", cfg, start);
-
 
     createHitLabel(el, "rotate", cfg.uid, {
         anchorMode: "pathStart",
@@ -722,6 +777,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
     });
 
     if (shouldStartNow) start();
+
 }
 
 

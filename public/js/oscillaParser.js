@@ -337,6 +337,7 @@ export class CueParser extends CstParser {
       $.CONSUME(Identifier, { LABEL: "key" });
       $.CONSUME(Colon);
       $.OR([
+        { ALT: () => $.SUBRULE($.simpleFuncCall, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(StringLiteral, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(RangeLiteral, { LABEL: "value" }) },
@@ -1356,16 +1357,44 @@ export function cstToAst(cst) {
         keyNode?.image ||
         keyNode?.children?.Identifier?.[0]?.image ||
         "unknown";
+
       let val = null;
-      if (valNode?.children?.StringLiteral?.[0]) {
-        val = valNode.children.StringLiteral[0].image;
-      } else if (valNode?.children?.NumberLiteral?.[0]) {
-        val = valNode.children.NumberLiteral[0].image;
-      } else if (valNode?.children?.RangeLiteral?.[0]) {
-        val = valNode.children.RangeLiteral[0].image;
-      } else if (valNode?.image) {
-        val = valNode.image;
-      }
+
+// CASE 1: value IS a simpleFuncCall
+if (valNode?.name === "simpleFuncCall" || valNode?.children?.Identifier) {
+  const funcName =
+    valNode.children?.Identifier?.[0]?.image ?? "unknown";
+
+  const argNodes =
+    valNode.children?.animValue ??
+    valNode.children?.NumberLiteral ??
+    [];
+
+  const funcArgs = argNodes.map(a => {
+    if (a.children?.NumberLiteral?.[0]) {
+      return Number(a.children.NumberLiteral[0].image);
+    }
+    if (a.children?.StringLiteral?.[0]) {
+      return unquoteLiteral(a.children.StringLiteral[0]);
+    }
+    if (a.image) return a.image;
+    return null;
+  });
+
+  val = { type: "func", name: funcName, args: funcArgs };
+}
+
+// CASE 2: fallback literals
+else if (valNode?.children?.StringLiteral?.[0]) {
+  val = unquoteLiteral(valNode.children.StringLiteral[0]);
+}
+else if (valNode?.children?.NumberLiteral?.[0]) {
+  val = Number(valNode.children.NumberLiteral[0].image);
+}
+else if (valNode?.image) {
+  val = valNode.image;
+}
+
 
 
       args.push({ type: key, value: val });
@@ -1727,7 +1756,28 @@ export function cstToAst(cst) {
       };
     }
 
-
+    // Simple function call: ghostClickable(6000), fadein(500), etc.
+    if (vNode.children.simpleFuncCall) {
+      const call = vNode.children.simpleFuncCall[0];
+      
+      // CST structure: Identifier token is stored under "Identifier" key
+      const nameTok = call.children?.Identifier?.[0];
+      const name = nameTok?.image || "unknown";
+      
+      // Arguments are stored under "animValue" 
+      const argNodes = call.children?.animValue || [];
+      const args = argNodes.map(a => extractValue(a));
+      
+      if (OSCILLA_DSL_DEBUG) {
+        console.log("[extractValue] simpleFuncCall →", { name, args, callChildren: call.children });
+      }
+      
+      return {
+        type: "func",
+        name,
+        args
+      };
+    }
 
     return null;
   }

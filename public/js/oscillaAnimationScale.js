@@ -490,12 +490,12 @@ export function handleScaleSequence(el, cfg) {
         });
 
         el._oscillaScaleAnim = anim;
-    }
+        cfg._anim = anim;
 
+    }
     // Kick off
     requestAnimationFrame(runNext);
 }
-
 
 // ============================================================
 // Continuous fallback (pulse) if no values provided
@@ -552,16 +552,10 @@ function handleScaleContinuous(el, cfg) {
     });
 
     el._oscillaScaleAnim = anim;
+    cfg._anim = anim;
 
-    // console.log(`[scale] start fallback pulse`, {
-    //     id: el.id,
-    //     useX, useY, dur, loop, ease, pivot: el.style.transformOrigin
-    // });
 }
 
-// ============================================================
-// MAIN ENTRY — matches dispatcher usage: handleScaleCue(ast, cueElement)
-// ============================================================
 // ============================================================================
 // SCALE cue handler — supports: tdelay, prestate(show|hide|ghost|fadein)
 // ============================================================================
@@ -574,7 +568,7 @@ export function handleScaleCue(ast, el, options = {}) {
     console.log("[scaleCue] ENTER", { el, astArgs, options });
 
     // ------------------------------------------------------------------------
-    // Parse DSL args: uid, trig, tdelay, prestate
+    // Parse DSL args
     // ------------------------------------------------------------------------
     let trig = "auto";
     let uid = el.id || ("scale_" + Math.random().toString(36).slice(2));
@@ -591,18 +585,11 @@ export function handleScaleCue(ast, el, options = {}) {
         if (key === "prestate") prestate = val;
     }
 
-    console.log("[scaleCue] Parsed →", {
-        trig,
-        uid,
-        tdelay: cfgStartDelay,
-        prestate
-    });
-
     const shouldStartNow =
         fromCueTrigger || trig === "auto" || trig === "playhead";
 
     // ------------------------------------------------------------------------
-    // CREATE BASE CFG *BEFORE* USING IT
+    // BASE CFG
     // ------------------------------------------------------------------------
     const baseCfg = {
         uid,
@@ -610,204 +597,169 @@ export function handleScaleCue(ast, el, options = {}) {
         start: cfgStartDelay,
         prestate,
         astArgs,
-        fromCueTrigger
+        fromCueTrigger,
+        kind: "scale",
+        _anim: null,
+        _start: null
     };
 
-    // ------------------------------------------------------------------------
-    // PRESTATE (visibility before animation starts)
-    // ------------------------------------------------------------------------
+    // PRESTATE: hide / ghost / ghostClickable
     applyPrestateBeforeStart(el, baseCfg);
 
     // ------------------------------------------------------------------------
-    // EXTRACT sequences
+    // Extract args
     // ------------------------------------------------------------------------
-    let valuesArg = astArgs.find(o =>
-        o.key === "values" || o.type === "values"
-    );
-
-    let xArg = astArgs.find(o =>
-        ["x", "valuesX"].includes(o.key || o.type)
-    );
-    let yArg = astArgs.find(o =>
-        ["y", "valuesY"].includes(o.key || o.type)
-    );
+    const valuesArg = astArgs.find(o => o.key === "values" || o.type === "values");
+    const xArg = astArgs.find(o => ["x", "valuesX"].includes(o.key || o.type));
+    const yArg = astArgs.find(o => ["y", "valuesY"].includes(o.key || o.type));
 
     // ------------------------------------------------------------------------
-    // INITIAL SCALE APPLY
+    // Initial scale helper
     // ------------------------------------------------------------------------
     function applyInitialScale(cfg) {
-        try {
-            const sx = cfg.xValues ? cfg.xValues[0] :
-                cfg.values ? cfg.values[0] : 1;
-            const sy = cfg.yValues ? cfg.yValues[0] :
-                cfg.values ? cfg.values[0] : sx;
-            el.style.transform = `scale(${sx}, ${sy})`;
-        } catch (e) {
-            console.warn("[scaleCue] Could not apply initial scale:", e);
-        }
+        const sx = cfg.xValues?.[0] ?? cfg.values?.[0] ?? 1;
+        const sy = cfg.yValues?.[0] ?? cfg.values?.[0] ?? sx;
+        el.style.transform = `scale(${sx}, ${sy})`;
     }
 
     // ------------------------------------------------------------------------
-    // DELAY + PRESTATE RESTORE WRAPPER
+    // wrapStart (with debug logging)
     // ------------------------------------------------------------------------
     function wrapStart(cfg, rawStartFn) {
         return () => {
-            if (cfg.start > 0) {
-                console.log(`[scaleCue] ⏳ tdelay ${cfg.start}s → uid=${cfg.uid}`);
 
-                scheduleCueStart(
-                    cfg,
-                    el,
-                    () => {
-                        applyPrestateOnStart(el, cfg);
-                        rawStartFn();
-                    },
-                    cfg.uid
-                );
+            const restoreOnly = () => {
+                applyPrestateOnStart(el, cfg);
+            };
 
-            } else {
+            const fullStart = () => {
                 applyPrestateOnStart(el, cfg);
                 rawStartFn();
+            };
+
+            if (cfg.start > 0) {
+                scheduleCueStart(cfg, el, () => {
+                    if (cfg._ghostClickable && cfg._startBlocked) {
+                        restoreOnly();
+                        return;
+                    }
+                    fullStart();
+                }, cfg.uid);
+
+                if (cfg._ghostClickable && cfg._startBlocked) {
+                    restoreOnly();
+                }
+            } else {
+                if (cfg._ghostClickable && cfg._startBlocked) {
+                    restoreOnly();
+                    return;
+                }
+                fullStart();
             }
         };
     }
 
     // ------------------------------------------------------------------------
-    // SEQUENCE MODES — UNIFORM VALUES
+    // SEQUENCE: values / patterns
     // ------------------------------------------------------------------------
     if (valuesArg) {
         const v = valuesArg.value;
 
-        // Pattern
-        if (v && v.type === "pattern") {
-            const cfg = {
-                ...baseCfg,
-                mode: "sequence-pattern",
-                pattern: v
-            };
+        const cfg = {
+            ...baseCfg,
+            mode: Array.isArray(v) ? "sequence-uniform" : "sequence-pattern",
+            values: Array.isArray(v) ? v : null,
+            pattern: v?.type === "pattern" ? v : null
+        };
 
-            const start = wrapStart(cfg, () =>
-                handleScaleSequence(el, cfg)
-            );
+        applyInitialScale(cfg);
 
-            registerAnimation(el, "scale-sequence-pattern", cfg, start);
-            createHitLabel(el, "scale", cfg.uid, {
-        anchorMode: "pathMidPoint",
-                color: "lime"
-            });
+        const rawStart = () => {
+            handleScaleSequence(el, cfg);
+        };
 
-            if (shouldStartNow) start();
-            return;
+        cfg._start = wrapStart(cfg, rawStart);
+
+        registerAnimation(el, "scale", cfg, cfg._start);
+
+        createHitLabel(el, "scale", cfg.uid, {
+            anchorMode: "pathMidPoint",
+            color: "lime"
+        });
+
+        // 🔑 THIS MAKES THINGS VISIBLE
+        applyPrestateOnStart(el, cfg);
+
+        if (shouldStartNow && !cfg._startBlocked) {
+            cfg._start();
         }
-
-        // Literal list
-        if (Array.isArray(v)) {
-            const cfg = {
-                ...baseCfg,
-                mode: "sequence-uniform",
-                values: v
-            };
-
-            applyInitialScale(cfg);
-
-            const start = wrapStart(cfg, () =>
-                handleScaleSequence(el, cfg)
-            );
-
-            registerAnimation(el, "scale-sequence-uniform", cfg, start);
-            createHitLabel(el, "scale", cfg.uid, {
-        anchorMode: "pathMidPoint",
-                color: "lime"
-            });
-
-            if (shouldStartNow) start();
-            return;
-        }
+        return;
     }
 
     // ------------------------------------------------------------------------
-    // XY MODE
+    // SEQUENCE XY
     // ------------------------------------------------------------------------
     if (xArg || yArg) {
-        const xVals = xArg ? xArg.value : null;
-        const yVals = yArg ? yArg.value : null;
-
         const cfg = {
             ...baseCfg,
             mode: "sequence-xy",
-            xValues: Array.isArray(xVals) ? xVals : null,
-            yValues: Array.isArray(yVals) ? yVals : null,
-            xPattern: xVals?.type === "pattern" ? xVals : null,
-            yPattern: yVals?.type === "pattern" ? yVals : null
+            xValues: Array.isArray(xArg?.value) ? xArg.value : null,
+            yValues: Array.isArray(yArg?.value) ? yArg.value : null,
+            xPattern: xArg?.value?.type === "pattern" ? xArg.value : null,
+            yPattern: yArg?.value?.type === "pattern" ? yArg.value : null
         };
 
-        if (cfg.xValues || cfg.yValues) {
-            applyInitialScale(cfg);
+        applyInitialScale(cfg);
+
+        const rawStart = () => {
+            handleScaleSequence(el, cfg);
+        };
+
+        cfg._start = wrapStart(cfg, rawStart);
+
+        registerAnimation(el, "scale", cfg, cfg._start);
+
+        createHitLabel(el, "scale", cfg.uid, {
+            anchorMode: "pathMidPoint",
+            color: "lime"
+        });
+
+        applyPrestateOnStart(el, cfg);
+
+        if (shouldStartNow && !cfg._startBlocked) {
+            cfg._start();
         }
-
-        const start = wrapStart(cfg, () =>
-            handleScaleSequence(el, cfg)
-        );
-
-        registerAnimation(el, "scale-sequence-xy", cfg, start);
-        createHitLabel(el, "scale", cfg.uid, {
-        anchorMode: "pathMidPoint",
-            color: "lime"
-        });
-
-        if (shouldStartNow) start();
         return;
     }
 
     // ------------------------------------------------------------------------
-    // SHORTHAND: scale(2)
-    // ------------------------------------------------------------------------
-    if (astArgs.length === 1 && typeof astArgs[0].value === "number") {
-        const val = Number(astArgs[0].value);
-
-        const cfg = {
-            ...baseCfg,
-            mode: "continuous",
-            min: 1,
-            max: val,
-            dur: 2
-        };
-
-        applyInitialScale({ values: [val] });
-
-        const start = wrapStart(cfg, () =>
-            handleScaleContinuous(el, cfg)
-        );
-
-        registerAnimation(el, "scale-continuous", cfg, start);
-        createHitLabel(el, "scale", cfg.uid, {
-        anchorMode: "pathMidPoint",
-            color: "lime"
-        });
-
-        if (shouldStartNow) start();
-        return;
-    }
-
-    // ------------------------------------------------------------------------
-    // FALLBACK CONTINUOUS MODE
+    // CONTINUOUS
     // ------------------------------------------------------------------------
     const cfg = {
         ...baseCfg,
         mode: "continuous"
     };
 
-    const start = wrapStart(cfg, () =>
-        handleScaleContinuous(el, cfg)
-    );
+    applyInitialScale(cfg);
 
-    registerAnimation(el, "scale-continuous", cfg, start);
+    const rawStart = () => {
+        handleScaleContinuous(el, cfg);
+    };
+
+    cfg._start = wrapStart(cfg, rawStart);
+
+    registerAnimation(el, "scale", cfg, cfg._start);
+
     createHitLabel(el, "scale", cfg.uid, {
         anchorMode: "pathMidPoint",
         color: "lime"
     });
 
-    if (shouldStartNow) start();
+    applyPrestateOnStart(el, cfg);
+
+    if (shouldStartNow && !cfg._startBlocked) {
+        cfg._start();
+    }
 }
 
 

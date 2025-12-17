@@ -44,6 +44,8 @@ function parseCueTextParams(ast, cueElement) {
     params[p.type] = p.value;
   }
 
+  console.log("[cueText] parseCueTextParams RAW params:", params);
+
   // -----------------------------
   // Extract simple fields
   // -----------------------------
@@ -66,12 +68,24 @@ function parseCueTextParams(ast, cueElement) {
   if (params.tdelay != null) {
     tdelay = Number(params.tdelay) || 0;
   }
+  
+  console.log("[cueText] parseCueTextParams tdelay:", { raw: params.tdelay, parsed: tdelay });
 
-  // Example: prestate:"fadein(1200)" → we store the whole string "fadein(1200)"
+  // prestate can be:
+  // - string: "show", "hide", "ghost"
+  // - string with func syntax: "fadein(1200)" 
+  // - object from parser: { type: "func", name: "ghostClickable", args: [1000] }
   let prestate = "show";
   if (params.prestate != null) {
-    prestate = unquote(String(params.prestate));
+    // If it's already an object (from parser), keep it
+    if (typeof params.prestate === "object" && params.prestate.type === "func") {
+      prestate = params.prestate;
+    } else {
+      prestate = unquote(String(params.prestate));
+    }
   }
+  
+  console.log("[cueText] parseCueTextParams prestate:", prestate);
 
   // -----------------------------
   // Compose return structure
@@ -311,6 +325,9 @@ async function transitionNonCross({layer, newText, params, slotState, layers, to
    7) Main handler (entry point)
 -------------------------------------------------------------------------*/
 export async function handleCueTextFromAST(ast, cueElement = null) {
+
+
+
   try {
     console.groupCollapsed("%c[cueText] ENTER handler", "color:#6cf;font-weight:bold");
 
@@ -347,16 +364,39 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
     `;
     document.body.appendChild(div);
 
+
+  // -------------------------------------------------
+// PRELOAD FIRST TEXT UNIT (for ghostClickable visibility)
+// -------------------------------------------------
+if (
+  parsed.prestate?.type === "func" &&
+  parsed.prestate.name === "ghostClickable" &&
+  units.length > 0
+) {
+  div.textContent = units[0].text;
+}
+
+
+
+
     // registry + cancel token
     if (!window.activeCueTexts) window.activeCueTexts = new Map();
     const token = { cancel: false, div, persist: parsed.rawParams.persist == 1 };
     window.activeCueTexts.set(parsed.cueUid, token);
 
-    // Click-to-cancel
+    // Click-to-cancel (will be added AFTER ghostClickable starts, if applicable)
     const onClickCancel = () => {
       token.cancel = true;
     };
-    div.addEventListener("click", onClickCancel);
+    
+    // Check if ghostClickable - don't add cancel handler yet if so
+    const isGhostClickablePrestate = 
+      (parsed.prestate && typeof parsed.prestate === "object" && parsed.prestate.type === "func" && parsed.prestate.name === "ghostClickable") ||
+      (typeof parsed.prestate === "string" && parsed.prestate.toLowerCase().startsWith("ghostclickable("));
+    
+    if (!isGhostClickablePrestate) {
+      div.addEventListener("click", onClickCancel);
+    }
 
     // -------------------------------------------------
     // 3) Slot state + base positioning
@@ -407,27 +447,138 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
 
     // -------------------------------------------------
     // NEW: prestate handling for text()
+    // Supports: show, hide, ghost, fadein(ms), ghostClickable(ms)
     // -------------------------------------------------
-    if (parsed.prestate) {
-      const s = parsed.prestate.toLowerCase().trim();
+    let isGhostClickable = false;
+    let ghostClickableMs = 500;
+    let textStartBlocked = false;
+    
+    const p = parsed.prestate;
+    
+    // Handle function-style prestate (object from parser)
+    if (p && typeof p === "object" && p.type === "func") {
+      
+      if (p.name === "fadein") {
+        const ms = Number(p.args?.[0] ?? 1000);
+        div.style.opacity = "0";
+        setTimeout(() => {
+          div.style.transition = `opacity ${ms}ms ease`;
+          div.style.opacity = "1";
+        }, 20);
+        console.log("[cueText] prestate fadein", { uid: parsed.cueUid, ms });
+      }
+      
+      else if (p.name === "ghostClickable") {
+        ghostClickableMs = Number(p.args?.[0] ?? 500);
+        isGhostClickable = true;
+        textStartBlocked = true;
+        
+        div.style.opacity = "0";
+        div.style.transition = "opacity 0ms";
+        div.style.pointerEvents = "auto";
+        div.style.cursor = "pointer";
+        
+        console.log("[cueText] prestate ghostClickable", { uid: parsed.cueUid, ms: ghostClickableMs });
+      }
+    }
+    // Handle string-style prestate
+    else if (typeof p === "string") {
+      const s = p.toLowerCase().trim();
 
       if (s === "hide") {
-        div.style.opacity = 0;
+        div.style.opacity = "0";
+      }
+      else if (s === "ghost") {
+        div.style.opacity = "0.3";
       }
       else if (s.startsWith("fadein(")) {
         const ms = parseInt(s.match(/\((\d+)\)/)?.[1] ?? "500");
-        div.style.opacity = 0;
+        div.style.opacity = "0";
         setTimeout(() => {
           div.style.transition = `opacity ${ms}ms ease`;
-          div.style.opacity = 1;
+          div.style.opacity = "1";
         }, 20);
+      }
+      else if (s.startsWith("ghostclickable(")) {
+        ghostClickableMs = parseInt(s.match(/\((\d+)\)/)?.[1] ?? "500");
+        isGhostClickable = true;
+        textStartBlocked = true;
+        
+        div.style.opacity = "0";
+        div.style.transition = "opacity 0ms";
+        div.style.pointerEvents = "auto";
+        div.style.cursor = "pointer";
+        
+        console.log("[cueText] prestate ghostClickable (string)", { uid: parsed.cueUid, ms: ghostClickableMs });
       }
     }
 
     // -------------------------------------------------
-    // NEW: tdelay handling for text()
+    // ghostClickable: fade to ghost after tdelay, wait for click
     // -------------------------------------------------
-    if (parsed.tdelay && parsed.tdelay > 0) {
+    if (isGhostClickable) {
+      // Handle tdelay first (wait before showing ghost)
+      if (parsed.tdelay && parsed.tdelay > 0) {
+        console.log(`[cueText] ⏳ ghostClickable tdelay=${parsed.tdelay}s before ghost`);
+        await rafWait(parsed.tdelay * 1000, token);
+        if (token.cancel) {
+          div.remove();
+          window.activeCueTexts.delete(parsed.cueUid);
+          console.groupEnd();
+          return;
+        }
+      }
+      
+      // Fade to ghost opacity
+      div.style.transition = `opacity ${ghostClickableMs}ms ease`;
+      void div.offsetHeight; // force reflow
+      div.style.opacity = "0.3";
+      
+      console.log("[cueText] ghostClickable → waiting for click", parsed.cueUid);
+      
+      // Wait for click to start
+      await new Promise((resolve) => {
+        const clickToStart = () => {
+          console.log("[cueText] ghostClickable CLICKED → starting", parsed.cueUid);
+          div.removeEventListener("click", clickToStart);
+          textStartBlocked = false;
+          
+          // Fade to full opacity
+          div.style.transition = "opacity 400ms ease";
+          void div.offsetHeight;
+          div.style.opacity = "1";
+          
+          // NOW add the click-to-cancel handler for subsequent clicks
+          div.addEventListener("click", onClickCancel);
+          
+          resolve();
+        };
+        
+        // Also resolve if canceled
+        const checkCancel = () => {
+          if (token.cancel) {
+            div.removeEventListener("click", clickToStart);
+            resolve();
+          } else {
+            requestAnimationFrame(checkCancel);
+          }
+        };
+        
+        div.addEventListener("click", clickToStart);
+        checkCancel();
+      });
+      
+      if (token.cancel) {
+        div.remove();
+        window.activeCueTexts.delete(parsed.cueUid);
+        console.groupEnd();
+        return;
+      }
+    }
+    // -------------------------------------------------
+    // Regular tdelay handling (non-ghostClickable)
+    // -------------------------------------------------
+    else if (parsed.tdelay && parsed.tdelay > 0) {
       console.log(
         `[cueText] ⏳ tdelay=${parsed.tdelay}s before showing text uid=${parsed.cueUid}`
       );

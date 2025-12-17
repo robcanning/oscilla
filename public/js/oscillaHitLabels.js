@@ -6,6 +6,7 @@
 // • Updates every frame using CTM / bbox
 // • Mirrors SVG opacity (ghost / fade / hidden)
 // • Supports fixed-size dots AND size-following rings
+// • LARGE invisible hit area + small visible marker
 // ============================================================
 
 window._oscillaHitLabels = window._oscillaHitLabels || [];
@@ -39,7 +40,7 @@ function flattenShapeStart(shape) {
     if (tag === "circle") {
         const cx = +shape.getAttribute("cx") || 0;
         const cy = +shape.getAttribute("cy") || 0;
-        const r  = +shape.getAttribute("r")  || 0;
+        const r = +shape.getAttribute("r") || 0;
         return { x: cx + r, y: cy };
     }
 
@@ -116,73 +117,11 @@ function computePathStartScreen(groupEl) {
     return localToScreen(shape, p.x, p.y);
 }
 
-
-
-
-
-
-function computeObjectMidpointScreen(groupEl) {
-    const box = groupEl.getBoundingClientRect();
-    return {
-        x: box.left + box.width / 2,
-        y: box.top  + box.height / 2
-    };
-}
-
-// ------------------------------------------------------------
-// CREATE HIT CIRCLE
-// ------------------------------------------------------------
-export function createHitLabel(groupEl, kind, uid, opts = {}) {
-    if (!groupEl) return;
-
-    const record = {
-        groupEl,
-        uid,
-        kind,
-        anchorMode: opts.anchorMode || "pathStart", // pathStart | followSizeMidPoint
-        color: opts.color || "red",
-        sizeMode: opts.sizeMode || "fixed"          // fixed | follow
-    };
-
-    const div = document.createElement("div");
-    div.dataset.uid = uid;
-
-    Object.assign(div.style, {
-        position: "fixed",
-        left: "0px",
-        top: "0px",
-        width: "14px",
-        height: "14px",
-        borderRadius: "50%",
-        background: record.sizeMode === "fixed" ? record.color : "transparent",
-        border: record.sizeMode === "follow"
-            ? `0.75px solid ${record.color}`
-            : "none",
-        zIndex: 2147483647,
-        pointerEvents: "auto",
-        boxSizing: "border-box"
-    });
-
-    div.addEventListener("click", e => {
-        e.stopPropagation();
-        groupEl.dispatchEvent(new Event("click", { bubbles: true }));
-    });
-
-    document.body.appendChild(div);
-
-    record.div = div;
-    window._oscillaHitLabels.push(record);
-
-    updateHitCircle(record);
-}
-
-
-
 function computeBBoxCenterScreen(groupEl) {
     const box = groupEl.getBoundingClientRect();
     return {
         x: box.left + box.width / 2,
-        y: box.top  + box.height / 2
+        y: box.top + box.height / 2
     };
 }
 
@@ -192,7 +131,6 @@ function computePathAnchorScreen(groupEl, t = 0) {
 
     const tag = shape.tagName.toLowerCase();
 
-    // ---- PATH ----
     if (tag === "path") {
         try {
             const len = shape.getTotalLength();
@@ -203,8 +141,6 @@ function computePathAnchorScreen(groupEl, t = 0) {
         }
     }
 
-    // ---- NON-PATH SHAPES → convert to implicit perimeter path ----
-    // circle / ellipse / rect / polygon → approximate via bbox perimeter
     const box = shape.getBBox();
     const w = box.width;
     const h = box.height;
@@ -229,18 +165,92 @@ function computePathAnchorScreen(groupEl, t = 0) {
     return localToScreen(shape, x, y);
 }
 
+// ------------------------------------------------------------
+// CREATE HIT LABEL
+// ------------------------------------------------------------
+export function createHitLabel(groupEl, kind, uid, opts = {}) {
+    if (!groupEl) return;
 
+    const record = {
+        groupEl,
+        uid,
+        kind,
+        anchorMode: opts.anchorMode || "pathStart",
+        color: opts.color || "red",
+        sizeMode: opts.sizeMode || "fixed",
+        div: null,  // visible dot
+        hit: null   // invisible hit area
+    };
+
+    // -----------------------------
+    // INVISIBLE LARGE HIT AREA
+    // -----------------------------
+    const hit = document.createElement("div");
+    hit.dataset.uid = uid;
+
+    Object.assign(hit.style, {
+        position: "fixed",
+        left: "0px",
+        top: "0px",
+        width: "140px",
+        height: "140px",
+        marginLeft: "-70px",
+        marginTop: "-70px",
+        background: "transparent",
+        pointerEvents: "auto",
+        zIndex: 2147483646
+    });
+
+    hit.addEventListener("click", e => {
+        e.stopPropagation();
+        groupEl.dispatchEvent(
+            new CustomEvent("oscilla-hit", {
+                bubbles: true,
+                detail: { kind }
+            })
+        );
+    });
+
+    // -----------------------------
+    // VISIBLE DOT (unchanged)
+    // -----------------------------
+    const div = document.createElement("div");
+    div.dataset.uid = uid;
+
+    Object.assign(div.style, {
+        position: "fixed",
+        left: "0px",
+        top: "0px",
+        width: "14px",
+        height: "14px",
+        borderRadius: "50%",
+        background: record.sizeMode === "fixed" ? record.color : "transparent",
+        border: record.sizeMode === "follow"
+            ? `0.75px solid ${record.color}`
+            : "none",
+        zIndex: 2147483647,
+        pointerEvents: "none",
+        boxSizing: "border-box"
+    });
+
+    document.body.appendChild(hit);
+    document.body.appendChild(div);
+
+    record.div = div;
+    record.hit = hit;
+
+    window._oscillaHitLabels.push(record);
+    updateHitCircle(record);
+}
 
 // ------------------------------------------------------------
 // UPDATE ONE HIT CIRCLE
 // ------------------------------------------------------------
 export function updateHitCircle(rec) {
-    const { groupEl, div, anchorMode, sizeMode, color } = rec;
-    if (!groupEl || !div) return;
+    const { groupEl, div, hit, anchorMode, sizeMode, color } = rec;
+    if (!groupEl || !div || !hit) return;
 
-    // ----------------------------------------------------
-    // Opacity sync (ghost / fade / hidden)
-    // ----------------------------------------------------
+    // Opacity sync
     try {
         const svgOpacity = parseFloat(getComputedStyle(groupEl).opacity);
         div.style.opacity = isNaN(svgOpacity) ? "1" : String(svgOpacity);
@@ -248,20 +258,15 @@ export function updateHitCircle(rec) {
         div.style.opacity = "1";
     }
 
-    // ----------------------------------------------------
-    // Anchor selection
-    // ----------------------------------------------------
+    // Anchor
     let pos = null;
-
     switch (anchorMode) {
         case "pathMidPoint":
             pos = computePathAnchorScreen(groupEl, 0.5);
             break;
-
         case "center":
             pos = computeBBoxCenterScreen(groupEl);
             break;
-
         case "pathStart":
         default:
             pos = computePathAnchorScreen(groupEl, 0);
@@ -269,53 +274,42 @@ export function updateHitCircle(rec) {
 
     if (!pos) return;
 
-    // ----------------------------------------------------
-    // Size handling
-    // ----------------------------------------------------
+    // Size-follow mode (visible only)
     if (sizeMode === "follow") {
         const box = groupEl.getBoundingClientRect();
         const r = Math.max(box.width, box.height) / 2 + 6;
         const size = r * 2;
 
-        div.style.width  = `${size}px`;
+        div.style.width = `${size}px`;
         div.style.height = `${size}px`;
         div.style.border = `0.75px solid ${color}`;
         div.style.background = "transparent";
 
         div.style.left = `${pos.x - size / 2}px`;
-        div.style.top  = `${pos.y - size / 2}px`;
-        return;
+        div.style.top = `${pos.y - size / 2}px`;
+    } else {
+        div.style.width = "14px";
+        div.style.height = "14px";
+        div.style.background = color;
+        div.style.border = "none";
+
+        div.style.left = `${pos.x - 7}px`;
+        div.style.top = `${pos.y - 7}px`;
     }
 
-    // ----------------------------------------------------
-    // Fixed-size dot
-    // ----------------------------------------------------
-    div.style.width = "14px";
-    div.style.height = "14px";
-    div.style.background = color;
-    div.style.border = "none";
-
-    div.style.left = `${pos.x - 7}px`;
-    div.style.top  = `${pos.y - 7}px`;
+    // Invisible hit area (always centered, fixed size)
+    hit.style.left = `${pos.x}px`;
+    hit.style.top = `${pos.y}px`;
 }
 
-
 // ------------------------------------------------------------
-// UPDATE ALL (call once per frame)
+// UPDATE ALL
 // ------------------------------------------------------------
 export function repositionAllHitLabels() {
     for (const rec of window._oscillaHitLabels) {
         updateHitCircle(rec);
     }
 }
-
-
-
-
-
-
-
-
 
 // ------------------------------------------------------------
 // SHOW / HIDE
@@ -325,7 +319,7 @@ export function toggleHitLabels() {
     const show = window.oscillaShowHitLabels;
 
     window._oscillaHitLabels.forEach(rec => {
-        rec.div.style.pointerEvents = show ? "auto" : "none";
+        rec.hit.style.pointerEvents = show ? "auto" : "none";
         rec.div.style.opacity = show ? rec.div.style.opacity : "0";
     });
 }

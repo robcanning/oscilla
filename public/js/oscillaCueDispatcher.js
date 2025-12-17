@@ -275,11 +275,12 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
     case "cueStopwatch": return handleStopwatchCue(ast, cueElement);
     case "cueVideo": return handleVideoCueFromAST(ast, cueElement);
 
-    case "cueText":
-      import("./oscillaText.js")
-        .then(mod => mod.handleCueTextFromAST(ast, cueElement))
-        .catch(err => console.error("[CueDSL] Failed to load text.js module:", err));
-      return;
+case "cueText":
+case "text":
+  import("./oscillaText.js")
+    .then(mod => mod.handleCueTextFromAST(ast, cueElement))
+    .catch(err => console.error("[CueDSL] Failed to load text.js module:", err));
+  return;
 
     case "cueMetronome":
     case "cueMetro":

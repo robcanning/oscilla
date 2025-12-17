@@ -22,6 +22,14 @@ export function applyPrestateBeforeStart(el, cfg) {
 
     const p = cfg.prestate;
 
+    console.log("[prestateBefore] ENTER", {
+        uid: cfg.uid,
+        prestate: p,
+        pType: typeof p,
+        pTypeField: p?.type,
+        pName: p?.name
+    });
+
     // ------------------------------------------------------------
     // FUNCTION FORM (fadein(ms), ghostClickable(ms))
     // ------------------------------------------------------------
@@ -44,9 +52,9 @@ export function applyPrestateBeforeStart(el, cfg) {
             const ms = Number(p.args?.[0] ?? 500);
 
             cfg._ghostClickable = true;
-            cfg._ghostFadeMs    = ms;
-            cfg._ghostOpacity   = 0.3;
-            cfg._startBlocked   = true;
+            cfg._ghostFadeMs = ms;
+            cfg._ghostOpacity = 0.7;
+            cfg._startBlocked = true;
 
             el.style.opacity = "0";
             el.style.transition = "opacity 0ms";
@@ -92,61 +100,105 @@ export function applyPrestateOnStart(el, cfg) {
     // ============================================================
     // ghostClickable — fade to ghostOpacity and install click handler
     // ============================================================
-    if (cfg._ghostClickable && cfg._startBlocked) {
-// ============================================================
-// ghostClickable — fade to ghostOpacity and install click handler
-// ============================================================
-if (cfg._ghostClickable && cfg._startBlocked) {
-    console.log("[ghostClickable] applyPrestateOnStart → fade to ghost", cfg.uid);
+    if (cfg._ghostClickable) {
 
-    // ghost fade-in
-    el.style.transition = `opacity ${cfg._ghostFadeMs}ms ease`;
-    forceReflow(el);
-    el.style.opacity = cfg._ghostOpacity;
+        // initialise state once
+        cfg._ghostState = cfg._ghostState ?? "waiting";
 
-    // Unified click logic
-    let clickCount = 0;
+        console.log("[ghostClickable] applyPrestateOnStart → ensure click handler", {
+            uid: cfg.uid,
+            state: cfg._ghostState,
+            opacity: cfg._ghostOpacity,
+            blocked: cfg._startBlocked
+        });
 
-    const clickHandler = () => {
-        clickCount++;
-
+        // fade to ghost only on first entry
+        if (cfg._ghostState === "waiting") {
+            el.style.transition = `opacity ${cfg._ghostFadeMs}ms ease`;
+            forceReflow(el);
+            el.style.opacity = cfg._ghostOpacity;
+        }
         // ----------------------------------------------------
-        // FIRST CLICK → selection only (handled externally)
+        // CLICK HANDLER (stateful, persistent)
         // ----------------------------------------------------
-        if (clickCount === 1) {
-            // Reset counter if no second click follows quickly
-            setTimeout(() => { clickCount = 0 }, 350);
-            return;
+        if (!cfg._clickHandler) {
+
+            cfg._clickHandler = (e) => {
+                // ------------------------------------------------
+                // 🔒 FILTER: ignore hits meant for other animations
+                // ------------------------------------------------
+                if (e.detail?.kind && cfg.kind && e.detail.kind !== cfg.kind) {
+                    return;
+                }
+
+                console.log("[ghostClickable] CLICK RECEIVED", {
+                    uid: cfg.uid,
+                    state: cfg._ghostState,
+                    kind: e.detail?.kind
+                });
+
+                // -----------------------------------------
+                // waiting → running (start)
+                // -----------------------------------------
+                if (cfg._ghostState === "waiting") {
+                    cfg._ghostState = "running";
+                    cfg._startBlocked = false;
+
+                    el.style.transition = "opacity 400ms ease";
+                    forceReflow(el);
+                    el.style.opacity = "1";
+
+                    console.log("[ghostClickable] START animation", cfg.uid);
+
+                    if (typeof cfg._start === "function") {
+                        cfg._start();
+                    }
+                    return;
+                }
+
+                // -----------------------------------------
+                // running → paused
+                // -----------------------------------------
+                if (cfg._ghostState === "running") {
+                    cfg._ghostState = "paused";
+
+                    el.style.transition = "opacity 400ms ease";
+                    forceReflow(el);
+                    el.style.opacity = cfg._ghostOpacity ?? 0.3;
+
+                    if (cfg._anim) {
+                        console.log("[ghostClickable] PAUSE animation", cfg.uid);
+                        cfg._anim.pause();
+                    }
+                    return;
+                }
+
+                // -----------------------------------------
+                // paused → running
+                // -----------------------------------------
+                if (cfg._ghostState === "paused") {
+                    cfg._ghostState = "running";
+
+                    el.style.transition = "opacity 400ms ease";
+                    forceReflow(el);
+                    el.style.opacity = "1";
+
+                    if (cfg._anim) {
+                        console.log("[ghostClickable] RESUME animation", cfg.uid);
+                        cfg._anim.play();
+                    } else if (typeof cfg._start === "function") {
+                        cfg._start();
+                    }
+                    return;
+                }
+            };
+
+            // listen ONLY to typed hit events
+            el.addEventListener("oscilla-hit", cfg._clickHandler);
+            el.style.pointerEvents = "all";
         }
 
-        // ----------------------------------------------------
-        // SECOND CLICK → activate ghostClickable
-        // ----------------------------------------------------
-        console.log("[ghostClickable] DOUBLE CLICK → activate", cfg.uid);
-
-        cfg._startBlocked = false;
-
-        // Remove handler
-        el.removeEventListener("click", clickHandler);
-
-        // Fade to full opacity
-        el.style.transition = "opacity 400ms ease";
-        forceReflow(el);
-        el.style.opacity = "1";
-
-        // Start animation
-        if (typeof cfg._start === "function") {
-            cfg._start();
-        }
-    };
-
-    cfg._clickHandler = clickHandler;
-
-    // Install handler on the element
-    el.addEventListener("click", clickHandler);
-
-    return;
-}
+        return;
 
     }
 
@@ -181,6 +233,7 @@ if (cfg._ghostClickable && cfg._startBlocked) {
     // default show
     el.style.opacity = "1";
 }
+
 
 // ============================================================================
 // Allow external cleanup (optional)

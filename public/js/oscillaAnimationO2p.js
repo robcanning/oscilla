@@ -523,6 +523,8 @@ function startContinuousO2P(el, cfg, virtual, uid) {
             if (!isFinite(angle)) angle = 0;
 
             applyTransform(el, point, angle, cfg);
+            repositionAllHitLabels();
+
             emitO2POsc({ uid, path, point, pathT, oscCfg });
         },
 
@@ -540,6 +542,8 @@ function startContinuousO2P(el, cfg, virtual, uid) {
     });
 
     el._o2pAnim = anim;
+    cfg._anim = anim;
+
 }
 
 
@@ -621,6 +625,8 @@ function startAlternateO2P(el, cfg, virtual, uid) {
                     if (!isFinite(angle)) angle = 0;
 
                     applyTransform(el, point, angle, cfg);
+                    repositionAllHitLabels();
+
                     emitO2POsc({ uid, path, point, pathT, oscCfg });
                 },
 
@@ -628,6 +634,8 @@ function startAlternateO2P(el, cfg, virtual, uid) {
             });
 
             el._o2pAnim = anim;
+            cfg._anim = anim;
+
         });
     }
 
@@ -747,6 +755,8 @@ export function handleO2PCue(el, args, options = {}) {
             next: null,
             nextOn: null,
             trig: "auto",
+
+            kind: "o2p",
 
             astArgs: args,
             fromCueTrigger
@@ -949,6 +959,8 @@ function positionO2PInitial(el, cfg) {
 
         // use the SAME transform writer as the main engine
         applyTransform(el, point, angle, cfg);
+        repositionAllHitLabels();
+
 
     } catch (err) {
         console.error("[o2p] Error in positionO2PInitial:", err);
