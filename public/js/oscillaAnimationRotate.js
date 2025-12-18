@@ -1,4 +1,4 @@
-// rotate.js — OscillaScore Rotate Cue (sequence + continuous)
+// rotate.js â€” OscillaScore Rotate Cue (sequence + continuous)
 
 import { registerAnimation } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
@@ -34,7 +34,7 @@ function sendOSCRotation(el, angle) {
 
 // ============================================================
 // Pattern Generators (Pseq, Prand, Pxrand, Pshuf)
-// — mirrors scale.js / previous rotate logic
+// â€” mirrors scale.js / previous rotate logic
 // ============================================================
 function makePatternGenerator(pattern) {
     if (!pattern || !pattern.values || !Array.isArray(pattern.values)) {
@@ -42,7 +42,7 @@ function makePatternGenerator(pattern) {
         return { next: () => null };
     }
 
-    // Literal list → Pseq(..., inf)
+    // Literal list â†’ Pseq(..., inf)
     if (Array.isArray(pattern.values) && !pattern.name) {
         let arr = pattern.values.slice();
         let i = 0;
@@ -341,7 +341,9 @@ export function handleRotateSequence(el, cfg) {
             driver.a = tgt;
             el.style.transform = `rotate(${tgt}deg)`;
 
-            if (oscMode === 1 || oscMode === 2) {
+            // Read OSC mode from cfg (reactive to double-click changes)
+            const currentOscMode = cfg.osc ?? oscMode;
+            if (currentOscMode === 1 || currentOscMode === 2) {
                 sendOSCRotation(el, tgt);
             }
 
@@ -353,7 +355,7 @@ export function handleRotateSequence(el, cfg) {
             return;
         }
 
-        // SMOOTH MODE — drift-compensated
+        // SMOOTH MODE â€” drift-compensated
         let current = getCurrentAngle(el, driver.a);
         current = ((current % 360) + 360) % 360;
         driver.a = current;
@@ -378,12 +380,17 @@ export function handleRotateSequence(el, cfg) {
 
                 let a = ((driver.a % 360) + 360) % 360;
                 el.style.transform = `rotate(${a}deg)`;
-                if (oscMode === 1) {
+                
+                // Read OSC mode from cfg (reactive to double-click changes)
+                const currentOscMode = cfg.osc ?? oscMode;
+                if (currentOscMode === 1) {
                     sendOSCRotation(el, a);
                 }
             },
             complete: () => {
-                if (oscMode === 2) {
+                // Read OSC mode from cfg (reactive to double-click changes)
+                const currentOscMode = cfg.osc ?? oscMode;
+                if (currentOscMode === 2) {
                     let finalA = ((driver.a % 360) + 360) % 360;
                     sendOSCRotation(el, finalA);
                 }
@@ -401,7 +408,7 @@ export function handleRotateSequence(el, cfg) {
             }
         });
 
-        // 🔑 CRITICAL FIX
+        // ðŸ”‘ CRITICAL FIX
         el._oscillaRotateAnim = anim;
         cfg._anim = anim;
     }
@@ -462,17 +469,17 @@ export function handleRotateContinuous(el, cfg) {
 
 
 // ============================================================
-// MAIN ENTRY — used by:
-//   • animationAssign(svgRoot) for id="rotate(...)"
-//   • cue system for cueRotate(...)
+// MAIN ENTRY â€” used by:
+//   â€¢ animationAssign(svgRoot) for id="rotate(...)"
+//   â€¢ cue system for cueRotate(...)
 // Signature: handleRotateCue(el, astArgs, options)
 // ============================================================
 // ============================================================
-// MAIN ENTRY — used by animationAssign() & cue system
+// MAIN ENTRY â€” used by animationAssign() & cue system
 // Supports: tdelay, prestate (show|hide|ghost)
 // ============================================================
 // ============================================================================
-// ROTATE cue handler — supports tdelay + prestate(show|hide|ghost|fadein)
+// ROTATE cue handler â€” supports tdelay + prestate(show|hide|ghost|fadein)
 // ============================================================================
 export function handleRotateCue(el, astArgs, options = {}) {
 
@@ -489,7 +496,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
 
     if (!el) return;
 
-    console.log("[rotateCue] ⬇️ ENTER", { el, astArgs, options });
+    console.log("[rotateCue] â¬‡ï¸ ENTER", { el, astArgs, options });
 
     const { fromCueTrigger = false } = options;
 
@@ -529,7 +536,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
     }
 
 
-    console.log("[rotateCue] Parsed →", {
+    console.log("[rotateCue] Parsed â†’", {
         trig,
         uid,
         tdelay: cfgStartDelay,
@@ -552,12 +559,12 @@ export function handleRotateCue(el, astArgs, options = {}) {
         _ghostState: "waiting",
     };
 
-    // 🔥 IMPORTANT FIX
+    // ðŸ”¥ IMPORTANT FIX
     if (fromCueTrigger) {
         applyPrestateBeforeStart(el, baseCfg);
     }
 
-    // ★ FIX: ensure the element actually receives clicks
+    // â˜… FIX: ensure the element actually receives clicks
     el.style.pointerEvents = "all";
     // Bring to front so clicks are reachable
     try { el.parentNode.appendChild(el); } catch (e) { }
@@ -567,7 +574,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
     // ----------------------------------------------------
     function makeRawStart(cfg, modeFn) {
         return () => {
-            console.log("[rotateCue] ▶ START ROTATION", cfg.uid);
+            console.log("[rotateCue] â–¶ START ROTATION", cfg.uid);
             modeFn(el, cfg);
         };
     }
@@ -580,7 +587,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
     //     if (!cfg._ghostClickable) return;
 
     //     function onClick() {
-    //         // waiting → running
+    //         // waiting â†’ running
     //         if (cfg._ghostState === "waiting") {
     //             cfg._ghostState = "running";
     //             el.style.transition = "opacity 400ms ease";
@@ -590,13 +597,13 @@ export function handleRotateCue(el, astArgs, options = {}) {
     //             return;
     //         }
 
-    //         // running → paused
+    //         // running â†’ paused
     //         if (cfg._ghostState === "running") {
     //             cfg._ghostState = "paused";
     //             el.style.transition = "opacity 400ms ease";
     //             el.style.opacity = cfg._ghostOpacity ?? 0.3;
 
-    //             // ✅ pause the *actual* animation instance
+    //             // âœ… pause the *actual* animation instance
     //             if (cfg._anim) {
     //                 cfg._anim.pause();
     //             }
@@ -604,7 +611,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
     //             return;
     //         }
 
-    //         // paused → running
+    //         // paused â†’ running
     //         if (cfg._ghostState === "paused") {
     //             cfg._ghostState = "running";
     //             el.style.transition = "opacity 400ms ease";
@@ -635,15 +642,15 @@ export function handleRotateCue(el, astArgs, options = {}) {
 
         return () => {
             if (cfg.start > 0) {
-                console.log(`[rotateCue] ⏳ tdelay ${cfg.start}s → uid=${cfg.uid}`);
+                console.log(`[rotateCue] â³ tdelay ${cfg.start}s â†’ uid=${cfg.uid}`);
 
                 scheduleCueStart(
                     cfg,
                     el,
                     () => {
-                        // ✅ ghostClickable: run prestates only, don't start animation
+                        // âœ… ghostClickable: run prestates only, don't start animation
                         if (cfg._ghostClickable && cfg._startBlocked) {
-                            console.log("[rotateCue] delayed start reached — ghostClickable fade to ghost only", cfg.uid);
+                            console.log("[rotateCue] delayed start reached â€” ghostClickable fade to ghost only", cfg.uid);
                             applyPrestateOnStart(el, cfg);
                             return; // wait for click
                         }
@@ -684,7 +691,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
             kind: "rotate"
         };
 
-        // ✅ APPLY PRESTATE TO FINAL CFG
+        // âœ… APPLY PRESTATE TO FINAL CFG
         applyPrestateBeforeStart(el, cfg);
 
         if (Array.isArray(v.values)) {
@@ -703,7 +710,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
         createHitLabel(el, "rotate", cfg.uid, {
             anchorMode: "pathStart",
             color: "cyan",
-            sizeMode: "fixed"
+            sizeMode: "rotate40"
         });
 
         if (shouldStartNow) start();
@@ -723,7 +730,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
 
         };
 
-        // ✅ APPLY PRESTATE TO FINAL CFG
+        // âœ… APPLY PRESTATE TO FINAL CFG
         applyPrestateBeforeStart(el, cfg);
 
         try {
@@ -740,7 +747,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
         createHitLabel(el, "rotate", cfg.uid, {
             anchorMode: "pathStart",
             color: "cyan",
-            sizeMode: "fixed"
+            sizeMode: "rotate40"
         });
 
         if (shouldStartNow) start();
@@ -760,7 +767,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
 
     };
 
-    // ✅ APPLY PRESTATE TO FINAL CFG
+    // âœ… APPLY PRESTATE TO FINAL CFG
     applyPrestateBeforeStart(el, cfg);
 
     const rawStart = makeRawStart(cfg, handleRotateContinuous);
@@ -773,14 +780,9 @@ export function handleRotateCue(el, astArgs, options = {}) {
     createHitLabel(el, "rotate", cfg.uid, {
         anchorMode: "pathStart",
         color: "cyan",
-        sizeMode: "fixed"
+        sizeMode: "rotate40"
     });
 
     if (shouldStartNow) start();
 
 }
-
-
-
-
-

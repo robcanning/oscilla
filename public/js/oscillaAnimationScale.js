@@ -1,4 +1,4 @@
-// scale.js — OscillaScore Scale Cue (uniform & non-uniform)
+// scale.js â€” OscillaScore Scale Cue (uniform & non-uniform)
 
 import { registerAnimation } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
@@ -36,7 +36,7 @@ function sendOSCScale(el, sx, sy) {
 }
 
 // ============================================================
-// Pattern Generators (Pseq, Prand, Pxrand, Pshuf) — cloned from rotate.js
+// Pattern Generators (Pseq, Prand, Pxrand, Pshuf) â€” cloned from rotate.js
 // ============================================================
 function makePatternGenerator(pattern) {
     if (!pattern || !pattern.values || !Array.isArray(pattern.values)) {
@@ -44,7 +44,7 @@ function makePatternGenerator(pattern) {
         return { next: () => null };
     }
 
-    // Literal list → Pseq(..., inf)
+    // Literal list â†’ Pseq(..., inf)
     if (Array.isArray(pattern.values) && !pattern.name) {
         let arr = pattern.values.slice();
         let i = 0;
@@ -291,7 +291,7 @@ export function handleScaleSequence(el, cfg) {
 
             case "mode": {
                 mode = String(val).trim().toLowerCase();
-                if (mode === "alt") mode = "alternate";   // ← alias support restored
+                if (mode === "alt") mode = "alternate";   // â† alias support restored
                 break;
             }
             case "pauseOnExit": pauseOnExit = Boolean(val); break;
@@ -409,7 +409,7 @@ export function handleScaleSequence(el, cfg) {
         let [tgtX, tgtY] = pair;
 
         // ------------------------------------------------------------
-        //  Wrap-around fix — prevents reverse tweening
+        //  Wrap-around fix â€” prevents reverse tweening
         // ------------------------------------------------------------
         const wrapping =
             mode !== "alternate" &&      // loop-only
@@ -446,7 +446,9 @@ export function handleScaleSequence(el, cfg) {
             driver.sy = tgtY;
             el.style.transform = `scale(${tgtX}, ${tgtY})`;
 
-            if (oscMode === 1 || oscMode === 2) {
+            // Read OSC mode from cfg (reactive to double-click changes)
+            const currentOscMode = cfg.osc ?? oscMode;
+            if (currentOscMode === 1 || currentOscMode === 2) {
                 sendOSCScale(el, tgtX, tgtY);
             }
 
@@ -468,12 +470,17 @@ export function handleScaleSequence(el, cfg) {
             easing: ease,
             update: () => {
                 el.style.transform = `scale(${driver.sx}, ${driver.sy})`;
-                if (oscMode === 1) {
+                
+                // Read OSC mode from cfg (reactive to double-click changes)
+                const currentOscMode = cfg.osc ?? oscMode;
+                if (currentOscMode === 1) {
                     sendOSCScale(el, driver.sx, driver.sy);
                 }
             },
             complete: () => {
-                if (oscMode === 2) {
+                // Read OSC mode from cfg (reactive to double-click changes)
+                const currentOscMode = cfg.osc ?? oscMode;
+                if (currentOscMode === 2) {
                     sendOSCScale(el, driver.sx, driver.sy);
                 }
                 stepIndexAdvance();
@@ -557,7 +564,7 @@ function handleScaleContinuous(el, cfg) {
 }
 
 // ============================================================================
-// SCALE cue handler — supports: tdelay, prestate(show|hide|ghost|fadein)
+// SCALE cue handler â€” supports: tdelay, prestate(show|hide|ghost|fadein)
 // ============================================================================
 export function handleScaleCue(ast, el, options = {}) {
     if (!el) return;
@@ -684,10 +691,12 @@ export function handleScaleCue(ast, el, options = {}) {
 
         createHitLabel(el, "scale", cfg.uid, {
             anchorMode: "pathMidPoint",
-            color: "lime"
+            color: "lime",
+            sizeMode: "scale40"
+
         });
 
-        // 🔑 THIS MAKES THINGS VISIBLE
+        // ðŸ”‘ THIS MAKES THINGS VISIBLE
         applyPrestateOnStart(el, cfg);
 
         if (shouldStartNow && !cfg._startBlocked) {
@@ -761,5 +770,3 @@ export function handleScaleCue(ast, el, options = {}) {
         cfg._start();
     }
 }
-
-

@@ -1,10 +1,11 @@
 // ========================================================================
-// oscillaText.js  — refactored, structured, behaviour-preserving
+// oscillaText.js — Slot-based text display with time-based soft eviction
 // ========================================================================
 
 /* ------------------------------------------------------------------------
-   1) Helpers used throughout
+   1) Core Helpers
 -------------------------------------------------------------------------*/
+
 function clamp(v, lo, hi) {
   return Math.min(hi, Math.max(lo, v));
 }
@@ -14,6 +15,16 @@ function unquote(v) {
   return v.replace(/^[`'"]+|[`'"]+$/g, "");
 }
 
+function shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+/**
+ * RAF-based wait that respects cancellation token
+ */
 function rafWait(ms, token) {
   return new Promise((resolve) => {
     if (token.cancel) return resolve();
@@ -27,119 +38,161 @@ function rafWait(ms, token) {
   });
 }
 
-function shuffleInPlace(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = (Math.random() * (i + 1)) | 0;
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+
+/* ------------------------------------------------------------------------
+   2) Pause/Resume System
+-------------------------------------------------------------------------*/
+
+function initPauseToken(token) {
+  if (!token) return;
+  if (token.paused === undefined) token.paused = false;
+  if (!token._resumeResolvers) token._resumeResolvers = [];
+}
+
+async function waitIfPaused(token) {
+  if (!token) return;
+  initPauseToken(token);
+  if (!token.paused) return;
+  await new Promise(resolve => {
+    token._resumeResolvers.push(resolve);
+  });
+}
+
+function resumeTextToken(token) {
+  if (!token) return;
+  initPauseToken(token);
+  token.paused = false;
+  while (token._resumeResolvers.length) {
+    token._resumeResolvers.shift()();
+  }
+}
+
+export function pauseAllCueTexts() {
+  if (!window.activeCueTexts) return;
+  for (const token of window.activeCueTexts.values()) {
+    initPauseToken(token);
+    token.paused = true;
+  }
+}
+
+export function resumeAllCueTexts() {
+  if (!window.activeCueTexts) return;
+  for (const token of window.activeCueTexts.values()) {
+    resumeTextToken(token);
   }
 }
 
 
 /* ------------------------------------------------------------------------
-   2) Parse parameters from AST
+   3) Parameter Parsing
 -------------------------------------------------------------------------*/
+
 function parseCueTextParams(ast, cueElement) {
   const params = {};
   for (const p of (ast?.args || [])) {
     params[p.type] = p.value;
   }
 
-  console.log("[cueText] parseCueTextParams RAW params:", params);
-
-  // -----------------------------
-  // Extract simple fields
-  // -----------------------------
+  // Core fields
   const order = unquote(params.order || "seq");
-  const mode  = unquote(params.mode  || "line");
+  const mode = unquote(params.mode || "line");
 
-  // Loop logic (unchanged)
-  const loopRaw0 = (params.loop ?? (order === "rnd" ? "0" : "1"))
-    .toString()
-    .trim()
-    .toLowerCase();
+  // Loop logic
+  const loopRaw = (params.loop ?? (order === "rnd" ? "0" : "1"))
+    .toString().trim().toLowerCase();
+  const infinite = (loopRaw === "0" || loopRaw === "inf" || loopRaw === "infinite");
+  const loopCount = infinite ? 0 : Math.max(1, parseInt(loopRaw, 10) || 1);
 
-  const infinite  = (loopRaw0 === "0" || loopRaw0 === "inf" || loopRaw0 === "infinite");
-  const loopCount = infinite ? 0 : Math.max(1, parseInt(loopRaw0, 10) || 1);
+  // Timing
+  const tdelay = Number(params.tdelay) || 0;
+  const dur = Number(params.dur) || 2;
+  // fadePercent: portion of durMs used for fade-in (0.4 = 40% of duration)
+  const fadePercent = clamp(Number(params.fadePercent ?? 0.4), 0, 1);
 
-  // -----------------------------
-  // NEW: tdelay / prestate
-  // -----------------------------
-  let tdelay = 0;
-  if (params.tdelay != null) {
-    tdelay = Number(params.tdelay) || 0;
-  }
+  // Slot system
+  const yslots = Math.max(1, Number(params.yslots) || 1);  // Always >= 1
+  const yoffset = Number(params.yoffset ?? 100);
+  const yslotmode = unquote(params.yslotmode || "sequence").toLowerCase();
   
-  console.log("[cueText] parseCueTextParams tdelay:", { raw: params.tdelay, parsed: tdelay });
+  // Overlap: 0-1, controls how long layers persist beyond their base duration
+  // 0 = layer starts fading immediately when next unit appears
+  // 1 = layer persists for full additional duration (2x total lifespan)
+  const overlap = clamp(Number(params.overlap ?? 0), 0, 1);
 
-  // prestate can be:
-  // - string: "show", "hide", "ghost"
-  // - string with func syntax: "fadein(1200)" 
-  // - object from parser: { type: "func", name: "ghostClickable", args: [1000] }
+  // Prestate handling
   let prestate = "show";
   if (params.prestate != null) {
-    // If it's already an object (from parser), keep it
     if (typeof params.prestate === "object" && params.prestate.type === "func") {
       prestate = params.prestate;
     } else {
       prestate = unquote(String(params.prestate));
     }
   }
-  
-  console.log("[cueText] parseCueTextParams prestate:", prestate);
 
-  // -----------------------------
-  // Compose return structure
-  // -----------------------------
   return {
     rawParams: params,
-
-    // content
-    content:   unquote(params.src || params.content || ""),
-    style:     unquote(params.style || ""),
-
-    // target placement
-    targetId:  unquote(params.target || "self"),
-    offsetX:   Number(params.offsetX || 0),
-    offsetY:   Number(params.offsetY || 0),
-
-    // sequencing
+    
+    // Content
+    content: unquote(params.src || params.content || ""),
+    style: unquote(params.style || ""),
+    
+    // Target placement
+    targetId: unquote(params.target || "self"),
+    offsetX: Number(params.offsetX || 0),
+    offsetY: Number(params.offsetY || 0),
+    
+    // Sequencing
     order,
     mode,
     infinite,
     loopCount,
-
-    // NEW unified cue-start behaviour
+    
+    // Timing
     tdelay,
+    dur,
+    fadePercent,
+    
+    // Slot system
+    yslots,
+    yoffset,
+    yslotmode,
+    overlap,
+    
+    // Prestate
     prestate,
-
-    // uid fallback
+    
+    // Identity
     cueUid: String(params.uid || cueElement?.id || `cueText_${unquote(params.target || "center")}`),
+    persist: params.persist == 1,
   };
 }
 
 
 /* ------------------------------------------------------------------------
-   3) Convert text → units (line/word/char)
+   4) Text Content Loading
 -------------------------------------------------------------------------*/
+
 function toUnitsFromText(str, mode) {
   if (!str) return [];
+  
   if (mode === "word") {
-    return str.split(/\s+/).filter(Boolean).map((tok) => ({
-      text: tok.split(":")[0], dur: null, gap: null
-    }));
+    return str.split(/\s+/).filter(Boolean).map(tok => {
+      const [text, durStr] = tok.split(":");
+      return { text, dur: durStr ? Number(durStr) : null };
+    });
   }
+  
   if (mode === "char") {
-    return str.split("").map((ch) => ({ text: ch, dur: null, gap: null }));
+    return str.split("").map(ch => ({ text: ch, dur: null }));
   }
-  return str.split(/[\r\n;]+/).filter(Boolean).map((line) => ({
-    text: line, dur: null, gap: null
-  }));
+  
+  // Default: line mode
+  return str.split(/[\r\n;]+/).filter(Boolean).map(line => {
+    const [text, durStr] = line.split(":");
+    return { text: text || line, dur: durStr ? Number(durStr) : null };
+  });
 }
 
-
-/* ------------------------------------------------------------------------
-   4) Fetch if .txt → return units array
--------------------------------------------------------------------------*/
 async function loadCueTextUnits(content, mode) {
   if (/\.txt$/i.test(content)) {
     const baseTextDir =
@@ -149,13 +202,14 @@ async function loadCueTextUnits(content, mode) {
           ? `${window.sharedDir}texts/`
           : "/texts/";
     const filePath = content.startsWith("/") ? content : `${baseTextDir}${content}`;
+    
     try {
       const resp = await fetch(filePath);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.text();
       return toUnitsFromText(data, mode);
     } catch {
-      return [{ text: `[Missing file: ${content}]`, dur: null, gap: null }];
+      return [{ text: `[Missing file: ${content}]`, dur: null }];
     }
   }
   return toUnitsFromText(content, mode);
@@ -163,17 +217,28 @@ async function loadCueTextUnits(content, mode) {
 
 
 /* ------------------------------------------------------------------------
-   5) Slot logic helpers
+   5) Slot System
 -------------------------------------------------------------------------*/
+
+/**
+ * Initialize slot cycling state
+ */
 function initSlotState(yslots) {
-  if (yslots <= 0) return { active: false };
-  const centerIndex = Math.round((yslots + 1) / 2);
-  return { active: true, index: centerIndex, dir: 1, order: [] };
+  const centerIndex = Math.ceil(yslots / 2);
+  return {
+    index: centerIndex,
+    dir: 1,
+    order: []
+  };
 }
 
+/**
+ * Compute next slot index based on mode
+ */
 function computeNextSlot(slotState, yslots, yslotmode) {
-  if (!slotState.active) return null;
-  let next, { index, dir, order } = slotState;
+  let next;
+  const { index, dir, order } = slotState;
+  
   switch (yslotmode) {
     case "singlestep":
       next = index + dir;
@@ -182,9 +247,11 @@ function computeNextSlot(slotState, yslots, yslotmode) {
         next = index + slotState.dir;
       }
       break;
+      
     case "random":
       next = 1 + Math.floor(Math.random() * yslots);
       break;
+      
     case "shuffle":
       if (!order.length) {
         slotState.order = Array.from({ length: yslots }, (_, i) => i + 1);
@@ -192,489 +259,544 @@ function computeNextSlot(slotState, yslots, yslotmode) {
       }
       next = slotState.order.shift();
       break;
+      
     case "sequence":
     default:
       next = index + 1;
       if (next > yslots) next = 1;
       break;
   }
+  
+  slotState.index = next;
   return next;
 }
 
-function applySlotPosition(layer, slot, { offsetX, offsetY, yoffset, yslots }) {
-  if (!slot || !yslots) return;
+/**
+ * Compute anchor box for slot positioning
+ */
+function computeSlotAnchor(parsed, cueElement) {
+  if (parsed.targetId === "self" && cueElement) {
+    return cueElement.getBoundingClientRect();
+  }
+  if (parsed.targetId && parsed.targetId !== "center") {
+    const t = document.getElementById(parsed.targetId);
+    if (t) return t.getBoundingClientRect();
+  }
+  return null; // Screen-center mode
+}
+
+/**
+ * Position a layer in its slot
+ */
+function applySlotPosition(layer, slotIndex, params, anchorBox) {
+  const { offsetX, offsetY, yoffset, yslots } = params;
   const centerIndex = (yslots + 1) / 2;
-  const extraY = (slot - centerIndex) * yoffset;
-  layer.style.position = "fixed";
-  layer.style.left = `calc(50% + ${offsetX}px)`;
-  layer.style.top  = `calc(50% + ${offsetY + extraY}px)`;
-  layer.style.transform = "translate(-50%, -50%)";
+  const extraY = (slotIndex - centerIndex) * yoffset;
+
+  if (anchorBox) {
+    // Object-relative positioning
+    layer.style.position = "absolute";
+    layer.style.left = `${anchorBox.x + offsetX}px`;
+    layer.style.top = `${anchorBox.y + offsetY + extraY}px`;
+    layer.style.transform = "translate(0, 0)";
+  } else {
+    // Screen-center positioning
+    layer.style.position = "fixed";
+    layer.style.left = `calc(50% + ${offsetX}px)`;
+    layer.style.top = `calc(50% + ${offsetY + extraY}px)`;
+    layer.style.transform = "translate(-50%, -50%)";
+  }
 }
 
 
 /* ------------------------------------------------------------------------
-   6) Cross and Non-cross transitions
+   6) Layer Management with Time-Based Auto-Eviction
+   
+   Architecture:
+   - Each layer has a total lifespan = durMs + (overlap * durMs)
+   - After durMs (when next unit starts), layer begins fading out
+   - Fade-out duration = overlap * durMs
+   - overlap=0: instant fade → 1 layer visible
+   - overlap=0.5: 50% extra linger → ~1-2 layers visible  
+   - overlap=1: 100% extra linger → up to all slots filled
+   
+   Timeline for overlap=0.5, durMs=1000:
+   ─────────────────────────────────────────────────────
+   Layer 1: [███████████|▓▓▓▓▓░]
+                        ↑ fade starts at 1000ms
+                              ↑ removed at 1500ms
+   Layer 2:            [███████████|▓▓▓▓▓░]
+   ─────────────────────────────────────────────────────
 -------------------------------------------------------------------------*/
-async function transitionCross({oldLayer, newText, params, slotState, layers, token}) {
-  const { fadeMs, durMs, yslots } = params;
 
-  oldLayer.style.pointerEvents = "none";
-
-  // compute new slot
-  let newSlot = null;
-  if (slotState.active) {
-    newSlot = computeNextSlot(slotState, yslots, params.yslotmode);
-  }
-
-  const newLayer = oldLayer.cloneNode(true);
-  newLayer.textContent = newText;
-  newLayer.style.transition = "none";
-  newLayer.style.opacity = 0;
-  newLayer.dataset.uid = params.uid;
-newLayer.className = "cue-text-overlay";
-slotState.index = newSlot ?? slotState.index;
-return { layer: newLayer, canceled: false };
-
-
-  newLayer.style.pointerEvents = "auto";
-  newLayer.addEventListener("click", layers.onClickCancel);
-
-  if (slotState.active && newSlot != null) {
-    applySlotPosition(newLayer, newSlot, params);
-  } else {
-    layers.positionBase(newLayer);
-  }
-
-  oldLayer.style.zIndex = 100000;
-  newLayer.style.zIndex = 100001;
-  document.body.appendChild(newLayer);
-
-  // crossfade
-  newLayer.offsetHeight;
-  newLayer.style.transition = `opacity ${fadeMs}ms ease`;
-  newLayer.style.opacity = 1;
-
-  oldLayer.offsetHeight;
-  oldLayer.style.transition = `opacity ${fadeMs}ms ease`;
-  oldLayer.style.opacity = 0;
-
-  await rafWait(fadeMs + durMs, token);
-  if (token.cancel) {
-    try { newLayer.remove(); } catch {}
-    try { oldLayer.remove(); } catch {}
-    return { canceled: true };
-  }
-
-  try { oldLayer.remove(); } catch {};
-
-  // promote
-  slotState.index = newSlot ?? slotState.index;
-  return { layer: newLayer, canceled: false };
-}
-
-
-async function transitionNonCross({layer, newText, params, slotState, layers, token}) {
-  const { fadeMs, durMs } = params;
-
-  // fade out current
-  layer.style.transition = `opacity ${fadeMs}ms ease`;
-  layer.offsetHeight;
-  layer.style.opacity = 0;
-  await rafWait(fadeMs, token);
-  if (token.cancel) return { canceled: true };
-
-  // blank gap
-  if (params.gapForUnit > 0) {
-    await rafWait(params.gapForUnit * 1000, token);
-    if (token.cancel) return { canceled: true };
-  }
-
-  // introduce new text
-  layer.textContent = newText;
+/**
+ * Create a styled text layer
+ */
+function createTextLayer(text, uid, baseStyle) {
+  const layer = document.createElement("div");
+  layer.className = "cue-text-overlay";
+  layer.dataset.uid = uid;
+  layer.textContent = text;
+  
+  // Apply base styles first, then ensure transition starts as none
+  layer.style.cssText = `
+    position: fixed;
+    background: transparent;
+    color: white;
+    z-index: 999999;
+    font-size: 4em;
+    padding: 8px 12px;
+    border-radius: 8px;
+    max-width: 70vw;
+    text-align: center;
+    text-shadow: 0 0 10px rgba(0,0,0,0.7);
+    pointer-events: auto;
+    cursor: pointer;
+    ${baseStyle}
+  `;
+  
+  // Set these AFTER cssText to ensure they're not overridden
+  layer.style.opacity = "0";
   layer.style.transition = "none";
-  layer.style.opacity = 0;
+  
+  return layer;
+}
 
-  if (slotState.active) {
-    const next = computeNextSlot(slotState, params.yslots, params.yslotmode);
-    if (next != null) slotState.index = next;
-    applySlotPosition(layer, slotState.index, params);
-  } else {
-    layers.positionBase(layer);
+/**
+ * Schedule a layer for automatic eviction after its lifespan
+ * 
+ * @param {HTMLElement} layer - The layer to evict
+ * @param {number} durMs - Base duration (time until fade starts)
+ * @param {number} fadeOutMs - Fade-out duration
+ * @param {Set} layerRegistry - Set to track active layers for cleanup
+ */
+function scheduleLayerEviction(layer, durMs, fadeOutMs, layerRegistry) {
+  // Add to registry
+  layerRegistry.add(layer);
+  
+  // After durMs: start fading out
+  const fadeTimeout = setTimeout(() => {
+    layer.style.pointerEvents = "none";
+    layer.style.transition = `opacity ${fadeOutMs}ms ease`;
+    layer.style.opacity = 0;
+    
+    // After fade completes: remove from DOM
+    const removeTimeout = setTimeout(() => {
+      layerRegistry.delete(layer);
+      try { layer.remove(); } catch {}
+    }, fadeOutMs + 50);
+    
+    // Store timeout for potential cleanup
+    layer._removeTimeout = removeTimeout;
+  }, durMs);
+  
+  // Store timeout for potential cleanup
+  layer._fadeTimeout = fadeTimeout;
+}
+
+/**
+ * Place text into a slot with automatic time-based eviction
+ */
+function placeTextInSlot({
+  text,
+  slotIndex,
+  timing,
+  position,
+  anchorBox,
+  layerRegistry,
+  onClickHandler
+}) {
+  const { durMs, fadeMs, overlap, yslots } = timing;
+  const { uid, yoffset, offsetX, offsetY, style } = position;
+  
+  // Create new layer
+  const layer = createTextLayer(text, uid, style);
+  layer.addEventListener("click", onClickHandler);
+  
+  // Position in slot
+  applySlotPosition(layer, slotIndex, { offsetX, offsetY, yoffset, yslots }, anchorBox);
+  
+  // Add to DOM
+  document.body.appendChild(layer);
+  
+  // --------------------------------------------------
+  // Single-slot crossfade mode (yslots === 1)
+  // --------------------------------------------------
+  if (yslots === 1) {
+    // For single slot: crossfade with existing layer
+    // overlap controls crossfade duration (0 = instant switch, 1 = full fadeMs crossfade)
+    const crossfadeMs = Math.max(50, Math.round(overlap * fadeMs));
+    
+    // Trigger fade-out on any existing layers in registry
+    for (const existingLayer of layerRegistry) {
+      existingLayer.style.pointerEvents = "none";
+      existingLayer.style.setProperty('transition', `opacity ${crossfadeMs}ms ease-out`, 'important');
+      existingLayer.style.setProperty('opacity', '0', 'important');
+      
+      // Clear existing timeouts
+      if (existingLayer._fadeTimeout) clearTimeout(existingLayer._fadeTimeout);
+      if (existingLayer._removeTimeout) clearTimeout(existingLayer._removeTimeout);
+      
+      // Schedule removal
+      const layerToRemove = existingLayer;
+      setTimeout(() => {
+        layerRegistry.delete(layerToRemove);
+        try { layerToRemove.remove(); } catch {}
+      }, crossfadeMs + 50);
+    }
+    
+    // Fade in new layer simultaneously
+    console.log(`[cueText] crossfade: ${crossfadeMs}ms for "${text.substring(0, 20)}..."`);
+    void layer.offsetHeight;
+    layer.style.setProperty('transition', `opacity ${crossfadeMs}ms ease-in`, 'important');
+    layer.style.setProperty('opacity', '1', 'important');
+    
+    // Register new layer
+    layerRegistry.add(layer);
+    
+    // Schedule this layer's eviction (it will be crossfaded out when next layer arrives)
+    // For single slot, we don't auto-evict - next placeTextInSlot call handles it
+    // But we still need timeout cleanup if sequence ends
+    const fadeTimeout = setTimeout(() => {
+      // Only fade out if still in registry (not already replaced)
+      if (layerRegistry.has(layer)) {
+        layer.style.pointerEvents = "none";
+        layer.style.setProperty('transition', `opacity ${fadeMs}ms ease-out`, 'important');
+        layer.style.setProperty('opacity', '0', 'important');
+        
+        setTimeout(() => {
+          layerRegistry.delete(layer);
+          try { layer.remove(); } catch {}
+        }, fadeMs + 50);
+      }
+    }, durMs);
+    
+    layer._fadeTimeout = fadeTimeout;
+    
+    return layer;
   }
+  
+  // --------------------------------------------------
+  // Multi-slot mode (yslots > 1)
+  // --------------------------------------------------
+  
+  // Fade in
+  console.log(`[cueText] fade-in: ${fadeMs}ms for "${text.substring(0, 20)}..."`);
+  void layer.offsetHeight;
+  layer.style.setProperty('transition', `opacity ${fadeMs}ms ease-in`, 'important');
+  layer.style.setProperty('opacity', '1', 'important');
+  
+  // Calculate lifespan and fade-out timing
+  // 
+  // Goal: overlap=1 should allow all yslots to be filled simultaneously
+  // 
+  // With yslots=3, overlap=1:
+  //   - Layer 1 appears at t=0
+  //   - Layer 2 appears at t=durMs  
+  //   - Layer 3 appears at t=2*durMs
+  //   - For all 3 to be visible, Layer 1 must survive until t=2*durMs
+  //   - So total lifespan = durMs * yslots = 3*durMs
+  //
+  // Formula:
+  //   lingerMs = overlap * durMs * (yslots - 1)
+  //   totalLifespan = durMs + lingerMs
+  //
+  // overlap=0 → lingerMs=0, lifespan=durMs (only 1 visible)
+  // overlap=0.5, yslots=3 → lingerMs=durMs, lifespan=2*durMs (~2 visible)
+  // overlap=1, yslots=3 → lingerMs=2*durMs, lifespan=3*durMs (all 3 visible)
+  
+  const lingerMs = Math.round(overlap * durMs * (yslots - 1));
+  const fadeOutMs = Math.max(50, lingerMs);
+  
+  // Schedule automatic eviction
+  // Layer stays at full opacity for durMs, then fades out over fadeOutMs
+  scheduleLayerEviction(layer, durMs, fadeOutMs, layerRegistry);
+  
+  return layer;
+}
 
-  layer.offsetHeight;
-  layer.style.transition = `opacity ${fadeMs}ms ease`;
-  layer.style.opacity = 1;
-  await rafWait(fadeMs, token);
-  if (token.cancel) return { canceled: true };
-
-  await rafWait(durMs, token);
-  if (token.cancel) return { canceled: true };
-
-  // fade out before next
-  layer.style.transition = `opacity ${fadeMs}ms ease`;
-  layer.offsetHeight;
-  layer.style.opacity = 0;
-  await rafWait(fadeMs, token);
-
-  return { layer, canceled: false };
+/**
+ * Force-evict all layers in registry (for cleanup)
+ */
+function evictAllLayers(layerRegistry, fadeMs = 150) {
+  for (const layer of layerRegistry) {
+    // Clear pending timeouts
+    if (layer._fadeTimeout) clearTimeout(layer._fadeTimeout);
+    if (layer._removeTimeout) clearTimeout(layer._removeTimeout);
+    
+    // Immediate fade out
+    layer.style.pointerEvents = "none";
+    layer.style.transition = `opacity ${fadeMs}ms ease`;
+    layer.style.opacity = 0;
+    
+    setTimeout(() => {
+      try { layer.remove(); } catch {}
+    }, fadeMs + 50);
+  }
+  layerRegistry.clear();
 }
 
 
 /* ------------------------------------------------------------------------
-   7) Main handler (entry point)
+   7) Prestate Handling
+   
+   Supports: show, hide, ghost, fadein(ms), ghostClickable(ms)
 -------------------------------------------------------------------------*/
+
+async function handlePrestate(div, prestate, tdelay, token, parsed, onClickTogglePause) {
+  const p = prestate;
+  let requiresClickToStart = false;
+  let ghostClickableMs = 500;
+  
+  // Parse prestate
+  if (p && typeof p === "object" && p.type === "func") {
+    if (p.name === "fadein") {
+      const ms = Number(p.args?.[0] ?? 1000);
+      div.style.opacity = "0";
+      setTimeout(() => {
+        div.style.transition = `opacity ${ms}ms ease`;
+        div.style.opacity = "1";
+      }, 20);
+    } else if (p.name === "ghostClickable") {
+      ghostClickableMs = Number(p.args?.[0] ?? 500);
+      requiresClickToStart = true;
+    }
+  } else if (typeof p === "string") {
+    const s = p.toLowerCase().trim();
+    
+    if (s === "hide") {
+      div.style.opacity = "0";
+    } else if (s === "ghost") {
+      div.style.opacity = "0.3";
+    } else if (s.startsWith("fadein(")) {
+      const ms = parseInt(s.match(/\((\d+)\)/)?.[1] ?? "500");
+      div.style.opacity = "0";
+      setTimeout(() => {
+        div.style.transition = `opacity ${ms}ms ease`;
+        div.style.opacity = "1";
+      }, 20);
+    } else if (s.startsWith("ghostclickable(")) {
+      ghostClickableMs = parseInt(s.match(/\((\d+)\)/)?.[1] ?? "500");
+      requiresClickToStart = true;
+    }
+  }
+  
+  // Handle ghostClickable flow
+  if (requiresClickToStart) {
+    // Wait for tdelay before showing ghost
+    if (tdelay > 0) {
+      await rafWait(tdelay * 1000, token);
+      if (token.cancel) return false;
+    }
+    
+    // Fade to ghost state
+    div.style.transition = `opacity ${ghostClickableMs}ms ease`;
+    void div.offsetHeight;
+    div.style.opacity = "0.3";
+    div.style.pointerEvents = "auto";
+    div.style.cursor = "pointer";
+    
+    // Wait for click to start
+    const started = await new Promise(resolve => {
+      const clickToStart = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        div.removeEventListener("click", clickToStart);
+        
+        // Fade to full opacity
+        div.style.transition = "opacity 400ms ease";
+        void div.offsetHeight;
+        div.style.opacity = "1";
+        
+        // Switch to pause/resume handler
+        div.addEventListener("click", onClickTogglePause);
+        resolve(true);
+      };
+      
+      const checkCancel = () => {
+        if (token.cancel) {
+          div.removeEventListener("click", clickToStart);
+          resolve(false);
+        } else {
+          requestAnimationFrame(checkCancel);
+        }
+      };
+      
+      div.addEventListener("click", clickToStart);
+      checkCancel();
+    });
+    
+    return started;
+  }
+  
+  // Regular tdelay (non-ghostClickable)
+  if (tdelay > 0) {
+    await rafWait(tdelay * 1000, token);
+    if (token.cancel) return false;
+  }
+  
+  return true;
+}
+
+
+/* ------------------------------------------------------------------------
+   8) Main Handler
+-------------------------------------------------------------------------*/
+
 export async function handleCueTextFromAST(ast, cueElement = null) {
-
-
-
   try {
     console.groupCollapsed("%c[cueText] ENTER handler", "color:#6cf;font-weight:bold");
-
+    
     // -------------------------------------------------
-    // 1) Params and units
+    // Parse parameters
     // -------------------------------------------------
     const parsed = parseCueTextParams(ast, cueElement);
+    console.log("[cueText] Parsed params:", parsed);
+    
+    // -------------------------------------------------
+    // Load content units
+    // -------------------------------------------------
     const units = await loadCueTextUnits(parsed.content, parsed.mode);
-    if (!units.length) return;
-
+    if (!units.length) {
+      console.log("[cueText] No units to display");
+      console.groupEnd();
+      return;
+    }
+    
     // -------------------------------------------------
-    // 2) Make initial overlay div
+    // Create initial overlay (used for prestate/ghostClickable)
     // -------------------------------------------------
-    const div = document.createElement("div");
-    div.className = "cue-text-overlay";
-    div.dataset.uid = parsed.cueUid;
-    div.style.cssText = `
-      position: fixed;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: transparent;
-      color: white;
-      z-index: 999999;
-      font-size: 4em;
-      padding: 8px 12px;
-      border-radius: 8px;
-      max-width: 70vw;
-      text-align: center;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      text-shadow: 0 0 10px rgba(0,0,0,0.7);
-      pointer-events: auto;
-      ${parsed.style}
-    `;
-    document.body.appendChild(div);
-
-
-  // -------------------------------------------------
-// PRELOAD FIRST TEXT UNIT (for ghostClickable visibility)
-// -------------------------------------------------
-if (
-  parsed.prestate?.type === "func" &&
-  parsed.prestate.name === "ghostClickable" &&
-  units.length > 0
-) {
-  div.textContent = units[0].text;
-}
-
-
-
-
-    // registry + cancel token
+    const initialDiv = createTextLayer(
+      units[0]?.text || "",
+      parsed.cueUid,
+      parsed.style
+    );
+    document.body.appendChild(initialDiv);
+    
+    // Position initial div
+    const anchorBox = computeSlotAnchor(parsed, cueElement);
+    const slotState = initSlotState(parsed.yslots);
+    
+    applySlotPosition(initialDiv, slotState.index, {
+      offsetX: parsed.offsetX,
+      offsetY: parsed.offsetY,
+      yoffset: parsed.yoffset,
+      yslots: parsed.yslots
+    }, anchorBox);
+    
+    // -------------------------------------------------
+    // Register token
+    // -------------------------------------------------
     if (!window.activeCueTexts) window.activeCueTexts = new Map();
-    const token = { cancel: false, div, persist: parsed.rawParams.persist == 1 };
+    const token = {
+      cancel: false,
+      div: initialDiv,
+      persist: parsed.persist
+    };
     window.activeCueTexts.set(parsed.cueUid, token);
-
-    // Click-to-cancel (will be added AFTER ghostClickable starts, if applicable)
+    
+    // -------------------------------------------------
+    // Click handlers
+    // -------------------------------------------------
+    const onClickTogglePause = (e) => {
+      e?.stopPropagation?.();
+      e?.preventDefault?.();
+      if (!token) return;
+      
+      if (!token.paused) {
+        token.paused = true;
+        console.log("[cueText] Paused:", parsed.cueUid);
+      } else {
+        resumeTextToken(token);
+        console.log("[cueText] Resumed:", parsed.cueUid);
+      }
+    };
+    
     const onClickCancel = () => {
       token.cancel = true;
     };
     
-    // Check if ghostClickable - don't add cancel handler yet if so
-    const isGhostClickablePrestate = 
-      (parsed.prestate && typeof parsed.prestate === "object" && parsed.prestate.type === "func" && parsed.prestate.name === "ghostClickable") ||
+    // -------------------------------------------------
+    // Handle prestate
+    // -------------------------------------------------
+    const isGhostClickable = 
+      (parsed.prestate?.type === "func" && parsed.prestate.name === "ghostClickable") ||
       (typeof parsed.prestate === "string" && parsed.prestate.toLowerCase().startsWith("ghostclickable("));
     
-    if (!isGhostClickablePrestate) {
-      div.addEventListener("click", onClickCancel);
+    if (!isGhostClickable) {
+      initialDiv.addEventListener("click", onClickCancel);
     }
-
-    // -------------------------------------------------
-    // 3) Slot state + base positioning
-    // -------------------------------------------------
-    const yslots   = Number(parsed.rawParams.yslots || 0);
-    const yoffset  = parsed.rawParams.yoffset != null ? Number(parsed.rawParams.yoffset) : 100;
-    const yslotmode = unquote(parsed.rawParams.yslotmode || "sequence").toLowerCase();
-    const slotState = initSlotState(yslots);
-
-    function positionBase(layer) {
-      if (yslots > 0) return;
-      let placed = false;
-      if (parsed.targetId === "self" && cueElement) {
-        const box = cueElement.getBoundingClientRect();
-        layer.style.position = "absolute";
-        layer.style.left = `${box.x + parsed.offsetX}px`;
-        layer.style.top  = `${box.y + parsed.offsetY}px`;
-        layer.style.transform = "translate(0, 0)";
-        placed = true;
-      } else if (parsed.targetId !== "center" && parsed.targetId !== "self") {
-        const target = document.getElementById(parsed.targetId);
-        if (target) {
-          const box = target.getBoundingClientRect();
-          layer.style.position = "absolute";
-          layer.style.left = `${box.x + parsed.offsetX}px`;
-          layer.style.top  = `${box.y + parsed.offsetY}px`;
-          layer.style.transform = "translate(0, 0)";
-          placed = true;
-        }
-      }
-      if (!placed) {
-        layer.style.position = "fixed";
-        layer.style.left = `calc(50% + ${parsed.offsetX}px)`;
-        layer.style.top  = `calc(50% + ${parsed.offsetY}px)`;
-        layer.style.transform = "translate(-50%, -50%)";
-      }
-    }
-
-     if (slotState.active) {
-      applySlotPosition(div, slotState.index, {
-        offsetX: parsed.offsetX, offsetY: parsed.offsetY,
-        yoffset, yslots
-      });
-    } else {
-      positionBase(div);
-    }
-
-
-    // -------------------------------------------------
-    // NEW: prestate handling for text()
-    // Supports: show, hide, ghost, fadein(ms), ghostClickable(ms)
-    // -------------------------------------------------
-    let isGhostClickable = false;
-    let ghostClickableMs = 500;
-    let textStartBlocked = false;
     
-    const p = parsed.prestate;
+    const prestateOk = await handlePrestate(
+      initialDiv,
+      parsed.prestate,
+      parsed.tdelay,
+      token,
+      parsed,
+      onClickTogglePause
+    );
     
-    // Handle function-style prestate (object from parser)
-    if (p && typeof p === "object" && p.type === "func") {
-      
-      if (p.name === "fadein") {
-        const ms = Number(p.args?.[0] ?? 1000);
-        div.style.opacity = "0";
-        setTimeout(() => {
-          div.style.transition = `opacity ${ms}ms ease`;
-          div.style.opacity = "1";
-        }, 20);
-        console.log("[cueText] prestate fadein", { uid: parsed.cueUid, ms });
-      }
-      
-      else if (p.name === "ghostClickable") {
-        ghostClickableMs = Number(p.args?.[0] ?? 500);
-        isGhostClickable = true;
-        textStartBlocked = true;
-        
-        div.style.opacity = "0";
-        div.style.transition = "opacity 0ms";
-        div.style.pointerEvents = "auto";
-        div.style.cursor = "pointer";
-        
-        console.log("[cueText] prestate ghostClickable", { uid: parsed.cueUid, ms: ghostClickableMs });
-      }
+    if (!prestateOk || token.cancel) {
+      try { initialDiv.remove(); } catch {}
+      window.activeCueTexts.delete(parsed.cueUid);
+      console.groupEnd();
+      return;
     }
-    // Handle string-style prestate
-    else if (typeof p === "string") {
-      const s = p.toLowerCase().trim();
-
-      if (s === "hide") {
-        div.style.opacity = "0";
-      }
-      else if (s === "ghost") {
-        div.style.opacity = "0.3";
-      }
-      else if (s.startsWith("fadein(")) {
-        const ms = parseInt(s.match(/\((\d+)\)/)?.[1] ?? "500");
-        div.style.opacity = "0";
-        setTimeout(() => {
-          div.style.transition = `opacity ${ms}ms ease`;
-          div.style.opacity = "1";
-        }, 20);
-      }
-      else if (s.startsWith("ghostclickable(")) {
-        ghostClickableMs = parseInt(s.match(/\((\d+)\)/)?.[1] ?? "500");
-        isGhostClickable = true;
-        textStartBlocked = true;
-        
-        div.style.opacity = "0";
-        div.style.transition = "opacity 0ms";
-        div.style.pointerEvents = "auto";
-        div.style.cursor = "pointer";
-        
-        console.log("[cueText] prestate ghostClickable (string)", { uid: parsed.cueUid, ms: ghostClickableMs });
-      }
-    }
-
+    
+    // Remove initial div (will be replaced by sequence)
+    try { initialDiv.remove(); } catch {}
+    
     // -------------------------------------------------
-    // ghostClickable: fade to ghost after tdelay, wait for click
+    // Layer registry for tracking active layers
     // -------------------------------------------------
-    if (isGhostClickable) {
-      // Handle tdelay first (wait before showing ghost)
-      if (parsed.tdelay && parsed.tdelay > 0) {
-        console.log(`[cueText] ⏳ ghostClickable tdelay=${parsed.tdelay}s before ghost`);
-        await rafWait(parsed.tdelay * 1000, token);
-        if (token.cancel) {
-          div.remove();
-          window.activeCueTexts.delete(parsed.cueUid);
-          console.groupEnd();
-          return;
-        }
-      }
-      
-      // Fade to ghost opacity
-      div.style.transition = `opacity ${ghostClickableMs}ms ease`;
-      void div.offsetHeight; // force reflow
-      div.style.opacity = "0.3";
-      
-      console.log("[cueText] ghostClickable → waiting for click", parsed.cueUid);
-      
-      // Wait for click to start
-      await new Promise((resolve) => {
-        const clickToStart = () => {
-          console.log("[cueText] ghostClickable CLICKED → starting", parsed.cueUid);
-          div.removeEventListener("click", clickToStart);
-          textStartBlocked = false;
-          
-          // Fade to full opacity
-          div.style.transition = "opacity 400ms ease";
-          void div.offsetHeight;
-          div.style.opacity = "1";
-          
-          // NOW add the click-to-cancel handler for subsequent clicks
-          div.addEventListener("click", onClickCancel);
-          
-          resolve();
-        };
-        
-        // Also resolve if canceled
-        const checkCancel = () => {
-          if (token.cancel) {
-            div.removeEventListener("click", clickToStart);
-            resolve();
-          } else {
-            requestAnimationFrame(checkCancel);
-          }
-        };
-        
-        div.addEventListener("click", clickToStart);
-        checkCancel();
-      });
-      
-      if (token.cancel) {
-        div.remove();
-        window.activeCueTexts.delete(parsed.cueUid);
-        console.groupEnd();
-        return;
-      }
-    }
+    const layerRegistry = new Set();
+    
     // -------------------------------------------------
-    // Regular tdelay handling (non-ghostClickable)
-    // -------------------------------------------------
-    else if (parsed.tdelay && parsed.tdelay > 0) {
-      console.log(
-        `[cueText] ⏳ tdelay=${parsed.tdelay}s before showing text uid=${parsed.cueUid}`
-      );
-
-      await rafWait(parsed.tdelay * 1000, token);
-
-      if (token.cancel) {
-        console.log("[cueText] canceled during tdelay, aborting.");
-        try {
-          div.removeEventListener("click", onClickCancel);
-        } catch {}
-        try {
-          div.remove();
-        } catch {}
-        window.activeCueTexts.delete(parsed.cueUid);
-        console.groupEnd();
-        return;
-      }
-    }
-
-    // -------------------------------------------------
-    // 4) Transition logic
+    // Play sequence function
     // -------------------------------------------------
     async function playSequenceOnce() {
-
-      let currentLayer = null;
-      let hasCurrent = false;
-
       for (const unit of units) {
-        if (token.cancel) return;
-        const durSec =
-          unit.dur ??
-          (2 + Math.random() * (2 - 2));    // simplified (same behaviour)
-        const gapSec =
-          unit.gap ??
-          (0 + Math.random() * (0 - 0));    // simplified (same behaviour)
-
-        const durMs  = durSec * 1000;
-        const fadeMs = clamp(parsed.fadeTimeBase != null
-          ? parsed.fadeTimeBase
-          : (parsed.fadePercent || 0.25) * durMs,
-          20, durMs * 0.5);
-
-        const params = {
-          uid: parsed.cueUid,
-          fadeMs, durMs, gapForUnit: gapSec,
-          yslots, yoffset,
-          yslotmode, offsetX: parsed.offsetX, offsetY: parsed.offsetY
-        };
-
-        if (!hasCurrent || !currentLayer) {
-          // first line
-          currentLayer = div;
-          currentLayer.textContent = unit.text;
-          currentLayer.style.transition = "none";
-          currentLayer.style.opacity = 0;
-          currentLayer.offsetHeight;
-          currentLayer.style.transition = `opacity ${fadeMs}ms ease`;
-          currentLayer.style.opacity = 1;
-          await rafWait(fadeMs + durMs, token);
-          if (token.cancel) return;
-          hasCurrent = true;
-          continue;
-        }
-
-        // CROSS?
-        if (parsed.rawParams.cross == 1) {
-          const result = await transitionCross({
-            oldLayer: currentLayer,
-            newText: unit.text,
-            params: {...params},
-            slotState,
-            layers: { onClickCancel, positionBase },
-            token
-          });
-          if (result.canceled) return;
-          currentLayer = result.layer;
-          continue;
-        }
-
-        // NON-CROSS
-        const nonCrossRes = await transitionNonCross({
-          layer: currentLayer,
-          newText: unit.text,
-          params: {...params},
-          slotState,
-          layers: { onClickCancel, positionBase },
-          token
+        if (token.cancel) break;
+        
+        // Compute timing
+        const durMs = (unit.dur ?? parsed.dur) * 1000;
+        // Fade-in: minimum 150ms, up to 70% of duration
+        const fadeMs = clamp(parsed.fadePercent * durMs, 150, durMs * 0.7);
+        
+        // Get next slot
+        const nextSlot = computeNextSlot(slotState, parsed.yslots, parsed.yslotmode);
+        
+        // Place text with automatic time-based eviction
+        placeTextInSlot({
+          text: unit.text,
+          slotIndex: nextSlot,
+          timing: {
+            durMs,
+            fadeMs,
+            overlap: parsed.overlap,
+            yslots: parsed.yslots
+          },
+          position: {
+            uid: parsed.cueUid,
+            yslots: parsed.yslots,
+            yoffset: parsed.yoffset,
+            offsetX: parsed.offsetX,
+            offsetY: parsed.offsetY,
+            style: parsed.style
+          },
+          anchorBox,
+          layerRegistry,
+          onClickHandler: onClickTogglePause
         });
-        if (nonCrossRes.canceled) return;
-        currentLayer = nonCrossRes.layer;
+        
+        // Wait for duration (respecting pause)
+        await waitIfPaused(token);
+        await rafWait(durMs, token);
       }
     }
-
+    
     // -------------------------------------------------
-    // 5) Playback loop
+    // Main playback loop
     // -------------------------------------------------
     if (parsed.order === "rnd" || parsed.infinite) {
       while (!token.cancel) {
@@ -686,54 +808,30 @@ if (
         await playSequenceOnce();
       }
     }
-
-
-
-
-// DEBUG: see what overlays are still in DOM before cleanup:
-const leftovers = [...document.querySelectorAll(`.cue-text-overlay[data-uid="${CSS.escape(parsed.cueUid)}"]`)]
-  .map(el => ({
-    text: el.textContent.trim(),
-    opacity: el.style.opacity,
-    display: el.style.display,
-    removed: el._oscillaRemoved
-  }));
-
-console.log("[cueText] PRE-CLEANUP left layers:", leftovers.length, leftovers);
-
-
-
-// -------------------------------------------------
-// 6) Cleanup — remove ALL layers with this UID
-// -------------------------------------------------
-console.log("[cueText] FINAL CLEANUP for UID:", parsed.cueUid);
-
-document.querySelectorAll(
-  `.cue-text-overlay[data-uid="${CSS.escape(parsed.cueUid)}"]`
-).forEach(el => {
-  el._oscillaRemoved = true; // track state so we can see
-  el.style.transition = "opacity 150ms ease";
-  el.style.opacity = 0;
-
-  setTimeout(() => {
-    try {
-      el.remove();
-    } catch {}
-  }, 180);
-
-setTimeout(() => {
-  const stillThere = document.querySelectorAll(`.cue-text-overlay[data-uid="${CSS.escape(parsed.cueUid)}"]`);
-  console.log("[cueText] POST-CLEANUP still in DOM?", stillThere.length, stillThere);
-}, 300);
-
-});
-
-
-
-window.activeCueTexts.delete(parsed.cueUid);
-console.groupEnd();
-
-
+    
+    // -------------------------------------------------
+    // Final cleanup
+    // -------------------------------------------------
+    console.log("[cueText] Final cleanup for UID:", parsed.cueUid);
+    
+    evictAllLayers(layerRegistry, 150);
+    
+    // Defensive: clean up any stray layers
+    setTimeout(() => {
+      document.querySelectorAll(
+        `.cue-text-overlay[data-uid="${CSS.escape(parsed.cueUid)}"]`
+      ).forEach(el => {
+        el.style.transition = "opacity 100ms ease";
+        el.style.opacity = 0;
+        setTimeout(() => {
+          try { el.remove(); } catch {}
+        }, 150);
+      });
+    }, 200);
+    
+    window.activeCueTexts.delete(parsed.cueUid);
+    console.groupEnd();
+    
   } catch (err) {
     console.error("[cueText] FATAL:", err);
     console.groupEnd?.();
@@ -742,14 +840,31 @@ console.groupEnd();
 
 
 /* ------------------------------------------------------------------------
-   8) Stop all overlays
+   9) Stop All Overlays
 -------------------------------------------------------------------------*/
+
 export function stopAllCueTexts() {
   if (!window.activeCueTexts) return;
+  
   for (const [uid, token] of window.activeCueTexts.entries()) {
     if (!token.persist) {
       token.cancel = true;
-      try { token.div?.remove(); } catch {}
+      
+      // Clean up all layers with this UID
+      document.querySelectorAll(
+        `.cue-text-overlay[data-uid="${CSS.escape(uid)}"]`
+      ).forEach(el => {
+        // Clear any pending timeouts
+        if (el._fadeTimeout) clearTimeout(el._fadeTimeout);
+        if (el._removeTimeout) clearTimeout(el._removeTimeout);
+        
+        el.style.transition = "opacity 100ms ease";
+        el.style.opacity = 0;
+        setTimeout(() => {
+          try { el.remove(); } catch {}
+        }, 150);
+      });
+      
       window.activeCueTexts.delete(uid);
     }
   }
