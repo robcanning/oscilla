@@ -15,9 +15,12 @@ window.resetCueEdgeTracking = function () {
     //  window.navRepeatMap = new Map();
 };
 
+import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 
 export function handleNavCue(ast) {
-
+    
+    destroyAllHitLabels();
+    
     // ------------------------------------------------------------
     // Extended debug logger
     // ------------------------------------------------------------

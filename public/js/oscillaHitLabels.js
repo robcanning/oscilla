@@ -1,19 +1,19 @@
 // oscillaHitLabels.js
 // ============================================================
 // Hit-circles for animation groups (rotate, scale, o2p, etc).
-// â€¢ Always clickable HTML overlays
-// â€¢ Anchored to path-start OR object midpoint
-// â€¢ Updates every frame using CTM / bbox
-// â€¢ Mirrors SVG opacity (ghost / fade / hidden)
-// â€¢ Supports fixed-size dots AND size-following rings
-// â€¢ LARGE invisible hit area + small visible marker
+// • Always clickable HTML overlays
+// • Anchored to path-start OR object midpoint
+// • Updates every frame using CTM / bbox
+// • Mirrors SVG opacity (ghost / fade / hidden)
+// • Supports fixed-size dots AND size-following rings
+// • LARGE invisible hit area + small visible marker
 // ============================================================
 
 window._oscillaHitLabels = window._oscillaHitLabels || [];
 window.oscillaShowHitLabels = true;
 
 // ------------------------------------------------------------
-// SVG local â†’ screen coords using CTM
+// SVG local → screen coords using CTM
 // ------------------------------------------------------------
 function localToScreen(el, x, y) {
     const svg = el.ownerSVGElement;
@@ -31,7 +31,7 @@ function localToScreen(el, x, y) {
 }
 
 // ------------------------------------------------------------
-// Flatten shape â†’ path start
+// Flatten shape → path start
 // ------------------------------------------------------------
 function flattenShapeStart(shape) {
     if (!shape) return null;
@@ -202,6 +202,9 @@ export function createHitLabel(groupEl, kind, uid, opts = {}) {
         zIndex: 2147483646
     });
 
+    hit.classList.add("oscilla-hit");
+    hit.dataset.oscillaHit = "1";
+
     // Track click timing for single vs double click detection
     let lastClickTime = 0;
     let clickTimeout = null;
@@ -228,11 +231,15 @@ export function createHitLabel(groupEl, kind, uid, opts = {}) {
             // Update visual color
             updateHitCircleColor(record);
             
-            // Dispatch OSC toggle event (separate from play/pause)
+            // ✅ FIX: Include UID in event so only matching animation responds
             groupEl.dispatchEvent(
                 new CustomEvent("oscilla-osc-toggle", {
                     bubbles: true,
-                    detail: { kind, oscEnabled: record.oscMode }
+                    detail: { 
+                        kind, 
+                        uid,      
+                        oscEnabled: record.oscMode 
+                    }
                 })
             );
 
@@ -245,7 +252,7 @@ export function createHitLabel(groupEl, kind, uid, opts = {}) {
                 groupEl.dispatchEvent(
                     new CustomEvent("oscilla-hit", {
                         bubbles: true,
-                        detail: { kind }
+                        detail: { kind, uid }  // ← Also include UID for consistency
                     })
                 );
 
@@ -304,10 +311,8 @@ export function updateHitCircle(rec) {
     let pos = null;
     switch (anchorMode) {
         case "object":
-            // follow actual transformed element on screen
             pos = computeBBoxCenterScreen(groupEl);
             break;
-
         case "pathMidPoint":
             pos = computePathAnchorScreen(groupEl, 0.5);
             break;
@@ -329,7 +334,6 @@ export function updateHitCircle(rec) {
     const OSC_COLOR = "#ffaa00";  // gold/orange for OSC enabled
 
     if (sizeMode === "follow") {
-        // bbox-following outline
         const box = groupEl.getBoundingClientRect();
         const r = Math.max(box.width, box.height) / 2 + 6;
         const size = r * 2;
@@ -339,7 +343,6 @@ export function updateHitCircle(rec) {
         div.style.background = "transparent";
 
         if (oscMode) {
-            // Double ring: inner original color, outer gold
             div.style.border = `2px solid ${color}`;
             div.style.boxShadow = `0 0 0 4px ${OSC_COLOR}, 0 0 12px ${OSC_COLOR}`;
         } else {
@@ -350,8 +353,6 @@ export function updateHitCircle(rec) {
         div.style.left = `${pos.x - size / 2}px`;
         div.style.top = `${pos.y - size / 2}px`;
     }
-
-    /* ---- fixed outline rings (no fill) ---- */
     else if (
         sizeMode === "ring40" ||
         sizeMode === "scale40" ||
@@ -359,17 +360,15 @@ export function updateHitCircle(rec) {
     ) {
         const size = RING_SIZE;
 
-        // override colour if desired
         let ringColor = color;
-        if (sizeMode === "scale40") ringColor = "#33ccff";   // scale colour
-        if (sizeMode === "rotate40") ringColor = "#ff9933"; // rotate colour
+        if (sizeMode === "scale40") ringColor = "#33ccff";
+        if (sizeMode === "rotate40") ringColor = "#ff9933";
 
         div.style.width = `${size}px`;
         div.style.height = `${size}px`;
         div.style.background = "transparent";
 
         if (oscMode) {
-            // Double ring: inner original/type color, outer gold
             div.style.border = `2px solid ${ringColor}`;
             div.style.boxShadow = `0 0 0 4px ${OSC_COLOR}, 0 0 12px ${OSC_COLOR}`;
         } else {
@@ -380,15 +379,12 @@ export function updateHitCircle(rec) {
         div.style.left = `${pos.x - size / 2}px`;
         div.style.top = `${pos.y - size / 2}px`;
     }
-
-    /* ---- default solid dot ---- */
     else {
         div.style.width = "14px";
         div.style.height = "14px";
         div.style.border = "none";
 
         if (oscMode) {
-            // Double ring effect on dot: inner dot color, outer gold ring
             div.style.background = color;
             div.style.boxShadow = `0 0 0 3px ${OSC_COLOR}, 0 0 10px ${OSC_COLOR}`;
         } else {
@@ -400,8 +396,6 @@ export function updateHitCircle(rec) {
         div.style.top = `${pos.y - 7}px`;
     }
 
-
-    // Invisible hit area (always centered, fixed size)
     hit.style.left = `${pos.x}px`;
     hit.style.top = `${pos.y}px`;
 }
@@ -422,17 +416,10 @@ export function updateHitCircleColor(rec) {
     const { div, color, sizeMode, oscMode } = rec;
     if (!div) return;
 
-    // OSC mode uses gold/orange for outer ring
-    const OSC_COLOR = "#ffaa00";  // gold/orange for OSC enabled
-    
-    // Double ring effect when OSC enabled:
-    // - Inner ring: original color
-    // - Outer ring: OSC gold color
-    // Using box-shadow to create concentric rings
+    const OSC_COLOR = "#ffaa00";
 
     if (sizeMode === "follow") {
         if (oscMode) {
-            // Double ring: inner original color, outer gold
             div.style.border = `2px solid ${color}`;
             div.style.boxShadow = `0 0 0 4px ${OSC_COLOR}, 0 0 12px ${OSC_COLOR}`;
         } else {
@@ -446,11 +433,9 @@ export function updateHitCircleColor(rec) {
         sizeMode === "rotate40"
     ) {
         if (oscMode) {
-            // Double ring: inner original color, outer gold
             div.style.border = `2px solid ${color}`;
             div.style.boxShadow = `0 0 0 4px ${OSC_COLOR}, 0 0 12px ${OSC_COLOR}`;
         } else {
-            // Restore original ring color based on sizeMode
             let ringColor = color;
             if (sizeMode === "scale40") ringColor = "#33ccff";
             if (sizeMode === "rotate40") ringColor = "#ff9933";
@@ -459,9 +444,7 @@ export function updateHitCircleColor(rec) {
         }
     }
     else {
-        // solid dot
         if (oscMode) {
-            // Double ring effect on dot: inner dot color, outer gold ring
             div.style.background = color;
             div.style.boxShadow = `0 0 0 3px ${OSC_COLOR}, 0 0 10px ${OSC_COLOR}`;
         } else {
@@ -475,7 +458,6 @@ export function updateHitCircleColor(rec) {
 
 // ------------------------------------------------------------
 // SET OSC MODE FOR A HIT LABEL BY UID
-// Called from animation shared code when double-click changes OSC state
 // ------------------------------------------------------------
 export function setHitLabelOscMode(uid, oscEnabled) {
     const rec = window._oscillaHitLabels.find(r => r.uid === uid);
@@ -498,4 +480,26 @@ export function toggleHitLabels() {
         rec.hit.style.pointerEvents = show ? "auto" : "none";
         rec.div.style.opacity = show ? rec.div.style.opacity : "0";
     });
+}
+
+// ------------------------------------------------------------
+// DESTROY ALL HIT LABELS
+// ------------------------------------------------------------
+export function destroyAllHitLabels(reason = "") {
+    console.log("[hitLabel] 🧹 DESTROY ALL", reason);
+
+    document
+        .querySelectorAll("[data-oscilla-hit], .oscilla-hit")
+        .forEach(el => {
+            console.log("[hitLabel] removing DOM node", el);
+            el.remove();
+        });
+
+    if (window._oscillaHitLabels) {
+        for (const rec of window._oscillaHitLabels) {
+            rec.div?.remove();
+            rec.hit?.remove();
+        }
+        window._oscillaHitLabels.length = 0;
+    }
 }

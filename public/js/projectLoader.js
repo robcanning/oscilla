@@ -7,10 +7,13 @@
 import { initializeSVG } from "./app.js";
 import { initializeObserver } from "./oscillaObserver.js";
 import { setSpeed, applyDarkMode, toggleSplashScreen, hideSplashScreen } from "./transport.js";
+import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 
 
 export function cleanupProjectOverlays() {
   console.log("[Cleanup] Removing overlays, videos, audio, metronomes, stopwatches, cue buttons…");
+
+  destroyAllHitLabels("project-load");
 
   // --- Metronomes
   document.querySelectorAll(".cue-metronome").forEach(el => el.remove());
@@ -79,6 +82,11 @@ window.applyPreferences = function applyPreferences(prefs) {
 export async function loadProject(projectName, options = {}) {
   try {
 
+        console.log("[Project] 🔁 hard cleanup before mode switch");
+
+    destroyAllHitLabels("project-load / mode-switch");
+
+
     console.log(`\n[loadProject] 🚀 Loading project: ${projectName}`);
     const { resetOnLoad = false } = options;
 
@@ -144,8 +152,6 @@ export async function loadProject(projectName, options = {}) {
     const prefs = await loadPreferences(window.projectBase);
 
     applyPreferences(prefs);
-
-
 
     // ✅ Make available to Preferences dialog and runtime
     window.currentProjectPrefs = prefs;

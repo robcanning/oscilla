@@ -59,6 +59,7 @@ import { stopAllCueTexts } from "./oscillaText.js";
 
 // import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
 
+import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 
 
 
@@ -1075,6 +1076,9 @@ window.returnToScrollingScore = function returnToScrollingScore() {
 
   console.log("[cuePage] Returning to scrolling score.");
   stopAllCueTexts();
+  
+  destroyAllHitLabels()
+
 
   const container = document.getElementById("singlePage-container");
   const content = document.getElementById("singlePage-content");
@@ -1880,6 +1884,18 @@ window.pendingCueStarts ??= new Map();
 //   • If ghostClickable && delay > 0  → WAIT, THEN FADE, STILL DO NOT AUTOSTART
 //   • Only start animation when cfg._startBlocked === false
 // ============================================================================
+// ============================================================================
+// UPDATED scheduleCueStart — supports ghostClickable(playhead) mode
+// ============================================================================
+//
+// Replace your scheduleCueStart in oscillaCueDispatcher.js with this version.
+//
+// CHANGES:
+// - For ghostClickable(playhead), skip the timed fade entirely
+// - Element stays invisible until playhead intersection triggers armGhostClickable()
+//
+// ============================================================================
+
 window.pendingCueStarts ??= new Map();
 
 export function scheduleCueStart(cfg, el, startFn, uid) {
@@ -1889,6 +1905,8 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
         uid,
         delay,
         ghostClickable: cfg._ghostClickable,
+        ghostPlayheadMode: cfg._ghostPlayheadMode,
+        ghostDelayMs: cfg._ghostDelayMs,
         blocked: cfg._startBlocked,
         el
     });
@@ -1898,6 +1916,41 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
         const old = window.pendingCueStarts.get(uid);
         clearTimeout(old.timeoutId);
         window.pendingCueStarts.delete(uid);
+    }
+
+    // ========================================================================
+    // GHOSTCLICKABLE(PLAYHEAD) MODE - Skip all timed fades
+    // Element stays invisible until playhead intersection
+    // ========================================================================
+    if (cfg._ghostClickable && cfg._ghostPlayheadMode) {
+        console.log("[startScheduler] ghostClickable(playhead) → staying invisible, waiting for playhead", { uid });
+        // Don't schedule anything - armGhostClickable() will be called by playhead intersection
+        return;
+    }
+
+    // ========================================================================
+    // GHOSTCLICKABLE WITH DELAY - Use _ghostDelayMs for arm timing
+    // ========================================================================
+    if (cfg._ghostClickable && cfg._ghostDelayMs > 0) {
+        console.log(`[startScheduler] ghostClickable timed → arming in ${cfg._ghostDelayMs}ms`, { uid });
+        
+        const timeoutId = setTimeout(() => {
+            console.log("[startScheduler] 🔥 ghostClickable delay done → arming", { uid });
+            window.pendingCueStarts.delete(uid);
+            
+            if (typeof cfg._applyPrestateOnStart === "function") {
+                cfg._applyPrestateOnStart();
+            }
+        }, cfg._ghostDelayMs);
+        
+        window.pendingCueStarts.set(uid, {
+            timeoutId,
+            cfg,
+            el,
+            startFn,
+            createdAt: performance.now(),
+        });
+        return;
     }
 
     // ========================================================================

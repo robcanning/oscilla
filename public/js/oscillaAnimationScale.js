@@ -3,37 +3,10 @@
 import { registerAnimation } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
 import { createHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
+import { applyPrestateBeforeStart, applyPrestateOnStart, ensureAnimWrapper, 
+    armGhostClickable, needsArming, installOscToggleHandler} from "./oscillaAnimationShared.js";
 
-import {
-    applyPrestateBeforeStart,
-    applyPrestateOnStart
-} from "./oscillaAnimationShared.js";
 
-// ============================================================
-// OSC send helper for SCALE
-// ============================================================
-function sendOSCScale(el, sx, sy) {
-    if (!window.socket) return;
-
-    const uid = el.id || el.dataset.uid || null;
-    const avg = (Number(sx) + Number(sy)) / 2;
-
-    const msg = {
-        type: "osc_scale",
-        uid,
-        sx: Number(sx),
-        sy: Number(sy),
-        avg,
-        timestamp: Date.now()
-    };
-
-    try {
-        window.socket.send(JSON.stringify(msg));
-        console.log("[scale][osc]:", msg);
-    } catch (e) {
-        console.warn("[scale][osc] send failed:", e);
-    }
-}
 
 // ============================================================
 // Pattern Generators (Pseq, Prand, Pxrand, Pshuf) â€” cloned from rotate.js
@@ -449,7 +422,7 @@ export function handleScaleSequence(el, cfg) {
             // Read OSC mode from cfg (reactive to double-click changes)
             const currentOscMode = cfg.osc ?? oscMode;
             if (currentOscMode === 1 || currentOscMode === 2) {
-                sendOSCScale(el, tgtX, tgtY);
+                sendOSCScale(cfg, el, tgtX, tgtY);
             }
 
             stepIndexAdvance();
@@ -470,18 +443,18 @@ export function handleScaleSequence(el, cfg) {
             easing: ease,
             update: () => {
                 el.style.transform = `scale(${driver.sx}, ${driver.sy})`;
-                
+
                 // Read OSC mode from cfg (reactive to double-click changes)
                 const currentOscMode = cfg.osc ?? oscMode;
                 if (currentOscMode === 1) {
-                    sendOSCScale(el, driver.sx, driver.sy);
+                    sendOSCScale(cfg, el, driver.sx, driver.sy);
                 }
             },
             complete: () => {
                 // Read OSC mode from cfg (reactive to double-click changes)
                 const currentOscMode = cfg.osc ?? oscMode;
                 if (currentOscMode === 2) {
-                    sendOSCScale(el, driver.sx, driver.sy);
+                    sendOSCScale(cfg, el, driver.sx, driver.sy);
                 }
                 stepIndexAdvance();
 
@@ -537,7 +510,10 @@ function handleScaleContinuous(el, cfg) {
 
     // Stop previous
     if (el._oscillaScaleAnim) el._oscillaScaleAnim.pause?.();
-    applySvgPivot(el);
+
+
+    const animEl = ensureAnimWrapper(el);
+    applySvgPivot(animEl);
 
     const ms = dur * 1000;
 
@@ -545,13 +521,13 @@ function handleScaleContinuous(el, cfg) {
     const anim = anime.timeline({ loop: loop === 0 ? true : loop });
 
     anim.add({
-        targets: el,
+        targets: animEl,
         duration: ms,
         easing: ease,
         scaleX: useX[1],
         scaleY: useY[1]
     }).add({
-        targets: el,
+        targets: animEl,
         duration: ms,
         easing: ease,
         scaleX: useX[0],
@@ -563,8 +539,33 @@ function handleScaleContinuous(el, cfg) {
 
 }
 
+
+// ============================================================
+// OSC send helper for SCALE - MUST use cfg.uid
+// ============================================================
+function sendOSCScale(cfg, el, sx, sy) {
+    if (!window.socket || !cfg?.uid) {
+        return;
+    }
+
+    const msg = {
+        type: "osc_scale",
+        uid: cfg.uid,          // ✅ ALWAYS cfg.uid, NEVER el.id
+        sx: Number(sx),
+        sy: Number(sy),
+        avg: (Number(sx) + Number(sy)) / 2,
+        timestamp: Date.now()
+    };
+    // console.log("[scaleCue] oscmsg", msg);
+    try {
+        window.socket.send(JSON.stringify(msg));
+    } catch (e) {
+        console.warn("[scale][osc] send failed:", e);
+    }
+}
+
 // ============================================================================
-// SCALE cue handler â€” supports: tdelay, prestate(show|hide|ghost|fadein)
+// SCALE cue handler
 // ============================================================================
 export function handleScaleCue(ast, el, options = {}) {
     if (!el) return;
@@ -572,49 +573,82 @@ export function handleScaleCue(ast, el, options = {}) {
     const { fromCueTrigger = false } = options;
     const astArgs = ast?.args || [];
 
+    // -----------------------------------------------------------
+    // CHECK: Is this a playhead trigger for already-registered element?
+    // -----------------------------------------------------------
+    const existingCfg = el._oscillaCfg;
+    
+    if (fromCueTrigger && existingCfg && existingCfg._ghostClickable) {
+        if (needsArming(existingCfg)) {
+            console.log("[scaleCue] PLAYHEAD → arming ghostClickable", existingCfg.uid);
+            armGhostClickable(el, existingCfg);
+        } else {
+            console.log("[scaleCue] PLAYHEAD → already armed/running", existingCfg.uid);
+        }
+        return;
+    }
+
+    // -----------------------------------------------------------
+    // FULL SETUP (first time registration)
+    // -----------------------------------------------------------
     console.log("[scaleCue] ENTER", { el, astArgs, options });
 
     // ------------------------------------------------------------------------
-    // Parse DSL args
+    // Parse DSL args - FIXED UID EXTRACTION
     // ------------------------------------------------------------------------
     let trig = "auto";
-    let uid = el.id || ("scale_" + Math.random().toString(36).slice(2));
     let cfgStartDelay = 0;
     let prestate = "show";
+    
+    // ✅ FIX: Start with null, NEVER use el.id as default
+    let uid = null;
 
     for (const a of astArgs) {
         const key = a.key || a.type;
         const val = a.value;
 
-        if (key === "uid") uid = String(val).trim();
+        if (key === "uid") {
+            uid = String(val).trim();
+            console.log("[scaleCue] ✅ Found uid in args:", uid);
+        }
         if (key === "trig") trig = String(val).toLowerCase();
         if (key === "tdelay") cfgStartDelay = Number(val) || 0;
         if (key === "prestate") prestate = val;
     }
+    
+    // ✅ FIX: If no uid found, generate a clean random one
+    // NEVER fall back to el.id (which contains the DSL string)
+    if (!uid) {
+        uid = "scale_" + Math.random().toString(36).slice(2, 10);
+        console.log("[scaleCue] ⚠️ No uid in DSL, generated:", uid);
+    }
 
-    const shouldStartNow =
-        fromCueTrigger || trig === "auto" || trig === "playhead";
+    console.log("[scaleCue] Final uid:", uid);
+
+    const shouldStartNow = fromCueTrigger || trig === "auto" || trig === "playhead";
 
     // ------------------------------------------------------------------------
     // BASE CFG
     // ------------------------------------------------------------------------
     const baseCfg = {
-        uid,
+        uid,                    // ✅ Clean semantic uid
         trig,
         start: cfgStartDelay,
         prestate,
         astArgs,
         fromCueTrigger,
         kind: "scale",
+        osc: 0,                 // OSC off by default, toggled via hit-label
         _anim: null,
         _start: null
     };
 
-    // PRESTATE: hide / ghost / ghostClickable
-    applyPrestateBeforeStart(el, baseCfg);
+    // Ensure element receives clicks
+    el.style.pointerEvents = "all";
+    try { el.parentNode.appendChild(el); } catch (e) { }
 
     // ------------------------------------------------------------------------
-    // Extract args
+    // Extract value args
     // ------------------------------------------------------------------------
     const valuesArg = astArgs.find(o => o.key === "values" || o.type === "values");
     const xArg = astArgs.find(o => ["x", "valuesX"].includes(o.key || o.type));
@@ -630,11 +664,10 @@ export function handleScaleCue(ast, el, options = {}) {
     }
 
     // ------------------------------------------------------------------------
-    // wrapStart (with debug logging)
+    // wrapStart
     // ------------------------------------------------------------------------
     function wrapStart(cfg, rawStartFn) {
         return () => {
-
             const restoreOnly = () => {
                 applyPrestateOnStart(el, cfg);
             };
@@ -679,6 +712,16 @@ export function handleScaleCue(ast, el, options = {}) {
             pattern: v?.type === "pattern" ? v : null
         };
 
+        // ✅ Store cfg on element for future reference
+        el._oscillaCfg = cfg;
+        el.dataset.oscillaUid = cfg.uid;
+
+        // ✅ Apply prestate (handles ghostClickable registration)
+        applyPrestateBeforeStart(el, cfg);
+        
+        // ✅ Install OSC toggle handler for ALL animations
+        installOscToggleHandler(el, cfg);
+
         applyInitialScale(cfg);
 
         const rawStart = () => {
@@ -693,10 +736,8 @@ export function handleScaleCue(ast, el, options = {}) {
             anchorMode: "pathMidPoint",
             color: "lime",
             sizeMode: "scale40"
-
         });
 
-        // ðŸ”‘ THIS MAKES THINGS VISIBLE
         applyPrestateOnStart(el, cfg);
 
         if (shouldStartNow && !cfg._startBlocked) {
@@ -718,6 +759,12 @@ export function handleScaleCue(ast, el, options = {}) {
             yPattern: yArg?.value?.type === "pattern" ? yArg.value : null
         };
 
+        el._oscillaCfg = cfg;
+        el.dataset.oscillaUid = cfg.uid;
+
+        applyPrestateBeforeStart(el, cfg);
+        installOscToggleHandler(el, cfg);  // ✅ Install OSC handler
+
         applyInitialScale(cfg);
 
         const rawStart = () => {
@@ -730,7 +777,8 @@ export function handleScaleCue(ast, el, options = {}) {
 
         createHitLabel(el, "scale", cfg.uid, {
             anchorMode: "pathMidPoint",
-            color: "lime"
+            color: "lime",
+            sizeMode: "scale40"
         });
 
         applyPrestateOnStart(el, cfg);
@@ -742,12 +790,18 @@ export function handleScaleCue(ast, el, options = {}) {
     }
 
     // ------------------------------------------------------------------------
-    // CONTINUOUS
+    // CONTINUOUS (fallback)
     // ------------------------------------------------------------------------
     const cfg = {
         ...baseCfg,
         mode: "continuous"
     };
+
+    el._oscillaCfg = cfg;
+    el.dataset.oscillaUid = cfg.uid;
+
+    applyPrestateBeforeStart(el, cfg);
+    installOscToggleHandler(el, cfg);  // ✅ Install OSC handler
 
     applyInitialScale(cfg);
 
@@ -761,7 +815,8 @@ export function handleScaleCue(ast, el, options = {}) {
 
     createHitLabel(el, "scale", cfg.uid, {
         anchorMode: "pathMidPoint",
-        color: "lime"
+        color: "lime",
+        sizeMode: "scale40"
     });
 
     applyPrestateOnStart(el, cfg);

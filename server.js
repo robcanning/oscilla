@@ -455,17 +455,19 @@ wss.on('connection', (ws, req) => {
 
 
       case "osc_scale": {
-        let { uid, scaleX, scaleY } = data;
+        let { uid, sx, sy } = data;
 
         // Coerce to numeric
-        scaleX = parseFloat(scaleX);
-        scaleY = parseFloat(scaleY);
+        let scaleX = parseFloat(sx);
+        let scaleY = parseFloat(sy);
 
         // Fallbacks to avoid crash
         if (isNaN(scaleX)) scaleX = 1;
         if (isNaN(scaleY)) scaleY = 1;
 
-        console.log(`[OSC] 📏 SCALE ${uid}: X=${scaleX.toFixed(3)} Y=${scaleY.toFixed(3)}`);
+        console.log(
+          `[OSC] 📏 SCALE ${uid}: X=${scaleX.toFixed(3)} Y=${scaleY.toFixed(3)}`
+        );
 
         oscPort.send({
           address: `/oscilla/scale/${uid}`,
@@ -477,23 +479,25 @@ wss.on('connection', (ws, req) => {
         break;
       }
 
-      case "osc_obj2path": {
-        const { pathId, x, y, angle } = data;
 
-        if (!pathId) {
-          console.warn("[OSC] ⚠️ Missing pathId in osc_obj2path message.");
+      case "osc_obj2path": {
+        const { uid, x, y, angle } = data;
+
+        if (!uid) {
+          console.warn("[OSC] ⚠️ Missing uid in osc_obj2path message.");
           break;
         }
 
-        // Coerce to numeric values
         const nx = parseFloat(x) || 0;
         const ny = parseFloat(y) || 0;
         const na = parseFloat(angle) || 0;
 
-        console.log(`[OSC] 🛰 obj2path ${pathId}: x=${nx.toFixed(3)} y=${ny.toFixed(3)} a=${na.toFixed(1)}`);
+        console.log(
+          `[OSC] 🛰 obj2path ${uid}: x=${nx.toFixed(3)} y=${ny.toFixed(3)} a=${na.toFixed(1)}`
+        );
 
         oscPort.send({
-          address: `/oscilla/obj2path/${pathId}`,
+          address: `/oscilla/o2p/${uid}`,
           args: [
             { type: "f", value: nx },
             { type: "f", value: ny },
@@ -503,6 +507,7 @@ wss.on('connection', (ws, req) => {
 
         break;
       }
+
 
 
 

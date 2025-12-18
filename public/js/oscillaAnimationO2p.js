@@ -1,4 +1,4 @@
-// o2p.js â€” Clean Modern Rewrite (patched with rotate modes + logging)
+// o2p.js — Clean Modern Rewrite (patched with rotate modes + logging)
 // -----------------------------------------------------------
 // Modes:
 //   - forward
@@ -13,16 +13,20 @@
 //   - ease: single int/string or list [...]
 //   - start/end: 0..1 segment slicing
 //   - uid override
+//   - ghostClickable three-phase lifecycle (registered → armed → running)
 // -----------------------------------------------------------
 
-import { registerAnimation } from "./oscillaAnimation.js";
+import { registerAnimation, resolveAnimationUid } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
 import { createHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
 
 import {
     applyPrestateBeforeStart,
-    applyPrestateOnStart
+    applyPrestateOnStart,
+    armGhostClickable,
+    needsArming, isOscEnabled
 } from "./oscillaAnimationShared.js";
+
 
 /* ---------------------------------------------------------
  *  1. normalizeOrigin(el)
@@ -213,10 +217,6 @@ function makeTMapper(start, end) {
 }
 
 
-
-
-
-
 /* ---------------------------------------------------------
  *  MATRIX HELPERS (inserted for drift-free transforms)
  * --------------------------------------------------------*/
@@ -243,7 +243,7 @@ function makeRotationMatrix(deg) {
     };
 }
 
-// Compose m2 âˆ˜ m1 = apply m1 first, then m2
+// Compose m2 ∘ m1 = apply m1 first, then m2
 function multiplyMatrices(m2, m1) {
     return {
         a: m2.a * m1.a + m2.c * m1.b,
@@ -257,13 +257,13 @@ function multiplyMatrices(m2, m1) {
 
 
 /* ---------------------------------------------------------
- *  5. TRANSFORM WRITER â€” rotation around normalized center
+ *  5. TRANSFORM WRITER — rotation around normalized center
  * --------------------------------------------------------*/
 function applyTransform(el, point, angleDeg, cfg) {
 
     const now = performance.now();
 
-    // Human-friendly rotate modes â†’ internal numeric codes
+    // Human-friendly rotate modes → internal numeric codes
     const rotateModeLookup = {
         "none": 0,
         "aligned": 1,
@@ -271,36 +271,21 @@ function applyTransform(el, point, angleDeg, cfg) {
         "spin": 4
     };
 
-    // -----------------------------------------------------
-    // Resolve cfg.rotate to numeric mode (with diagnostics)
-    // -----------------------------------------------------
+    // Resolve cfg.rotate to numeric mode
     let mode = cfg.rotate;
 
-    // Log raw input
-    // console.log(`[ROT_MODE] raw=${cfg.rotate}`);
-
-    // If rotate is a string, map it to numeric
     if (typeof mode === "string") {
         const key = mode.toLowerCase().trim();
-        // console.log(`[ROT_MODE] received string="${key}"`);
         if (rotateModeLookup[key] !== undefined) {
-            // console.log(`[ROT_MODE] mapped to numeric=${rotateModeLookup[key]}`);
             mode = rotateModeLookup[key];
         } else {
-            // console.warn(`[ROT_MODE] WARNING: unknown mode "${key}" â€” using fallback 0`);
             mode = 0;
         }
     }
 
-    // Fallback if it failed
     if (!Number.isFinite(mode)) {
-        // console.warn(`[ROT_MODE] WARNING: mode not numeric (${mode}) â€” using fallback 0`);
         mode = 0;
     }
-
-    // Final output for diagnostics
-    // console.log(`[ROT_MODE] final internal mode=${mode}`);
-
 
     let tx = point.x;
     let ty = point.y;
@@ -315,8 +300,6 @@ function applyTransform(el, point, angleDeg, cfg) {
 
     // base translation
     let t = `translate(${tx}, ${ty})`;
-
-    // const rotate = cfg.rotate || 0;
 
     if (!isFinite(angleDeg)) angleDeg = 0;
 
@@ -362,45 +345,41 @@ function applyTransform(el, point, angleDeg, cfg) {
                 el._o2pFreeSpin += degPerSecond * dir * dt;
                 t += ` rotate(${el._o2pFreeSpin})`;
 
-                // debug
                 if (!window._o2p_lastSpin || (now - window._o2p_lastSpin) > 800) {
-                    // console.log(
-                    //     `[o2p-spin] ${el.id || cfg.uid}: ` +
-                    //     `${(360 / secPerRev).toFixed(1)}Â°/sec  (dt=${dt.toFixed(3)}s)`
-                    // );
                     window._o2p_lastSpin = now;
                 }
             }
             break;
-
-
     }
 
     el.setAttribute("transform", t);
     el.style.transform = "";
-
-    if (!window._o2p_lastXformLog || (now - window._o2p_lastXformLog) > 1500) {
-        // console.log(`[o2p-xform] ${el.id || cfg.uid}: ${t}`);
-        window._o2p_lastXformLog = now;
-    }
 }
 
 
 /* ---------------------------------------------------------
  *  6. OSC emitter
  * --------------------------------------------------------*/
-function emitO2POsc({ uid, path, point, pathT, oscCfg }) {
-    if (!oscCfg.enabled) return;
+/* ---------------------------------------------------------
+ *  6. OSC emitter (UID-safe, live-toggle, math preserved)
+ * --------------------------------------------------------*/
 
+const O2P_OSC_THROTTLE_MS = 30;
+
+function emitO2POsc({ cfg, uid, path, point, pathT, oscMode }) {
+
+    // ---- OSC enable gate (shared logic) ----
+    if (!isOscEnabled(cfg, oscMode)) return;
+
+    // ---- Throttle (live, not frozen) ----
     const now = performance.now();
-    if (now - oscCfg.lastSent < oscCfg.throttle) return;
-    oscCfg.lastSent = now;
+    if (!cfg._oscLastSent) cfg._oscLastSent = 0;
+    if (now - cfg._oscLastSent < O2P_OSC_THROTTLE_MS) return;
+    cfg._oscLastSent = now;
 
+    // ---- Geometry (UNCHANGED) ----
     const bbox = path.getBBox();
-    if (!bbox || bbox.width === 0 || bbox.height === 0) {
-        // avoid NaNs in normalisation
-        return;
-    }
+    if (!bbox || bbox.width === 0 || bbox.height === 0) return;
 
     const normX = (point.x - bbox.x) / bbox.width;
     const normY = (point.y - bbox.y) / bbox.height;
@@ -410,27 +389,32 @@ function emitO2POsc({ uid, path, point, pathT, oscCfg }) {
     const localL = pathT * length;
     const aheadLen = Math.min(length - EPS, Math.max(0, localL + EPS));
     const ahead = path.getPointAtLength(aheadLen);
-    let angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
-    if (!isFinite(angle)) angle = 0;
 
+    let angle = Math.atan2(
+        ahead.y - point.y,
+        ahead.x - point.x
+    ) * (180 / Math.PI);
+
+    if (!Number.isFinite(angle)) angle = 0;
+
+    // ---- Transport ----
     if (!window.socket || window.socket.readyState !== WebSocket.OPEN) return;
 
-    window.socket.send(
-        JSON.stringify({
-            type: "osc_obj2path",
-            uid,
-            x: normX,
-            y: normY,
-            angle
-        })
-    );
+    window.socket.send(JSON.stringify({
+        type: "osc_obj2path",
+        uid,
+        x: normX,
+        y: normY,
+        angle,
+        timestamp: Date.now()
+    }));
 }
 
 /* ---------------------------------------------------------
- *  7. Continuous mode (forward/reverse)
+ *  7. Continuous mode (forward / reverse) — FIXED
  * --------------------------------------------------------*/
 function startContinuousO2P(el, cfg, virtual, uid) {
-    const { dur, loop, oscCfg, startPos, endPos, next, nextOn } = cfg;
+    const { dur, loop, startPos, endPos, next, nextOn, oscMode } = cfg;
 
     // normalize origin ONCE only
     if (!el._originNormalized) {
@@ -450,6 +434,9 @@ function startContinuousO2P(el, cfg, virtual, uid) {
     const cycles = loop === 0 ? true : loop;
     const durationMs = dur * 1000;
 
+    // -----------------------------------------------------
+    // Running animation registry (unchanged)
+    // -----------------------------------------------------
     if (!window.runningAnimations) window.runningAnimations = {};
     window.runningAnimations[uid] = {
         pause: () => el._o2pAnim?.pause(),
@@ -458,6 +445,12 @@ function startContinuousO2P(el, cfg, virtual, uid) {
         stop: () => el._o2pAnim?.pause(),
         wasPaused: false
     };
+
+    // -----------------------------------------------------
+    // Throttle (live, per-cfg)
+    // -----------------------------------------------------
+    const OSC_THROTTLE_MS = 30;
+    cfg._oscLastSent = 0;
 
     const anim = anime({
         targets: driver,
@@ -468,64 +461,86 @@ function startContinuousO2P(el, cfg, virtual, uid) {
         direction: "normal",
 
         update: () => {
-
-            // free-spin timing support (dt)
             const nowTime = performance.now();
-            window._o2p_dt = window._o2p_lastTime ? (nowTime - window._o2p_lastTime) / 1000 : 0.016;
+            window._o2p_dt = window._o2p_lastTime
+                ? (nowTime - window._o2p_lastTime) / 1000
+                : 0.016;
             window._o2p_lastTime = nowTime;
 
-            let phase = driver.u;  // 0..1 progression
+            const phase = driver.u;
             let globalT;
 
             const hasCustomStart = (startPos !== 0);
-            const hasCustomEnd = (endPos !== 1);
+            const hasCustomEnd   = (endPos !== 1);
 
             if (cfg.mode === "forward") {
-
-                // start-only forward â†’ orbit shift
                 if (hasCustomStart && !hasCustomEnd) {
                     globalT = (startPos + phase) % 1;
-                }
-                // segment
-                else {
+                } else {
                     globalT = tMap(phase);
                 }
             }
-
             else if (cfg.mode === "reverse") {
-
-                // start-only reverse â†’ orbit shift backward
                 if (hasCustomStart && !hasCustomEnd) {
                     globalT = (startPos - phase + 1) % 1;
-                }
-                // segment
-                else {
-                    const phaseRev = 1 - phase;
-                    globalT = tMap(phaseRev);
+                } else {
+                    globalT = tMap(1 - phase);
                 }
             }
 
-
-            // --------------------------------------
-            //   SAMPLE FROM PATH
-            // --------------------------------------
             const sample = virtual.sample(globalT);
             if (!sample) return;
 
             const { path, point, pathT } = sample;
 
+            // -------------------------------------------------
+            // Geometry (UNCHANGED)
+            // -------------------------------------------------
             const length = path.getTotalLength();
             const EPS = 0.1;
             const localL = pathT * length;
             const aheadLen = Math.min(length - EPS, Math.max(0, localL + EPS));
             const ahead = path.getPointAtLength(aheadLen);
-            let angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
-            if (!isFinite(angle)) angle = 0;
+
+            let angle = Math.atan2(
+                ahead.y - point.y,
+                ahead.x - point.x
+            ) * (180 / Math.PI);
+
+            if (!Number.isFinite(angle)) angle = 0;
 
             applyTransform(el, point, angle, cfg);
             repositionAllHitLabels();
 
-            emitO2POsc({ uid, path, point, pathT, oscCfg });
+            // -------------------------------------------------
+            // OSC EMIT (FIXED)
+            // -------------------------------------------------
+            if (
+                isOscEnabled(cfg, oscMode) &&
+                window.socket &&
+                window.socket.readyState === WebSocket.OPEN
+            ) {
+                const now = performance.now();
+                if (now - cfg._oscLastSent >= OSC_THROTTLE_MS) {
+                    cfg._oscLastSent = now;
+
+                    const bbox = path.getBBox();
+                    if (!bbox || bbox.width === 0 || bbox.height === 0) return;
+
+                    const normX = (point.x - bbox.x) / bbox.width;
+                    const normY = (point.y - bbox.y) / bbox.height;
+
+                    window.socket.send(JSON.stringify({
+                        type: "osc_obj2path",
+                        uid: cfg.uid,
+                        x: normX,
+                        y: normY,
+                        angle,
+                        t: pathT,
+                        timestamp: Date.now()
+                    }));
+                }
+            }
         },
 
         loopComplete: () => {
@@ -543,16 +558,14 @@ function startContinuousO2P(el, cfg, virtual, uid) {
 
     el._o2pAnim = anim;
     cfg._anim = anim;
-
 }
 
 
-
 /* ---------------------------------------------------------
- *  8. Alternate mode (true ping-pong)
+ *  8. Alternate mode (true ping-pong) — FIXED
  * --------------------------------------------------------*/
 function startAlternateO2P(el, cfg, virtual, uid) {
-    const { dur, loop, oscCfg, startPos, endPos, next, nextOn } = cfg;
+    const { dur, loop, startPos, endPos, next, nextOn, oscMode } = cfg;
 
     if (!el._originNormalized) {
         normalizeOrigin(el);
@@ -570,6 +583,9 @@ function startAlternateO2P(el, cfg, virtual, uid) {
     let remaining = loop === 0 ? Infinity : loop;
     let stopped = false;
 
+    // -----------------------------------------------------
+    // Running animation registry (unchanged)
+    // -----------------------------------------------------
     if (!window.runningAnimations) window.runningAnimations = {};
     window.runningAnimations[uid] = {
         pause: () => el._o2pAnim?.pause(),
@@ -578,6 +594,12 @@ function startAlternateO2P(el, cfg, virtual, uid) {
         stop: () => { stopped = true; el._o2pAnim?.pause(); },
         wasPaused: false
     };
+
+    // -----------------------------------------------------
+    // Throttle (live, per-cfg)
+    // -----------------------------------------------------
+    const OSC_THROTTLE_MS = 30;
+    cfg._oscLastSent = 0;
 
     function halfCycle(directionSign) {
         return new Promise(resolve => {
@@ -597,22 +619,15 @@ function startAlternateO2P(el, cfg, virtual, uid) {
                         : 0.016;
                     window._o2p_lastTime = nowTime;
 
-                    const phase = driver.u; // 0..1
+                    const phase = driver.u;
                     let globalT;
 
                     const hasExplicitEnd = cfg.endPos !== 1;
 
                     if (!hasExplicitEnd) {
-                        // --------------------------------------------------
-                        // TRUE CIRCULAR PING-PONG
-                        // startPos = phase origin, not segment boundary
-                        // --------------------------------------------------
                         globalT = (cfg.startPos + directionSign * phase) % 1;
                         if (globalT < 0) globalT += 1;
                     } else {
-                        // --------------------------------------------------
-                        // SEGMENT-BASED PING-PONG (legacy / explicit end)
-                        // --------------------------------------------------
                         globalT = tMap(phase);
                         if (directionSign < 0) {
                             globalT = cfg.endPos + cfg.startPos - globalT;
@@ -624,21 +639,54 @@ function startAlternateO2P(el, cfg, virtual, uid) {
 
                     const { path, point, pathT } = sample;
 
+                    // -------------------------------------------------
+                    // Geometry (UNCHANGED)
+                    // -------------------------------------------------
                     const length = path.getTotalLength();
                     const EPS = 0.1;
                     const localL = pathT * length;
                     const aheadLen = Math.min(length - EPS, Math.max(0, localL + EPS));
                     const ahead = path.getPointAtLength(aheadLen);
+
                     let angle = Math.atan2(
                         ahead.y - point.y,
                         ahead.x - point.x
                     ) * (180 / Math.PI);
-                    if (!isFinite(angle)) angle = 0;
+
+                    if (!Number.isFinite(angle)) angle = 0;
 
                     applyTransform(el, point, angle, cfg);
                     repositionAllHitLabels();
 
-                    emitO2POsc({ uid, path, point, pathT, oscCfg });
+                    // -------------------------------------------------
+                    // OSC EMIT (FIXED)
+                    // -------------------------------------------------
+                    if (
+                        isOscEnabled(cfg, oscMode) &&
+                        window.socket &&
+                        window.socket.readyState === WebSocket.OPEN
+                    ) {
+                        const now = performance.now();
+                        if (now - cfg._oscLastSent >= OSC_THROTTLE_MS) {
+                            cfg._oscLastSent = now;
+
+                            const bbox = path.getBBox();
+                            if (!bbox || bbox.width === 0 || bbox.height === 0) return;
+
+                            const normX = (point.x - bbox.x) / bbox.width;
+                            const normY = (point.y - bbox.y) / bbox.height;
+
+                            window.socket.send(JSON.stringify({
+                                type: "osc_obj2path",
+                                uid: cfg.uid,
+                                x: normX,
+                                y: normY,
+                                angle,
+                                t: pathT,
+                                timestamp: Date.now()
+                            }));
+                        }
+                    }
                 },
 
                 complete: resolve
@@ -649,7 +697,9 @@ function startAlternateO2P(el, cfg, virtual, uid) {
         });
     }
 
-
+    // -----------------------------------------------------
+    // Ping-pong loop (unchanged logic)
+    // -----------------------------------------------------
     (async () => {
         while (!stopped && remaining > 0) {
             await halfCycle(+1);
@@ -669,6 +719,7 @@ function startAlternateO2P(el, cfg, virtual, uid) {
         }
     })();
 }
+
 
 
 /* ---------------------------------------------------------
@@ -708,8 +759,7 @@ function startO2PForElement(el, cfg) {
     const virtual = new VirtualPath([p]);
     if (!virtual.totalLen) return;
 
-    const uid = cfg.uid || el.id || ("o2p_" + Math.random().toString(36).slice(2));
-    cfg.uid = uid;
+    const uid = cfg.uid  || ("o2p_" + Math.random().toString(36).slice(2));
 
     window.o2pState ??= {};
     window.o2pState[uid] = {};
@@ -726,10 +776,11 @@ function startO2PForElement(el, cfg) {
 
 /* ---------------------------------------------------------
  *  10. Cue handler: handleO2PCue
+ *      Supports three-phase ghostClickable lifecycle:
+ *        1. REGISTERED (load) - invisible, hit-label clickable
+ *        2. ARMED (playhead)  - ghost visible, waiting for click  
+ *        3. RUNNING (click)   - full opacity, animation playing
  * --------------------------------------------------------*/
-// ============================================================================
-// O2P cue handler â€” supports tdelay + prestate(show|hide|ghost|fadein)
-// ============================================================================
 export function handleO2PCue(el, args, options = {}) {
     const { fromCueTrigger = false } = options;
 
@@ -737,7 +788,26 @@ export function handleO2PCue(el, args, options = {}) {
         if (!Array.isArray(args)) args = [];
 
         // -----------------------------------------------------------
-        // BASE CFG â€” shared prestate and scheduling system
+        // CHECK: Is this a playhead trigger for already-registered element?
+        // If so, just ARM it - don't re-run full setup.
+        // -----------------------------------------------------------
+        const existingCfg = el._oscillaCfg;
+
+        if (fromCueTrigger && existingCfg && existingCfg._ghostClickable) {
+            // Element was already registered at load time
+            // Playhead intersection should just ARM it (fade to ghost)
+
+            if (needsArming(existingCfg)) {
+                console.log("[o2pCue] PLAYHEAD → arming ghostClickable", existingCfg.uid);
+                armGhostClickable(el, existingCfg);
+            } else {
+                console.log("[o2pCue] PLAYHEAD → already armed/running, skipping", existingCfg.uid);
+            }
+            return;  // Don't re-run full handler
+        }
+
+        // -----------------------------------------------------------
+        // FULL SETUP (first time registration)
         // -----------------------------------------------------------
         const cfg = {
             path: null,
@@ -756,11 +826,11 @@ export function handleO2PCue(el, args, options = {}) {
             osc: false,
 
             // --- SPATIAL PATH POSITION ---
-            startPos: 0,   // 0..1 along path
-            endPos: 1,     // 0..1 along path
+            startPos: 0,
+            endPos: 1,
 
             // --- TEMPORAL SCHEDULING ---
-            startDelay: 0, // seconds
+            startDelay: 0,
 
             // prestates (show | hide | ghost | fadein(ms) | ghostClickable(ms))
             prestate: "show",
@@ -816,11 +886,9 @@ export function handleO2PCue(el, args, options = {}) {
                 case "ease": cfg.ease = val; break;
                 case "osc": cfg.osc = val; break;
 
-                // ---- spatial ----
                 case "start": cfg.startPos = Number(val); break;
                 case "end": cfg.endPos = Number(val); break;
 
-                // ---- temporal ----
                 case "tdelay": cfg.startDelay = Number(val) || 0; break;
 
                 case "prestate": cfg.prestate = val; break;
@@ -844,23 +912,19 @@ export function handleO2PCue(el, args, options = {}) {
         cfg.startPos = Math.max(0, Math.min(1, cfg.startPos));
         cfg.endPos = Math.max(0, Math.min(1, cfg.endPos));
 
-        // mode aliases
         if (cfg.mode === "fwd") cfg.mode = "forward";
         if (cfg.mode === "rev") cfg.mode = "reverse";
         if (cfg.mode === "alt") cfg.mode = "alternate";
 
-        // uid fallback
-        if (!cfg.uid) {
-            cfg.uid = el.id || ("o2p_" + Math.random().toString(36).slice(2));
-        }
+ if (!cfg.uid) {
+    cfg.uid = "o2p_" + Math.random().toString(36).slice(2, 10);
+}
 
         console.log("[o2pCue] Parsed:", {
             uid: cfg.uid,
             path: cfg.path,
             trig: cfg.trig,
             startDelay: cfg.startDelay,
-            startPos: cfg.startPos,
-            endPos: cfg.endPos,
             prestate: cfg.prestate
         });
 
@@ -869,13 +933,19 @@ export function handleO2PCue(el, args, options = {}) {
             return;
         }
 
+        // -----------------------------------------------------------
+        // STORE CFG ON ELEMENT for future playhead triggers
+        // -----------------------------------------------------------
+        el._oscillaCfg = cfg;
+
         const shouldStartNow =
             fromCueTrigger ||
             cfg.trig === "auto" ||
             cfg.trig === "playhead";
 
         // -----------------------------------------------------------
-        // PRESTATE BEFORE START
+        // PRESTATE BEFORE START (REGISTRATION)
+        // For ghostClickable: makes element invisible, installs handlers
         // -----------------------------------------------------------
         applyPrestateBeforeStart(el, cfg);
 
@@ -891,7 +961,7 @@ export function handleO2PCue(el, args, options = {}) {
         // Real animation start function
         // -----------------------------------------------------------
         const rawStart = () => {
-            console.log("[o2pCue] â–¶ Starting O2P animation â†’", cfg.uid);
+            console.log("[o2pCue] ▶ Starting O2P animation →", cfg.uid);
             startO2PForElement(el, cfg);
         };
 
@@ -904,9 +974,8 @@ export function handleO2PCue(el, args, options = {}) {
         // Register with visibility / pause / resume system
         // -----------------------------------------------------------
         registerAnimation(el, "o2p", cfg, () => {
-
             if (cfg._ghostClickable && cfg._startBlocked) {
-                console.log("[o2pCue] start blocked â€” ghostClickable waiting for click");
+                console.log("[o2pCue] start blocked — ghostClickable waiting for click");
                 return;
             }
 
@@ -921,23 +990,22 @@ export function handleO2PCue(el, args, options = {}) {
         });
 
         // -----------------------------------------------------------
-        // AUTO-START (tdelay)
+        // AUTO-START (tdelay) - only if NOT ghostClickable
+        // For ghostClickable, playhead intersection triggers arming
         // -----------------------------------------------------------
         if (shouldStartNow) {
-            console.log("[o2pCue] auto-start requested â†’ scheduling", cfg.uid);
+            console.log("[o2pCue] auto-start requested → scheduling", cfg.uid);
 
             scheduleCueStart(cfg, el, () => {
 
                 if (cfg._ghostClickable && cfg._startBlocked) {
-                    console.log(
-                        "[o2pCue] delayed start reached â€” ghostClickable fade-in only",
-                        cfg.uid
-                    );
-
-                    cfg._applyPrestateOnStart?.();
+                    // ghostClickable: just arm (fade to ghost), don't start animation
+                    console.log("[o2pCue] delayed start reached — arming ghostClickable", cfg.uid);
+                    applyPrestateOnStart(el, cfg);
                     return;
                 }
 
+                // Normal cue: apply prestate and start animation
                 applyPrestateOnStart(el, cfg);
                 rawStart();
 
@@ -950,13 +1018,8 @@ export function handleO2PCue(el, args, options = {}) {
 }
 
 
-
-
-
-
 function positionO2PInitial(el, cfg) {
     try {
-        // ensure origin normalization (same as engine)
         if (!el._originNormalized) {
             normalizeOrigin(el);
             el._originNormalized = true;
@@ -974,17 +1037,14 @@ function positionO2PInitial(el, cfg) {
 
         const point = pathEl.getPointAtLength(localL);
 
-        // compute tangent for initial angle (same math as engine)
         const EPS = 0.1;
         const aheadLen = Math.min(length - EPS, Math.max(0, localL + EPS));
         const ahead = pathEl.getPointAtLength(aheadLen);
         let angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
         if (!isFinite(angle)) angle = 0;
 
-        // use the SAME transform writer as the main engine
         applyTransform(el, point, angle, cfg);
         repositionAllHitLabels();
-
 
     } catch (err) {
         console.error("[o2p] Error in positionO2PInitial:", err);

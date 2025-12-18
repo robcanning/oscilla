@@ -77,17 +77,28 @@ if (/iPad|iPhone|Android|Mobile|Tablet/i.test(navigator.userAgent)) {
 // ===========================
 // SVG Initialization
 // ===========================
-export const initializeSVG = async (svgElement) => {
-  if (!svgElement) {
-    console.warn("[initializeSVG] No SVG element provided");
-    return;
-  }
+import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 
-  // Expand propagate(...) sequences before anything else
+export const initializeSVG = async (svgElement) => {
+
+
   await settleDomForPropagate();
+  console.log("[initializeSVG] 🔧 propagate() after FULL DOM settle");
   propagate(svgElement);
 
-  const isPageOverlay = svgElement.id === "pageSVG" || svgElement.classList.contains("oscilla-page");
+  const isPageOverlay =
+    svgElement.id === "pageSVG" ||
+    svgElement.classList.contains("oscilla-page");
+
+  //  HARD RESET of HTML overlays when mode changes
+  if (window.isPageOverlay !== undefined &&
+    window.isPageOverlay !== isPageOverlay) {
+
+    destroyAllHitLabels(
+      isPageOverlay ? "enter-page-mode" : "enter-scroll-mode"
+    );
+  }
+
   window.isPageOverlay = isPageOverlay;
 
   // ----- PAGE OVERLAY MODE -----
@@ -205,6 +216,10 @@ async function settleDomForPropagate() {
   await new Promise((r) => setTimeout(r, 0));
 }
 
+  // propagate(svgElement);
+
+
+
 // ===========================
 // Main DOMContentLoaded Handler
 // ===========================
@@ -215,7 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeDarkModeToggle();
   populateProjectMenu();
   setupStopwatchFullscreenToggle();
-
   // Template download button
   document.getElementById("download-template-btn")?.addEventListener("click", () => {
     const link = document.createElement("a");
