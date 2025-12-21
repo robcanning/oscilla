@@ -34,6 +34,9 @@ import {
  *     NOTE: intended to be called ONCE per element.
  * --------------------------------------------------------*/
 function normalizeOrigin(el) {
+
+
+
     function flatten(node) {
         try {
             if (typeof SVGPathCommander !== "undefined") {
@@ -115,6 +118,8 @@ function normalizeOrigin(el) {
     }
 
     shift(el, cx, cy);
+        el._originNormalized = true;
+
 }
 
 
@@ -293,10 +298,10 @@ function applyTransform(el, point, angleDeg, cfg) {
     const tag = el.tagName.toLowerCase();
 
     // compensate for origin normalization for paths / groups
-    if (tag === "path" || tag === "g") {
-        tx -= (el._o2pOrigin?.x || 0);
-        ty -= (el._o2pOrigin?.y || 0);
-    }
+if ((tag === "path" || tag === "g") && el._o2pOrigin) {
+    tx -= el._o2pOrigin.x;
+    ty -= el._o2pOrigin.y;
+}
 
     // base translation
     let t = `translate(${tx}, ${ty})`;

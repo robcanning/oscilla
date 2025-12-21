@@ -1063,7 +1063,7 @@ body.inverted #stopwatch {
   color: var(--btn-fg, #eee);
   border: 1px solid rgba(255,255,255,0.18);
   border-radius: 6px;
-  padding: 0px 0px;
+  padding: 5px 5px 5px 5px;
   font-family: system-ui, sans-serif;
   font-weight: 600;
   font-size: 14px;
@@ -1298,7 +1298,7 @@ body.inverted #stopwatch {
   font-weight: bold;
   text-align: center;
   border-radius: 10px;
-  z-index: 9999;
+  z-index: 99999;
 
   /* Start hidden */
   display: none;
@@ -1308,7 +1308,7 @@ body.inverted #stopwatch {
   justify-content: center;
   align-items: center;
   pointer-events: auto;
-  padding: 30px;
+  padding: 10px;
 }
 
 

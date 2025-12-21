@@ -44,7 +44,7 @@ import { parseCueToAST } from "./oscillaParser.js";
 import { handleStopwatchCue } from "./oscillaTimers.js";
 import { handlePauseCue } from "./oscillaPause.js";
 import { handleNavCue } from "./oscillaNav.js";
-import { handleFadeCueFromAST } from "./oscillaFade.js";
+import { handleFadeCueFromAST, primeFadeTargetFromAST } from "./oscillaFade.js";
 import { handleVideoCueFromAST } from "./oscillaVideo.js";
 import { buildCueButtonsIn } from "./oscillaButton.js";
 import { handleMetronomeCue } from "./oscillaMetro.js";
@@ -56,6 +56,7 @@ import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues } fro
 import { propagate } from "./oscillaPropagate.js";
 import { handleSpeedCue, handleSpeedRamp } from "./oscillaSpeed.js";
 import { stopAllCueTexts } from "./oscillaText.js";
+import { handleOscCue } from "./oscillaOSC.js";
 
 // import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
 
@@ -267,6 +268,10 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
     case "cueScale": return handleScaleCue(ast, cueElement, { fromCueTrigger: true });
     case "cueO2P": return handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
 
+    // OSC
+    case "cueOsc":
+      return handleOscCue(ast, cueElement, { fromCueTrigger: true });
+
     // Page navigation — ALWAYS retrigger
     case "cuePage":
     case "page":
@@ -276,12 +281,13 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
     case "cueStopwatch": return handleStopwatchCue(ast, cueElement);
     case "cueVideo": return handleVideoCueFromAST(ast, cueElement);
 
-case "cueText":
-case "text":
-  import("./oscillaText.js")
-    .then(mod => mod.handleCueTextFromAST(ast, cueElement))
-    .catch(err => console.error("[CueDSL] Failed to load text.js module:", err));
-  return;
+    case "cueText":
+    case "text":
+      import("./oscillaText.js")
+        .then(mod => mod.handleCueTextFromAST(ast, cueElement))
+        .catch(err => console.error("[CueDSL] Failed to load text.js module:", err));
+      return;
+
 
     case "cueMetronome":
     case "cueMetro":
@@ -700,6 +706,8 @@ export function assignCues(svgRoot, cuesArray = []) {
         continue;
       }
 
+
+
       // Skip non-cue directives like use(...), propagate(...), comments, or anything that returns null
       if (!ast) {
         walk(child);
@@ -711,6 +719,13 @@ export function assignCues(svgRoot, cuesArray = []) {
         walk(child);
         continue;
       }
+
+      // Pre-prime fade targets at load so fade-ins aren’t briefly visible
+      if (ast.type === "cueFade") {
+        window._fadeCues.set(child, ast);
+        primeFadeTargetFromAST(ast, child);
+      }
+
 
       // Normal cue (including scale, rotate, o2p, etc.)
       const box = child.getBBox?.();
@@ -1076,7 +1091,7 @@ window.returnToScrollingScore = function returnToScrollingScore() {
 
   console.log("[cuePage] Returning to scrolling score.");
   stopAllCueTexts();
-  
+
   destroyAllHitLabels()
 
 
@@ -1201,122 +1216,122 @@ function resumeScrollScore() {
 }
 
 
-/**
- * handleOscCue(cueId, cueParams = {})
- *
- * Sends OSC messages from cue IDs of the form cueOsc*, supporting the following subtypes:
- *
- * Supported Types:
- *   - cueOscTrigger(value) → Sends a single numeric trigger
- *   - cueOscValue(value)   → Sends a named value
- *   - cueOscSet(key, value) → Sends a key-value object
- *   - cueOscRandom(min, max) → Sends a min/max pair for random value generation
- *   - cueOscBurst(count, interval) → Sends repeated messages over time
- *   - cueOscPulse(rate, duration) → Sends messages at a rate for a fixed time
- *
- * Optional OSC Address Override:
- *   Append `_addr(custom/osc/path)` to override the default path.
- *
- * Example:
- *   cueOscTrigger(1)_addr(/my/osc/path)
- */
-export function handleOscCue(cueId, cueParams = {}) {
-  const type = cueId.split('(')[0]; // e.g., cueOscTrigger
-  const subType = type.replace(/^cueOsc/, "").toLowerCase(); // "trigger", "burst", etc.
+// /**
+//  * handleOscCue(cueId, cueParams = {})
+//  *
+//  * Sends OSC messages from cue IDs of the form cueOsc*, supporting the following subtypes:
+//  *
+//  * Supported Types:
+//  *   - cueOscTrigger(value) → Sends a single numeric trigger
+//  *   - cueOscValue(value)   → Sends a named value
+//  *   - cueOscSet(key, value) → Sends a key-value object
+//  *   - cueOscRandom(min, max) → Sends a min/max pair for random value generation
+//  *   - cueOscBurst(count, interval) → Sends repeated messages over time
+//  *   - cueOscPulse(rate, duration) → Sends messages at a rate for a fixed time
+//  *
+//  * Optional OSC Address Override:
+//  *   Append `_addr(custom/osc/path)` to override the default path.
+//  *
+//  * Example:
+//  *   cueOscTrigger(1)_addr(/my/osc/path)
+//  */
+// export function handleOscCue(cueId, cueParams = {}) {
+//   const type = cueId.split('(')[0]; // e.g., cueOscTrigger
+//   const subType = type.replace(/^cueOsc/, "").toLowerCase(); // "trigger", "burst", etc.
 
-  // 🔍 Extract optional OSC address override
-  const addrMatch = cueId.match(/_addr\\(([^)]+)\\)/);
-  const oscAddr = addrMatch ? addrMatch[1] : "/oscilla";
+//   // 🔍 Extract optional OSC address override
+//   const addrMatch = cueId.match(/_addr\\(([^)]+)\\)/);
+//   const oscAddr = addrMatch ? addrMatch[1] : "/oscilla";
 
-  const baseMessage = {
-    type: "osc",
-    subType,
-    address: oscAddr,
-    timestamp: Date.now()
-  };
+//   const baseMessage = {
+//     type: "osc",
+//     subType,
+//     address: oscAddr,
+//     timestamp: Date.now()
+//   };
 
-  console.log(`[cueOsc] ⚡ Handling subtype: ${subType} → ${oscAddr}`);
+//   console.log(`[cueOsc] ⚡ Handling subtype: ${subType} → ${oscAddr}`);
 
-  switch (subType) {
-    case "trigger":
-    case "value": {
-      const value = parseFloat(cueParams.choice ?? cueParams.value);
-      if (isNaN(value)) {
-        console.warn("[cueOsc] ❌ Missing or invalid value:", cueId);
-        return;
-      }
-      baseMessage.data = value;
-      window.socket?.send(JSON.stringify(baseMessage));
-      console.log(`[cueOsc] 🔹 Sent value: ${value}`);
-      break;
-    }
+//   switch (subType) {
+//     case "trigger":
+//     case "value": {
+//       const value = parseFloat(cueParams.choice ?? cueParams.value);
+//       if (isNaN(value)) {
+//         console.warn("[cueOsc] ❌ Missing or invalid value:", cueId);
+//         return;
+//       }
+//       baseMessage.data = value;
+//       window.socket?.send(JSON.stringify(baseMessage));
+//       console.log(`[cueOsc] 🔹 Sent value: ${value}`);
+//       break;
+//     }
 
-    case "set": {
-      const [key, val] = Object.entries(cueParams)[0] || [];
-      if (!key || val === undefined) {
-        console.warn("[cueOsc] ❌ Invalid set params:", cueParams);
-        return;
-      }
-      baseMessage.data = { [key]: val };
-      window.socket?.send(JSON.stringify(baseMessage));
-      console.log(`[cueOsc] 🔹 Sent set: ${key} = ${val}`);
-      break;
-    }
+//     case "set": {
+//       const [key, val] = Object.entries(cueParams)[0] || [];
+//       if (!key || val === undefined) {
+//         console.warn("[cueOsc] ❌ Invalid set params:", cueParams);
+//         return;
+//       }
+//       baseMessage.data = { [key]: val };
+//       window.socket?.send(JSON.stringify(baseMessage));
+//       console.log(`[cueOsc] 🔹 Sent set: ${key} = ${val}`);
+//       break;
+//     }
 
-    case "random": {
-      const min = parseFloat(cueParams.min);
-      const max = parseFloat(cueParams.max);
-      if (isNaN(min) || isNaN(max)) {
-        console.warn("[cueOsc] ❌ Invalid random range:", cueParams);
-        return;
-      }
-      baseMessage.data = { min, max };
-      window.socket?.send(JSON.stringify(baseMessage));
-      console.log(`[cueOsc] 🔹 Sent random range: min=${min}, max=${max}`);
-      break;
-    }
+//     case "random": {
+//       const min = parseFloat(cueParams.min);
+//       const max = parseFloat(cueParams.max);
+//       if (isNaN(min) || isNaN(max)) {
+//         console.warn("[cueOsc] ❌ Invalid random range:", cueParams);
+//         return;
+//       }
+//       baseMessage.data = { min, max };
+//       window.socket?.send(JSON.stringify(baseMessage));
+//       console.log(`[cueOsc] 🔹 Sent random range: min=${min}, max=${max}`);
+//       break;
+//     }
 
-    case "burst": {
-      const count = parseInt(cueParams.count ?? cueParams.choice);
-      const interval = parseInt(cueParams.interval ?? 100);
-      if (!count || isNaN(interval)) {
-        console.warn("[cueOsc] ❌ Invalid burst params:", cueParams);
-        return;
-      }
-      console.log(`[cueOsc] 🔁 Sending burst: ${count} messages every ${interval}ms`);
-      let sent = 0;
-      const burstTimer = setInterval(() => {
-        if (sent >= count) return clearInterval(burstTimer);
-        window.socket?.send(JSON.stringify({ ...baseMessage }));
-        sent++;
-      }, interval);
-      break;
-    }
+//     case "burst": {
+//       const count = parseInt(cueParams.count ?? cueParams.choice);
+//       const interval = parseInt(cueParams.interval ?? 100);
+//       if (!count || isNaN(interval)) {
+//         console.warn("[cueOsc] ❌ Invalid burst params:", cueParams);
+//         return;
+//       }
+//       console.log(`[cueOsc] 🔁 Sending burst: ${count} messages every ${interval}ms`);
+//       let sent = 0;
+//       const burstTimer = setInterval(() => {
+//         if (sent >= count) return clearInterval(burstTimer);
+//         window.socket?.send(JSON.stringify({ ...baseMessage }));
+//         sent++;
+//       }, interval);
+//       break;
+//     }
 
-    case "pulse": {
-      const rate = parseFloat(cueParams.rate);
-      const duration = parseFloat(cueParams.duration);
-      if (!rate || !duration) {
-        console.warn("[cueOsc] ❌ Invalid pulse params:", cueParams);
-        return;
-      }
-      const interval = 1000 / rate;
-      const total = Math.floor(duration * rate);
-      let sent = 0;
-      console.log(`[cueOsc] 🌀 Sending pulse: ${total} messages at ${rate}Hz for ${duration}s`);
-      const pulseTimer = setInterval(() => {
-        if (sent >= total) return clearInterval(pulseTimer);
-        window.socket?.send(JSON.stringify({ ...baseMessage }));
-        sent++;
-      }, interval);
-      break;
-    }
+//     case "pulse": {
+//       const rate = parseFloat(cueParams.rate);
+//       const duration = parseFloat(cueParams.duration);
+//       if (!rate || !duration) {
+//         console.warn("[cueOsc] ❌ Invalid pulse params:", cueParams);
+//         return;
+//       }
+//       const interval = 1000 / rate;
+//       const total = Math.floor(duration * rate);
+//       let sent = 0;
+//       console.log(`[cueOsc] 🌀 Sending pulse: ${total} messages at ${rate}Hz for ${duration}s`);
+//       const pulseTimer = setInterval(() => {
+//         if (sent >= total) return clearInterval(pulseTimer);
+//         window.socket?.send(JSON.stringify({ ...baseMessage }));
+//         sent++;
+//       }, interval);
+//       break;
+//     }
 
-    default:
-      console.warn("[cueOsc] ⚠️ Unsupported subType:", subType);
-      break;
-  }
-}
+//     default:
+//       console.warn("[cueOsc] ⚠️ Unsupported subType:", subType);
+//       break;
+//   }
+// }
 
 
 
@@ -1899,144 +1914,144 @@ window.pendingCueStarts ??= new Map();
 window.pendingCueStarts ??= new Map();
 
 export function scheduleCueStart(cfg, el, startFn, uid) {
-    const delay = Number(cfg.start ?? 0);
+  const delay = Number(cfg.start ?? 0);
 
-    console.log("[startScheduler] ENTER", {
-        uid,
-        delay,
-        ghostClickable: cfg._ghostClickable,
-        ghostPlayheadMode: cfg._ghostPlayheadMode,
-        ghostDelayMs: cfg._ghostDelayMs,
-        blocked: cfg._startBlocked,
-        el
-    });
+  console.log("[startScheduler] ENTER", {
+    uid,
+    delay,
+    ghostClickable: cfg._ghostClickable,
+    ghostPlayheadMode: cfg._ghostPlayheadMode,
+    ghostDelayMs: cfg._ghostDelayMs,
+    blocked: cfg._startBlocked,
+    el
+  });
 
-    // Cancel previous pending start for this uid
-    if (window.pendingCueStarts.has(uid)) {
-        const old = window.pendingCueStarts.get(uid);
-        clearTimeout(old.timeoutId);
-        window.pendingCueStarts.delete(uid);
-    }
+  // Cancel previous pending start for this uid
+  if (window.pendingCueStarts.has(uid)) {
+    const old = window.pendingCueStarts.get(uid);
+    clearTimeout(old.timeoutId);
+    window.pendingCueStarts.delete(uid);
+  }
 
-    // ========================================================================
-    // GHOSTCLICKABLE(PLAYHEAD) MODE - Skip all timed fades
-    // Element stays invisible until playhead intersection
-    // ========================================================================
-    if (cfg._ghostClickable && cfg._ghostPlayheadMode) {
-        console.log("[startScheduler] ghostClickable(playhead) → staying invisible, waiting for playhead", { uid });
-        // Don't schedule anything - armGhostClickable() will be called by playhead intersection
-        return;
-    }
+  // ========================================================================
+  // GHOSTCLICKABLE(PLAYHEAD) MODE - Skip all timed fades
+  // Element stays invisible until playhead intersection
+  // ========================================================================
+  if (cfg._ghostClickable && cfg._ghostPlayheadMode) {
+    console.log("[startScheduler] ghostClickable(playhead) → staying invisible, waiting for playhead", { uid });
+    // Don't schedule anything - armGhostClickable() will be called by playhead intersection
+    return;
+  }
 
-    // ========================================================================
-    // GHOSTCLICKABLE WITH DELAY - Use _ghostDelayMs for arm timing
-    // ========================================================================
-    if (cfg._ghostClickable && cfg._ghostDelayMs > 0) {
-        console.log(`[startScheduler] ghostClickable timed → arming in ${cfg._ghostDelayMs}ms`, { uid });
-        
-        const timeoutId = setTimeout(() => {
-            console.log("[startScheduler] 🔥 ghostClickable delay done → arming", { uid });
-            window.pendingCueStarts.delete(uid);
-            
-            if (typeof cfg._applyPrestateOnStart === "function") {
-                cfg._applyPrestateOnStart();
-            }
-        }, cfg._ghostDelayMs);
-        
-        window.pendingCueStarts.set(uid, {
-            timeoutId,
-            cfg,
-            el,
-            startFn,
-            createdAt: performance.now(),
-        });
-        return;
-    }
-
-    // ========================================================================
-    // IMMEDIATE START (delay=0)
-    // ========================================================================
-    if (!delay || delay <= 0) {
-
-        // ---------------- ghostClickable immediate fade ----------------
-        if (cfg._ghostClickable && cfg._startBlocked) {
-            console.log("[startScheduler] ghostClickable immediate → fade to ghost only", { uid });
-
-            if (typeof cfg._applyPrestateOnStart === "function") {
-                cfg._applyPrestateOnStart();   // fade to ghostOpacity
-            }
-
-            return; // DO NOT START ANIMATION
-        }
-
-        // ---------------- normal immediate start ----------------
-        console.log("[startScheduler] Immediate start → uid:", uid);
-        startFn();
-        return;
-    }
-
-    // ========================================================================
-    // DELAYED START (delay > 0)
-    // ========================================================================
-    console.log(`[startScheduler] Scheduling start in ${delay}s → uid=${uid}`);
+  // ========================================================================
+  // GHOSTCLICKABLE WITH DELAY - Use _ghostDelayMs for arm timing
+  // ========================================================================
+  if (cfg._ghostClickable && cfg._ghostDelayMs > 0) {
+    console.log(`[startScheduler] ghostClickable timed → arming in ${cfg._ghostDelayMs}ms`, { uid });
 
     const timeoutId = setTimeout(() => {
+      console.log("[startScheduler] 🔥 ghostClickable delay done → arming", { uid });
+      window.pendingCueStarts.delete(uid);
 
-        console.log("[startScheduler] 🔥 FIRING delayed start → uid:", uid);
-        window.pendingCueStarts.delete(uid);
+      if (typeof cfg._applyPrestateOnStart === "function") {
+        cfg._applyPrestateOnStart();
+      }
+    }, cfg._ghostDelayMs);
 
-        // ---------------- ghostClickable delayed fade ----------------
-        if (cfg._ghostClickable && cfg._startBlocked) {
-            console.log("[startScheduler] ghostClickable delay done → fade to ghost only", { uid });
-
-            if (typeof cfg._applyPrestateOnStart === "function") {
-                cfg._applyPrestateOnStart();   // fade to ghostOpacity
-            }
-
-            return; // DO NOT START ANIMATION YET
-        }
-
-        // ---------------- normal delayed start ----------------
-        try {
-            startFn();
-        } catch (err) {
-            console.error("[startScheduler] ERROR in startFn:", err);
-        }
-
-    }, delay * 1000);
-
-    // register pending start
     window.pendingCueStarts.set(uid, {
-        timeoutId,
-        cfg,
-        el,
-        startFn,
-        createdAt: performance.now(),
+      timeoutId,
+      cfg,
+      el,
+      startFn,
+      createdAt: performance.now(),
     });
+    return;
+  }
 
-    console.log("[startScheduler] stored pending", [...window.pendingCueStarts.keys()]);
+  // ========================================================================
+  // IMMEDIATE START (delay=0)
+  // ========================================================================
+  if (!delay || delay <= 0) {
+
+    // ---------------- ghostClickable immediate fade ----------------
+    if (cfg._ghostClickable && cfg._startBlocked) {
+      console.log("[startScheduler] ghostClickable immediate → fade to ghost only", { uid });
+
+      if (typeof cfg._applyPrestateOnStart === "function") {
+        cfg._applyPrestateOnStart();   // fade to ghostOpacity
+      }
+
+      return; // DO NOT START ANIMATION
+    }
+
+    // ---------------- normal immediate start ----------------
+    console.log("[startScheduler] Immediate start → uid:", uid);
+    startFn();
+    return;
+  }
+
+  // ========================================================================
+  // DELAYED START (delay > 0)
+  // ========================================================================
+  console.log(`[startScheduler] Scheduling start in ${delay}s → uid=${uid}`);
+
+  const timeoutId = setTimeout(() => {
+
+    console.log("[startScheduler] 🔥 FIRING delayed start → uid:", uid);
+    window.pendingCueStarts.delete(uid);
+
+    // ---------------- ghostClickable delayed fade ----------------
+    if (cfg._ghostClickable && cfg._startBlocked) {
+      console.log("[startScheduler] ghostClickable delay done → fade to ghost only", { uid });
+
+      if (typeof cfg._applyPrestateOnStart === "function") {
+        cfg._applyPrestateOnStart();   // fade to ghostOpacity
+      }
+
+      return; // DO NOT START ANIMATION YET
+    }
+
+    // ---------------- normal delayed start ----------------
+    try {
+      startFn();
+    } catch (err) {
+      console.error("[startScheduler] ERROR in startFn:", err);
+    }
+
+  }, delay * 1000);
+
+  // register pending start
+  window.pendingCueStarts.set(uid, {
+    timeoutId,
+    cfg,
+    el,
+    startFn,
+    createdAt: performance.now(),
+  });
+
+  console.log("[startScheduler] stored pending", [...window.pendingCueStarts.keys()]);
 }
 
 // ============================================================================
 // Cancel all pending starts
 // ============================================================================
 export function cancelAllPendingStarts() {
-    for (const [uid, entry] of window.pendingCueStarts.entries()) {
-        clearTimeout(entry.timeoutId);
-    }
-    window.pendingCueStarts.clear();
-    console.log("[startScheduler] All pending delayed-starts cancelled.");
+  for (const [uid, entry] of window.pendingCueStarts.entries()) {
+    clearTimeout(entry.timeoutId);
+  }
+  window.pendingCueStarts.clear();
+  console.log("[startScheduler] All pending delayed-starts cancelled.");
 }
 
 // ============================================================================
 // Cancel one pending start
 // ============================================================================
 export function cancelPendingStartByUid(uid) {
-    const e = window.pendingCueStarts.get(uid);
-    if (!e) return;
-    clearTimeout(e.timeoutId);
-    window.pendingCueStarts.delete(uid);
-    console.log(`[startScheduler] cancelled pending start for ${uid}`);
+  const e = window.pendingCueStarts.get(uid);
+  if (!e) return;
+  clearTimeout(e.timeoutId);
+  window.pendingCueStarts.delete(uid);
+  console.log(`[startScheduler] cancelled pending start for ${uid}`);
 }
 
 

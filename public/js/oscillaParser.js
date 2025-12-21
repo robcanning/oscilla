@@ -83,6 +83,8 @@ const Button = createToken({ name: "Button", pattern: /button\b/ });
 const Rotate = createToken({ name: "Rotate", pattern: /\brotate\b/, longer_alt: Identifier });
 const Scale = createToken({ name: "Scale", pattern: /\bscale\b/, longer_alt: Identifier });
 const ScaleXY = createToken({ name: "Scale", pattern: /\bscaleXY\b/, longer_alt: Identifier });
+const Osc = createToken({ name: "Osc", pattern: /\bosc\b/, longer_alt: Identifier});
+
 
 const O2P = createToken({ name: "O2P", pattern: /\bo2p\b/, longer_alt: Identifier });
 
@@ -127,7 +129,8 @@ const PatternName = createToken({
 export const allTokens = [
   Cue, Fade, Page, Stopwatch, Video, Text, Pause, Stop,
   Audio, Button, Nav,
-  Rotate, Scale, ScaleXY, O2P,
+  Rotate, Scale, ScaleXY, O2P,  
+  Osc,
   After, PatternName, Choose,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
   RangeLiteral, NumberLiteral, StringLiteral, True, False,
@@ -661,6 +664,28 @@ export class CueParser extends CstParser {
 
 
 
+// ------------------------------------------------------------
+// cue:osc(...)
+
+$.RULE("trailingParamList", () => {
+  $.SUBRULE($.genericParam);
+  $.MANY(() => {
+    $.CONSUME(Comma);
+    $.SUBRULE2($.genericParam);
+  });
+});
+
+// ------------------------------------------------------------
+$.RULE("cueOscTop", () => {
+  $.CONSUME(Osc);
+  $.SUBRULE($.genericParamList);
+
+  // ✅ allow propagate() to append bare params (e.g. uid:prop_3_7)
+  $.OPTION(() => {
+    $.CONSUME(Comma);
+    $.SUBRULE($.trailingParamList);
+  });
+});
     // ------------------------------------------------------------
     // cueSpeedTop (grammar) — supports speed(3) and keyed params
     // ------------------------------------------------------------
@@ -920,6 +945,8 @@ export class CueParser extends CstParser {
         { ALT: () => $.SUBRULE($.cueRotateTop) },
         { ALT: () => $.SUBRULE($.cueScaleTop) },
         { ALT: () => $.SUBRULE($.cueO2PTop) },
+        { ALT: () => $.SUBRULE($.cueOscTop) }   
+
       ]);
 
     });
@@ -1402,6 +1429,51 @@ else if (valNode?.image) {
 
     return { type: "cueText", args };
   }
+
+
+// ------------------------------------------------------------
+// cue:osc(...) AST builder
+// ------------------------------------------------------------
+const oscNode =
+  cst.children?.cueOscTop?.[0] ||
+  (cst.name === "cueOscTop" ? cst : null);
+
+if (oscNode) {
+  const args = [];
+  const list = oscNode.children.genericParamList?.[0];
+  const items = list?.children.genericParam || [];
+
+  for (const p of items) {
+    const key = p.children.key?.[0]?.image;
+    const token =
+      p.children.value?.[0] ||
+      p.children.NumberLiteral?.[0] ||
+      p.children.StringLiteral?.[0] ||
+      p.children.True?.[0] ||
+      p.children.False?.[0] ||
+      p.children.Identifier?.[0] ||
+      null;
+
+    if (!key || !token) continue;
+
+    let raw = token.image.replace(/^"|"$/g, "");
+
+    let val =
+      raw === "true" ? true :
+      raw === "false" ? false :
+      isNaN(raw) ? raw :
+      Number(raw);
+
+    args.push({ type: key, value: val });
+  }
+
+  return {
+    type: "cueOsc",
+    args
+  };
+}
+
+
 
 
   // ============================================================================
@@ -1913,7 +1985,7 @@ export function parseCueToAST(input) {
 
   const lexResult = CueLexer.tokenize(input);
 
-  debugTokens(input);  //
+  // debugTokens(input);  //
 
   console.log("[LexerDebug] Tokens:", lexResult.tokens.map(t => t.image));
   console.log("[LexerDebug] Errors:", lexResult.errors);

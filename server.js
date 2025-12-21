@@ -479,6 +479,45 @@ wss.on('connection', (ws, req) => {
         break;
       }
 
+// -----------------------------------------------------------
+// 🎛 Generic OSC value sender (from osc() cue)
+// -----------------------------------------------------------
+case "osc_value": {
+  const { addr, values, uid } = data;
+
+  if (!addr || typeof values !== "object") {
+    console.warn("[OSC] ⚠️ Invalid osc_value message:", data);
+    break;
+  }
+
+  // Build OSC address
+  // addr:voice  →  /oscilla/voice
+  // optional uid →  /oscilla/voice/pt_2
+  let oscAddress = `/oscilla/${String(addr)}`;
+  if (uid) {
+    oscAddress += `/${String(uid)}`;
+  }
+
+  // Convert values object → OSC args
+  const args = Object.values(values).map(v => ({
+    type: "f",
+    value: Number(v) || 0
+  }));
+
+  console.log(
+    `[OSC] 🎹 VALUE ${oscAddress}`,
+    Object.entries(values)
+      .map(([k, v]) => `${k}=${Number(v).toFixed(3)}`)
+      .join(" ")
+  );
+
+  oscPort.send({
+    address: oscAddress,
+    args
+  });
+
+  break;
+}
 
       case "osc_obj2path": {
         const { uid, x, y, angle } = data;

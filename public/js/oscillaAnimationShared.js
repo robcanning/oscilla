@@ -33,6 +33,7 @@ function forceReflow(el) {
 // ============================================================================
 export function applyPrestateBeforeStart(el, cfg) {
 
+
     // Guard: only run registration once per element lifecycle
     if (cfg._prestateRegistered) {
         console.log("[prestateBefore] SKIP - already registered", cfg.uid);
@@ -427,6 +428,7 @@ export function isGhostClickableReady(cfg) {
 // Check if element needs arming (for playhead intersection logic)
 // ============================================================================
 export function needsArming(cfg) {
+    // if (!el) return false;
     if (!cfg._ghostClickable) return false;
     return cfg._ghostState === "registered";
 }

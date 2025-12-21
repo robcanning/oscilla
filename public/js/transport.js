@@ -41,6 +41,9 @@
 
 
 import { getSpeedForPosition } from "./oscillaSpeed.js";
+import { resetAllFadePriming } from "./oscillaFade.js";
+
+
 
 window.seekDebounceTime = 300;
 window.seekingTimeout = null;
@@ -174,6 +177,8 @@ export const rewind = () => {
 
   if (triggeredCues) {
     triggeredCues.clear(); //  Ensure cues retrigger after rewind
+      resetAllFadePriming();
+
     window._cueInsideState?.clear();
     window.navRepeatMap?.clear();
 
@@ -241,6 +246,8 @@ export const forward = () => {
 
   if (triggeredCues) {
     triggeredCues.clear(); // Ensure cues retrigger after forward
+      resetAllFadePriming();
+
     window._cueInsideState?.clear();
     window.navRepeatMap?.clear();
 

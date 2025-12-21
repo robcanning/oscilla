@@ -1,220 +1,279 @@
+// ============================================================================
+// oscillaFade.js
+// Fade cue handling with correct lifecycle, transport reset, and ownership
+// ============================================================================
 
+/*
+Fade semantics:
+  - fade(in)     → hidden until triggered
+  - fade(inout)  → hidden until triggered
+  - fade(out)    → visible until triggered
+  - explicit from: always wins
 
-export function handleFadeCueFromAST(ast, cueElementId) {
-  console.group("[cueFade] 🎛 Handling fade cue");
+Fade OWNS opacity.
+Nothing else should permanently set opacity on fade targets.
+*/
 
+// -----------------------------------------------------------------------------
+// Internal registry (one fade per element)
+// -----------------------------------------------------------------------------
+window._fadeCues ??= new Map();
+
+// -----------------------------------------------------------------------------
+// Resolve fade target (shared logic)
+// -----------------------------------------------------------------------------
+function resolveFadeTarget(ast, cueElement) {
   const params = Object.fromEntries(ast.args.map(a => [a.type, a.value]));
-
-  const mode = params.mode || "in";
-  const dur = Number(params.dur ?? 1);
-  const from = Number(params.from ?? (mode === "in" ? 0 : 1));
-  const to = Number(params.to ?? (mode === "in" ? 1 : 0));
-  const ease = params.ease || "linear";
-  const delay = Number(params.delay ?? 0);
-  const hold = Number(params.hold ?? 0); // ⏸ pause between loops
   const targetId = params.target || "self";
 
-  
-  function sendFadeOSC(value) {
-    const oscFlag = Number(params.osc ?? 1);
-    if (!window.OSC_ENABLED || !oscFlag) return;
-    if (!window.wsEnabled || !window.socket || window.socket.readyState !== WebSocket.OPEN) return;
-
-    const message = {
-      type: "osc_fade",
-      uid,
-      value,
-      timestamp: Date.now(),
-    };
-
-    window.socket.send(JSON.stringify(message));
-    console.debug("[OSC] 🎚 Sent fade update:", message);
-  }
-
-  //  Resolve target: "self" defaults to element containing this cue
   let target = null;
 
   if (targetId === "self") {
-    if (typeof cueElementId === "string") {
+    if (cueElement instanceof Element) {
+      target = cueElement;
+    } else if (typeof cueElement === "string") {
       target =
-        document.getElementById(cueElementId) ||
-        window.svgElement?.getElementById?.(cueElementId);
-    } else if (cueElementId instanceof Element) {
-      target = cueElementId;
+        document.getElementById(cueElement) ||
+        window.svgElement?.getElementById?.(cueElement);
     }
   } else {
-    // Try HTML first, then inside the loaded SVG
     target =
       document.getElementById(targetId) ||
       window.svgElement?.getElementById?.(targetId);
   }
 
-  //  fallback
-  if (!target) {
+  // Fallbacks (defensive)
+  if (!target || !(target instanceof Element)) {
     target =
       document.querySelector(`[data-id="${ast.type}"]`) ||
-      document.getElementById("scoreContainer") ||
       window.svgElement ||
       document.body;
   }
 
-  if (!target || !(target instanceof Element)) {
-    console.warn(`[cueFade] No valid target found for ID '${targetId}', aborting.`);
+  return target instanceof Element ? target : null;
+}
+
+// -----------------------------------------------------------------------------
+// Prime fade target (load + transport reset)
+// -----------------------------------------------------------------------------
+export function primeFadeTargetFromAST(ast, cueElement) {
+  if (!ast || !Array.isArray(ast.args)) return;
+
+  const params = Object.fromEntries(ast.args.map(a => [a.type, a.value]));
+  const mode = (params.mode || "in").toLowerCase();
+
+  const from = Number(
+    params.from ??
+    (mode === "out" ? 1 : 0) // in + inout start hidden
+  );
+
+  const target = resolveFadeTarget(ast, cueElement);
+  if (!target) return;
+
+  // Fade owns opacity → assert authority
+  target.style.setProperty("opacity", from, "important");
+}
+
+// -----------------------------------------------------------------------------
+// Reset ALL fades (call on rewind / jump / restart)
+// -----------------------------------------------------------------------------
+export function resetAllFadePriming() {
+  if (!window._fadeCues || window._fadeCues.size === 0) return;
+
+  console.log("[fade] 🔄 Resetting fade priming");
+
+  for (const [element, ast] of window._fadeCues.entries()) {
+    primeFadeTargetFromAST(ast, element);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Handle fade cue trigger
+// -----------------------------------------------------------------------------
+export function handleFadeCueFromAST(ast, cueElement) {
+  console.group("[cueFade] 🎛 Handling fade cue");
+
+  const params = Object.fromEntries(ast.args.map(a => [a.type, a.value]));
+
+  const mode  = (params.mode || "in").toLowerCase();
+  const dur   = Number(params.dur ?? 1);
+  const hold  = Number(params.hold ?? 0);
+  const delay = Number(params.delay ?? 0);
+  const ease  = params.ease || "linear";
+
+  const from = Number(
+    params.from ??
+    (mode === "out" ? 1 : 0)
+  );
+
+  const to = Number(
+    params.to ??
+    (mode === "out" ? 0 : 1)
+  );
+
+  const target = resolveFadeTarget(ast, cueElement);
+
+  if (!target) {
+    console.warn("[cueFade] No valid target, aborting.");
     console.groupEnd();
     return;
   }
 
-  console.log(
-    `[cueFade] mode=${mode}, dur=${dur}s, hold=${hold}s, from=${from}, to=${to}, ease=${ease}, delay=${delay}s`
-  );
-  console.log("[cueFade] Target element:", target);
+  // ---------------------------------------------------------------------------
+  // UID (resolve BEFORE OSC)
+  // ---------------------------------------------------------------------------
+  let uid =
+    params.uid ||
+    target.id ||
+    (typeof cueElement === "string" ? cueElement : null) ||
+    "fade";
 
-  anime.remove(target);
-  target.style.opacity = from;
-
-
-  //  Resolve and normalize UID once for OSC and logging
-  let uid = params.uid || null;
-
-  if (!uid) {
-    // Prefer target.id if valid, otherwise fall back to cueElementId
-    uid =
-      target?.id ||
-      cueElementId?.replace(/^cue:/, "") ||
-      targetId?.replace(/^cue:/, "") ||
-      "unknown";
-  }
-
-  // Sanitize for OSC address
   uid = String(uid).replace(/[^a-zA-Z0-9_\-]/g, "");
 
+  // ---------------------------------------------------------------------------
+  // OSC sender
+  // ---------------------------------------------------------------------------
+  function sendFadeOSC(value) {
+    const oscFlag = Number(params.osc ?? 1);
+    if (!window.OSC_ENABLED || !oscFlag) return;
+    if (!window.wsEnabled || !window.socket || window.socket.readyState !== WebSocket.OPEN) return;
 
-  const commonProps = {
+    window.socket.send(JSON.stringify({
+      type: "osc_fade",
+      uid,
+      value,
+      timestamp: Date.now(),
+    }));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Prepare target for animation
+  // ---------------------------------------------------------------------------
+  anime.remove(target);
+
+  // Release fade priming authority so Anime.js can control opacity
+  target.style.removeProperty("opacity");
+  target.style.opacity = from;
+
+  console.log(
+    `[cueFade] mode=${mode}, dur=${dur}s, from=${from}, to=${to}, hold=${hold}s`
+  );
+  console.log("[cueFade] Target:", target);
+
+  const common = {
     targets: target,
     easing: ease,
     duration: dur * 1000,
     delay: delay * 1000,
-    begin: () => console.log("[cueFade] ▶ Fade begin"),
     update: anim => {
-      const current = parseFloat(anim.animations?.[0]?.currentValue || 0);
-      sendFadeOSC(current);
+      const v = parseFloat(anim.animations?.[0]?.currentValue ?? from);
+      sendFadeOSC(v);
     },
     complete: () => {
       sendFadeOSC(to);
-      console.log("[cueFade] ✅ Fade complete");
+      console.log("[cueFade] ✅ Complete");
     },
   };
 
-
-
-  // Switch by mode
+  // ---------------------------------------------------------------------------
+  // Modes
+  // ---------------------------------------------------------------------------
   switch (mode) {
+
     case "in":
     case "out":
-      anime({ ...commonProps, opacity: [from, to] });
+      anime({ ...common, opacity: [from, to] });
       break;
 
     case "inout":
-      anime({ ...commonProps, opacity: [from, to], direction: "alternate", loop: 2 });
+      anime({
+        ...common,
+        opacity: [from, to],
+        direction: "alternate",
+        loop: 2
+      });
       break;
 
-    case "pulse": {
-      const ms = dur * 1000;
+    case "pulse":
       anime({
-        ...commonProps,
+        ...common,
         opacity: [from, to],
         direction: "alternate",
         loop: true,
-        easing: ease || "easeInOutSine",
-        duration: ms,
-        endDelay: hold * 1000,
+        endDelay: hold * 1000
       });
       break;
-    }
 
     case "pulseSlow":
       anime({
-        ...commonProps,
+        ...common,
         opacity: [from, to],
         direction: "alternate",
         loop: true,
-        easing: "easeInOutSine",
         duration: dur * 2000,
-        endDelay: hold * 1000, // ⏸ pause between each cycle
+        endDelay: hold * 1000
       });
       break;
 
     case "pulseFast":
       anime({
-        ...commonProps,
+        ...common,
         opacity: [from, to],
         direction: "alternate",
         loop: true,
-        easing: "easeInOutSine",
         duration: dur * 500,
-        endDelay: hold * 1000, // ⏸ pause between each cycle
+        endDelay: hold * 1000
       });
       break;
 
     case "strobe":
       anime({
-        ...commonProps,
+        ...common,
         opacity: [from, to],
-        loop: true,
         direction: "alternate",
+        loop: true,
         duration: dur * 100,
         easing: "steps(2)",
-        endDelay: hold * 1000, // ⏸ pause between strobes
+        endDelay: hold * 1000
       });
       break;
 
     case "blink": {
-      console.log("[cueFade] ⚡ Blink mode (native setInterval + OSC)");
-
-      const cycle = dur * 1000;
-      const half = cycle / 2;
       let visible = false;
+      const interval = (dur * 1000) / 2;
 
-      if (target._blinkTimer) clearInterval(target._blinkTimer);
+      clearInterval(target._blinkTimer);
 
       target._blinkTimer = setInterval(() => {
         visible = !visible;
-        const value = visible ? to : from;
-        target.style.opacity = value;
-        sendFadeOSC(value); // 🔊 send only on change
-      }, half);
+        const v = visible ? to : from;
+        target.style.opacity = v;
+        sendFadeOSC(v);
+      }, interval);
 
-      const timeLimit = Number(params.time || params.hold || 0);
-      if (timeLimit > 0) {
-        setTimeout(() => {
-          clearInterval(target._blinkTimer);
-          target.style.opacity = from;
-          sendFadeOSC(from);
-          console.log(`[cueFade] ⏹ Blink auto-stopped after ${timeLimit}s`);
-        }, timeLimit * 1000);
-      }
       break;
     }
 
     case "stop":
-      console.log(`[cueFade] ⏹ Stopping fade on target: ${target.id || target}`);
       anime.remove(target);
       clearInterval(target._blinkTimer);
-      target.style.opacity = from ?? 0;
+      target.style.opacity = from;
       break;
 
     default:
-      console.warn(`[cueFade] ⚠️ Unknown fade mode: ${mode}`);
-      break;
+      console.warn("[cueFade] Unknown mode:", mode);
   }
 
-  // 🕒 Optional global auto-stop (applies to any looping mode)
+  // ---------------------------------------------------------------------------
+  // Optional auto-stop
+  // ---------------------------------------------------------------------------
   const timeLimit = Number(params.time || 0);
-  if (timeLimit > 0 && ["blink", "pulseSlow", "pulseFast", "strobe"].includes(mode)) {
+  if (timeLimit > 0) {
     setTimeout(() => {
       anime.remove(target);
       clearInterval(target._blinkTimer);
       target.style.opacity = from;
+      sendFadeOSC(from);
       console.log(`[cueFade] ⏹ Auto-stopped after ${timeLimit}s`);
     }, timeLimit * 1000);
   }
