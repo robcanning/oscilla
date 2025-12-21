@@ -1,109 +1,190 @@
-# `cueOsc*` — Send OSC Messages to External Audio Engines
+# cue:osc — Discrete OSC Event Cue
 
-The `cueOsc*` family of cues sends Open Sound Control (OSC) messages from the browser to the oscillaScore server, which forwards them to connected software like **SuperCollider**, **Pure Data (Pd)**, or **Max/MSP**.
+`osc(...)` sends a **single OSC message** when triggered.  
+It is **event-based**, not continuous, and is designed to turn **drawn objects into control events**.
 
----
-
-## 🔤 Syntax Overview
-
-Each cue uses camelCase format and defines a sub-type of OSC action:
-
-```txt
-cueOscTrigger(1)
-cueOscRandom(0.4, 1.2)
-cueOscPulse(rate: 4, duration: 3)
-cueOscBurst(count: 5, interval: 250)
-cueOscValue(0.67)
-cueOscSet(speed, 1.5)
-```
-
-Optional suffix:
-```txt
-cueOscSet(speed, 1.5)_addr(synths/myEngine)
-```
+It works especially well with `propagate()` to create many independent OSC triggers from simple drawings.
 
 ---
 
-## ✅ Supported OSC Cue Types
+## BASIC FORM
 
-### 🎯 `cueOscTrigger(value)`
-Send a basic integer or float trigger.
-
-### 📏 `cueOscValue(value)`
-Send a single scalar float or integer.
-
-### 🧩 `cueOscSet(param, value)`
-Send a named parameter. Example:
-```txt
-cueOscSet(filterFreq, 880)
+```
+osc(addr:<name>, <param>:<source>, ...)
 ```
 
-### 🎲 `cueOscRandom(min, max)`
-Send a random float between bounds.
+Required:
 
-### 💥 `cueOscBurst(count, interval)`
-Send a timed burst of messages (handled client-side). Sends `count` messages spaced by `interval` milliseconds.
+| Key | Meaning |
+|-----|--------|
+| `addr` | OSC address name (without leading `/`) |
 
-### 🕒 `cueOscPulse(rate, duration)`
-Send a rhythmic stream of OSC messages for `duration` seconds at `rate` Hz.
+Example:
+
+```
+osc(addr:voice, pitch:y, amp:size)
+```
 
 ---
 
-## 📬 Routing with `_addr(...)`
+## EVENT-BASED BEHAVIOUR
 
-All `cueOsc*` cues can include an `_addr(...)` suffix to target a custom OSC address:
+- Sends **one OSC message per trigger**
+- No animation, no scheduling, no looping
+- Values are sampled **at trigger time**
+- Completes immediately
 
-```xml
-<circle id="cueOscSet(speed, 1.5)_addr(synths/drumEngine)" />
-```
-
-This will emit:
-```json
-{
-  "type": "osc",
-  "subType": "set",
-  "address": "synths/drumEngine",
-  "data": { "speed": 1.5 }
-}
-```
-
-Default address is `/oscilla` if none is given.
+`osc()` is a *logical cue*, not an animation cue.
 
 ---
 
-## 🛠 Dynamic Assignment via `assignCues(...)`
+## VISUAL PARAMETER SOURCES (NORMALISED)
 
-You can assign a group of randomized OSC cues using:
+All sampled values are normalised to `0–1`.
 
-```xml
-<g id="assignCues(cueOscTrigger(rnd[1,9]))">
+| Source | Meaning |
+|------|--------|
+| `x` | Object centre X position |
+| `y` | Object centre Y position |
+| `size` | Max of width/height relative to viewport |
+| `scale` | Current visual scale |
+| `rotation` | Normalised rotation (0–360 → 0–1) |
+| `opacity` | Computed opacity |
+| `fill` | Numeric colour hash |
+
+Example mapping:
+
 ```
-
-Supported patterns:
-- `rnd[min,max]` — random number
-- `ypos[min,max]` — map Y-position within group to value
-
-Used by the `assignCues(svgRoot)` function in `app.js`.
+osc(addr:voice, pitch:y, amp:size)
+```
 
 ---
 
-## 🧪 Continuous OSC via `o2p(...)`
+## TRIGGERING
 
-For path-following OSC animation, use:
+`osc()` supports the same trigger model as other cues.
 
-```xml
-<circle id="o2p(path-id)_osc(1)" />
+| Key | Meaning |
+|-----|--------|
+| `trig:auto` | Fire immediately |
+| `trig:playhead` | Fire on playhead intersection |
+| `trig:click` | Fire on click |
+| `prestate:ghostClickable` | Arm click interaction |
+
+Example:
+
 ```
-
-See `osc-o2p.md` for advanced OSC modulation via animation.
+osc(addr:voice, pitch:y, trig:playhead)
+```
 
 ---
 
-## 🧩 Related Cues
+## UID (OPTIONAL)
 
-- [`cueAudio(...)`](cue_audio.md)
-- [`cueTraverse(...)`](cue_traverse.md)
-- [`cueChoice(...)`](cue_choice.md)
-- [`cuePause(...)`](cue_pause.md)
+`uid` is **optional** and is only included if explicitly provided.
 
-For a full list, see [`cueSystem.md`](cueSystem.md)
+```
+osc(addr:voice, pitch:y, uid:v1)
+```
+
+Emits OSC address:
+
+```
+/oscilla/voice/v1
+```
+
+If `uid` is omitted, no UID is sent.
+
+---
+
+## OSC OUTPUT FORMAT
+
+### Without UID
+
+```
+/oscilla/<addr> <value> <value> ...
+```
+
+Example:
+
+```
+/oscilla/voice 0.63 0.41
+```
+
+### With UID
+
+```
+/oscilla/<addr>/<uid> <value> <value> ...
+```
+
+Example:
+
+```
+/oscilla/voice/v1 0.63 0.41
+```
+
+Values are sent in the order defined in the cue.
+
+---
+
+## USE WITH propagate()
+
+`propagate()` applies the same `osc()` cue to all child objects,
+automatically injecting unique parameters where needed.
+
+### Example — spatial pitch cloud
+
+```
+propagate(
+  osc(
+    addr:voice,
+    pitch:y,
+    amp:size,
+    trig:playhead
+  )
+)
+```
+
+Each object produces an independent OSC event as the playhead crosses it.
+
+---
+
+### Example — clickable voices with UID
+
+```
+propagate(
+  osc(
+    addr:voice,
+    pitch:y,
+    amp:size,
+    uid:v,
+    trig:click,
+    prestate:ghostClickable
+  )
+)
+```
+
+Produces addresses like:
+
+```
+/oscilla/voice/v_0
+/oscilla/voice/v_1
+/oscilla/voice/v_2
+```
+
+---
+
+## DESIGN NOTES
+
+- `osc()` is **stateless**
+- No DOM IDs are ever used
+- No continuous OSC streaming
+- No expressions or mappings inside the DSL
+- Mapping and scaling are expected downstream (SuperCollider, Pd, etc.)
+
+---
+
+## SUMMARY
+
+> `osc()` turns visual objects into one-shot OSC control events.  
+> Combined with `propagate()`, it enables complex drawable control structures with minimal notation.

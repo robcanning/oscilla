@@ -40,63 +40,146 @@ function getViewportBox() {
 // ---------------------------------------------------------------------------
 // Visual property samplers (NORMALIZED)
 // ---------------------------------------------------------------------------
-
+// ---------------------------------------------------------------------------
+// Visual property sampler (NORMALISED, synthesis-oriented)
+// ---------------------------------------------------------------------------
 function sampleVisual(el) {
-    const box = el.getBBox?.();
-    const vp = getViewportBox();
-    if (!box || !vp) return null;
+  if (!el || !el.getBoundingClientRect) return null;
 
-    const cx = box.x + box.width / 2;
-    const cy = box.y + box.height / 2;
+  // ---------------------------------------------------------
+  // Resolve spatial reference:
+  //   1) nearest valid osc frame
+  //   2) fallback to visible score window (ALWAYS)
+  // ---------------------------------------------------------
+  let vpEl = null;
 
-    const x = clamp01((cx - vp.x) / vp.w);
-    const y = clamp01((cy - vp.y) / vp.h);
-
-    const size = clamp01(
-        Math.max(box.width / vp.w, box.height / vp.h)
-    );
-
-    // scale (best effort)
-    let scale = 1;
-    const t = el.style.transform || "";
-    const m = t.match(/scale\(\s*([-\d.+eE]+)/);
-    if (m) {
-        const s = parseFloat(m[1]);
-        if (Number.isFinite(s)) scale = s;
+  const frameEl = findOscFrame(el);
+  if (frameEl) {
+    const r = frameEl.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) {
+      vpEl = frameEl;
     }
+  }
 
-    // rotation (0–1)
-    let rotation = 0;
-    const r = t.match(/rotate\(\s*([-\d.+eE]+)/);
-    if (r) {
-        const deg = parseFloat(r[1]);
-        if (Number.isFinite(deg)) {
-            rotation = ((deg % 360) + 360) % 360 / 360;
-        }
+  // unconditional fallback (restores original behaviour)
+  vpEl = vpEl || window.scoreContainer;
+  if (!vpEl) return null;
+
+  const vp = vpEl.getBoundingClientRect();
+  if (!vp.width || !vp.height) return null;
+
+  const box = el.getBoundingClientRect();
+
+  // ---------------------------------------------------------
+  // Position (screen-space → frame-local → normalised)
+  // ---------------------------------------------------------
+  const cx = box.left + box.width / 2;
+  const cy = box.top  + box.height / 2;
+
+  const lx = cx - vp.left;
+  const ly = cy - vp.top;
+
+  const x = clamp01(lx / vp.width);
+  const y = clamp01(1 - (ly / vp.height)); // invert Y for musical semantics
+
+  // ---------------------------------------------------------
+  // Geometry (screen-space, perceptual)
+  // ---------------------------------------------------------
+  const widthRaw  = clamp01(box.width  / vp.width);
+  const heightRaw = clamp01(box.height / vp.height);
+
+  const width  = Math.sqrt(widthRaw);                  // envelope / time
+  const height = Math.sqrt(heightRaw);                 // brightness
+  const area   = Math.pow(widthRaw * heightRaw, 0.25); // density / energy
+
+  let aspect = 0.5;
+  if (box.height > 0) {
+    const ratio = box.width / box.height;
+    aspect = clamp01(ratio / (ratio + 1));
+  }
+
+  const size = Math.max(width, height);
+
+  // ---------------------------------------------------------
+  // Transform-derived values
+  // ---------------------------------------------------------
+  let scale = 1;
+  let rotation = 0;
+
+  const t = el.getAttribute("transform") || "";
+
+  const sm = t.match(/scale\(\s*([-\d.+eE]+)/);
+  if (sm) {
+    const s = parseFloat(sm[1]);
+    if (Number.isFinite(s)) scale = clamp01(Math.abs(s));
+  }
+
+  const rm = t.match(/rotate\(\s*([-\d.+eE]+)/);
+  if (rm) {
+    const deg = parseFloat(rm[1]);
+    if (Number.isFinite(deg)) {
+      rotation = ((deg % 360) + 360) % 360 / 360;
     }
+  }
 
-    // opacity
-    let opacity = 1;
-    const o = getComputedStyle(el).opacity;
-    if (o != null) {
-        const v = parseFloat(o);
-        if (Number.isFinite(v)) opacity = clamp01(v);
+  // ---------------------------------------------------------
+  // Opacity
+  // ---------------------------------------------------------
+  let opacity = 1;
+  const o = getComputedStyle(el).opacity;
+  if (o != null) {
+    const v = parseFloat(o);
+    if (Number.isFinite(v)) opacity = clamp01(v);
+  }
+
+  // ---------------------------------------------------------
+  // Fill → numeric (deterministic hash)
+  // ---------------------------------------------------------
+  let fill = 0;
+  const fillStr = getComputedStyle(el).fill || "";
+  if (fillStr && fillStr !== "none") {
+    let h = 0;
+    for (let i = 0; i < fillStr.length; i++) {
+      h = ((h << 5) - h) + fillStr.charCodeAt(i);
+      h |= 0;
     }
+    fill = clamp01(Math.abs(h % 1000) / 1000);
+  }
 
-    // fill → numeric hash (stable, deterministic)
-    let fill = 0;
-    const fillStr = getComputedStyle(el).fill || "";
-    if (fillStr && fillStr !== "none") {
-        let h = 0;
-        for (let i = 0; i < fillStr.length; i++) {
-            h = ((h << 5) - h) + fillStr.charCodeAt(i);
-            h |= 0;
-        }
-        fill = clamp01(Math.abs(h % 1000) / 1000);
-    }
-
-    return { x, y, size, scale, rotation, opacity, fill };
+  return {
+    x, y,
+    width,
+    height,
+    area,
+    aspect,
+    size,
+    scale,
+    rotation,
+    opacity,
+    fill
+  };
 }
+
+
+
+
+
+function findOscFrame(el) {
+  let node = el.parentElement;
+  while (node) {
+    if (
+      node.hasAttribute?.("data-osc-frame") ||
+      (typeof node.id === "string" && node.id.includes("osc_frame"))
+    ) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
+
+
 
 // ---------------------------------------------------------------------------
 // OSC sender
