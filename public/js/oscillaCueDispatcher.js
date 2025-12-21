@@ -186,6 +186,27 @@ function capitalize(s) {
 }
 
 
+
+
+
+
+function triggerNestedCues(ast, cueElement, options) {
+  if (!ast || !ast.body || !Array.isArray(ast.body)) return;
+
+  for (const childAst of ast.body) {
+    if (!childAst?.type) continue;
+
+    // 🚫 propagate itself is not a cue
+    if (childAst.type === "propagate") {
+      triggerNestedCues(childAst, cueElement, options);
+      continue;
+    }
+
+    // 🔁 Trigger nested cue immediately
+    handleCueTrigger(childAst, false, true, cueElement);
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, cueElement = null) {
@@ -264,13 +285,28 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
   switch (ast.type) {
 
     // Animation handlers
-    case "cueRotate": return handleRotateCue(cueElement, ast.args, { fromCueTrigger: true });
-    case "cueScale": return handleScaleCue(ast, cueElement, { fromCueTrigger: true });
-    case "cueO2P": return handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
+case "cueScale": {
+  handleScaleCue(ast, cueElement, { fromCueTrigger: true });
+  triggerNestedCues(ast, cueElement);
+  return;
+}
 
-    // OSC
-    case "cueOsc":
-      return handleOscCue(ast, cueElement, { fromCueTrigger: true });
+case "cueRotate": {
+  handleRotateCue(cueElement, ast.args, { fromCueTrigger: true });
+  triggerNestedCues(ast, cueElement);
+  return;
+}
+
+case "cueO2P": {
+  handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
+  triggerNestedCues(ast, cueElement);
+  return;
+}
+
+case "cueOsc": {
+  handleOscCue(ast, cueElement, { fromCueTrigger: true });
+  return; // osc has no children
+}
 
     // Page navigation — ALWAYS retrigger
     case "cuePage":
@@ -728,14 +764,20 @@ export function assignCues(svgRoot, cuesArray = []) {
 
 
       // Normal cue (including scale, rotate, o2p, etc.)
-      const box = child.getBBox?.();
-      cuesArray.push({
-        id,
-        ast,
-        element: child,
-        triggered: false,
-        ...(box && { x: box.x, width: box.width })
-      });
+const box = child.getBBox();
+const screenX = child.getBoundingClientRect().left + box.width / 2;
+
+cuesArray.push({
+  id,
+  ast,
+  element: child,
+
+  // 🔒 freeze trigger geometry
+  triggerX: screenX,
+  triggerWidth: box.width,
+
+  triggered: false
+});
       registerCueUid(id, "walk");
 
 
@@ -1375,7 +1417,8 @@ export async function checkCueTriggers() {
   if (!Array.isArray(window.cues)) return;
 
   // ✅ Sync elapsed time based on current scroll position
-  window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+  window.elapsedTime =
+    (window.playheadX / window.scoreWidth) * window.duration;
 
   // 🛑 Skip cue checks if paused, seeking, or not playing
   if (window.isSeeking || window.animationPaused || !window.isPlaying) return;
@@ -1386,14 +1429,15 @@ export async function checkCueTriggers() {
     return;
   }
 
-  // We track cue-left positions across frames (since the playhead is fixed)
+  // Persistent per-cue state
   if (!window._prevCueLefts) window._prevCueLefts = new Map();
   if (!window._cueInsideState) window._cueInsideState = new Map();
   if (!window.triggeredCues) window.triggeredCues = new Set();
 
-  const tolerance = 8; // px (tweak 5–10)
+  const tolerance = 8; // px
 
-  const containerRect = window.scoreContainer.getBoundingClientRect();
+  const containerRect =
+    window.scoreContainer.getBoundingClientRect();
 
   for (const cue of window.cues) {
     if (!cue?.element) continue;
@@ -1409,16 +1453,15 @@ export async function checkCueTriggers() {
     const wasInside = window._cueInsideState.get(cue.id) || false;
     const isInside = playheadX >= cueLeft && playheadX <= cueRight;
 
-    // Initialize previous left on first sight (prevents start/resume/seek retriggers)
+    // Initialise state on first encounter
     if (prevLeft === undefined) {
       window._prevCueLefts.set(cue.id, cueLeft);
       window._cueInsideState.set(cue.id, isInside);
       continue;
     }
 
-    // Forward scroll = cues move LEFT (cueLeft decreases)
+    // Forward scroll → cues move LEFT
     const movingForward = cueLeft < prevLeft;
-
 
     const crossedLeftEdgeForward =
       movingForward &&
@@ -1430,52 +1473,69 @@ export async function checkCueTriggers() {
       cue.ast?.params &&
       cue.ast.params.repeats !== undefined;
 
+    // ======================================================
+    // 🎯 PRIMARY TRIGGER
+    // ======================================================
     if (crossedLeftEdgeForward) {
-      // For normal cues: fire once, then suppress via triggeredCues
       if (!isRepeatNavCue && window.triggeredCues.has(cue.id)) {
-        // already fired once → skip
+        // already fired → skip
       } else {
-        console.log(`[cueTrigger] ✅ Left-edge crossing → ${cue.id}`);
+        console.log(
+          `[cueTrigger] ✅ Left-edge crossing → ${cue.id}`
+        );
+
         handleCueTrigger(
           cue.ast,
           false,      // isRemote
           true,       // force
-          cue.element // element for UI
+          cue.element // UI / DOM anchor
         );
 
-        // Only "lock" normal cues; repeat-nav cues must be allowed to trigger again
         if (!isRepeatNavCue) {
           window.triggeredCues.add(cue.id);
         }
+
       }
     }
 
-
-    // Update per-cue state for next frame
+    // Update state for next frame
     window._prevCueLefts.set(cue.id, cueLeft);
     window._cueInsideState.set(cue.id, isInside);
 
-    // 🔁 Repeat logic — unchanged from your working version
-    for (const [repeatCueId, repeat] of Object.entries(window.repeatStateMap || {})) {
+    
+    // ======================================================
+    // 🔁 REPEAT LOGIC (unchanged)
+    // ======================================================
+    for (const [repeatCueId, repeat] of Object.entries(
+      window.repeatStateMap || {}
+    )) {
       if (!repeat.active || !repeat.ready || !repeat.initialJumpDone) continue;
 
       let isAtRepeatEnd = false;
 
-      if (repeat.endId === 'self') {
-        const repeatCue = window.cues.find(c => c.id === repeat.cueId || c.id.startsWith(`${repeat.cueId}-`));
+      if (repeat.endId === "self") {
+        const repeatCue = window.cues.find(
+          c => c.id === repeat.cueId || c.id.startsWith(`${repeat.cueId}-`)
+        );
         if (repeatCue?.element) {
-          const repeatRect = repeatCue.element.getBoundingClientRect();
-          const repeatX = repeatRect.left - containerRect.left;
-          const repeatEnd = repeatX + (repeatRect.width || 40);
-          isAtRepeatEnd = playheadX >= repeatX && playheadX <= repeatEnd;
+          const repeatRect =
+            repeatCue.element.getBoundingClientRect();
+          const repeatX =
+            repeatRect.left - containerRect.left;
+          const repeatEnd =
+            repeatX + (repeatRect.width || 40);
+          isAtRepeatEnd =
+            playheadX >= repeatX && playheadX <= repeatEnd;
         }
-      } else if (cue.id === repeat.endId || cue.id.startsWith(`${repeat.endId}-`)) {
+      } else if (
+        cue.id === repeat.endId ||
+        cue.id.startsWith(`${repeat.endId}-`)
+      ) {
         isAtRepeatEnd = true;
       }
 
       const now = Date.now();
       if (repeat.jumpCooldownUntil && now < repeat.jumpCooldownUntil) {
-        console.log(`[repeat] ⏳ Cooldown active for ${repeatCueId}`);
         continue;
       }
 
@@ -1487,43 +1547,48 @@ export async function checkCueTriggers() {
         repeat.currentCount++;
         window.updateRepeatCountDisplay?.(repeat.currentCount);
 
-        console.log(`[repeat] Reached end (${repeat.endId}) for ${repeatCueId} → count: ${repeat.currentCount}`);
-
         if (repeat.isInfinite || repeat.currentCount < repeat.count) {
-          if (repeat.directionMode === 'p') {
+          if (repeat.directionMode === "p") {
             repeat.currentlyReversing = !repeat.currentlyReversing;
           }
 
-          console.log(`[repeat] Executing repeat jump for ${repeatCueId}`);
           try {
-            await window.executeRepeatJump?.(repeat, repeatCueId);
+            await window.executeRepeatJump?.(
+              repeat,
+              repeatCueId
+            );
           } catch (err) {
-            console.error(`[repeat] ❌ Error during repeat jump (${repeatCueId}):`, err);
+            console.error(
+              `[repeat] ❌ Error during repeat jump (${repeatCueId}):`,
+              err
+            );
           }
         } else {
           repeat.active = false;
           window.hideRepeatCountDisplay?.();
 
-          if (repeat.action === 'stop') {
-            console.log(`[repeat] Repeat complete → stopping playback.`);
+          if (repeat.action === "stop") {
             window.stopAnimation?.();
             window.isPlaying = false;
             window.isMusicalPause = true;
             window.togglePlayButton?.();
-          } else if (repeat.resumeId && repeat.resumeId !== 'self') {
-            console.log(`[repeat] Repeat complete → jumping to ${repeat.resumeId}`);
+          } else if (
+            repeat.resumeId &&
+            repeat.resumeId !== "self"
+          ) {
             window.jumpToCueId?.(repeat.resumeId);
-            window.isPlaying ? window.pausePlayback() : window.startPlayback();
-          } else {
-            console.log(`[repeat] Repeat complete → staying at current location.`);
+            window.isPlaying
+              ? window.pausePlayback()
+              : window.startPlayback();
           }
         }
 
-        break; // 🛑 Prevent multiple repeat triggers in one frame
+        break; // prevent multiple repeat triggers in one frame
       }
     }
   }
 }
+
 
 
 window.resetCueEdgeTracking = function () {

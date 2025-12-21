@@ -494,9 +494,6 @@ case "osc_value": {
   // addr:voice  →  /oscilla/voice
   // optional uid →  /oscilla/voice/pt_2
   let oscAddress = `/oscilla/${String(addr)}`;
-  if (uid) {
-    oscAddress += `/${String(uid)}`;
-  }
 
   // Convert values object → OSC args
   const args = Object.values(values).map(v => ({
