@@ -20,6 +20,17 @@ window.autostartStopwatchCues = () => {
 };
 
 
+function restoreStopwatchCue(cueElement) {
+  if (!cueElement || !cueElement._stopwatchHidden) return;
+
+  const prev = cueElement._stopwatchHidden;
+  cueElement.style.display = prev.display || "";
+  cueElement.style.opacity = prev.opacity || "";
+  cueElement.style.pointerEvents = prev.pointerEvents || "";
+
+  delete cueElement._stopwatchHidden;
+}
+
 export function handleStopwatchCue(ast, cueElement = null, options = {}) {
   const { fromCueTrigger = false } = options;
 
@@ -201,6 +212,8 @@ export function handleStopwatchCue(ast, cueElement = null, options = {}) {
       div.style.cursor = "pointer";
       div.onclick = () => {
         clearInterval(intervalId);
+          restoreStopwatchCue(cueElement);
+
         div.remove();
       };
     }
@@ -221,10 +234,21 @@ export function handleStopwatchCue(ast, cueElement = null, options = {}) {
       div.style.opacity = "0";
       setTimeout(() => {
         console.log("[STOPWATCH] Removing after fade");
+          restoreStopwatchCue(cueElement);
+
         div.remove();
       }, 1000);
     }, hold * 1000);
   }
+
+
+if (cueElement && !cueElement._stopwatchHidden) {
+  cueElement._stopwatchHidden = {
+    display: cueElement.style.display,
+    opacity: cueElement.style.opacity,
+    pointerEvents: cueElement.style.pointerEvents
+  };
+}
 
 
   // -----------------------------------------

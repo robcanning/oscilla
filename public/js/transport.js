@@ -135,6 +135,7 @@ export const rewindToStart = () => {
     triggeredCues.clear(); //  Ensure cues retrigger after rewind
     window._cueInsideState?.clear();
     window.navRepeatMap?.clear();
+    
 
     // console.log("[DEBUG] Cleared triggered cues due to rewind.");
   }

@@ -662,6 +662,21 @@ export function handleRestoredRepeatState(repeatStateMap, cues) {
   }
 }
 
+
+
+/////////////////////////////////////////////////////////
+
+function splitCueId(id) {
+  if (!id || typeof id !== "string") return [];
+
+  return id
+    .split(/\)\s*(?=[a-zA-Z_][a-zA-Z0-9_-]*\s*\()/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => s.endsWith(")") ? s : s + ")");
+}
+
+
 /**
  * assignCues(svgRoot)
  * ---------------------
@@ -712,18 +727,56 @@ export function assignCues(svgRoot, cuesArray = []) {
     for (const child of node.children) {
       const id = child.id;
 
-      // no id or no cue syntax → dive deeper
-      if (!id || !/[()]/.test(id)) {
-        walk(child);
-        continue;
-      }
+// 🔹 NEW: split compound IDs
+const cueExprs = splitCueId(id);
 
-      // --- 🔥 Ignore reuse(...) clones entirely ---
-      if (/^reuse\s*\(/.test(id)) {
-        // console.log(`[assignCues] ⏭ Ignoring reuse() clone id="${id}"`);
-        walk(child);
-        continue;
-      }
+// No valid cues → dive deeper
+if (!cueExprs.length) {
+  walk(child);
+  continue;
+}
+
+for (const cueExpr of cueExprs) {
+  let ast = null;
+
+  try {
+    ast = parseCueToAST(cueExpr);
+  } catch (e) {
+    console.warn("[assignCues] parse failed for:", cueExpr);
+    continue;
+  }
+
+  if (!ast) continue;
+
+  // Skip non-cues
+  if (ast.type === "cueButton") continue;
+
+  // Pre-prime fade targets
+  if (ast.type === "cueFade") {
+    window._fadeCues.set(child, ast);
+    primeFadeTargetFromAST(ast, child);
+  }
+
+  const box = child.getBBox();
+  const screenX = child.getBoundingClientRect().left + box.width / 2;
+
+  cuesArray.push({
+    id: cueExpr,          // 🔹 IMPORTANT: individual cue ID
+    ast,
+    element: child,
+
+    triggerX: screenX,
+    triggerWidth: box.width,
+
+    triggered: false
+  });
+
+  registerCueUid(cueExpr, "walk");
+}
+
+// Continue walking children
+walk(child);
+
       // --------------------------------------------------------
       // Skip propagate(...) because it's NOT a cue — it's a generator
       // --------------------------------------------------------
@@ -1409,6 +1462,9 @@ export function resetTriggeredCues() {
  * - Cooldown suppression after jump events to avoid double triggers
  * - Manual playback stop or resume via cueRepeat_* directives
  */
+
+  window.evaluateCueIntersections = true;
+
 export async function checkCueTriggers() {
   // 🔒 Global cue suppression guard (jumping, scrubbing, loading, etc.)
   if (window.suppressCueTriggers) return;
@@ -1421,7 +1477,10 @@ export async function checkCueTriggers() {
     (window.playheadX / window.scoreWidth) * window.duration;
 
   // 🛑 Skip cue checks if paused, seeking, or not playing
-  if (window.isSeeking || window.animationPaused || !window.isPlaying) return;
+
+
+if (window.isSeeking || !window.evaluateCueIntersections) return;
+
 
   const playheadX = window.getPlayheadX();
   if (playheadX === null) {
@@ -1450,8 +1509,45 @@ export async function checkCueTriggers() {
       ? window._prevCueLefts.get(cue.id)
       : undefined;
 
-    const wasInside = window._cueInsideState.get(cue.id) || false;
-    const isInside = playheadX >= cueLeft && playheadX <= cueRight;
+ const prevInside = window._cueInsideState.get(cue.id) || false;
+const isInside = playheadX >= cueLeft && playheadX <= cueRight;
+
+// 🔧 update state FIRST
+window._cueInsideState.set(cue.id, isInside);
+
+// ======================================================
+// 🔊 OSC RE-ENTRANT PLAYHEAD TRIGGER
+// ======================================================
+if (cue.ast?.type === "cueOsc") {
+
+  if (cue._armed === undefined) cue._armed = true;
+  if (cue._lastOscFire === undefined) cue._lastOscFire = 0;
+
+  const now = performance.now();
+  const COOLDOWN = 80;
+
+  // ENTER
+  if (!prevInside && isInside && cue._armed) {
+    if (now - cue._lastOscFire >= COOLDOWN) {
+      handleCueTrigger(cue.ast, false, true, cue.element);
+      cue._armed = false;
+      cue._lastOscFire = now;
+      console.log(`[osc] 🔔 ENTER → ${cue.id}`);
+    }
+  }
+
+  // EXIT
+  if (prevInside && !isInside) {
+    cue._armed = true;
+    console.log(`[osc] 🔄 EXIT → rearmed ${cue.id}`);
+  }
+}
+
+
+
+
+
+
 
     // Initialise state on first encounter
     if (prevLeft === undefined) {
@@ -1502,7 +1598,7 @@ export async function checkCueTriggers() {
     window._prevCueLefts.set(cue.id, cueLeft);
     window._cueInsideState.set(cue.id, isInside);
 
-    
+
     // ======================================================
     // 🔁 REPEAT LOGIC (unchanged)
     // ======================================================

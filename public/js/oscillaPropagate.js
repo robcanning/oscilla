@@ -1,38 +1,32 @@
+// ------------------------------------------------------------
 // oscillaPropagate.js
 // ------------------------------------------------------------
-// Group-level macro expansion for Oscilla’s new DSL.
+// Group-level macro expansion for Oscilla DSL.
 //
-// Allows:
-//   <g id="propagate(
-//        scale(values:[1,2], seqdur:${1}, ease:0, uid:foo),
-//        rnd([20,30,40])
-//      )">
-//      <circle ... />
-//      <circle ... />
-//   </g>
+// Supports:
+//   propagate(
+//     osc(freq:${1}, trig:edge),
+//     scale(values:[1,1.2,1], dur:${2}),
+//     rnd(300,800),
+//     rnd(2,6)
+//   )
 //
 // Behaviour:
-//   - TEMPLATE = first argument
-//   - expr1, expr2, ... = subsequent arguments (rnd(), numbers, etc.)
-//   - For EACH CHILD:
-//        * substitute ${1}, ${2}, …
-//          (each occurrence re-evaluates its expression → fresh rnd)
-//        * apply unique uid:
-//              if uid:foo  → uid:foo_0, uid:foo_1, …
-// –              if no uid:  → append ", uid:prop_G_I"
-//   - assign expanded ID to each child element
-//
-// This runs *before* the main Cue/Animation DSL parser.
+//   • Multiple cue templates per child
+//   • rnd(...) and numbers are compile-time expressions ONLY
+//   • Exactly ONE uid per child, shared across cues
+//   • Space-separated cue IDs (parser-safe)
+//   • Nested propagate(...) supported (multi-pass)
 // ------------------------------------------------------------
 
+
 // ------------------------------------------------------------
-// Simple expression evaluator for rnd(), numbers, lists.
-// Replace with your central evaluator if desired.
+// Expression evaluator (compile-time only)
 // ------------------------------------------------------------
 function evaluateExpr(rawExpr) {
   const expr = String(rawExpr).trim();
 
-  // rnd([a,b,c]) → choose from list
+  // rnd([a,b,c])
   let m = expr.match(/^rnd\s*\(\s*\[(.+)\]\s*\)\s*$/);
   if (m) {
     const items = m[1].split(",").map(s => s.trim());
@@ -54,13 +48,13 @@ function evaluateExpr(rawExpr) {
     return parseFloat(expr);
   }
 
-  // fallback: string literal
+  // fallback literal
   return expr;
 }
 
+
 // ------------------------------------------------------------
-// Split top-level args inside propagate(...)
-// Handles nested () and [] so commas inside them are safe.
+// Split top-level args (comma-safe with nesting)
 // ------------------------------------------------------------
 function splitTopLevelArgs(inner) {
   const parts = [];
@@ -70,6 +64,7 @@ function splitTopLevelArgs(inner) {
   for (const ch of inner) {
     if (ch === "(" || ch === "[") depth++;
     if (ch === ")" || ch === "]") depth--;
+
     if (ch === "," && depth === 0) {
       parts.push(current.trim());
       current = "";
@@ -82,8 +77,10 @@ function splitTopLevelArgs(inner) {
   return parts;
 }
 
+
 // ------------------------------------------------------------
-// Substitute ${1}, ${2}, ... with per-occurrence evaluation
+// Placeholder expansion: ${1}, ${2}, ...
+// Each occurrence re-evaluates rnd(...)
 // ------------------------------------------------------------
 function applyPlaceholders(template, argExprs) {
   let expanded = template;
@@ -101,80 +98,100 @@ function applyPlaceholders(template, argExprs) {
   return expanded;
 }
 
+
 // ------------------------------------------------------------
-// UID logic (new DSL only)
+// Cue template detection
 // ------------------------------------------------------------
-// If uid:foo exists → becomes uid:foo_0, foo_1, ...
-// If no uid → append ", uid:prop_g_i"
-function applyUniqueUid(expanded, groupIndex, childIndex) {
-  const uidRe = /uid\s*:\s*([A-Za-z0-9_\-]+)/;
-
-  // Case 1: uid:VALUE exists → rename
-  if (uidRe.test(expanded)) {
-    return expanded.replace(uidRe, (_, val) => {
-      return `uid:${val}_${childIndex}`;
-    });
-  }
-
-  // Case 2: no uid present → append canonical uid
-  const autoUid = `uid:prop_${groupIndex}_${childIndex}`;
-
-  // If template already has parameters (contains "(" ), append with comma
-  if (expanded.includes("(") && !expanded.endsWith("(")) {
-    return `${expanded}, ${autoUid}`;
-  }
-
-  // Fallback: just append cleanly
-  return `${expanded}, ${autoUid}`;
+// IMPORTANT:
+//   • osc(...), scale(...), rotate(...), o2p(...), propagate(...)
+//     → templates
+//   • rnd(...) → expression ONLY (never emitted)
+// ------------------------------------------------------------
+function isCueTemplate(str) {
+  return (
+    /^[a-zA-Z_][a-zA-Z0-9_-]*\s*\(/.test(str) &&
+    !str.startsWith("rnd(")
+  );
 }
 
+
 // ------------------------------------------------------------
-// Main function
+// Main propagate macro
 // ------------------------------------------------------------
 export function propagate(svgRoot) {
   if (!svgRoot) return;
 
-  const groups = svgRoot.querySelectorAll('[id^="propagate("]');
-  if (!groups.length) return;
+  let expandedSomething;
 
-  console.info(`[propagate] Found ${groups.length} groups`);
+  // 🔁 Multi-pass expansion to support nested propagate(...)
+  do {
+    expandedSomething = false;
 
-  groups.forEach((group, groupIndex) => {
-    const id = group.id;
-    const match = id.match(/^propagate\((.*)\)$/s);
-    if (!match) return;
+    const groups = svgRoot.querySelectorAll('[id^="propagate("]');
+    if (!groups.length) return;
 
-    const inner = match[1];
-    const parts = splitTopLevelArgs(inner);
-    if (!parts.length) return;
+    console.info(`[propagate] Found ${groups.length} groups`);
 
-    const template = parts[0];
-    const argExprs = parts.slice(1);
-    const children = Array.from(group.children);
+    groups.forEach((group, groupIndex) => {
+      const id = group.id;
+      const match = id.match(/^propagate\((.*)\)$/s);
+      if (!match) return;
 
-    if (!children.length) {
-      console.warn(`[propagate] ⚠️ No children inside group ${id}`);
-      return;
-    }
+      expandedSomething = true;
 
-    children.forEach((child, i) => {
-      // 1) placeholder expansion (fresh rnd each occurrence)
-      let expanded = applyPlaceholders(template, argExprs);
+      const inner = match[1];
+      const parts = splitTopLevelArgs(inner);
+      if (!parts.length) return;
 
-      // 2) uid injection / uniquifying
-      expanded = applyUniqueUid(expanded, groupIndex, i);
+      // Separate cue templates from argument expressions
+      const templates = parts.filter(isCueTemplate);
+      const argExprs  = parts.filter(p => !isCueTemplate(p));
 
-      // 3) assign final ID
-      child.id = expanded;
+      const children = Array.from(group.children);
+      if (!children.length) {
+        console.warn(`[propagate] ⚠️ No children inside group ${id}`);
+        return;
+      }
 
-      console.debug(
-        `[propagate] #${i} → id="${child.id}"`
-      );
+      children.forEach((child, i) => {
+        // 1) Expand placeholders for each cue
+        const expandedCues = templates.map(tpl =>
+          applyPlaceholders(tpl, argExprs)
+        );
+
+        // 2) One UID per child (shared across cues)
+        const uid = `prop_${groupIndex}_${i}`;
+
+        // 3) Inject uid into each cue
+        const withUid = expandedCues.map(cue => {
+          if (/uid\s*:/.test(cue)) {
+            return cue.replace(
+              /uid\s*:\s*([A-Za-z0-9_-]+)/,
+              (_, base) => `uid:${base}_${i}`
+            );
+          }
+          return cue.replace(/\)$/, `, uid:${uid})`);
+        });
+
+        // 4) Assign final space-separated ID
+        child.id = withUid.join(" ");
+
+        console.debug(
+          `[propagate] #${i} → id="${child.id}"`
+        );
+      });
+
+      // Clean up macro ID after expansion
+      group.removeAttribute("id");
     });
-  });
+
+  } while (expandedSomething);
 }
 
-// Expose globally so existing calls from app.js / cues.js continue to work
+
+// ------------------------------------------------------------
+// Global exposure (legacy compatibility)
+// ------------------------------------------------------------
 if (typeof window !== "undefined") {
   window.propagate = propagate;
 }

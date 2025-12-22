@@ -1,4 +1,4 @@
-// o2p.js — Clean Modern Rewrite (patched with rotate modes + logging)
+// o2p.js — Clean Modern Rewrite (FIXED for nested animations + scroll mode)
 // -----------------------------------------------------------
 // Modes:
 //   - forward
@@ -13,7 +13,11 @@
 //   - ease: single int/string or list [...]
 //   - start/end: 0..1 segment slicing
 //   - uid override
-//   - ghostClickable three-phase lifecycle (registered → armed → running)
+//   - ghostClickable three-phase lifecycle
+// -----------------------------------------------------------
+// KEY FIX: Do NOT shift geometry. Store original bbox center and
+//          compute transforms relative to that center. This preserves
+//          the object's position in SVG coordinate space.
 // -----------------------------------------------------------
 
 import { registerAnimation, resolveAnimationUid } from "./oscillaAnimation.js";
@@ -24,107 +28,104 @@ import {
     applyPrestateBeforeStart,
     applyPrestateOnStart,
     armGhostClickable,
-    needsArming, isOscEnabled
+    needsArming,
+    isOscEnabled,
+    ensureAnimWrapper
 } from "./oscillaAnimationShared.js";
 
 
 /* ---------------------------------------------------------
- *  1. normalizeOrigin(el)
- *     Centers ANY SVG element/group at (0,0)
- *     NOTE: intended to be called ONCE per element.
+ *  1. ensureO2PWrapper(el)
+ *     Creates a dedicated wrapper for o2p transforms.
+ *     This wrapper sits INSIDE the element and receives
+ *     all o2p translation/rotation. The outer element
+ *     retains its scroll-mode placement transform.
  * --------------------------------------------------------*/
-function normalizeOrigin(el) {
-
-
-
-    function flatten(node) {
-        try {
-            if (typeof SVGPathCommander !== "undefined") {
-                SVGPathCommander.toPath(node);
-            }
-        } catch (_) { }
+function ensureO2PWrapper(el) {
+    // If we already have a wrapper, return it
+    if (el._o2pAnimWrapper) {
+        return el._o2pAnimWrapper;
     }
 
-    // flatten transform on self
-    if (el.hasAttribute("transform")) {
-        flatten(el);
-        el.removeAttribute("transform");
+    // Only wrap groups
+    if (!(el instanceof SVGGElement)) {
+        // For non-groups, animate directly
+        el._o2pAnimWrapper = el;
+        return el;
     }
 
-    // flatten child transforms if group
-    if (el instanceof SVGGElement) {
-        for (const child of [...el.children]) {
-            if (child.hasAttribute("transform")) {
-                flatten(child);
-                child.removeAttribute("transform");
-            }
-        }
+    // Check if wrapper already exists in DOM
+    const existing = el.querySelector(":scope > g.oscilla-o2p-anim");
+    if (existing) {
+        el._o2pAnimWrapper = existing;
+        return existing;
     }
 
-    // compute bbox center
-    const bbox = el.getBBox();
-    // guard against zero-area / invalid bbox
+    // Create new wrapper
+    const wrapper = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    wrapper.classList.add("oscilla-o2p-anim");
+
+    // Move all children into the wrapper
+    while (el.firstChild) {
+        wrapper.appendChild(el.firstChild);
+    }
+
+    // Attach wrapper to element
+    el.appendChild(wrapper);
+    el._o2pAnimWrapper = wrapper;
+
+    console.log("[o2p] Created animation wrapper for", el.id || "(anon)");
+
+    return wrapper;
+}
+
+
+/* ---------------------------------------------------------
+ *  2. captureOriginalCenter(wrapper)
+ *     
+ *     Captures the bbox center of the wrapper content
+ *     WITHOUT modifying any geometry. This center is used
+ *     to compute the offset needed when positioning on path.
+ *     
+ *     KEY INSIGHT: We don't move the geometry to (0,0).
+ *     Instead, we remember where it was and compute
+ *     transforms that move it FROM its original position
+ *     TO the path position.
+ * --------------------------------------------------------*/
+function captureOriginalCenter(wrapper) {
+    // Guard: don't re-capture
+    if (wrapper._o2pCenterCaptured) {
+        return wrapper._o2pOriginalCenter;
+    }
+
+    // Compute bbox in local coordinates
+    const bbox = wrapper.getBBox();
+    
+    // Guard against zero-area / invalid bbox
     if (!bbox || !isFinite(bbox.x) || !isFinite(bbox.y) ||
         !isFinite(bbox.width) || !isFinite(bbox.height) ||
         bbox.width === 0 || bbox.height === 0) {
-        console.warn("[o2p] normalizeOrigin: invalid or zero-area bbox for", el.id || el);
-        return;
+        console.warn("[o2p] captureOriginalCenter: invalid or zero-area bbox for", wrapper);
+        wrapper._o2pOriginalCenter = { x: 0, y: 0 };
+        wrapper._o2pCenterCaptured = true;
+        return wrapper._o2pOriginalCenter;
     }
 
     const cx = bbox.x + bbox.width / 2;
     const cy = bbox.y + bbox.height / 2;
 
-    // store original center for later compensation
-    el._o2pOrigin = { x: cx, y: cy };
+    // Store original center - this is where the object currently sits
+    wrapper._o2pOriginalCenter = { x: cx, y: cy };
+    wrapper._o2pCenterCaptured = true;
 
-    if (!isFinite(cx) || !isFinite(cy)) return;
+    console.log("[o2p] Captured original center for", wrapper, "→", cx.toFixed(1), cy.toFixed(1));
 
-    // recursive shift so that the center moves to (0,0)
-    function shift(node, dx, dy) {
-        const tag = node.tagName;
-
-        if (tag === "path") {
-            const d = node.getAttribute("d");
-            if (d) {
-                try {
-                    const cmd = new SVGPathCommander(d);
-                    node.setAttribute("d", cmd.translate(-dx, -dy).toString());
-                } catch (_) { }
-            }
-        }
-        else if (tag === "rect") {
-            const x = parseFloat(node.getAttribute("x")) || 0;
-            const y = parseFloat(node.getAttribute("y")) || 0;
-            node.setAttribute("x", x - dx);
-            node.setAttribute("y", y - dy);
-        }
-        else if (tag === "circle" || tag === "ellipse") {
-            const x = parseFloat(node.getAttribute("cx")) || 0;
-            const y = parseFloat(node.getAttribute("cy")) || 0;
-            node.setAttribute("cx", x - dx);
-            node.setAttribute("cy", y - dy);
-        }
-        else if (tag === "polygon" || tag === "polyline") {
-            const pts = node.points;
-            for (let i = 0; i < pts.numberOfItems; i++) {
-                const p = pts.getItem(i);
-                p.x -= dx;
-                p.y -= dy;
-            }
-        }
-        else if (node instanceof SVGGElement) {
-            for (const c of [...node.children]) shift(c, dx, dy);
-        }
-    }
-
-    shift(el, cx, cy);
-        el._originNormalized = true;
-
+    return wrapper._o2pOriginalCenter;
 }
 
 
 /* ---------------------------------------------------------
- *  2. ease controller
+ *  3. ease controller
  * --------------------------------------------------------*/
 function normalizeEase(easeVal) {
     const easingMap = {
@@ -166,8 +167,7 @@ function normalizeEase(easeVal) {
 
 
 /* ---------------------------------------------------------
- *  3. VirtualPath
- *     Unified sampler with segment slicing
+ *  4. VirtualPath - Unified sampler with segment slicing
  * --------------------------------------------------------*/
 class VirtualPath {
     constructor(paths) {
@@ -185,11 +185,9 @@ class VirtualPath {
         return sum;
     }
 
-    // globalT: 0..1 mapped to concatenated paths
     sample(globalT) {
         if (!this.totalLen) return null;
 
-        // clamp to [0,1] to avoid null from tiny FP drift
         if (!isFinite(globalT)) return null;
         globalT = Math.max(0, Math.min(1, globalT));
 
@@ -212,7 +210,7 @@ class VirtualPath {
 
 
 /* ---------------------------------------------------------
- *  4. Path segment mapper (start/end)
+ *  5. Path segment mapper (start/end)
  * --------------------------------------------------------*/
 function makeTMapper(start, end) {
     const a = Math.max(0, Math.min(1, start ?? 0));
@@ -223,49 +221,20 @@ function makeTMapper(start, end) {
 
 
 /* ---------------------------------------------------------
- *  MATRIX HELPERS (inserted for drift-free transforms)
+ *  6. TRANSFORM WRITER
+ *     
+ *     Computes the transform needed to move the object
+ *     FROM its original center TO the path point.
+ *     
+ *     Transform = translate(pathPoint - originalCenter) + rotate
+ *     
+ *     This means:
+ *     - Object at (40000, 500) with center at (40050, 520)
+ *     - Path point at (40100, 530)
+ *     - Translation = (40100-40050, 530-520) = (50, 10)
+ *     - Object moves 50px right and 10px down from its original spot
  * --------------------------------------------------------*/
-
-function makeIdentityMatrix() {
-    return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
-}
-
-function makeTranslationMatrix(tx, ty) {
-    return { a: 1, b: 0, c: 0, d: 1, e: tx, f: ty };
-}
-
-function makeRotationMatrix(deg) {
-    const rad = (deg * Math.PI) / 180;
-    const cos = Math.cos(rad);
-    const sin = Math.sin(rad);
-    return {
-        a: cos,
-        b: sin,
-        c: -sin,
-        d: cos,
-        e: 0,
-        f: 0
-    };
-}
-
-// Compose m2 ∘ m1 = apply m1 first, then m2
-function multiplyMatrices(m2, m1) {
-    return {
-        a: m2.a * m1.a + m2.c * m1.b,
-        b: m2.b * m1.a + m2.d * m1.b,
-        c: m2.a * m1.c + m2.c * m1.d,
-        d: m2.b * m1.c + m2.d * m1.d,
-        e: m2.a * m1.e + m2.c * m1.f + m2.e,
-        f: m2.b * m1.e + m2.d * m1.f + m2.f
-    };
-}
-
-
-/* ---------------------------------------------------------
- *  5. TRANSFORM WRITER — rotation around normalized center
- * --------------------------------------------------------*/
-function applyTransform(el, point, angleDeg, cfg) {
-
+function applyTransform(wrapper, point, angleDeg, cfg) {
     const now = performance.now();
 
     // Human-friendly rotate modes → internal numeric codes
@@ -292,97 +261,91 @@ function applyTransform(el, point, angleDeg, cfg) {
         mode = 0;
     }
 
-    let tx = point.x;
-    let ty = point.y;
+    // Get the original center (where the object was before any o2p transform)
+    const originalCenter = wrapper._o2pOriginalCenter || { x: 0, y: 0 };
 
-    const tag = el.tagName.toLowerCase();
+    // Compute translation: move FROM original center TO path point
+    const tx = point.x - originalCenter.x;
+    const ty = point.y - originalCenter.y;
 
-    // compensate for origin normalization for paths / groups
-if ((tag === "path" || tag === "g") && el._o2pOrigin) {
-    tx -= el._o2pOrigin.x;
-    ty -= el._o2pOrigin.y;
-}
-
-    // base translation
+    // Build transform string
+    // First translate to move center to path point
+    // Then rotate around the new center position
     let t = `translate(${tx}, ${ty})`;
 
     if (!isFinite(angleDeg)) angleDeg = 0;
 
-    switch (mode) {
+    // For rotation, we need to rotate around the center
+    // Since we've translated, the center is now at the path point
+    // We rotate around (0,0) relative to the translated position
+    // which means rotating around originalCenter in local coords
+    
+    const rotateAroundX = originalCenter.x;
+    const rotateAroundY = originalCenter.y;
 
+    switch (mode) {
         case 0:
             // no rotation
             break;
 
         case 1:
-            // tangent
-            t += ` rotate(${angleDeg})`;
+            // tangent-aligned - rotate around the object's center
+            t += ` rotate(${angleDeg}, ${rotateAroundX}, ${rotateAroundY})`;
             break;
 
         case 2:
             // tangent + static offset
-            t += ` rotate(${angleDeg + (cfg.rotoffset || 0)})`;
+            t += ` rotate(${angleDeg + (cfg.rotoffset || 0)}, ${rotateAroundX}, ${rotateAroundY})`;
             break;
 
         case 3:
             // locked heading
-            t += ` rotate(${cfg.rotlock || 0})`;
+            t += ` rotate(${cfg.rotlock || 0}, ${rotateAroundX}, ${rotateAroundY})`;
             break;
 
         case 4:
-            if (!el._o2pFreeSpin) el._o2pFreeSpin = 0;
+            // free spin
+            if (!wrapper._o2pFreeSpin) wrapper._o2pFreeSpin = 0;
             {
-                // smooth dt
                 let dt;
-                if (el._o2pLastSpinTime == null) {
+                if (wrapper._o2pLastSpinTime == null) {
                     dt = window._o2p_dt || 0.016;
                 } else {
-                    dt = (now - el._o2pLastSpinTime) / 1000;
+                    dt = (now - wrapper._o2pLastSpinTime) / 1000;
                     if (dt > 0.05) dt = 0.05;
                 }
-                el._o2pLastSpinTime = now;
+                wrapper._o2pLastSpinTime = now;
 
-                // interpret rotspeed as "seconds per revolution"
                 const secPerRev = cfg.rotspeed || 1;
                 const degPerSecond = 360 / secPerRev;
                 const dir = cfg.rotdir || 1;
 
-                el._o2pFreeSpin += degPerSecond * dir * dt;
-                t += ` rotate(${el._o2pFreeSpin})`;
-
-                if (!window._o2p_lastSpin || (now - window._o2p_lastSpin) > 800) {
-                    window._o2p_lastSpin = now;
-                }
+                wrapper._o2pFreeSpin += degPerSecond * dir * dt;
+                t += ` rotate(${wrapper._o2pFreeSpin}, ${rotateAroundX}, ${rotateAroundY})`;
             }
             break;
     }
 
-    el.setAttribute("transform", t);
-    el.style.transform = "";
+    // Apply transform to the wrapper ONLY via SVG attribute
+    wrapper.setAttribute("transform", t);
+    
+    // DO NOT touch style.transform - that's for CSS animations (nested rotate)
 }
 
 
 /* ---------------------------------------------------------
- *  6. OSC emitter
+ *  7. OSC emitter
  * --------------------------------------------------------*/
-/* ---------------------------------------------------------
- *  6. OSC emitter (UID-safe, live-toggle, math preserved)
- * --------------------------------------------------------*/
-
 const O2P_OSC_THROTTLE_MS = 30;
 
 function emitO2POsc({ cfg, uid, path, point, pathT, oscMode }) {
-
-    // ---- OSC enable gate (shared logic) ----
     if (!isOscEnabled(cfg, oscMode)) return;
 
-    // ---- Throttle (live, not frozen) ----
     const now = performance.now();
     if (!cfg._oscLastSent) cfg._oscLastSent = 0;
     if (now - cfg._oscLastSent < O2P_OSC_THROTTLE_MS) return;
     cfg._oscLastSent = now;
 
-    // ---- Geometry (UNCHANGED) ----
     const bbox = path.getBBox();
     if (!bbox || bbox.width === 0 || bbox.height === 0) return;
 
@@ -402,7 +365,6 @@ function emitO2POsc({ cfg, uid, path, point, pathT, oscMode }) {
 
     if (!Number.isFinite(angle)) angle = 0;
 
-    // ---- Transport ----
     if (!window.socket || window.socket.readyState !== WebSocket.OPEN) return;
 
     window.socket.send(JSON.stringify({
@@ -415,22 +377,22 @@ function emitO2POsc({ cfg, uid, path, point, pathT, oscMode }) {
     }));
 }
 
+
 /* ---------------------------------------------------------
- *  7. Continuous mode (forward / reverse) — FIXED
+ *  8. Continuous mode (forward / reverse)
  * --------------------------------------------------------*/
 function startContinuousO2P(el, cfg, virtual, uid) {
     const { dur, loop, startPos, endPos, next, nextOn, oscMode } = cfg;
 
-    // normalize origin ONCE only
-    if (!el._originNormalized) {
-        normalizeOrigin(el);
-        el._originNormalized = true;
-    }
+    // Get or create the animation wrapper
+    const wrapper = ensureO2PWrapper(el);
+    cfg._wrapper = wrapper;
 
+    // Capture original center (no geometry modification)
+    captureOriginalCenter(wrapper);
+
+    // Stop any existing animation
     if (el._o2pAnim) el._o2pAnim.pause?.();
-
-    el.style.transformBox = "fill-box";
-    el.style.transformOrigin = "center";
 
     const easeCtrl = normalizeEase(cfg.ease);
     const tMap = makeTMapper(startPos, endPos);
@@ -439,9 +401,7 @@ function startContinuousO2P(el, cfg, virtual, uid) {
     const cycles = loop === 0 ? true : loop;
     const durationMs = dur * 1000;
 
-    // -----------------------------------------------------
-    // Running animation registry (unchanged)
-    // -----------------------------------------------------
+    // Running animation registry
     if (!window.runningAnimations) window.runningAnimations = {};
     window.runningAnimations[uid] = {
         pause: () => el._o2pAnim?.pause(),
@@ -451,9 +411,7 @@ function startContinuousO2P(el, cfg, virtual, uid) {
         wasPaused: false
     };
 
-    // -----------------------------------------------------
-    // Throttle (live, per-cfg)
-    // -----------------------------------------------------
+    // Throttle for OSC
     const OSC_THROTTLE_MS = 30;
     cfg._oscLastSent = 0;
 
@@ -476,7 +434,7 @@ function startContinuousO2P(el, cfg, virtual, uid) {
             let globalT;
 
             const hasCustomStart = (startPos !== 0);
-            const hasCustomEnd   = (endPos !== 1);
+            const hasCustomEnd = (endPos !== 1);
 
             if (cfg.mode === "forward") {
                 if (hasCustomStart && !hasCustomEnd) {
@@ -498,9 +456,7 @@ function startContinuousO2P(el, cfg, virtual, uid) {
 
             const { path, point, pathT } = sample;
 
-            // -------------------------------------------------
-            // Geometry (UNCHANGED)
-            // -------------------------------------------------
+            // Compute tangent angle
             const length = path.getTotalLength();
             const EPS = 0.1;
             const localL = pathT * length;
@@ -514,12 +470,11 @@ function startContinuousO2P(el, cfg, virtual, uid) {
 
             if (!Number.isFinite(angle)) angle = 0;
 
-            applyTransform(el, point, angle, cfg);
+            // Apply transform to WRAPPER
+            applyTransform(wrapper, point, angle, cfg);
             repositionAllHitLabels();
 
-            // -------------------------------------------------
-            // OSC EMIT (FIXED)
-            // -------------------------------------------------
+            // OSC emit
             if (
                 isOscEnabled(cfg, oscMode) &&
                 window.socket &&
@@ -530,20 +485,20 @@ function startContinuousO2P(el, cfg, virtual, uid) {
                     cfg._oscLastSent = now;
 
                     const bbox = path.getBBox();
-                    if (!bbox || bbox.width === 0 || bbox.height === 0) return;
+                    if (bbox && bbox.width !== 0 && bbox.height !== 0) {
+                        const normX = (point.x - bbox.x) / bbox.width;
+                        const normY = (point.y - bbox.y) / bbox.height;
 
-                    const normX = (point.x - bbox.x) / bbox.width;
-                    const normY = (point.y - bbox.y) / bbox.height;
-
-                    window.socket.send(JSON.stringify({
-                        type: "osc_obj2path",
-                        uid: cfg.uid,
-                        x: normX,
-                        y: normY,
-                        angle,
-                        t: pathT,
-                        timestamp: Date.now()
-                    }));
+                        window.socket.send(JSON.stringify({
+                            type: "osc_obj2path",
+                            uid: cfg.uid,
+                            x: normX,
+                            y: normY,
+                            angle,
+                            t: pathT,
+                            timestamp: Date.now()
+                        }));
+                    }
                 }
             }
         },
@@ -555,6 +510,11 @@ function startContinuousO2P(el, cfg, virtual, uid) {
         },
 
         complete: () => {
+            // Finite loops must reset pose
+            if (loop !== 0) {
+                positionO2PInitial(el, cfg);
+            }
+
             if (loop !== 0 && next && nextOn === "stop") {
                 window.handleCueTrigger?.(next);
             }
@@ -567,19 +527,19 @@ function startContinuousO2P(el, cfg, virtual, uid) {
 
 
 /* ---------------------------------------------------------
- *  8. Alternate mode (true ping-pong) — FIXED
+ *  9. Alternate mode (true ping-pong)
  * --------------------------------------------------------*/
 function startAlternateO2P(el, cfg, virtual, uid) {
     const { dur, loop, startPos, endPos, next, nextOn, oscMode } = cfg;
 
-    if (!el._originNormalized) {
-        normalizeOrigin(el);
-        el._originNormalized = true;
-    }
+    // Get or create the animation wrapper
+    const wrapper = ensureO2PWrapper(el);
+    cfg._wrapper = wrapper;
+
+    // Capture original center (no geometry modification)
+    captureOriginalCenter(wrapper);
 
     if (el._o2pAnim) el._o2pAnim.pause?.();
-    el.style.transformBox = "fill-box";
-    el.style.transformOrigin = "center";
 
     const tMap = makeTMapper(startPos, endPos);
     const easeCtrl = normalizeEase(cfg.ease);
@@ -588,9 +548,7 @@ function startAlternateO2P(el, cfg, virtual, uid) {
     let remaining = loop === 0 ? Infinity : loop;
     let stopped = false;
 
-    // -----------------------------------------------------
-    // Running animation registry (unchanged)
-    // -----------------------------------------------------
+    // Running animation registry
     if (!window.runningAnimations) window.runningAnimations = {};
     window.runningAnimations[uid] = {
         pause: () => el._o2pAnim?.pause(),
@@ -600,9 +558,6 @@ function startAlternateO2P(el, cfg, virtual, uid) {
         wasPaused: false
     };
 
-    // -----------------------------------------------------
-    // Throttle (live, per-cfg)
-    // -----------------------------------------------------
     const OSC_THROTTLE_MS = 30;
     cfg._oscLastSent = 0;
 
@@ -644,9 +599,6 @@ function startAlternateO2P(el, cfg, virtual, uid) {
 
                     const { path, point, pathT } = sample;
 
-                    // -------------------------------------------------
-                    // Geometry (UNCHANGED)
-                    // -------------------------------------------------
                     const length = path.getTotalLength();
                     const EPS = 0.1;
                     const localL = pathT * length;
@@ -660,12 +612,11 @@ function startAlternateO2P(el, cfg, virtual, uid) {
 
                     if (!Number.isFinite(angle)) angle = 0;
 
-                    applyTransform(el, point, angle, cfg);
+                    // Apply transform to WRAPPER
+                    applyTransform(wrapper, point, angle, cfg);
                     repositionAllHitLabels();
 
-                    // -------------------------------------------------
-                    // OSC EMIT (FIXED)
-                    // -------------------------------------------------
+                    // OSC emit
                     if (
                         isOscEnabled(cfg, oscMode) &&
                         window.socket &&
@@ -676,20 +627,20 @@ function startAlternateO2P(el, cfg, virtual, uid) {
                             cfg._oscLastSent = now;
 
                             const bbox = path.getBBox();
-                            if (!bbox || bbox.width === 0 || bbox.height === 0) return;
+                            if (bbox && bbox.width !== 0 && bbox.height !== 0) {
+                                const normX = (point.x - bbox.x) / bbox.width;
+                                const normY = (point.y - bbox.y) / bbox.height;
 
-                            const normX = (point.x - bbox.x) / bbox.width;
-                            const normY = (point.y - bbox.y) / bbox.height;
-
-                            window.socket.send(JSON.stringify({
-                                type: "osc_obj2path",
-                                uid: cfg.uid,
-                                x: normX,
-                                y: normY,
-                                angle,
-                                t: pathT,
-                                timestamp: Date.now()
-                            }));
+                                window.socket.send(JSON.stringify({
+                                    type: "osc_obj2path",
+                                    uid: cfg.uid,
+                                    x: normX,
+                                    y: normY,
+                                    angle,
+                                    t: pathT,
+                                    timestamp: Date.now()
+                                }));
+                            }
                         }
                     }
                 },
@@ -702,9 +653,7 @@ function startAlternateO2P(el, cfg, virtual, uid) {
         });
     }
 
-    // -----------------------------------------------------
-    // Ping-pong loop (unchanged logic)
-    // -----------------------------------------------------
+    // Ping-pong loop
     (async () => {
         while (!stopped && remaining > 0) {
             await halfCycle(+1);
@@ -726,21 +675,20 @@ function startAlternateO2P(el, cfg, virtual, uid) {
 }
 
 
-
 /* ---------------------------------------------------------
- *  9. Dispatcher: startO2PForElement
+ *  10. Dispatcher: startO2PForElement
  * --------------------------------------------------------*/
 function startO2PForElement(el, cfg) {
-    // kill existing
+    // Kill existing animation
     if (el._o2pAnim) {
         try { el._o2pAnim.pause(); } catch (_) { }
         el._o2pAnim = null;
     }
 
-    // normalize mode
+    // Normalize mode
     cfg.mode = (cfg.mode ?? "forward").toLowerCase();
 
-    // build OSC config
+    // Build OSC config
     const osc = cfg.osc;
     let oscCfg = { enabled: false, throttle: 30, lastSent: 0 };
     if (osc === false || osc === 0) {
@@ -753,7 +701,7 @@ function startO2PForElement(el, cfg) {
     }
     cfg.oscCfg = oscCfg;
 
-    // resolve path(s)
+    // Resolve path(s)
     const svg = el.ownerSVGElement || document.querySelector("svg");
     const p = svg.querySelector(`#${cfg.path}`);
     if (!p) {
@@ -764,7 +712,7 @@ function startO2PForElement(el, cfg) {
     const virtual = new VirtualPath([p]);
     if (!virtual.totalLen) return;
 
-    const uid = cfg.uid  || ("o2p_" + Math.random().toString(36).slice(2));
+    const uid = cfg.uid || ("o2p_" + Math.random().toString(36).slice(2));
 
     window.o2pState ??= {};
     window.o2pState[uid] = {};
@@ -780,11 +728,48 @@ function startO2PForElement(el, cfg) {
 
 
 /* ---------------------------------------------------------
- *  10. Cue handler: handleO2PCue
- *      Supports three-phase ghostClickable lifecycle:
- *        1. REGISTERED (load) - invisible, hit-label clickable
- *        2. ARMED (playhead)  - ghost visible, waiting for click  
- *        3. RUNNING (click)   - full opacity, animation playing
+ *  11. positionO2PInitial — Pre-position at start
+ * --------------------------------------------------------*/
+function positionO2PInitial(el, cfg) {
+    try {
+        // Get or create wrapper
+        const wrapper = ensureO2PWrapper(el);
+        cfg._wrapper = wrapper;
+
+        // Capture original center if not done yet
+        captureOriginalCenter(wrapper);
+
+        const pathEl = document.getElementById(cfg.path);
+        if (!pathEl) {
+            console.warn("[o2p] Initial position: path not found:", cfg.path);
+            return;
+        }
+
+        const length = pathEl.getTotalLength();
+        const t = cfg.startPos ?? 0;
+        const localL = t * length;
+
+        const point = pathEl.getPointAtLength(localL);
+
+        // Compute tangent angle
+        const EPS = 0.1;
+        const aheadLen = Math.min(length - EPS, Math.max(0, localL + EPS));
+        const ahead = pathEl.getPointAtLength(aheadLen);
+        let angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
+        if (!isFinite(angle)) angle = 0;
+
+        // Apply to WRAPPER
+        applyTransform(wrapper, point, angle, cfg);
+        repositionAllHitLabels();
+
+    } catch (err) {
+        console.error("[o2p] Error in positionO2PInitial:", err);
+    }
+}
+
+
+/* ---------------------------------------------------------
+ *  12. Cue handler: handleO2PCue
  * --------------------------------------------------------*/
 export function handleO2PCue(el, args, options = {}) {
     const { fromCueTrigger = false } = options;
@@ -794,21 +779,18 @@ export function handleO2PCue(el, args, options = {}) {
 
         // -----------------------------------------------------------
         // CHECK: Is this a playhead trigger for already-registered element?
-        // If so, just ARM it - don't re-run full setup.
         // -----------------------------------------------------------
         const existingCfg = el._oscillaCfg;
 
         if (fromCueTrigger && existingCfg && existingCfg._ghostClickable) {
-            // Element was already registered at load time
-            // Playhead intersection should just ARM it (fade to ghost)
+            armGhostClickable(el, existingCfg);
 
-            if (needsArming(existingCfg)) {
-                console.log("[o2pCue] PLAYHEAD → arming ghostClickable", existingCfg.uid);
-                armGhostClickable(el, existingCfg);
-            } else {
-                console.log("[o2pCue] PLAYHEAD → already armed/running, skipping", existingCfg.uid);
+            if (existingCfg.trig === "edge" && !existingCfg._running) {
+                startO2PForElement(el, existingCfg);
+                existingCfg._running = true;
             }
-            return;  // Don't re-run full handler
+
+            return;
         }
 
         // -----------------------------------------------------------
@@ -830,14 +812,10 @@ export function handleO2PCue(el, args, options = {}) {
             ease: 3,
             osc: false,
 
-            // --- SPATIAL PATH POSITION ---
             startPos: 0,
             endPos: 1,
 
-            // --- TEMPORAL SCHEDULING ---
             startDelay: 0,
-
-            // prestates (show | hide | ghost | fadein(ms) | ghostClickable(ms))
             prestate: "show",
 
             uid: null,
@@ -921,9 +899,9 @@ export function handleO2PCue(el, args, options = {}) {
         if (cfg.mode === "rev") cfg.mode = "reverse";
         if (cfg.mode === "alt") cfg.mode = "alternate";
 
- if (!cfg.uid) {
-    cfg.uid = "o2p_" + Math.random().toString(36).slice(2, 10);
-}
+        if (!cfg.uid) {
+            cfg.uid = "o2p_" + Math.random().toString(36).slice(2, 10);
+        }
 
         console.log("[o2pCue] Parsed:", {
             uid: cfg.uid,
@@ -939,7 +917,7 @@ export function handleO2PCue(el, args, options = {}) {
         }
 
         // -----------------------------------------------------------
-        // STORE CFG ON ELEMENT for future playhead triggers
+        // STORE CFG ON ELEMENT
         // -----------------------------------------------------------
         el._oscillaCfg = cfg;
 
@@ -950,15 +928,13 @@ export function handleO2PCue(el, args, options = {}) {
 
         // -----------------------------------------------------------
         // PRESTATE BEFORE START (REGISTRATION)
-        // For ghostClickable: makes element invisible, installs handlers
         // -----------------------------------------------------------
         applyPrestateBeforeStart(el, cfg);
 
-        // Bring element above others so clicks reach it
         try { el.parentNode.appendChild(el); } catch (_) { }
 
         // -----------------------------------------------------------
-        // Pre-position object along the path (static)
+        // Pre-position object along the path
         // -----------------------------------------------------------
         positionO2PInitial(el, cfg);
 
@@ -979,6 +955,11 @@ export function handleO2PCue(el, args, options = {}) {
         // Register with visibility / pause / resume system
         // -----------------------------------------------------------
         registerAnimation(el, "o2p", cfg, () => {
+            if (cfg.trig === "edge" && !cfg._edgeTriggered) {
+                console.log("[o2pCue] trig:edge — waiting for playhead", cfg.uid);
+                return;
+            }
+
             if (cfg._ghostClickable && cfg._startBlocked) {
                 console.log("[o2pCue] start blocked — ghostClickable waiting for click");
                 return;
@@ -995,8 +976,7 @@ export function handleO2PCue(el, args, options = {}) {
         });
 
         // -----------------------------------------------------------
-        // AUTO-START (tdelay) - only if NOT ghostClickable
-        // For ghostClickable, playhead intersection triggers arming
+        // AUTO-START (tdelay)
         // -----------------------------------------------------------
         if (shouldStartNow) {
             console.log("[o2pCue] auto-start requested → scheduling", cfg.uid);
@@ -1004,13 +984,11 @@ export function handleO2PCue(el, args, options = {}) {
             scheduleCueStart(cfg, el, () => {
 
                 if (cfg._ghostClickable && cfg._startBlocked) {
-                    // ghostClickable: just arm (fade to ghost), don't start animation
                     console.log("[o2pCue] delayed start reached — arming ghostClickable", cfg.uid);
                     applyPrestateOnStart(el, cfg);
                     return;
                 }
 
-                // Normal cue: apply prestate and start animation
                 applyPrestateOnStart(el, cfg);
                 rawStart();
 
@@ -1019,39 +997,5 @@ export function handleO2PCue(el, args, options = {}) {
 
     } catch (err) {
         console.error("[o2p] ERROR in handleO2PCue:", err);
-    }
-}
-
-
-function positionO2PInitial(el, cfg) {
-    try {
-        if (!el._originNormalized) {
-            normalizeOrigin(el);
-            el._originNormalized = true;
-        }
-
-        const pathEl = document.getElementById(cfg.path);
-        if (!pathEl) {
-            console.warn("[o2p] Initial position: path not found:", cfg.path);
-            return;
-        }
-
-        const length = pathEl.getTotalLength();
-        const t = cfg.startPos ?? 0;
-        const localL = t * length;
-
-        const point = pathEl.getPointAtLength(localL);
-
-        const EPS = 0.1;
-        const aheadLen = Math.min(length - EPS, Math.max(0, localL + EPS));
-        const ahead = pathEl.getPointAtLength(aheadLen);
-        let angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
-        if (!isFinite(angle)) angle = 0;
-
-        applyTransform(el, point, angle, cfg);
-        repositionAllHitLabels();
-
-    } catch (err) {
-        console.error("[o2p] Error in positionO2PInitial:", err);
     }
 }

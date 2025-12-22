@@ -622,7 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Animation Loop
   // ===========================
   window.animate = async (currentTime) => {
-    if (!window.isPlaying || window.isSeeking) return;
+    if ( window.isSeeking) return;
 
     let dt = window.lastAnimationFrameTime !== null
       ? (currentTime - window.lastAnimationFrameTime) / 1000 : 0;
@@ -630,12 +630,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const refWidth = window.remoteScoreWidth || window.scoreWidth;
 
-    if (dt > 0 && refWidth && window.duration) {
-      const effectiveDeltaMs = dt * 1000 * (window.speedMultiplier || 1);
-      window.playheadX = Math.min(
-        window.playheadX + (effectiveDeltaMs / window.duration) * refWidth,
-        refWidth
-      );
+if (window.isPlaying && dt > 0 && refWidth && window.duration) {
+  const effectiveDeltaMs = dt * 1000 * (window.speedMultiplier || 1);
+  window.playheadX = Math.min(
+    window.playheadX + (effectiveDeltaMs / window.duration) * refWidth,
+    refWidth
+  );
+      
 
       // Drift correction
       if (window.serverSyncPlayheadX != null) {
@@ -660,7 +661,14 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   window.startAnimation = () => {
-    if (!window.isPlaying || window.animationPaused || window.isSeeking) return;
+    console.log("[RAF] startAnimation called", {
+  isPlaying: window.isPlaying,
+  animationPaused: window.animationPaused,
+  isSeeking: window.isSeeking,
+  animationFrameId: window.animationFrameId
+});
+
+  if (window.isSeeking) return;
     if (window.animationFrameId === null) {
       requestAnimationFrame((time) => {
         window.lastAnimationFrameTime = time;
@@ -669,14 +677,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+
   window.stopAnimation = () => {
-    if (window.animationFrameId !== null) {
-      cancelAnimationFrame(window.animationFrameId);
-      window.animationFrameId = null;
-    }
-    window.isPlaying = false;
-    window.isMusicalPause = false;
-  };
+  // ❌ DO NOT cancel RAF here
+  window.isPlaying = false;
+  window.isMusicalPause = true;
+};
+
+
 
   // ===========================
   // Repeat Count Display
