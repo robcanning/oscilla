@@ -36,19 +36,19 @@ export function applyPrestateBeforeStart(el, cfg) {
 
     // Guard: only run registration once per element lifecycle
     if (cfg._prestateRegistered) {
-        console.log("[prestateBefore] SKIP - already registered", cfg.uid);
+        // console.log("[prestateBefore] SKIP - already registered", cfg.uid);
         return;
     }
     cfg._prestateRegistered = true;
 
     const p = cfg.prestate;
 
-    console.log("[prestateBefore] REGISTER", {
-        uid: cfg.uid,
-        prestate: p,
-        pType: typeof p,
-        pName: p?.name
-    });
+    // console.log("[prestateBefore] REGISTER", {
+    //     uid: cfg.uid,
+    //     prestate: p,
+    //     pType: typeof p,
+    //     pName: p?.name
+    // });
 
     // ------------------------------------------------------------
     // FUNCTION FORM: ghostClickable(ms), fadein(ms)
@@ -64,7 +64,7 @@ export function applyPrestateBeforeStart(el, cfg) {
             el.style.opacity = "0";
             el.style.transition = "opacity 0ms";
 
-            console.log("[prestateBefore] fadein registered", { uid: cfg.uid, ms });
+            // console.log("[prestateBefore] fadein registered", { uid: cfg.uid, ms });
             return;
         }
 
@@ -126,13 +126,13 @@ export function applyPrestateBeforeStart(el, cfg) {
             // Install click handlers NOW so hit-label works immediately
             installGhostClickHandlers(el, cfg);
 
-            console.log("[prestateBefore] ghostClickable REGISTERED", { 
-                uid: cfg.uid, 
-                playheadMode: isPlayheadMode,
-                delayMs,
-                fadeMs,
-                opacity
-            });
+            // console.log("[prestateBefore] ghostClickable REGISTERED", { 
+            //     uid: cfg.uid, 
+            //     playheadMode: isPlayheadMode,
+            //     delayMs,
+            //     fadeMs,
+            //     opacity
+            // });
             return;
         }
     }
@@ -145,14 +145,14 @@ export function applyPrestateBeforeStart(el, cfg) {
             cfg._ghostState = "registered";
             el.style.opacity = "0";
             el.style.transition = "opacity 0ms";
-            console.log("[prestateBefore] hide registered", cfg.uid);
+            // console.log("[prestateBefore] hide registered", cfg.uid);
             return;
 
         case "ghost":
             cfg._ghostState = "armed";  // ghost without click = already visible
             el.style.opacity = "0.3";
             el.style.transition = "opacity 0ms";
-            console.log("[prestateBefore] ghost registered", cfg.uid);
+            // console.log("[prestateBefore] ghost registered", cfg.uid);
             return;
 
         case "show":
@@ -160,7 +160,7 @@ export function applyPrestateBeforeStart(el, cfg) {
             cfg._ghostState = "running";  // show = already visible
             el.style.opacity = "1";
             el.style.transition = "opacity 0ms";
-            console.log("[prestateBefore] show registered", cfg.uid);
+            // console.log("[prestateBefore] show registered", cfg.uid);
             return;
     }
 }
@@ -174,7 +174,7 @@ export function applyPrestateBeforeStart(el, cfg) {
 export function armGhostClickable(el, cfg) {
 
     if (!cfg._ghostClickable) {
-        console.log("[armGhost] not ghostClickable, skipping", cfg.uid);
+        // console.log("[armGhost] not ghostClickable, skipping", cfg.uid);
         return false;
     }
 
@@ -182,12 +182,12 @@ export function armGhostClickable(el, cfg) {
 
     // Already armed or running - don't re-arm
     if (state === "armed" || state === "running" || state === "paused") {
-        console.log("[armGhost] already armed/running, skipping", { uid: cfg.uid, state });
+        // console.log("[armGhost] already armed/running, skipping", { uid: cfg.uid, state });
         return false;
     }
 
     // Transition: REGISTERED → ARMED
-    console.log("[armGhost] ARMING ghostClickable", { uid: cfg.uid, from: state });
+    // console.log("[armGhost] ARMING ghostClickable", { uid: cfg.uid, from: state });
 
     cfg._ghostState = "armed";
 
@@ -196,7 +196,7 @@ export function armGhostClickable(el, cfg) {
     forceReflow(el);
     el.style.opacity = String(cfg._ghostOpacity);
 
-    console.log("[armGhost] → ARMED (ghost visible, waiting for click)", cfg.uid);
+    // console.log("[armGhost] → ARMED (ghost visible, waiting for click)", cfg.uid);
     return true;
 }
 
@@ -234,16 +234,16 @@ export function installOscToggleHandler(el, cfg) {
         
         cfg.osc = oscEnabled ? 1 : 0;
 
-        console.log("[oscToggle] OSC state changed", { 
-            uid: cfg.uid, 
-            kind: cfg.kind,
-            oscEnabled,
-            cfgOsc: cfg.osc
-        });
+        // console.log("[oscToggle] OSC state changed", { 
+        //     uid: cfg.uid, 
+        //     kind: cfg.kind,
+        //     oscEnabled,
+        //     cfgOsc: cfg.osc
+        // });
     };
 
     el.addEventListener("oscilla-osc-toggle", cfg._oscToggleHandler);
-    console.log("[oscToggle] handler installed for", cfg.uid);
+    // console.log("[oscToggle] handler installed for", cfg.uid);
 }
 
 // ============================================================================
@@ -253,7 +253,7 @@ export function installOscToggleHandler(el, cfg) {
 function installGhostClickHandlers(el, cfg) {
 
     if (cfg._clickHandler) {
-        console.log("[installGhostClick] handlers already installed", cfg.uid);
+        // console.log("[installGhostClick] handlers already installed", cfg.uid);
         return;
     }
 
@@ -268,11 +268,11 @@ function installGhostClickHandlers(el, cfg) {
 
         const state = cfg._ghostState;
 
-        console.log("[ghostClickable] CLICK", {
-            uid: cfg.uid,
-            state,
-            kind: e.detail?.kind
-        });
+        // console.log("[ghostClickable] CLICK", {
+        //     uid: cfg.uid,
+        //     state,
+        //     kind: e.detail?.kind
+        // });
 
         // -----------------------------------------
         // REGISTERED state - not yet armed by playhead
@@ -280,7 +280,7 @@ function installGhostClickHandlers(el, cfg) {
         // (or optionally: could auto-arm here for manual start)
         // -----------------------------------------
         if (state === "registered") {
-            console.log("[ghostClickable] not armed yet - ignoring click", cfg.uid);
+            // console.log("[ghostClickable] not armed yet - ignoring click", cfg.uid);
             return;
         }
 
@@ -295,7 +295,7 @@ function installGhostClickHandlers(el, cfg) {
             forceReflow(el);
             el.style.opacity = "1";
 
-            console.log("[ghostClickable] ARMED → RUNNING", cfg.uid);
+            // console.log("[ghostClickable] ARMED → RUNNING", cfg.uid);
 
             if (typeof cfg._start === "function") {
                 cfg._start();
@@ -314,7 +314,7 @@ function installGhostClickHandlers(el, cfg) {
             el.style.opacity = String(cfg._ghostOpacity ?? 0.3);
 
             if (cfg._anim) {
-                console.log("[ghostClickable] RUNNING → PAUSED", cfg.uid);
+                // console.log("[ghostClickable] RUNNING → PAUSED", cfg.uid);
                 cfg._anim.pause();
             }
             return;
@@ -331,7 +331,7 @@ function installGhostClickHandlers(el, cfg) {
             el.style.opacity = "1";
 
             if (cfg._anim) {
-                console.log("[ghostClickable] PAUSED → RUNNING", cfg.uid);
+                // console.log("[ghostClickable] PAUSED → RUNNING", cfg.uid);
                 cfg._anim.play();
             } else if (typeof cfg._start === "function") {
                 cfg._start();
@@ -346,7 +346,7 @@ function installGhostClickHandlers(el, cfg) {
     el.addEventListener("oscilla-hit", cfg._clickHandler);
     el.style.pointerEvents = "all";
 
-    console.log("[installGhostClick] handlers installed", cfg.uid);
+    // console.log("[installGhostClick] handlers installed", cfg.uid);
 }
 
 // ============================================================================
@@ -367,14 +367,14 @@ export function applyPrestateOnStart(el, cfg, source = "unknown") {
 
         // If already running/paused, don't re-arm
         if (cfg._ghostState === "running" || cfg._ghostState === "paused") {
-            console.log("[prestateOnStart] ghostClickable already running/paused", cfg.uid);
+            // console.log("[prestateOnStart] ghostClickable already running/paused", cfg.uid);
             return;
         }
 
         // PLAYHEAD MODE: only arm when called from playhead intersection
         // Skip if this is a timed call (from scheduleCueStart)
         if (cfg._ghostPlayheadMode && source === "scheduled") {
-            console.log("[prestateOnStart] ghostClickable(playhead) - skipping scheduled fade, waiting for playhead", cfg.uid);
+            // console.log("[prestateOnStart] ghostClickable(playhead) - skipping scheduled fade, waiting for playhead", cfg.uid);
             return;
         }
 
@@ -387,7 +387,7 @@ export function applyPrestateOnStart(el, cfg, source = "unknown") {
     // fadein(ms)
     // ============================================================
     if (cfg._fadeInMs) {
-        console.log("[prestateOnStart] fadein", cfg.uid);
+        // console.log("[prestateOnStart] fadein", cfg.uid);
 
         el.style.transition = `opacity ${cfg._fadeInMs}ms ease`;
         forceReflow(el);
@@ -446,7 +446,7 @@ export function getGhostState(cfg) {
 export function resetGhostState(el, cfg) {
     if (!cfg._ghostClickable) return;
 
-    console.log("[resetGhost] resetting to registered state", cfg.uid);
+    // console.log("[resetGhost] resetting to registered state", cfg.uid);
 
     cfg._ghostState = "registered";
     cfg._startBlocked = true;

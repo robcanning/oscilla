@@ -193,13 +193,20 @@ function sendOSC(payload) {
         console.warn("[osc] send failed:", e);
     }
 }
-
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
-
 export function handleOscCue(ast, el, options = {}) {
-    if (!ast || !el) return;
+
+    console.group("[handleOscCue] ENTER");
+
+    if (!ast || !el) {
+        console.warn("[handleOscCue] Missing ast or el", ast, el);
+        console.groupEnd();
+        return;
+    }
+
+    console.log("[handleOscCue] AST:", JSON.parse(JSON.stringify(ast)));
 
     const astArgs = ast.args || [];
 
@@ -208,81 +215,142 @@ export function handleOscCue(ast, el, options = {}) {
     let trig = "auto";
     let prestate = null;
 
-    const mappings = {}; // paramName → visualKey
+    // 🔹 Static (semantic) params → sent as-is
+    const staticParams = {};
+
+    // 🔹 Visual mappings → sampled every frame
+    const visualMappings = {};
 
     // ---------------------------------------------------------
-    // Parse generic param:value args
+    // Parse args
     // ---------------------------------------------------------
     for (const a of astArgs) {
-        const key = a.key || a.type;
+
+        const key = a.type;
         const val = a.value;
 
-        if (key === "addr") addr = String(val).trim();
-        else if (key === "uid") uid = String(val).trim();
-        else if (key === "trig") trig = String(val).toLowerCase();
-        else if (key === "prestate") prestate = val;
+        console.log("[handleOscCue] arg:", key, val);
+
+        if (key === "addr") {
+            addr = typeof val === "string" ? val.trim() : String(val);
+            console.log("[handleOscCue] addr parsed →", addr);
+        }
+        else if (key === "uid") {
+            uid = typeof val === "string" ? val.trim() : String(val);
+            console.log("[handleOscCue] uid parsed →", uid);
+        }
+        else if (key === "trig") {
+            trig = String(val).toLowerCase();
+            console.log("[handleOscCue] trig parsed →", trig);
+        }
+        else if (key === "prestate") {
+            prestate = val;
+            console.log("[handleOscCue] prestate parsed →", prestate);
+        }
+
+        // -------------------------------------------------
+        // Typed / static values (hz(), midi(), future)
+        // -------------------------------------------------
+        else if (val && typeof val === "object" && val.type) {
+            staticParams[key] = val;
+            console.log("[handleOscCue] static param:", key, val);
+        }
+
+        // -------------------------------------------------
+        // Visual mappings (env:width, bright:opacity, etc.)
+        // -------------------------------------------------
+        else if (typeof val === "string") {
+            visualMappings[key] = val;
+            console.log("[handleOscCue] visual mapping:", key, "→", val);
+        }
+
+        // -------------------------------------------------
+        // Literal fallback (numbers, booleans)
+        // -------------------------------------------------
         else {
-            // generic mapping (e.g. pitch:y, amp:size)
-            mappings[key] = String(val).trim();
+            staticParams[key] = val;
+            console.log("[handleOscCue] static literal:", key, val);
         }
     }
 
+    console.log("[handleOscCue] FINAL addr =", addr);
+
     if (!addr) {
-        console.warn("[osc] Missing addr: — osc() skipped");
+        console.error("[handleOscCue] ❌ addr is NULL — aborting send");
+        console.groupEnd();
         return;
     }
 
     // ---------------------------------------------------------
-    // Prestate handling (same as animations)
+    // Prestate
     // ---------------------------------------------------------
-    if (el && prestate) {
+    if (prestate) {
+        console.log("[handleOscCue] applying prestate");
         applyPrestateBeforeStart(el, prestate);
     }
 
+    // ---------------------------------------------------------
+    // Fire OSC
+    // ---------------------------------------------------------
     const start = () => {
-        const sample = sampleVisual(el);
-        if (!sample) return;
 
+        console.group("[handleOscCue] START");
+
+        const sample = sampleVisual(el);
+        if (!sample) {
+            console.warn("[handleOscCue] sampleVisual returned null");
+            console.groupEnd();
+            return;
+        }
+
+        // 🔹 Per-frame sampled values
         const values = {};
 
-        for (const [param, source] of Object.entries(mappings)) {
+        for (const [param, source] of Object.entries(visualMappings)) {
+
             if (sample[source] != null) {
                 values[param] = sample[source];
+                console.log("[handleOscCue] value(visual):", param, values[param]);
+            } else {
+                console.warn("[handleOscCue] visual source missing:", param, source);
             }
         }
 
+        // -------------------------------------------------
+        // Build payload
+        // -------------------------------------------------
         const payload = {
             type: "osc_value",
             addr,
             values,
+            static: staticParams, // 🔹 pitch, midi, etc.
             timestamp: Date.now()
         };
 
         if (uid) payload.uid = uid;
 
+        console.log("[handleOscCue] PAYLOAD →", JSON.parse(JSON.stringify(payload)));
+
         sendOSC(payload);
         emitCueComplete(ast.raw || addr, "osc");
+
+        console.groupEnd(); // START
     };
 
     // ---------------------------------------------------------
-    // Trigger routing (shared behaviour)
+    // Trigger routing
     // ---------------------------------------------------------
     if (el && needsArming(el)) {
+        console.log("[handleOscCue] ghostClickable arming");
         armGhostClickable(el, start);
+        console.groupEnd();
         return;
     }
 
-    // ---------------------------------------------------------
-    // Trigger handling for osc()
-    // ---------------------------------------------------------
-
-    // ghostClickable → only makes sense if element exists
-    if (el && needsArming(el)) {
-        armGhostClickable(el, start);
-        return;
-    }
-
-    // playhead / auto / click → fire immediately
+    console.log("[handleOscCue] immediate start()");
     start();
 
+    console.groupEnd(); // ENTER
 }
+
+

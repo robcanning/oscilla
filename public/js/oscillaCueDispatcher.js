@@ -285,28 +285,28 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
   switch (ast.type) {
 
     // Animation handlers
-case "cueScale": {
-  handleScaleCue(ast, cueElement, { fromCueTrigger: true });
-  triggerNestedCues(ast, cueElement);
-  return;
-}
+    case "cueScale": {
+      handleScaleCue(ast, cueElement, { fromCueTrigger: true });
+      triggerNestedCues(ast, cueElement);
+      return;
+    }
 
-case "cueRotate": {
-  handleRotateCue(cueElement, ast.args, { fromCueTrigger: true });
-  triggerNestedCues(ast, cueElement);
-  return;
-}
+    case "cueRotate": {
+      handleRotateCue(cueElement, ast.args, { fromCueTrigger: true });
+      triggerNestedCues(ast, cueElement);
+      return;
+    }
 
-case "cueO2P": {
-  handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
-  triggerNestedCues(ast, cueElement);
-  return;
-}
+    case "cueO2P": {
+      handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
+      triggerNestedCues(ast, cueElement);
+      return;
+    }
 
-case "cueOsc": {
-  handleOscCue(ast, cueElement, { fromCueTrigger: true });
-  return; // osc has no children
-}
+    case "cueOsc": {
+      handleOscCue(ast, cueElement, { fromCueTrigger: true });
+      return; // osc has no children
+    }
 
     // Page navigation — ALWAYS retrigger
     case "cuePage":
@@ -676,6 +676,7 @@ function splitCueId(id) {
     .map(s => s.endsWith(")") ? s : s + ")");
 }
 
+const CUE_PREFIX_RE =  /^(?:cue:)?(osc|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;
 
 /**
  * assignCues(svgRoot)
@@ -689,218 +690,92 @@ function splitCueId(id) {
  *   - ypos[min,max]    → scaled vertical position
  * Also walks the entire SVG tree to catch other cue(...) elements.
  */
+
 export function assignCues(svgRoot, cuesArray = []) {
   console.group("[assignCues]");
-  // console.log("[assignCues] → svgRoot:", svgRoot?.id);
-
-
-  // Count children for basic sanity
-  // console.log("[assignCues] Child element count:", svgRoot.querySelectorAll("*").length);
-
-  // ----------------------------------------------------
-  // Handle assignCues(...) groups (unchanged logic)
-  // ----------------------------------------------------
-  const cueGroups = svgRoot.querySelectorAll('g[id^="assignCues("]');
-  // console.log(`[assignCues] assignCues() groups found: ${cueGroups.length}`);
-
-  cueGroups.forEach(group => {
-    const baseId = group.id.split('-')[0];
-    // console.log(`[assignCues] → Processing assignCues group id="${group.id}" (baseId="${baseId}")`);
-
-    const match = baseId.match(/^assignCues\((.+)\)$/);
-    if (!match) {
-      // console.warn(`[assignCues] ⚠ Bad assignCues() block id="${group.id}"`);
-      return;
-    }
-    const instruction = match[1].trim();
-    // console.log(`[assignCues] assignCues() instruction:`, instruction);
-    // … your original assignCues instruction logic …
-  });
-
-  // ----------------------------------------------------
-  // Walk SVG to register cues & button() elements
-  // ----------------------------------------------------
-
 
   function walk(node) {
-
     for (const child of node.children) {
       const id = child.id;
 
-// 🔹 NEW: split compound IDs
-const cueExprs = splitCueId(id);
-
-// No valid cues → dive deeper
-if (!cueExprs.length) {
-  walk(child);
-  continue;
-}
-
-for (const cueExpr of cueExprs) {
-  let ast = null;
-
-  try {
-    ast = parseCueToAST(cueExpr);
-  } catch (e) {
-    console.warn("[assignCues] parse failed for:", cueExpr);
-    continue;
-  }
-
-  if (!ast) continue;
-
-  // Skip non-cues
-  if (ast.type === "cueButton") continue;
-
-  // Pre-prime fade targets
-  if (ast.type === "cueFade") {
-    window._fadeCues.set(child, ast);
-    primeFadeTargetFromAST(ast, child);
-  }
-
-  const box = child.getBBox();
-  const screenX = child.getBoundingClientRect().left + box.width / 2;
-
-  cuesArray.push({
-    id: cueExpr,          // 🔹 IMPORTANT: individual cue ID
-    ast,
-    element: child,
-
-    triggerX: screenX,
-    triggerWidth: box.width,
-
-    triggered: false
-  });
-
-  registerCueUid(cueExpr, "walk");
-}
-
-// Continue walking children
-walk(child);
-
-      // --------------------------------------------------------
-      // Skip propagate(...) because it's NOT a cue — it's a generator
-      // --------------------------------------------------------
-      if (/^propagate\(/.test(id.trim())) {
-        // console.log("[assignCues] ⏭ Skipping propagate():", id);
+      // --------------------------------------------------
+      // 🚫 Fast reject: no ID or cannot possibly be a cue
+      // --------------------------------------------------
+      if (!id || !CUE_PREFIX_RE.test(id)) {
         walk(child);
         continue;
       }
 
-      let ast = null;
-      try {
-        ast = parseCueToAST(id.trim());
-      } catch (e) {
-        // console.warn("[assignCues] parse failed for:", id);
+      // --------------------------------------------------
+      // 🔹 Split compound cue IDs: "osc(...) scale(...)"
+      // --------------------------------------------------
+      const cueExprs = splitCueId(id);
+
+      if (!cueExprs.length) {
         walk(child);
         continue;
       }
 
+      for (const cueExpr of cueExprs) {
+        // 🚫 Safety: prefix guard per expression
+        if (!CUE_PREFIX_RE.test(cueExpr)) continue;
 
-
-      // Skip non-cue directives like use(...), propagate(...), comments, or anything that returns null
-      if (!ast) {
-        walk(child);
-        continue;
-      }
-
-      // Skip cue buttons — they are built elsewhere
-      if (ast.type === "cueButton") {
-        walk(child);
-        continue;
-      }
-
-      // Pre-prime fade targets at load so fade-ins aren’t briefly visible
-      if (ast.type === "cueFade") {
-        window._fadeCues.set(child, ast);
-        primeFadeTargetFromAST(ast, child);
-      }
-
-
-      // Normal cue (including scale, rotate, o2p, etc.)
-const box = child.getBBox();
-const screenX = child.getBoundingClientRect().left + box.width / 2;
-
-cuesArray.push({
-  id,
-  ast,
-  element: child,
-
-  // 🔒 freeze trigger geometry
-  triggerX: screenX,
-  triggerWidth: box.width,
-
-  triggered: false
-});
-      registerCueUid(id, "walk");
-
-
-      // -----------------------------------
-      // PAGE MODE AUTOEXEC for stopwatch()
-      // -----------------------------------
-      console.warn(`[assignCues] FOUND AST:`, ast);
-
-      if (ast.type === "cueStopwatch") {
-        // Default = trig:auto
-        const trigPair = ast.args?.find(p => p.type === "trig");
-        const trig = (trigPair?.value || "auto").toLowerCase();
-
-        // Only autostart in PAGE mode:
-        if (window.currentMode === "page") {
-          // And only if auto:
-          if (trig === "auto") {
-            console.warn("[cueStopwatch] PAGE-MODE AUTOSTART →", id);
-            handleStopwatchCue(ast, child, { fromCueTrigger: false });
-          }
+        let ast;
+        try {
+          ast = parseCueToAST(cueExpr);
+        } catch {
+          // ❌ Silent skip — not a cue, not an error
+          continue;
         }
+
+        if (!ast || ast.type === "cueButton") continue;
+
+        // -----------------------------------
+        // Pre-prime fade targets
+        // -----------------------------------
+        if (ast.type === "cueFade") {
+          window._fadeCues.set(child, ast);
+          primeFadeTargetFromAST(ast, child);
+        }
+
+        const box = child.getBBox();
+        const screenX = child.getBoundingClientRect().left + box.width / 2;
+
+        cuesArray.push({
+          id: cueExpr,
+          ast,
+          element: child,
+          triggerX: screenX,
+          triggerWidth: box.width,
+          triggered: false
+        });
+
+        registerCueUid(cueExpr, "walk");
       }
 
-
-
-
-
+      // Continue walking down
       walk(child);
     }
   }
 
-  // console.log("[assignCues] 🌳 Starting deep walk...");
-  walk(svgRoot, 0);
-
-  // console.log("[assignCues] Total cues registered:", cuesArray.length);
+  walk(svgRoot);
 
   // --------------------------------------------------------
-  // BUILD CUE BUTTONS — PAGE vs SCROLL MODE
+  // BUILD CUE BUTTONS — PAGE vs SCROLL MODE (unchanged)
   // --------------------------------------------------------
   if (window.isPageOverlay) {
-    // ------------------------------
-    // PAGE OVERLAY MODE (correct!)
-    // ------------------------------
-    // console.log("[assignCues] Page overlay mode — building cueButtons inside overlay SVG.");
-
-    const result = buildCueButtonsIn(svgRoot, svgRoot);
-    // console.log(`[assignCues] cueButtons created in page overlay: ${result?.length}`);
-
+    buildCueButtonsIn(svgRoot, svgRoot);
   } else {
-    // ------------------------------
-    // SCROLL MODE
-    // ------------------------------
-    // console.log("[assignCues] Scroll-mode detected. Page overlay? ", window.isPageOverlay);
-
     const scrollContainer = document.getElementById("scoreInner");
-    // console.log("[assignCues] scrollContainer:", scrollContainer);
-
     if (scrollContainer) {
-      // console.log("[assignCues] 🛠 Building cueButtons in #scoreInner…");
-      const result = buildCueButtonsIn(svgRoot, scrollContainer);
-      // console.log(`[assignCues] cueButtons created: ${result?.length}`);
-    } else {
-      // console.warn("[assignCues] ⚠ scrollContainer not found — no cueButtons built in scroll mode.");
+      buildCueButtonsIn(svgRoot, scrollContainer);
     }
   }
 
   console.groupEnd();
   return cuesArray;
-
 }
+
 
 
 
@@ -1463,7 +1338,7 @@ export function resetTriggeredCues() {
  * - Manual playback stop or resume via cueRepeat_* directives
  */
 
-  window.evaluateCueIntersections = true;
+window.evaluateCueIntersections = true;
 
 export async function checkCueTriggers() {
   // 🔒 Global cue suppression guard (jumping, scrubbing, loading, etc.)
@@ -1479,7 +1354,7 @@ export async function checkCueTriggers() {
   // 🛑 Skip cue checks if paused, seeking, or not playing
 
 
-if (window.isSeeking || !window.evaluateCueIntersections) return;
+  if (window.isSeeking || !window.evaluateCueIntersections) return;
 
 
   const playheadX = window.getPlayheadX();
@@ -1509,39 +1384,39 @@ if (window.isSeeking || !window.evaluateCueIntersections) return;
       ? window._prevCueLefts.get(cue.id)
       : undefined;
 
- const prevInside = window._cueInsideState.get(cue.id) || false;
-const isInside = playheadX >= cueLeft && playheadX <= cueRight;
+    const prevInside = window._cueInsideState.get(cue.id) || false;
+    const isInside = playheadX >= cueLeft && playheadX <= cueRight;
 
-// 🔧 update state FIRST
-window._cueInsideState.set(cue.id, isInside);
+    // 🔧 update state FIRST
+    window._cueInsideState.set(cue.id, isInside);
 
-// ======================================================
-// 🔊 OSC RE-ENTRANT PLAYHEAD TRIGGER
-// ======================================================
-if (cue.ast?.type === "cueOsc") {
+    // ======================================================
+    // 🔊 OSC RE-ENTRANT PLAYHEAD TRIGGER
+    // ======================================================
+    if (cue.ast?.type === "cueOsc") {
 
-  if (cue._armed === undefined) cue._armed = true;
-  if (cue._lastOscFire === undefined) cue._lastOscFire = 0;
+      if (cue._armed === undefined) cue._armed = true;
+      if (cue._lastOscFire === undefined) cue._lastOscFire = 0;
 
-  const now = performance.now();
-  const COOLDOWN = 80;
+      const now = performance.now();
+      const COOLDOWN = 80;
 
-  // ENTER
-  if (!prevInside && isInside && cue._armed) {
-    if (now - cue._lastOscFire >= COOLDOWN) {
-      handleCueTrigger(cue.ast, false, true, cue.element);
-      cue._armed = false;
-      cue._lastOscFire = now;
-      console.log(`[osc] 🔔 ENTER → ${cue.id}`);
+      // ENTER
+      if (!prevInside && isInside && cue._armed) {
+        if (now - cue._lastOscFire >= COOLDOWN) {
+          handleCueTrigger(cue.ast, false, true, cue.element);
+          cue._armed = false;
+          cue._lastOscFire = now;
+          console.log(`[osc] 🔔 ENTER → ${cue.id}`);
+        }
+      }
+
+      // EXIT
+      if (prevInside && !isInside) {
+        cue._armed = true;
+        console.log(`[osc] 🔄 EXIT → rearmed ${cue.id}`);
+      }
     }
-  }
-
-  // EXIT
-  if (prevInside && !isInside) {
-    cue._armed = true;
-    console.log(`[osc] 🔄 EXIT → rearmed ${cue.id}`);
-  }
-}
 
 
 
@@ -2077,15 +1952,15 @@ window.pendingCueStarts ??= new Map();
 export function scheduleCueStart(cfg, el, startFn, uid) {
   const delay = Number(cfg.start ?? 0);
 
-  console.log("[startScheduler] ENTER", {
-    uid,
-    delay,
-    ghostClickable: cfg._ghostClickable,
-    ghostPlayheadMode: cfg._ghostPlayheadMode,
-    ghostDelayMs: cfg._ghostDelayMs,
-    blocked: cfg._startBlocked,
-    el
-  });
+  // console.log("[startScheduler] ENTER", {
+  //   uid,
+  //   delay,
+  //   ghostClickable: cfg._ghostClickable,
+  //   ghostPlayheadMode: cfg._ghostPlayheadMode,
+  //   ghostDelayMs: cfg._ghostDelayMs,
+  //   blocked: cfg._startBlocked,
+  //   el
+  // });
 
   // Cancel previous pending start for this uid
   if (window.pendingCueStarts.has(uid)) {
@@ -2099,7 +1974,7 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
   // Element stays invisible until playhead intersection
   // ========================================================================
   if (cfg._ghostClickable && cfg._ghostPlayheadMode) {
-    console.log("[startScheduler] ghostClickable(playhead) → staying invisible, waiting for playhead", { uid });
+    // console.log("[startScheduler] ghostClickable(playhead) → staying invisible, waiting for playhead", { uid });
     // Don't schedule anything - armGhostClickable() will be called by playhead intersection
     return;
   }
@@ -2108,10 +1983,10 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
   // GHOSTCLICKABLE WITH DELAY - Use _ghostDelayMs for arm timing
   // ========================================================================
   if (cfg._ghostClickable && cfg._ghostDelayMs > 0) {
-    console.log(`[startScheduler] ghostClickable timed → arming in ${cfg._ghostDelayMs}ms`, { uid });
+    // console.log(`[startScheduler] ghostClickable timed → arming in ${cfg._ghostDelayMs}ms`, { uid });
 
     const timeoutId = setTimeout(() => {
-      console.log("[startScheduler] 🔥 ghostClickable delay done → arming", { uid });
+      // console.log("[startScheduler] 🔥 ghostClickable delay done → arming", { uid });
       window.pendingCueStarts.delete(uid);
 
       if (typeof cfg._applyPrestateOnStart === "function") {
@@ -2136,7 +2011,7 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
 
     // ---------------- ghostClickable immediate fade ----------------
     if (cfg._ghostClickable && cfg._startBlocked) {
-      console.log("[startScheduler] ghostClickable immediate → fade to ghost only", { uid });
+      // console.log("[startScheduler] ghostClickable immediate → fade to ghost only", { uid });
 
       if (typeof cfg._applyPrestateOnStart === "function") {
         cfg._applyPrestateOnStart();   // fade to ghostOpacity
@@ -2146,7 +2021,7 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
     }
 
     // ---------------- normal immediate start ----------------
-    console.log("[startScheduler] Immediate start → uid:", uid);
+    // console.log("[startScheduler] Immediate start → uid:", uid);
     startFn();
     return;
   }
@@ -2154,16 +2029,16 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
   // ========================================================================
   // DELAYED START (delay > 0)
   // ========================================================================
-  console.log(`[startScheduler] Scheduling start in ${delay}s → uid=${uid}`);
+  // console.log(`[startScheduler] Scheduling start in ${delay}s → uid=${uid}`);
 
   const timeoutId = setTimeout(() => {
 
-    console.log("[startScheduler] 🔥 FIRING delayed start → uid:", uid);
+    // console.log("[startScheduler] 🔥 FIRING delayed start → uid:", uid);
     window.pendingCueStarts.delete(uid);
 
     // ---------------- ghostClickable delayed fade ----------------
     if (cfg._ghostClickable && cfg._startBlocked) {
-      console.log("[startScheduler] ghostClickable delay done → fade to ghost only", { uid });
+      // console.log("[startScheduler] ghostClickable delay done → fade to ghost only", { uid });
 
       if (typeof cfg._applyPrestateOnStart === "function") {
         cfg._applyPrestateOnStart();   // fade to ghostOpacity
@@ -2176,7 +2051,7 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
     try {
       startFn();
     } catch (err) {
-      console.error("[startScheduler] ERROR in startFn:", err);
+      // console.error("[startScheduler] ERROR in startFn:", err);
     }
 
   }, delay * 1000);
@@ -2190,7 +2065,7 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
     createdAt: performance.now(),
   });
 
-  console.log("[startScheduler] stored pending", [...window.pendingCueStarts.keys()]);
+  // console.log("[startScheduler] stored pending", [...window.pendingCueStarts.keys()]);
 }
 
 // ============================================================================
@@ -2201,7 +2076,7 @@ export function cancelAllPendingStarts() {
     clearTimeout(entry.timeoutId);
   }
   window.pendingCueStarts.clear();
-  console.log("[startScheduler] All pending delayed-starts cancelled.");
+  // console.log("[startScheduler] All pending delayed-starts cancelled.");
 }
 
 // ============================================================================
@@ -2212,7 +2087,7 @@ export function cancelPendingStartByUid(uid) {
   if (!e) return;
   clearTimeout(e.timeoutId);
   window.pendingCueStarts.delete(uid);
-  console.log(`[startScheduler] cancelled pending start for ${uid}`);
+  // console.log(`[startScheduler] cancelled pending start for ${uid}`);
 }
 
 

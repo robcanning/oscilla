@@ -68,7 +68,6 @@ export const createRehearsalMarkButtons = () => {
   rehearsalMarks["0"] = { x: 0 };
 
   console.log("[DEBUG] 🎭 Final Sorted Rehearsal Marks:", sortedMarks);
-  console.log("[DEBUG] 🎭 Final Sorted Rehearsal Marks:", sortedMarks);
 
   let rowContainer = null;
   const buttonsPerRow = 4;

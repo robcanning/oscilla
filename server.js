@@ -479,42 +479,141 @@ wss.on('connection', (ws, req) => {
         break;
       }
 
-// -----------------------------------------------------------
-// 🎛 Generic OSC value sender (from osc() cue)
-// -----------------------------------------------------------
-case "osc_value": {
-  const { addr, values, uid } = data;
+        // -----------------------------------------------------------
+        // 🎛 Generic OSC value sender (from osc() cue)
+        // -----------------------------------------------------------
 
-  if (!addr || typeof values !== "object") {
-    console.warn("[OSC] ⚠️ Invalid osc_value message:", data);
-    break;
-  }
+        // ------------------------------------
+        // Helper: resolve typed pitch
+        // ------------------------------------
+        function resolvePitch(pitch) {
+          if (!pitch) return null;
 
-  // Build OSC address
-  // addr:voice  →  /oscilla/voice
-  // optional uid →  /oscilla/voice/pt_2
-  let oscAddress = `/oscilla/${String(addr)}`;
+          const { type, value } = pitch;
 
-  // Convert values object → OSC args
-  const args = Object.values(values).map(v => ({
-    type: "f",
-    value: Number(v) || 0
-  }));
+          if (type === "hz") {
+            return {
+              hz: value,
+              midi: 69 + 12 * Math.log2(value / 440),
+              raw: value
+            };
+          }
 
-  console.log(
-    `[OSC] 🎹 VALUE ${oscAddress}`,
-    Object.entries(values)
-      .map(([k, v]) => `${k}=${Number(v).toFixed(3)}`)
-      .join(" ")
-  );
+          if (type === "midi") {
+            const hz = 440 * Math.pow(2, (value - 69) / 12);
+            return {
+              hz,
+              midi: value,
+              raw: value
+            };
+          }
 
-  oscPort.send({
-    address: oscAddress,
-    args
-  });
+          if (type === "raw") {
+            return {
+              hz: null,
+              midi: null,
+              raw: value
+            };
+          }
 
-  break;
-}
+          return null;
+        }
+      // -----------------------------------------------------------
+      // OSC message router
+      // -----------------------------------------------------------
+      case "osc_value": {
+        const { addr, values, static: staticParams, uid } = data;
+
+        if (!addr || typeof values !== "object") {
+          console.warn("[OSC] ⚠️ Invalid osc_value message:", data);
+          break;
+        }
+
+        // ------------------------------------
+        // Build OSC address
+        // ------------------------------------
+        const oscAddress = `/oscilla/${String(addr)}`;
+
+        const args = [];
+        const logParts = [];
+
+        // ------------------------------------
+        // 0) Extract control-pitch (pitch:y)
+        // ------------------------------------
+        let pitchCtrl = null;
+
+        if (typeof values.pitch === "number" && isFinite(values.pitch)) {
+          pitchCtrl = values.pitch;
+          delete values.pitch; // never forward bare "pitch"
+        }
+
+        // ------------------------------------
+        // 1) Continuous visual values (non-pitch)
+        // ------------------------------------
+        for (const [key, num] of Object.entries(values)) {
+          if (typeof num !== "number" || !isFinite(num)) continue;
+
+          // ✅ SEND KEY + VALUE
+          args.push({ type: "s", value: key });
+          args.push({ type: "f", value: num });
+
+          logParts.push(`${key}=${num.toFixed(3)}`);
+        }
+
+        // ------------------------------------
+        // 2) Control pitch (from y, etc.)
+        // ------------------------------------
+        if (pitchCtrl != null) {
+          args.push({ type: "s", value: "pitchCtrl" });
+          args.push({ type: "f", value: pitchCtrl });
+
+          logParts.push(`pitchCtrl=${pitchCtrl.toFixed(3)}`);
+        }
+
+        // ------------------------------------
+        // 3) Semantic pitch (hz / midi)
+        // ------------------------------------
+        if (staticParams?.pitch?.type === "hz") {
+          args.push({ type: "s", value: "pitchHz" });
+          args.push({ type: "f", value: staticParams.pitch.value });
+
+          logParts.push(`pitchHz=${staticParams.pitch.value.toFixed(3)}`);
+        }
+
+        if (staticParams?.pitch?.type === "midi") {
+          args.push({ type: "s", value: "pitchMidi" });
+          args.push({ type: "f", value: staticParams.pitch.value });
+
+          logParts.push(`pitchMidi=${staticParams.pitch.value.toFixed(3)}`);
+        }
+
+        // ------------------------------------
+        // 4) Optional UID
+        // ------------------------------------
+        if (uid) {
+          args.push({ type: "s", value: "uid" });
+          args.push({ type: "s", value: String(uid) });
+
+          logParts.push(`uid=${uid}`);
+        }
+
+        // ------------------------------------
+        // Send OSC
+        // ------------------------------------
+        console.log(
+          `[OSC] 🎹 VALUE ${oscAddress}`,
+          logParts.join(" ")
+        );
+
+        oscPort.send({
+          address: oscAddress,
+          args
+        });
+
+        break;
+      }
+
+
 
       case "osc_obj2path": {
         const { uid, x, y, angle } = data;

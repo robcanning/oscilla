@@ -12,6 +12,18 @@
 window._oscillaHitLabels = window._oscillaHitLabels || [];
 window.oscillaShowHitLabels = true;
 
+
+export function shouldCreateHitLabel(cfg) {
+    // ghostClickable(...) explicitly requires interaction
+    if (cfg._ghostClickable) return true;
+
+    // future-proof: other interactive prestates can go here
+    if (cfg.prestate === "ghost") return false; // visible but not clickable
+
+    return false;
+}
+
+
 // ------------------------------------------------------------
 // SVG local → screen coords using CTM
 // ------------------------------------------------------------

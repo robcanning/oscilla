@@ -12,7 +12,7 @@ function sendOSCRotation(cfg, angle) {
 
     if (!window.socket || !cfg?.uid) return;
 
-    console.log("osc,,,", angle);
+    // console.log("osc,,,", angle);
 
     window.socket.send(JSON.stringify({
         type: "osc_rotate",
@@ -492,10 +492,10 @@ export function handleRotateCue(el, astArgs, options = {}) {
         // Playhead intersection should just ARM it (fade to ghost)
 
         if (needsArming(existingCfg)) {
-            console.log("[rotateCue] PLAYHEAD → arming ghostClickable", existingCfg.uid);
+            // console.log("[rotateCue] PLAYHEAD → arming ghostClickable", existingCfg.uid);
             armGhostClickable(el, existingCfg);
         } else {
-            console.log("[rotateCue] PLAYHEAD → already armed/running, skipping", existingCfg.uid);
+            // console.log("[rotateCue] PLAYHEAD → already armed/running, skipping", existingCfg.uid);
         }
         return;  // Don't re-run full handler
     }
@@ -503,7 +503,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
     // -----------------------------------------------------------
     // FULL SETUP (first time registration)
     // -----------------------------------------------------------
-    console.log("[rotateCue] ⬇️ ENTER", { el, astArgs, options });
+    // console.log("[rotateCue] ⬇️ ENTER", { el, astArgs, options });
 
     // ---------------------------------
     // Parse trig, uid, tdelay, prestate
@@ -526,12 +526,12 @@ export function handleRotateCue(el, astArgs, options = {}) {
         }
     }
 
-    console.log("[rotateCue] Parsed →", {
-        trig,
-        uid,
-        tdelay: cfgStartDelay,
-        prestate
-    });
+    // console.log("[rotateCue] Parsed →", {
+    //     trig,
+    //     uid,
+    //     tdelay: cfgStartDelay,
+    //     prestate
+    // });
 
     const shouldStartNow =
         fromCueTrigger || trig === "auto" || trig === "playhead";
@@ -560,7 +560,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
     // ----------------------------------------------------
     function makeRawStart(cfg, modeFn) {
         return () => {
-            console.log("[rotateCue] ▶ START ROTATION", cfg.uid);
+            // console.log("[rotateCue] ▶ START ROTATION", cfg.uid);
             modeFn(el, cfg);
         };
     }
@@ -575,7 +575,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
 
         return () => {
             if (cfg.start > 0) {
-                console.log(`[rotateCue] ⏳ tdelay ${cfg.start}s → uid=${cfg.uid}`);
+                // console.log(`[rotateCue] ⏳ tdelay ${cfg.start}s → uid=${cfg.uid}`);
 
                 scheduleCueStart(
                     cfg,
@@ -583,7 +583,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
                     () => {
                         // ✅ ghostClickable: just arm, don't start animation
                         if (cfg._ghostClickable && cfg._startBlocked) {
-                            console.log("[rotateCue] delayed start → arming ghostClickable", cfg.uid);
+                            // console.log("[rotateCue] delayed start → arming ghostClickable", cfg.uid);
                             applyPrestateOnStart(el, cfg);
                             return; // wait for click
                         }
@@ -693,7 +693,7 @@ export function handleRotateCue(el, astArgs, options = {}) {
     // ----------------------------------------------------
     // CONTINUOUS MODE
     // ----------------------------------------------------
-    console.log("[rotateCue] Fallback rotate mode");
+    // console.log("[rotateCue] Fallback rotate mode");
 
     const cfg = {
         ...baseCfg,

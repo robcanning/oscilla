@@ -2,9 +2,11 @@
 
 import { registerAnimation } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
-import { createHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
-import { applyPrestateBeforeStart, applyPrestateOnStart, ensureAnimWrapper, 
-    armGhostClickable, needsArming, installOscToggleHandler} from "./oscillaAnimationShared.js";
+import { createHitLabel, shouldCreateHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
+import {
+    applyPrestateBeforeStart, applyPrestateOnStart, ensureAnimWrapper,
+    armGhostClickable, needsArming, installOscToggleHandler
+} from "./oscillaAnimationShared.js";
 
 
 
@@ -577,13 +579,13 @@ export function handleScaleCue(ast, el, options = {}) {
     // CHECK: Is this a playhead trigger for already-registered element?
     // -----------------------------------------------------------
     const existingCfg = el._oscillaCfg;
-    
+
     if (fromCueTrigger && existingCfg && existingCfg._ghostClickable) {
         if (needsArming(existingCfg)) {
-            console.log("[scaleCue] PLAYHEAD → arming ghostClickable", existingCfg.uid);
+            // console.log("[scaleCue] PLAYHEAD → arming ghostClickable", existingCfg.uid);
             armGhostClickable(el, existingCfg);
         } else {
-            console.log("[scaleCue] PLAYHEAD → already armed/running", existingCfg.uid);
+            // console.log("[scaleCue] PLAYHEAD → already armed/running", existingCfg.uid);
         }
         return;
     }
@@ -591,7 +593,7 @@ export function handleScaleCue(ast, el, options = {}) {
     // -----------------------------------------------------------
     // FULL SETUP (first time registration)
     // -----------------------------------------------------------
-    console.log("[scaleCue] ENTER", { el, astArgs, options });
+    // console.log("[scaleCue] ENTER", { el, astArgs, options });
 
     // ------------------------------------------------------------------------
     // Parse DSL args - FIXED UID EXTRACTION
@@ -599,7 +601,7 @@ export function handleScaleCue(ast, el, options = {}) {
     let trig = "auto";
     let cfgStartDelay = 0;
     let prestate = "show";
-    
+
     // ✅ FIX: Start with null, NEVER use el.id as default
     let uid = null;
 
@@ -609,21 +611,21 @@ export function handleScaleCue(ast, el, options = {}) {
 
         if (key === "uid") {
             uid = String(val).trim();
-            console.log("[scaleCue] ✅ Found uid in args:", uid);
+            // console.log("[scaleCue] ✅ Found uid in args:", uid);
         }
         if (key === "trig") trig = String(val).toLowerCase();
         if (key === "tdelay") cfgStartDelay = Number(val) || 0;
         if (key === "prestate") prestate = val;
     }
-    
+
     // ✅ FIX: If no uid found, generate a clean random one
     // NEVER fall back to el.id (which contains the DSL string)
     if (!uid) {
         uid = "scale_" + Math.random().toString(36).slice(2, 10);
-        console.log("[scaleCue] ⚠️ No uid in DSL, generated:", uid);
+        // console.log("[scaleCue] ⚠️ No uid in DSL, generated:", uid);
     }
 
-    console.log("[scaleCue] Final uid:", uid);
+    // console.log("[scaleCue] Final uid:", uid);
 
     const shouldStartNow = fromCueTrigger || trig === "auto" || trig === "playhead";
 
@@ -718,7 +720,7 @@ export function handleScaleCue(ast, el, options = {}) {
 
         // ✅ Apply prestate (handles ghostClickable registration)
         applyPrestateBeforeStart(el, cfg);
-        
+
         // ✅ Install OSC toggle handler for ALL animations
         installOscToggleHandler(el, cfg);
 
@@ -732,11 +734,14 @@ export function handleScaleCue(ast, el, options = {}) {
 
         registerAnimation(el, "scale", cfg, cfg._start);
 
-        createHitLabel(el, "scale", cfg.uid, {
-            anchorMode: "pathMidPoint",
-            color: "lime",
-            sizeMode: "scale40"
-        });
+        if (shouldCreateHitLabel(cfg)) {
+
+            createHitLabel(el, "scale", cfg.uid, {
+                anchorMode: "pathMidPoint",
+                color: "lime",
+                sizeMode: "scale40"
+            });
+        }
 
         applyPrestateOnStart(el, cfg);
 
@@ -775,11 +780,14 @@ export function handleScaleCue(ast, el, options = {}) {
 
         registerAnimation(el, "scale", cfg, cfg._start);
 
-        createHitLabel(el, "scale", cfg.uid, {
-            anchorMode: "pathMidPoint",
-            color: "lime",
-            sizeMode: "scale40"
-        });
+
+        if (shouldCreateHitLabel(cfg)) {
+            createHitLabel(el, "scale", cfg.uid, {
+                anchorMode: "pathMidPoint",
+                color: "lime",
+                sizeMode: "scale40"
+            });
+        }
 
         applyPrestateOnStart(el, cfg);
 
@@ -813,11 +821,13 @@ export function handleScaleCue(ast, el, options = {}) {
 
     registerAnimation(el, "scale", cfg, cfg._start);
 
-    createHitLabel(el, "scale", cfg.uid, {
-        anchorMode: "pathMidPoint",
-        color: "lime",
-        sizeMode: "scale40"
-    });
+    if (shouldCreateHitLabel(cfg)) {
+        createHitLabel(el, "scale", cfg.uid, {
+            anchorMode: "pathMidPoint",
+            color: "lime",
+            sizeMode: "scale40"
+        });
+    }
 
     applyPrestateOnStart(el, cfg);
 

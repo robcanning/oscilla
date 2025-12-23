@@ -118,7 +118,7 @@ function captureOriginalCenter(wrapper) {
     wrapper._o2pOriginalCenter = { x: cx, y: cy };
     wrapper._o2pCenterCaptured = true;
 
-    console.log("[o2p] Captured original center for", wrapper, "→", cx.toFixed(1), cy.toFixed(1));
+    // console.log("[o2p] Captured original center for", wrapper, "→", cx.toFixed(1), cy.toFixed(1));
 
     return wrapper._o2pOriginalCenter;
 }
@@ -903,13 +903,13 @@ export function handleO2PCue(el, args, options = {}) {
             cfg.uid = "o2p_" + Math.random().toString(36).slice(2, 10);
         }
 
-        console.log("[o2pCue] Parsed:", {
-            uid: cfg.uid,
-            path: cfg.path,
-            trig: cfg.trig,
-            startDelay: cfg.startDelay,
-            prestate: cfg.prestate
-        });
+        // console.log("[o2pCue] Parsed:", {
+        //     uid: cfg.uid,
+        //     path: cfg.path,
+        //     trig: cfg.trig,
+        //     startDelay: cfg.startDelay,
+        //     prestate: cfg.prestate
+        // });
 
         if (!cfg.path) {
             console.warn("[o2p] Missing path argument.");
@@ -956,12 +956,12 @@ export function handleO2PCue(el, args, options = {}) {
         // -----------------------------------------------------------
         registerAnimation(el, "o2p", cfg, () => {
             if (cfg.trig === "edge" && !cfg._edgeTriggered) {
-                console.log("[o2pCue] trig:edge — waiting for playhead", cfg.uid);
+                // console.log("[o2pCue] trig:edge — waiting for playhead", cfg.uid);
                 return;
             }
 
             if (cfg._ghostClickable && cfg._startBlocked) {
-                console.log("[o2pCue] start blocked — ghostClickable waiting for click");
+                // console.log("[o2pCue] start blocked — ghostClickable waiting for click");
                 return;
             }
 
@@ -979,12 +979,12 @@ export function handleO2PCue(el, args, options = {}) {
         // AUTO-START (tdelay)
         // -----------------------------------------------------------
         if (shouldStartNow) {
-            console.log("[o2pCue] auto-start requested → scheduling", cfg.uid);
+            // console.log("[o2pCue] auto-start requested → scheduling", cfg.uid);
 
             scheduleCueStart(cfg, el, () => {
 
                 if (cfg._ghostClickable && cfg._startBlocked) {
-                    console.log("[o2pCue] delayed start reached — arming ghostClickable", cfg.uid);
+                    // console.log("[o2pCue] delayed start reached — arming ghostClickable", cfg.uid);
                     applyPrestateOnStart(el, cfg);
                     return;
                 }
@@ -996,6 +996,6 @@ export function handleO2PCue(el, args, options = {}) {
         }
 
     } catch (err) {
-        console.error("[o2p] ERROR in handleO2PCue:", err);
+        // console.error("[o2p] ERROR in handleO2PCue:", err);
     }
 }
