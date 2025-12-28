@@ -126,39 +126,42 @@
 
 
     <div id="cue-info" class="osc-monitor">
-      <strong>OSC</strong>
+      <strong>OSC:</strong>
       <div class="osc-line" id="osc-latest">waiting…</div>
     </div>
 
+    <div id="topbar-actions">
 
-    <span id="mode-toggle" style="cursor:pointer; font-family: sans-serif; font-size:14px; opacity:0.75;">
-      scroll
-    </span>
-    <!-- 🔹 Right-aligned container for the dropdown -->
-    <div id="hamburger-container">
-      <sl-dropdown>
-        <sl-button id="hamburger-menu" slot="trigger">☰</sl-button>
-        <sl-menu>
+      <span id="mode-toggle" style="cursor:pointer; font-family: sans-serif; font-size:24px; opacity:0.75;">
+        scroll
+      </span>
+      <!-- 🔹 Right-aligned container for the dropdown -->
+      <button id="pin-topbar" title="Keep top bar visible">📌</button>
 
-          <!-- Pages submenu -->
-          <sl-menu-item id="pages-submenu-root">Pages
-            <sl-menu slot="submenu" id="pages-submenu"></sl-menu>
-          </sl-menu-item>
+      <div id="hamburger-container">
+        <sl-dropdown>
+          <sl-button id="hamburger-menu" size="small" slot="trigger">☰</sl-button>
+          <sl-menu>
 
-          <!-- ✅ Projects submenu -->
-          <sl-menu-item id="projects-submenu-root">Projects
-            <sl-menu slot="submenu" id="projects-submenu"></sl-menu>
-          </sl-menu-item>
-          <sl-divider></sl-divider>
+            <!-- Pages submenu -->
+            <sl-menu-item id="pages-submenu-root">Pages
+              <sl-menu slot="submenu" id="pages-submenu"></sl-menu>
+            </sl-menu-item>
 
-          <sl-menu-item value="preferences">Preferences</sl-menu-item>
+            <!-- ✅ Projects submenu -->
+            <sl-menu-item id="projects-submenu-root">Projects
+              <sl-menu slot="submenu" id="projects-submenu"></sl-menu>
+            </sl-menu-item>
+            <sl-divider></sl-divider>
 
-        </sl-menu>
-      </sl-dropdown>
+            <sl-menu-item value="preferences">Preferences</sl-menu-item>
 
+          </sl-menu>
+        </sl-dropdown>
+
+      </div>
     </div>
   </div>
-
 
   <!-- 🔸 Project list modal (hidden by default) -->
   <sl-dialog id="project-dialog" label="Load Score">

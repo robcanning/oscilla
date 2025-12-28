@@ -20,6 +20,45 @@ window.autostartStopwatchCues = () => {
 };
 
 
+
+
+// -------------------------------------------------------
+// 🚨 GLOBAL: dismiss ALL active stopwatch overlays
+// -------------------------------------------------------
+export function dismissAllStopwatchOverlays() {
+
+  console.log("[STOPWATCH] ✋ Dismissing all stopwatch overlays");
+
+  // remove any overlay nodes
+  document.querySelectorAll('[id^="cue-stopwatch-"]').forEach(div => {
+    if (div._intervalId) clearInterval(div._intervalId);
+    div.remove();
+  });
+
+  // restore original cue visibility
+  if (window.cues) {
+    for (const c of window.cues) {
+      if (!c.ast || c.ast.type !== "cueStopwatch") continue;
+
+      const el = c.element;
+      if (!el) continue;
+
+      try {
+        // if previously hidden by stopwatch
+        if (el._stopwatchHidden) {
+          el.style.display = el._stopwatchHidden.display || "";
+          el.style.opacity = el._stopwatchHidden.opacity || "";
+          el.style.pointerEvents = el._stopwatchHidden.pointerEvents || "";
+          delete el._stopwatchHidden;
+        }
+      } catch(e) {
+        console.warn("[STOPWATCH] failed restoring cue:", e);
+      }
+    }
+  }
+}
+
+
 function restoreStopwatchCue(cueElement) {
   if (!cueElement || !cueElement._stopwatchHidden) return;
 
@@ -30,6 +69,9 @@ function restoreStopwatchCue(cueElement) {
 
   delete cueElement._stopwatchHidden;
 }
+
+
+
 
 export function handleStopwatchCue(ast, cueElement = null, options = {}) {
   const { fromCueTrigger = false } = options;

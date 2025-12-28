@@ -1603,7 +1603,7 @@ body.inverted #stopwatch {
   left: 0;
   width: 100%;
   height: 50px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.75);
   color: white;
   display: flex;
   align-items: center;
@@ -1617,10 +1617,37 @@ body.inverted #stopwatch {
 }
 
 
+#topbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+
 #hamburger-container {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  /* justify-content: flex-end; */
+}
+
+#hamburger-container sl-button::part(base) {
+  height: 32px;                 /* match pin + mode height */
+  line-height: 32px;
+  padding: 0 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#hamburger-container sl-button {
+  vertical-align: middle;
+    margin-top: -10px;   /* adjust if needed */
+
+}
+
+sl-menu-item::part(base)::after {
+  display: none !important;
 }
 
 #top-bar.dismissed {
@@ -1739,9 +1766,28 @@ body.inverted #stopwatch {
 
 }
 
+#pin-topbar {
+  font-size: 16px;
+  padding: 6px 10px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+#pin-topbar:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+#pin-topbar.active {
+  background: rgba(255,255,255,0.3);
+  border-color: rgba(255,255,255,0.6);
+}
+
+
+
 /* 🔹 Hamburger Menu Button (Fixed on the Right) */
 #hamburger-menu {
   background: none;
+  height: 32px;
   border: none;
   color: white;
   font-size: 2rem;
@@ -2119,4 +2165,6 @@ body.inverted #stopwatch {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+    display: inline;
+
 }

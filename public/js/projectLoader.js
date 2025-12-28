@@ -73,6 +73,29 @@ window.applyPreferences = function applyPreferences(prefs) {
 
   // 4. Loop playback
   window.loopPlayback = !!prefs.loopPlayback;
+
+// 5. Playhead + playzone styling
+try {
+
+  // ---- PLAYHEAD ----
+  const playhead = document.getElementById("playhead");
+  if (playhead) {
+    if (prefs.playheadColor)  playhead.style.backgroundColor = prefs.playheadColor;
+    if (prefs.playheadWidth)  playhead.style.width = prefs.playheadWidth;
+    if (prefs.playheadBorder) playhead.style.borderRight = prefs.playheadBorder;
+  }
+
+  // ---- PLAYZONE ----
+  const zone = document.getElementById("playzone");
+  if (zone) {
+    if (prefs.playzoneColor) zone.style.backgroundColor = prefs.playzoneColor;
+  }
+
+} catch (err) {
+  console.warn("[Prefs] playhead/playzone styling failed:", err);
+}
+
+
 };
 
 

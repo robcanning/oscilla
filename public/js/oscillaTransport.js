@@ -44,6 +44,8 @@ import { getSpeedForPosition } from "./oscillaSpeed.js";
 import { resetAllFadePriming } from "./oscillaFade.js";
 import { stopAllCueTexts } from "./oscillaText.js";
 import { destroyAllHitLabels } from "./oscillaHitLabels.js";
+import { dismissAllStopwatchOverlays } from "./oscillaTimers.js";
+
 
 window.seekDebounceTime = 300;
 window.seekingTimeout = null;
@@ -133,9 +135,13 @@ export const rewindToStart = () => {
 
   if (triggeredCues) {
     triggeredCues.clear(); //  Ensure cues retrigger after rewind
+
+    resetAllFadePriming();
+    dismissAllStopwatchOverlays();
+
     window._cueInsideState?.clear();
     window.navRepeatMap?.clear();
-    
+
 
     // console.log("[DEBUG] Cleared triggered cues due to rewind.");
   }
@@ -178,7 +184,9 @@ export const rewind = () => {
 
   if (triggeredCues) {
     triggeredCues.clear(); //  Ensure cues retrigger after rewind
-      resetAllFadePriming();
+    resetAllFadePriming();
+    dismissAllStopwatchOverlays();
+
 
     window._cueInsideState?.clear();
     window.navRepeatMap?.clear();
@@ -235,9 +243,9 @@ export const rewind = () => {
 export const forward = () => {
 
   const FORWARD_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // Convert time step into X coordinate shift
-  
+
   window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
-  
+
   scrollToPlayheadVisual();
   // console.log(`[DEBUG] Forward applied. Newwindow.playheadX: ${window.playheadX}`);
 
@@ -247,7 +255,9 @@ export const forward = () => {
 
   if (triggeredCues) {
     triggeredCues.clear(); // Ensure cues retrigger after forward
-      resetAllFadePriming();
+    resetAllFadePriming();
+    dismissAllStopwatchOverlays();
+
 
     window._cueInsideState?.clear();
     window.navRepeatMap?.clear();
@@ -390,28 +400,34 @@ window.adjustSpeed = adjustSpeed;
 let controlsTimeout; // Timer to hide controls after inactivity
 
 export const hideControls = () => {
-  if (window.controlsPinned) {
-    console.log("[UI] Controls pinned — hideControls() blocked.");
-    return; // ✅ Do nothing
-  }
-
   const controls = document.getElementById('controls');
   const topBar = document.getElementById('top-bar');
 
-  controls.classList.add('dismissed');
-  if (topBar) topBar.classList.add('dismissed');
+  // Controls
+  if (!window.controlsPinned && controls) {
+    controls.classList.add('dismissed');
+  } else {
+    console.log("[UI] Controls pinned — not hiding.");
+  }
 
-  console.log('[UI] Controls hidden.');
+  // Top bar
+  if (!window.topbarPinned && topBar) {
+    topBar.classList.add('dismissed');
+  } else {
+    console.log("[UI] Top-bar pinned — not hiding.");
+  }
 };
+
 
 
 export const showControls = () => {
   const controls = document.getElementById('controls');
-  const topBar = document.getElementById('top-bar'); //  Include top-bar
+  const topBar = document.getElementById('top-bar');
 
-  controls.classList.remove('dismissed');
-  if (topBar) topBar.classList.remove('dismissed'); //  Show top-bar
+  if (controls) controls.classList.remove('dismissed');
+  if (topBar) topBar.classList.remove('dismissed');
 };
+
 
 window.hideControls = hideControls;
 
@@ -419,6 +435,7 @@ window.hideControls = hideControls;
 // 🧷 Controls Pin Toggle
 // -------------------------------------------------------------------
 window.controlsPinned = false;
+window.topbarPinned = false;
 
 export function initializeControlsPin() {
   const pinButton = document.getElementById("pin-controls");
@@ -438,10 +455,25 @@ export function initializeControlsPin() {
   });
 }
 
+export function initializeTopbarPin() {
+  const btn = document.getElementById("pin-topbar");
+  if (!btn) return console.warn("[UI] No #pin-topbar button found.");
 
-// ---------------------------------------------------------
-// ⏳ Hide controls later — respects pin state
-// ---------------------------------------------------------
+  btn.addEventListener("click", () => {
+    window.topbarPinned = !window.topbarPinned;
+    btn.classList.toggle("active", window.topbarPinned);
+
+    if (window.topbarPinned) {
+      console.log("[UI] Top-bar pinned.");
+      showControls();
+    } else {
+      window.hideControlsLater();
+    }
+  });
+}
+
+
+
 // ---------------------------------------------------------
 // ⏳ Unified Hide Controls Timer (respects pin state, never resets on re-call)
 // ---------------------------------------------------------
@@ -599,7 +631,7 @@ export function startPlayback() {
   window.isPaused = false;
 
   // --- Speed setup ---
-window.speedMultiplier = getSpeedForPosition(window.playheadX) * (window.baseSpeedMultiplier || 1);
+  window.speedMultiplier = getSpeedForPosition(window.playheadX) * (window.baseSpeedMultiplier || 1);
   console.log(
     `[Playback] 🎚 Applying speed multiplier: ${window.speedMultiplier} (playheadX=${window.playheadX.toFixed(
       2
@@ -623,6 +655,7 @@ window.speedMultiplier = getSpeedForPosition(window.playheadX) * (window.baseSpe
 
   // --- Cue trigger sync ---
   checkCueTriggers?.();
+  dismissAllStopwatchOverlays();
 
   window.ignoreNextSync = true;
 
@@ -1227,10 +1260,8 @@ function setSplashVisibility(show) {
 
     // ✅ Only reinitialize UI controls (not the SVG / score)
     setTimeout(() => {
-      if (typeof initializeControlsPin === "function") {
-        console.log("[UI] Initializing pin controls after splash hide");
-        initializeControlsPin();
-      }
+      if (typeof initializeControlsPin === "function") initializeControlsPin();
+      if (typeof initializeTopbarPin === "function") initializeTopbarPin();
     }, 300);
 
   }
