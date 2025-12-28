@@ -23,15 +23,12 @@
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
 import { sendOSCMessage } from "./oscillaOSC.js";
 
-
 import {
     registerAnimation,
     registerRunningAnimation,
     clearRunningAnimation,
     resolveAnimationUid
 } from "./oscillaAnimation.js";
-
-
 
 const OSCCTRL_THROTTLE_MS = 30;
 // Global registry of control lanes

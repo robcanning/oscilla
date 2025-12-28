@@ -194,6 +194,10 @@ function findOscFrame(el) {
 //     }
 // }
 
+function fmt(v) {
+  if (Number.isInteger(v)) return v;           // leave ints alone
+  return Number(v.toFixed(3));                 // 0.123456 → 0.123
+}
 
 // Centralised OSC sender
 export function sendOSCMessage(payload, options = {}) {
@@ -201,38 +205,30 @@ export function sendOSCMessage(payload, options = {}) {
 
     if (!payload || typeof payload !== "object") return;
 
-    // store latest message for debugging
     window.lastOscMessage = payload;
 
-    // ---- OSC-style UI preview (simple + generic) ----
     try {
         const box = document.getElementById("osc-latest");
 
         if (box) {
             let path = "/oscilla";
-
             if (payload.addr) path += `/${payload.addr}`;
-            // if (payload.type) path += `/${payload.type}`;
-            // if (payload.uid) path += `/${payload.uid}`;
 
-            // collect numeric args
-            const values = [];
-            for (const [k, v] of Object.entries(payload)) {
-                // if (k === "type" || k === "addr" || k === "uid" || k === "timestamp") continue;
-                if (k === "addr") continue;
+            let values = [];
 
-                if (typeof v === "number") values.push(v);
+            if (Array.isArray(payload.args)) {
+                values = payload.args.map(fmt);
+            } else {
+                for (const [k, v] of Object.entries(payload)) {
+                    if (k === "addr" || k === "type" || k === "timestamp") continue;
+                    if (typeof v === "number") values.push(fmt(v));
+                }
             }
 
-            // const types = values.map(v => Number.isInteger(v) ? "i" : "f").join("");
-
-            // box.textContent = `${path} ${types} ${values.join(" ")}`.trim();
             box.textContent = `${path} ${values.join(" ")}`.trim();
-
         }
-    } catch { }
+    } catch {}
 
-    // ---- send over socket ----
     if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
         if (!silent) console.warn("[osc] socket not ready", payload);
         return;
@@ -244,6 +240,7 @@ export function sendOSCMessage(payload, options = {}) {
         console.warn("[osc] send failed", err, payload);
     }
 }
+
 
 
 function norm(v, inMin, inMax) {

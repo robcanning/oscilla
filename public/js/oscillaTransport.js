@@ -42,8 +42,8 @@
 
 import { getSpeedForPosition } from "./oscillaSpeed.js";
 import { resetAllFadePriming } from "./oscillaFade.js";
-
-
+import { stopAllCueTexts } from "./oscillaText.js";
+import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 
 window.seekDebounceTime = 300;
 window.seekingTimeout = null;
@@ -725,6 +725,135 @@ window.updateModeToggleUI = updateModeToggleUI;
 // -----------------------------------------------------
 
 
+
+
+window.returnToScrollingScore = function returnToScrollingScore() {
+
+  console.log("[cuePage] Returning to scrolling score.");
+  stopAllCueTexts();
+
+  destroyAllHitLabels()
+
+
+  const container = document.getElementById("singlePage-container");
+  const content = document.getElementById("singlePage-content");
+  const mainScore = document.getElementById("scoreInner");
+  const ps = window.pageState || (window.pageState = { mode: "scroll", current: null });
+
+  if (!container || !content) {
+    console.warn("[cuePage] No page overlay present — just resuming scroll.");
+    ps.mode = "scroll";
+    updateModeToggleUI();
+
+    ps.current = null;
+    resumeScrollScore?.();
+    return;
+  }
+
+  container.style.transition = "opacity 0.5s ease";
+  container.style.opacity = "0";
+
+  setTimeout(() => {
+    // Remove any leftover cue buttons safely
+    window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
+    window._activePageButtons = [];
+
+    container.style.display = "none";
+    content.innerHTML = "";
+
+    ps.mode = "scroll";
+    updateModeToggleUI();
+
+    ps.current = null;
+
+    if (mainScore) {
+      mainScore.style.opacity = "1";
+      mainScore.style.pointerEvents = "auto";
+    }
+
+    resumeScrollScore?.();
+  }, 500);
+};
+
+
+
+/**
+ * pauseScrollScore() / resumeScrollScore()
+ * ----------------------------------------
+ * Encapsulate your pause/resume logic.
+ */
+function pauseScrollScore() {
+  window.isPlaying = false;
+  window.isMusicalPause = true;
+  window.stopAnimation?.();
+
+  const socket = window.socket;
+  if (window.wsEnabled && socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(
+      JSON.stringify({
+        type: "pause",
+        playheadX: window.playheadX,
+        elapsedTime: window.elapsedTime,
+      })
+    );
+  }
+}
+
+function resumeScrollScore() {
+  console.log(" Resuming scrolling score...");
+
+  // If we arrived here from nav(mode:scrollPaused@X)
+  if (window._resumeAfterJump === false) {
+    console.log(" ⏸ Staying paused after jump (scrollPaused mode).");
+
+    // Ensure playback remains paused
+    window.isPlaying = false;
+    window.animationPaused = true;
+    window.isMusicalPause = true;
+
+    // Ensure remote sync does NOT resume playback
+    window.ignoreNextSync = true;
+
+    // Ensure stopwatch is paused
+    window.pauseStopwatch?.();
+
+    // Reset so next resumeScrollScore() isn't blocked
+    window._resumeAfterJump = null;
+    return;
+  }
+
+  // Normal resume (mode(scroll) or general resume)
+  window.ignoreNextSync = true;
+  window.isPlaying = true;
+  window.isMusicalPause = false;
+
+  if (typeof window.resumePlayback === "function") {
+    window.resumePlayback();
+  } else if (typeof window.startPlayback === "function") {
+    window.startPlayback();
+  }
+
+  window.startStopwatch?.();
+
+  // if (resumeReason === "scroll-mode-switch") {
+  //   window.lastSyncTime = performance.now();
+  //   window.lastElapsedTime = window.elapsedTime ?? 0;
+  // }
+
+  const socket = window.socket;
+  if (window.wsEnabled && socket?.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: "play",
+      playheadX: window.playheadX,
+      elapsedTime: window.elapsedTime,
+    }));
+  }
+
+  // Reset flag so future scroll resumes behave normally
+  window._resumeAfterJump = null;
+
+  console.log("▶ Scroll resume complete.");
+}
 
 
 

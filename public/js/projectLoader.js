@@ -6,7 +6,7 @@
 
 import { initializeSVG } from "./app.js";
 import { initializeObserver } from "./oscillaObserver.js";
-import { setSpeed, applyDarkMode, toggleSplashScreen, hideSplashScreen } from "./transport.js";
+import { setSpeed, applyDarkMode, toggleSplashScreen, hideSplashScreen } from "./oscillaTransport.js";
 import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 
 
