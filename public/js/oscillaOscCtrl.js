@@ -21,6 +21,7 @@
 // ============================================================================
 
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
+import { sendOSCMessage } from "./oscillaOSC.js";
 
 
 import {
@@ -77,7 +78,7 @@ export function handleOscCtrlCue(el, args = []) {
     // must have OSC address
     if (!cfg.addr) {
         console.warn("[oscCtrl] missing addr — skipping");
-         console.groupEnd();
+        console.groupEnd();
         return;
     }
 
@@ -115,21 +116,21 @@ export function handleOscCtrlCue(el, args = []) {
     <div>${cfg.addr}  ${cfg.min} → ${cfg.max}</div>
   `;
 
-const scroller = document.getElementById("scoreInner") || document.body;
-scroller.appendChild(overlay);
-scroller.style.position ??= "relative";
-cfg._overlay = overlay;
+    const scroller = document.getElementById("scoreInner") || document.body;
+    scroller.appendChild(overlay);
+    scroller.style.position ??= "relative";
+    cfg._overlay = overlay;
 
-cfg._updateOverlay = function () {
-    if (!cfg._path || !cfg._overlay) return;
+    cfg._updateOverlay = function () {
+        if (!cfg._path || !cfg._overlay) return;
 
-    const rect = cfg._path.getBoundingClientRect();
-    const parentRect = scroller.getBoundingClientRect();
+        const rect = cfg._path.getBoundingClientRect();
+        const parentRect = scroller.getBoundingClientRect();
 
-    const s = cfg._overlay.style;
-    s.left = `${rect.left - parentRect.left}px`;
-    s.top  = `${rect.top  - parentRect.top }px`;
-};
+        const s = cfg._overlay.style;
+        s.left = `${rect.left - parentRect.left}px`;
+        s.top = `${rect.top - parentRect.top}px`;
+    };
 
 
     // initial position
@@ -244,20 +245,14 @@ function startOscCtrl(cfg) {
             // ------------------------------------
             // send
             // ------------------------------------
-            if (window.socket?.readyState === WebSocket.OPEN) {
-                console.log("[oscCtrl]: ", cfg.addr, value );
-
-                window.socket.send(
-                    JSON.stringify({
-                        type: "osc_control",
-                        addr: cfg.addr,
-                        uid: cfg.uid,
-                        value,
-                        t,
-                        timestamp: Date.now()
-                    })
-                );
-            }
+            sendOSCMessage({
+                type: "osc_control",
+                addr: cfg.addr,
+                uid: cfg.uid,
+                value,
+                t,
+                timestamp: Date.now()
+            });
         }
     };
 

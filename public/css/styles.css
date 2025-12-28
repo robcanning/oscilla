@@ -98,13 +98,13 @@ svg {
   flex-direction: column;
   /* ✅ Makes seek bar appear above buttons */
   position: fixed;
-  bottom: 40px;
+  bottom: 0px;
   left: 0;
   width: 100vw;
   background-color: rgba(0, 0, 0, 0.6);
-  padding: 10px;
-  margin-bottom: 10px !important;
-  padding-bottom: 30px !important;
+  padding: 0px;
+  margin-bottom: 5px !important;
+  padding-bottom: 20px !important;
 
   display: flex;
   flex-direction: column;
@@ -2103,4 +2103,20 @@ body.inverted #stopwatch {
 .oscilla-hitlabel.hidden {
     opacity: 0;
     pointer-events: none;
+}
+
+
+.osc-monitor {
+  font-family: monospace;
+  background: rgba(0,0,0,.1);
+  padding: 6px 10px;
+  border-radius: 6px;
+  max-width: 650px;
+  overflow: hidden;
+}
+
+.osc-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

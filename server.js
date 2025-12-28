@@ -518,121 +518,155 @@ wss.on('connection', (ws, req) => {
 
           return null;
         }
+// -----------------------------------------------------------
+// OSC message router
+// -----------------------------------------------------------
+case "osc_value": {
+  const { addr, values, static: staticParams, args, uid } = data;
 
-      // -----------------------------------------------------------
-      // OSC message router
-      // -----------------------------------------------------------
-      case "osc_value": {
-        const { addr, values, static: staticParams, uid } = data;
+  if (!addr) {
+    console.warn("[OSC] ⚠️ osc_value missing addr:", data);
+    break;
+  }
 
-        if (!addr || typeof values !== "object") {
-          console.warn("[OSC] ⚠️ Invalid osc_value message:", data);
-          break;
-        }
+  const oscAddress = `/oscilla/${String(addr)}`;
 
-        // ------------------------------------
-        // Build OSC address
-        // ------------------------------------
-        const oscAddress = `/oscilla/${String(addr)}`;
+  // =========================================================
+  // 1️⃣ NEW POSITIONAL FORMAT
+  // =========================================================
+  //
+  // Browser sends:
+  // {
+  //   type:"osc_value",
+  //   addr:"pontalist",
+  //   args:[ pitchType, pitchA, pitchB, size, env, density ]
+  // }
+  //
+  // =========================================================
+  if (Array.isArray(args)) {
+    console.log(
+      `[OSC] 🎹 VALUE (positional) ${oscAddress}`,
+      args.join(" ")
+    );
 
-        const args = [];
-        const logParts = [];
+    oscPort.send({
+      address: oscAddress,
+      args: args.map(v => ({
+        type: Number.isInteger(v) ? "i" : "f",
+        value: v
+      }))
+    });
 
-        // ------------------------------------
-        // 0) Extract control-pitch (pitch:y)
-        // ------------------------------------
-        let pitchCtrl = null;
+    break;   // 🔥 IMPORTANT — do not continue into legacy path
+  }
 
-        if (typeof values.pitch === "number" && isFinite(values.pitch)) {
-          pitchCtrl = values.pitch;
-          delete values.pitch; // never forward bare "pitch"
-        }
+  // =========================================================
+  // 2️⃣ LEGACY KEY / VALUE FORMAT
+  // =========================================================
+  //
+  // Browser sends (old):
+  // {
+  //   type:"osc_value",
+  //   addr:"pontalist",
+  //   values:{ env:0.3, density:0.2 },
+  //   static:{ pitch:{...} }
+  // }
+  //
+  // =========================================================
+  if (typeof values !== "object") {
+    console.warn("[OSC] ⚠️ Invalid legacy osc_value payload:", data);
+    break;
+  }
 
-        // ------------------------------------
-        // 1) Continuous visual values (non-pitch)
-        // ------------------------------------
-        for (const [key, num] of Object.entries(values)) {
-          if (typeof num !== "number" || !isFinite(num)) continue;
+  const oscArgs = [];
+  const logParts = [];
 
-          // ✅ SEND KEY + VALUE
-          args.push({ type: "s", value: key });
-          args.push({ type: "f", value: num });
+  // --------------------------
+  // control pitch (pitch:y)
+  // --------------------------
+  let pitchCtrl = null;
 
-          logParts.push(`${key}=${num.toFixed(3)}`);
-        }
+  if (typeof values.pitch === "number" && isFinite(values.pitch)) {
+    pitchCtrl = values.pitch;
+    delete values.pitch;
+  }
 
-        // ------------------------------------
-        // 2) Control pitch (from y, etc.)
-        // ------------------------------------
-        if (pitchCtrl != null) {
-          args.push({ type: "s", value: "pitchCtrl" });
-          args.push({ type: "f", value: pitchCtrl });
+  // --------------------------
+  // continuous visual values
+  // --------------------------
+  for (const [key, num] of Object.entries(values)) {
+    if (typeof num !== "number" || !isFinite(num)) continue;
 
-          logParts.push(`pitchCtrl=${pitchCtrl.toFixed(3)}`);
-        }
+    oscArgs.push({ type: "s", value: key });
+    oscArgs.push({ type: "f", value: num });
 
-        // ------------------------------------
-        // 3) Semantic pitch (hz / midi)
-        // ------------------------------------
-        if (staticParams?.pitch?.type === "hz") {
-          args.push({ type: "s", value: "pitchHz" });
-          args.push({ type: "f", value: staticParams.pitch.value });
+    logParts.push(`${key}=${num.toFixed(3)}`);
+  }
 
-          logParts.push(`pitchHz=${staticParams.pitch.value.toFixed(3)}`);
-        }
+  // --------------------------
+  // control pitch
+  // --------------------------
+  if (pitchCtrl != null) {
+    oscArgs.push({ type: "s", value: "pitchCtrl" });
+    oscArgs.push({ type: "f", value: pitchCtrl });
 
-        if (staticParams?.pitch?.type === "midi") {
-          args.push({ type: "s", value: "pitchMidi" });
-          args.push({ type: "f", value: staticParams.pitch.value });
+    logParts.push(`pitchCtrl=${pitchCtrl.toFixed(3)}`);
+  }
 
-          logParts.push(`pitchMidi=${staticParams.pitch.value.toFixed(3)}`);
-        }
+  // --------------------------
+  // semantic pitch
+  // --------------------------
+  if (staticParams?.pitch?.type === "hz") {
+    oscArgs.push({ type: "s", value: "pitchHz" });
+    oscArgs.push({ type: "f", value: staticParams.pitch.value });
 
-        // ------------------------------------
-        // 3b) Degree pitch (deg(d,o))
-        // ------------------------------------
-        if (staticParams?.pitch?.type === "deg") {
-          const { degree, octave } = staticParams.pitch;
+    logParts.push(`pitchHz=${staticParams.pitch.value.toFixed(3)}`);
+  }
 
-          if (Number.isFinite(degree) && Number.isFinite(octave)) {
+  if (staticParams?.pitch?.type === "midi") {
+    oscArgs.push({ type: "s", value: "pitchMidi" });
+    oscArgs.push({ type: "f", value: staticParams.pitch.value });
 
-            // ✅ SEND KEYS EXPLICITLY
-            args.push({ type: "s", value: "pitchDeg" });
-            args.push({ type: "f", value: degree });
+    logParts.push(`pitchMidi=${staticParams.pitch.value.toFixed(3)}`);
+  }
 
-            args.push({ type: "s", value: "pitchOct" });
-            args.push({ type: "f", value: octave });
+  if (staticParams?.pitch?.type === "deg") {
+    const { degree, octave } = staticParams.pitch;
 
-            logParts.push(`pitchDeg=${degree}`);
-            logParts.push(`pitchOct=${octave}`);
-          }
-        }
+    if (Number.isFinite(degree) && Number.isFinite(octave)) {
+      oscArgs.push({ type: "s", value: "pitchDeg" });
+      oscArgs.push({ type: "f", value: degree });
 
-        // ------------------------------------
-        // 4) Optional UID
-        // ------------------------------------
-        if (uid) {
-          args.push({ type: "s", value: "uid" });
-          args.push({ type: "s", value: String(uid) });
+      oscArgs.push({ type: "s", value: "pitchOct" });
+      oscArgs.push({ type: "f", value: octave });
 
-          logParts.push(`uid=${uid}`);
-        }
+      logParts.push(`pitchDeg=${degree}`);
+      logParts.push(`pitchOct=${octave}`);
+    }
+  }
 
-        // ------------------------------------
-        // Send OSC
-        // ------------------------------------
-        console.log(
-          `[OSC] 🎹 VALUE ${oscAddress}`,
-          logParts.join(" ")
-        );
+  // --------------------------
+  // optional UID
+  // --------------------------
+  if (uid) {
+    oscArgs.push({ type: "s", value: "uid" });
+    oscArgs.push({ type: "s", value: String(uid) });
 
-        oscPort.send({
-          address: oscAddress,
-          args
-        });
+    logParts.push(`uid=${uid}`);
+  }
 
-        break;
-      }
+  console.log(
+    `[OSC] 🎹 VALUE (legacy) ${oscAddress}`,
+    logParts.join(" ")
+  );
+
+  oscPort.send({
+    address: oscAddress,
+    args: oscArgs
+  });
+
+  break;
+}
 
 
 

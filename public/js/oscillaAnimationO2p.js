@@ -33,6 +33,9 @@ import {
     ensureAnimWrapper
 } from "./oscillaAnimationShared.js";
 
+import { sendOSCMessage } from "./oscillaOSC.js";
+
+
 
 /* ---------------------------------------------------------
  *  1. ensureO2PWrapper(el)
@@ -100,7 +103,7 @@ function captureOriginalCenter(wrapper) {
 
     // Compute bbox in local coordinates
     const bbox = wrapper.getBBox();
-    
+
     // Guard against zero-area / invalid bbox
     if (!bbox || !isFinite(bbox.x) || !isFinite(bbox.y) ||
         !isFinite(bbox.width) || !isFinite(bbox.height) ||
@@ -279,7 +282,7 @@ function applyTransform(wrapper, point, angleDeg, cfg) {
     // Since we've translated, the center is now at the path point
     // We rotate around (0,0) relative to the translated position
     // which means rotating around originalCenter in local coords
-    
+
     const rotateAroundX = originalCenter.x;
     const rotateAroundY = originalCenter.y;
 
@@ -328,7 +331,7 @@ function applyTransform(wrapper, point, angleDeg, cfg) {
 
     // Apply transform to the wrapper ONLY via SVG attribute
     wrapper.setAttribute("transform", t);
-    
+
     // DO NOT touch style.transform - that's for CSS animations (nested rotate)
 }
 
@@ -365,16 +368,14 @@ function emitO2POsc({ cfg, uid, path, point, pathT, oscMode }) {
 
     if (!Number.isFinite(angle)) angle = 0;
 
-    if (!window.socket || window.socket.readyState !== WebSocket.OPEN) return;
-
-    window.socket.send(JSON.stringify({
+    sendOSCMessage({
         type: "osc_obj2path",
         uid,
         x: normX,
         y: normY,
         angle,
         timestamp: Date.now()
-    }));
+    });
 }
 
 

@@ -20,9 +20,9 @@ s.waitForBoot({
     // -------------------------------------------------
     // DEFAULT PITCH SYSTEM
     // -------------------------------------------------
-~oscScale = Scale.major;   // default scale
-~oscRoot  = 0;             // C0 (8.1758 Hz)
-~oscOctaveOffset = 0;      // musical mapping: 3 ≈ middle C
+	~oscScale = Scale.major;   // default scale
+	~oscRoot = 24;          // base register
+	~oscOctaveOffset = 0;   // (optional global transpose)
 
     // -------------------------------------------------
     // BUSES
@@ -138,89 +138,131 @@ s.waitForBoot({
     // =================================================
     // OSC INPUT — DEG / HZ / CONTROL PITCH
     // =================================================
-    OSCdef(\pontalist, { |msg|
-        var dict;
-        var pitchHz, pitchCtrl, pitchDeg, pitchOct;
-        var pitch01, freqHz;
-        var env, bright, density;
+   // =================================================
+// OSC INPUT — POSITIONAL FORMAT
+// =================================================
+OSCdef(\pontalist, { |msg|
+    var pitchType, pitchA, pitchB;
+    var size, env, density;
 
-        // Build key–value dictionary
-        dict = Dictionary.new;
-        msg.copyRange(1, msg.size-1).clump(2).do { |pair|
-            if(pair.size == 2) {
-                dict[pair[0].asSymbol] = pair[1];
-            }
-        };
+    var pitch01, freqHz;
+    var pitchHz, pitchCtrl;
+    var pitchDeg, pitchOct;
 
-        pitchHz   = dict[\pitchHz];
-        pitchCtrl = dict[\pitchCtrl];
-        pitchDeg  = dict[\pitchDeg];
-        pitchOct  = dict[\pitchOct];
+    // scale + tuning vars
+    var scale, root, offset;
+    var degreeIndex, octaveSteps, midi;
 
-        // -----------------------------------------
-        // Pitch resolution (priority-based)
-        // -----------------------------------------
+    // optional override root from cue
+    var incomingRoot;
+
+    if (msg.size < 7) {
+        ("[OSC] ⚠ unexpected message: " ++ msg).postln;
+        ^nil;
+    };
+
+    pitchType = msg[1];
+    pitchA    = msg[2];
+    pitchB    = msg[3];
+    size      = msg[4];
+    env       = msg[5];
+    density   = msg[6];
+
+    // optional 7th positional argument
+    incomingRoot = if(msg.size > 7) { msg[7] } { nil };
+
     // -----------------------------------------
-// Pitch resolution (priority-based)
-// -----------------------------------------
-if (pitchDeg.notNil and: pitchOct.notNil) {
-    var scOct;
+    // Pitch decoding
+    // -----------------------------------------
+    switch(pitchType,
 
-    // -------------------------------------
-    // Musical octave mapping
-    //
-    // pitchOct = 0 → very low register
-    // pitchOct = 3 → around middle C
-    // pitchOct = 4 → one octave above
-    // -------------------------------------
-    scOct = pitchOct + ~oscOctaveOffset;
+        // -----------------------------------
+        // 1) degree + octave
+        // -----------------------------------
+        1, {
+            pitchDeg = pitchA;
+            pitchOct = pitchB;
 
-    freqHz = ~oscScale.degreeToFreq(
-        pitchDeg,
-        scOct,
-        ~oscRoot.midicps
+            scale  = (~oscScale ? Scale.major);
+            offset = (~oscOctaveOffset ? 0);
+
+            // if cue specifies root, use it — else fall back to global
+            root = if(incomingRoot.notNil) {
+                incomingRoot
+            } {
+                (~oscRoot ? 0)
+            };
+
+            // wrap degree + propagate overflow into octaves
+            degreeIndex = pitchDeg % scale.degrees.size;
+            octaveSteps = (pitchDeg / scale.degrees.size).floor;
+
+            midi =
+                root
+                + ((pitchOct + offset + octaveSteps) * 12)
+                + scale.degrees[degreeIndex];
+
+            freqHz = midi.midicps;
+        },
+
+        // 2) hz
+        2, {
+            freqHz = pitchA;
+        },
+
+        // 3) midi
+        3, {
+            freqHz = pitchA.midicps;
+        },
+
+        // 4) y-normalized control
+        4, {
+            pitchCtrl = pitchA.clip(0, 1);
+            freqHz = pitchCtrl.linexp(0, 1, 60, 2000);
+        },
+
+        // fallback
+        {
+            freqHz = 220;
+        }
     );
 
-} {
-    if (pitchHz.notNil) {
-        freqHz = pitchHz;
-    } {
-        pitch01 = (pitchCtrl ? 0.5).clip(0, 1);
-        freqHz  = pitch01.linexp(0, 1, 60, 2000);
-    };
-};
+    // -----------------------------------------
+    // Normalize 0..1
+    // -----------------------------------------
+    pitch01 = freqHz.explin(60, 2000, 0, 1).clip(0, 1);
+
+    env     = env.clip(0, 1);
+    density = density.clip(0, 1);
+    size    = size.clip(0, 1);
+
+    [
+        \pitchType, pitchType,
+        \deg, pitchDeg,
+        \oct, pitchOct,
+        \root, (incomingRoot ?? { ~oscRoot }),
+        \freqHz, freqHz.round(0.1)
+    ].postln;
+
+    Synth(\oscillaVoice, [
+        \pitch, pitch01,
+        \env, env,
+        \bright, size,
+        \density, density,
+        \out, ~oscDryBus,
+        \revBus, ~oscRevBus,
+        \send, density.linlin(0, 1, 0.2, 0.75)
+    ], ~oscVoiceGroup);
+
+}, '/oscilla/pontalist');
 
 
-        // Convert Hz → 0..1 for synth
-        pitch01 = freqHz.explin(60, 2000, 0, 1).clip(0, 1);
 
-        env     = (dict[\env]     ? 0.2).clip(0, 1);
-        bright  = (dict[\bright]  ? 0.5).clip(0, 1);
-        density = (dict[\density] ? 0.3).clip(0, 1);
 
-        // -----------------------------------------
-        // Diagnostic log
-        // -----------------------------------------
-        [
-            \pitchDeg, pitchDeg,
-            \pitchOct, pitchOct,
-            \pitchHz, pitchHz,
-            \pitchCtrl, pitchCtrl,
-            \freqHz, freqHz.round(0.1)
-        ].postln;
-
-        Synth(\oscillaVoice, [
-            \pitch, pitch01,
-            \env, env,
-            \bright, bright,
-            \density, density,
-            \out, ~oscDryBus,
-            \revBus, ~oscRevBus,
-            \send, density.linlin(0, 1, 0.2, 0.75)
-        ], ~oscVoiceGroup);
-
-    }, '/oscilla/pontalist');
 
     "=== OSCILLA SYSTEM READY ===".postln;
 });
 )
+
+
+

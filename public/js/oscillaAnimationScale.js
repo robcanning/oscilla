@@ -8,6 +8,7 @@ import {
     armGhostClickable, needsArming, installOscToggleHandler
 } from "./oscillaAnimationShared.js";
 
+import { sendOSCMessage } from "./oscillaOSC.js";
 
 
 // ============================================================
@@ -546,25 +547,18 @@ function handleScaleContinuous(el, cfg) {
 // OSC send helper for SCALE - MUST use cfg.uid
 // ============================================================
 function sendOSCScale(cfg, el, sx, sy) {
-    if (!window.socket || !cfg?.uid) {
-        return;
-    }
+    if (!cfg?.uid) return;
 
-    const msg = {
+    sendOSCMessage({
         type: "osc_scale",
-        uid: cfg.uid,          // ✅ ALWAYS cfg.uid, NEVER el.id
+        uid: cfg.uid,
         sx: Number(sx),
         sy: Number(sy),
         avg: (Number(sx) + Number(sy)) / 2,
         timestamp: Date.now()
-    };
-    // console.log("[scaleCue] oscmsg", msg);
-    try {
-        window.socket.send(JSON.stringify(msg));
-    } catch (e) {
-        console.warn("[scale][osc] send failed:", e);
-    }
+    });
 }
+
 
 // ============================================================================
 // SCALE cue handler

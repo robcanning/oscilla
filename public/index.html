@@ -125,11 +125,15 @@
 
 
 
-    <div id="cue-info">OSC:</div>
-<span id="mode-toggle"
-        style="cursor:pointer; font-family: sans-serif; font-size:14px; opacity:0.75;">
-    scroll
-  </span>
+    <div id="cue-info" class="osc-monitor">
+      <strong>OSC</strong>
+      <div class="osc-line" id="osc-latest">waiting…</div>
+    </div>
+
+
+    <span id="mode-toggle" style="cursor:pointer; font-family: sans-serif; font-size:14px; opacity:0.75;">
+      scroll
+    </span>
     <!-- 🔹 Right-aligned container for the dropdown -->
     <div id="hamburger-container">
       <sl-dropdown>
@@ -145,9 +149,9 @@
           <sl-menu-item id="projects-submenu-root">Projects
             <sl-menu slot="submenu" id="projects-submenu"></sl-menu>
           </sl-menu-item>
-                    <sl-divider></sl-divider>
+          <sl-divider></sl-divider>
 
-                    <sl-menu-item value="preferences">Preferences</sl-menu-item>
+          <sl-menu-item value="preferences">Preferences</sl-menu-item>
 
         </sl-menu>
       </sl-dropdown>
@@ -161,24 +165,25 @@
     <div id="project-list" class="project-list"></div>
   </sl-dialog>
 
-<sl-dialog id="preferences-dialog" label="Preferences">
-  <form id="preferences-form" class="prefs-form"></form>
-  <sl-button slot="footer" id="preferences-save" variant="primary">Save</sl-button>
-</sl-dialog>
+  <sl-dialog id="preferences-dialog" label="Preferences">
+    <form id="preferences-form" class="prefs-form"></form>
+    <sl-button slot="footer" id="preferences-save" variant="primary">Save</sl-button>
+  </sl-dialog>
 
-<style>
-  .prefs-form {
-    display: grid;
-    grid-template-columns: 180px 1fr;
-    gap: 6px 12px;
-    padding: 8px;
-    z-index: 99999;
-  }
-  .prefs-form input[type="text"],
-  .prefs-form input[type="number"] {
-    width: 100%;
-  }
-</style>
+  <style>
+    .prefs-form {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 6px 12px;
+      padding: 8px;
+      z-index: 99999;
+    }
+
+    .prefs-form input[type="text"],
+    .prefs-form input[type="number"] {
+      width: 100%;
+    }
+  </style>
 
 
 

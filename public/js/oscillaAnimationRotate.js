@@ -5,23 +5,22 @@ import { scheduleCueStart } from "./oscillaCueDispatcher.js";
 import { createHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
 import { applyPrestateBeforeStart, applyPrestateOnStart, ensureAnimWrapper, installOscToggleHandler } from "./oscillaAnimationShared.js";
 
+import { sendOSCMessage } from "./oscillaOSC.js";
+
+
 // ============================================================
 // OSC send helper for ROTATION
 // ============================================================
+
 function sendOSCRotation(cfg, angle) {
-
-    if (!window.socket || !cfg?.uid) return;
-
-    // console.log("osc,,,", angle);
-
-    window.socket.send(JSON.stringify({
+    sendOSCMessage({
         type: "osc_rotate",
         uid: cfg.uid,
         angle: Number(angle),
         timestamp: Date.now()
-
-    }));
+    });
 }
+
 // ============================================================
 // Pattern Generators (Pseq, Prand, Pxrand, Pshuf)
 // â€” mirrors scale.js / previous rotate logic
