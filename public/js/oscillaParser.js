@@ -84,6 +84,8 @@ const Rotate = createToken({ name: "Rotate", pattern: /\brotate\b/, longer_alt: 
 const Scale = createToken({ name: "Scale", pattern: /\bscale\b/, longer_alt: Identifier });
 const ScaleXY = createToken({ name: "Scale", pattern: /\bscaleXY\b/, longer_alt: Identifier });
 const Osc = createToken({ name: "Osc", pattern: /\bosc\b/, longer_alt: Identifier });
+const OscCtrl = createToken({ name: "OscCtrl", pattern: /\boscCtrl\b/, longer_alt: Identifier });
+const OscCtrlNode = createToken({ name: "OscCtrlNode", pattern: /\boscCtrlNode\b/, longer_alt: Identifier });
 
 
 const O2P = createToken({ name: "O2P", pattern: /\bo2p\b/, longer_alt: Identifier });
@@ -130,7 +132,7 @@ export const allTokens = [
   Cue, Fade, Page, Stopwatch, Video, Text, Pause, Stop,
   Audio, Button, Nav,
   Rotate, Scale, ScaleXY, O2P,
-  Osc,
+  Osc, OscCtrl, OscCtrlNode,
   After, PatternName, Choose,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
   RangeLiteral, NumberLiteral, StringLiteral, True, False,
@@ -679,17 +681,28 @@ export class CueParser extends CstParser {
     // ------------------------------------------------------------
     $.RULE("cueOscTop", () => {
       $.CONSUME(Osc);
-      $.SUBRULE($.genericParamList);
+      $.SUBRULE($.genericParamList, { LABEL: "genericParamList" });
 
       // ✅ allow propagate() to append bare params (e.g. uid:prop_3_7)
       $.OPTION(() => {
         $.CONSUME(Comma);
-        $.SUBRULE($.trailingParamList);
+        $.SUBRULE($.trailingParamList, { LABEL: "trailingParamList" });
       });
     });
 
     ////////////////////////////////////////
 
+    $.RULE("cueOscCtrlTop", () => {
+      $.CONSUME(OscCtrl);
+      $.SUBRULE($.genericParamList);
+    });
+
+    $.RULE("cueOscCtrlNodeTop", () => {
+      $.CONSUME(OscCtrlNode);
+      $.SUBRULE($.genericParamList);
+    });
+
+    ////////////////////////////////////////
 
     // ------------------------------------------------------------
     // cueSpeedTop (grammar) — supports speed(3) and keyed params
@@ -950,7 +963,9 @@ export class CueParser extends CstParser {
         { ALT: () => $.SUBRULE($.cueRotateTop) },
         { ALT: () => $.SUBRULE($.cueScaleTop) },
         { ALT: () => $.SUBRULE($.cueO2PTop) },
-        { ALT: () => $.SUBRULE($.cueOscTop) }
+        { ALT: () => $.SUBRULE($.cueOscTop) },
+        { ALT: () => $.SUBRULE($.cueOscCtrlTop) },
+        { ALT: () => $.SUBRULE($.cueOscCtrlNodeTop) },
 
       ]);
 
@@ -1263,9 +1278,9 @@ export function cstToAst(cst) {
 
   if (navNode) {
     const ch = navNode.children;
-    console.log("==== [NAV CST CHILDREN DUMP] ====");
-    console.log(JSON.parse(JSON.stringify(ch)));
-    console.log("=================================");
+    // console.log("==== [NAV CST CHILDREN DUMP] ====");
+    // console.log(JSON.parse(JSON.stringify(ch)));
+    // console.log("=================================");
     const action = ch.navAction?.[0]?.image ?? null;
     const target = ch.navTarget?.[0]?.image ?? null;
 
@@ -1436,111 +1451,223 @@ export function cstToAst(cst) {
   }
 
 
- // ------------------------------------------------------------
-// cue:osc(...) AST builder  — WITH LOGS
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// cue:osc(...) AST builder  — FIXED
-// ------------------------------------------------------------
-const oscNode =
-  cst.children?.cueOscTop?.[0] ||
-  (cst.name === "cueOscTop" ? cst : null);
+  // ------------------------------------------------------------
+  // cue:osc(...) AST builder  — WITH LOGS
+  // ------------------------------------------------------------
+  function extractValueExpr(v) {
+    if (!v) return null;
 
-if (oscNode) {
-  const args = [];
-  const items = [];
+    // ------------------------------------
+    // unwrap animValue
+    // ------------------------------------
+    if (v.name === "animValue") {
+      // recurse into its single child
+      const child =
+        v.children?.NumberLiteral?.[0] ||
+        v.children?.simpleFuncCall?.[0] ||
+        null;
 
-  // Collect params from both lists
-  const mainList = oscNode.children.genericParamList?.[0];
-  if (mainList?.children?.genericParam) {
-    items.push(...mainList.children.genericParam);
+      return extractValueExpr(child);
+    }
+
+    // ------------------------------------
+    // NumberLiteral
+    // ------------------------------------
+    if (v.image != null && !isNaN(v.image)) {
+      return Number(v.image);
+    }
+
+    // ------------------------------------
+    // simpleFuncCall (CST)
+    // ------------------------------------
+    if (v.name === "simpleFuncCall") {
+      const fname = v.children.Identifier[0].image.toLowerCase();
+      const args = v.children.animValue ?? [];
+
+      // rand / irand
+      if ((fname === "rand" || fname === "irand") && args.length === 2) {
+        const min = extractValueExpr(args[0]);
+        const max = extractValueExpr(args[1]);
+        if (Number.isFinite(min) && Number.isFinite(max)) {
+          return { type: fname, min, max };
+        }
+      }
+
+      // fallback: return symbolic func
+      return {
+        type: "func",
+        name: fname,
+        args: args.map(extractValueExpr)
+      };
+    }
+
+    return null;
   }
 
-  const trailingList = oscNode.children.trailingParamList?.[0];
-  if (trailingList?.children?.genericParam) {
-    items.push(...trailingList.children.genericParam);
+
+
+  // ------------------------------------------------------------
+  // cue:osc(...) AST builder  — FIXED (CST-based)
+  // ------------------------------------------------------------
+  const oscNode =
+    cst.children?.cueOscTop?.[0] ||
+    (cst.name === "cueOscTop" ? cst : null);
+
+  if (oscNode) {
+    const args = [];
+    const items = [];
+
+    // Collect params from both lists
+    const mainList = oscNode.children.genericParamList?.[0];
+    if (mainList?.children?.genericParam) {
+      items.push(...mainList.children.genericParam);
+    }
+
+    const trailingList = oscNode.children.trailingParamList?.[0];
+    if (trailingList?.children?.genericParam) {
+      items.push(...trailingList.children.genericParam);
+    }
+
+    for (const p of items) {
+      const key = p.children.key?.[0]?.image;
+      if (!key) continue;
+
+      let val = null;
+      const v = p.children.value?.[0];
+
+      // console.log(
+      //   "[OSC VALUE NODE]",
+      //   key,
+      //   v,
+      //   "has children:",
+      //   !!v?.children
+      // );
+
+      // --------------------------------------------------
+      // simpleFuncCall (CST)
+      // --------------------------------------------------
+      if (v?.name === "simpleFuncCall") {
+        const fname = v.children.Identifier[0].image.toLowerCase();
+        const argsCst = v.children.animValue ?? [];
+
+        // deg(d, o)
+        if (fname === "deg" && argsCst.length === 2) {
+          const degree = extractValueExpr(argsCst[0]);
+          const octave = extractValueExpr(argsCst[1]);
+
+          if (degree != null && octave != null) {
+            val = {
+              type: "deg",
+              degree,
+              octave
+            };
+          }
+        }
+
+        // rand / irand
+        else if ((fname === "rand" || fname === "irand") && argsCst.length === 2) {
+          const min = extractValueExpr(argsCst[0]);
+          const max = extractValueExpr(argsCst[1]);
+
+          if (Number.isFinite(min) && Number.isFinite(max)) {
+            val = {
+              type: fname,
+              min,
+              max
+            };
+          }
+        }
+
+        // hz / midi
+        else if ((fname === "hz" || fname === "midi") && argsCst.length === 1) {
+          const value = extractValueExpr(argsCst[0]);
+          if (Number.isFinite(value)) {
+            val = {
+              type: fname,
+              value
+            };
+          }
+        }
+      }
+
+      // --------------------------------------------------
+      // Literal fallback (Identifier, NumberLiteral, String)
+      // --------------------------------------------------
+      if (val === null && v?.image != null) {
+        const s = String(v.image).replace(/^"|"$/g, "");
+        val =
+          s === "true" ? true :
+            s === "false" ? false :
+              (!isNaN(s) && s !== "") ? Number(s) :
+                s;
+      }
+
+      args.push({ type: key, value: val });
+    }
+
+    return {
+      type: "cueOsc",
+      args
+    };
   }
 
-  for (const p of items) {
-    const key = p.children.key?.[0]?.image;
-    if (!key) continue;
 
+  // ------------------------------------------------------------
+  // cue:oscCtrl(...)
+  // ------------------------------------------------------------
+  const oscCtrlNode =
+    cst.children?.cueOscCtrlTop?.[0] ||
+    (cst.name === "cueOscCtrlTop" ? cst : null);
 
-// --------------------------------------------------
-// 1) simpleFuncCall → hz(440), midi(62)
-// --------------------------------------------------
-let val = null;
+  if (oscCtrlNode) {
+    const args = [];
+    const list = oscCtrlNode.children.genericParamList?.[0];
+    const items = list?.children.genericParam || [];
 
-const valNode = p.children.value?.[0];
+    for (const p of items) {
+      const key = p.children.key?.[0]?.image;
+      const raw = p.children.value?.[0]?.image;
+      if (!key) continue;
 
-// --------------------------------------------------
-// 1) typed value: hz(440), midi(62)
-// --------------------------------------------------
-if (valNode?.name === "simpleFuncCall") {
-  const fname = valNode.children?.Identifier?.[0]?.image?.toLowerCase();
-  const arg0 = valNode.children?.animValue?.[0];
+      let val =
+        raw === "true" ? true :
+          raw === "false" ? false :
+            (!isNaN(raw)) ? Number(raw) :
+              raw?.replace(/^"|"$/g, "");
 
-  // animValue can be NumberLiteral, Identifier, etc.
-  const numTok =
-    arg0?.children?.NumberLiteral?.[0] ||
-    arg0?.children?.numberLiteral?.[0]; // (only if you have variant naming; safe fallback)
+      args.push({ type: key, value: val });
+    }
 
-  if ((fname === "hz" || fname === "midi") && numTok) {
-    val = { type: fname, value: Number(numTok.image) };
-  } else {
-    // Optional: keep generic func support, if you want
-    // val = { type: "func", name: fname, args: [...] };
-  }
-}
-
-// --------------------------------------------------
-// 2) literal-ish values (addr:pontalist, env:width, etc.)
-// --------------------------------------------------
-if (val === null) {
-  // For genericParam, non-func alternatives are CONSUME(...) tokens labeled "value"
-  // so valNode is a Token-like object with .image
-  const raw = valNode?.image;
-  if (raw != null) {
-    const s = String(raw).replace(/^"|"$/g, "");
-    val =
-      s === "true" ? true :
-      s === "false" ? false :
-      (s !== "" && !isNaN(s)) ? Number(s) :
-      s;
-  }
-}
-
-args.push({ type: key, value: val });
-
-
-// --------------------------------------------------
-// 2) value token with direct image (addr:pontalist)
-// --------------------------------------------------
-if (val === null && valueNode?.image) {
-  const raw = valueNode.image.replace(/^"|"$/g, "");
-  val =
-    raw === "true" ? true :
-    raw === "false" ? false :
-    isNaN(raw) ? raw :
-    Number(raw);
-}
-
-// --------------------------------------------------
-// 3) safety fallback (NumberLiteral etc.)
-// --------------------------------------------------
-if (val === null && valueNode?.children?.NumberLiteral?.[0]) {
-  val = Number(valueNode.children.NumberLiteral[0].image);
-}
-
-
-args.push({ type: key, value: val });
+    return { type: "oscCtrl", args };
   }
 
-  return {
-    type: "cueOsc",
-    args
-  };
-}
+
+  const oscCtrlNodeNode =
+    cst.children?.cueOscCtrlNodeTop?.[0] ||
+    (cst.name === "cueOscCtrlNodeTop" ? cst : null);
+
+  if (oscCtrlNodeNode) {
+    const args = [];
+    const list = oscCtrlNodeNode.children.genericParamList?.[0];
+    const items = list?.children.genericParam || [];
+
+    for (const p of items) {
+      const key = p.children.key?.[0]?.image;
+      const raw = p.children.value?.[0]?.image;
+      if (!key) continue;
+
+      let val =
+        raw === "true" ? true :
+          raw === "false" ? false :
+            (!isNaN(raw)) ? Number(raw) :
+              raw?.replace(/^"|"$/g, "");
+
+      args.push({ type: key, value: val });
+    }
+
+    return { type: "oscCtrlNode", args };
+  }
+
 
 
 
@@ -1674,7 +1801,7 @@ args.push({ type: key, value: val });
       opt[key] = val;
     });
 
-     //console.log("[cueButton:AST] Final extracted style opt=", JSON.stringify(opt, null, 2));
+    //console.log("[cueButton:AST] Final extracted style opt=", JSON.stringify(opt, null, 2));
 
 
     return {
@@ -1944,23 +2071,17 @@ args.push({ type: key, value: val });
   // ---------------------------------------------------------------------------
   // Simple function-call extractor: fadein(500) → { type:"func", name:"fadein", args:[500] }
   // ---------------------------------------------------------------------------
-  function extractFuncCall(callNode) {
-    const name = callNode.children.Identifier[0].image;
+  function extractFuncCall(node) {
+    if (!node || !node.children) return null;
 
-    const args = [];
-    const argNodes = callNode.children.animValue || [];
-
-    for (const n of argNodes) {
-      args.push(extractValue(n));
-    }
+    const id = node.children.Identifier?.[0];
+    if (!id) return null;
 
     return {
-      type: "func",
-      name,
-      args
+      name: id.image.toLowerCase(),
+      args: node.children.animValue ?? []
     };
   }
-
 
 
   // ============================================================================
@@ -2037,7 +2158,7 @@ args.push({ type: key, value: val });
   // ============================================================================
   // 🔹 Fallback (unknown cue)
   // ============================================================================
-   console.warn("[CueDSL] ⚠️ Unrecognized CST structure:", cst.name);
+  console.warn("[CueDSL] ⚠️ Unrecognized CST structure:", cst.name);
   return { type: "cueUnknown", args: [] };
 }
 
@@ -2057,22 +2178,22 @@ export function parseCueToAST(input) {
 
   // debugTokens(input);  //
 
-   console.log("[LexerDebug] Tokens:", lexResult.tokens.map(t => t.image));
-   console.log("[LexerDebug] Errors:", lexResult.errors);
+  // console.log("[LexerDebug] Tokens:", lexResult.tokens.map(t => t.image));
+  // console.log("[LexerDebug] Errors:", lexResult.errors);
 
   const parser = new CueParser();
   parser.input = lexResult.tokens;
   const cst = parser.cueTop();
 
   if (parser.errors.length) {
-     console.error("[CueDSL] ❌ Parse errors:", parser.errors);
+    console.error("[CueDSL] ❌ Parse errors:", parser.errors);
     throw new Error("Parsing failed");
   }
 
   // console.log("✅ Parsed CST structure ↓↓↓");
   // printCST(cst);
   const ast = cstToAst(cst);
-  console.log("[CueDSL] ✅ Parsed AST:", ast);
+  // console.log("[CueDSL] ✅ Parsed AST:", ast);
   return ast;
 }
 

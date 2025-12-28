@@ -198,7 +198,7 @@ function sendOSC(payload) {
 // ---------------------------------------------------------------------------
 export function handleOscCue(ast, el, options = {}) {
 
-    console.group("[handleOscCue] ENTER");
+    // console.group("[handleOscCue] ENTER");
 
     if (!ast || !el) {
         console.warn("[handleOscCue] Missing ast or el", ast, el);
@@ -206,7 +206,7 @@ export function handleOscCue(ast, el, options = {}) {
         return;
     }
 
-    console.log("[handleOscCue] AST:", JSON.parse(JSON.stringify(ast)));
+    // console.log("[handleOscCue] AST:", JSON.parse(JSON.stringify(ast)));
 
     const astArgs = ast.args || [];
 
@@ -215,10 +215,10 @@ export function handleOscCue(ast, el, options = {}) {
     let trig = "auto";
     let prestate = null;
 
-    // 🔹 Static (semantic) params → sent as-is
+    // 🔹 Semantic params (hz, midi, deg, rand, irand, literals)
     const staticParams = {};
 
-    // 🔹 Visual mappings → sampled every frame
+    // 🔹 Visual mappings → sampled each trigger
     const visualMappings = {};
 
     // ---------------------------------------------------------
@@ -229,31 +229,27 @@ export function handleOscCue(ast, el, options = {}) {
         const key = a.type;
         const val = a.value;
 
-        console.log("[handleOscCue] arg:", key, val);
+        // console.log("[handleOscCue] arg:", key, val);
 
         if (key === "addr") {
             addr = typeof val === "string" ? val.trim() : String(val);
-            console.log("[handleOscCue] addr parsed →", addr);
         }
         else if (key === "uid") {
             uid = typeof val === "string" ? val.trim() : String(val);
-            console.log("[handleOscCue] uid parsed →", uid);
         }
         else if (key === "trig") {
             trig = String(val).toLowerCase();
-            console.log("[handleOscCue] trig parsed →", trig);
         }
         else if (key === "prestate") {
             prestate = val;
-            console.log("[handleOscCue] prestate parsed →", prestate);
         }
 
         // -------------------------------------------------
-        // Typed / static values (hz(), midi(), future)
+        // Typed / semantic values
+        // (hz, midi, deg, rand, irand)
         // -------------------------------------------------
         else if (val && typeof val === "object" && val.type) {
             staticParams[key] = val;
-            console.log("[handleOscCue] static param:", key, val);
         }
 
         // -------------------------------------------------
@@ -261,22 +257,18 @@ export function handleOscCue(ast, el, options = {}) {
         // -------------------------------------------------
         else if (typeof val === "string") {
             visualMappings[key] = val;
-            console.log("[handleOscCue] visual mapping:", key, "→", val);
         }
 
         // -------------------------------------------------
-        // Literal fallback (numbers, booleans)
+        // Literal fallback
         // -------------------------------------------------
         else {
             staticParams[key] = val;
-            console.log("[handleOscCue] static literal:", key, val);
         }
     }
 
-    console.log("[handleOscCue] FINAL addr =", addr);
-
     if (!addr) {
-        console.error("[handleOscCue] ❌ addr is NULL — aborting send");
+        console.error("[handleOscCue] ❌ addr is NULL — aborting");
         console.groupEnd();
         return;
     }
@@ -285,16 +277,52 @@ export function handleOscCue(ast, el, options = {}) {
     // Prestate
     // ---------------------------------------------------------
     if (prestate) {
-        console.log("[handleOscCue] applying prestate");
         applyPrestateBeforeStart(el, prestate);
     }
+
+    // ---------------------------------------------------------
+    // Runtime evaluator (event-time randomness)
+    // ---------------------------------------------------------
+function evalRuntime(val) {
+  if (val == null) return val;
+
+  // literals
+  if (typeof val !== "object") return val;
+
+  // integer random
+  if (val.type === "irand") {
+    return Math.floor(
+      val.min + Math.random() * (val.max - val.min + 1)
+    );
+  }
+
+  // float random
+  if (val.type === "rand") {
+    return val.min + Math.random() * (val.max - val.min);
+  }
+
+  // deg(d,o) → numeric pitch (MIDI-style)
+  if (val.type === "deg") {
+    const d = evalRuntime(val.degree);
+    const o = evalRuntime(val.octave);
+
+    if (Number.isFinite(d) && Number.isFinite(o)) {
+      return 12 * o + d;   // ✅ YOUR pitch mapping
+    }
+
+    return null;
+  }
+
+  return val;
+}
+
 
     // ---------------------------------------------------------
     // Fire OSC
     // ---------------------------------------------------------
     const start = () => {
 
-        console.group("[handleOscCue] START");
+        // console.group("[handleOscCue] START");
 
         const sample = sampleVisual(el);
         if (!sample) {
@@ -303,18 +331,47 @@ export function handleOscCue(ast, el, options = {}) {
             return;
         }
 
-        // 🔹 Per-frame sampled values
+        // 🔹 Visual (continuous) values
         const values = {};
-
         for (const [param, source] of Object.entries(visualMappings)) {
-
             if (sample[source] != null) {
                 values[param] = sample[source];
-                console.log("[handleOscCue] value(visual):", param, values[param]);
-            } else {
-                console.warn("[handleOscCue] visual source missing:", param, source);
             }
         }
+
+// 🔹 Evaluate runtime semantic params (MODE B: semantic pitch)
+const evaluatedStatic = {};
+// 🔹 Evaluate runtime semantic params (MODE B — FLAT)
+for (const [key, val] of Object.entries(staticParams)) {
+
+  if (key === "pitch" && val?.type === "deg") {
+    const deg = evalRuntime(val.degree);
+    const oct = evalRuntime(val.octave);
+
+    if (Number.isFinite(deg)) values.pitchDeg = deg;
+    if (Number.isFinite(oct)) values.pitchOct = oct;
+    continue;
+  }
+
+  if (key === "pitch" && val?.type === "hz") {
+    values.pitchHz = evalRuntime(val.value);
+    continue;
+  }
+
+  if (key === "pitch" && val?.type === "midi") {
+    values.pitchMidi = evalRuntime(val.value);
+    continue;
+  }
+
+
+
+  // ----------------------------
+  // Other semantic params
+  // ----------------------------
+  const resolved = evalRuntime(val);
+  evaluatedStatic[key] = resolved;
+}
+
 
         // -------------------------------------------------
         // Build payload
@@ -323,13 +380,15 @@ export function handleOscCue(ast, el, options = {}) {
             type: "osc_value",
             addr,
             values,
-            static: staticParams, // 🔹 pitch, midi, etc.
+            static: evaluatedStatic,
             timestamp: Date.now()
         };
 
         if (uid) payload.uid = uid;
 
-        console.log("[handleOscCue] PAYLOAD →", JSON.parse(JSON.stringify(payload)));
+        // console.log("[handleOscCue] PAYLOAD →",
+        //     JSON.parse(JSON.stringify(payload))
+        // );
 
         sendOSC(payload);
         emitCueComplete(ast.raw || addr, "osc");
@@ -341,16 +400,14 @@ export function handleOscCue(ast, el, options = {}) {
     // Trigger routing
     // ---------------------------------------------------------
     if (el && needsArming(el)) {
-        console.log("[handleOscCue] ghostClickable arming");
         armGhostClickable(el, start);
         console.groupEnd();
         return;
     }
 
-    console.log("[handleOscCue] immediate start()");
     start();
-
     console.groupEnd(); // ENTER
 }
-
+ 
+    
 

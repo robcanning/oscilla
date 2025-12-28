@@ -1,7 +1,8 @@
 # cue:osc — Discrete OSC Event Cue
 
-`osc(...)` sends a **single OSC message** when triggered.  
-It is **event-based**, not continuous, and is designed to turn **drawn objects into control events**.
+`osc(...)` sends a **single OSC message** when triggered.
+
+It is **event-based**, not continuous, and is designed to turn **drawn objects into discrete control events**, typically consumed by SuperCollider, Pd, Max, etc.
 
 It works especially well with `propagate()` to create many independent OSC triggers from simple drawings.
 
@@ -22,7 +23,7 @@ Required:
 Example:
 
 ```
-osc(addr:voice, pitch:y, amp:size)
+osc(addr:voice, pitch:y, env:size)
 ```
 
 ---
@@ -40,7 +41,7 @@ osc(addr:voice, pitch:y, amp:size)
 
 ## VISUAL PARAMETER SOURCES (NORMALISED)
 
-All sampled values are normalised to `0–1`.
+All visual sources are normalised to `0–1`.
 
 | Source | Meaning |
 |------|--------|
@@ -52,11 +53,74 @@ All sampled values are normalised to `0–1`.
 | `opacity` | Computed opacity |
 | `fill` | Numeric colour hash |
 
-Example mapping:
+Example:
 
 ```
 osc(addr:voice, pitch:y, amp:size)
 ```
+
+This sends a **continuous control pitch** (`pitchCtrl`) derived from the object’s Y position.
+
+---
+
+## SEMANTIC PITCH VALUES
+
+In addition to visual mappings, `osc()` supports **typed pitch values**.
+
+### Absolute pitch (Hz)
+
+```
+osc(addr:voice, pitch:hz(440))
+```
+
+Emits:
+
+```
+"pitchHz", 440
+```
+
+### MIDI note number
+
+```
+osc(addr:voice, pitch:midi(60))
+```
+
+Emits:
+
+```
+"pitchMidi", 60
+```
+
+### Scale degree + absolute octave
+
+```
+osc(addr:voice, pitch:deg(5,3))
+```
+
+Represents:
+
+- `degree = 5`
+- `octave = 3` (absolute octave, where 3 ≈ middle C region)
+
+Emits:
+
+```
+"pitchDeg", 5, "pitchOct", 3
+```
+
+> Interpretation of degrees and scales is **intentionally delegated to the receiving instrument** (e.g. SuperCollider).
+
+---
+
+## PITCH PRIORITY (IMPORTANT)
+
+When multiple pitch sources exist, resolution is:
+
+1. `deg(d,o)` → symbolic, scale-based pitch
+2. `hz()` or `midi()` → absolute pitch
+3. visual `pitch:y` → continuous control pitch (`pitchCtrl`)
+
+Only **one pitch representation** is expected to be used by the instrument per event.
 
 ---
 
@@ -74,63 +138,75 @@ osc(addr:voice, pitch:y, amp:size)
 Example:
 
 ```
-osc(addr:voice, pitch:y, trig:playhead)
+osc(addr:voice, pitch:deg(0,4), trig:playhead)
 ```
 
 ---
 
 ## UID (OPTIONAL)
 
-`uid` is **optional** and is only included if explicitly provided.
+`uid` is optional and is only included if explicitly provided.
 
 ```
 osc(addr:voice, pitch:y, uid:v1)
 ```
 
-Emits OSC address:
+Emits OSC arguments including:
 
 ```
-/oscilla/voice/v1
+"uid", "v1"
 ```
 
-If `uid` is omitted, no UID is sent.
+UIDs are typically used to associate events with performers, voices, or persistent identities downstream.
 
 ---
 
-## OSC OUTPUT FORMAT
+## OSC OUTPUT FORMAT (AUTHORITATIVE)
 
-### Without UID
+All OSC messages use **explicit key–value pairs**.
 
-```
-/oscilla/<addr> <value> <value> ...
-```
-
-Example:
+### General form
 
 ```
-/oscilla/voice 0.63 0.41
+/oscilla/<addr>
+  "param1", <value>,
+  "param2", <value>,
+  ...
 ```
 
-### With UID
+### Example — visual pitch
 
 ```
-/oscilla/<addr>/<uid> <value> <value> ...
+/oscilla/voice
+  "pitchCtrl", 0.63,
+  "env", 0.41
 ```
 
-Example:
+### Example — degree-based pitch
 
 ```
-/oscilla/voice/v1 0.63 0.41
+/oscilla/voice
+  "pitchDeg", 0,
+  "pitchOct", 4,
+  "env", 0.32
 ```
 
-Values are sent in the order defined in the cue.
+### Example — absolute pitch
+
+```
+/oscilla/voice
+  "pitchHz", 440,
+  "density", 0.18
+```
+
+> **Positional arguments are never used.**  
+> Receivers are expected to parse OSC messages into dictionaries / maps.
 
 ---
 
 ## USE WITH propagate()
 
-`propagate()` applies the same `osc()` cue to all child objects,
-automatically injecting unique parameters where needed.
+`propagate()` applies the same `osc()` cue to all child objects, automatically creating **many independent OSC events**.
 
 ### Example — spatial pitch cloud
 
@@ -139,37 +215,43 @@ propagate(
   osc(
     addr:voice,
     pitch:y,
-    amp:size,
+    env:size,
     trig:playhead
   )
 )
 ```
 
-Each object produces an independent OSC event as the playhead crosses it.
-
 ---
 
-### Example — clickable voices with UID
+### Example — scale-degree constellation
 
 ```
 propagate(
   osc(
     addr:voice,
-    pitch:y,
-    amp:size,
-    uid:v,
-    trig:click,
-    prestate:ghostClickable
+    pitch:deg(${1}, 3),
+    env:size, uid:rnd
+  ),
+  rnd([0,2,4,5,7,9,11])
+)
+
+propagate(
+  osc(
+    addr:voice,
+    pitch:deg(${1}, ${2}),
+    env:size, uid:rndoct123
+  ),
+  rnd([0,2,4,5,7,9,11]), rnd([0,1,2,3,4,5])
+)
+
+
+propagate(
+  osc(
+    addr:pontalist,
+    pitch:deg(irand(0,11), irand(0,2)),
+    env:size, uid:irand1235
   )
 )
-```
-
-Produces addresses like:
-
-```
-/oscilla/voice/v_0
-/oscilla/voice/v_1
-/oscilla/voice/v_2
 ```
 
 ---
@@ -179,12 +261,13 @@ Produces addresses like:
 - `osc()` is **stateless**
 - No DOM IDs are ever used
 - No continuous OSC streaming
-- No expressions or mappings inside the DSL
-- Mapping and scaling are expected downstream (SuperCollider, Pd, etc.)
+- No DSP or scale logic inside the DSL
+- Musical interpretation is delegated downstream
+- OSC arguments are **always keyed**
 
 ---
 
 ## SUMMARY
 
 > `osc()` turns visual objects into one-shot OSC control events.  
-> Combined with `propagate()`, it enables complex drawable control structures with minimal notation.
+> It supports continuous control, absolute pitch, and symbolic pitch, while leaving musical interpretation to the receiving instrument.

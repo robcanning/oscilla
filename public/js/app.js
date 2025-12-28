@@ -31,11 +31,17 @@ import {
   startStopwatch, stopStopwatch, resetStopwatch,
   resumeStopwatch, setupStopwatchFullscreenToggle
 } from './oscillaTimers.js';
+
 import {
   handleCueTrigger, checkCueTriggers, parseCueParams, resetTriggeredCues,
-  handleStopCue,  handleRepeatCue, parseRepeatCueId,
-  executeRepeatJump, repeatStateMap, handleRestoredRepeatState, assignCues
+   assignCues
 } from './oscillaCueDispatcher.js';
+
+
+import { handleStopCue } from './oscillaStop.js';
+
+
+
 import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues } from "./oscillaAudio.js";
 import { dismissPauseCountdown, pauseDismissClickHandler, handlePauseCue } from "./oscillaPause.js";
 
@@ -216,7 +222,7 @@ async function settleDomForPropagate() {
   await new Promise((r) => setTimeout(r, 0));
 }
 
-  // propagate(svgElement);
+// propagate(svgElement);
 
 
 
@@ -622,7 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Animation Loop
   // ===========================
   window.animate = async (currentTime) => {
-    if ( window.isSeeking) return;
+    if (window.isSeeking) return;
 
     let dt = window.lastAnimationFrameTime !== null
       ? (currentTime - window.lastAnimationFrameTime) / 1000 : 0;
@@ -630,13 +636,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const refWidth = window.remoteScoreWidth || window.scoreWidth;
 
-if (window.isPlaying && dt > 0 && refWidth && window.duration) {
-  const effectiveDeltaMs = dt * 1000 * (window.speedMultiplier || 1);
-  window.playheadX = Math.min(
-    window.playheadX + (effectiveDeltaMs / window.duration) * refWidth,
-    refWidth
-  );
-      
+    if (window.isPlaying && dt > 0 && refWidth && window.duration) {
+      const effectiveDeltaMs = dt * 1000 * (window.speedMultiplier || 1);
+      window.playheadX = Math.min(
+        window.playheadX + (effectiveDeltaMs / window.duration) * refWidth,
+        refWidth
+      );
+
 
       // Drift correction
       if (window.serverSyncPlayheadX != null) {
@@ -657,18 +663,31 @@ if (window.isPlaying && dt > 0 && refWidth && window.duration) {
     if (window._skipTriggerFrame > 0) window._skipTriggerFrame--;
     else await checkCueTriggers?.(window.elapsedTime);
 
+
+    // ----------------------------------
+    // Tick non-anime custom animations
+    // ----------------------------------
+    if (window.runningAnimations) {
+      for (const anim of window.runningAnimations.values()) {
+        if (typeof anim.tick === "function") {
+          anim.tick();
+        }
+      }
+    }
+
+
     window.animationFrameId = requestAnimationFrame(window.animate);
   };
 
   window.startAnimation = () => {
     console.log("[RAF] startAnimation called", {
-  isPlaying: window.isPlaying,
-  animationPaused: window.animationPaused,
-  isSeeking: window.isSeeking,
-  animationFrameId: window.animationFrameId
-});
+      isPlaying: window.isPlaying,
+      animationPaused: window.animationPaused,
+      isSeeking: window.isSeeking,
+      animationFrameId: window.animationFrameId
+    });
 
-  if (window.isSeeking) return;
+    if (window.isSeeking) return;
     if (window.animationFrameId === null) {
       requestAnimationFrame((time) => {
         window.lastAnimationFrameTime = time;
@@ -679,10 +698,10 @@ if (window.isPlaying && dt > 0 && refWidth && window.duration) {
 
 
   window.stopAnimation = () => {
-  // ❌ DO NOT cancel RAF here
-  window.isPlaying = false;
-  window.isMusicalPause = true;
-};
+    // ❌ DO NOT cancel RAF here
+    window.isPlaying = false;
+    window.isMusicalPause = true;
+  };
 
 
 

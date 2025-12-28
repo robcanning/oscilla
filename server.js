@@ -518,6 +518,7 @@ wss.on('connection', (ws, req) => {
 
           return null;
         }
+
       // -----------------------------------------------------------
       // OSC message router
       // -----------------------------------------------------------
@@ -588,6 +589,26 @@ wss.on('connection', (ws, req) => {
         }
 
         // ------------------------------------
+        // 3b) Degree pitch (deg(d,o))
+        // ------------------------------------
+        if (staticParams?.pitch?.type === "deg") {
+          const { degree, octave } = staticParams.pitch;
+
+          if (Number.isFinite(degree) && Number.isFinite(octave)) {
+
+            // ✅ SEND KEYS EXPLICITLY
+            args.push({ type: "s", value: "pitchDeg" });
+            args.push({ type: "f", value: degree });
+
+            args.push({ type: "s", value: "pitchOct" });
+            args.push({ type: "f", value: octave });
+
+            logParts.push(`pitchDeg=${degree}`);
+            logParts.push(`pitchOct=${octave}`);
+          }
+        }
+
+        // ------------------------------------
         // 4) Optional UID
         // ------------------------------------
         if (uid) {
@@ -608,6 +629,41 @@ wss.on('connection', (ws, req) => {
         oscPort.send({
           address: oscAddress,
           args
+        });
+
+        break;
+      }
+
+
+
+      case "osc_control": {
+        const { addr, value, t } = data;
+
+        if (!addr) {
+          console.warn("[OSC] ⚠️ Missing addr in osc_control message.");
+          break;
+        }
+
+        const v = parseFloat(value);
+        const tt = parseFloat(t);
+
+        const nv = Number.isFinite(v) ? v : 0;
+        const nt = Number.isFinite(tt) ? tt : 0;
+
+        // Build OSC path: /oscilla/control/<addr>...
+        const oscAddress = `/oscilla/control${addr.startsWith("/") ? "" : "/"}${addr}`;
+
+        console.log(
+          `[OSC] 🎛 control → ${oscAddress}  v=${nv.toFixed(3)} t=${nt.toFixed(3)}`
+        );
+
+        oscPort.send({
+          address: oscAddress,
+          args: [
+            // value + t only — clean signal
+            { type: "f", value: nv },
+            { type: "f", value: nt }
+          ]
         });
 
         break;

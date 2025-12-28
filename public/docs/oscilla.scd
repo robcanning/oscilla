@@ -1,6 +1,6 @@
 (
 // =====================================================
-// OSCILLA + GREYHOLE — COMPLETE FILE (FIXED OSC INPUT)
+// OSCILLA + GREYHOLE — COMPLETE FILE (DEG + SCALE FIX)
 // =====================================================
 
 // -----------------------------------------------------
@@ -18,13 +18,20 @@ s.waitForBoot({
     OSCdef.trace(false);
 
     // -------------------------------------------------
+    // DEFAULT PITCH SYSTEM
+    // -------------------------------------------------
+~oscScale = Scale.major;   // default scale
+~oscRoot  = 0;             // C0 (8.1758 Hz)
+~oscOctaveOffset = 0;      // musical mapping: 3 ≈ middle C
+
+    // -------------------------------------------------
     // BUSES
     // -------------------------------------------------
     ~oscDryBus = Bus.audio(s, 2);
     ~oscRevBus = Bus.audio(s, 2);
 
     // -------------------------------------------------
-    // GROUPS (ORDER MATTERS)
+    // GROUPS
     // -------------------------------------------------
     ~oscVoiceGroup   = Group.head(s);
     ~oscReverbGroup  = Group.after(~oscVoiceGroup);
@@ -34,9 +41,6 @@ s.waitForBoot({
     // SYNTHDEFS
     // =================================================
 
-    // -------------------------------------------------
-    // OSCILLA VOICE
-    // -------------------------------------------------
     SynthDef(\oscillaVoice, {
         |out=0, revBus=0, send=0.4,
          pitch=0.5, env=0.2, bright=0.5, density=0.3|
@@ -45,14 +49,9 @@ s.waitForBoot({
         var numPartials, detuneSpread;
         var partials, driftRates, driftDepths, pans;
 
-        // -------------------------------------------------
-        // Base frequency (expects 0..1 pitch control)
-        // -------------------------------------------------
+        // pitch is always 0..1 here
         freq = pitch.linexp(0, 1, 60, 2000);
 
-        // -------------------------------------------------
-        // Envelope
-        // -------------------------------------------------
         ampEnv = EnvGen.kr(
             Env.linen(
                 0.05,
@@ -63,9 +62,6 @@ s.waitForBoot({
             doneAction: 2
         );
 
-        // -------------------------------------------------
-        // Partial configuration
-        // -------------------------------------------------
         numPartials   = density.linlin(0, 1, 3, 7).round(1);
         detuneSpread = bright.linlin(0, 1, 0.2, 12);
 
@@ -73,9 +69,6 @@ s.waitForBoot({
         driftDepths = Array.fill(7, { Rand(0.1, 1.0) });
         pans        = Array.fill(7, { Rand(-0.7, 0.7) });
 
-        // -------------------------------------------------
-        // Generate partials
-        // -------------------------------------------------
         partials = Mix.fill(7, { |i|
             var active, detune, drift, f, amp;
 
@@ -123,17 +116,14 @@ s.waitForBoot({
         Out.ar(outBus, wet * level);
     }).add;
 
-    // -------------------------------------------------
-    // MONITOR
-    // -------------------------------------------------
     SynthDef(\oscMonitor, {
         |inBus, out=0, level=0.35|
         Out.ar(out, In.ar(inBus, 2) * level);
     }).add;
 
-    // =================================================
+    // -------------------------------------------------
     // START FX + MONITOR
-    // =================================================
+    // -------------------------------------------------
     ~oscReverb = Synth(\greyhole2, [
         \inBus, ~oscRevBus,
         \outBus, ~oscDryBus,
@@ -146,71 +136,91 @@ s.waitForBoot({
     ], ~oscMonitorGroup);
 
     // =================================================
-    // OSC INPUT (FIXED)
+    // OSC INPUT — DEG / HZ / CONTROL PITCH
     // =================================================
-   OSCdef(\pontalist, { |msg|
-    var dict;
-    var pitchHz, pitchCtrl, pitch01, freqHz;
-    var env, bright, density;
+    OSCdef(\pontalist, { |msg|
+        var dict;
+        var pitchHz, pitchCtrl, pitchDeg, pitchOct;
+        var pitch01, freqHz;
+        var env, bright, density;
 
-    // -----------------------------------------
-    // Build key–value dictionary
-    // (skip msg[0] = OSC address)
-    // -----------------------------------------
-    dict = Dictionary.new;
-    msg.copyRange(1, msg.size-1).clump(2).do { |pair|
-        if(pair.size == 2) {
-            dict[pair[0].asSymbol] = pair[1];
-        }
-    };
+        // Build key–value dictionary
+        dict = Dictionary.new;
+        msg.copyRange(1, msg.size-1).clump(2).do { |pair|
+            if(pair.size == 2) {
+                dict[pair[0].asSymbol] = pair[1];
+            }
+        };
 
-    // -----------------------------------------
-    // Pitch resolution
-    // -----------------------------------------
-    pitchHz   = dict[\pitchHz];
-    pitchCtrl = dict[\pitchCtrl];
+        pitchHz   = dict[\pitchHz];
+        pitchCtrl = dict[\pitchCtrl];
+        pitchDeg  = dict[\pitchDeg];
+        pitchOct  = dict[\pitchOct];
 
-    if(pitchHz.notNil) {
-        // semantic pitch → Hz → 0..1
-        pitch01 = pitchHz.explin(50, 8000, 0, 1).clip(0, 1);
+        // -----------------------------------------
+        // Pitch resolution (priority-based)
+        // -----------------------------------------
+    // -----------------------------------------
+// Pitch resolution (priority-based)
+// -----------------------------------------
+if (pitchDeg.notNil and: pitchOct.notNil) {
+    var scOct;
+
+    // -------------------------------------
+    // Musical octave mapping
+    //
+    // pitchOct = 0 → very low register
+    // pitchOct = 3 → around middle C
+    // pitchOct = 4 → one octave above
+    // -------------------------------------
+    scOct = pitchOct + ~oscOctaveOffset;
+
+    freqHz = ~oscScale.degreeToFreq(
+        pitchDeg,
+        scOct,
+        ~oscRoot.midicps
+    );
+
+} {
+    if (pitchHz.notNil) {
+        freqHz = pitchHz;
     } {
-        // control pitch fallback
         pitch01 = (pitchCtrl ? 0.5).clip(0, 1);
+        freqHz  = pitch01.linexp(0, 1, 60, 2000);
     };
+};
 
-    freqHz = pitch01.linexp(0, 1, 60, 2000);
 
-    // -----------------------------------------
-    // Other controls
-    // -----------------------------------------
-    env     = (dict[\env]     ? 0.2).clip(0, 1);
-    bright  = (dict[\bright]  ? 0.5).clip(0, 1);
-    density = (dict[\density] ? 0.3).clip(0, 1);
+        // Convert Hz → 0..1 for synth
+        pitch01 = freqHz.explin(60, 2000, 0, 1).clip(0, 1);
 
-    // -----------------------------------------
-    // 🔍 DIAGNOSTIC LOG
-    // -----------------------------------------
-    [
-        \pitchHz_in, pitchHz,
-        \pitchCtrl_in, pitchCtrl,
-        \pitch01, pitch01.round(0.001),
-        \freqHz_expected, freqHz.round(0.1)
-    ].postln;
+        env     = (dict[\env]     ? 0.2).clip(0, 1);
+        bright  = (dict[\bright]  ? 0.5).clip(0, 1);
+        density = (dict[\density] ? 0.3).clip(0, 1);
 
-    // -----------------------------------------
-    // Spawn voice
-    // -----------------------------------------
-    Synth(\oscillaVoice, [
-        \pitch, pitch01,
-        \env, env,
-        \bright, bright,
-        \density, density,
-        \out, ~oscDryBus,
-        \revBus, ~oscRevBus,
-        \send, density.linlin(0, 1, 0.2, 0.75)
-    ], ~oscVoiceGroup);
+        // -----------------------------------------
+        // Diagnostic log
+        // -----------------------------------------
+        [
+            \pitchDeg, pitchDeg,
+            \pitchOct, pitchOct,
+            \pitchHz, pitchHz,
+            \pitchCtrl, pitchCtrl,
+            \freqHz, freqHz.round(0.1)
+        ].postln;
 
-}, '/oscilla/pontalist');
+        Synth(\oscillaVoice, [
+            \pitch, pitch01,
+            \env, env,
+            \bright, bright,
+            \density, density,
+            \out, ~oscDryBus,
+            \revBus, ~oscRevBus,
+            \send, density.linlin(0, 1, 0.2, 0.75)
+        ], ~oscVoiceGroup);
+
+    }, '/oscilla/pontalist');
+
+    "=== OSCILLA SYSTEM READY ===".postln;
 });
-"=== OSCILLA SYSTEM READY ===".postln;
 )
