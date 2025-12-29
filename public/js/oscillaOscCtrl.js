@@ -210,12 +210,11 @@ function startOscCtrl(cfg) {
 
             const p = cfg._path.getPointAtLength(t * cfg._len);
 
-            // ------------------------------------
-            // Y normalization (relative to rect)
-            // ------------------------------------
-            let ny = (p.y - rect.top) / rect.height;
+            // local-space normalization (works even with group transforms)
+            let ny = (p.y - cfg._bbox.y) / cfg._bbox.height;
             ny = 1 - ny;
             ny = Math.min(1, Math.max(0, ny));
+
 
             const value = cfg.min + ny * (cfg.max - cfg.min);
 

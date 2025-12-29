@@ -1606,14 +1606,18 @@ body.inverted #stopwatch {
   background: rgba(0, 0, 0, 0.75);
   color: white;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  /* align-items: center; */
+  /* justify-content: space-between; */
   /* ✅ Add this line */
   padding: 0 15px;
   font-size: 1rem;
   z-index: 99999;
   pointer-events: auto;
   transition: transform 0.3s ease, opacity 0.3s ease;
+    display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
 }
 
 
@@ -1621,6 +1625,7 @@ body.inverted #stopwatch {
   display: flex;
   gap: 8px;
   align-items: center;
+  margin-left: auto; 
 }
 
 
@@ -1754,7 +1759,10 @@ sl-menu-item::part(base)::after {
 } */
 
 /* 🔹 Cue Info (Placed to the right of the stopwatch) */
+
 #cue-info {
+    width: 300px;     /* fixed */
+
   font-size: 0.75rem;
   font-weight: bold;
   color: white;
@@ -1763,8 +1771,10 @@ sl-menu-item::part(base)::after {
   left: calc(50% + 120px);
   /* ✅ Places it to the right of stopwatch */
   /* background: rgba(0, 0, 0, 0.7); */
+    flex: 0 0 auto;   /* 🚫 don’t grow, 🚫 don’t shrink */
 
 }
+
 
 #pin-topbar {
   font-size: 16px;
@@ -2151,20 +2161,18 @@ sl-menu-item::part(base)::after {
     pointer-events: none;
 }
 
-
+/* Keep OSC cluster stable */
 .osc-monitor {
-  font-family: monospace;
-  background: rgba(0,0,0,.1);
-  padding: 6px 10px;
-  border-radius: 6px;
-  max-width: 650px;
-  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
 }
 
-.osc-line {
+.osc-monitor .osc-line {
+  min-width: 220px;
+  max-width: 320px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-    display: inline;
-
 }
