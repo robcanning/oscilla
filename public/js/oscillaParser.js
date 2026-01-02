@@ -11,7 +11,7 @@
 // Chevrotain can distinguish branches by first token.
 //
 // ============================================================================
-const OSCILLA_DSL_DEBUG = false; // turn off by setting to false
+const OSCILLA_DSL_DEBUG = true; // turn off by setting to false
 
 import {
   createToken,
@@ -89,7 +89,6 @@ const OscCtrlNode = createToken({ name: "OscCtrlNode", pattern: /\boscCtrlNode\b
 
 
 const O2P = createToken({ name: "O2P", pattern: /\bo2p\b/, longer_alt: Identifier });
-
 
 
 const After = createToken({ name: "After", pattern: /after\b/ });
@@ -281,6 +280,8 @@ export class CueParser extends CstParser {
       const keyTok = $.OR([
         { ALT: () => $.CONSUME(Identifier, { LABEL: "key" }) },
         { ALT: () => $.CONSUME(Rotate, { LABEL: "key" }) },
+            { ALT: () => $.CONSUME(Osc, { LABEL: "key" }) },   // ← ADD THIS
+
       ]);
 
       $.CONSUME(Colon);
@@ -2088,7 +2089,7 @@ export function cstToAst(cst) {
   // shared helper animation AST builders (with instrumentation)
   // ============================================================================
   function extractAnimKvArgs(node) {
-    // if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() ENTER:", node);
+     if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() ENTER:", node);
 
     const out = [];
 
@@ -2104,31 +2105,50 @@ export function cstToAst(cst) {
       node.children.animGenericParamList?.[0]?.children?.kvParams || [];
 
     for (const p of restParams) {
-      const key = p.children.key?.[0]?.image || p.key;
-      if (!key) continue;
+  const key = p.children.key?.[0]?.image || p.key;
+  if (!key) continue;
 
-      // Unified animValue extraction
-      let vNode =
-        p.children.value?.[0] ||
-        p.children.animValue?.[0] ||
-        null;
+  let vNode =
+    p.children.value?.[0] ||
+    p.children.animValue?.[0] ||
+    p.children.NumberLiteral?.[0] ||
+    p.children.StringLiteral?.[0] ||
+    p.children.Identifier?.[0] ||
+    null;
 
-      // NEW: direct tokens (NumberLiteral / StringLiteral / Identifier)
-      if (!vNode && p.children.NumberLiteral) vNode = p.children.NumberLiteral[0];
-      if (!vNode && p.children.StringLiteral) vNode = p.children.StringLiteral[0];
-      if (!vNode && p.children.Identifier) vNode = p.children.Identifier[0];
+  // --- NEW: unwrap nested value() containers ---
+  if (vNode?.children?.StringLiteral) {
+    vNode = vNode.children.StringLiteral[0];
+  }
 
-      let val = extractValue({ children: vNode ? { ...(vNode.children || {}), [vNode.tokenType?.name]: [vNode] } : {} });
+  if (vNode?.children?.NumberLiteral) {
+    vNode = vNode.children.NumberLiteral[0];
+  }
 
-      // Simple fallback for plain literals (common case)
-      if (!val && vNode?.image) {
-        if (!isNaN(vNode.image)) val = Number(vNode.image);
-        else val = vNode.image;
-      }
+  let val;
 
-      out.push({ type: key, value: val });
+  // String literal — strip quotes
+  if (vNode?.tokenType?.name === "StringLiteral") {
+    val = vNode.image.replace(/^"(.*)"$/, "$1");
+  } else {
+    val = extractValue({
+      children: vNode
+        ? { ...(vNode.children || {}), [vNode.tokenType?.name]: [vNode] }
+        : {}
+    });
+  }
 
-    }
+  if (val === null || val === undefined) {
+    const img = vNode?.image;
+
+    if (img === "true") val = true;
+    else if (img === "false") val = false;
+    else if (img !== undefined && !isNaN(img)) val = Number(img);
+    else val = img ?? null;
+  }
+
+  out.push({ type: key, value: val });
+}
 
     if (OSCILLA_DSL_DEBUG) console.log("[OSCILLA_DSL] extractAnimKvArgs() RETURN:", out);
     return out;
@@ -2178,8 +2198,8 @@ export function parseCueToAST(input) {
 
   // debugTokens(input);  //
 
-  // console.log("[LexerDebug] Tokens:", lexResult.tokens.map(t => t.image));
-  // console.log("[LexerDebug] Errors:", lexResult.errors);
+   console.log("[LexerDebug] Tokens:", lexResult.tokens.map(t => t.image));
+   console.log("[LexerDebug] Errors:", lexResult.errors);
 
   const parser = new CueParser();
   parser.input = lexResult.tokens;
@@ -2191,9 +2211,9 @@ export function parseCueToAST(input) {
   }
 
   // console.log("✅ Parsed CST structure ↓↓↓");
-  // printCST(cst);
+   printCST(cst);
   const ast = cstToAst(cst);
-  // console.log("[CueDSL] ✅ Parsed AST:", ast);
+   console.log("[CueDSL] ✅ Parsed AST:", ast);
   return ast;
 }
 

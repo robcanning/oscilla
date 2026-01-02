@@ -1,29 +1,61 @@
-// rotate.js â€” OscillaScore Rotate Cue (sequence + continuous)
+// rotate.js — OscillaScore Rotate Cue (sequence + continuous)
 
 import { registerAnimation } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
 import { createHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
-import { applyPrestateBeforeStart, applyPrestateOnStart, ensureAnimWrapper, installOscToggleHandler } from "./oscillaAnimationShared.js";
+import {
+    applyPrestateBeforeStart,
+    applyPrestateOnStart,
+    ensureAnimWrapper,
+    installOscToggleHandler,
+    armGhostClickable,
+    needsArming,
+    isOscEnabled
+} from "./oscillaAnimationShared.js";
 
-import { sendOSCMessage } from "./oscillaOSC.js";
+import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
 
 
 // ============================================================
 // OSC send helper for ROTATION
+// - wraps angle into [0, 360)
+// - also sends radians + 0–1 normalised
+// - respects optional cfg.oscAddr (from oscaddr:"...")
 // ============================================================
-
 function sendOSCRotation(cfg, angle) {
-    sendOSCMessage({
+    const raw = Number(angle);
+
+    // Safety — avoid NaN propagation
+    const safe = Number.isFinite(raw) ? raw : 0;
+
+    // wrap into [0,360)
+    const deg = ((safe % 360) + 360) % 360;
+    const rad = deg * (Math.PI / 180);
+    const norm = deg / 360;
+
+    const addr =
+        cfg.oscaddr ??
+        cfg.oscAddr ??
+        cfg.addr ??
+        null;
+
+    const payload = {
         type: "osc_rotate",
         uid: cfg.uid,
-        angle: Number(angle),
+        deg,
+        rad,
+        norm,
         timestamp: Date.now()
-    });
+    };
+
+    if (addr) payload.addr = addr;
+
+    sendOSCMessage(payload);
 }
 
 // ============================================================
 // Pattern Generators (Pseq, Prand, Pxrand, Pshuf)
-// â€” mirrors scale.js / previous rotate logic
+// — mirrors scale.js / previous rotate logic
 // ============================================================
 function makePatternGenerator(pattern) {
     if (!pattern || !pattern.values || !Array.isArray(pattern.values)) {
@@ -31,7 +63,7 @@ function makePatternGenerator(pattern) {
         return { next: () => null };
     }
 
-    // Literal list â†’ Pseq(..., inf)
+    // Literal list → Pseq(..., inf)
     if (Array.isArray(pattern.values) && !pattern.name) {
         let arr = pattern.values.slice();
         let i = 0;
@@ -146,12 +178,12 @@ function getCurrentAngle(el, fallback = 0) {
     return Number.isFinite(v) ? v : fallback;
 }
 
+
 // ======================================================================
 //  ROTATION SEQUENCE ENGINE (sequence / patterns / lists)
 //  handleRotateSequence(el, cfg)
 // ======================================================================
 export function handleRotateSequence(el, cfg) {
-
 
     const astArgs = cfg.astArgs || [];
 
@@ -170,12 +202,6 @@ export function handleRotateSequence(el, cfg) {
     let ease = "linear";
     let hold = null;
     let oscMode = 0;                      // 0 off, 1 continuous, 2 per-step
-
-    function oscEnabled(cfg) {
-        return cfg._oscEnabled === true || oscMode > 0;
-    }
-
-
 
     // Pattern generator
     let valueGen = null;
@@ -230,6 +256,15 @@ export function handleRotateSequence(el, cfg) {
                 oscMode = Number(val) || 0;
                 break;
 
+            // NEW: accept explicit OSC address
+            case "oscaddr":
+            case "oscAddr":
+                cfg.oscAddr = String(val).trim();
+                break;
+
+
+
+                
             default:
                 break;
         }
@@ -264,6 +299,29 @@ export function handleRotateSequence(el, cfg) {
     }
 
     applySvgPivot(el);
+
+    // ----------------------------------------------
+    // OVERLAY (anchors to rotating element, center)
+    // only when OSC is actually enabled
+    // ----------------------------------------------
+    if (cfg._overlay) {
+        cfg._overlay.destroy();
+        cfg._overlay = null;
+    }
+
+    const wrapper = ensureAnimWrapper(el);
+
+    if (isOscEnabled(cfg, oscMode)) {
+        cfg._overlay = createOscOverlay({
+            anchorEl: wrapper,
+            label: cfg.oscAddr || cfg.uid || "rotate",
+            anchorMode: "center",
+            mode: "auto"
+        });
+
+        cfg._overlay.update("…");
+        cfg._overlay.position();
+    }
 
     // Literal list indexing
     const N = Array.isArray(values) ? values.length : Infinity;
@@ -324,6 +382,13 @@ export function handleRotateSequence(el, cfg) {
             if (!pauseOnExit && Array.isArray(values) && values.length > 0) {
                 el.style.transform = `rotate(${values[0]}deg)`;
             }
+
+            // cleanup overlay on finish
+            if (cfg._overlay) {
+                cfg._overlay.destroy();
+                cfg._overlay = null;
+            }
+
             el._oscillaRotateAnim = null;
             return;
         }
@@ -338,9 +403,12 @@ export function handleRotateSequence(el, cfg) {
             driver.a = tgt;
             el.style.transform = `rotate(${tgt}deg)`;
 
-            // Read OSC mode from cfg (reactive to double-click changes)
-            if (oscEnabled(cfg)) {
-                sendOSCRotation(cfg, tgt);
+            if (cfg._overlay) {
+                cfg._overlay.update(`deg:${tgt.toFixed(1)}`);
+            }
+
+            if (isOscEnabled(cfg, oscMode)) {
+                sendOSCRotation(cfg, Number(tgt) || 0);
             }
 
             stepIndexAdvance();
@@ -351,7 +419,7 @@ export function handleRotateSequence(el, cfg) {
             return;
         }
 
-        // SMOOTH MODE â€” drift-compensated
+        // SMOOTH MODE — drift-compensated
         let current = getCurrentAngle(el, driver.a);
         current = ((current % 360) + 360) % 360;
         driver.a = current;
@@ -371,34 +439,37 @@ export function handleRotateSequence(el, cfg) {
             a: driver.a + delta,
             duration: stepDur * 1000,
             easing: ease,
+
             update: () => {
                 repositionAllHitLabels();
 
                 let a = ((driver.a % 360) + 360) % 360;
                 el.style.transform = `rotate(${a}deg)`;
 
-                // Read OSC mode from cfg (reactive to double-click changes)
-                if (oscEnabled(cfg)) {
-                    sendOSCRotation(cfg, a);
+                if (cfg._overlay) {
+                    cfg._overlay.update(`deg:${a.toFixed(1)}`);
+                }
+
+                if (isOscEnabled(cfg, oscMode)) {
+                    sendOSCRotation(cfg, Number(a) || 0);
                 }
             },
 
             complete: () => {
-                if (oscEnabled(cfg)) {
-                    const a = getCurrentAngle(animEl, 0);
-                    sendOSCRotation(cfg, a);
+                if (isOscEnabled(cfg, oscMode)) {
+                    const a = getCurrentAngle(el, 0);
+                    sendOSCRotation(cfg, Number(a) || 0);
                 }
             }
         });
 
-        // ðŸ”‘ CRITICAL FIX
         el._oscillaRotateAnim = anim;
         cfg._anim = anim;
     }
 
-
     requestAnimationFrame(runNext);
 }
+
 
 // ============================================================
 // Continuous fallback rotation (no values:[] provided)
@@ -414,10 +485,6 @@ export function handleRotateContinuous(el, cfg) {
     let mode = "loop";  // kept for completeness
     let oscMode = 0;
 
-    function oscEnabled(cfg) {
-        return cfg._oscEnabled === true || oscMode > 0;
-    }
-
     for (const arg of astArgs) {
         const key = arg.key || arg.type;
         const value = arg.value;
@@ -428,6 +495,10 @@ export function handleRotateContinuous(el, cfg) {
         if (key === "ease") ease = String(value).trim();
         if (key === "mode") mode = String(value).trim().toLowerCase();
         if (key === "osc") oscMode = Number(value) || 0;
+
+        if (key === "oscaddr") {
+            cfg.oscAddr = String(value).trim();
+        }
     }
 
     // stop existing animation if active
@@ -436,6 +507,29 @@ export function handleRotateContinuous(el, cfg) {
     const animEl = ensureAnimWrapper(el);
 
     applySvgPivot(animEl);
+
+    // ----------------------------------------------
+    // OVERLAY (anchor to center of wrapper)
+    // ----------------------------------------------
+    if (cfg._overlay) {
+        cfg._overlay.destroy();
+        cfg._overlay = null;
+    }
+
+    const wrapper = ensureAnimWrapper(el);
+
+    // only show overlay if OSC actually enabled
+    if (isOscEnabled(cfg, oscMode)) {
+        cfg._overlay = createOscOverlay({
+            anchorEl: wrapper,
+            label: cfg.oscAddr || cfg.uid || "rotate",
+            anchorMode: "center",
+            mode: "auto"
+        });
+
+        cfg._overlay.update("…");
+        cfg._overlay.position();
+    }
 
     const fullTurn = dir * 360;
     const ms = dur * 1000;
@@ -451,9 +545,13 @@ export function handleRotateContinuous(el, cfg) {
         update: () => {
             try { repositionAllHitLabels(); } catch (e) { }
 
-            if (oscEnabled(cfg)) {
+            if (isOscEnabled(cfg, oscMode)) {
                 const a = getCurrentAngle(animEl, 0);
-                sendOSCRotation(cfg, a);
+                sendOSCRotation(cfg, Number(a) || 0);
+
+                if (cfg._overlay) {
+                    cfg._overlay.update(`deg:${(((a % 360) + 360) % 360).toFixed(1)}`);
+                }
             }
         }
     });
@@ -461,13 +559,6 @@ export function handleRotateContinuous(el, cfg) {
     el._oscillaRotateAnim = anim;
     cfg._anim = anim;
 }
-
-
-// UPDATE YOUR IMPORTS at top of file:
-import {
-    armGhostClickable,
-    needsArming
-} from "./oscillaAnimationShared.js";
 
 
 // ============================================================================
@@ -480,29 +571,15 @@ export function handleRotateCue(el, astArgs, options = {}) {
 
     const { fromCueTrigger = false } = options;
 
-    // -----------------------------------------------------------
-    // CHECK: Is this a playhead trigger for already-registered element?
-    // If so, just ARM it - don't re-run full setup.
-    // -----------------------------------------------------------
+    // CHECK: playhead trigger for already-registered element?
     const existingCfg = el._oscillaCfg;
 
     if (fromCueTrigger && existingCfg && existingCfg._ghostClickable) {
-        // Element was already registered at load time
-        // Playhead intersection should just ARM it (fade to ghost)
-
         if (needsArming(existingCfg)) {
-            // console.log("[rotateCue] PLAYHEAD → arming ghostClickable", existingCfg.uid);
             armGhostClickable(el, existingCfg);
-        } else {
-            // console.log("[rotateCue] PLAYHEAD → already armed/running, skipping", existingCfg.uid);
         }
-        return;  // Don't re-run full handler
+        return;
     }
-
-    // -----------------------------------------------------------
-    // FULL SETUP (first time registration)
-    // -----------------------------------------------------------
-    // console.log("[rotateCue] ⬇️ ENTER", { el, astArgs, options });
 
     // ---------------------------------
     // Parse trig, uid, tdelay, prestate
@@ -525,13 +602,6 @@ export function handleRotateCue(el, astArgs, options = {}) {
         }
     }
 
-    // console.log("[rotateCue] Parsed →", {
-    //     trig,
-    //     uid,
-    //     tdelay: cfgStartDelay,
-    //     prestate
-    // });
-
     const shouldStartNow =
         fromCueTrigger || trig === "auto" || trig === "playhead";
 
@@ -549,45 +619,31 @@ export function handleRotateCue(el, astArgs, options = {}) {
         _anim: null
     };
 
-    // ★ FIX: ensure the element actually receives clicks
+    // ensure the element actually receives clicks
     el.style.pointerEvents = "all";
-    // Bring to front so clicks are reachable
     try { el.parentNode.appendChild(el); } catch (e) { }
 
-    // ----------------------------------------------------
-    // DEFINE RAW START FOR ALL ROTATION MODES
-    // ----------------------------------------------------
     function makeRawStart(cfg, modeFn) {
         return () => {
-            // console.log("[rotateCue] ▶ START ROTATION", cfg.uid);
             modeFn(el, cfg);
         };
     }
 
-    // ----------------------------------------------------
-    // WRAP START (tdelay + prestates)
-    // ----------------------------------------------------
     function wrapStart(cfg, rawStartFn) {
-        // expose to ghostClickable system
         cfg._start = rawStartFn;
         cfg._applyPrestateOnStart = () => applyPrestateOnStart(el, cfg);
 
         return () => {
             if (cfg.start > 0) {
-                // console.log(`[rotateCue] ⏳ tdelay ${cfg.start}s → uid=${cfg.uid}`);
-
                 scheduleCueStart(
                     cfg,
                     el,
                     () => {
-                        // ✅ ghostClickable: just arm, don't start animation
                         if (cfg._ghostClickable && cfg._startBlocked) {
-                            // console.log("[rotateCue] delayed start → arming ghostClickable", cfg.uid);
                             applyPrestateOnStart(el, cfg);
-                            return; // wait for click
+                            return;
                         }
 
-                        // normal start
                         applyPrestateOnStart(el, cfg);
                         rawStartFn();
                     },
@@ -595,7 +651,6 @@ export function handleRotateCue(el, astArgs, options = {}) {
                 );
 
             } else {
-                // immediate case: still respect ghostClickable
                 if (cfg._ghostClickable && cfg._startBlocked) {
                     applyPrestateOnStart(el, cfg);
                     return;
@@ -621,11 +676,9 @@ export function handleRotateCue(el, astArgs, options = {}) {
             mode: "sequence-pattern"
         };
 
-        // ✅ STORE CFG ON ELEMENT for future playhead triggers
         el._oscillaCfg = cfg;
 
         installOscToggleHandler(el, cfg);
-        // ✅ APPLY PRESTATE (REGISTRATION)
         applyPrestateBeforeStart(el, cfg);
 
         if (Array.isArray(v.values)) {
@@ -660,13 +713,10 @@ export function handleRotateCue(el, astArgs, options = {}) {
             mode: "sequence"
         };
 
-        // ✅ STORE CFG ON ELEMENT
         el._oscillaCfg = cfg;
         el.dataset.oscillaUid = cfg.uid;
 
-
         installOscToggleHandler(el, cfg);
-        // ✅ APPLY PRESTATE (REGISTRATION)
         applyPrestateBeforeStart(el, cfg);
 
         try {
@@ -692,17 +742,13 @@ export function handleRotateCue(el, astArgs, options = {}) {
     // ----------------------------------------------------
     // CONTINUOUS MODE
     // ----------------------------------------------------
-    // console.log("[rotateCue] Fallback rotate mode");
-
     const cfg = {
         ...baseCfg,
         mode: "continuous"
     };
 
-    // ✅ STORE CFG ON ELEMENT
     el._oscillaCfg = cfg;
 
-    // ✅ APPLY PRESTATE (REGISTRATION)
     applyPrestateBeforeStart(el, cfg);
 
     const rawStart = makeRawStart(cfg, handleRotateContinuous);

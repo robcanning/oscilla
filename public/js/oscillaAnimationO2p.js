@@ -33,7 +33,7 @@ import {
     ensureAnimWrapper
 } from "./oscillaAnimationShared.js";
 
-import { sendOSCMessage } from "./oscillaOSC.js";
+import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
 
 
 
@@ -341,10 +341,18 @@ function applyTransform(wrapper, point, angleDeg, cfg) {
  * --------------------------------------------------------*/
 const O2P_OSC_THROTTLE_MS = 30;
 
-function emitO2POsc({ cfg, uid, path, point, pathT, oscMode }) {
-    if (!isOscEnabled(cfg, oscMode)) return;
+// console.log("[o2p isOsc?]", JSON.stringify(cfg.oscCfg));
+
+function emitO2POsc({ cfg, uid, path, point, pathT }) {
+
+    const oscCfg = cfg.oscCfg;
+
+    if (!oscCfg || !oscCfg.enabled) return;
 
     const now = performance.now();
+    if (oscCfg.lastSent && (now - oscCfg.lastSent < oscCfg.throttle)) return;
+    oscCfg.lastSent = now;
+
     if (!cfg._oscLastSent) cfg._oscLastSent = 0;
     if (now - cfg._oscLastSent < O2P_OSC_THROTTLE_MS) return;
     cfg._oscLastSent = now;
@@ -366,33 +374,49 @@ function emitO2POsc({ cfg, uid, path, point, pathT, oscMode }) {
         ahead.x - point.x
     ) * (180 / Math.PI);
 
+
+    angle = (angle + 360) % 360;
+
+
     if (!Number.isFinite(angle)) angle = 0;
 
+    let addr;
+
+    if (cfg.oscAddr) {
+        addr = cfg.oscAddr.replace(/^\//, "");
+    } else {
+        addr = `o2p/${cfg.uid || "unknown"}`;
+    }
+
+    // normalize pathT relative to startPos
+    let tLocal = pathT;
+    if (Number.isFinite(cfg.startPos)) {
+        tLocal = (pathT - cfg.startPos + 1) % 1;
+    }
+
     sendOSCMessage({
-        type: "osc_obj2path",
-        uid,
-        x: normX,
-        y: normY,
-        angle,
+        type: "osc_value",
+        addr,
+        args: [
+            tLocal,
+            normX,
+            normY,
+            angle
+        ],
         timestamp: Date.now()
     });
+
+
 }
 
-
-/* ---------------------------------------------------------
- *  8. Continuous mode (forward / reverse)
- * --------------------------------------------------------*/
 function startContinuousO2P(el, cfg, virtual, uid) {
-    const { dur, loop, startPos, endPos, next, nextOn, oscMode } = cfg;
+    const { dur, loop, startPos, endPos, next, nextOn } = cfg;
 
-    // Get or create the animation wrapper
     const wrapper = ensureO2PWrapper(el);
     cfg._wrapper = wrapper;
 
-    // Capture original center (no geometry modification)
     captureOriginalCenter(wrapper);
 
-    // Stop any existing animation
     if (el._o2pAnim) el._o2pAnim.pause?.();
 
     const easeCtrl = normalizeEase(cfg.ease);
@@ -402,7 +426,6 @@ function startContinuousO2P(el, cfg, virtual, uid) {
     const cycles = loop === 0 ? true : loop;
     const durationMs = dur * 1000;
 
-    // Running animation registry
     if (!window.runningAnimations) window.runningAnimations = {};
     window.runningAnimations[uid] = {
         pause: () => el._o2pAnim?.pause(),
@@ -412,8 +435,6 @@ function startContinuousO2P(el, cfg, virtual, uid) {
         wasPaused: false
     };
 
-    // Throttle for OSC
-    const OSC_THROTTLE_MS = 30;
     cfg._oscLastSent = 0;
 
     const anim = anime({
@@ -422,7 +443,6 @@ function startContinuousO2P(el, cfg, virtual, uid) {
         duration: durationMs,
         easing: easeCtrl.next(),
         loop: cycles,
-        direction: "normal",
 
         update: () => {
             const nowTime = performance.now();
@@ -435,21 +455,16 @@ function startContinuousO2P(el, cfg, virtual, uid) {
             let globalT;
 
             const hasCustomStart = (startPos !== 0);
-            const hasCustomEnd = (endPos !== 1);
+            const hasCustomEnd   = (endPos !== 1);
 
             if (cfg.mode === "forward") {
-                if (hasCustomStart && !hasCustomEnd) {
-                    globalT = (startPos + phase) % 1;
-                } else {
-                    globalT = tMap(phase);
-                }
-            }
-            else if (cfg.mode === "reverse") {
-                if (hasCustomStart && !hasCustomEnd) {
-                    globalT = (startPos - phase + 1) % 1;
-                } else {
-                    globalT = tMap(1 - phase);
-                }
+                globalT = hasCustomStart && !hasCustomEnd
+                    ? (startPos + phase) % 1
+                    : tMap(phase);
+            } else if (cfg.mode === "reverse") {
+                globalT = hasCustomStart && !hasCustomEnd
+                    ? (startPos - phase + 1) % 1
+                    : tMap(1 - phase);
             }
 
             const sample = virtual.sample(globalT);
@@ -457,7 +472,6 @@ function startContinuousO2P(el, cfg, virtual, uid) {
 
             const { path, point, pathT } = sample;
 
-            // Compute tangent angle
             const length = path.getTotalLength();
             const EPS = 0.1;
             const localL = pathT * length;
@@ -471,36 +485,17 @@ function startContinuousO2P(el, cfg, virtual, uid) {
 
             if (!Number.isFinite(angle)) angle = 0;
 
-            // Apply transform to WRAPPER
             applyTransform(wrapper, point, angle, cfg);
             repositionAllHitLabels();
 
             // OSC emit
-            if (
-                isOscEnabled(cfg, oscMode) &&
-                window.socket &&
-                window.socket.readyState === WebSocket.OPEN
-            ) {
-                const now = performance.now();
-                if (now - cfg._oscLastSent >= OSC_THROTTLE_MS) {
-                    cfg._oscLastSent = now;
+            emitO2POsc({ cfg, uid: cfg.uid, path, point, pathT });
 
-                    const bbox = path.getBBox();
-                    if (bbox && bbox.width !== 0 && bbox.height !== 0) {
-                        const normX = (point.x - bbox.x) / bbox.width;
-                        const normY = (point.y - bbox.y) / bbox.height;
-
-                        window.socket.send(JSON.stringify({
-                            type: "osc_obj2path",
-                            uid: cfg.uid,
-                            x: normX,
-                            y: normY,
-                            angle,
-                            t: pathT,
-                            timestamp: Date.now()
-                        }));
-                    }
-                }
+            // overlay text (position handled globally)
+            if (cfg._overlay) {
+                cfg._overlay.update(
+                    `x:${point.x.toFixed(1)} y:${point.y.toFixed(1)}`
+                );
             }
         },
 
@@ -511,10 +506,7 @@ function startContinuousO2P(el, cfg, virtual, uid) {
         },
 
         complete: () => {
-            // Finite loops must reset pose
-            if (loop !== 0) {
-                positionO2PInitial(el, cfg);
-            }
+            if (loop !== 0) positionO2PInitial(el, cfg);
 
             if (loop !== 0 && next && nextOn === "stop") {
                 window.handleCueTrigger?.(next);
@@ -527,17 +519,12 @@ function startContinuousO2P(el, cfg, virtual, uid) {
 }
 
 
-/* ---------------------------------------------------------
- *  9. Alternate mode (true ping-pong)
- * --------------------------------------------------------*/
 function startAlternateO2P(el, cfg, virtual, uid) {
-    const { dur, loop, startPos, endPos, next, nextOn, oscMode } = cfg;
+    const { dur, loop, startPos, endPos, next, nextOn } = cfg;
 
-    // Get or create the animation wrapper
     const wrapper = ensureO2PWrapper(el);
     cfg._wrapper = wrapper;
 
-    // Capture original center (no geometry modification)
     captureOriginalCenter(wrapper);
 
     if (el._o2pAnim) el._o2pAnim.pause?.();
@@ -549,7 +536,6 @@ function startAlternateO2P(el, cfg, virtual, uid) {
     let remaining = loop === 0 ? Infinity : loop;
     let stopped = false;
 
-    // Running animation registry
     if (!window.runningAnimations) window.runningAnimations = {};
     window.runningAnimations[uid] = {
         pause: () => el._o2pAnim?.pause(),
@@ -559,7 +545,6 @@ function startAlternateO2P(el, cfg, virtual, uid) {
         wasPaused: false
     };
 
-    const OSC_THROTTLE_MS = 30;
     cfg._oscLastSent = 0;
 
     function halfCycle(directionSign) {
@@ -613,36 +598,17 @@ function startAlternateO2P(el, cfg, virtual, uid) {
 
                     if (!Number.isFinite(angle)) angle = 0;
 
-                    // Apply transform to WRAPPER
                     applyTransform(wrapper, point, angle, cfg);
                     repositionAllHitLabels();
 
                     // OSC emit
-                    if (
-                        isOscEnabled(cfg, oscMode) &&
-                        window.socket &&
-                        window.socket.readyState === WebSocket.OPEN
-                    ) {
-                        const now = performance.now();
-                        if (now - cfg._oscLastSent >= OSC_THROTTLE_MS) {
-                            cfg._oscLastSent = now;
+                    emitO2POsc({ cfg, uid: cfg.uid, path, point, pathT });
 
-                            const bbox = path.getBBox();
-                            if (bbox && bbox.width !== 0 && bbox.height !== 0) {
-                                const normX = (point.x - bbox.x) / bbox.width;
-                                const normY = (point.y - bbox.y) / bbox.height;
-
-                                window.socket.send(JSON.stringify({
-                                    type: "osc_obj2path",
-                                    uid: cfg.uid,
-                                    x: normX,
-                                    y: normY,
-                                    angle,
-                                    t: pathT,
-                                    timestamp: Date.now()
-                                }));
-                            }
-                        }
+                    // overlay text
+                    if (cfg._overlay) {
+                        cfg._overlay.update(
+                            `x:${point.x.toFixed(1)} y:${point.y.toFixed(1)}`
+                        );
                     }
                 },
 
@@ -654,7 +620,6 @@ function startAlternateO2P(el, cfg, virtual, uid) {
         });
     }
 
-    // Ping-pong loop
     (async () => {
         while (!stopped && remaining > 0) {
             await halfCycle(+1);
@@ -664,6 +629,7 @@ function startAlternateO2P(el, cfg, virtual, uid) {
             if (stopped) break;
 
             if (remaining !== Infinity) remaining--;
+
             if (next && nextOn === "cycle") {
                 window.handleCueTrigger?.(next);
             }
@@ -676,39 +642,64 @@ function startAlternateO2P(el, cfg, virtual, uid) {
 }
 
 
-/* ---------------------------------------------------------
- *  10. Dispatcher: startO2PForElement
- * --------------------------------------------------------*/
 function startO2PForElement(el, cfg) {
-    // Kill existing animation
+
+    // stop previous animation if any
     if (el._o2pAnim) {
-        try { el._o2pAnim.pause(); } catch (_) { }
+        try { el._o2pAnim.pause(); } catch (_) {}
         el._o2pAnim = null;
     }
 
-    // Normalize mode
     cfg.mode = (cfg.mode ?? "forward").toLowerCase();
 
-    // Build OSC config
+    // ------------------------------
+    // OSC configuration
+    // ------------------------------
     const osc = cfg.osc;
     let oscCfg = { enabled: false, throttle: 30, lastSent: 0 };
-    if (osc === false || osc === 0) {
+    const n = Number(osc);
+
+    if (osc === false || osc === "false" || n === 0) {
         oscCfg.enabled = false;
-    } else if (osc === true) {
+    } else if (osc === true || osc === "true") {
         oscCfg.enabled = true;
-    } else if (typeof osc === "number") {
+    } else if (!Number.isNaN(n)) {
         oscCfg.enabled = true;
-        oscCfg.throttle = Math.max(5, osc);
+        oscCfg.throttle = Math.max(5, n);
     }
+
     cfg.oscCfg = oscCfg;
 
-    // Resolve path(s)
+// ------------------------------------------------------
+// DEBUG OVERLAY — ONLY if OSC is enabled
+// ------------------------------------------------------
+const pathEl = document.getElementById(cfg.path);
+
+// destroy previous overlay if restarting
+if (cfg._overlay) {
+    cfg._overlay.destroy();
+    cfg._overlay = null;
+}
+
+// draw overlay ONLY if OSC sending is enabled
+if (pathEl && cfg.oscCfg?.enabled) {
+    cfg._overlay = createOscOverlay({
+        anchorEl: pathEl,
+        label: cfg.oscAddr || cfg.uid,
+        mode: "auto"
+    });
+
+    cfg._overlay.update("…");
+    cfg._overlay.position();
+}
+
+
+    // ------------------------------------
+    // Resolve path + virtual path wrapper
+    // ------------------------------------
     const svg = el.ownerSVGElement || document.querySelector("svg");
     const p = svg.querySelector(`#${cfg.path}`);
-    if (!p) {
-        console.warn("[o2p] Path not found:", cfg.path);
-        return;
-    }
+    if (!p) return;
 
     const virtual = new VirtualPath([p]);
     if (!virtual.totalLen) return;
@@ -726,6 +717,7 @@ function startO2PForElement(el, cfg) {
 
     window._o2p_lastTime = performance.now();
 }
+
 
 
 /* ---------------------------------------------------------
@@ -868,7 +860,34 @@ export function handleO2PCue(el, args, options = {}) {
                 case "rotdir": cfg.rotdir = Number(val) || 1; break;
 
                 case "ease": cfg.ease = val; break;
-                case "osc": cfg.osc = val; break;
+                case "osc": {
+                    let v = val;
+
+                    // normalize booleans + numeric strings
+                    if (typeof v === "string") {
+                        const lower = v.toLowerCase();
+
+                        if (lower === "true") v = true;
+                        else if (lower === "false") v = false;
+                        else if (!isNaN(lower)) v = Number(lower);
+                    }
+
+                    if (v == null) v = false;
+
+                    cfg.osc = v;
+                    break;
+                }
+
+                case "oscaddr":
+                case "oscAddr": {
+                    if (typeof val === "string") {
+                        cfg.oscAddr = val;
+                    }
+                    console.log("[O2P oscAddr parsed]", { key, val, cfgOscAddr: cfg.oscAddr });
+
+                    break;
+                }
+
 
                 case "start": cfg.startPos = Number(val); break;
                 case "end": cfg.endPos = Number(val); break;

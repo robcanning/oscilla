@@ -515,6 +515,7 @@ export function ensureAnimWrapper(el) {
 // - UI override WINS (can disable osc:1)
 // ============================================================================
 export function isOscEnabled(cfg, oscMode = 0) {
+    
     if (!cfg) return false;
 
     // Explicit UI override

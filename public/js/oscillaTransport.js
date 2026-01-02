@@ -586,22 +586,47 @@ export const togglePlay = () => {
   }
 };
 
-// Updates the play/pause button UI to match playback state
-export const togglePlayButton = () => {
-  const playButton = document.getElementById("toggle-button");
 
-  if (playButton) {
-    playButton.innerHTML = window.isPlaying
-      ? '<div class="custom-pause"></div>'
-      : "▶";
-  } else {
-    console.error("[ERROR] Play button element not found.");
+// --- PLAY / PAUSE ICONS -----------------------------
+
+const ICON_PLAY = `
+<svg viewBox="0 0 24 24" width="26" height="26"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+</svg>
+`;
+
+const ICON_PAUSE = `
+<svg viewBox="0 0 24 24" width="26" height="26"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <rect x="6" y="4" width="4" height="16"></rect>
+  <rect x="14" y="4" width="4" height="16"></rect>
+</svg>
+`;
+
+
+// --- UPDATE PLAY BUTTON ------------------------------
+
+export const togglePlayButton = () => {
+  const iconSlot = document.getElementById("play-icon");
+
+  if (!iconSlot) {
+    console.error("[ERROR] Play icon element not found.");
+    return;
   }
+
+  iconSlot.innerHTML = window.isPlaying ? ICON_PAUSE : ICON_PLAY;
 };
 
-// import { getSpeedForPosition, updateSpeedDisplay } from "./cues.js";
-// import { updateSeekBar } from "./transport.js"; // safe circular import; only function refs used
-// import { togglePlayButton } from "./ui.js"; // if you have a UI helper
+
+document.addEventListener("DOMContentLoaded", () => {
+  togglePlayButton();
+});
+
+
+
 import { checkCueTriggers } from "./oscillaCueDispatcher.js";
 
 /**

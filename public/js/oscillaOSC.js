@@ -161,9 +161,6 @@ function sampleVisual(el) {
 }
 
 
-
-
-
 function findOscFrame(el) {
     let node = el.parentElement;
     while (node) {
@@ -177,8 +174,6 @@ function findOscFrame(el) {
     }
     return null;
 }
-
-
 
 
 // ---------------------------------------------------------------------------
@@ -195,8 +190,8 @@ function findOscFrame(el) {
 // }
 
 function fmt(v) {
-  if (Number.isInteger(v)) return v;           // leave ints alone
-  return Number(v.toFixed(3));                 // 0.123456 → 0.123
+    if (Number.isInteger(v)) return v;           // leave ints alone
+    return Number(v.toFixed(3));                 // 0.123456 → 0.123
 }
 
 // Centralised OSC sender
@@ -204,8 +199,20 @@ export function sendOSCMessage(payload, options = {}) {
     const { silent = false } = options;
 
     if (!payload || typeof payload !== "object") return;
-
     window.lastOscMessage = payload;
+
+
+    // GLOBAL OSC MUTE
+    if (window.oscMuted) {
+        // still update UI preview, but don't send
+        try {
+            const box = document.getElementById("osc-latest");
+            if (box) box.textContent = "[muted] " + box.textContent;
+        } catch { }
+
+        return;
+    }
+
 
     try {
         const box = document.getElementById("osc-latest");
@@ -227,7 +234,7 @@ export function sendOSCMessage(payload, options = {}) {
 
             box.textContent = `${path} ${values.join(" ")}`.trim();
         }
-    } catch {}
+    } catch { }
 
     if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
         if (!silent) console.warn("[osc] socket not ready", payload);
@@ -447,6 +454,263 @@ export function handleOscCue(ast, el, options = {}) {
 
 
 
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+///////// SHARED FUNCTION FOR OSC GUI "TOOLTIP" OVERLAY
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+// ----------------------------------------------------------------------------
+// Global OSC Debug Overlay Factory
+// ----------------------------------------------------------------------------
+// Usage:
+//   const o = createOscOverlay({
+//     anchorEl: elOrPath,
+//     label: "/fx/ring/freq",
+//     mode: "auto" | "off" | "label" | "full",
+//     anchorMode: "bbox" | "center"   ← NEW (default = bbox)
+//   });
+//
+//   o.update("val:0.72");
+//   o.destroy();
+// ----------------------------------------------------------------------------
+
+export function createOscOverlay({
+    anchorEl,
+    label = "OSC",
+    mode = "auto",      // "auto" = use global preference
+    track = true,       // auto-track via RAF
+    anchorMode = "bbox" // NEW: "bbox" | "center"
+} = {}) {
+
+    // --------------------------------------------------------
+    // Resolve display mode
+    // --------------------------------------------------------
+    const globalMode =
+        window?.oscillaPrefs?.overlayMode ?? "label";
+
+    const modeToUse = (mode === "auto") ? globalMode : mode;
+
+    // --------------------------------------------------------
+    // MODE: OFF → return a no-op stub
+    // --------------------------------------------------------
+    if (modeToUse === "off" || !anchorEl) {
+        return {
+            update() { },
+            position() { },
+            startTracking() { },
+            stopTracking() { },
+            destroy() { }
+        };
+    }
+
+    // --------------------------------------------------------
+    // Create DOM overlay
+    // --------------------------------------------------------
+    const box = document.createElement("div");
+    box.className = "oscilla-overlay";
+
+    box.style.position = "fixed";
+    box.style.pointerEvents = "none";
+    box.style.zIndex = 99999;
+
+    box.style.padding = "4px 8px";
+    box.style.borderRadius = "6px";
+    box.style.background = "rgba(0,0,0,.075)";
+    box.style.color = "rgba(0, 0, 0, 1)";
+    box.style.fontFamily = "monospace";
+    box.style.fontSize = "11px";
+    box.style.whiteSpace = "nowrap";
+
+    // initial label
+    box.textContent = label ?? "";
+
+    document.body.appendChild(box);
+
+    // --------------------------------------------------------
+    // Helpers
+    // --------------------------------------------------------
+
+    function positionBBox() {
+        const r = anchorEl.getBoundingClientRect();
+        box.style.left = `${r.left}px`;
+        box.style.top = `${r.top}px`;
+    }
+
+    // SVG-aware pivot positioning
+    function positionCenter() {
+        // non-SVG fallback → bbox center
+        if (!anchorEl.getBBox || !anchorEl.ownerSVGElement) {
+            const r = anchorEl.getBoundingClientRect();
+            box.style.left = `${r.left + r.width / 2}px`;
+            box.style.top = `${r.top + r.height / 2}px`;
+            return;
+        }
+
+        const svg = anchorEl.ownerSVGElement;
+        const bbox = anchorEl.getBBox();
+        const cx = bbox.x + bbox.width / 2;
+        const cy = bbox.y + bbox.height / 2;
+
+        const pt = svg.createSVGPoint();
+        pt.x = cx;
+        pt.y = cy;
+
+        const screen = pt.matrixTransform(anchorEl.getScreenCTM());
+
+        box.style.left = `${screen.x}px`;
+        box.style.top = `${screen.y}px`;
+    }
+
+    function position() {
+        if (!anchorEl || !box.isConnected) return;
+
+        if (anchorMode === "center") {
+            positionCenter();
+        } else {
+            // default behaviour
+            positionBBox();
+        }
+    }
+
+    // --------------------------------------------------------
+    // Tracking loop (independent from animations)
+    // --------------------------------------------------------
+    let tracking = false;
+
+    function loop() {
+        if (!tracking) return;
+        try { position(); } catch (_) { }
+        requestAnimationFrame(loop);
+    }
+
+    function startTracking() {
+        if (tracking) return;
+        tracking = true;
+        requestAnimationFrame(loop);
+    }
+
+    function stopTracking() {
+        tracking = false;
+    }
+
+    if (track) startTracking();
+
+    // --------------------------------------------------------
+    // Value updater
+    // --------------------------------------------------------
+function update(text) {
+  const globalMode =
+    window?.oscillaPrefs?.overlayMode ?? "addr";
+
+  const m = (mode === "auto") ? globalMode : mode;
+
+  // hide entirely
+  if (m === "off") {
+    box.style.display = "none";
+    return;
+  }
+
+  box.style.display = "block";
+
+  // address only
+  if (m === "addr") {
+    box.textContent = label ?? "";
+    return;
+  }
+
+  // address + values
+  if (m === "vals") {
+    box.textContent = (label ?? "") + (text ? " — " + text : "");
+    return;
+  }
+}
+
+
+
+    // --------------------------------------------------------
+    // Cleanup
+    // --------------------------------------------------------
+    function destroy() {
+        stopTracking();
+        try { box.remove(); } catch (_) { }
+    }
+
+    // public API
+    return {
+        el: box,
+        update,
+        position,
+        startTracking,
+        stopTracking,
+        destroy
+    };
+}
+
+// --------------------------------------------
+// Overlay toggle: off → addr → vals → off
+// --------------------------------------------
+window.oscillaPrefs ??= {};
+window.oscillaPrefs.overlayMode ??= "addr";
+
+const overlayBtn = document.getElementById("overlay-toggle");
+
+function labelFor(mode) {
+  if (mode === "off")  return "off";
+  if (mode === "vals") return "vals";
+  return "addr";   // default / fallback
+}
+
+function cycleOverlayMode() {
+  const cur = window.oscillaPrefs.overlayMode;
+
+  let next;
+  if (cur === "addr")      next = "vals";  // ✅ addr → vals
+  else if (cur === "vals") next = "off";   // ✅ vals → off
+  else                     next = "addr";  // ✅ off/other → addr
+
+  window.oscillaPrefs.overlayMode = next;
+  overlayBtn.textContent = labelFor(next);
+
+  console.log("[overlay] mode →", next);
+
+  // refresh all active overlays
+  window._oscillaOverlays?.forEach(o => {
+    try { o.update?.(""); o.position?.(); } catch {}
+  });
+}
+
+if (overlayBtn) {
+  overlayBtn.textContent = labelFor(window.oscillaPrefs.overlayMode);
+  overlayBtn.addEventListener("click", cycleOverlayMode);
+}
+
+
+
+
+window.oscMuted = false;
+
+const muteBtn = document.getElementById("osc-mute-btn");
+
+function updateMuteUI() {
+  if (!muteBtn) return;
+
+  muteBtn.textContent = "M";   // always the same
+
+  if (window.oscMuted) {
+    muteBtn.classList.add("is-muted");
+    muteBtn.title = "Enable OSC output";
+  } else {
+    muteBtn.classList.remove("is-muted");
+    muteBtn.title = "Mute OSC output";
+  }
+}
+
+muteBtn?.addEventListener("click", () => {
+  window.oscMuted = !window.oscMuted;
+  updateMuteUI();
+});
+
+updateMuteUI();
 
 
 

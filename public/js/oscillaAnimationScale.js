@@ -3,12 +3,31 @@
 import { registerAnimation } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
 import { createHitLabel, shouldCreateHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
-import {
-    applyPrestateBeforeStart, applyPrestateOnStart, ensureAnimWrapper,
-    armGhostClickable, needsArming, installOscToggleHandler
+import { applyPrestateBeforeStart, applyPrestateOnStart, ensureAnimWrapper,
+    armGhostClickable, needsArming, installOscToggleHandler, isOscEnabled
 } from "./oscillaAnimationShared.js";
 
-import { sendOSCMessage } from "./oscillaOSC.js";
+import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
+
+// ============================================================
+// OSC send helper for SCALE
+// ============================================================
+function sendOSCScale(cfg, sx, sy) {
+    const addr =
+        cfg.oscaddr
+            ? String(cfg.oscaddr).trim()
+            : `scale/${cfg.uid || "unknown"}`;
+
+    sendOSCMessage({
+        type: "osc_scale",
+        uid: cfg.uid,
+        addr,
+        sx: Number(sx),
+        sy: Number(sy),
+        timestamp: Date.now()
+    });
+}
+
 
 
 // ============================================================
@@ -181,10 +200,14 @@ function getCurrentScale(el, fallback = { sx: 1, sy: 1 }) {
 //  SCALE SEQUENCE ENGINE (new architecture)
 //  handleScaleSequence(el, cfg)
 // ======================================================================
+// ======================================================================
+//  SCALE SEQUENCE ENGINE — yesterday version, patched safely
+// ======================================================================
 export function handleScaleSequence(el, cfg) {
+
     const astArgs = cfg.astArgs || [];
 
-    // Value sources (uniform or XY)
+    // Value sources
     let ax = cfg.xValues || null;
     let ay = cfg.yValues || null;
     let xPattern = cfg.xPattern || null;
@@ -195,20 +218,21 @@ export function handleScaleSequence(el, cfg) {
     let dur = 1;
     let durGen = null;
 
-    // Modes / behaviour
-    let mode = "loop";          // loop | once | alternate
-    let pauseOnExit = true;
-    let interp = "smooth";      // smooth | step
+    // Behaviour
+    let mode = "loop";
+    let interp = "smooth";
     let ease = "linear";
-    let hold = null;
-    let oscMode = 0;
+    let hold = 0;
 
-    // Pattern generators
+    // OSC
+    let oscMode = 0;
+    let oscAddr = null;
+
     let axGen = null;
     let ayGen = null;
 
     // ------------------------------------------------------------
-    // Parse AST arguments
+    // Parse AST
     // ------------------------------------------------------------
     for (const arg of astArgs) {
         const key = arg.key || arg.type;
@@ -221,8 +245,7 @@ export function handleScaleSequence(el, cfg) {
                     uniformPattern = val;
                     axGen = makePatternGenerator(val);
                     ayGen = makePatternGenerator(val);
-                    ax = null;
-                    ay = null;
+                    ax = null; ay = null;
                 } else if (Array.isArray(val)) {
                     ax = val.slice();
                     ay = val.slice();
@@ -237,8 +260,6 @@ export function handleScaleSequence(el, cfg) {
                     ax = null;
                 } else if (Array.isArray(val)) {
                     ax = val.slice();
-                } else if (Number.isFinite(Number(val))) {
-                    ax = [Number(val)];
                 }
                 break;
 
@@ -250,8 +271,6 @@ export function handleScaleSequence(el, cfg) {
                     ay = null;
                 } else if (Array.isArray(val)) {
                     ay = val.slice();
-                } else if (Number.isFinite(Number(val))) {
-                    ay = [Number(val)];
                 }
                 break;
 
@@ -265,37 +284,46 @@ export function handleScaleSequence(el, cfg) {
                 }
                 break;
 
-            case "mode": {
+            case "mode":
                 mode = String(val).trim().toLowerCase();
-                if (mode === "alt") mode = "alternate";   // â† alias support restored
                 break;
-            }
-            case "pauseOnExit": pauseOnExit = Boolean(val); break;
-            case "interp": interp = String(val).trim().toLowerCase(); break;
-            case "ease": ease = String(val).trim(); break;
-            case "hold": hold = Number(val); break;
-            case "osc": oscMode = Number(val) || 0; break;
 
-            default: break;
+            case "interp":
+                interp = String(val).trim().toLowerCase();
+                break;
+
+            case "ease":
+                ease = String(val).trim();
+                break;
+
+            case "hold":
+                hold = Number(val) || 0;
+                break;
+
+            case "osc":
+                oscMode = Number(val) || 0;
+                break;
+
+            case "oscaddr":
+                oscAddr = String(val).trim();
+                break;
         }
     }
 
-    // Determine generators if not already set
+    // fallback osc address
+    if (!oscAddr) {
+        oscAddr = `scale/${cfg.uid}`;
+    }
+
+    // generators if needed
     if (xPattern && !axGen) axGen = makePatternGenerator(xPattern);
     if (yPattern && !ayGen) ayGen = makePatternGenerator(yPattern);
-
     if (uniformPattern && !axGen && !ayGen) {
         axGen = makePatternGenerator(uniformPattern);
         ayGen = makePatternGenerator(uniformPattern);
     }
 
-    // Defaults for hold
-    if (interp === "smooth") {
-        if (hold === null || Number.isNaN(hold)) hold = 0;
-    }
-    if (interp === "step") hold = 0;
-
-    // Stop previous animation safely
+    // clean previous
     if (el._oscillaScaleAnim) {
         el._oscillaScaleAnim.pause?.();
         clearTimeout(el._oscillaScaleAnim);
@@ -304,52 +332,51 @@ export function handleScaleSequence(el, cfg) {
 
     applySvgPivot(el);
 
-    // Sequence length (for literal lists)
     const NX = Array.isArray(ax) ? ax.length : Infinity;
     const NY = Array.isArray(ay) ? ay.length : Infinity;
-    const N = Math.max(NX, NY);
+    const N  = Math.max(NX, NY);
 
     let index = 0;
     let direction = 1;
 
-    // Driver object for tweening
-    const cur = getCurrentScale(el, {
-        sx: Array.isArray(ax) ? ax[0] ?? 1 : 1,
-        sy: Array.isArray(ay) ? ay[0] ?? 1 : 1
-    });
-    const driver = { sx: cur.sx, sy: cur.sy };
+    // driver
+    const driver = { sx: 1, sy: 1 };
 
-    // ------------------------------------------------------------
-    // Next value helper
-    // ------------------------------------------------------------
+    // ------------------------------
+    // Overlay (centered, only if OSC)
+    // ------------------------------
+    if (cfg._overlay) {
+        cfg._overlay.destroy();
+        cfg._overlay = null;
+    }
+
+    if (isOscEnabled(cfg, oscMode)) {
+        cfg._overlay = createOscOverlay({
+            anchorEl: el,
+            label: oscAddr,
+            mode: "auto",
+            track: true
+        });
+    }
+
+    // ------------------------------
+    // Helpers
+    // ------------------------------
     function nextPair() {
         let sx, sy;
 
-        if (axGen) {
-            sx = axGen.next();
-        } else if (Array.isArray(ax) && NX > 0) {
-            sx = ax[index % NX];
-        } else {
-            sx = driver.sx;
-        }
+        if (axGen) sx = axGen.next();
+        else if (Array.isArray(ax)) sx = ax[index % NX];
+        else sx = driver.sx;
 
-        if (ayGen) {
-            sy = ayGen.next();
-        } else if (Array.isArray(ay) && NY > 0) {
-            sy = ay[index % NY];
-        } else if (axGen || Array.isArray(ax)) {
-            sy = sx;
-        } else {
-            sy = driver.sy;
-        }
+        if (ayGen) sy = ayGen.next();
+        else if (Array.isArray(ay)) sy = ay[index % NY];
+        else sy = sx;
 
         if (sx == null || sy == null) return null;
         return [Number(sx), Number(sy)];
     }
 
-    // ------------------------------------------------------------
-    // Index stepping (fixed)
-    // ------------------------------------------------------------
     function stepIndexAdvance() {
         if (axGen || ayGen) return;
 
@@ -364,201 +391,217 @@ export function handleScaleSequence(el, cfg) {
         }
     }
 
-    function atEndOnce() {
-        return (!axGen && !ayGen && mode === "once" && index >= N);
+    // ------------------------------
+    // Main loop
+    // ------------------------------
+ function runNext() {
+
+    const pair = nextPair();
+    if (!pair) return;
+
+    let [tgtX, tgtY] = pair;
+
+    const durRaw = durGen ? durGen.next() : dur;
+    const stepDur = Number(durRaw) || dur || 0.0001;
+
+    // ✨ if target equals current → skip instantly
+    if (driver.sx === tgtX && driver.sy === tgtY) {
+        stepIndexAdvance();
+        runNext();
+        return;
     }
 
-    // ------------------------------------------------------------
-    // Main tick
-    // ------------------------------------------------------------
-    function runNext() {
-        const pair = nextPair();
-        if (!pair || atEndOnce()) {
-            if (!pauseOnExit && Array.isArray(ax) && ax.length > 0) {
-                const sx0 = ax[0];
-                const sy0 = Array.isArray(ay) && ay.length > 0 ? ay[0] : sx0;
-                el.style.transform = `scale(${sx0}, ${sy0})`;
-            }
-            return;
-        }
+    // ---------------------------------
+    // STEP MODE
+    // ---------------------------------
+    if (interp === "step") {
+        driver.sx = tgtX;
+        driver.sy = tgtY;
 
-        let [tgtX, tgtY] = pair;
+        el.style.transform = `scale(${tgtX}, ${tgtY})`;
 
-        // ------------------------------------------------------------
-        //  Wrap-around fix â€” prevents reverse tweening
-        // ------------------------------------------------------------
-        const wrapping =
-            mode !== "alternate" &&      // loop-only
-            !axGen && !ayGen &&          // not patterns
-            index === 0 &&               // we wrapped
-            (driver.sx !== tgtX || driver.sy !== tgtY);
+        if (isOscEnabled(cfg, oscMode)) {
+            sendOSCMessage({
+                addr: oscAddr,
+                type: "osc_scale",
+                uid: cfg.uid,
+                sx: tgtX,
+                sy: tgtY,
+                avg: (tgtX + tgtY) / 2,
+                norm: Math.min(1, Math.max(0, (tgtX - 1) / 3)),
+                timestamp: Date.now()
+            });
 
-        if (wrapping) {
-            driver.sx = tgtX;
-            driver.sy = tgtY;
-            el.style.transform = `scale(${tgtX}, ${tgtY})`;
-
-            stepIndexAdvance();
-
-            const next = nextPair();
-            if (!next) return;
-            [tgtX, tgtY] = next;
-        }
-        // ------------------------------------------------------------
-
-        // Skip redundant tween
-        if (driver.sx === tgtX && driver.sy === tgtY) {
-            stepIndexAdvance();
-            requestAnimationFrame(runNext);
-            return;
-        }
-
-        const durRaw = durGen ? durGen.next() : dur;
-        const stepDur = Number(durRaw) || dur || 0.0001;
-
-        // STEP MODE
-        if (interp === "step") {
-            driver.sx = tgtX;
-            driver.sy = tgtY;
-            el.style.transform = `scale(${tgtX}, ${tgtY})`;
-
-            // Read OSC mode from cfg (reactive to double-click changes)
-            const currentOscMode = cfg.osc ?? oscMode;
-            if (currentOscMode === 1 || currentOscMode === 2) {
-                sendOSCScale(cfg, el, tgtX, tgtY);
-            }
-
-            stepIndexAdvance();
-
-            el._oscillaScaleAnim = setTimeout(
-                () => requestAnimationFrame(runNext),
-                stepDur * 1000
+            cfg._overlay?.update(
+                `sx:${tgtX.toFixed(2)} sy:${tgtY.toFixed(2)}`
             );
-            return;
         }
 
-        // SMOOTH MODE (do NOT sample element transform)
-        const anim = anime({
-            targets: driver,
-            sx: tgtX,
-            sy: tgtY,
-            duration: stepDur * 1000,
-            easing: ease,
-            update: () => {
-                el.style.transform = `scale(${driver.sx}, ${driver.sy})`;
+        stepIndexAdvance();
 
-                // Read OSC mode from cfg (reactive to double-click changes)
-                const currentOscMode = cfg.osc ?? oscMode;
-                if (currentOscMode === 1) {
-                    sendOSCScale(cfg, el, driver.sx, driver.sy);
-                }
-            },
-            complete: () => {
-                // Read OSC mode from cfg (reactive to double-click changes)
-                const currentOscMode = cfg.osc ?? oscMode;
-                if (currentOscMode === 2) {
-                    sendOSCScale(cfg, el, driver.sx, driver.sy);
-                }
-                stepIndexAdvance();
-
-                if (hold > 0) {
-                    el._oscillaScaleAnim = setTimeout(
-                        () => requestAnimationFrame(runNext),
-                        hold * 1000
-                    );
-                } else {
-                    requestAnimationFrame(runNext);
-                }
-            }
-        });
-
-        el._oscillaScaleAnim = anim;
-        cfg._anim = anim;
-
+        // 🔥 no extra RAF — only one timer
+        el._oscillaScaleAnim = setTimeout(runNext, stepDur * 1000);
+        return;
     }
-    // Kick off
+
+    // ---------------------------------
+    // SMOOTH MODE
+    // ---------------------------------
+    const anim = anime({
+        targets: driver,
+        sx: tgtX,
+        sy: tgtY,
+        duration: stepDur * 1000,
+        easing: ease,
+
+        update: () => {
+            el.style.transform = `scale(${driver.sx}, ${driver.sy})`;
+
+            if (isOscEnabled(cfg, oscMode)) {
+                sendOSCMessage({
+                    addr: oscAddr,
+                    type: "osc_scale",
+                    uid: cfg.uid,
+                    sx: driver.sx,
+                    sy: driver.sy,
+                    avg: (driver.sx + driver.sy) / 2,
+                    norm: Math.min(1, Math.max(0, (driver.sx - 1) / 3)),
+                    timestamp: Date.now()
+                });
+
+                cfg._overlay?.update(
+                    `sx:${driver.sx.toFixed(2)} sy:${driver.sy.toFixed(2)}`
+                );
+            }
+        },
+
+        complete: () => {
+            stepIndexAdvance();
+
+            // 🔥 hold means ONLY a pause — never hold + RAF stack
+            if (hold > 0) {
+                el._oscillaScaleAnim = setTimeout(runNext, hold * 1000);
+            } else {
+                runNext();
+            }
+        }
+    });
+
+    el._oscillaScaleAnim = anim;
+}
+
+
     requestAnimationFrame(runNext);
 }
+
+
+
 
 // ============================================================
 // Continuous fallback (pulse) if no values provided
 // ============================================================
-function handleScaleContinuous(el, cfg) {
+export function handleScaleContinuous(el, cfg) {
+
     const astArgs = cfg.astArgs || [];
 
-    // Defaults
-    let min = 1, max = 1.2;
-    let minX = null, maxX = null, minY = null, maxY = null;
+    let dir = 1;
     let dur = 2;
-    let loop = 0;              // 0 = infinite
+    let loop = 0;
     let ease = "linear";
+    let oscMode = 0;
+    let mode = "loop";          // loop | alternate
+    let oscaddr = null;
+
+    function oscEnabled(cfg) {
+        return cfg._oscEnabled === true || oscMode > 0;
+    }
 
     for (const arg of astArgs) {
         const key = arg.key || arg.type;
-        const v = arg.value;
-        if (key === "min") min = Number(v);
-        if (key === "max") max = Number(v);
-        if (key === "minX") minX = Number(v);
-        if (key === "maxX") maxX = Number(v);
-        if (key === "minY") minY = Number(v);
-        if (key === "maxY") maxY = Number(v);
-        if (key === "dur") dur = Number(v);
-        if (key === "loop") loop = Number(v);
-        if (key === "ease") ease = String(v).trim();
+        const val = arg.value;
+
+        if (key === "dir") dir = Number(val);
+        if (key === "dur") dur = Number(val);
+        if (key === "loop") loop = Number(val);
+        if (key === "ease") ease = String(val).trim();
+        if (key === "osc") oscMode = Number(val) || 0;
+
+        if (key === "mode") {
+            mode = String(val).toLowerCase();
+            if (mode === "alt") mode = "alternate";
+        }
+
+        if (key === "oscaddr") {
+            oscaddr = String(val).trim();
+        }
     }
 
-    // Resolve axis ranges
-    const useX = [minX ?? min, maxX ?? max];
-    const useY = [minY ?? min, maxY ?? max];
+    if (!oscaddr) {
+        oscaddr = `scale/${cfg.uid || "unknown"}`;
+    }
 
-    // Stop previous
     if (el._oscillaScaleAnim) el._oscillaScaleAnim.pause?.();
-
 
     const animEl = ensureAnimWrapper(el);
     applySvgPivot(animEl);
 
-    const ms = dur * 1000;
+    // overlay
+    if (cfg._overlay) cfg._overlay.destroy();
+    cfg._overlay = createOscOverlay({
+        anchorEl: el,
+        label: cfg.uid || "scale",
+        mode: "auto"
+    });
 
-    // Pulse X and Y with yoyo
-    const anim = anime.timeline({ loop: loop === 0 ? true : loop });
+    cfg._overlay.update("…");
+    cfg._overlay.position();
 
-    anim.add({
+    function sendOSC(sx, sy) {
+        if (!oscEnabled(cfg)) return;
+
+        sendOSCMessage({
+            type: "osc_scale",
+            uid: cfg.uid,
+            addr: oscaddr,
+            sx: Number(sx),
+            sy: Number(sy),
+            avg: (Number(sx) + Number(sy)) / 2,
+            timestamp: Date.now()
+        });
+    }
+
+    // -----------------------------------------
+    // NO TIMELINE — single tween, no pause
+    // -----------------------------------------
+    const anim = anime({
         targets: animEl,
-        duration: ms,
+        duration: dur * 1000,
         easing: ease,
-        scaleX: useX[1],
-        scaleY: useY[1]
-    }).add({
-        targets: animEl,
-        duration: ms,
-        easing: ease,
-        scaleX: useX[0],
-        scaleY: useY[0]
+        loop: loop === 0 ? true : loop,
+        direction: mode === "alternate" ? "alternate" : "normal",
+
+        scale: dir === -1 ? [1, 0.5] : [1, 1.5],
+
+        update: () => {
+            try { repositionAllHitLabels(); } catch {}
+
+            const tr = animEl.style.transform;
+            const sx = tr.match(/scale\(([^,]+),/)?.[1];
+            const sy = tr.match(/,\s*([^)]+)\)/)?.[1];
+
+            if (sx && sy && cfg._overlay) {
+                cfg._overlay.update(
+                    `sx:${Number(sx).toFixed(2)} sy:${Number(sy).toFixed(2)}`
+                );
+            }
+
+            if (sx && sy) sendOSC(sx, sy);
+        }
     });
 
     el._oscillaScaleAnim = anim;
     cfg._anim = anim;
-
 }
-
-
-// ============================================================
-// OSC send helper for SCALE - MUST use cfg.uid
-// ============================================================
-function sendOSCScale(cfg, el, sx, sy) {
-    if (!cfg?.uid) return;
-
-    sendOSCMessage({
-        type: "osc_scale",
-        uid: cfg.uid,
-        sx: Number(sx),
-        sy: Number(sy),
-        avg: (Number(sx) + Number(sy)) / 2,
-        timestamp: Date.now()
-    });
-}
-
 
 // ============================================================================
 // SCALE cue handler
@@ -576,72 +619,66 @@ export function handleScaleCue(ast, el, options = {}) {
 
     if (fromCueTrigger && existingCfg && existingCfg._ghostClickable) {
         if (needsArming(existingCfg)) {
-            // console.log("[scaleCue] PLAYHEAD → arming ghostClickable", existingCfg.uid);
             armGhostClickable(el, existingCfg);
-        } else {
-            // console.log("[scaleCue] PLAYHEAD → already armed/running", existingCfg.uid);
         }
         return;
     }
 
-    // -----------------------------------------------------------
-    // FULL SETUP (first time registration)
-    // -----------------------------------------------------------
-    // console.log("[scaleCue] ENTER", { el, astArgs, options });
-
     // ------------------------------------------------------------------------
-    // Parse DSL args - FIXED UID EXTRACTION
+    // Parse DSL args
     // ------------------------------------------------------------------------
     let trig = "auto";
     let cfgStartDelay = 0;
     let prestate = "show";
 
-    // ✅ FIX: Start with null, NEVER use el.id as default
     let uid = null;
+
+    // 🔥 normalized OSC field
+    let oscAddr = null;
 
     for (const a of astArgs) {
         const key = a.key || a.type;
         const val = a.value;
 
-        if (key === "uid") {
-            uid = String(val).trim();
-            // console.log("[scaleCue] ✅ Found uid in args:", uid);
-        }
+        if (key === "uid") uid = String(val).trim();
         if (key === "trig") trig = String(val).toLowerCase();
         if (key === "tdelay") cfgStartDelay = Number(val) || 0;
         if (key === "prestate") prestate = val;
+
+        // accept BOTH spellings
+        if (key === "oscaddr" || key === "oscAddr") {
+            oscAddr = String(val).trim();
+        }
     }
 
-    // ✅ FIX: If no uid found, generate a clean random one
-    // NEVER fall back to el.id (which contains the DSL string)
     if (!uid) {
         uid = "scale_" + Math.random().toString(36).slice(2, 10);
-        // console.log("[scaleCue] ⚠️ No uid in DSL, generated:", uid);
     }
 
-    // console.log("[scaleCue] Final uid:", uid);
-
-    const shouldStartNow = fromCueTrigger || trig === "auto" || trig === "playhead";
+    const shouldStartNow =
+        fromCueTrigger || trig === "auto" || trig === "playhead";
 
     // ------------------------------------------------------------------------
-    // BASE CFG
+    // BASE CFG — unified oscAddr now!
     // ------------------------------------------------------------------------
     const baseCfg = {
-        uid,                    // ✅ Clean semantic uid
+        uid,
         trig,
         start: cfgStartDelay,
         prestate,
         astArgs,
         fromCueTrigger,
         kind: "scale",
-        osc: 0,                 // OSC off by default, toggled via hit-label
+
+        oscAddr,       // 👈 canonical
+        osc: 0,
+
         _anim: null,
         _start: null
     };
 
-    // Ensure element receives clicks
     el.style.pointerEvents = "all";
-    try { el.parentNode.appendChild(el); } catch (e) { }
+    try { el.parentNode.appendChild(el); } catch {}
 
     // ------------------------------------------------------------------------
     // Extract value args
@@ -650,24 +687,15 @@ export function handleScaleCue(ast, el, options = {}) {
     const xArg = astArgs.find(o => ["x", "valuesX"].includes(o.key || o.type));
     const yArg = astArgs.find(o => ["y", "valuesY"].includes(o.key || o.type));
 
-    // ------------------------------------------------------------------------
-    // Initial scale helper
-    // ------------------------------------------------------------------------
     function applyInitialScale(cfg) {
         const sx = cfg.xValues?.[0] ?? cfg.values?.[0] ?? 1;
         const sy = cfg.yValues?.[0] ?? cfg.values?.[0] ?? sx;
         el.style.transform = `scale(${sx}, ${sy})`;
     }
 
-    // ------------------------------------------------------------------------
-    // wrapStart
-    // ------------------------------------------------------------------------
     function wrapStart(cfg, rawStartFn) {
         return () => {
-            const restoreOnly = () => {
-                applyPrestateOnStart(el, cfg);
-            };
-
+            const restoreOnly = () => applyPrestateOnStart(el, cfg);
             const fullStart = () => {
                 applyPrestateOnStart(el, cfg);
                 rawStartFn();
@@ -675,28 +703,20 @@ export function handleScaleCue(ast, el, options = {}) {
 
             if (cfg.start > 0) {
                 scheduleCueStart(cfg, el, () => {
-                    if (cfg._ghostClickable && cfg._startBlocked) {
-                        restoreOnly();
-                        return;
-                    }
+                    if (cfg._ghostClickable && cfg._startBlocked) return restoreOnly();
                     fullStart();
                 }, cfg.uid);
 
-                if (cfg._ghostClickable && cfg._startBlocked) {
-                    restoreOnly();
-                }
+                if (cfg._ghostClickable && cfg._startBlocked) restoreOnly();
             } else {
-                if (cfg._ghostClickable && cfg._startBlocked) {
-                    restoreOnly();
-                    return;
-                }
+                if (cfg._ghostClickable && cfg._startBlocked) return restoreOnly();
                 fullStart();
             }
         };
     }
 
     // ------------------------------------------------------------------------
-    // SEQUENCE: values / patterns
+    // SEQUENCE uniform / pattern
     // ------------------------------------------------------------------------
     if (valuesArg) {
         const v = valuesArg.value;
@@ -708,28 +728,19 @@ export function handleScaleCue(ast, el, options = {}) {
             pattern: v?.type === "pattern" ? v : null
         };
 
-        // ✅ Store cfg on element for future reference
         el._oscillaCfg = cfg;
         el.dataset.oscillaUid = cfg.uid;
 
-        // ✅ Apply prestate (handles ghostClickable registration)
         applyPrestateBeforeStart(el, cfg);
-
-        // ✅ Install OSC toggle handler for ALL animations
         installOscToggleHandler(el, cfg);
-
         applyInitialScale(cfg);
 
-        const rawStart = () => {
-            handleScaleSequence(el, cfg);
-        };
-
+        const rawStart = () => handleScaleSequence(el, cfg);
         cfg._start = wrapStart(cfg, rawStart);
 
         registerAnimation(el, "scale", cfg, cfg._start);
 
         if (shouldCreateHitLabel(cfg)) {
-
             createHitLabel(el, "scale", cfg.uid, {
                 anchorMode: "pathMidPoint",
                 color: "lime",
@@ -738,15 +749,12 @@ export function handleScaleCue(ast, el, options = {}) {
         }
 
         applyPrestateOnStart(el, cfg);
-
-        if (shouldStartNow && !cfg._startBlocked) {
-            cfg._start();
-        }
+        if (shouldStartNow && !cfg._startBlocked) cfg._start();
         return;
     }
 
     // ------------------------------------------------------------------------
-    // SEQUENCE XY
+    // SEQUENCE-XY
     // ------------------------------------------------------------------------
     if (xArg || yArg) {
         const cfg = {
@@ -762,18 +770,13 @@ export function handleScaleCue(ast, el, options = {}) {
         el.dataset.oscillaUid = cfg.uid;
 
         applyPrestateBeforeStart(el, cfg);
-        installOscToggleHandler(el, cfg);  // ✅ Install OSC handler
-
+        installOscToggleHandler(el, cfg);
         applyInitialScale(cfg);
 
-        const rawStart = () => {
-            handleScaleSequence(el, cfg);
-        };
-
+        const rawStart = () => handleScaleSequence(el, cfg);
         cfg._start = wrapStart(cfg, rawStart);
 
         registerAnimation(el, "scale", cfg, cfg._start);
-
 
         if (shouldCreateHitLabel(cfg)) {
             createHitLabel(el, "scale", cfg.uid, {
@@ -784,15 +787,12 @@ export function handleScaleCue(ast, el, options = {}) {
         }
 
         applyPrestateOnStart(el, cfg);
-
-        if (shouldStartNow && !cfg._startBlocked) {
-            cfg._start();
-        }
+        if (shouldStartNow && !cfg._startBlocked) cfg._start();
         return;
     }
 
     // ------------------------------------------------------------------------
-    // CONTINUOUS (fallback)
+    // CONTINUOUS fallback
     // ------------------------------------------------------------------------
     const cfg = {
         ...baseCfg,
@@ -803,14 +803,10 @@ export function handleScaleCue(ast, el, options = {}) {
     el.dataset.oscillaUid = cfg.uid;
 
     applyPrestateBeforeStart(el, cfg);
-    installOscToggleHandler(el, cfg);  // ✅ Install OSC handler
-
+    installOscToggleHandler(el, cfg);
     applyInitialScale(cfg);
 
-    const rawStart = () => {
-        handleScaleContinuous(el, cfg);
-    };
-
+    const rawStart = () => handleScaleContinuous(el, cfg);
     cfg._start = wrapStart(cfg, rawStart);
 
     registerAnimation(el, "scale", cfg, cfg._start);
@@ -824,8 +820,5 @@ export function handleScaleCue(ast, el, options = {}) {
     }
 
     applyPrestateOnStart(el, cfg);
-
-    if (shouldStartNow && !cfg._startBlocked) {
-        cfg._start();
-    }
+    if (shouldStartNow && !cfg._startBlocked) cfg._start();
 }

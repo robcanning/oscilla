@@ -13,13 +13,13 @@ body {
   overflow: hidden;
   background-color: white;
   color: black;
-  font-family: Antonio, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: 'Iosevka Term Web', monospace;
   overflow: hidden !important;
 
 }
 
 
-/* Font-face for offline Antonio */
+/* Font-face for offline Antonio
 @font-face {
   font-family: 'Antonio';
   src: url('fonts/Antonio-VariableFont_wght.ttf') format('truetype');
@@ -33,7 +33,7 @@ body {
   font-weight: bold;
   font-style: normal;
 
-}
+} */
 
 
 /* 🔹 Remove focus outlines and blue flash from all major containers and SVGs */
@@ -88,163 +88,159 @@ svg {
 
 
 
+/* ----------------------------------------------------
+   CORE LAYOUT + UTILITIES
+---------------------------------------------------- */
 
+:root {
+  --transport-scale: 1;
+}
 
-
-
-/* Controls Container */
-/* Ensure the overall controls container occupies the full available height */
-#controls {
-  flex-direction: column;
-  /* ✅ Makes seek bar appear above buttons */
-  position: fixed;
-  bottom: 0px;
-  left: 0;
-  width: 100vw;
-  background-color: rgba(0, 0, 0, 0.6);
-  padding: 0px;
-  margin-bottom: 5px !important;
-  padding-bottom: 20px !important;
-
+.gui-bar {
   display: flex;
-  flex-direction: column;
-  height: 12%;
-  /* or use a fixed height / 100vh as needed */
-  z-index: 10000;
-  /* Ensure it's on top */
-
-  transition: transform 0.3s ease, opacity 0.3s ease;
-  transform: translateY(0);
-  opacity: 1;
-
+  align-items: center;
+  gap: 0.6rem;
 }
 
-/* When dismissed, slide down off-screen (using 100vh to ensure it's fully off-screen) */
-#controls.dismissed {
-  transform: translateY(50vh);
-  opacity: 0;
-}
-
-#controls button {
-  font-size: 45px;
-  background-color: rgba(0, 0, 0, 0.7);
-  border-radius: 10px;
-
-}
-
-
-
-/* Arrange the left, center, and right groups horizontally */
-#button-container {
+.gui-cluster {
   display: flex;
-  justify-content: space-between;
-  align-items: stretch;
-  /* all child containers take full height */
-  height: 100%;
-  margin-right: 30px;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-/* Left and right controls in a two-row grid */
-#left-controls,
-#right-controls {
-
+.gui-grid-2x2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   grid-template-rows: repeat(2, 1fr);
-  gap: 0.5rem;
-  margin-right: 20px;
-
+  gap: 0.3rem;
 }
 
-#speedControls button,
-#left-controls button,
-#right-controls button {
-  flex: 1;
-  /* Allow it to grow and fill available space */
-  font-size: 1.5rem !important;
-  justify-content: center !important;
-  align-items: center !important;
+.gui-sticky-top {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: 100%;
-  padding: 10px;
-
 }
 
-/* Center seek controls: vertically centered and occupying full height */
-#seek-controls {
-  flex: 1;
-  /* Allow it to grow and fill available space */
-  display: flex;
-  flex-direction: row;
-  /* Arrange buttons horizontally */
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  gap: 0.5rem;
-  /* Optional spacing between buttons */
-  padding-left: 4vw;
-  padding-right: 4vw;
-
+.gui-sticky-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
 }
 
-/* Optional: style buttons for consistent sizing */
-#seek-controls button {
-  font-size: 2.5rem !important;
-  border-radius: 20px !important;
-
-}
-
-
-/* Optional: style buttons for consistent sizing */
-#button-container button {
-  padding: 0.5rem;
-  /* display: flex; */
-  align-items: stretch;
-  /* Ensure children take full height */
-  height: 100% !important;
-  /* Or a fixed height / 100vh */
-
-}
-
-#controls.hidden {
-  pointer-events: none;
-  transform: translate(-50%, 100%);
-  /* Slide down out of the screen */
+.is-hidden {
   opacity: 0;
-  /* Fade out */
+  pointer-events: none;
 }
 
-
-
-
-/* 🔹 Hide Scrollbars Everywhere */
-::-webkit-scrollbar {
-  display: none !important;
-  /* ✅ Hides scrollbar in WebKit browsers */
+.is-dismissed {
+  transform: translateY(100%);
+  opacity: 0;
 }
 
-* {
-  scrollbar-width: none !important;
-  /* ✅ Hides scrollbar in Firefox */
-  -ms-overflow-style: none !important;
-  /* ✅ Hides scrollbar in IE/Edge */
+/* ----------------------------------------------------
+   BUTTON SYSTEM
+---------------------------------------------------- */
+
+.gui-button {
+  background: #222;
+  color: #fff;
+  border-radius: 10px;
+  border: 1px solid #444;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .2s, box-shadow .15s, border .15s;
 }
 
-/* Seek Bar (Now Inside Controls, Above Buttons) */
+.gui-button:hover {
+  background: #333;
+}
+
+.gui-button:active {
+  background: #555;
+}
+
+/* Main transport buttons — fixed, centered, equal size */
+.gui-button--large {
+  width: 80px;
+  height: 80px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 48px;       /* icon size */
+  line-height: 1;
+
+  padding: 0;            /* stop glyph from expanding button */
+}
+
+.gui-button--round {
+  border-radius: 50%;
+}
+
+.gui-button--ghost {
+  background: black;
+  border-color: #333;
+}
+
+.gui-button--warning {
+  border-color: red;
+}
+
+/* Highlight active toggle buttons */
+.gui-button.active {
+  border-color: white;
+  /* color: lime;
+  box-shadow: 0 0 10px limegreen; */
+}
+
+.gui-button svg,
+.gui-button .icon,
+.gui-button span {
+  /* color: inherit; */
+  /* fill: currentColor;
+  stroke: currentColor; */
+}
+
+/* side cluster button style — minimal overrides */
+.side-button {
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  padding: 0;
+}
+
+/* spacing around left + right clusters */
+#left-controls {
+  margin-left: 10px;      /* tweak as needed */
+}
+
+#right-controls {
+  margin-right: 10px;     /* tweak as needed */
+}
+
+/* ----------------------------------------------------
+   SEEK BAR
+---------------------------------------------------- */
+
 #seek-bar {
   width: 100%;
-  /* Full width inside controls */
-  height: 10px;
+  height: 8px;
   background: #ccc;
   border-radius: 5px;
-  outline: none;
   cursor: pointer;
-  margin-bottom: 20px;
-  /* Adds spacing between seek bar and buttons */
-  align-self: center;
+  padding-top: 2px;
+  padding-bottom: 1px;
 }
 
-#seek-bar::-webkit-slider-thumb {
+#seek-bar::-webkit-slider-thumb,
+#seek-bar::-moz-range-thumb {
   appearance: none;
   width: 30px;
   height: 30px;
@@ -253,247 +249,247 @@ svg {
   cursor: pointer;
 }
 
-#seek-bar::-moz-range-thumb {
-  width: 30px;
-  height: 30px;
-  background: #333;
-  border-radius: 50%;
-  cursor: pointer;
-  z-index: 10000;
+/* ----------------------------------------------------
+   CONTROLS BAR
+---------------------------------------------------- */
 
+#controls {
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.6);
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  display: flex;
+  /* height: 12%; */
+  z-index: 10000;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  transform: translateY(0);
+  opacity: 1;
 }
 
+#controls.dismissed {
+  transform: translateY(50vh);
+  opacity: 0;
+}
 
-/* ✅ Buttons Always Stay in One Row Below the Seek Bar */
 #button-container {
   display: flex;
-  flex-direction: row;
-  /* ✅ Ensures buttons are always in a row */
+    flex: 1;
+
   justify-content: space-between;
+  align-items: stretch;
+  /* height: 80%; */
   width: 100%;
-  padding: 0;
 }
 
-/* ✅ Buttons Should Distribute Evenly */
-#button-container button {
+#seek-controls {
   flex: 1;
-  /* ✅ Ensures buttons fill space evenly */
-  text-align: center;
-  padding: 0px;
-}
-
-
-
-/* Center Playback Buttons */
-#main-controls {
-  display: flex;
-  justify-content: center;
-  flex-grow: 1;
-}
-
-#rehearsal-marks-button,
-#stop-audio-button {
-  flex: 0 0 auto;
-  /* Prevents resizing */
-  min-width: 40px;
-  /* ✅ Ensures button is not too small */
-  max-width: 100px;
-  /* ✅ Prevents it from growing too large */
-  font-size: 1.8vw !important;
-  /* ✅ Adjusts size dynamically based on scoreContainer width */
-  text-align: center;
-  padding: 10px;
-  white-space: nowrap;
-  /* ✅ Prevents text from wrapping */
-  overflow: hidden;
-  /* ✅ Ensures no overflow */
-  text-overflow: ellipsis;
-  /* ✅ Adds "..." if text overflows */
-}
-
-#rehearsal-marks-button,
-#stop-audio-button {
-  height: 50px;
-  /* ✅ Keeps all buttons uniform */
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: .2rem;
+  padding-left: 4vw;
+  padding-right: 4vw;
 }
 
-@media (max-width: 768px) {
-
-  #rehearsal-marks-button,
-  #stop-audio-button {
-    font-size: 3vw;
-    /* ✅ Increases readability on small screens */
-    min-width: 40px;
-    max-width: 100px;
-  }
-}
-
-
-#toggle-notes-button {
-  font-size: 30px !important;
-  /* Adjust the size as needed */
-  min-width: 40px;
-  /* ✅ Ensures button is not too small */
-  max-width: 100px;
-  /* ✅ Prevents it from growing too large */
-}
-
-#audio-master-button {
-  border: 2px solid red;
-  background: black;
-  color: white;
-  font-size: 20px;
-  padding: 5px 10px;
-  margin-left: 5px;
-  border-radius: 4px;
-}
-
-#audio-master-button.active {
-  border-color: limegreen;
-}
-
-
-
-/* -----------------------------------------------------------
-   📌 PIN + 📝 NOTES TOGGLE (match Audio Master style)
-   ----------------------------------------------------------- */
-#pin-controls,
-#toggle-notes-button {
-  border: 2px solid red;
-  background: black;
-  color: white;
-  font-size: 20px;
-  padding: 5px 10px;
-  margin-left: 5px;
-  border-radius: 4px;
-  transition: all 0.2s ease-in-out;
-}
-
-/* Active state — green border like Audio Master */
-#pin-controls.active,
-#toggle-notes-button.active {
-  border-color: limegreen;
-  color: limegreen;
-  box-shadow: 0 0 10px limegreen;
-}
-
-/* Optional hover behaviour for both states */
-#pin-controls:hover,
-#toggle-notes-button:hover {
-  background: #222;
-}
-
-
-
-#rehearsal-marks-button {
-  font-size: 30px !important;
-  /* Adjust the size as needed */
-  min-width: 40px;
-  /* ✅ Ensures button is not too small */
-  max-width: 100px;
-  /* ✅ Prevents it from growing too large */
-}
-
-#rehearsal-close-button {
-  padding: 10px;
-  margin-top: 20px;
-  background-color: gray;
-}
-
-.rehearsal-button {
-  font-family: Antonio, 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  font-size: 30px !important;
-  /* Adjust the size as needed */
-
-}
-
-#help-button {
-  font-size: 30px !important;
-  /* Adjust the size as needed */
-  min-width: 40px;
-  /* ✅ Ensures button is not too small */
-  max-width: 100px;
-  /* ✅ Prevents it from growing too large */
-}
-
-#rewind-to-zero-button {
-  font-size: 30px !important;
-  /* Adjust the size as needed */
-  min-width: 40px;
-  /* ✅ Ensures button is not too small */
-  max-width: 100px;
-  /* ✅ Prevents it from growing too large */
-}
-
-#fullscreen-button {
-  line-height: 20px;
-  min-width: 40px;
-  /* ✅ Ensures button is not too small */
-  max-width: 100px;
-  /* ✅ Prevents it from growing too large */
-}
-
-#speedControls {
-  display: flex;
-  align-items: center;
-  gap: 0px;
-  padding: 0px;
-  border-radius: 4px;
+.seek-main {
+  gap: 0.2rem;
   padding-left: 20px;
 
 }
 
-#speedControls button {
-  /* width: 50px; */
-  font-size: 36px;
-  color: white;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-}
 
-#speedControls button:hover {
-  background: #666;
+/* ----------------------------
+   SPEED PANEL
+----------------------------- */
+
+#speedControls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding-left: 20px;
 }
 
 #speedDisplay {
   min-width: 40px;
+  color: white;
   text-align: center;
-  color: white;
-  font-size: 33px;
+  font-size: 23px;
 }
 
 
+.speed-panel {
+  gap: 0.6rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 10px;
 
-/* Button styling */
-button {
-  margin: 0 5px;
-  padding: 0px 0px;
-  font-size: 15px;
-  background: #333;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Square utility for compact control buttons */
+.gui-button--square {
+  width: 33px;
+  height: 33px;
+  padding: 0;
+}
+
+/* Display in the middle */
+.speed-display {
+  font-family: monospace;
+  font-size: 0.6rem;
+  color: #fff;
+  min-width: 64px;
+  text-align: center;
+
+  background: rgba(0,0,0,0.55);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+
+  padding: 4px 10px;
+}
+/* ----------------------------------------------------
+   TOP BAR
+---------------------------------------------------- */
+
+#top-bar {
+  height: 35px;
+  background: rgba(0, 0, 0, 0.85);
   color: white;
-  border: none;
+  gap: 14px;
+  padding: 0 15px;
+  z-index: 99999;
+  pointer-events: auto;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  /* display:flex comes from .gui-bar */
+}
+
+#top-bar.dismissed {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+#topbar-actions {
+  display: flex;
+    flex: 1;          /* ⬅️ allow it to take remaining width */
+
+  gap: 8px;
+  align-items: center;
+}
+
+/* CLIENT LIST */
+
+#client-list {
+  font-size: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 240px;
+  white-space: normal;
+  line-height: 1.2;
+  user-select: none;
   cursor: pointer;
-  border-radius: 5px;
 }
 
-button:hover {
-  background: #555;
+.local-client { font-weight: bold; color: #facc15; }
+.remote-client { color: white; }
+
+/* stopwatch */
+
+#stopwatch-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  gap: 2px;
 }
 
-button:active {
-  background: #777;
+#stopwatch {
+  font-family: monospace;
+  font-size: 1.2em;
+}
+
+#stopwatch-controls button {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+/* clusters on the right */
+
+.osc-tools {
+  background: rgba(0, 0, 0, 0.5);
+  font-size: 0.5em;
+  display: flex;
+  align-items: center;
+  width: 60%;
+  gap: 2px;
+  padding: 4px;
+  border-right: 1px solid rgba(255,255,255,.2);
+}
+
+
+.view-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  margin-left: auto;   /* ⬅️ THIS pushes it to the far right */
+  padding-left: 10px;
+  padding-right: 20px;
+
+}
+
+
+/* pin */
+
+#pin-topbar {
+  height: 32px;
+  border-radius: 8px;
+}
+
+#pin-topbar:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+/* hamburger */
+
+#hamburger-menu {
+  background: none;
+  height: 32px;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  padding: 5px 15px;
+}
+
+#hamburger-menu:hover {
+  color: #f0a500;
+}
+
+/* override old shoelace-style sizing */
+#hamburger-menu.hamburger-btn {
+  background: none;
+  border: none;
+  color: white;
+
+  width: 40px;
+  height: 40px;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* make the three lines actually big */
+#hamburger-menu .hamburger-icon {
+  width: 26px;
+  height: 26px;
+  stroke: currentColor;
 }
 
 
 
-
-
-
-
+/* ////////////////////////////////////////// */
 
 html, body {
   margin: 0;
@@ -801,47 +797,7 @@ body.inverted #score {
 
 }
 
-
-
-/* Invert colors mode */
-body.inverted {
-  background-color: black;
-  color: white;
-}
-
-body.inverted #controls {
-  background-color: white;
-  color: black;
-}
-
-body.inverted button {
-  background-color: white;
-  color: black;
-}
-
-body.inverted button:hover {
-  background-color: black;
-  color: white;
-}
-
-body.inverted #seek-bar {
-  background: #666;
-}
-
-body.inverted #seek-bar::-webkit-slider-thumb,
-body.inverted #seek-bar::-moz-range-thumb {
-  background: #ccc;
-}
-
-body.inverted #playhead {
-  background: rgba(255, 255, 255, 0.7);
-  border-left: 1px dashed rgba(255, 255, 255, 0.8);
-}
-
-body.inverted #stopwatch {
-  background: black;
-  color: white;
-}
+/*  */
 
 .hidden {
   display: none !important;
@@ -1064,7 +1020,6 @@ body.inverted #stopwatch {
   border: 1px solid rgba(255,255,255,0.18);
   border-radius: 6px;
   padding: 5px 5px 5px 5px;
-  font-family: system-ui, sans-serif;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -1310,9 +1265,6 @@ body.inverted #stopwatch {
   pointer-events: auto;
   padding: 10px;
 }
-
-
-
 
 
 #pause-countdown:hover {
@@ -1596,234 +1548,6 @@ body.inverted #stopwatch {
   margin-bottom: 10px;
 }
 
-/* 🔹 Top Bar Styling (Floats Above Everything) */
-#top-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 50px;
-  background: rgba(0, 0, 0, 0.75);
-  color: white;
-  display: flex;
-  /* align-items: center; */
-  /* justify-content: space-between; */
-  /* ✅ Add this line */
-  padding: 0 15px;
-  font-size: 1rem;
-  z-index: 99999;
-  pointer-events: auto;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-    display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 14px;
-}
-
-
-#topbar-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-left: auto; 
-}
-
-
-#hamburger-container {
-  display: flex;
-  align-items: center;
-  /* justify-content: flex-end; */
-}
-
-#hamburger-container sl-button::part(base) {
-  height: 32px;                 /* match pin + mode height */
-  line-height: 32px;
-  padding: 0 10px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#hamburger-container sl-button {
-  vertical-align: middle;
-    margin-top: -10px;   /* adjust if needed */
-
-}
-
-sl-menu-item::part(base)::after {
-  display: none !important;
-}
-
-#top-bar.dismissed {
-  transform: translateY(-100%);
-  opacity: 0;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-
-
-/* 🔹 Client List (Ensures Two Clients Per Line) */
-#client-list {
-  font-size: 1rem;
-  display: flex;
-  flex-wrap: wrap;
-  max-width: 240px;
-  /* ✅ Adjust width to control wrapping */
-  overflow: hidden;
-  white-space: normal;
-  line-height: 1.2;
-  user-select: none;
-  /* ✅ Prevents accidental text selection */
-  cursor: pointer;
-  /* ✅ Indicates interactivity */
-}
-
-/* 🔹 Individual Client Names */
-.client-name {
-  display: inline-block;
-  /* ✅ Allows proper wrapping */
-  width: 45%;
-  /* ✅ Ensures two clients per line */
-  text-align: left;
-  white-space: nowrap;
-  /* ✅ Prevents names from breaking */
-  margin-right: 5px;
-  /* ✅ Adds spacing */
-}
-
-/* Outer cluster wrapper */
-#stopwatch-cluster {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 200px;        /* fixed width for consistent layout */
-  gap: 4px;            /* small space between time and buttons */
-}
-
-
-/* Stopwatch timer text */
-#stopwatch {
-  font-family: monospace;
-  font-size: 1.2em;
-  color: #fff;
-  text-align: center;
-  margin: 0;                /* remove vertical gaps */
-  padding: 0;
-  line-height: 1;
-}
-
-/* Control buttons */
-#stopwatch-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;                 /* tighter spacing between buttons */
-  margin: 0;
-  padding: 0;
-}
-
-#stopwatch-controls button {
-  font-size: 1em;
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 4px;
-  background: #333;
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s, transform 0.1s;
-}
-
-#stopwatch-controls button:hover {
-  background: #555;
-}
-
-#stopwatch-controls button:active {
-  transform: scale(0.95);
-}
-
-
-
-
-
-/* 
-/* 🔹 Stopwatch Icon */
-#stopwatch::before {
-  content: "⏱";
-  /* Stopwatch Icon */
-  font-size: 1.4rem;
-} */
-
-/* 🔹 Cue Info (Placed to the right of the stopwatch) */
-
-#cue-info {
-    width: 300px;     /* fixed */
-
-  font-size: 0.75rem;
-  font-weight: bold;
-  color: white;
-  white-space: nowrap;
-  position: absolute;
-  left: calc(50% + 120px);
-  /* ✅ Places it to the right of stopwatch */
-  /* background: rgba(0, 0, 0, 0.7); */
-    flex: 0 0 auto;   /* 🚫 don’t grow, 🚫 don’t shrink */
-
-}
-
-
-#pin-topbar {
-  font-size: 16px;
-  padding: 6px 10px;
-  height: 32px;
-  border-radius: 8px;
-}
-
-#pin-topbar:hover {
-  background: rgba(255,255,255,0.15);
-}
-
-#pin-topbar.active {
-  background: rgba(255,255,255,0.3);
-  border-color: rgba(255,255,255,0.6);
-}
-
-
-
-/* 🔹 Hamburger Menu Button (Fixed on the Right) */
-#hamburger-menu {
-  background: none;
-  height: 32px;
-  border: none;
-  color: white;
-  font-size: 2rem;
-  cursor: pointer;
-  padding: 5px 15px;
-  outline: none;
-  margin-left: auto;
-  /* ✅ Ensures it stays on the right */
-}
-
-/* 🔹 Hover effect for hamburger */
-#hamburger-menu:hover {
-  color: #f0a500;
-}
-
-.local-client {
-  font-weight: bold;
-  color: #facc15;
-  /* Optional: Highlight color */
-}
-
-.remote-client {
-  font-weight: normal;
-  color: #fff;
-}
-
 /* custom style for button as android makes the unicode one orange yuck */
 .custom-pause {
   display: inline-block;
@@ -1900,7 +1624,6 @@ sl-menu-item::part(base)::after {
   background: #fff;
   color: #000;
   z-index: 999999 !important;
-  font-family: "Antonio", sans-serif;
   pointer-events: all;
 
 }
@@ -2146,7 +1869,6 @@ sl-menu-item::part(base)::after {
     background: rgba(0,0,0,0.75);
     color: #fff;
     font-size: 12px;
-    font-family: sans-serif;
     border-radius: 4px;
     pointer-events: auto;
     cursor: pointer;
@@ -2172,6 +1894,7 @@ sl-menu-item::part(base)::after {
 .osc-monitor .osc-line {
   min-width: 220px;
   max-width: 320px;
+  font-size: x-small;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -1,27 +1,10 @@
-// ============================================================================
-// oscillaOscCtrl.js — Continuous OSC Control Lanes
-// ----------------------------------------------------------------------------
-// Cue: oscCtrl(...)
-//
-// Example:
-//   oscCtrl(
-//     addr:/fx/ring/freq,
-//     path:ringCurve,
-//     min:60,
-//     max:800,
-//     uid:ringModFreq
-//   )
-//
-// • Continuous, playhead-driven control
-// • Path defines baseline curve
-// • Y normalized relative to path bbox
-// • Min/max mapped to OSC values
-// • Throttled streaming
-// • Designed to later integrate oscCtrlNode()
-// ============================================================================
+/* ============================================================================
+ * oscillaOscCtrl.js — Continuous OSC Control Lanes
+ * ============================================================================
+ */
 
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
-import { sendOSCMessage } from "./oscillaOSC.js";
+import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
 
 import {
     registerAnimation,
@@ -30,8 +13,9 @@ import {
     resolveAnimationUid
 } from "./oscillaAnimation.js";
 
+
 const OSCCTRL_THROTTLE_MS = 30;
-// Global registry of control lanes
+
 window.oscCtrlState ??= {};
 
 export function handleOscCtrlCue(el, args = []) {
@@ -43,25 +27,20 @@ export function handleOscCtrlCue(el, args = []) {
         min: 0,
         max: 1,
         trig: "auto",
-        mode: "event",          // default behaviour
+        mode: "event",
         uid: resolveAnimationUid(el, "oscCtrl", args),
 
-        // internals
         _path: null,
         _bbox: null,
         _len: 0,
         _lastSent: 0,
 
-        _lastValue: null,       // last value sent
-        _epsilon: 0.005,        // change threshold (tunable)
+        _lastValue: null,
+        _epsilon: 0.005,
 
-        _overlay: null,
-        _updateOverlay: null
+        _overlay: null
     };
 
-    // -------------------------
-    // parse args
-    // -------------------------
     for (const a of args) {
         switch (a.type) {
             case "addr": cfg.addr = String(a.value); break;
@@ -72,16 +51,12 @@ export function handleOscCtrlCue(el, args = []) {
         }
     }
 
-    // must have OSC address
     if (!cfg.addr) {
         console.warn("[oscCtrl] missing addr — skipping");
         console.groupEnd();
         return;
     }
 
-    // -------------------------
-    // path must BE the element
-    // -------------------------
     if (el.tagName?.toLowerCase() !== "path") {
         console.warn("[oscCtrl] cue must be attached to a <path>");
         console.groupEnd();
@@ -92,80 +67,20 @@ export function handleOscCtrlCue(el, args = []) {
     cfg._bbox = el.getBBox();
     cfg._len = el.getTotalLength();
 
-    // ---------------------------------------
-    // HTML overlay showing addr + min/max
-    // ---------------------------------------
-    const overlay = document.createElement("div");
-    overlay.className = "oscctrl-overlay";
+    // ------------------------------------------------------
+    // Debug overlay (global overlay system)
+    // ------------------------------------------------------
+    cfg._overlay = createOscOverlay({
+        anchorEl: el,                 // overlay glued to path bbox
+        label: cfg.addr || "oscCtrl", // label (or addr)
+        mode: "auto"                  // follows global overlayMode
+    });
 
-    overlay.style.position = "absolute";
-    overlay.style.pointerEvents = "none";
-    // overlay.style.background = "rgba(0,0,0,.65)";
-    overlay.style.color = "black";
-    overlay.style.fontSize = "11px";
-    overlay.style.fontFamily = `"Courier New", Courier, monospace`;
-    overlay.style.padding = "3px 6px";
-    overlay.style.borderRadius = "6px";
-    overlay.style.whiteSpace = "nowrap";
-    overlay.style.zIndex = 99999;
-
-    overlay.innerHTML = `
-    <div>${cfg.addr}  ${cfg.min} → ${cfg.max}</div>
-  `;
-
-    const scroller = document.getElementById("scoreInner") || document.body;
-    scroller.appendChild(overlay);
-    scroller.style.position ??= "relative";
-    cfg._overlay = overlay;
-
-    cfg._updateOverlay = function () {
-        if (!cfg._path || !cfg._overlay) return;
-
-        const rect = cfg._path.getBoundingClientRect();
-        const parentRect = scroller.getBoundingClientRect();
-
-        const s = cfg._overlay.style;
-        s.left = `${rect.left - parentRect.left}px`;
-        s.top = `${rect.top - parentRect.top}px`;
-    };
+    // initial display (in label or full mode)
+    cfg._overlay.update(`${cfg.min} → ${cfg.max}`);
+    cfg._overlay.position();
 
 
-    // initial position
-    cfg._updateOverlay();
-
-    let _rafRunning = false;
-
-    cfg._trackOverlay = function track() {
-        if (_rafRunning) return;
-        _rafRunning = true;
-
-        const loop = () => {
-            cfg._updateOverlay();
-            if (!cfg._overlay) {
-                _rafRunning = false;
-                return;
-            }
-            requestAnimationFrame(loop);
-        };
-
-        requestAnimationFrame(loop);
-    };
-
-    // start tracking
-    cfg._trackOverlay();
-
-
-
-    // keep roughly in sync with viewport changes
-    window.addEventListener("scroll", cfg._updateOverlay, { passive: true });
-    window.addEventListener("resize", cfg._updateOverlay, { passive: true });
-
-    // const scroller = document.getElementById("scoreInner");
-    if (scroller) {
-        scroller.addEventListener("scroll", cfg._updateOverlay, { passive: true });
-    }
-
-    // register with animation engine (will start when active)
     registerAnimation(el, "oscCtrl", cfg, () => startOscCtrl(cfg));
 
     console.groupEnd();
@@ -179,68 +94,72 @@ function startOscCtrl(cfg) {
     const instance = {
         uid: cfg.uid,
 
-        stop() {
-            clearRunningAnimation(cfg.uid);
-            if (cfg._overlay) {
-                cfg._overlay.remove();
-                cfg._overlay = null;
-            }
-        },
+stop() {
+    clearRunningAnimation(cfg.uid);
+
+    if (cfg._overlay) {
+        cfg._overlay.destroy();
+        cfg._overlay = null;
+    }
+},
 
         tick() {
             const playX = window.getPlayheadX?.();
             if (playX == null) return;
 
-            // ------------------------------------
-            // SCREEN-SPACE path bounds (refresh)
-            // ------------------------------------
             const rect = cfg._path.getBoundingClientRect();
-
-            // small tolerance so edge counts as "inside"
             const EPS = 1.5;
 
-            // bail unless the playhead is visually over the path
-            if (playX < rect.left - EPS || playX > rect.right + EPS) return;
+            // overlay ALWAYS follows, even when not active
+            if (cfg._overlay) cfg._overlay.position();
 
-            // ------------------------------------
-            // map X position → path length fraction
-            // ------------------------------------
+            // determine whether we are inside path horizontally
+            const inside =
+                !(playX < rect.left - EPS || playX > rect.right + EPS);
+
+            if (!inside) {
+                // do nothing else — just keep HUD locked
+                return;
+            }
+
+            // map playhead to normalized t
             let t = (playX - rect.left) / rect.width;
             t = Math.min(1, Math.max(0, t));
 
             const p = cfg._path.getPointAtLength(t * cfg._len);
 
-            // local-space normalization (works even with group transforms)
+            // normalize Y
             let ny = (p.y - cfg._bbox.y) / cfg._bbox.height;
-            ny = 1 - ny;
-            ny = Math.min(1, Math.max(0, ny));
-
+            ny = Math.min(1, Math.max(0, 1 - ny));
 
             const value = cfg.min + ny * (cfg.max - cfg.min);
 
-            // ------------------------------------
-            // mode:event → only send when value changes
-            // ------------------------------------
+            let shouldSend = true;
+
             if (cfg.mode === "event") {
                 if (cfg._lastValue !== null) {
                     if (Math.abs(value - cfg._lastValue) < cfg._epsilon) {
-                        return; // skip — value not meaningfully different
+                        shouldSend = false;
                     }
                 }
             }
 
             cfg._lastValue = value;
 
-            // ------------------------------------
-            // rate-limit sends (still applied to both modes)
-            // ------------------------------------
             const now = performance.now();
-            if (now - cfg._lastSent < 30) return;
+            if (!shouldSend || now - cfg._lastSent < OSCCTRL_THROTTLE_MS)
+                return;
+
             cfg._lastSent = now;
 
-            // ------------------------------------
-            // send
-            // ------------------------------------
+// overlay (only shows live values in "full" mode)
+if (cfg._overlay) {
+    cfg._overlay.update(
+        `val:${value.toFixed(3)}  t:${t.toFixed(3)}`
+    );
+}
+
+
             sendOSCMessage({
                 type: "osc_control",
                 addr: cfg.addr,
@@ -254,6 +173,3 @@ function startOscCtrl(cfg) {
 
     registerRunningAnimation(cfg.uid, instance);
 }
-
-
-

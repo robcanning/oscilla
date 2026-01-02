@@ -7,20 +7,13 @@
   <title>Oscilla</title>
 
   <link rel="stylesheet" href="css/styles.css">
-  <!-- <link rel="stylesheet" href="css/tablet.css" media="screen and (min-width: 769px) and (max-width: 1366px) and (min-height: 600px)"> -->
-  <!-- <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet"> -->
-  <!-- <script src="https://cdn.jsdelivr.net/npm/svg-path-commander"></script> -->
-  <!-- <script src="https://cdn.jsdelivr.net/npm/svg-path-commander@6.1.0/dist/svg-path-commander.umd.min.js"></script> -->
-
 
   <!-- Shoelace JS + CSS -->
   <script type="module">
     import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.0/cdn/shoelace.js';
   </script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.0/dist/themes/light.css" />
-
-
-
+<link href="https://iosevka-webfonts.github.io/iosevka-term/iosevka-term.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.0/dist/themes/light.css" />
 </head>
 
 <body>
@@ -29,7 +22,6 @@
     <h1>Welcome to Oscilla</h1>
     <p>Select an existing score or upload a new one.</p>
 
-    <!-- List of Available Scores -->
     <h2>Available Scores:</h2>
     <ul id="score-list">
       <li>
@@ -37,22 +29,17 @@
       </li>
     </ul>
 
-    <!-- Upload New Score -->
     <h2>Upload a New Score:</h2>
     <input type="file" id="upload-score" accept=".svg" />
   </div>
 
-
-
-
-
-  <!-- Splash / Project Selector -->
+  <!-- Splash -->
   <div id="splash">
     <div class="splash-container">
-      <!-- 🔹 Title & Subtitle -->
+
       <div class="title-section">
         <h1 id="splash-title" class="splash-title">Oscilla</h1>
-        <h2 class="splash-subtitle" id="splash-subtitle">Interactive Graphic Score System</h2>
+        <h2 id="splash-subtitle" class="splash-subtitle">Interactive Graphic Score System</h2>
         <img src="assets/logo.svg" alt="Oscilla Logo" class="logo" />
 
         <p id="splash-message" class="splash-message">
@@ -60,26 +47,22 @@
         </p>
       </div>
 
-      <!-- 🔹 Dynamic Project List -->
       <div id="project-grid" class="project-grid"></div>
 
-      <!-- 🔹 Manual Entry Fallback -->
       <div id="manual-entry" class="manual-entry" style="display: none;">
         <p>Could not automatically list projects.</p>
         <input id="manual-project-input" type="text" placeholder="Enter project name manually" />
         <button id="manual-load-btn">Load Project</button>
       </div>
 
-      <!-- 🔹 Help & Documentation Section -->
       <div class="help-section">
         <h3>Help & Documentation</h3>
         <p class="project-card">Load the helper-score for in-score documentation.</p><br>
-
-        <a class="project-card" href="https://github.com/robcanning/oscilla/tree/main/md_docs" target="_blank">Online
-          Documentation</a>
+        <a class="project-card" href="https://github.com/robcanning/oscilla/tree/main/md_docs" target="_blank">
+          Online Documentation
+        </a>
       </div>
 
-      <!-- 🔹 Meta / Credits Section -->
       <div class="meta-section">
         <hr class="meta-divider" />
         <p class="meta-line">
@@ -95,6 +78,7 @@
           Built with Node.js, Anime.js & WebSockets — Open Source (GPL-3.0)
         </p>
       </div>
+
     </div>
   </div>
 
@@ -102,68 +86,154 @@
 
 
 
+  <!-- 🔹 Top Bar -->
+<div id="top-bar" class="gui-bar gui-sticky-top">
 
+  <!-- Clients -->
+  <div id="client-list" class="gui-cluster">
+    Clients: 0
   </div>
-  </div>
 
-  <!-- 🔹 Top Bar Container -->
-  <div id="top-bar">
-    <div id="client-list">Clients: 0</div>
-    <!-- <button onclick="toggleHitLabels()">Hit Labels</button> -->
+  <!-- Stopwatch -->
+  <div id="stopwatch-cluster" class="gui-cluster">
 
+    <div id="stopwatch">00:00</div>
 
-    <div id="stopwatch-cluster">
+    <div id="stopwatch-controls" class="gui-cluster">
 
-      <div id="stopwatch">00:00</div>
-      <div id="stopwatch-controls">
-        <button id="startBtn" title="Start">⏵</button>
-        <button id="pauseBtn" title="Pause">⏸</button>
-        <button id="resetBtn" title="Reset">⏹</button>
-      </div>
+      <!-- Start -->
+      <button id="startBtn" class="gui-button" title="Start">
+        <svg viewBox="0 0 24 24" width="18" height="18"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="6 4 20 12 6 20 6 4" />
+        </svg>
+      </button>
+
+      <!-- Pause -->
+      <button id="pauseBtn" class="gui-button" title="Pause">
+        <svg viewBox="0 0 24 24" width="18" height="18"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <rect x="6" y="4" width="4" height="16" />
+          <rect x="14" y="4" width="4" height="16" />
+        </svg>
+      </button>
+
+      <!-- Reset -->
+      <button id="resetBtn" class="gui-button" title="Reset">
+        <svg viewBox="0 0 24 24" width="18" height="18"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="4" width="16" height="16" rx="2" />
+        </svg>
+      </button>
 
     </div>
 
-
-
-    <div id="cue-info" class="osc-monitor">
-      <strong>OSC:</strong>
-      <div class="osc-line" id="osc-latest">waiting…</div>
-    </div>
-
-    <div id="topbar-actions">
-
-      <span id="mode-toggle" style="cursor:pointer; font-family: sans-serif; font-size:24px; opacity:0.75;">
-        scroll
-      </span>
-      <!-- 🔹 Right-aligned container for the dropdown -->
-      <button id="pin-topbar" title="Keep top bar visible">📌</button>
-
-      <div id="hamburger-container">
-        <sl-dropdown>
-          <sl-button id="hamburger-menu" size="small" slot="trigger">☰</sl-button>
-          <sl-menu>
-
-            <!-- Pages submenu -->
-            <sl-menu-item id="pages-submenu-root">Pages
-              <sl-menu slot="submenu" id="pages-submenu"></sl-menu>
-            </sl-menu-item>
-
-            <!-- ✅ Projects submenu -->
-            <sl-menu-item id="projects-submenu-root">Projects
-              <sl-menu slot="submenu" id="projects-submenu"></sl-menu>
-            </sl-menu-item>
-            <sl-divider></sl-divider>
-
-            <sl-menu-item value="preferences">Preferences</sl-menu-item>
-
-          </sl-menu>
-        </sl-dropdown>
-
-      </div>
-    </div>
   </div>
 
-  <!-- 🔸 Project list modal (hidden by default) -->
+
+  <!--  mid side actions -->
+ <div id="topbar-actions" class="gui-cluster">
+
+  <!-- 🔹 OSC CONTROLS GROUP -->
+<div class="gui-cluster osc-tools">
+
+  <!-- Mute OSC -->
+  <button id="osc-mute-btn" class="gui-button" title="Mute OSC">
+    <svg viewBox="0 0 24 24" width="18" height="18"
+         fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <line x1="23" y1="9" x2="17" y2="15" />
+      <line x1="17" y1="9" x2="23" y2="15" />
+    </svg>
+  </button>
+
+  <!-- Overlay toggle -->
+  <button id="overlay-toggle" class="gui-button" title="OSC Overlay">
+    <svg viewBox="0 0 24 24" width="18" height="18"
+         fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="14" rx="2" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  </button>
+
+  <!-- OSC preview -->
+  <div id="cue-info" class="osc-monitor gui-cluster">
+    <strong>OSC:</strong>
+    <div class="osc-line" id="osc-latest">waiting…</div>
+  </div>
+
+
+</div>
+
+
+  <!-- 🔹 VIEW / NAV CONTROLS GROUP -->
+  <div class="gui-cluster view-tools">
+
+    <span id="mode-toggle">scroll</span>
+
+    <button id="pin-topbar" class="gui-button" title="Pin top bar">
+      <svg viewBox="0 0 24 24" width="18" height="18"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 17v5"/>
+        <path d="M5 7l5 5-5 5"/>
+        <path d="M19 7l-5 5 5 5"/>
+        <path d="M2 7h20"/>
+      </svg>
+    </button>
+<div id="hamburger-container">
+  <sl-dropdown>
+
+<button
+  id="hamburger-menu"
+  class="gui-button gui-button--square hamburger-btn"
+  slot="trigger"
+  aria-haspopup="true"
+  aria-expanded="false"
+>
+  <svg
+    viewBox="0 0 24 24"
+    class="hamburger-icon"
+    aria-hidden="true"
+  >
+    <line x1="3" y1="6"  x2="21" y2="6"></line>
+    <line x1="3" y1="12" x2="21" y2="12"></line>
+    <line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+</button>
+
+    <sl-menu>
+      <sl-menu-item id="pages-submenu-root">Pages
+        <sl-menu slot="submenu" id="pages-submenu"></sl-menu>
+      </sl-menu-item>
+
+      <sl-menu-item id="projects-submenu-root">Projects
+        <sl-menu slot="submenu" id="projects-submenu"></sl-menu>
+      </sl-menu-item>
+
+      <sl-divider></sl-divider>
+
+      <sl-menu-item value="preferences">Preferences</sl-menu-item>
+    </sl-menu>
+
+  </sl-dropdown>
+</div>
+
+
+  </div>
+
+</div>
+
+
+</div>
+
+
+  <!-- Project Dialog -->
   <sl-dialog id="project-dialog" label="Load Score">
     <div id="project-list" class="project-list"></div>
   </sl-dialog>
@@ -181,122 +251,188 @@
       padding: 8px;
       z-index: 99999;
     }
-
-    .prefs-form input[type="text"],
-    .prefs-form input[type="number"] {
-      width: 100%;
-    }
   </style>
 
+  <!-- 🔹 Controls -->
+  <div id="controls" class="gui-sticky-bottom gui-bar">
 
-
-
-
-  <!-- Controls -->
-  <div id="controls">
-    <!-- ✅ Seek Bar is Above Buttons -->
     <input id="seek-bar" type="range" min="0" max="100" value="0">
 
-    <div id="button-container">
+    <div id="button-container" class="gui-bar">
 
-      <div id="left-controls">
-        <button id="rewind-to-zero-button">&#x21B6;</button>
-        <button id="rehearsal-marks-button">A</button>
-        <button id="toggle-notes-button" title="Toggle Score Notes">📝</button>
-        <button id="audio-master-button" class="control-button" title="Audio Master Toggle">
-          🔈
+      <div id="left-controls" class="gui-grid-2x2 transport-side">
+
+        <button id="rewind-to-zero-button" class="gui-button side-button">&#x21B6;</button>
+
+        <button id="rehearsal-marks-button" class="gui-button side-button">
+          R
         </button>
+
+        <button id="toggle-notes-button" class="gui-button side-button" title="Toggle Score Notes">
+          N
+        </button>
+
+        <button id="audio-master-button" class="gui-button side-button" title="Audio Master Toggle">
+          A
+        </button>
+
       </div>
 
-      <!-- Group of 4 Seek Buttons -->
-      <div id="seek-controls">
-        <button id="fast-rewind-button" title="Fast Rewind (Jump to previous mark)">
-          &#x276E; <!-- ❮ -->
-        </button>
+      <div id="seek-controls" class="gui-cluster">
 
-        <button id="rewind-button" title="Slow Rewind">
-          &#x23EE; <!-- ⏮ -->
-        </button>
+        <!-- ▶️ Transport controls -->
+        <div class="seek-main gui-cluster">
 
-        <button id="toggle-button" title="Play/Pause">
-          &#x25B6; <!-- ▶ -->
-        </button>
+          <!-- Fast Rewind -->
+          <button id="fast-rewind-button" class="gui-button gui-button--large" title="Jump back">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 19 2 12 11 5 11 19"></polygon>
+              <polygon points="22 19 13 12 22 5 22 19"></polygon>
+            </svg>
+          </button>
 
-        <button id="forward-button" title="Slow Forward">
-          &#x23ED; <!-- ⏭ -->
-        </button>
+          <!-- Rewind -->
+          <button id="rewind-button" class="gui-button gui-button--large" title="Rewind">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 19 2 12 11 5 11 19"></polygon>
+              <rect x="13" y="5" width="2" height="14"></rect>
+            </svg>
+          </button>
 
-        <button id="fast-forward-button" title="Fast Forward (Jump to next mark)">
-          &#x276F; <!-- ❯ -->
-        </button>
+          <!-- Play / Pause -->
+          <button id="toggle-button" class="gui-button gui-button--large" title="Play / Pause">
+            <span id="play-icon"></span>
+          </button>
 
-        <button id="fullscreen-button">⛶</button>
+          <!-- Forward -->
+          <button id="forward-button" class="gui-button gui-button--large" title="Forward">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 5 22 12 13 19 13 5"></polygon>
+              <rect x="9" y="5" width="2" height="14"></rect>
+            </svg>
+          </button>
 
-        <div id="speedControls">
-          <button id="decreaseSpeed">−</button>
-          <span id="speedDisplay">1.0×</span>
-          <button id="increaseSpeed">+</button>
-          <button id="resetSpeed">↻</button>
+          <!-- Fast Forward -->
+          <button id="fast-forward-button" class="gui-button gui-button--large" title="Jump forward">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 5 22 12 13 19 13 5"></polygon>
+              <polygon points="2 5 11 12 2 19 2 5"></polygon>
+            </svg>
+          </button>
+
+          <!-- Fullscreen -->
+          <button id="fullscreen-button" class="gui-button gui-button--large" title="Fullscreen">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <polyline points="9 21 3 21 3 15"></polyline>
+              <line x1="21" y1="3" x2="14" y2="10"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+          </button>
+
         </div>
+
+        <!-- ⏩ Speed controls -->
+        <div id="speedControls" class="gui-cluster speed-panel">
+
+          <!-- slower -->
+          <button id="decreaseSpeed" class="gui-button gui-button--square" title="Slower">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+
+          <!-- display -->
+          <span id="speedDisplay" class="speed-display">1.0×</span>
+
+          <!-- faster -->
+          <button id="increaseSpeed" class="gui-button gui-button--square" title="Faster">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+
+          <!-- reset -->
+          <button id="resetSpeed" class="gui-button gui-button--square" title="Reset speed">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 12 3 3 12 3" />
+              <path d="M3 3l7.5 7.5A9 9 0 1 1 8 4" />
+            </svg>
+          </button>
+
+        </div>
+
+
+
+
       </div>
 
-      <div id="right-controls">
-        <!-- Other control buttons -->
-        <button id="stop-audio-button">🔇</button>
-        <button id="invert-button">&#x1F317;</button>
-        <!-- <button id="help-button">[i]</button> -->
-        <button id="ws-toggle-button">🌐</button>
-        <button id="pin-controls" title="Keep controls visible">📌</button>
+
+      <div id="right-controls" class="gui-grid-2x2">
+
+        <!-- Stop Audio -->
+        <button id="stop-audio-button" class="gui-button side-button" title="Stop all audio">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
+            <rect x="6" y="6" width="12" height="12" rx="2" />
+          </svg>
+        </button>
+
+        <!-- Invert Display -->
+        <button id="invert-button" class="gui-button side-button" title="Invert display colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20" />
+            <path d="M5 12a7 7 0 0 1 7-7v14a7 7 0 0 1-7-7z" />
+          </svg>
+        </button>
+
+        <!-- Websocket On/Off -->
+        <button id="ws-toggle-button" class="gui-button side-button" title="Network / WebSocket status">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 8a10 10 0 0 1 20 0" />
+            <path d="M5 12a7 7 0 0 1 14 0" />
+            <path d="M8 16a4 4 0 0 1 8 0" />
+            <circle cx="12" cy="20" r="1" />
+          </svg>
+        </button>
+
+        <!-- Pin Controls -->
+        <button class="gui-button side-button" id="pin-controls" title="Pin controls">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 17v5" />
+            <path d="M5 7l5 5-5 5" />
+            <path d="M19 7l-5 5 5 5" />
+            <path d="M2 7h20" />
+          </svg>
+        </button>
 
       </div>
-
     </div>
+
+
   </div>
-
-  <!-- ✅ Waveform Display Container (Pre-Defined in HTML) -->
-
-  <!-- Score Viewport -->
-  <!-- <div id="scoreContainer">
-    <img id="score" src="scores/help.svg" alt="Score">
-  </div> -->
-
 
   <div id="scoreContainer"></div>
 
-
   <div id="playzone"></div>
+
   <div id="playhead">
     <div id="repeat-count-box" class="hidden">1</div>
   </div>
 
-  <!-- Stopwatch -->
-  <!-- <div id="stopwatch"></div> -->
-
   <div id="keybindings-popup" class="popup hidden">
-    <h2>Keybindings</h2>
-    <p><strong>Space:</strong> PLAY/PAUSE</p>
-    <p><strong>Arrow Left:</strong> SEEK &#x276E;&#x276E;</p> <!-- ❮❮ -->
-    <p><strong>Arrow Right:</strong> SEEK &#x276F;&#x276F;</p> <!-- ❯❯ -->
-
-    <p><strong>Arrow Up:</strong> Jump to Previous Rehearsal Mark</p>
-    <p><strong>Arrow Down:</strong> Jump to Next Rehearsal Mark</p>
-    <p><strong>+</strong> Increase Speed</p>
-    <p><strong>-</strong> Decrease Speed</p>
-    <p><strong>R</strong> Rehearsal Marks</p>
-    <p><strong>0</strong> Rewind to Start</p>
-    <p><strong>N</strong> Toggle Score Annotations</p>
-    <p><strong>S:</strong> Show/Hide SCORE LOADER Options</p>
-    <p><strong>H:</strong> Show/Hide HELP</p>
-    <p><strong>T:</strong> Show/Hide TITLE PAGE</p>
-    <p><strong>Esc:</strong> Enable/Disable Network Sync</p>
-    <hr> <!-- Divider between keybindings and touch gestures -->
-
-    <h3>Touch Gestures</h3>
-    <p><strong>Double Tap:</strong> Play/Pause</p>
-    <p><strong>Swipe Left:</strong> Move score left</p>
-    <p><strong>Swipe Right:</strong> Move score right</p>
-    <p><strong>Swipe and Hold:</strong> Continuously seek </p>
-    <button id="close-keybindings">Close</button>
+    <!-- left unchanged -->
   </div>
 
   <div id="animation-popup" class="popup interaction-popup hidden">
@@ -304,17 +440,13 @@
   </div>
 
   <div id="singlePage-container" class="popup hidden">
-    <!-- <button id="singlePage-close-button" class="singlePage-close-button">X</button> -->
-    <div id="singlePage-content"> <!-- Directly load the SVG here -->
-      <!-- SVG will be inserted dynamically -->
-    </div>
+    <div id="singlePage-content"></div>
     <div id="singlePage-countdown"></div>
   </div>
 
   <div id="cue-choice-container" class="hidden">
     <div id="cue-choice-header">Choose an Option </div>
   </div>
-
 
   <div id="pause-countdown" class="hidden">
     <span id="pause-time">0</span>
@@ -324,10 +456,10 @@
     <div id="media-content"></div>
   </div>
 
-
   <div id="rehearsal-popup" class="hidden">
-    <div id="rehearsal-header">Select Rehearsal Mark to Jump to Location in Score <br> or jump with arrow UP and DOWN
-      keys</div>
+    <div id="rehearsal-header">
+      Select Rehearsal Mark…
+    </div>
 
     <div id="rehearsal-grid">
       <div id="rehearsal-mark-container"></div>
@@ -340,28 +472,13 @@
     <video id="video-content" controls></video>
   </div>
 
-
-
   <div id="black-overlay"></div>
-
-  <!-- <div id="oscilla-console">
-    <textarea id="oscilla-console-editor"></textarea>
-  </div>
-
-  <div id="oscilla-uid-sidebar">
-    <input id="oscilla-uid-search" placeholder="filter…" autocomplete="off">
-    <div id="oscilla-uid-list"></div>
-  </div> -->
 
   <script>
     fetch('/config')
-      .then(response => response.json())
-      .then(config => {
-        window.websocketConfig = config; // Store config for later use
-      })
-      .catch(error => {
-        console.error('Error fetching configuration:', error);
-      });
+      .then(r => r.json())
+      .then(config => window.websocketConfig = config)
+      .catch(console.error);
   </script>
 
   <script type="module">
@@ -369,17 +486,12 @@
     initStopwatch();
   </script>
 
-  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js" crossorigin="anonymous"></script> -->
   <script src="js/anime.min.js"></script>
-  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script> -->
-  <!-- <script src="js/p5.min.js"></script> -->
-  <!-- <script src="js/app.js"></script> -->
   <script src="js/svg-path-commander.js"></script>
+
   <script type="module" src="./js/scoreSetup.js"></script>
   <script type="module" src="js/app.js"></script>
-  <!-- <script src="js/playback_diagnostics.js"></script> -->
 
-  <!-- TODO modularise this using modules and the cuehandlers.js -->
 </body>
 
 </html>
