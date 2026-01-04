@@ -272,6 +272,12 @@ A video of a different piece showing Oscilla working in a performance context:
 
 awaiting online hosted instance....
 
+### SuperCollider Patch
+
+Download the SuperCollider file:
+
+[polygonfield.scd](supercollider/polygonfield.scd)
+
 ## Abstract
 
 A Walk in Polygon Field is a graphic score environment for controlled improvisation, composed for 1–4 instrumentalists with electronics and surround diffusion. Three polygons—pentagon, hexagon, heptagon—rotate at different rates, producing polymetric phase relationships (5-against-6-against-7). Performers activate objects orbiting these shapes, interpreting compound visual motion as sonic material. An outer ring generates OSC data driving spatial processing.
