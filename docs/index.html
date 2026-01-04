@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap" rel="stylesheet">
 
-  <title>A Walk in Polygon Field (2026)</title>
+  <title>OscillaScore</title>
 
   <!-- Pico CSS for layout -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
@@ -61,160 +61,227 @@
 
 
 <main>
-  <h1>A Walk in a Polygon Field</h1>
-<p><strong>from <em>Ways Through, Not To.</em></strong></p>
-<p>Rob Canning (2026)</p>
-<p><strong>Duration:</strong> approximately 8 minutes
-<strong>Performers:</strong> 1–4 instrumentalists + electronics performer (+ optional conductor/director)
-<strong>Amplification:</strong> all instruments amplified/miced for live processing
-<strong>Diffusion:</strong> surround sound (minimum quad, ideally octophonic or higher)
-<strong>Display:</strong> individual tablets/iPads per performer, or single projected score with conductor</p>
-<hr>
-<h2>Overview</h2>
-<p><em>A Walk in a Polygon Field</em> is a page-based graphic score environment for controlled improvisation. The score consists of three rotating polygons (5-, 6-, and 7-sided) and an outer circular path carrying four orbiting objects. Performers activate and control objects that orbit these polygons, interpreting visual motion as sonic material. An electronics performer manages spatialisation, processing, and the four outer ring objects.</p>
-<p>The piece functions as a framework: the score defines available states, behaviours, and constraints, while performers negotiate interpretation, timing, and sonic realisation.</p>
-<hr>
-<h2>Score Elements</h2>
-<h3>Polygons</h3>
-<p>Three polygons occupy the central field: a pentagon, hexagon, and heptagon. Each rotates at a different rate, producing polymetric phase relationships (5-against-6-against-7). The sides of each polygon are visually distinguished by colour and line style (solid, dashed, dotted).</p>
-<h3>Objects</h3>
-<p>Small objects orbit along the edges of each polygon. When active, an object moves continuously around its polygon's perimeter. The combination of the object's orbit and the polygon's rotation produces compound motion across the screen.</p>
-<h3>Outer Ring</h3>
-<p>A circular path surrounds the polygon field, carrying four orbiting objects dedicated to spatialisation and electronic control.</p>
-<h3>Timer</h3>
-<p>A visible timer runs throughout the performance, helping performers coordinate pacing and endings. (In projected versions for audience, this may be hidden.)</p>
-<hr>
-<h2>For Instrumentalists</h2>
-<h3>Preparing</h3>
-<p>Before rehearsing or performing, spend time with the score. Watch how the polygons rotate, how objects orbit, and how these motions combine. Notice what situations arise: crossings, alignments, convergences, separations. Consider what the interface affords your instrument and your musical thinking—which states invite sustained sound, which encourage gesture, which suggest silence or restraint.</p>
-<p>You are not following instructions in a conventional sense. You are developing a practice for navigating this environment. The score provides structure; you decide what that structure sounds like.</p>
-<h3>Reading the Score</h3>
-<p>You read the score on your own tablet or laptop, connected to the local network. Touch gestures activate and stop objects; no external controller is needed. Interact deliberately—accidental taps will trigger changes. Keep the screen visible, but avoid becoming trapped by it. Shift your attention between the interface, your fellow performers, and the sound in the room. The score is one input among several.</p>
-<h3>Activation</h3>
-<p>Objects begin inactive (greyed out). To enter the piece, click or touch the handle on your chosen object to activate it. The object will highlight and begin orbiting. Decide entry order with your ensemble before performance, or negotiate entries in the moment.</p>
-<p>A global start button is available if you prefer synchronised entries, but manual activation allows staggered, overlapping entrances.</p>
-<h3>Interpretation</h3>
-<p>Each side of a polygon represents a discrete performance state. What this means is yours to decide:</p>
+  <p>OscillaScore is an open-source platform for creating and performing time-based, animated notation in the browser. It supports collaborative performance, synthesis control, and visual experimentation using simple SVG and web technologies.</p>
+<p style="text-align: left;">
+  <a href="./assets/oscilla-title-logo.png" target="_blank">
+    <img src="./assets/oscilla-title-logo.png" alt="OscillaScore Title" style="width: 100%; height: auto; border-radius: 6px;" />
+  </a>
+</p>
+<h2>What Can OscillaScore Do?</h2>
 <ul>
-<li>A change in pitch region or register</li>
-<li>A shift in articulation or attack mode</li>
-<li>A microtonal inflection within a sustained drone</li>
-<li>A new rhythmic pattern or density</li>
-<li>A textural transformation</li>
-</ul>
-<p>The visual distinctions (colour, line style) may guide your mapping, or you may ignore them entirely. Negotiate shared conventions with your ensemble, or develop individual responses.</p>
-<h3>Motion and Position</h3>
-<p>Your object's position results from two simultaneous motions: its orbit along the polygon edge and the polygon's own rotation. Depending on direction and speed, your object may:</p>
-<ul>
-<li>Move rapidly through screen quadrants</li>
-<li>Linger in one area</li>
-<li>Cross paths with other objects</li>
-</ul>
-<p>You may choose to interpret screen position (quadrants, proximity to centre/edge, nearness to other objects) as additional parameters—or not.</p>
-<h3>Changing Objects</h3>
-<p>After completing at least one full orbit, you may stop your object and claim a different inactive object. Alternatively, negotiate other constraints with your ensemble:</p>
-<ul>
-<li>Change only when orbits cross</li>
-<li>Change only on entering a new screen quadrant</li>
-<li>Change only after a set duration</li>
-</ul>
-<p>Two performers cannot control the same object simultaneously. If you wish to take a solo, you may stop other performers' objects—but use this affordance thoughtfully.</p>
-<h3>Stopping</h3>
-<p>To stop playing, click your object to deactivate it. It will fade to grey. You may:</p>
-<ul>
-<li>Stop immediately</li>
-<li>Stop after reaching a particular polygon side or screen position</li>
-<li>Fade out gradually while the object is still active</li>
-</ul>
-<p>Decide with your ensemble whether inactive objects freeze in place or continue orbiting silently.</p>
-<hr>
-<h2>For the Electronics Performer</h2>
-<h3>Role</h3>
-<p>You manage live processing, spatialisation, and the four outer ring objects. Depending on setup, you may also act as conductor/director (see below).</p>
-<h3>Outer Ring Objects</h3>
-<p>The four objects orbiting the outer circle are yours to control. These generate OSC data for spatialisation. Activate, pause, or adjust them to shape the spatial field around the instrumental texture.</p>
-<h3>OSC Streams</h3>
-<p>Active objects and polygons send OSC data:</p>
-<ul>
-<li><strong>Object orbit position:</strong> normalised angle along polygon edge</li>
-<li><strong>Polygon rotation:</strong> current rotation angle</li>
-<li><strong>Object scale:</strong> if scaling animations are active</li>
-<li><strong>Polygon scale:</strong> if scaling animations are active</li>
-</ul>
-<p>Addresses are fixed and named according to object and polygon identifiers (see score legend for specific addresses).</p>
-<h3>Processing</h3>
-<p>A SuperCollider patch is provided offering:</p>
-<ul>
-<li>Minimal synthesis (drone pads)</li>
-<li>Ring modulation</li>
-<li>Delay and reverb</li>
-<li>Granular processing</li>
-<li>Quadraphonic (or higher) spatialisation</li>
-</ul>
-<p>Mix and apply processing in response to the ensemble. You may also build your own mappings if preferred.</p>
-<h3>Mixer Role</h3>
-<p>Balance the acoustic and electronic layers. The processing should support and extend the instrumental sound, not dominate it—unless the ensemble decides otherwise.</p>
-<hr>
-<h2>For the Conductor / Director (Optional)</h2>
-<p>If performing from a single projected score rather than individual tablets, a conductor/director operates the master control:</p>
-<ul>
-<li>Activate and deactivate performer objects on their behalf</li>
-<li>Signal entries, transitions, and endings through gesture</li>
-<li>Control global functions (start, fade, timer)</li>
-</ul>
-<p>In this configuration, you are conducting the score as much as the performers. Coordinate entries, encourage transitions between polygons, and shape the arc of the performance.</p>
-<p>Even with individual tablets, an ensemble may designate a director to make structural decisions—when to build, when to thin, when to end.</p>
-<hr>
-<h2>Duration and Ending</h2>
-<p>The target duration is approximately 8 minutes, but this is flexible.</p>
-<h3>Possible Ending Strategies</h3>
-<p>Negotiate an ending approach before or during performance:</p>
-<ul>
-<li><strong>Synchronised stop:</strong> All performers stop together after reaching a climax or target time</li>
-<li><strong>Staggered fade:</strong> Performers deactivate objects one by one, thinning the texture gradually</li>
-<li><strong>Global fade:</strong> Use the fade-all button to fade all active objects over a set duration (e.g., 2 minutes)</li>
-<li><strong>Drone and decay:</strong> Settle into a sustained drone, then fade</li>
-</ul>
-<p>A timer is visible to help coordinate. For example, you might agree: &quot;Build density until 6 minutes, then begin staggered exits, aiming to finish around 8.&quot;</p>
-<hr>
-<h2>Suggested Interpretation Strategies</h2>
-<p>These are starting points—develop your own approach.</p>
-<h3>Drone-based</h3>
-<p>Treat each polygon side as a pitch region. Sustain long tones, shifting microtonally or registrally as sides change. Let the polymetric rotation create slow phase patterns.</p>
-<h3>Gestural / Pointillist</h3>
-<p>Respond to object motion with short, articulated gestures. Attacks align with vertices; sustained sounds fill the sides. Density follows orbit speed.</p>
-<h3>Textural Accumulation</h3>
-<p>Begin sparse. Gradually activate more objects, layer entries, build density toward a climax, then thin out.</p>
-<h3>Spatial Counterpoint</h3>
-<p>Map screen position to register or timbre. Objects in different quadrants occupy different sonic territories. Crossings create moments of intersection.</p>
-<hr>
-<h2>Summary</h2>
-<ul>
-<li>Activate objects by clicking; deactivate to exit</li>
-<li>Each polygon side = a change in state (your interpretation)</li>
-<li>Complete at least one orbit before changing objects</li>
-<li>Negotiate entry order, transitions, and endings with your ensemble</li>
-<li>Electronics performer controls outer ring, processing, and spatialisation</li>
-<li>Target duration ~8 minutes; coordinate using the visible timer</li>
-<li>The score provides structure; you provide the sound</li>
+<li>Synchronize score playback across local devices or remote performers</li>
+<li>Trigger audio, events, or OSC messages via cues</li>
+<li>Combine open-form and fixed-form structures for hybrid performance formats</li>
+<li>Animate shapes, symbols, and cues using custom SVG syntax</li>
+<li>Run entirely in the browser — no installation required</li>
 </ul>
 <hr>
-<h2>Resources</h2>
 <ul>
-<li>Score and army: https://robcanning.github.io/oscilla/compositions/polygonwalk2026</li>
-<li>Oscilla documentation: https://robcanning.github.io/oscilla/</li>
-<li>Questions: rc@kiben.net</li>
+<li>Full documentation and source code on <a href="https://github.com/robcanning/oscilla">GitHub</a></li>
 </ul>
-<h2>Short Biography</h2>
-<p>Rob Canning is an Irish composer, improviser, and creative technologist whose work explores animated notation, improvisation, and the dynamics of networked musical systems. He holds a PhD in composition from Goldsmiths, University of London, where his research examined distributed authorship in computer-aided music. A long-time advocate of Free and Open Source Software, he develops Oscilla, an open-source platform for animated graphic notation and networked performance.</p>
-<h2>Programme Note</h2>
-<p>A Walk in a Polygon Field (2025/26)</p>
-<p>The title gestures toward walking as a way of knowing — slow movement through a place, attentive to edges, paths, obstacles, unexpected turns. The field called &quot;Polygon&quot; is imaginary, yet precise: shapes rotate at different rates (5-against-6-against-7), creating polymetric cycles. Objects orbit, collide, separate, phase. These movements are not metaphors for music—they are material. Musicians activate these objects, navigate their motions, translate what they see into sound. The piece asks performers not to read, but to inhabit—to learn the score's rhythms, its frictions, what it permits or resists.</p>
-<p>Each musician controls one object at a time. Activating it sets motion in play. Deactivating withdraws from the shared texture. The field is never neutral. Choices ripple outward: density shifts, pacing changes, social balance tilts. Sometimes the system invites sustained sound and patient listening. Other times, sudden alignments provoke reaction—quick gestures, sharp attacks, convergence.</p>
-<p>The score provides landmarks; musicians decide what those landmarks sound like. A polygon edge might signal a shift in pitch region, articulation, texture. Performers may develop shared conventions or follow individual logic. The system shapes possibility without prescribing outcome.</p>
-<p>This concerns attitude more than correctness: attention, restraint, curiosity, trust. The piece rewards musicians willing to observe first, contribute sparingly, let relationships form gradually. Silence is not absence but active position. Intensity arises not because written, but because it emerges—from overlapping processes, shared decisions, friction between what the score does and what players choose.</p>
-<p>An electronics performer shapes the spatial field. Live processing extends instrumental sound—textures that bloom and decay. The score runs on networked tablets, its infrastructure invisible, holding balance: enough structure to orient, enough openness to leave music unresolved until played.</p>
-<p>Each performance traces a different route, shaped as much by personalities in the room as by shapes on screen. What emerges is neither fully composed nor entirely improvised—something negotiated, music grown from shared encounter with a moving score.</p>
+<h2>What Kind of Software Is OscillaScore?</h2>
+<p>Oscilla is a hybrid system that sits between score playback engine, cue-based media framework, and distributed performance interface. It is designed to support composers and performers working with contemporary forms of notation, multimedia integration, and distributed coordination.</p>
+<p><strong>It is:</strong></p>
+<ul>
+<li>A performance framework for distributed setups, allowing composers and performers to coordinate audio, animation, and media in real time</li>
+<li>A cue-driven score playback and control system for structured, time-based, and media-integrated works</li>
+<li>A networked playback environment supporting multi-client synchronization via WebSockets and OSC</li>
+<li>A score authoring platform supporting compact mini-syntax for animation, transformation, and timing control using SVG ID conventions</li>
+</ul>
+<p><strong>It is not:</strong></p>
+<ul>
+<li>A full-featured notation program like MuseScore or Sibelius</li>
+<li>A DAW or audio sequencing environment</li>
+</ul>
+<p>Nonetheless, when integrated with external tools such as Inkscape or conventional notation software, OscillaScore offers a robust environment for the composition and design of animated and spatial graphic scores. This hybrid approach supports a range of experimental, electroacoustic, and intermedia practices, enabling composers to work beyond the constraints of traditional notation.</p>
+<h2>Conceptual Overview</h2>
+<p>OscillaScore supports both fixed-form and open-form works, and can be used in isolation as a powerful environment for structuring electronic music compositions. It accommodates a range of artistic practices including:</p>
+<ul>
+<li>Animated graphic or symbolic scores</li>
+<li>Distributed improvisation and comporovisation</li>
+<li>Time-based cue sequences and gesture triggers</li>
+<li>Media scores involving video, audio, or text prompts</li>
+<li>Live networked performances and collaborative rehearsals</li>
+</ul>
+<p>It builds on the lineage of drawing-based music systems like Xenakis’s UPIC, reimagining the score as a spatial interface for sonic control. With support for animation and OSC, OscillaScore acts as both a form of notation and a performable instrument, allowing users to control sound through movement, timing, and visual gesture.</p>
+<p><strong>It operates under two main paradigms:</strong></p>
+<ul>
+<li>A scrolling score model, suited for linear, horizontally-unfolding timelines</li>
+<li>A page-based or hypertextual model, allowing spatial, nonlinear, or interactive structures</li>
+</ul>
+<p>These paradigms can coexist within a single score, enabling hybrid forms that mix continuous motion with branching or triggerable segments.</p>
+<p>OscillaScore tightly integrates notation, performer cues, media triggers, and animation into a unified timing and control system. This allows complex audiovisual structures to be executed with precise coordination — ensuring seamless transitions between written material, live gestures, and multimedia elements.</p>
+<p>Composers and performers can author complex transformations, animations, and media events using a concise SVG ID-based syntax paired with a powerful cue system.</p>
+<h2>Use Cases</h2>
+<p>OscillaScore supports a wide range of use cases, including:</p>
+<ul>
+<li><strong>Score composition for ensembles</strong>: Design dynamic, cue-based scores using SVG animations and transformation syntax tailored for group performance</li>
+<li><strong>Rehearsal and performance for ensembles</strong>: Share synchronized score playback with multiple musicians in real time using WebSockets or OSC</li>
+<li><strong>Telematic and distributed improvisation</strong>: Use cues and visual animations to coordinate remote performers across networks</li>
+<li><strong>Mixed-media or hypermedia works</strong>: Integrate text, video, sound, and interactivity in dynamic score designs<br>
+<strong>Solo electronic music composition</strong>: Structure and trigger sound processes in synthesis tools like SuperCollider or Pure Data using animated SVG cues and OSC output</li>
+<li><strong>Interactive installations</strong>: Embed visual or spatial scores in gallery contexts with OSC-driven sound interaction</li>
+</ul>
+<p style="text-align: left;">
+  <a href="./assets/oscilla-ponysays-canning-dublin.png" target="_blank">
+    <img src="./assets/oscilla-ponysays-canning-dublin.png" alt="OscillaScore Live" style="width: 100%; height: auto; border-radius: 6px;" />
+  </a>
+</p>
+<p style="font-size: 0.9em; color: #666; max-width: 100%; text-align: left; margin-top: -0.5em;">
+  <em>PonySays trio performing <strong>Rob Canning's composition <em>1:10,560 (6 inches to the Mile)</em></strong>, 2025 — intermedia score for electric guitar, synthesiser, and drums — at Dublin Sound Lab’s Music Current Festival, Project Arts Centre, Dublin. The musicians performed using iPads synchronized over a local network with Oscilla, while the projector was connected as a fourth client displaying the score to the audience.</em>
+</p>
+<hr>
+<h2>Create Oscilla Scores with Inkscape</h2>
+<p>OscillaScore is designed to work seamlessly with <a href="https://inkscape.org/">Inkscape</a> — a free and open-source vector graphics editor. It is also compatible with other SVG-capable tools such as Adobe Illustrator, though some advanced features may vary in support. If you encounter any issues, please report them via the <a href="https://github.com/robcanning/oscilla/discussions">GitHub Discussions</a> or the <a href="https://matrix.to/#/#oscilla:matrix.org">Oscilla Matrix room</a>.</p>
+<ul>
+<li>Download: <a href="https://inkscape.org/release/">inkscape.org/release</a></li>
+<li>Use OscillaScore templates and naming conventions for animated SVG scores</li>
+<li>See <a href="https://github.com/robcanning/oscilla">GitHub</a> for templates and examples</li>
+</ul>
+<hr>
+<h2>Interactive Help Score File</h2>
+<p>Oscilla comes with an interactive help file help.svg. Here are some screenshots from the help score:</p>
+<div id="gallery" class="grid">
+<p><a href="./assets/oscilla_interface_screenshot.png"
+       data-pswp-width="1920"
+       data-pswp-height="1080"
+       target="_blank" class="thumbnail">
+<img src="./assets/oscilla_interface_screenshot.png"
+           alt="oscilla interface screenshot" />
+</a></p>
+<p><a href="./assets/oscilla-help-cues.png"
+       data-pswp-width="1920"
+       data-pswp-height="1080"
+       target="_blank" class="thumbnail">
+<img src="./assets/oscilla-help-cues.png"
+           alt="oscilla-help-cues" />
+</a></p>
+<p><a href="./assets/oscilla-help-cues2.png"
+       data-pswp-width="1920"
+       data-pswp-height="1080"
+       target="_blank" class="thumbnail">
+<img src="./assets/oscilla-help-cues2.png"
+           alt="oscilla-help-cues2" />
+</a></p>
+<p><a href="./assets/oscilla-help-osc1.png"
+       data-pswp-width="1920"
+       data-pswp-height="1080"
+       target="_blank" class="thumbnail">
+<img src="./assets/oscilla-help-osc1.png"
+           alt="oscilla-help-osc1" />
+</a></p>
+<p><a href="./assets/oscilla-help-osc2.png"
+       data-pswp-width="1920"
+       data-pswp-height="1080"
+       target="_blank" class="thumbnail">
+<img src="./assets/oscilla-help-osc2.png"
+           alt="oscilla-help-osc2" />
+</a></p>
+<p><a href="./assets/oscilla-help-paths1.png"
+       data-pswp-width="1920"
+       data-pswp-height="1080"
+       target="_blank" class="thumbnail">
+<img src="./assets/oscilla-help-paths1.png"
+           alt="oscilla-help-paths1" />
+</a></p>
+<p><a href="./assets/oscilla-help-paths2.png"
+       data-pswp-width="1920"
+       data-pswp-height="1080"
+       target="_blank" class="thumbnail">
+<img src="./assets/oscilla-help-paths2.png"
+           alt="oscilla-help-paths2" />
+</a></p>
+<p><a href="./assets/oscilla-help-rotation1.png"
+       data-pswp-width="1920"
+       data-pswp-height="1080"
+       target="_blank" class="thumbnail">
+<img src="./assets/oscilla-help-rotation1.png"
+           alt="oscilla-help-rotation1" />
+</a></p>
+<p><a href="./assets/oscilla-help-raster.png"
+       data-pswp-width="1920"
+       data-pswp-height="1080"
+       target="_blank" class="thumbnail">
+<img src="./assets/oscilla-help-raster.png"
+           alt="oscilla-help-raster" />
+</a></p>
+</div>
+<style>
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  .thumbnail img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+</style>
+<hr>
+<h2>PonySays Trio using Oscilla @ MusicCurrent Festival 2025</h2>
+<div class="video-container">
+  <iframe src="https://www.youtube.com/embed/6LMr5QH07kk?si=8P0dZc2AABIRCOYN"
+          title="YouTube video player"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen>
+  </iframe>
+</div>
+<style>
+  .video-container {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+    max-width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+</style>
+<hr>
+<h2>Workshops</h2>
+<p>OscillaScore workshops explore graphic notation, live performance, and networked interaction. These sessions are designed for composers, improvisers, and artists working at the intersection of sound, code, and visual media — exploring new modes of performance, interaction, and notation. OscillaScore workshops can be adapted to:</p>
+<ul>
+<li>Experimental music ensembles</li>
+<li>Improvisation collectives</li>
+<li>Composition/technology courses</li>
+<li>Hacklabs and interdisciplinary events</li>
+</ul>
+<p>Workshops typically include live demos, collaborative score creation, and integrations with synthesis, spatial sound, or video. Please get in touch if you are interested in hosting a workshop.</p>
+<p style="text-align: left;">
+  <a href="./assets/oscilla-workshop-cmc2025.png" target="_blank">
+    <img src="./assets/oscilla-workshop-cmc2025.png" alt="Oscilla Workshop CMC 2025" style="width: 100%; height: auto; border-radius: 6px;" />
+  </a>
+</p>
+<p style="font-size: 0.9em; color: #666; max-width: 100%; text-align: left; margin-top: -0.5em;">
+  <em>The first Oscilla workshop hosted by the Contemporary Music Centre of Ireland as part of the Music Current Festival 2025. More details at <a href="https://www.cmc.ie/events/2025/apr/music-current-2025-rob-canning-digital-score-workshop" target="_blank">cmc.ie</a>.<br>
+  Photo © Contemporary Music Centre of Ireland, 2025.</em>
+</p>
+<hr>
+<h2>Papers in Preparation</h2>
+<p>One or more research papers related to Oscilla are currently in preparation for submission to peer-reviewed academic conferences. Due to the requirements of the double-blind review process, these preprints cannot be shared publicly at this stage. They will be made available here once the review process has concluded.</p>
+<h2>Community &amp; Support</h2>
+<ul>
+<li><a href="https://github.com/robcanning/oscilla/discussions">GitHub Discussions</a></li>
+<li><a href="https://matrix.to/#/#oscilla:matrix.org">Join Matrix Chat</a></li>
+<li><a href="https://toot.si/@rob">Follow @rob@toot.si</a> on Mastodon</li>
+</ul>
+<hr>
+<h2>Contact</h2>
+<h2>For workshops, collaborations, or support:
+Email: <a href="mailto:r&#115;ca&#110;ning&#64;g&#109;ail&#46;com">rscanning@gmail.com</a></h2>
 
 </main>
 
