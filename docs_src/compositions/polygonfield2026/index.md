@@ -252,21 +252,35 @@ A screenshot of the animate score.
 
 ![Walk in a Polygon Field](images/WalkInPolygonField2026_01.png)
 
+
 ### Score Video
 
 A short video clip of the score in operation can be found here:
 
-[Polygon Field — Score Demo (MP4)](https://github.com/robcanning/oscilla/blob/main/docs_src/compositions/polygonfield2026/videos/PolygonField2025_SCORE_QUICK_DEMO.mp4)
+<video controls width="720">
+  <source src="videos/PolygonField2025_SCORE_QUICK_DEMO.mp4" type="video/mp4" />
+  Your browser does not support the video tag.
+</video>
 
 A video of a different piece showing Oscilla working in a performance context:
 
 [Oscilla — Performance Context (YouTube)](https://www.youtube.com/watch?v=LTae9fubyyM)
 
 
-<video controls width="720">
-  <source src="videos/PolygonField2025_SCORE_QUICK_DEMO.mp4" type="video/mp4" />
-  Your browser does not support the video tag.
-</video>
+### Oscilla Project File for Score
+
+If you choose to install Oscilla, you can download the Oscilla project for this composition here:
+
+[Walk in a Polygon Field — Oscilla Project (ZIP)](oscilla/PolygonField2026.zip)
+
+Unzip the file and place the resulting directory in: oscilla/public/scores
+
+It will then appear in Oscilla’s file loader.
+
+Installation notes for Oscilla are here:
+
+https://github.com/robcanning/oscilla/blob/main/public/docs/md_docs/QUICKSTART.md
+
 
 ### Score Live Online Instance
 
@@ -274,7 +288,7 @@ awaiting online hosted instance....
 
 ### SuperCollider Patch
 
-Download the SuperCollider file:
+Download the SuperCollider file (in progress):
 
 [polygonfield.scd](supercollider/polygonfield.scd)
 

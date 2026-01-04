@@ -4,7 +4,8 @@ module.exports = function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy("compositions/**/images/*");
   eleventyConfig.addPassthroughCopy("compositions/**/videos/*");
   eleventyConfig.addPassthroughCopy("compositions/**/supercollider/*");
-  
+  eleventyConfig.addPassthroughCopy("compositions/**/oscilla/*");
+
   return {
     dir: {
       input: ".",
