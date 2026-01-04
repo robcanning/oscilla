@@ -1,9 +1,9 @@
 module.exports = function (eleventyConfig) {
   // Copy static assets to the output folder
   eleventyConfig.addPassthroughCopy("assets");
-  // eleventyConfig.addPassthroughCopy("compositions/polygonfield2026/images");
   eleventyConfig.addPassthroughCopy("compositions/**/images/*");
-
+  eleventyConfig.addPassthroughCopy("compositions/**/videos/*");
+  eleventyConfig.addPassthroughCopy("compositions/**/supercollider/*");
   
   return {
     dir: {

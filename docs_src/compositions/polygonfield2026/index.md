@@ -20,6 +20,8 @@ Rob Canning (2026)
 **Display:** individual tablets/iPads per performer, or single projected score with conductor*
 
 ---
+\tableofcontents
+
 
 ## Overview
 
@@ -223,7 +225,7 @@ Map screen position to register or timbre. Objects in different quadrants occupy
 
 ## Short Biography
 
-Rob Canning is an Irish composer, improviser, and creative technologist whose work explores animated notation, improvisation, and the dynamics of networked musical systems. He holds a PhD in composition from Goldsmiths, University of London, where his research examined distributed authorship in computer-aided music. A long-time advocate of Free and Open Source Software, he develops Oscilla, an open-source platform for animated graphic notation and networked performance.
+Rob Canning (Dublinm 1974) is an composer, improviser, and creative technologist whose work explores animated notation, improvisation, and the dynamics of networked musical systems. He holds a PhD in composition from Goldsmiths, University of London, where his research examined distributed authorship in computer-aided music. A long-time advocate of Free and Open Source Software, he develops Oscilla, an open-source platform for animated graphic notation and networked performance.
 
 ## Programme Note
 
@@ -240,18 +242,35 @@ An electronics performer shapes the spatial field. Live processing extends instr
 
 Each performance traces a different route, shaped as much by personalities in the room as by shapes on screen. What emerges is neither fully composed nor entirely improvised—something negotiated, music grown from shared encounter with a moving score.
 
-## Screenshots
+## Score (Browser-based)
+
+The score requires the authors Oscilla score system to be installed to see the interactive and animated features. At the time of submission there is no publicly hosted instance of the score software and score. There are links to videos and screenshots below and if a online instance is created it will also be listed below.
+
+### Score Screenshots
+
+A screenshot of the animate score.
 
 ![Walk in a Polygon Field](images/WalkInPolygonField2026_01.png)
-![Walk in a Polygon Field](images/WalkInPolygonField2026_02.png)
+
+### Score Video
+
+A short video clip of the score in operation can be found here:
+
+[Polygon Field — Score Demo (MP4)](https://github.com/robcanning/oscilla/blob/main/docs_src/compositions/polygonfield2026/videos/PolygonField2025_SCORE_QUICK_DEMO.mp4)
+
+A video of a different piece showing Oscilla working in a performance context:
+
+[Oscilla — Performance Context (YouTube)](https://www.youtube.com/watch?v=LTae9fubyyM)
 
 
-## Score
+<video controls width="720">
+  <source src="videos/PolygonField2025_SCORE_QUICK_DEMO.mp4" type="video/mp4" />
+  Your browser does not support the video tag.
+</video>
 
-The score requires the authors Oscilla score system to see the interactive and animated features. At the time of submission there is not publicly hosted instance of the score software and score. There are links to videos
+### Score Live Online Instance
 
-### similar works
-
+awaiting online hosted instance....
 
 ## Abstract
 
@@ -259,21 +278,6 @@ A Walk in Polygon Field is a graphic score environment for controlled improvisat
 The score defines states, behaviours, and constraints; performers negotiate what these structures sound like. Each polygon side represents a discrete performance state—pitch region, articulation, texture—but specific mappings remain open. Musicians enter and withdraw from a shared texture whose density and pacing emerge from collective decision-making.
 Authored entirely in SVG, the work embeds performance semantics directly into visual element identifiers, executed by a browser-based runtime on networked tablets. This approach, detailed in the accompanying paper "Scores That Run: Graphic Notation with Embedded Performance Semantics," demonstrates how open web standards support animated notation without specialised infrastructure. Each performance traces a different route—music negotiated through shared encounter with a moving score.
 
-
 Full Guide to Interpretation, Programme Notes and supporting materials including Supercollider live electronics patch are available online:
 
 https://robcanning.github.io/oscilla/compositions/polygonfield2026/
-
-
-## additional notes
-
-Electronic performer should be on-stage.
-Composer provides laptop running Supercollider connected to 8 in 8 out interface with TRS in/out-puts (Presonus Audiobox 1818VSL) - Analog connection to soundboard.
-Also running from stage is the OscillaScore software connected to projector via HDMI
-
-I need to setup private wifi. I can provide the router. No need to communicate with outer. Everything is served on the LAN.
-
-I use a custom score display https://robcanning.github.io/oscilla
-I require each performer to have their own ipad and stand. I cannot provide these.
-
-I need a projector. I am projecting from full-screen browser on laptop via HDMI - resolution is responsive. I have a thinkpad which has intel graphics so if a Mac or other machine with good GPU is available I would like to use for projection instead of my own hardware.
