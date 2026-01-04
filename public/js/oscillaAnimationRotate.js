@@ -10,6 +10,8 @@ import {
     installOscToggleHandler,
     armGhostClickable,
     needsArming,
+    needsFadeIn,
+    triggerFadeIn,
     isOscEnabled
 } from "./oscillaAnimationShared.js";
 
@@ -577,6 +579,14 @@ export function handleRotateCue(el, astArgs, options = {}) {
     if (fromCueTrigger && existingCfg && existingCfg._ghostClickable) {
         if (needsArming(existingCfg)) {
             armGhostClickable(el, existingCfg);
+        }
+        return;
+    }
+
+    // CHECK: playhead trigger for fadein element?
+    if (fromCueTrigger && existingCfg && existingCfg._fadeInMs) {
+        if (needsFadeIn(existingCfg)) {
+            triggerFadeIn(el, existingCfg);
         }
         return;
     }

@@ -60,6 +60,7 @@ export function applyPrestateBeforeStart(el, cfg) {
             const ms = Number(p.args?.[0] ?? 1000);
             cfg._fadeInMs = ms;
             cfg._ghostState = "registered";
+            cfg._fadeInTriggered = false;  // Track if fadein has been triggered
 
             el.style.opacity = "0";
             el.style.transition = "opacity 0ms";
@@ -384,9 +385,23 @@ export function applyPrestateOnStart(el, cfg, source = "unknown") {
     }
 
     // ============================================================
-    // fadein(ms)
+    // fadein(ms) - only trigger from playhead intersection
     // ============================================================
     if (cfg._fadeInMs) {
+        // Prevent double-triggering
+        if (cfg._fadeInTriggered) {
+            // console.log("[prestateOnStart] fadein already triggered", cfg.uid);
+            return;
+        }
+        
+        // Only fade in when called from playhead (fromCueTrigger), not on initial load
+        // source === "unknown" typically means initial load call
+        if (source === "unknown" && !cfg.fromCueTrigger) {
+            // console.log("[prestateOnStart] fadein skipping initial load, waiting for playhead", cfg.uid);
+            return;
+        }
+        
+        cfg._fadeInTriggered = true;
         // console.log("[prestateOnStart] fadein", cfg.uid);
 
         el.style.transition = `opacity ${cfg._fadeInMs}ms ease`;
@@ -431,6 +446,31 @@ export function needsArming(cfg) {
     // if (!el) return false;
     if (!cfg._ghostClickable) return false;
     return cfg._ghostState === "registered";
+}
+
+// ============================================================================
+// Check if fadein element needs triggering (for playhead intersection logic)
+// ============================================================================
+export function needsFadeIn(cfg) {
+    if (!cfg._fadeInMs) return false;
+    return !cfg._fadeInTriggered;
+}
+
+// ============================================================================
+// Trigger fadein for element (called at playhead intersection)
+// ============================================================================
+export function triggerFadeIn(el, cfg) {
+    if (!cfg._fadeInMs || cfg._fadeInTriggered) {
+        return false;
+    }
+    
+    cfg._fadeInTriggered = true;
+    // console.log("[triggerFadeIn] triggering fadein", cfg.uid);
+    
+    el.style.transition = `opacity ${cfg._fadeInMs}ms ease`;
+    forceReflow(el);
+    el.style.opacity = "1";
+    return true;
 }
 
 // ============================================================================

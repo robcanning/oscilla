@@ -1222,7 +1222,6 @@ body.inverted #score {
 }
 
 
-
 #media-popup {
   position: fixed;
   top: 0;
@@ -1243,7 +1242,7 @@ body.inverted #score {
 
 #pause-countdown {
   position: fixed;
-  top: 20px;
+  top: 45px;
   right: 20px;
   width: 70px;
   height: 70px;
