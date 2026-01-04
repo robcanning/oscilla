@@ -235,3 +235,10 @@ This concerns attitude more than correctness: attention, restraint, curiosity, t
 An electronics performer shapes the spatial field. Live processing extends instrumental sound—textures that bloom and decay. The score runs on networked tablets, its infrastructure invisible, holding balance: enough structure to orient, enough openness to leave music unresolved until played.
 
 Each performance traces a different route, shaped as much by personalities in the room as by shapes on screen. What emerges is neither fully composed nor entirely improvised—something negotiated, music grown from shared encounter with a moving score.
+
+## Screenshots
+
+![Walk in a Polygon Field](images/WalkInPolygonField2026_01.png)
+
+
+![Walk in a Polygon Field](images/WalkInPolygonField2026_02.png)
