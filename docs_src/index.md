@@ -146,7 +146,7 @@ Oscilla comes with an interactive help file help.svg. Here are some screenshots 
 ## PonySays Trio using Oscilla @ MusicCurrent Festival 2025
 
 <div class="video-container">
-  <iframe src="https://www.youtube.com/embed/6LMr5QH07kk?si=8P0dZc2AABIRCOYN"
+  <iframe src="https://www.youtube.com/watch?v=LTae9fubyyM"
           title="YouTube video player"
           frameborder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
