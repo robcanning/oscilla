@@ -244,14 +244,17 @@ Each performance traces a different route, shaped as much by personalities in th
 
 ## Score (Browser-based)
 
-The score requires the authors Oscilla score system to be installed to see the interactive and animated features. At the time of submission there is no publicly hosted instance of the score software and score. There are links to videos and screenshots below and if a online instance is created it will also be listed below.
+This score is designed to run inside the Oscilla environment in order to access its interactive and animated features.  At the time of submission, there is no publicly hosted version of Oscilla.
+
+Below you will find links to videos and screenshots that give an impression of how the system behaves.   If a public online instance becomes available in the future, it will be listed here as well.
+
+For more technically adventurous users, there is also a link to the Oscilla project directory for the composition, which can be downloaded and run locally once Oscilla is installed.
 
 ### Score Screenshots
 
 A screenshot of the animate score.
 
 ![Walk in a Polygon Field](images/WalkInPolygonField2026_01.png)
-
 
 ### Score Video
 
