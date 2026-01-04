@@ -3,23 +3,27 @@ title: A Walk in Polygon Field (2026)
 layout: layout.njk
 --- 
 
-# A Walk in a Polygon Field
+# A Walk in Polygon Field
 
 **from *Ways Through, Not To.***
 
 Rob Canning (2026)
 
-**Duration:** approximately 8 minutes
+**Duration:** variable / ~6-8 minutes
+
 **Performers:** 1–4 instrumentalists + electronics performer (+ optional conductor/director)
+
 **Amplification:** all instruments amplified/miced for live processing
+
 **Diffusion:** surround sound (minimum quad, ideally octophonic or higher)
-**Display:** individual tablets/iPads per performer, or single projected score with conductor
+
+**Display:** individual tablets/iPads per performer, or single projected score with conductor*
 
 ---
 
 ## Overview
 
-*A Walk in a Polygon Field* is a page-based graphic score environment for controlled improvisation. The score consists of three rotating polygons (5-, 6-, and 7-sided) and an outer circular path carrying four orbiting objects. Performers activate and control objects that orbit these polygons, interpreting visual motion as sonic material. An electronics performer manages spatialisation, processing, and the four outer ring objects.
+*A Walk in a Polygon Field* is an animated graphic score environment for controlled improvisation. The score consists of three rotating polygons (5-, 6-, and 7-sided) and an outer circular path carrying four orbiting objects. Performers activate and control objects that orbit these polygons, interpreting visual motion as sonic material. An electronics performer manages spatialisation, processing, and the four outer ring objects.
 
 The piece functions as a framework: the score defines available states, behaviours, and constraints, while performers negotiate interpretation, timing, and sonic realisation.
 
@@ -213,7 +217,7 @@ Map screen position to register or timbre. Objects in different quadrants occupy
 
 ## Resources
 
-- Score and army: https://robcanning.github.io/oscilla/compositions/polygonwalk2026
+- Score and Notes: https://robcanning.github.io/oscilla/compositions/polygonfield2026
 - Oscilla documentation: https://robcanning.github.io/oscilla/
 - Questions: rc@kiben.net
 
@@ -239,6 +243,37 @@ Each performance traces a different route, shaped as much by personalities in th
 ## Screenshots
 
 ![Walk in a Polygon Field](images/WalkInPolygonField2026_01.png)
-
-
 ![Walk in a Polygon Field](images/WalkInPolygonField2026_02.png)
+
+
+## Score
+
+The score requires the authors Oscilla score system to see the interactive and animated features. At the time of submission there is not publicly hosted instance of the score software and score. There are links to videos
+
+### similar works
+
+
+## Abstract
+
+A Walk in Polygon Field is a graphic score environment for controlled improvisation, composed for 1–4 instrumentalists with electronics and surround diffusion. Three polygons—pentagon, hexagon, heptagon—rotate at different rates, producing polymetric phase relationships (5-against-6-against-7). Performers activate objects orbiting these shapes, interpreting compound visual motion as sonic material. An outer ring generates OSC data driving spatial processing.
+The score defines states, behaviours, and constraints; performers negotiate what these structures sound like. Each polygon side represents a discrete performance state—pitch region, articulation, texture—but specific mappings remain open. Musicians enter and withdraw from a shared texture whose density and pacing emerge from collective decision-making.
+Authored entirely in SVG, the work embeds performance semantics directly into visual element identifiers, executed by a browser-based runtime on networked tablets. This approach, detailed in the accompanying paper "Scores That Run: Graphic Notation with Embedded Performance Semantics," demonstrates how open web standards support animated notation without specialised infrastructure. Each performance traces a different route—music negotiated through shared encounter with a moving score.
+
+
+Full Guide to Interpretation, Programme Notes and supporting materials including Supercollider live electronics patch are available online:
+
+https://robcanning.github.io/oscilla/compositions/polygonfield2026/
+
+
+## additional notes
+
+Electronic performer should be on-stage.
+Composer provides laptop running Supercollider connected to 8 in 8 out interface with TRS in/out-puts (Presonus Audiobox 1818VSL) - Analog connection to soundboard.
+Also running from stage is the OscillaScore software connected to projector via HDMI
+
+I need to setup private wifi. I can provide the router. No need to communicate with outer. Everything is served on the LAN.
+
+I use a custom score display https://robcanning.github.io/oscilla
+I require each performer to have their own ipad and stand. I cannot provide these.
+
+I need a projector. I am projecting from full-screen browser on laptop via HDMI - resolution is responsive. I have a thinkpad which has intel graphics so if a Mac or other machine with good GPU is available I would like to use for projection instead of my own hardware.
