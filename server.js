@@ -167,12 +167,6 @@ app.get("/api/audio-list/:project/:dir*", (req, res) => {
 });
 
 
-
-
-
-
-
-
 app.post("/save-preferences/:project", express.json(), (req, res) => {
   const project = req.params.project;
   const prefs = req.body;
@@ -188,8 +182,6 @@ app.post("/save-preferences/:project", express.json(), (req, res) => {
     res.status(500).json({ error: "Failed to write preferences.json" });
   }
 });
-
-
 
 
 const server = app.listen(port, () => {
@@ -221,7 +213,7 @@ let durationByProject = {};
 
 
 let lastUpdateTime = null;
-let lastKnownElapsedTime = 0; // ✅ Store last valid elapsed time
+let lastKnownElapsedTime = 0; // Store last valid elapsed time
 let lastJumpTime = 0; // Timestamp for debouncing jumps
 const JUMP_DEBOUNCE_INTERVAL = 100; // Debounce interval in milliseconds
 
@@ -281,7 +273,6 @@ const updateElapsedTime = () => {
   // Optional: emit OSC time every tick
   sendOscMessage();
 };
-
 
 
 
@@ -371,7 +362,7 @@ let cuePauseAcks = new Set(); // ✅ Moved to global scope so it persists for al
 
 let repeatStateMap = {}; // cueId → { currentCount, count, active, ... }
 
-// ✅ Declare a set to track triggered cues
+// Declare a set to track triggered cues
 let triggeredCues = new Set();
 
 wss.on('connection', (ws, req) => {
@@ -380,17 +371,17 @@ wss.on('connection', (ws, req) => {
   activeClients.add(ws);
   console.log(`[DEBUG] New WebSocket connection: ${clientName}`);
 
-  // ✅ Send welcome message to client so they know their name
+  //  Send welcome message to client so they know their name
   ws.send(JSON.stringify({ type: 'welcome', name: clientName }));
 
   broadcastClientList();
 
-  // ✅ Instead of resetting, send the current state to the new client
+  // Instead of resetting, send the current state to the new client
   // ws.send(JSON.stringify({ type: "welcome", name: clientName }));
-  // ✅ Sync the new client with existing state
+  // Sync the new client with existing state
   ws.send(JSON.stringify({ type: 'sync', state: sharedState }));
 
-  // 🔁 Send full repeat state to newly connected client
+  // Send full repeat state to newly connected client
   ws.send(JSON.stringify({
     type: 'repeat_state_map',
     repeatStateMap
@@ -406,7 +397,7 @@ wss.on('connection', (ws, req) => {
       case "cueStop":
         console.log(`[DEBUG] Broadcasting cue_stop from client.`);
 
-        // ✅ Use client-provided state
+        // Use client-provided state
         sharedState.isPlaying = false;
         sharedState.elapsedTime = !isNaN(data.elapsedTime) ? data.elapsedTime : sharedState.elapsedTime;
         sharedState.playheadX = !isNaN(data.playheadX) ? data.playheadX : sharedState.playheadX;
@@ -477,8 +468,6 @@ wss.on('connection', (ws, req) => {
 
 
 
-
-
       case "osc_scale": {
         let { uid, sx, sy, addr } = data;
 
@@ -507,6 +496,138 @@ wss.on('connection', (ws, req) => {
 
         break;
       }
+
+      // -----------------------------------------------------------
+      // 🔊 OSC Audio Pool trigger
+      // -----------------------------------------------------------
+      case "osc_audio_pool": {
+        const { filename, amp, fadeIn, fadeOut, pan, pitch, addr } = data;
+
+        const address = addr
+          ? `/oscilla/${addr.replace(/^\//, "")}`
+          : `/oscilla/audio/pool`;
+
+        const ampVal = parseFloat(amp) || 1;
+        const panVal = parseFloat(pan) || 0;
+        const pitchVal = parseFloat(pitch) || 1;
+        const fadeInVal = parseFloat(fadeIn) || 0;
+        const fadeOutVal = parseFloat(fadeOut) || 0;
+
+        console.log(
+          `[OSC] 🔊 POOL → ${address}  file=${filename}  amp=${ampVal.toFixed(2)}  pan=${panVal.toFixed(2)}  pitch=${pitchVal.toFixed(2)}`
+        );
+
+        // Args: filename, amp, pan, pitch, fadeIn, fadeOut
+        oscPort.send({
+          address,
+          args: [
+            { type: "s", value: filename || "unknown" },
+            { type: "f", value: ampVal },
+            { type: "f", value: panVal },
+            { type: "f", value: pitchVal },
+            { type: "f", value: fadeInVal },
+            { type: "f", value: fadeOutVal }
+          ]
+        });
+
+        break;
+      }
+
+
+      // -----------------------------------------------------------
+      // 🌧 OSC Audio Impulse hit
+      // -----------------------------------------------------------
+      case "osc_audio_impulse": {
+        const { filename, amp, fadeIn, fadeOut, pan, pitch, addr } = data;
+
+        const address = addr
+          ? `/oscilla/${addr.replace(/^\//, "")}`
+          : `/oscilla/audio/impulse`;
+
+        const ampVal = parseFloat(amp) || 1;
+        const panVal = parseFloat(pan) || 0;
+        const pitchVal = parseFloat(pitch) || 1;
+        const fadeInVal = parseFloat(fadeIn) || 0;
+        const fadeOutVal = parseFloat(fadeOut) || 0;
+
+        console.log(
+          `[OSC] 🌧 IMPULSE → ${address}  file=${filename}  amp=${ampVal.toFixed(2)}  pan=${panVal.toFixed(2)}  pitch=${pitchVal.toFixed(2)}`
+        );
+
+        // Args: filename, amp, pan, pitch, fadeIn, fadeOut
+        oscPort.send({
+          address,
+          args: [
+            { type: "s", value: filename || "unknown" },
+            { type: "f", value: ampVal },
+            { type: "f", value: panVal },
+            { type: "f", value: pitchVal },
+            { type: "f", value: fadeInVal },
+            { type: "f", value: fadeOutVal }
+          ]
+        });
+
+        break;
+      }
+
+
+      // -----------------------------------------------------------
+      // 🎧 OSC Audio Trigger (generic cueAudio)
+      // -----------------------------------------------------------
+      case "osc_audio_trigger": {
+        const { filename, volume, loop, addr } = data;
+
+        const address = addr
+          ? `/oscilla/${addr.replace(/^\//, "")}`
+          : `/oscilla/audio/trigger`;
+
+        const vol = parseFloat(volume) || 1;
+        const loopCount = parseInt(loop) || 1;
+
+        console.log(
+          `[OSC] 🎧 TRIGGER → ${address}  file=${filename}  vol=${vol.toFixed(2)}  loop=${loopCount}`
+        );
+
+        oscPort.send({
+          address,
+          args: [
+            { type: "s", value: filename || "unknown" },
+            { type: "f", value: vol },
+            { type: "i", value: loopCount }
+          ]
+        });
+
+        break;
+      }
+
+
+      // -----------------------------------------------------------
+      // 🛑 OSC Audio Stop
+      // -----------------------------------------------------------
+      case "osc_audio_stop": {
+        const { filename, fadeOutMs, addr } = data;
+
+        const address = addr
+          ? `/oscilla/${addr.replace(/^\//, "")}`
+          : `/oscilla/audio/stop`;
+
+        const fadeMs = parseFloat(fadeOutMs) || 0;
+
+        console.log(
+          `[OSC] 🛑 STOP → ${address}  file=${filename || "all"}  fadeOut=${fadeMs}ms`
+        );
+
+        oscPort.send({
+          address,
+          args: [
+            { type: "s", value: filename || "all" },
+            { type: "f", value: fadeMs / 1000 }  // Convert to seconds
+          ]
+        });
+
+        break;
+      }
+
 
         // -----------------------------------------------------------
         // 🎛 Generic OSC value sender (from osc() cue)
@@ -554,7 +675,7 @@ wss.on('connection', (ws, req) => {
         const { addr, values, static: staticParams, args, uid } = data;
 
         if (!addr) {
-          console.warn("[OSC] ⚠️ osc_value missing addr:", data);
+          console.warn("[OSC]  osc_value missing addr:", data);
           break;
         }
 
@@ -586,7 +707,7 @@ wss.on('connection', (ws, req) => {
             }))
           });
 
-          break;   // 🔥 IMPORTANT — do not continue into legacy path
+          break;   //  IMPORTANT — do not continue into legacy path
         }
 
         // =========================================================

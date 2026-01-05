@@ -243,13 +243,13 @@ export class CueParser extends CstParser {
 
     // Accepts arrays, animation pattern calls (Pseq/Prand/...),
     // or plain literals.
+
     $.RULE("animValue", () => {
       return $.OR([
         { ALT: () => $.SUBRULE($.arrayValue) },
 
         {
-          GATE: () =>
-            $.LA(1).tokenType === PatternName,   // ✅ Fix
+          GATE: () => $.LA(1).tokenType === PatternName,
           ALT: () => $.SUBRULE($.patternCall)
         },
 
@@ -257,7 +257,15 @@ export class CueParser extends CstParser {
         { ALT: () => $.CONSUME(StringLiteral) },
         { ALT: () => $.CONSUME(True) },
         { ALT: () => $.CONSUME(False) },
-        { ALT: () => $.SUBRULE($.simpleFuncCall) },
+        
+        // ⭐ GATE: Only try simpleFuncCall if next tokens are Identifier + LParen
+        {
+          GATE: () => $.LA(1).tokenType.name === "Identifier" && 
+                      $.LA(2).tokenType.name === "LParen",
+          ALT: () => $.SUBRULE($.simpleFuncCall)
+        },
+        
+        // Plain identifier (must come AFTER simpleFuncCall check)
         { ALT: () => $.CONSUME(Identifier) },
       ]);
     });
@@ -337,26 +345,35 @@ export class CueParser extends CstParser {
 
 
     // -----------------------
-
-
-    // -----------------------
     // Generic key:value param list — reusable across cues
     // -----------------------
+
     $.RULE("genericParam", () => {
-      $.CONSUME(Identifier, { LABEL: "key" });
+      //  Allow both Identifier AND reserved tokens as keys
+      $.OR1([
+        { ALT: () => $.CONSUME(Identifier, { LABEL: "key" }) },
+        { ALT: () => $.CONSUME(Osc, { LABEL: "key" }) },           // ⭐ ADD: osc:
+        { ALT: () => $.CONSUME(OscCtrl, { LABEL: "key" }) },       // ⭐ ADD: oscCtrl:
+        { ALT: () => $.CONSUME(OscCtrlNode, { LABEL: "key" }) },   // ⭐ ADD: oscCtrlNode:
+      ]);
+      
       $.CONSUME(Colon);
-      $.OR([
-        { ALT: () => $.SUBRULE($.simpleFuncCall, { LABEL: "value" }) },
+      
+      $.OR2([
+        //  GATE for simpleFuncCall (Identifier followed by LParen)
+        {
+          GATE: () => $.LA(1).tokenType.name === "Identifier" && 
+                      $.LA(2).tokenType.name === "LParen",
+          ALT: () => $.SUBRULE($.simpleFuncCall, { LABEL: "value" })
+        },
         { ALT: () => $.CONSUME(NumberLiteral, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(StringLiteral, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(RangeLiteral, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(True, { LABEL: "value" }) },
         { ALT: () => $.CONSUME(False, { LABEL: "value" }) },
-        //  { ALT: () => $.SUBRULE($.cueExpr, { LABEL: "cueCall" }) },
         { ALT: () => $.CONSUME1(Identifier, { LABEL: "value" }) },
       ]);
     });
-
 
 
     $.RULE("genericParamList", () => {
@@ -1837,70 +1854,103 @@ export function cstToAst(cst) {
   // cueAudio(...) AST Builder
   // ------------------------------------------------------------
   const audioNode =
-    cst.children?.cueAudioTop?.[0] ||
-    (cst.name === "cueAudioTop" ? cst : null);
+  cst.children?.cueAudioTop?.[0] ||
+  (cst.name === "cueAudioTop" ? cst : null);
 
-  if (audioNode) {
+if (audioNode) {
 
-    const list = audioNode.children.genericParamList?.[0];
-    const items = list?.children?.genericParam || [];
+  const list = audioNode.children.genericParamList?.[0];
+  const items = list?.children?.genericParam || [];
 
-    // Generic dictionary
-    const params = {};
+  const params = {};
 
-    for (const p of items) {
-      const key = p.children.key?.[0]?.image;
-      const token =
-        p.children.value?.[0] ||
-        p.children.NumberLiteral?.[0] ||
-        p.children.StringLiteral?.[0] ||
-        p.children.True?.[0] ||
-        p.children.False?.[0] ||
-        p.children.Identifier?.[0] ||
-        null;
+  for (const p of items) {
+    const key = p.children.key?.[0]?.image;
+    if (!key) continue;
 
-      if (!key || !token) continue;
+    const valNode = p.children.value?.[0];
 
-      let raw = token.image.replace(/^"|"$/g, ""); // strip quotes
+    // ⭐ NEW: Check for simpleFuncCall FIRST
+    if (valNode?.name === "simpleFuncCall") {
+      const fname = valNode.children.Identifier?.[0]?.image?.toLowerCase();
+      const argsCst = valNode.children.animValue ?? [];
 
-      // Convert common numerics / bools automatically:
-      let val =
-        raw === "true" ? true :
-          raw === "false" ? false :
-            isNaN(raw) ? raw :
-              Number(raw);
+      if ((fname === "rand" || fname === "irand") && argsCst.length === 2) {
+        const getNum = (node) => {
+          if (node?.children?.NumberLiteral?.[0]) {
+            return Number(node.children.NumberLiteral[0].image);
+          }
+          return NaN;
+        };
+        const min = getNum(argsCst[0]);
+        const max = getNum(argsCst[1]);
 
-      params[key] = val;  // ← store generically
+        if (Number.isFinite(min) && Number.isFinite(max)) {
+          params[key] = { type: "funcCall", name: fname, args: [min, max] };
+          continue;
+        }
+      }
+      params[key] = { type: "funcCall", name: fname, args: [] };
+      continue;
     }
 
-    // ✅ Normalization layer — small & declarative
-    const {
-      src,
-      amp = 1,
-      loop = 1,
-      toggle = false,
-      fade,
-      fadeIn = fade,
-      fadeOut = fade,
-      uid = src // <— default uid to src if not provided
-    } = params;
+    // ⭐ EXISTING: Standard token extraction
+    const token =
+      valNode ||
+      p.children.NumberLiteral?.[0] ||
+      p.children.StringLiteral?.[0] ||
+      p.children.True?.[0] ||
+      p.children.False?.[0] ||
+      p.children.Identifier?.[0] ||
+      null;
 
-    // const cueExpr = `audio(${Object.entries(params)
-    //   .map(([k,v]) => `${k}:${v}`)
-    //   .join(",")})`;
+    if (!token) continue;
 
-    return {
-      type: "cueAudio",
-      src,
-      amp,
-      loop,
-      fadeIn: fadeIn ?? 0,
-      fadeOut: fadeOut ?? 0,
-      toggle,
-      uid,
-      //  cueExpr
-    };
+    let raw;
+    if (token.children?.NumberLiteral?.[0]) {
+      raw = token.children.NumberLiteral[0].image;
+    } else if (token.children?.StringLiteral?.[0]) {
+      raw = token.children.StringLiteral[0].image?.replace?.(/^"|"$/g, "");
+    } else if (token.children?.Identifier?.[0]) {
+      raw = token.children.Identifier[0].image;
+    } else {
+      raw = token.image?.replace?.(/^"|"$/g, "") ?? token.image;
+    }
+
+    if (raw === undefined || raw === null) continue;
+
+    let val =
+      raw === "true" ? true :
+      raw === "false" ? false :
+      isNaN(raw) ? raw :
+      Number(raw);
+
+    params[key] = val;
   }
+
+  const {
+    src,
+    amp = 1,
+    loop = 1,
+    toggle = false,
+    fade,
+    fadeIn = fade,
+    fadeOut = fade,
+    uid = src
+  } = params;
+
+  return {
+    type: "cueAudio",
+    src,
+    amp,
+    loop,
+    fadeIn: fadeIn ?? 0,
+    fadeOut: fadeOut ?? 0,
+    toggle,
+    uid,
+    params  // ⭐ Added params for runtime access to pan, etc.
+  };
+}
 
 
 // ------------------------------------------------------------
@@ -1915,14 +1965,41 @@ if (audioPoolNode) {
   const list = audioPoolNode.children.genericParamList?.[0];
   const items = list?.children?.genericParam || [];
 
-  // Generic dictionary (same as cueAudio)
   const params = {};
 
   for (const p of items) {
     const key = p.children.key?.[0]?.image;
+    if (!key) continue;
 
+    const valNode = p.children.value?.[0];
+
+    // ⭐ NEW: Check for simpleFuncCall FIRST
+    if (valNode?.name === "simpleFuncCall") {
+      const fname = valNode.children.Identifier?.[0]?.image?.toLowerCase();
+      const argsCst = valNode.children.animValue ?? [];
+
+      if ((fname === "rand" || fname === "irand") && argsCst.length === 2) {
+        const getNum = (node) => {
+          if (node?.children?.NumberLiteral?.[0]) {
+            return Number(node.children.NumberLiteral[0].image);
+          }
+          return NaN;
+        };
+        const min = getNum(argsCst[0]);
+        const max = getNum(argsCst[1]);
+
+        if (Number.isFinite(min) && Number.isFinite(max)) {
+          params[key] = { type: "funcCall", name: fname, args: [min, max] };
+          continue;
+        }
+      }
+      params[key] = { type: "funcCall", name: fname, args: [] };
+      continue;
+    }
+
+    // ⭐ EXISTING: Standard token extraction
     const token =
-      p.children.value?.[0] ||
+      valNode ||
       p.children.NumberLiteral?.[0] ||
       p.children.StringLiteral?.[0] ||
       p.children.True?.[0] ||
@@ -1930,15 +2007,20 @@ if (audioPoolNode) {
       p.children.Identifier?.[0] ||
       null;
 
-    if (!key || !token) continue;
+    if (!token) continue;
 
-    // NOTE: funcCall values are objects — don't mutate them
-    if (token.type === "funcCall") {
-      params[key] = token;
-      continue;
+    let raw;
+    if (token.children?.NumberLiteral?.[0]) {
+      raw = token.children.NumberLiteral[0].image;
+    } else if (token.children?.StringLiteral?.[0]) {
+      raw = token.children.StringLiteral[0].image?.replace?.(/^"|"$/g, "");
+    } else if (token.children?.Identifier?.[0]) {
+      raw = token.children.Identifier[0].image;
+    } else {
+      raw = token.image?.replace?.(/^"|"$/g, "") ?? token.image;
     }
 
-    let raw = token.image?.replace?.(/^"|"$/g, "") ?? token.image;
+    if (raw === undefined || raw === null) continue;
 
     let val =
       raw === "true" ? true :
@@ -1966,10 +2048,9 @@ if (audioPoolNode) {
     mode,
     uid,
     group,
-    params          // keep full dictionary for runtime
+    params
   };
 }
-
 
 
 // ------------------------------------------------------------
@@ -1988,9 +2069,55 @@ if (audioImpulseNode) {
 
   for (const p of items) {
     const key = p.children.key?.[0]?.image;
+    if (!key) continue;
 
+    const valNode = p.children.value?.[0];
+
+    // CASE 1: simpleFuncCall (e.g., rand(-1,1), rand("10%","60%"))
+    if (valNode?.name === "simpleFuncCall") {
+      const fname = valNode.children.Identifier?.[0]?.image?.toLowerCase();
+      const argsCst = valNode.children.animValue ?? [];
+
+      // Extract args - handle both NumberLiteral and StringLiteral
+      const args = argsCst.map(arg => {
+        // NumberLiteral
+        if (arg.children?.NumberLiteral?.[0]) {
+          return Number(arg.children.NumberLiteral[0].image);
+        }
+        // StringLiteral - preserve the string (for percentages like "50%")
+        if (arg.children?.StringLiteral?.[0]) {
+          // Remove surrounding quotes
+          const str = arg.children.StringLiteral[0].image;
+          return str.replace(/^["']|["']$/g, "");
+        }
+        // Direct token
+        if (arg.image !== undefined) {
+          const img = arg.image;
+          // Check if it's a quoted string
+          if ((img.startsWith('"') && img.endsWith('"')) || 
+              (img.startsWith("'") && img.endsWith("'"))) {
+            return img.slice(1, -1);
+          }
+          // Try as number
+          const num = Number(img);
+          return isNaN(num) ? img : num;
+        }
+        return null;
+      });
+
+      params[key] = {
+        type: "funcCall",
+        name: fname,
+        args: args
+      };
+      
+      console.log(`[audioImpulse parser] ${key} = ${fname}(${args.join(", ")})`);
+      continue;
+    }
+
+    //  CASE 2: Standard token extraction
     const token =
-      p.children.value?.[0] ||
+      valNode ||
       p.children.NumberLiteral?.[0] ||
       p.children.StringLiteral?.[0] ||
       p.children.True?.[0] ||
@@ -1998,15 +2125,21 @@ if (audioImpulseNode) {
       p.children.Identifier?.[0] ||
       null;
 
-    if (!key || !token) continue;
+    if (!token) continue;
 
-    // preserve function calls like rand(...)
-    if (token.type === "funcCall") {
-      params[key] = token;
-      continue;
+    // Handle nested value children
+    let raw;
+    if (token.children?.NumberLiteral?.[0]) {
+      raw = token.children.NumberLiteral[0].image;
+    } else if (token.children?.StringLiteral?.[0]) {
+      raw = token.children.StringLiteral[0].image?.replace?.(/^["']|["']$/g, "");
+    } else if (token.children?.Identifier?.[0]) {
+      raw = token.children.Identifier[0].image;
+    } else {
+      raw = token.image?.replace?.(/^["']|["']$/g, "") ?? token.image;
     }
 
-    let raw = token.image?.replace?.(/^"|"$/g, "") ?? token.image;
+    if (raw === undefined || raw === null) continue;
 
     let val =
       raw === "true" ? true :
@@ -2022,8 +2155,8 @@ if (audioImpulseNode) {
     glob,
     format = "wav",
     mode = "shuffle",
-    rate = 30,          // events / minute
-    jitter = 0,         // 0–1
+    rate = 30,
+    jitter = 0,
     lifetime = "region",
     uid,
     group
@@ -2040,7 +2173,7 @@ if (audioImpulseNode) {
     lifetime,
     uid,
     group,
-    params            // keep original dict for runtime
+    params
   };
 }
 
@@ -2122,15 +2255,12 @@ if (audioImpulseNode) {
   }
 
   // ------------------------------------------------------------
-
-  // ------------------------------------------------------------
   // extractValue(vNode) — unified value normalizer for animValue
-  // ------------------------------------------------------------
   // ---------------------------------------------------------------------------
   // Extract a value from animValue (numbers, strings, identifiers, arrays,
   // pattern calls, AND simple function calls like fadein(500))
   // ---------------------------------------------------------------------------
-  // 
+  
   function extractValue(vNode) {
     if (!vNode || !vNode.children) return null;
 
@@ -2213,8 +2343,6 @@ if (audioImpulseNode) {
   }
 
 
-
-
   // ---------------------------------------------------------------------------
   // extractPatternCall(node) — wrapper around convertPatternNodeToAST()
   // ---------------------------------------------------------------------------
@@ -2227,7 +2355,6 @@ if (audioImpulseNode) {
       return null;
     }
   }
-
 
   // ---------------------------------------------------------------------------
   // Simple function-call extractor: fadein(500) → { type:"func", name:"fadein", args:[500] }
@@ -2243,7 +2370,6 @@ if (audioImpulseNode) {
       args: node.children.animValue ?? []
     };
   }
-
 
   // ============================================================================
   // shared helper animation AST builders (with instrumentation)
@@ -2338,7 +2464,7 @@ if (audioImpulseNode) {
   // ============================================================================
   // 🔹 Fallback (unknown cue)
   // ============================================================================
-  console.warn("[CueDSL] ⚠️ Unrecognized CST structure:", cst.name);
+  console.warn("[CueDSL] Unrecognized CST structure:", cst.name);
   return { type: "cueUnknown", args: [] };
 }
 
@@ -2347,7 +2473,6 @@ if (audioImpulseNode) {
 // 4️⃣ MAIN ENTRY
 // ============================================================================
 export function parseCueToAST(input) {
-
 
   if (input.trim().startsWith("use(")) {
     // console.warn("[CueDSL] Skipping 'use(...)' directive");
