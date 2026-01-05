@@ -29,15 +29,17 @@ import {
   pausePlayback, resumePlayback, jumpToCueId, hideControls, showControls
 } from './oscillaTransport.js';
 
-import {startStopwatch, stopStopwatch, resetStopwatch,
-  resumeStopwatch, setupStopwatchFullscreenToggle} from './oscillaTimers.js';
+import {
+  startStopwatch, stopStopwatch, resetStopwatch,
+  resumeStopwatch, setupStopwatchFullscreenToggle
+} from './oscillaTimers.js';
 
 
-import {handleCueTrigger, checkCueTriggers, parseCueParams, resetTriggeredCues, assignCues} from './oscillaCueDispatcher.js';
+import { handleCueTrigger, checkCueTriggers, parseCueParams, resetTriggeredCues, assignCues } from './oscillaCueDispatcher.js';
 
 
 import { handleStopCue } from './oscillaStop.js';
-import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues } from "./oscillaAudio.js";
+import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues, checkImpulseRegions } from "./oscillaAudio.js";
 import { dismissPauseCountdown, pauseDismissClickHandler, handlePauseCue } from "./oscillaPause.js";
 
 // ===========================
@@ -657,6 +659,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (window._skipTriggerFrame > 0) window._skipTriggerFrame--;
     else await checkCueTriggers?.(window.elapsedTime);
+
+    // ⭐ region-lifetime audioImpulse watcher
+    if (typeof checkImpulseRegions === "function") {
+      checkImpulseRegions();
+    }
 
 
     // ----------------------------------

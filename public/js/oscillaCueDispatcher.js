@@ -52,7 +52,10 @@ import { handleRotateCue } from "./oscillaAnimationRotate.js";
 import { handleScaleCue } from "./oscillaAnimationScale.js";
 import { handleO2PCue } from "./oscillaAnimationO2p.js";
 import { handlePageCue } from "./oscillaPage.js";
-import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues } from "./oscillaAudio.js";
+import {
+  handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues,
+  handleAudioPoolCue, handleAudioImpulseCue
+} from "./oscillaAudio.js";
 import { propagate } from "./oscillaPropagate.js";
 import { handleSpeedCue, handleSpeedRamp } from "./oscillaSpeed.js";
 import { stopAllCueTexts } from "./oscillaText.js";
@@ -364,6 +367,23 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
     case "cueAudioStop":
       return stopAudioCue(ast.filename || ast.file);
 
+
+    // AUDIO POOL — single-event randomised selection
+    case "cueAudioPool": {
+      console.log("[dispatch] audioPool AST →", ast);
+      return handleAudioPoolCue(ast, cueElement, { fromCueTrigger: true });
+    }
+
+    // AUDIO IMPULSE — long-running process
+    case "cueAudioImpulse": {
+      console.log("[dispatch] audioImpulse AST →", ast);
+      return handleAudioImpulseCue(ast, cueElement, { fromCueTrigger: true });
+    }
+
+
+
+
+
     default:
       console.warn(`[CueDSL] ⚠ Unsupported cue type: ${ast.type}`);
       return;
@@ -418,7 +438,7 @@ function splitCueId(id) {
     .map(s => s.endsWith(")") ? s : s + ")");
 }
 
-const CUE_PREFIX_RE = /^(?:cue:)?(oscCtrl|osc|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;
+const CUE_PREFIX_RE = /^(?:cue:)?(oscCtrl|osc|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|audioPool|audioImpulse|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;
 
 /**
  * assignCues(svgRoot)

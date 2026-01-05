@@ -1,93 +1,153 @@
+# Audio Cues --- `audio`, `audioPool`, `audioImpulse`
 
-# `cueAudio` — Trigger Audio Playback (Local or OSC-Based)
+This document describes the **current behaviour implemented in code**,
+without legacy underscore syntax.
 
-The `cueAudio(...)` cue allows playback of audio files from either the browser (via WaveSurfer.js) or through external OSC-compatible environments such as SuperCollider, Pure Data (Pd), Max, or similar tools.
+Oscilla's audio system provides three related cue types:
 
----
+-   **audio(...)** --- play a specific file
+-   **audioPool(...)** --- select one file from a discovered folder
+-   **audioImpulse(...)** --- stochastic repeated triggering from a pool
 
-## 🔤 Syntax
+All cues use generic key:value parameter syntax.
 
-```
-cueAudio(filename)_amp(1.0)_loop(1)_ext(wav)
-```
+------------------------------------------------------------------------
 
-- `filename` → The name of the audio file (with or without extension).
-- `amp(value)` → Playback volume (0.0 to 1.0). Default: `1.0`.
-- `loop(value)` → Number of loops. Use `0` for infinite looping. Default: `1`.
-- `ext(value)` → File extension if not included in filename (e.g. `wav`, `mp3`).
+## 1. `audio(...)` --- Play a Single File
 
----
+Lowest‑level audio playback building block.
 
-## ✅ Examples
+### Example
 
-### Local browser-based playback
-```
-cueAudio(kick)_amp(0.8)
-cueAudio(drum-loop.wav)_loop(0)
-```
+    audio(src:kick, amp:0.9, loop:1, fade:0.3)
 
-### Explicit extension and volume
-```
-cueAudio(ambient)_ext(ogg)_amp(0.4)
-```
+### Parameters
 
----
+  key                meaning
+  ------------------ --------------------------------------------
+  `src` (required)   filename/stem, `.wav` auto‑added
+  `amp`              gain 0--1 (default 1)
+  `loop`             1=once, N\>1 repeats, 0=infinite
+  `fade`             applies to both fadeIn/fadeOut
+  `fadeIn`           fade‑in seconds
+  `fadeOut`          fade‑out seconds
+  `toggle`           second trigger stops instead of restarting
+  `uid`              playback identity (default = src)
 
-## 🔈 Playback Modes
+Files load from the project `/audio` folder, falling back to shared
+`/audio`.
 
-### 1. ✅ Local browser playback (WaveSurfer.js)
+Playback state is tracked so UI and buttons can reflect on/off.
 
-By default, if this client is marked as the **audio master**, the cue will:
-- Load the audio file from the `/audio/` folder
-- Play it using WaveSurfer.js in the browser
-- Respect parameters like `amp(...)`, `loop(...)`, `fadein(...)`, and `fadeout(...)`
+------------------------------------------------------------------------
 
-### 2. ✅ OSC-based audio triggering
+## 2. `audioPool(...)` --- One‑Shot Selection From a Folder
 
-The same cue also sends a WebSocket message to the server of type:
+A pool is built dynamically by scanning a folder --- you never list
+filenames manually.
 
-```json
-{
-  "type": "osc_audio_trigger",
-  "filename": "drone.wav",
-  "volume": 0.7,
-  "loop": 2,
-  "timestamp": 1746516500
-}
-```
+    audioPool(
+      path:sfx/birds,
+      format:wav,
+      mode:shuffle,
+      amp:rand(0.2,0.8),
+      fadein:0.05,
+      fadeout:0.2,
+      poly:4,
+      uid:birdsA
+    )
 
-This allows external audio engines (e.g. SuperCollider, Pd, etc.) to trigger and manage playback in sync with the score.
+### Behaviour
 
----
+-   server enumerates files in `path:`
+-   every trigger selects **one** file
+-   optional randomisation per trigger
+-   overlays show which file played
+-   optional OSC mirror
 
-## 🎛️ Audio Master Role
+### Parameters
 
-Only one client should be responsible for **local audio playback** (e.g. connected to the speakers).
+  key                   meaning
+  --------------------- ----------------------------------
+  `path` (required)     folder inside project audio
+  `glob`                optional filter hint
+  `format`              extension (default wav)
+  `mode`                `shuffle` or `rand`
+  `amp`                 number or `rand(a,b)`
+  `fadein`, `fadeout`   per‑hit fades
+  `loop`                loop the selected file
+  `poly`                overlapping voices (0=unlimited)
+  `uid`                 identity of this pool
+  `osc`, `oscaddr`      optional OSC mirroring
 
-- By default, `window.isPlaybackMaster = false`
-- This prevents all clients from playing audio simultaneously
-- You can **toggle this role in the GUI** (e.g. checkbox or menu option)
-- When enabled, this client will handle `cueAudio(...)` locally
+Polyphony applies **per pool**.
 
-```js
-if (!window.isPlaybackMaster) {
-  console.log("Skipping local audio playback — not audio master");
-  return;
-}
-```
+------------------------------------------------------------------------
 
----
+## 3. `audioImpulse(...)` --- Stochastic Repeating Process
 
-## 🚫 Notes
+Uses the same pool logic, but runs autonomously and keeps firing hits.
 
-- If a cue does not specify an extension, it defaults to `.wav`
-- Extensions already present in the filename are preserved
-- Clients not designated as playback masters will still forward OSC messages
+    audioImpulse(
+      path:sfx/rain,
+      rate:40,
+      jitter:0.4,
+      amp:rand(0.1,0.5),
+      fadeout:0.25,
+      poly:6,
+      lifetime:process
+    )
 
----
+### Timing
 
-## 🧩 Related Cues
+  key        meaning
+  ---------- ---------------------------------------------
+  `rate`     events per minute
+  `jitter`   randomisation 0--1
+  `poly`     overlapping voices (default 6, 0=unlimited)
 
-- [`cuePause(...)`](cuePause.md) — pause with optional countdown and jump
-- [`cueRepeat(...)`](cueRepeat.md) — structured loop and jump logic
-- [`cueTraverse(...)`](cueTraverse.md) — animate objects along paths or between points
+### Lifetime Modes
+
+  value       behaviour
+  ----------- ----------------------------------------------------
+  `process`   runs until stopped
+  `region`    runs only while playhead is inside the cue element
+
+In region mode overlays update live and disappear when leaving the
+region.
+
+OSC mirrors each hit if enabled.
+
+------------------------------------------------------------------------
+
+## Random Expressions
+
+Where supported:
+
+    amp:rand(0.2,0.9)
+    fadeout:rand(0.05,0.3)
+
+Evaluated **per hit**.
+
+------------------------------------------------------------------------
+
+## Stopping
+
+-   internal stop on fade/toggle
+-   region exit cleans the process
+-   global helpers (where implemented):
+    -   stopAudioImpulse(uid)
+    -   stopAllAudio()
+
+------------------------------------------------------------------------
+
+## Quick Examples
+
+    // drone
+    audio(src:drone, loop:0, fade:2)
+
+    // percussive palette
+    audioPool(path:sfx/wood, mode:shuffle, poly:5)
+
+    // rainfall texture inside a passage
+    audioImpulse(path:sfx/rain, rate:30, jitter:0.5, lifetime:region)

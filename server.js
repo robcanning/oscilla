@@ -133,6 +133,45 @@ app.use('/docs', express.static(path.join(process.cwd(), 'public/docs/md_docs'))
 
 // app.use(express.static('dist'));
 
+app.get("/api/audio-list/:project/:dir*", (req, res) => {
+  const project = req.params.project;
+  const dirPart = req.params.dir || "";
+
+  const dirPath = path.join(
+    process.cwd(),
+    "public",
+    "scores",
+    project,
+    "audio",
+    dirPart
+  );
+
+  try {
+    if (!fs.existsSync(dirPath)) {
+      return res.status(404).json({ files: [] });
+    }
+
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+    const files = entries
+      .filter(e => e.isFile())
+      .map(e => e.name)
+      .filter(name => /\.(wav|aiff|aif|mp3|ogg)$/i.test(name));
+
+    res.json({ files });
+
+  } catch (err) {
+    console.error("[API] audio-list failed:", err);
+    res.status(500).json({ error: "Could not read directory" });
+  }
+});
+
+
+
+
+
+
+
 
 app.post("/save-preferences/:project", express.json(), (req, res) => {
   const project = req.params.project;

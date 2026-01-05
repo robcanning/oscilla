@@ -10,6 +10,11 @@
  * @param {string} cueId - e.g. "cueAudioStop(noise.wav)" or "cueAudioStop()"
  * @param {object} cueParams - e.g. { choice: "noise.wav", fadeOut: 200 }
  */
+
+
+import { createOscOverlay } from "./oscillaOSC.js";
+
+
 export async function handleAudioStopCue(cueId, cueParams = {}) {
   const fadeOutMs = cueParams.fadeOut ?? 120;
   const choice = cueParams.choice || cueId.match(/\(([^)]+)\)/)?.[1];
@@ -313,4 +318,537 @@ document.getElementById("stop-audio-button")?.addEventListener("click", () => {
 
   console.log("[AUDIO] ✅ All audio voices cleared.");
 });
+
+
+// stubs to develop
+// =============================================================
+// 🎲 audioPool(...) — single hit from randomized pool
+// =============================================================
+
+// cache pool lists per uid
+const audioPools = window.audioPools || (window.audioPools = new Map());
+
+function evalMaybeRandom(v) {
+  if (!v) return v;
+
+  // function-call AST: { type:'funcCall', name:'rand', args:[a,b] }
+  if (typeof v === "object" && v.type === "funcCall") {
+    if (v.name === "rand" && v.args?.length === 2) {
+      const a = Number(v.args[0]);
+      const b = Number(v.args[1]);
+      if (!isNaN(a) && !isNaN(b)) {
+        return a + Math.random() * (b - a);
+      }
+    }
+
+    // fallback — unexpected func
+    return null;
+  }
+
+  return v;
+}
+
+
+
+
+async function ensureAudioPool(uid, params) {
+  if (audioPools.has(uid)) return audioPools.get(uid);
+
+  const { path, project } = params;
+
+  // Guess current project if not passed
+  const projectName =
+    project ||
+    window.currentProject ||
+    (window.preferences && window.preferences.projectTitle) ||
+    "default";
+
+  const api = `/api/audio-list/${projectName}/${path}`;
+
+  let files = [];
+
+  try {
+    const res = await fetch(api);
+    const json = await res.json();
+    files = Array.isArray(json.files) ? json.files : [];
+  } catch (err) {
+    console.warn("[audioPool] Failed to load audio list:", err);
+  }
+
+  const pool = {
+    files,
+    mode: params.mode || "shuffle",
+    cursor: 0
+  };
+
+  audioPools.set(uid, pool);
+  return pool;
+}
+
+
+
+export async function handleAudioPoolCue(ast, el, opts = {}) {
+  try {
+    const params = ast.params || ast;
+
+    const {
+      path,
+      glob,
+      format = "wav",
+      mode = "shuffle",
+      uid = `${path || "pool"}-${glob || "all"}`,
+
+      amp,
+      fadein,
+      fadeout,
+      loop = 1,
+
+      osc,
+      oscaddr
+    } = params;
+
+    if (!path) {
+      console.warn("[audioPool] Missing path:", params);
+      return;
+    }
+
+    const pool = await ensureAudioPool(uid, { path, glob, format, mode });
+
+    if (!pool?.files?.length) {
+      console.warn("[audioPool] No matching files:", params);
+      return;
+    }
+
+    let file = null;
+
+    // selection logic
+    if (pool.mode === "rand") {
+      file = pool.files[Math.floor(Math.random() * pool.files.length)];
+    } else {
+      // shuffle (no repeat until exhausted)
+      file = pool.files[pool.cursor % pool.files.length];
+      pool.cursor++;
+
+      // reshuffle when looped
+      if (pool.cursor >= pool.files.length) {
+        pool.files = [...pool.files].sort(() => Math.random() - 0.5);
+        pool.cursor = 0;
+      }
+    }
+
+    const evaluatedAmp = evalMaybeRandom(amp) ?? 1;
+    const evaluatedFadeIn = evalMaybeRandom(fadein) ?? 0;
+    const evaluatedFadeOut = evalMaybeRandom(fadeout) ?? 0;
+
+    let name = file.endsWith(`.${format}`) ? file : `${file}.${format}`;
+    const filename = path ? `${path}/${name}` : name;
+
+    // polyphony control
+    const poly = Number(params.poly ?? (params.overlap ? 99 : 1));
+
+    let playUid = uid;
+
+    // If more than one allowed, generate unique instance IDs
+    if (poly > 1) {
+      playUid = `${uid}__${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+    }
+
+    const cue = {
+      type: "cueAudio",
+      src: filename,
+      uid: playUid,
+      amp: Math.max(0, Math.min(1, Number(evaluatedAmp))),
+      fadeIn: Number(evaluatedFadeIn),
+      fadeOut: Number(evaluatedFadeOut),
+      loop: Number(loop) || 1,
+      toggle: false
+    };
+
+    // ⭐ AUDIO OVERLAY - show path and filename
+    if (el) {
+      // Create a temporary overlay that shows the played file
+      const overlay = createAudioOverlay({
+        anchorEl: el,
+        label: `🔊 ${path}`,
+        mode: "auto"
+      });
+      
+      // Update with filename
+      overlay.update(file);
+      overlay.position();
+      
+      // Auto-destroy after a short time (since audioPool is a one-shot)
+      setTimeout(() => {
+        overlay.destroy();
+      }, 1500);
+    }
+
+    // optional OSC announcement
+    if (osc || oscaddr) {
+      try {
+        sendOSCMessage({
+          type: "osc_audio_pool",
+          uid,
+          filename,
+          amp: cue.amp,
+          fadeIn: cue.fadeIn,
+          fadeOut: cue.fadeOut,
+          addr: oscaddr || "/audio/client/pool"
+        });
+      } catch (err) {
+        console.warn("[audioPool OSC] failed:", err);
+      }
+    }
+
+    return handleAudioCue(cue);
+
+  } catch (err) {
+    console.error("[audioPool] error:", err);
+  }
+}
+
+
+// =============================================================
+// 🌧 audioImpulse(...) — stochastic repeating process
+// =============================================================
+
+const audioImpulses = window.audioImpulses || (window.audioImpulses = new Map());
+
+function computeInterval(rate, jitter = 0) {
+  if (!rate || rate <= 0) return 2.0;
+
+  const base = 60 / rate; // events per minute → seconds between hits
+
+  if (!jitter || jitter <= 0) return base;
+
+  // jitter: 0 → stable, 1 → fully random (0..2x)
+  const min = Math.max(0.01, base * (1 - jitter));
+  const max = base * (1 + jitter);
+
+  return min + Math.random() * (max - min);
+}
+
+async function ensureImpulsePool(uid, params) {
+  // reuse the pool cache from audioPool
+  return ensureAudioPool(uid, params);
+}
+
+function scheduleNextImpulse(state) {
+  const { uid } = state;
+
+  if (state.stopped) return;
+
+  const interval = computeInterval(state.rate, state.jitter);
+
+  state.timer = setTimeout(async () => {
+
+    if (state.stopped) return;
+
+    try {
+      await playImpulseHit(state);
+    } catch (err) {
+      console.warn("[audioImpulse] play failed:", err);
+    }
+
+    scheduleNextImpulse(state);
+
+  }, interval * 1000);
+}
+
+
+
+
+async function playImpulseHit(state) {
+  const { uid, params, pool } = state;
+
+  if (!pool?.files?.length) return;
+
+  let file;
+
+  if (pool.mode === "rand") {
+    file = pool.files[Math.floor(Math.random() * pool.files.length)];
+  } else {
+    file = pool.files[pool.cursor % pool.files.length];
+    pool.cursor++;
+
+    if (pool.cursor >= pool.files.length) {
+      pool.files = [...pool.files].sort(() => Math.random() - 0.5);
+      pool.cursor = 0;
+    }
+  }
+
+  const amp = evalMaybeRandom(params.amp) ?? 1;
+  const fadeIn = evalMaybeRandom(params.fadein) ?? 0;
+  const fadeOut = evalMaybeRandom(params.fadeout) ?? 0;
+
+  // PATH + EXTENSION
+  const path = params.path || "";
+  const format = params.format || "wav";
+
+  let name = file.endsWith(`.${format}`) ? file : `${file}.${format}`;
+  const filename = path ? `${path}/${name}` : name;
+
+  // ⭐ Update overlay with current filename
+  if (state._overlay) {
+    state._overlay.update(file);
+    state._overlay.position();
+  }
+
+  // POLYPHONY
+  const basePoly = params.poly === 0 ? 0 : (params.poly ?? 6);
+
+  const playUid =
+    basePoly === 1
+      ? uid
+      : `${uid}__${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+
+  const cue = {
+    type: "cueAudio",
+    src: filename,
+    uid: playUid,
+    amp: Math.max(0, Math.min(1, Number(amp))),
+    fadeIn: Number(fadeIn),
+    fadeOut: Number(fadeOut),
+    loop: 1,
+    toggle: false
+  };
+
+  // optional OSC mirror
+  if (params.osc || params.oscaddr) {
+    try {
+      sendOSCMessage({
+        type: "osc_audio_impulse",
+        uid: playUid,
+        filename,
+        amp: cue.amp,
+        fadeIn: cue.fadeIn,
+        fadeOut: cue.fadeOut,
+        addr: params.oscaddr || "/audio/client/impulse"
+      });
+    } catch (err) {
+      console.warn("[audioImpulse OSC] failed:", err);
+    }
+  }
+
+  return handleAudioCue(cue);
+}
+
+
+
+// =============================================================
+// ⭐ CORRECTED handleAudioImpulseCue function
+// =============================================================
+
+export async function handleAudioImpulseCue(ast, el, opts = {}) {
+  try {
+    const params = ast.params || ast;
+
+    const {
+      path,
+      glob,
+      format = "wav",
+      mode = "shuffle",
+
+      rate = 30,       // events per minute
+      jitter = 0,
+
+      poly = 6,
+
+      uid = `impulse-${path || "pool"}`,
+      group = null
+    } = params;
+
+    if (!path) {
+      console.warn("[audioImpulse] Missing path:", params);
+      return;
+    }
+
+    // if already running → ignore (for now)
+    if (audioImpulses.has(uid)) {
+      console.log(`[audioImpulse] Already running: ${uid}`);
+      return;
+    }
+
+    const pool = await ensureImpulsePool(uid, { path, glob, format, mode });
+
+    if (!pool?.files?.length) {
+      console.warn("[audioImpulse] Empty pool:", params);
+      return;
+    }
+
+    // ⭐ Create overlay for audioImpulse (persistent while running)
+    let overlay = null;
+    if (el) {
+      overlay = createAudioOverlay({
+        anchorEl: el,
+        label: `🌧 ${path}`,
+        mode: "auto"
+      });
+      overlay.update("starting...");
+      overlay.position();
+    }
+
+    // Build the COMPLETE state object
+    const state = {
+      uid,
+      params: { ...params, poly },
+      rate: Number(rate),
+      jitter: Number(jitter),
+      pool,
+      stopped: false,
+      timer: null,
+      group,
+      
+      // Region lifetime support
+      _regionEl: el || null,
+      _skipFirstCheck: true,
+      lifetime: params.lifetime || "process",
+      
+      // ⭐ Store overlay reference for updates
+      _overlay: overlay
+    };
+
+    console.log("[audioImpulse:init]", {
+      uid,
+      lifetime: state.lifetime,
+      hasElement: !!el,
+      playheadX: window.getPlayheadX?.()
+    });
+
+    audioImpulses.set(uid, state);
+
+    // wait one interval before first hit
+    scheduleNextImpulse(state);
+
+  } catch (err) {
+    console.error("[audioImpulse] error:", err);
+  }
+}
+
+
+// =============================================================
+// ⭐ FIXED checkImpulseRegions - with proper entry tolerance
+// =============================================================
+
+export function checkImpulseRegions() {
+  if (!window.audioImpulses) return;
+
+  const playX = window.getPlayheadX?.();
+  if (playX == null) return;
+
+  for (const state of window.audioImpulses.values()) {
+    if (!state) continue;
+    if (state.lifetime !== "region") continue;
+    if (!state._regionEl) continue;
+
+    // Get fresh bounds every tick
+    const rect = state._regionEl.getBoundingClientRect();
+    const containerRect = window.scoreContainer?.getBoundingClientRect();
+    
+    // Convert rect to container-relative coords (same space as getPlayheadX)
+    const rectLeft = rect.left - (containerRect?.left || 0);
+    const rectRight = rect.right - (containerRect?.left || 0);
+    
+    const EPS = 1.5;
+    
+    // On first few ticks after trigger, be more forgiving on the entry side
+    let entryTolerance = EPS;
+    if (state._tickCount === undefined) state._tickCount = 0;
+    state._tickCount++;
+    
+    if (state._tickCount < 10) {
+      entryTolerance = 50;
+    }
+
+    const inside = !(playX < rectLeft - entryTolerance || playX > rectRight + EPS);
+
+    // ⭐ Keep overlay positioned
+    if (state._overlay) {
+      state._overlay.position();
+    }
+
+    // Only log on state change
+    if (state._lastInside !== inside) {
+      state._lastInside = inside;
+      console.log("[ImpulseRegion:tick]", {
+        uid: state.uid,
+        playX,
+        rectLeft,
+        rectRight,
+        inside,
+        tickCount: state._tickCount
+      });
+    }
+
+    // Only exit after we've been "inside" at least once
+    if (!inside && !state.stopped && state._wasInsideOnce) {
+      console.log("[ImpulseRegion:exit]", {
+        uid: state.uid,
+        playX,
+        rectLeft,
+        rectRight
+      });
+      
+      state.stopped = true;
+      stopAudioImpulse(state.uid);
+    }
+    
+    // Track if we've ever been inside
+    if (inside) {
+      state._wasInsideOnce = true;
+    }
+  }
+}
+
+
+export function stopAudioImpulse(uid) {
+  const st = audioImpulses.get(uid);
+  if (!st) return;
+
+  st.stopped = true;
+
+  if (st.timer) {
+    clearTimeout(st.timer);
+    st.timer = null;
+  }
+
+  // ⭐ Destroy overlay when impulse stops
+  if (st._overlay) {
+    st._overlay.destroy();
+    st._overlay = null;
+  }
+
+  audioImpulses.delete(uid);
+}
+
+
+
+
+export function createAudioOverlay({
+  anchorEl,
+  label = "🔊 audio",
+  mode = "auto",
+  track = true
+} = {}) {
+  
+  // Use the existing OSC overlay system
+  const overlay = createOscOverlay({
+    anchorEl,
+    label,
+    mode,
+    track,
+    anchorMode: "bbox"
+  });
+  
+  //  Apply audio-specific styling (slightly different color)
+  if (overlay.el) {
+    overlay.el.style.background = "rgba(0, 100, 200, 0.1)";
+    overlay.el.style.borderLeft = "2px solid rgba(0, 100, 200, 0.5)";
+  }
+  
+  return overlay;
+}
+
+
+
 

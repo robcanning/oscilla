@@ -79,6 +79,9 @@ const Pause = createToken({ name: "Pause", pattern: /\bpause\b/, longer_alt: Ide
 const Stop = createToken({ name: "Stop", pattern: /\bstop\b/, longer_alt: Identifier });
 const Nav = createToken({ name: "Nav", pattern: /nav\b/, longer_alt: Identifier });
 const Audio = createToken({ name: "Audio", pattern: /audio\b/ });
+const AudioPool = createToken({ name: "AudioPool", pattern: /audioPool\b/ });
+const AudioImpulse = createToken({ name: "AudioImpulse", pattern: /audioImpulse\b/ });
+
 const Button = createToken({ name: "Button", pattern: /button\b/ });
 const Rotate = createToken({ name: "Rotate", pattern: /\brotate\b/, longer_alt: Identifier });
 const Scale = createToken({ name: "Scale", pattern: /\bscale\b/, longer_alt: Identifier });
@@ -129,7 +132,7 @@ const PatternName = createToken({
 
 export const allTokens = [
   Cue, Fade, Page, Stopwatch, Video, Text, Pause, Stop,
-  Audio, Button, Nav,
+  Audio, AudioPool, AudioImpulse, Button, Nav,
   Rotate, Scale, ScaleXY, O2P,
   Osc, OscCtrl, OscCtrlNode,
   After, PatternName, Choose,
@@ -856,6 +859,17 @@ export class CueParser extends CstParser {
       $.SUBRULE($.genericParamList);  // <-- (src:..., amp:..., loop:...)
     });
 
+        $.RULE("cueAudioPoolTop", () => {
+      $.CONSUME(AudioPool);
+      $.SUBRULE($.genericParamList); 
+    });
+
+        $.RULE("cueAudioImpulseTop", () => {
+      $.CONSUME(AudioImpulse);
+      $.SUBRULE($.genericParamList);  
+    });
+
+
     // ------------------------------------------------------------
 
     $.RULE("cueButtonTop", () => {
@@ -961,6 +975,8 @@ export class CueParser extends CstParser {
         { ALT: () => $.SUBRULE($.cueStopTop) },
         { ALT: () => $.SUBRULE($.cueButtonTop) },
         { ALT: () => $.SUBRULE($.cueAudioTop) },
+        { ALT: () => $.SUBRULE($.cueAudioPoolTop) },
+        { ALT: () => $.SUBRULE($.cueAudioImpulseTop) },
         { ALT: () => $.SUBRULE($.cueRotateTop) },
         { ALT: () => $.SUBRULE($.cueScaleTop) },
         { ALT: () => $.SUBRULE($.cueO2PTop) },
@@ -1885,6 +1901,150 @@ export function cstToAst(cst) {
       //  cueExpr
     };
   }
+
+
+// ------------------------------------------------------------
+// audioPool(...)  AST Builder
+// ------------------------------------------------------------
+const audioPoolNode =
+  cst.children?.cueAudioPoolTop?.[0] ||
+  (cst.name === "cueAudioPoolTop" ? cst : null);
+
+if (audioPoolNode) {
+
+  const list = audioPoolNode.children.genericParamList?.[0];
+  const items = list?.children?.genericParam || [];
+
+  // Generic dictionary (same as cueAudio)
+  const params = {};
+
+  for (const p of items) {
+    const key = p.children.key?.[0]?.image;
+
+    const token =
+      p.children.value?.[0] ||
+      p.children.NumberLiteral?.[0] ||
+      p.children.StringLiteral?.[0] ||
+      p.children.True?.[0] ||
+      p.children.False?.[0] ||
+      p.children.Identifier?.[0] ||
+      null;
+
+    if (!key || !token) continue;
+
+    // NOTE: funcCall values are objects — don't mutate them
+    if (token.type === "funcCall") {
+      params[key] = token;
+      continue;
+    }
+
+    let raw = token.image?.replace?.(/^"|"$/g, "") ?? token.image;
+
+    let val =
+      raw === "true" ? true :
+      raw === "false" ? false :
+      isNaN(raw) ? raw :
+      Number(raw);
+
+    params[key] = val;
+  }
+
+  const {
+    path,
+    glob,
+    format = "wav",
+    mode = "shuffle",
+    uid,
+    group
+  } = params;
+
+  return {
+    type: "cueAudioPool",
+    path,
+    glob,
+    format,
+    mode,
+    uid,
+    group,
+    params          // keep full dictionary for runtime
+  };
+}
+
+
+
+// ------------------------------------------------------------
+// audioImpulse(...)  AST Builder
+// ------------------------------------------------------------
+const audioImpulseNode =
+  cst.children?.cueAudioImpulseTop?.[0] ||
+  (cst.name === "cueAudioImpulseTop" ? cst : null);
+
+if (audioImpulseNode) {
+
+  const list = audioImpulseNode.children.genericParamList?.[0];
+  const items = list?.children?.genericParam || [];
+
+  const params = {};
+
+  for (const p of items) {
+    const key = p.children.key?.[0]?.image;
+
+    const token =
+      p.children.value?.[0] ||
+      p.children.NumberLiteral?.[0] ||
+      p.children.StringLiteral?.[0] ||
+      p.children.True?.[0] ||
+      p.children.False?.[0] ||
+      p.children.Identifier?.[0] ||
+      null;
+
+    if (!key || !token) continue;
+
+    // preserve function calls like rand(...)
+    if (token.type === "funcCall") {
+      params[key] = token;
+      continue;
+    }
+
+    let raw = token.image?.replace?.(/^"|"$/g, "") ?? token.image;
+
+    let val =
+      raw === "true" ? true :
+      raw === "false" ? false :
+      isNaN(raw) ? raw :
+      Number(raw);
+
+    params[key] = val;
+  }
+
+  const {
+    path,
+    glob,
+    format = "wav",
+    mode = "shuffle",
+    rate = 30,          // events / minute
+    jitter = 0,         // 0–1
+    lifetime = "region",
+    uid,
+    group
+  } = params;
+
+  return {
+    type: "cueAudioImpulse",
+    path,
+    glob,
+    format,
+    mode,
+    rate,
+    jitter,
+    lifetime,
+    uid,
+    group,
+    params            // keep original dict for runtime
+  };
+}
+
+
 
   // ------------------------------------------------------------
   // cue:pause(...)
