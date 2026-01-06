@@ -13,7 +13,7 @@ module.exports = function (eleventyConfig) {
   // ---- Copy Oscilla in-app docs into website after build ----
   eleventyConfig.on("afterBuild", () => {
     const src = path.join(__dirname, "../public/docs/site");
-    const dest = path.join(__dirname, "../docs/oscilla");
+    const dest = path.join(__dirname, "../docs/docs");
 
     if (fs.existsSync(src)) {
       // wipe old copy
