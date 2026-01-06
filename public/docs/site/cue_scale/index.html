@@ -1,0 +1,200 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_scale</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>cue:scale — Scaling Animation</h1>
+<p><code>scale()</code> adjusts the size of SVG objects using sequences, patterns, continuous pulsing, or independent X/Y scaling.</p>
+<hr>
+<h1>BASIC FORMS</h1>
+<h3>Uniform scaling</h3>
+<pre><code>scale(values:[1,1.5,1], dur:2)
+</code></pre>
+<h3>Non-uniform (XY)</h3>
+<pre><code>scaleXY([1,1.3],[1,0.6], dur:1)
+</code></pre>
+<h3>Continuous pulse</h3>
+<pre><code>scale(min:1, max:1.3, dur:2)
+</code></pre>
+<hr>
+<h1>TRIGGERING</h1>
+<ul>
+<li>automatic page-mode</li>
+<li>scroll edge</li>
+<li>cue activation</li>
+</ul>
+<hr>
+<h1>TRIGGER DELAY</h1>
+<h3><code>tdelay:&lt;seconds&gt;</code></h3>
+<p>Delays scaling start.</p>
+<pre><code>scale(values:[1,1.4,1], tdelay:3)
+</code></pre>
+<hr>
+<h1>PRESTART VISIBILITY</h1>
+<h3><code>prestate:&lt;show|hide|ghost&gt;</code></h3>
+<pre><code>scale([1,1.5,1], tdelay:4, prestate:ghost)
+</code></pre>
+<p>Initial scale is applied immediately.</p>
+<hr>
+<h1>SEQUENCES</h1>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>values</code></td>
+<td>uniform scale list</td>
+</tr>
+<tr>
+<td><code>x</code>, <code>y</code></td>
+<td>independent XY sequences</td>
+</tr>
+<tr>
+<td><code>dur</code></td>
+<td>duration per step</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>loop / once / alternate</td>
+</tr>
+<tr>
+<td><code>interp</code></td>
+<td>smooth / step</td>
+</tr>
+<tr>
+<td><code>hold</code></td>
+<td>pause (smooth only)</td>
+</tr>
+</tbody>
+</table>
+<p>Pattern forms (<code>Pseq</code>, <code>Prand</code>, etc.) supported for all parameters.</p>
+<hr>
+<h1>CONTINUOUS SCALING</h1>
+<pre><code>scale(min:1, max:1.4, dur:1.5, loop:0)
+</code></pre>
+<hr>
+<h1>UID — Live Updates</h1>
+<pre><code>scale(values:[1,1.2,1], uid:s1)
+scale(uid:s1, dur:0.5)
+</code></pre>
+<hr>
+<h1>FULL PARAMETER LIST</h1>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>values</code></td>
+<td>scalar sequence</td>
+</tr>
+<tr>
+<td><code>x</code>, <code>y</code></td>
+<td>axis-specific sequences</td>
+</tr>
+<tr>
+<td><code>dur</code></td>
+<td>step duration</td>
+</tr>
+<tr>
+<td><code>hold</code></td>
+<td>pause</td>
+</tr>
+<tr>
+<td><code>ease</code></td>
+<td>tween curve</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>loop logic</td>
+</tr>
+<tr>
+<td><code>interp</code></td>
+<td>smooth/step</td>
+</tr>
+<tr>
+<td><code>uid</code></td>
+<td>animation identity</td>
+</tr>
+<tr>
+<td><code>trig</code></td>
+<td>trigger</td>
+</tr>
+<tr>
+<td><code>tdelay</code></td>
+<td>delay after trigger</td>
+</tr>
+<tr>
+<td><code>prestate</code></td>
+<td>pre-start visual state</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h1>EXAMPLES</h1>
+<pre><code>scale([1,2,1], dur:2, tdelay:3)
+scaleXY([1,1.4],[1,0.6], dur:1)
+scale(Pseq([1,1.5,1],inf), dur:Prand([0.5,1],inf))
+</code></pre>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

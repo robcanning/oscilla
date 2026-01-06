@@ -1,0 +1,290 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_o2p</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>cue:o2p — Object-to-Path Animation</h1>
+<p><code>o2p(...)</code> animates an SVG object along a named <code>&lt;path&gt;</code>.<br>
+It supports path traversal, directional modes, rotation modes, looping, OSC output,
+partial-path motion, trigger-based activation, delayed start, and visual pre-start states.</p>
+<hr>
+<h1>BASIC FORM</h1>
+<pre><code>o2p(path:&lt;id&gt;, dur:&lt;seconds&gt;, mode:fwd)
+</code></pre>
+<p>Required:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>path</code></td>
+<td>The ID of the <code>&lt;path&gt;</code> element to follow</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h1>TIMING</h1>
+<h3><code>dur:&lt;seconds&gt;</code></h3>
+<p>Duration of one full traversal of the path.</p>
+<pre><code>o2p(path:orbit, dur:6)
+</code></pre>
+<p>In <code>mode:alt</code>, the full A→B→A cycle lasts <code>dur</code> seconds.</p>
+<h3><code>tdelay:&lt;seconds&gt;</code></h3>
+<p>Delays the start of the animation after the cue triggers.</p>
+<pre><code>o2p(path:orbit, tdelay:3)
+</code></pre>
+<p><code>tdelay</code> is real-time and independent of score position.</p>
+<hr>
+<h1>PRESTART VISIBILITY</h1>
+<h3><code>prestate:&lt;show|hide|ghost&gt;</code></h3>
+<p>Controls how the object looks before the animation begins:</p>
+<ul>
+<li><code>show</code>  — fully visible immediately</li>
+<li><code>hide</code>  — invisible until start</li>
+<li><code>ghost</code> — semi-transparent until start</li>
+</ul>
+<p>The object is positioned at its correct starting location before motion begins.</p>
+<pre><code>o2p(path:orbit, tdelay:4, prestate:hide)
+</code></pre>
+<hr>
+<h1>DIRECTION MODES</h1>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>forward</code> / <code>fwd</code></td>
+<td>0 → 1 along path</td>
+</tr>
+<tr>
+<td><code>reverse</code> / <code>rev</code></td>
+<td>1 → 0</td>
+</tr>
+<tr>
+<td><code>alternate</code> / <code>alt</code></td>
+<td>back-and-forth motion</td>
+</tr>
+</tbody>
+</table>
+<pre><code>o2p(path:curve, mode:alt, dur:8)
+</code></pre>
+<hr>
+<h1>PATH SEGMENTS</h1>
+<pre><code>o2p(path:ring, start:0.2, end:0.8)
+</code></pre>
+<p>The object travels only between normalized positions <code>start</code> and <code>end</code>.</p>
+<hr>
+<h1>ROTATION</h1>
+<table>
+<thead>
+<tr>
+<th><code>rotate:</code></th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>none</code></td>
+<td>no rotation</td>
+</tr>
+<tr>
+<td><code>aligned</code></td>
+<td>align to tangent direction</td>
+</tr>
+<tr>
+<td><code>locked</code></td>
+<td>fixed heading using <code>rotlock</code></td>
+</tr>
+<tr>
+<td><code>spin</code></td>
+<td>continuous rotation (<code>rotspeed</code>, <code>rotdir</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>Additional keys:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rotoffset</code></td>
+<td>add angular offset</td>
+</tr>
+<tr>
+<td><code>rotlock</code></td>
+<td>fixed heading in degrees</td>
+</tr>
+<tr>
+<td><code>rotspeed</code></td>
+<td>seconds per full rotation</td>
+</tr>
+<tr>
+<td><code>rotdir</code></td>
+<td>±1 direction multiplier</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h1>LOOPING</h1>
+<pre><code>o2p(path:orbit, loop:3)
+o2p(path:orbit, loop:0)   // infinite
+</code></pre>
+<hr>
+<h1>OSC OUTPUT</h1>
+<pre><code>o2p(path:orbit, osc:true)
+</code></pre>
+<p>Emits:</p>
+<pre><code>/obj2path &lt;uid&gt; &lt;normX&gt; &lt;normY&gt; &lt;angle&gt;
+</code></pre>
+<hr>
+<h1>TRIGGERING</h1>
+<ul>
+<li><code>trig:auto</code> — starts automatically in page mode</li>
+<li><code>trig:edge</code> — starts when the playhead intersects in scroll mode</li>
+<li>cues may also be activated programmatically</li>
+<li><code>tdelay</code> applies after the trigger is detected</li>
+</ul>
+<hr>
+<h1>LIVE UPDATE (<code>uid:</code>)</h1>
+<pre><code>o2p(path:ring, uid:a1)
+o2p(uid:a1, mode:alt)
+</code></pre>
+<p>Later cues with the same <code>uid</code> modify running animations.</p>
+<hr>
+<h1>FULL PARAMETER LIST</h1>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>path</code></td>
+<td>required path reference</td>
+</tr>
+<tr>
+<td><code>dur</code></td>
+<td>motion duration</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>direction mode</td>
+</tr>
+<tr>
+<td><code>loop</code></td>
+<td>repeat count (<code>0</code> = infinite)</td>
+</tr>
+<tr>
+<td><code>start</code>, <code>end</code></td>
+<td>normalized path range</td>
+</tr>
+<tr>
+<td><code>rotate</code></td>
+<td>rotation behavior</td>
+</tr>
+<tr>
+<td><code>rotoffset</code>, <code>rotlock</code>, <code>rotspeed</code>, <code>rotdir</code></td>
+<td>rotation parameters</td>
+</tr>
+<tr>
+<td><code>ease</code></td>
+<td>easing preset</td>
+</tr>
+<tr>
+<td><code>osc</code></td>
+<td>OSC emission</td>
+</tr>
+<tr>
+<td><code>uid</code></td>
+<td>animation identity tag</td>
+</tr>
+<tr>
+<td><code>trig</code></td>
+<td>trigger mode</td>
+</tr>
+<tr>
+<td><code>tdelay</code></td>
+<td>time delay after trigger</td>
+</tr>
+<tr>
+<td><code>prestate</code></td>
+<td>show/hide/ghost before start</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h1>EXAMPLES</h1>
+<pre><code>o2p(path:orbitA, dur:8, tdelay:3, prestate:hide)
+o2p(path:spiral, rotate:aligned, rotoffset:-90)
+o2p(path:ring, start:0.2, end:0.9, mode:alt)
+o2p(path:circle, rotate:spin, rotspeed:2, rotdir:-1)
+</code></pre>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

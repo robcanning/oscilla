@@ -1,0 +1,335 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Cue Text</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>cue:text — OscillaScore Text Cue Reference</h1>
+<p>This document describes all features of the OscillaScore text engine, including
+<strong>slot-based layout</strong>, <strong>two-layer crossfades</strong>, <strong>duration/gap logic</strong>, <strong>looping</strong>, and <strong>ordering</strong>.</p>
+<hr>
+<h1>1. Basic Syntax</h1>
+<pre><code>text(
+  src:&lt;file or inline&gt;,
+  order:&lt;seq|rnd&gt;,
+  dur:&lt;seconds or range&gt;,
+  gap:&lt;seconds or range&gt;,
+  cross:&lt;0|1&gt;,
+  crossfade:&lt;ms or &quot;%&quot;&gt;,
+  loop:&lt;0|N&gt;,
+  target:&lt;center|self|elementId&gt;,
+  offsetX:&lt;px&gt;,
+  offsetY:&lt;px&gt;,
+  yslots:&lt;N&gt;,
+  yoffset:&lt;px&gt;,
+  yslotmode:&lt;sequence|singlestep|random|shuffle&gt;,
+  autostart:&lt;0|1&gt;,
+  style:&quot;CSS...&quot;
+)
+</code></pre>
+<p>All parameters are optional unless stated.</p>
+<hr>
+<h1>2. Content Source</h1>
+<h3><code>src:tzara.txt</code></h3>
+<p>Loads a <code>.txt</code> file from the project's text directory.</p>
+<h3><code>src:&quot;Hello world&quot;</code></h3>
+<p>Inline text string.</p>
+<p>Lines may be separated with:</p>
+<ul>
+<li>newline (<code> </code>)</li>
+<li>semicolon (<code>;</code>)</li>
+</ul>
+<hr>
+<h1>3. Unit Construction</h1>
+<h3><code>mode:line</code> <em>(default)</em></h3>
+<p>Each line is shown as a unit.</p>
+<h3><code>mode:word</code></h3>
+<p>Each word becomes a unit.</p>
+<h3><code>mode:char</code></h3>
+<p>Each character becomes a unit.</p>
+<hr>
+<h1>4. Duration &amp; Gap</h1>
+<h3><code>dur:3</code></h3>
+<p>Each unit shows for <strong>3 seconds</strong>.</p>
+<h3>Ranges</h3>
+<pre><code>dur:2-4
+gap:0.5-1.2
+</code></pre>
+<ul>
+<li>Duration is chosen per unit.</li>
+<li>Gaps produce blank time between units <strong>only when <code>cross:0</code></strong>.</li>
+</ul>
+<hr>
+<h1>5. Ordering</h1>
+<h3><code>order:seq</code></h3>
+<p>Units shown in natural order.</p>
+<h3><code>order:rnd</code></h3>
+<p>Units shuffled every cycle.</p>
+<hr>
+<h1>6. Looping</h1>
+<p>The loop behaviour:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>loop:0</code></td>
+<td>Infinite loop</td>
+</tr>
+<tr>
+<td><code>loop:N</code></td>
+<td>Play N cycles</td>
+</tr>
+<tr>
+<td>No loop param, <code>order:seq</code></td>
+<td>Play once</td>
+</tr>
+<tr>
+<td>No loop param, <code>order:rnd</code></td>
+<td>Loop infinitely</td>
+</tr>
+</tbody>
+</table>
+<p>Example infinite loop:</p>
+<pre><code>text(src:foo.txt, loop:0)
+</code></pre>
+<hr>
+<h1>7. Crossfade System</h1>
+<p>OscillaScore now uses a <strong>two-layer crossfade design</strong>:</p>
+<ul>
+<li>The <strong>old line</strong> fades out in its slot</li>
+<li>The <strong>new line</strong> fades in in its own slot</li>
+<li>Both remain visible simultaneously during overlap</li>
+<li>No teleporting, no slot-shifting during fade</li>
+</ul>
+<h3><code>cross:1</code></h3>
+<p>Enables overlapping crossfade.</p>
+<h3><code>cross:0</code></h3>
+<p>Fade-out → blank gap → fade-in.</p>
+<h3><code>crossfade:&quot;60%&quot;</code></h3>
+<p>Fade time = 60% of unit duration.</p>
+<h3><code>crossfade:800</code></h3>
+<p>Fade time = 800ms.</p>
+<hr>
+<h1>8. Slot-Based Vertical Layout</h1>
+<p>Slots override vertical placement completely.</p>
+<p>This system enables structured multi-line presentation.</p>
+<h3><code>yslots:N</code></h3>
+<p>Enable slot layout, N vertical “lanes”.</p>
+<p>Example:</p>
+<pre><code>yslots:3
+</code></pre>
+<p>Creates:</p>
+<pre><code>top
+center
+bottom
+</code></pre>
+<h3><code>yoffset:&lt;px&gt;</code></h3>
+<p>Distance between slots. Default: <code>100px</code>.</p>
+<h3>Slot Modes</h3>
+<h4><code>yslotmode:sequence</code></h4>
+<pre><code>1 → 2 → 3 → 1 → 2 → 3...
+</code></pre>
+<h4><code>yslotmode:singlestep</code></h4>
+<p>Bounces:</p>
+<pre><code>center → next → center → previous → center...
+</code></pre>
+<h4><code>yslotmode:random</code></h4>
+<p>Each unit goes to a random slot.</p>
+<h4><code>yslotmode:shuffle</code></h4>
+<p>Uses each slot once per cycle:</p>
+<pre><code>(3,1,2) → (2,3,1) → ...
+</code></pre>
+<h3>Behavior</h3>
+<ul>
+<li>Each line lives in exactly <strong>one</strong> slot.</li>
+<li>Crossfade overlaps use <strong>two different layers</strong>, one per slot.</li>
+<li>With high crossfade %, multiple lines may be visible across slots.</li>
+</ul>
+<p>This allows the reader to finish reading an old line while a new one appears.</p>
+<hr>
+<h1>9. Positioning</h1>
+<h3>Slots override Y-position entirely.</h3>
+<h3>Horizontal center with <code>offsetX</code></h3>
+<pre><code>left = 50% + offsetX
+</code></pre>
+<h3>If <code>yslots</code> is not enabled:</h3>
+<ul>
+<li><code>target:self</code> anchors to cue element</li>
+<li><code>target:&lt;id&gt;</code> anchors to an SVG element</li>
+<li><code>target:center</code> (default) centers onscreen</li>
+</ul>
+<hr>
+<h1>10. Examples</h1>
+<h3>Basic</h3>
+<pre><code>text(src:foo.txt, dur:3, autostart:1)
+</code></pre>
+<h3>Infinite random cycling</h3>
+<pre><code>text(src:foo.txt, order:rnd, dur:2, loop:0)
+</code></pre>
+<h3>Crossfade with 60% overlap</h3>
+<pre><code>text(src:foo.txt, dur:3, cross:1, crossfade:&quot;60%&quot;)
+</code></pre>
+<h3>Slot-based layout (3 lanes)</h3>
+<pre><code>text(
+  src:foo.txt,
+  dur:3,
+  cross:1,
+  crossfade:&quot;70%&quot;,
+  yslots:3,
+  yoffset:130,
+  yslotmode:singlestep,
+  autostart:1
+)
+</code></pre>
+<h3>Sequential slot cycling</h3>
+<pre><code>text(src:foo.txt, yslots:3, yslotmode:sequence)
+</code></pre>
+<h3>Random slots, no crossfade</h3>
+<pre><code>text(
+  src:foo.txt,
+  yslots:3,
+  yslotmode:random,
+  cross:0,
+  gap:1,
+  dur:2
+)
+</code></pre>
+<hr>
+<h1>11. Interaction</h1>
+<p>Clicking the text overlay cancels the sequence.</p>
+<h3><code>persist:1</code></h3>
+<p>Prevents the overlay from being removed during <code>stopAllCueTexts()</code>.</p>
+<hr>
+<h1>12. Stopping All Text</h1>
+<pre><code>stopAllCueTexts()
+</code></pre>
+<p>Removes all <strong>non-persistent</strong> text overlays.</p>
+<hr>
+<h1>13. Summary Table</h1>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src</code></td>
+<td>File or inline text</td>
+</tr>
+<tr>
+<td><code>order</code></td>
+<td>seq or rnd</td>
+</tr>
+<tr>
+<td><code>dur</code></td>
+<td>seconds or range</td>
+</tr>
+<tr>
+<td><code>gap</code></td>
+<td>seconds or range (non-cross only)</td>
+</tr>
+<tr>
+<td><code>cross</code></td>
+<td>1=overlap, 0=fade-out/in</td>
+</tr>
+<tr>
+<td><code>crossfade</code></td>
+<td>ms or percent</td>
+</tr>
+<tr>
+<td><code>loop</code></td>
+<td>0 infinite, N cycles</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>line / word / char</td>
+</tr>
+<tr>
+<td><code>yslots</code></td>
+<td>number of vertical lanes</td>
+</tr>
+<tr>
+<td><code>yoffset</code></td>
+<td>px between lanes</td>
+</tr>
+<tr>
+<td><code>yslotmode</code></td>
+<td>sequence, singlestep, random, shuffle</td>
+</tr>
+<tr>
+<td><code>offsetX/Y</code></td>
+<td>px offsets</td>
+</tr>
+<tr>
+<td><code>autostart</code></td>
+<td>begin immediately</td>
+</tr>
+<tr>
+<td><code>persist</code></td>
+<td>survive global stop</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h1>End of Document</h1>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

@@ -1,0 +1,190 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>anim_rotate</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>🔁 Rotation Animation Namespace — <code>r(...)</code></h1>
+<p>This module defines compact animation syntax for rotating SVG objects in Oscilla.</p>
+<h2>🧩 Base Format</h2>
+<pre><code>r(&lt;mode&gt;)_[modifiers...]
+</code></pre>
+<h2>🎛️ Modes</h2>
+<table>
+<thead>
+<tr>
+<th>Syntax</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>r(1)</code></td>
+<td>Continuous clockwise</td>
+</tr>
+<tr>
+<td><code>r(-1)</code></td>
+<td>Continuous anticlockwise</td>
+</tr>
+<tr>
+<td><code>r(0)</code></td>
+<td>No rotation</td>
+</tr>
+<tr>
+<td><code>r(deg[...])</code></td>
+<td>Stepped rotation (manual values)</td>
+</tr>
+<tr>
+<td><code>r(alt[min,max])</code></td>
+<td>Ping-pong rotation between two angles</td>
+</tr>
+<tr>
+<td><code>r(rnd[n])</code></td>
+<td>Fixed slice of n random angles</td>
+</tr>
+<tr>
+<td><code>r(rnd[nx,min,max])</code></td>
+<td>Looping random slice from range</td>
+</tr>
+<tr>
+<td><code>r(seq[...])</code></td>
+<td>Sequential rotation steps</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>⚙️ Modifiers</h2>
+<table>
+<thead>
+<tr>
+<th>Modifier</th>
+<th>Values</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_rpm(...)</code></td>
+<td>number</td>
+<td>Rotations per minute (for continuous)</td>
+</tr>
+<tr>
+<td><code>_bpm(...)</code></td>
+<td>number[,subdiv]</td>
+<td>Tempo-based speed (1 rotation per note)</td>
+</tr>
+<tr>
+<td><code>_speed(...)</code></td>
+<td>seconds</td>
+<td>Step duration (applies to <code>deg</code>, <code>rnd</code>, <code>alt</code>)</td>
+</tr>
+<tr>
+<td><code>_dur[...]</code></td>
+<td>list</td>
+<td>Per-step durations (for <code>deg</code>, <code>rnd</code>, <code>seq</code>)</td>
+</tr>
+<tr>
+<td><code>_seqdur(...)</code></td>
+<td>seconds</td>
+<td>Total time for full sequence</td>
+</tr>
+<tr>
+<td><code>_mode(...)</code></td>
+<td><code>loop</code>, <code>bounce</code></td>
+<td>For <code>seq[...]</code> direction control</td>
+</tr>
+<tr>
+<td><code>_osc(1)</code></td>
+<td>boolean</td>
+<td>Enable OSC output of current angle</td>
+</tr>
+<tr>
+<td><code>_throttle(...)</code></td>
+<td>Hz</td>
+<td>OSC message rate cap (default: 20Hz)</td>
+</tr>
+<tr>
+<td><code>_quant(1)</code></td>
+<td>boolean</td>
+<td>Quantize animation start to global BPM grid</td>
+</tr>
+<tr>
+<td><code>_t(1)</code></td>
+<td>boolean</td>
+<td>Defer animation until cue triggered</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>🛠️ Examples</h2>
+<pre><code>r(1)_rpm(30)
+r(-1)_bpm(120)
+r(deg[0,90,180,270])_speed(1.5)
+r(alt[45,135])_bpm(60)_osc(1)
+r(rnd[6])_speed(2)
+r(rnd[6x,0,360])_speed(0.5)_osc(1)
+r(seq[0,120,240])_bpm(90)_mode(bounce)_quant(1)
+</code></pre>
+<hr>
+<h2>🧠 Notes</h2>
+<ul>
+<li>All angles are interpreted in degrees</li>
+<li>Continuous modes ignore <code>speed</code>, <code>dur</code>, <code>seqdur</code></li>
+<li>Step-based modes (<code>deg</code>, <code>alt</code>, <code>rnd</code>, <code>seq</code>) accept quantized start via <code>_quant(1)</code></li>
+<li>OSC sends <code>/oscilla/rot</code> with <code>{ id, angle, radians, norm }</code></li>
+</ul>
+<hr>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

@@ -1,0 +1,154 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_video</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h2><code>cue:video</code> (Concise Reference)</h2>
+<p><strong>Purpose:</strong> Spawn and control HTML5 video overlays during a score.</p>
+<p><strong>Required</strong></p>
+<ul>
+<li><code>file:</code> Filename with optional extension (<code>.mp4</code> default if missing). Supports <code>mp4|webm|ogg</code>.</li>
+</ul>
+<p><strong>Placement &amp; Positioning</strong></p>
+<ul>
+<li><code>location:</code> <code>fixed</code> (default) | <code>scroll</code>
+<ul>
+<li><code>fixed</code> → pinned to viewport.</li>
+<li><code>scroll</code> → follows target/score scroll.</li>
+</ul>
+</li>
+<li><code>target:</code> <code>&lt;elementId&gt;</code> — centers the video on the target (if not fullscreen).</li>
+<li><code>offsetX:</code> / <code>offsetY:</code> pixel offsets applied after centering.</li>
+</ul>
+<p><strong>Size</strong></p>
+<ul>
+<li><code>size:</code>
+<ul>
+<li><code>fs</code> or <code>fullscreen</code> → covers viewport at <code>(0,0)</code> with <code>100vw×100vh</code> and <strong>passes clicks through</strong> by default.</li>
+<li><code>&lt;W&gt;</code> (e.g. <code>640</code>) → width in px, auto height.</li>
+<li><code>&lt;W&gt;x&lt;H&gt;</code> (e.g. <code>640x360</code>).</li>
+</ul>
+</li>
+</ul>
+<p><strong>Audio (Default Muted)</strong></p>
+<ul>
+<li><code>audio:</code> <code>0|1|true|false</code> — <strong>default is muted</strong>. Set <code>audio:1</code> (or <code>true</code>) to unmute.</li>
+</ul>
+<p><strong>Spawning / Reuse</strong></p>
+<ul>
+<li>By default, cues <strong>reuse</strong> an existing video matching the same <code>file + target</code>.</li>
+<li><code>uid:</code> <code>&lt;string&gt;</code> or <code>new:1</code> → <strong>force a new concurrent instance</strong> (even if one exists).</li>
+<li>Every instance receives <code>data-uid</code> for tracking; <code>data-key</code> = <code>file_target</code>.</li>
+</ul>
+<p><strong>Timing &amp; Playback</strong></p>
+<ul>
+<li><code>in:</code> seconds (seek start)</li>
+<li><code>out:</code> seconds (optional fade-out scheduling; pairs well with <code>fadeOut</code>)</li>
+<li><code>hold:</code> seconds (auto-remove after this duration, regardless of loop)</li>
+<li><code>loop:</code> <code>0</code> = infinite; <code>N</code> = loop count; omit = play once</li>
+<li><code>speed:</code> playback rate (e.g. <code>0.5</code>, <code>1.25</code>)</li>
+<li><code>opacity:</code> <code>0..1</code> (default <code>1</code>)</li>
+<li><code>fadeIn:</code> seconds; <code>fadeOut:</code> seconds</li>
+</ul>
+<p><strong>Interaction</strong></p>
+<ul>
+<li><strong>Fullscreen (<code>size:fs</code>)</strong>: uses <code>pointer-events:none</code> so the score behind remains draggable/clickable.
+<ul>
+<li>Add <code>clickable:1</code> to allow clicks <strong>on</strong> the fullscreen video (e.g., to close on click).</li>
+</ul>
+</li>
+<li>Non-fullscreen videos remain clickable; single-click removes them by default.</li>
+</ul>
+<p><strong>Removal</strong></p>
+<ul>
+<li>Ends when:
+<ul>
+<li>playback completes (no loop) <strong>or</strong></li>
+<li><code>loop</code> count is reached <strong>or</strong></li>
+<li><code>hold</code> expires <strong>or</strong></li>
+<li>user clicks (non-fs) / double-click overlay (if you implement) / explicit cue cleanup.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h3>Examples</h3>
+<ol>
+<li>
+<p><strong>Fullscreen, pass-through clicks, but allow click-to-close</strong></p>
+<pre><code>cue:video(file:intro.mp4,size:fs,clickable:1,audio:1,fadeIn:0.5)
+</code></pre>
+</li>
+<li>
+<p><strong>Windowed, anchored to a target, follows scroll, infinite loop</strong></p>
+<pre><code>cue:video(file:clip.webm,target:markerA,location:scroll,size:640x360,loop:0,opacity:0.9)
+</code></pre>
+</li>
+<li>
+<p><strong>Spawn a second independent instance via <code>uid</code></strong></p>
+<pre><code>cue:video(file:cam.mp4,uid:stageLeft,in:5,fadeIn:1,fadeOut:1,hold:20)
+</code></pre>
+</li>
+<li>
+<p><strong>Force new instance without specifying uid</strong></p>
+<pre><code>cue:video(file:teaser.mp4,new:1,in:2,out:10,fadeIn:0.5,fadeOut:0.5,speed:1.25)
+</code></pre>
+</li>
+</ol>
+<blockquote>
+<p><strong>Note:</strong> <code>size:fs</code> always positions at <code>(0,0)</code> and ignores target geometry; all other sizes center on <code>target</code> (or the cue position) with optional <code>offsetX/offsetY</code>. Default audio is muted; use <code>audio:1</code> to unmute. By default, same <code>file+target</code> cues reuse the existing element unless <code>uid</code> or <code>new:1</code> is supplied.</p>
+</blockquote>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

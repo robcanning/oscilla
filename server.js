@@ -113,23 +113,14 @@ app.get('/shared/*', (req, res, next) => {
   }
 });
 
-// --- Directory listing for /docs/... ---
-app.get('/docs/*', (req, res, next) => {
-  const subPath = req.params[0] || '';
-  const dir = path.join(process.cwd(), 'public/docs/md_docs', subPath);
-  try {
-    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
-      res
-        .type('html')
-        .send(listDirectory(dir, req.path.endsWith('/') ? req.path : req.path + '/'));
-    } else next();
-  } catch (err) {
-    next();
-  }
-});
+// --- Serve rendered Oscilla docs (Eleventy output) ---
+app.use(
+  "/docs",
+  express.static(path.join(process.cwd(), "public/docs/site"), {
+    extensions: ["html"], // lets /docs/cue_audio resolve to index.html
+  })
+);
 
-// --- Serve static files in /docs (Markdown etc.) ---
-app.use('/docs', express.static(path.join(process.cwd(), 'public/docs/md_docs')));
 
 // app.use(express.static('dist'));
 

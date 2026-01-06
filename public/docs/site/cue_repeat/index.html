@@ -1,0 +1,123 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_repeat</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1><code>cueRepeat</code> — Structured Playback Loops and Jumps</h1>
+<p>The <code>cueRepeat(...)</code> cue type enables controlled repetition of score sections using cue-based jump logic. It is designed for da capo, dal segno, and custom repeat behaviors.</p>
+<hr>
+<h2>🔤 Syntax</h2>
+<pre><code>cue_repeat_s(startId)_e(endId)_x(count)_r(resumeId)_d(direction)_a(action)
+</code></pre>
+<ul>
+<li><code>s(startId)</code> → ID of the cue where the repeat loop starts (<strong>required</strong>)</li>
+<li><code>e(endId)</code> → ID where the repeat loop ends (optional, defaults to current cue)</li>
+<li><code>x(count)</code> → Number of times to repeat the loop (<strong>required</strong>)</li>
+<li><code>r(resumeId)</code> → Cue to jump to after repeats complete (optional, defaults to cue location)</li>
+<li><code>d(direction)</code> → Direction of traversal (<code>forward</code> or <code>reverse</code>) (optional)</li>
+<li><code>a(action)</code> → What to do at loop end: <code>jump</code>, <code>pause</code>, or <code>none</code> (optional)</li>
+</ul>
+<hr>
+<h2>✅ Examples</h2>
+<h3>Repeat a single section 3 times</h3>
+<pre><code>cue_repeat_s(intro)_x(3)
+</code></pre>
+<h3>Repeat section from <code>A</code> to <code>B</code> 2 times, then jump to <code>C</code></h3>
+<pre><code>cue_repeat_s(A)_e(B)_x(2)_r(C)
+</code></pre>
+<hr>
+<h2>🛠️ Server-Side Logic (⚠️ Under Repair)</h2>
+<p>The server currently <strong>tracks active repeats</strong> and <strong>broadcasts loop state</strong> to clients. However:</p>
+<blockquote>
+<p>⚠️ <strong>BUG</strong>: Repeat coordination is currently broken in multi-client setups.</p>
+<ul>
+<li>Only one client handles jumps correctly</li>
+<li>Others may desync or re-trigger independently</li>
+</ul>
+</blockquote>
+<h3>❗TODO [HIGH PRIORITY]:</h3>
+<ul>
+<li>Fix server broadcast/resync logic so that all connected clients:
+<ul>
+<li>Share repeat state</li>
+<li>Jump together in sync</li>
+<li>Recover gracefully on reconnect</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>🔁 TODO: Support Nested Repeats</h2>
+<p>Nested or overlapping repeat blocks (e.g., a repeat inside a larger form) are not currently supported.</p>
+<blockquote>
+<p>🧩 <strong>Planned</strong>: Stack-based repeat state with entry/exit markers for nested structures.</p>
+</blockquote>
+<hr>
+<h2>🧠 Notes</h2>
+<ul>
+<li>A repeat is considered &quot;active&quot; once it is triggered</li>
+<li>After each loop, the playhead jumps back to <code>startId</code></li>
+<li>On final repeat, it jumps to <code>resumeId</code> or stays in place</li>
+<li>Use <code>cueRepeat(...)</code> cues at or near the end of the section being looped</li>
+</ul>
+<hr>
+<h2>🧩 Related Cues</h2>
+<ul>
+<li><a href="cuePause.md"><code>cuePause(...)</code></a> — pause playback with optional countdown</li>
+<li><a href="cueAudio.md"><code>cueAudio(...)</code></a> — play local or OSC-triggered audio</li>
+<li><a href="cueTraverse.md"><code>cueTraverse(...)</code></a> — animate objects through points or steps</li>
+</ul>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

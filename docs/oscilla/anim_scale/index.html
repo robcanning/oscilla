@@ -1,0 +1,168 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>anim_scale</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>🌀 Scale Animation Namespace (Modern Syntax)</h1>
+<p>This document describes the <strong>modern <code>scale</code> namespace format</strong> used in OscillaScore. All legacy formats (<code>s_seq_...</code>, <code>s[...]</code>) are deprecated.</p>
+<hr>
+<h2>✅ Format Overview</h2>
+<pre><code>s([...])        → uniform scale
+sXY([...])      → paired X/Y scale
+sX([...])       → X-only scale
+sY([...])       → Y-only scale
+</code></pre>
+<p>Each takes a list of values or XY pairs, with additional control via suffix arguments.</p>
+<hr>
+<h2>🎛️ Parameters</h2>
+<h3>Required</h3>
+<ul>
+<li><code>s(...)</code>, <code>sXY(...)</code>, <code>sX(...)</code>, <code>sY(...)</code> — animation data</li>
+</ul>
+<h3>Optional Arguments</h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mode(...)</code></td>
+<td>string</td>
+<td><code>loop</code> (default), <code>alt</code>, <code>bounce</code>, <code>once</code></td>
+</tr>
+<tr>
+<td><code>seqdur(...)</code></td>
+<td>number</td>
+<td>Total duration of full animation loop (in seconds)</td>
+</tr>
+<tr>
+<td><code>dur[...]</code></td>
+<td>numbers</td>
+<td>Relative duration weights for steps</td>
+</tr>
+<tr>
+<td><code>ease(...)</code></td>
+<td>number</td>
+<td>Easing code (0–9) or <code>ease[...]</code> list</td>
+</tr>
+<tr>
+<td><code>pivot(...)</code></td>
+<td>x,y</td>
+<td>Offset from object's center (e.g. <code>pivot(20,-10)</code>)</td>
+</tr>
+<tr>
+<td><code>_t(1)</code></td>
+<td>flag</td>
+<td>Defer playback (cue-triggered only)</td>
+</tr>
+<tr>
+<td><code>osc(1)</code></td>
+<td>flag</td>
+<td>Enable OSC output on each scale step/frame</td>
+</tr>
+<tr>
+<td><code>throttle(...)</code></td>
+<td>number (ms)</td>
+<td>Minimum ms between OSC sends (default 50)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>🎨 Examples</h2>
+<h3>1. Uniform loop</h3>
+<pre><code>s([1,1.2,1])_seqdur(2)_ease(3)
+</code></pre>
+<h3>2. Non-uniform XY</h3>
+<pre><code>sXY([[1,1],[1.2,0.8],[1,1]])_mode(alt)_seqdur(3)_ease(2)
+</code></pre>
+<h3>3. Regenerating random</h3>
+<pre><code>s(rnd(4x0.6-1.4x))_mode(loop)_seqdur(2)
+</code></pre>
+<h3>4. Triggerable scale burst</h3>
+<pre><code>s([1,1.5,1])_mode(once)_ease(5)_t(1)
+</code></pre>
+<h3>5. OSC scale loop with pivot</h3>
+<pre><code>s([1,2])_mode(alt)_pivot(50,-50)_osc(1)_throttle(30)
+</code></pre>
+<hr>
+<h2>🧠 Notes</h2>
+<ul>
+<li><code>pivot(x,y)</code> is <strong>relative to the object’s center</strong>, not the SVG root.</li>
+<li><code>s(...)</code> is required — legacy <code>s_seq_...</code> / <code>s[...]</code> are unsupported.</li>
+<li><code>OSC</code> messages are sent as:</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;osc_scale&quot;,
+  &quot;id&quot;: &quot;obj-id&quot;,
+  &quot;scaleX&quot;: 1.5,
+  &quot;scaleY&quot;: 1.2,
+  &quot;timestamp&quot;: 1710000000000
+}
+</code></pre>
+<hr>
+<h2>🔄 Compatibility</h2>
+<ul>
+<li>Fully supported: ✅ <code>startScale()</code> (modern)</li>
+<li>Observer-aware: ✅ Pauses/resumes when off-screen</li>
+<li>Triggerable: ✅ via <code>_t(1)</code></li>
+<li>Regenerating: ✅ random sequences with <code>x</code> flag</li>
+</ul>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

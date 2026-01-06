@@ -1,0 +1,115 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_media</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1><code>cueMedia(...)</code> — Media Overlay Cue</h1>
+<p>The <code>cueMedia(...)</code> cue allows you to display a timed fullscreen media overlay (SVG, image, or video)
+during score playback. The cue pauses the score, shows the media files in sequence, and resumes playback after a given duration or manual dismissal.</p>
+<hr>
+<h2>🧩 Syntax</h2>
+<pre><code>cueMedia(file1,file2,...)_dur(seconds)_interval(seconds)_shuffle(1)_random(1)_loop(1)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>file1,...</code></td>
+<td>Comma-separated list of media filenames (relative to <code>media/</code> folder)</td>
+</tr>
+<tr>
+<td><code>_dur(N)</code></td>
+<td>Total cue duration in seconds</td>
+</tr>
+<tr>
+<td><code>_interval(N)</code></td>
+<td>Duration for each item (optional; default = dur / number of files)</td>
+</tr>
+<tr>
+<td><code>_shuffle(1)</code></td>
+<td>Shuffle list once, then show each item once</td>
+</tr>
+<tr>
+<td><code>_random(1)</code></td>
+<td>Randomly choose and show files repeatedly until time runs out</td>
+</tr>
+<tr>
+<td><code>_loop(1)</code></td>
+<td>Loop through list repeatedly until duration is complete</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>✅ Examples</h2>
+<pre><code class="language-xml">cueMedia(logo.svg,alert.jpg)_dur(10)_shuffle(1)
+cueMedia(video.mp4)_dur(12)
+cueMedia(image1.jpg,image2.jpg,image3.jpg)_dur(15)_random(1)_interval(4)
+</code></pre>
+<hr>
+<h2>🛠 Behavior</h2>
+<ul>
+<li>Supports <code>.svg</code>, <code>.jpg</code>, <code>.png</code>, <code>.gif</code>, <code>.webp</code>, <code>.mp4</code>, <code>.webm</code>, <code>.ogg</code></li>
+<li>Auto-dismisses popup on timeout or video end</li>
+<li>User can dismiss with click or Escape key</li>
+<li>Media list is processed based on mode: <code>shuffle</code>, <code>random</code>, or <code>loop</code></li>
+</ul>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

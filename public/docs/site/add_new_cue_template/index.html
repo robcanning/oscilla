@@ -1,0 +1,164 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>add_new_cue_template</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h2>🔧 Template for Adding a New Cue Type</h2>
+<p>Follow this pattern to introduce any new <code>cue:&lt;type&gt;(...)</code> construct, such as <code>cue:metronome</code>, <code>cue:light</code>, or <code>cue:harmony</code>.<br>
+Each cue type requires <strong>three small additions</strong>: one in the grammar, one in the AST translator, and one in the runtime dispatcher.</p>
+<hr>
+<h3>🧱 Step 1 — Add Grammar Rule in <code>parser.js</code></h3>
+<p>Define the cue-specific rule using the existing <code>cue:page</code> pattern.<br>
+Use clear token labels for arguments so they can be extracted easily in <code>cstToAst()</code>.</p>
+<pre><code class="language-js">// ── cue:metronome(seq:7/16x2,3/4x4,bpm:92,style:pulse,showNumbers:1)
+$.RULE(&quot;metronomeCue&quot;, () =&gt; {
+  $.CONSUME(Identifier, { LABEL: &quot;metronomeKeyword&quot; }); // &quot;metronome&quot;
+  $.CONSUME(LParen);
+
+  $.MANY_SEP({
+    SEP: Comma,
+    DEF: () =&gt; {
+      $.CONSUME(Identifier, { LABEL: &quot;paramKey&quot; }); // seq, bpm, style, etc.
+      $.CONSUME(Colon);
+      $.OR([
+        { ALT: () =&gt; $.CONSUME(NumberLiteral, { LABEL: &quot;paramNumber&quot; }) },
+        { ALT: () =&gt; $.CONSUME(Identifier, { LABEL: &quot;paramIdent&quot; }) },
+        { ALT: () =&gt; $.CONSUME(StringLiteral, { LABEL: &quot;paramString&quot; }) },
+      ]);
+    },
+  });
+
+  $.CONSUME(RParen);
+});
+</code></pre>
+<p>Register it in your root cue selector:</p>
+<pre><code class="language-js">$.RULE(&quot;cueRoot&quot;, () =&gt; {
+  $.CONSUME(Cue);
+  $.CONSUME(Colon);
+  $.OR([
+    { ALT: () =&gt; $.SUBRULE($.pageCue) },
+    { ALT: () =&gt; $.SUBRULE($.audioCue) },
+    { ALT: () =&gt; $.SUBRULE($.metronomeCue) },   // ← new cue here
+    // ...
+  ]);
+});
+</code></pre>
+<hr>
+<h3>🧠 Step 2 — Extend <code>cstToAst()</code></h3>
+<p>Transform the CST node into a simple, uniform AST object:</p>
+<pre><code class="language-js">if (c.metronomeCue) {
+  const ch = c.metronomeCue[0].children;
+  const params = [];
+
+  const keys = ch.paramKey || [];
+  keys.forEach((k, i) =&gt; {
+    const key = k.image;
+    const val =
+      ch.paramNumber?.[i]?.image ||
+      ch.paramIdent?.[i]?.image ||
+      ch.paramString?.[i]?.image ||
+      null;
+    params.push({ type: key, value: val });
+  });
+
+  ast = { type: &quot;cueMetronome&quot;, args: params };
+}
+</code></pre>
+<hr>
+<h3>⚙️ Step 3 — Add a Runtime Handler in <code>cues.js</code></h3>
+<p>Create a function to execute the new cue’s behavior at runtime:</p>
+<pre><code class="language-js">export async function handleMetronomeCueFromAST(ast) {
+  const args = Object.fromEntries(ast.args.map(a =&gt; [a.type, a.value]));
+  console.log(&quot;[CueDSL] 🕒 Starting metronome with:&quot;, args);
+
+  // Example: initialize or sync a visual metronome
+  startNetworkMetronome({
+    bpm: Number(args.bpm) || 90,
+    sequence: args.seq || &quot;4/4x4&quot;,
+    style: args.style || &quot;pulse&quot;,
+    showNumbers: args.showNumbers === &quot;1&quot;,
+  });
+}
+</code></pre>
+<p>And register it in the unified dispatcher:</p>
+<pre><code class="language-js">export async function handleCueFromAST(ast) {
+  switch (ast.type) {
+    case &quot;cuePage&quot;:      return handlePageCueFromAST(ast);
+    case &quot;cueAudio&quot;:     return handleAudioCueFromAST(ast);
+    case &quot;cueMetronome&quot;: return handleMetronomeCueFromAST(ast);
+    // ...
+  }
+}
+</code></pre>
+<hr>
+<h3>✅ Result</h3>
+<p>After adding these three parts, you can use your new cue directly inside an SVG element ID:</p>
+<pre><code>id=&quot;cue:metronome(seq:7/16x2,3/4x4,bpm:92,style:pulse,showNumbers:1)&quot;
+</code></pre>
+<p>and it will be parsed, converted to an AST like:</p>
+<pre><code class="language-js">{
+  type: &quot;cueMetronome&quot;,
+  args: [
+    { type: &quot;seq&quot;, value: &quot;7/16x2,3/4x4&quot; },
+    { type: &quot;bpm&quot;, value: &quot;92&quot; },
+    { type: &quot;style&quot;, value: &quot;pulse&quot; },
+    { type: &quot;showNumbers&quot;, value: &quot;1&quot; }
+  ]
+}
+</code></pre>
+<p>and executed by <code>handleMetronomeCueFromAST()</code> in real time.</p>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

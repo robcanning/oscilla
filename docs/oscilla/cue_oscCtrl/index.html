@@ -1,0 +1,178 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_oscCtrl</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>oscCtrl --- Continuous Control Lanes (OSC)</h1>
+<p><code>oscCtrl</code> lets you draw a <strong>path in the score</strong> and use it as a live
+control lane for audio / electronics via OSC. As the playhead passes
+over the path, values are mapped and streamed to the audio engine.</p>
+<p>The path acts like a <strong>breakpoint automation curve</strong> tightly aligned to
+instrumental notation.</p>
+<hr>
+<h2>Basic Syntax</h2>
+<p>oscCtrl(
+addr:&quot;/fx/ring/freq&quot;,
+min:60,
+max:800,
+uid:ringModFreq
+)</p>
+<h3>Parameters</h3>
+<hr>
+<p>Param        Required             Type         Description</p>
+<hr>
+<p><code>addr</code>       ✔                    string       OSC address to control
+(joined under
+<code>/oscilla/control</code>)</p>
+<p><code>min</code>        ✖                    number       Minimum mapped value
+(default <code>0</code>)</p>
+<p><code>max</code>        ✖                    number       Maximum mapped value
+(default <code>1</code>)</p>
+<p><code>uid</code>        ✖                    string       Unique label (client‑side
+only, debugging)</p>
+<h2><code>mode</code>       ✖                    enum         <code>event</code> (default) or
+<code>continuous</code></h2>
+<p>The cue <strong>must be placed directly on a <code>&lt;path&gt;</code> element</strong>.</p>
+<hr>
+<h2>What gets sent</h2>
+<p>Given:</p>
+<p>addr:&quot;/fx/ring/freq&quot;</p>
+<p>Oscilla sends:</p>
+<p>/oscilla/control/fx/ring/freq   <value>   <t></p>
+<p>Where:</p>
+<ul>
+<li><strong>value</strong> → mapped Y position between <code>min</code> → <code>max</code></li>
+<li><strong>t</strong> → normalized X position along the path (0--1)</li>
+</ul>
+<p>Example:</p>
+<p>/oscilla/control/fx/ring/freq   726.06   0.27</p>
+<hr>
+<h2>Path Semantics</h2>
+<p>The path defines:</p>
+<ul>
+<li>
+<p>horizontal = <strong>time alignment</strong> with notation</p>
+</li>
+<li>
+<p>vertical = <strong>control value</strong></p>
+</li>
+<li>
+<p>Top of path → higher values</p>
+</li>
+<li>
+<p>Bottom of path → lower values</p>
+</li>
+</ul>
+<p>Zoom, scale, and SVG transforms are handled automatically.</p>
+<hr>
+<h2>Modes</h2>
+<h3><code>mode:event</code> (default)</h3>
+<p>Send only when the value <strong>changes meaningfully</strong>.</p>
+<p>oscCtrl(
+addr:&quot;/fx/pan&quot;,
+min:-1,
+max:1
+)</p>
+<p>Reduces controller spam and CPU noise.</p>
+<h3><code>mode:continuous</code></h3>
+<p>Send regularly while the playhead is inside the lane:</p>
+<p>oscCtrl(
+addr:&quot;/fx/pan&quot;,
+min:-1,
+max:1,
+mode:continuous
+)</p>
+<p>Useful for:</p>
+<ul>
+<li>scrubbing</li>
+<li>FM / modulation</li>
+<li>granular playback positions</li>
+</ul>
+<p>Messages are still <strong>throttled to ~30/s</strong>.</p>
+<hr>
+<h2>Recommended Uses</h2>
+<p>✔ ring modulation frequency<br>
+✔ panning automation<br>
+✔ filter cutoff / resonance<br>
+✔ spatialization<br>
+✔ cueing electronics transitions</p>
+<hr>
+<h2>Not Sent</h2>
+<p><code>oscCtrl</code> does <strong>not</strong> apply smoothing.<br>
+This should happen in the <strong>audio client</strong>, where it belongs.</p>
+<hr>
+<h2>Future Extensions</h2>
+<ul>
+<li><code>oscCtrlNode()</code> breakpoint nodes &amp; interpolation</li>
+<li>custom easing curves (exp / log)</li>
+<li>curve visualization overlays</li>
+</ul>
+<hr>
+<h2>Troubleshooting</h2>
+<p><strong>Nothing happens?</strong><br>
+Ensure the cue is attached to the <strong>path element itself</strong>, not a group.</p>
+<p><strong>OSC not received?</strong><br>
+Check the server receives:</p>
+<p>type: &quot;osc_control&quot;</p>
+<p>and that <code>/oscilla/control/*</code> is routed correctly.</p>
+<hr>
+<h2>Summary</h2>
+<p><code>oscCtrl</code> brings automation‑style control inside the score while
+remaining modular and OSC‑native.</p>
+<p>Compose gestures visually --- let the audio engine interpret.</p>
+<hr>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

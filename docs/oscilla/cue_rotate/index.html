@@ -1,0 +1,190 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_rotate</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>rotate() --- Rotation Cue</h1>
+<p><code>rotate(...)</code> rotates an SVG element using either:</p>
+<ul>
+<li><strong>continuous rotation</strong>, or</li>
+<li>a <strong>sequence / pattern of angle values</strong></li>
+</ul>
+<p>Rotation can be:</p>
+<ul>
+<li>smooth interpolated</li>
+<li>stepped</li>
+<li>looping, alternating, or one‑shot</li>
+<li>optionally sending OSC messages (with live overlays).</li>
+</ul>
+<hr>
+<h2>🔁 BASIC FORMS</h2>
+<h3>Continuous</h3>
+<p>rotate(dir:1, dur:1)</p>
+<h3>Sequence</h3>
+<p>rotate(values:[0,120,240], dur:2)</p>
+<h3>Pattern sequences</h3>
+<p>rotate(values:Pseq([0,45,10],inf), dur:Pseq([1,0.2,2],inf))</p>
+<hr>
+<h2>⚡ TRIGGERING</h2>
+<ul>
+<li><code>auto</code> (page load / mode)</li>
+<li><code>edge</code> (playhead collision)</li>
+<li>cue activation</li>
+</ul>
+<hr>
+<h2>⏱ TRIGGER DELAY --- <code>tdelay:&lt;seconds&gt;</code></h2>
+<p>Delays motion after trigger:</p>
+<p>rotate(values:[0,120,240], tdelay:2)</p>
+<hr>
+<h2>👻 PRESTART VISIBILITY --- <code>prestate:&lt;show|hide|ghost&gt;</code></h2>
+<p>Controls appearance before rotation begins.</p>
+<p>rotate(values:[0,90,180], tdelay:4, prestate:ghost)</p>
+<p>The element adopts the <strong>initial rotation angle immediately</strong>, then
+waits.</p>
+<hr>
+<h2>🎚 SEQUENCE PARAMETERS</h2>
+<p>Key        Meaning</p>
+<hr>
+<p><code>values</code>   list of angles or pattern
+<code>dur</code>      seconds per step (or pattern)
+<code>mode</code>     <code>loop</code>, <code>once</code>, <code>alternate</code>
+<code>interp</code>   <code>smooth</code> or <code>step</code>
+<code>hold</code>     pause after tween (smooth only)</p>
+<hr>
+<h2>🔄 CONTINUOUS ROTATION</h2>
+<p>rotate(dir:1, dur:2)
+rotate(dir:-1, dur:3, ease:&quot;easeInOutSine&quot;)</p>
+<ul>
+<li><code>dir:1</code> → clockwise</li>
+<li><code>dir:-1</code> → counter‑clockwise</li>
+<li><code>loop:0</code> (default) = infinite</li>
+</ul>
+<hr>
+<h2>🆔 UID --- Live Updates</h2>
+<p>UID lets multiple cues address the same animation:</p>
+<p>rotate(values:[0,90,180], uid:r1)
+rotate(uid:r1, dur:0.5)</p>
+<hr>
+<h2>🌐 OSC OUTPUT (optional)</h2>
+<p>Rotation can send OSC every frame or per‑step.</p>
+<p>Enable via:</p>
+<p>osc:1</p>
+<p>Specify an OSC address:</p>
+<p>rotate(values:[0,90,180], osc:1, oscaddr:&quot;/spatialisation/source1&quot;)</p>
+<h3>Payload format</h3>
+<p>Every message includes:</p>
+<p>Field         Meaning</p>
+<hr>
+<p><code>deg</code>         wrapped degrees <strong>0--360</strong>
+<code>rad</code>         radians (<code>deg * π/180</code>)
+<code>norm</code>        normalized 0--1 (<code>deg/360</code>)
+<code>uid</code>         animation UID
+<code>timestamp</code>   ms since epoch</p>
+<p>Example conceptual payload:</p>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;osc_rotate&quot;,
+  &quot;uid&quot;: &quot;r1&quot;,
+  &quot;deg&quot;: 135.0,
+  &quot;rad&quot;: 2.356,
+  &quot;norm&quot;: 0.375,
+  &quot;addr&quot;: &quot;/spatialisation/source1&quot;
+}
+</code></pre>
+<blockquote>
+<p>NOTE: Internally angles may accumulate, but outgoing OSC <strong>always
+wraps to 0--360</strong>.</p>
+</blockquote>
+<h3>On‑screen overlays</h3>
+<p>When OSC is enabled, a small overlay shows:</p>
+<p>/spatialisation/source1 — deg:135.0</p>
+<p>Overlays can be globally toggled.</p>
+<hr>
+<h2>📋 FULL PARAMETER LIST</h2>
+<p>Key          Description</p>
+<hr>
+<p><code>values</code>     angle sequence or pattern
+<code>dur</code>        duration or pattern
+<code>mode</code>       loop logic
+<code>interp</code>     step or smooth
+<code>hold</code>       pause after tween
+<code>dir</code>        direction (continuous mode)
+<code>ease</code>       easing curve
+<code>uid</code>        animation identity
+<code>trig</code>       trigger mode
+<code>tdelay</code>     trigger delay
+<code>prestate</code>   visual pre‑start state
+<code>osc</code>        enable OSC (0/1/2)
+<code>oscaddr</code>    explicit OSC address</p>
+<hr>
+<h2>⭐ EXAMPLES</h2>
+<p>rotate(values:[0,120,240], dur:4, tdelay:2)</p>
+<p>rotate(values:Pshuf([0,180],inf),
+dur:1,
+mode:alternate,
+osc:1,
+oscaddr:&quot;/fx/rot1&quot;)</p>
+<p>rotate(dir:-1, dur:3, prestate:hide, tdelay:1)</p>
+<hr>
+<h2>✔ Summary</h2>
+<ul>
+<li>declarative rotation cue</li>
+<li>works in page + scroll modes</li>
+<li>full control of timing + interpolation</li>
+<li>OSC‑ready with wrapped degrees, radians, and normalized values</li>
+<li>optional debug overlays</li>
+</ul>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

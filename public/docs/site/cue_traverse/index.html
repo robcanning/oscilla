@@ -1,0 +1,146 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_traverse</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1><code>cueTraverse</code> — Animate Objects Between SVG Points</h1>
+<p>The <code>cueTraverse(...)</code> cue animates an SVG object along a path defined by a list of point elements (<code>&lt;circle&gt;</code>, <code>&lt;rect&gt;</code>, or <code>&lt;ellipse&gt;</code>). It's useful for moving symbols, playheads, or visual elements dynamically across the score.</p>
+<hr>
+<h2>🔤 Syntax</h2>
+<pre><code>cue_traverse_p(p1,p2,p3)_o(objectId)_s(speed)_d(direction)_x(repeats)_e(easeType)_h(holdMs)_next(targetCue)
+</code></pre>
+<p>Each parameter is enclosed in its own parenthesis. The cue name and parameters can be written as a single underscore-delimited string.</p>
+<hr>
+<h2>🧩 Parameter Reference</h2>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>p(...)</code></td>
+<td>List of point IDs (e.g. <code>p(p1,p2,p3)</code>)</td>
+</tr>
+<tr>
+<td><code>o(...)</code></td>
+<td>Object ID to move</td>
+</tr>
+<tr>
+<td><code>s(...)</code></td>
+<td>Speed in pixels per second (e.g. <code>s(2.5)</code>)</td>
+</tr>
+<tr>
+<td><code>d(...)</code></td>
+<td>Direction: <code>0=forward</code>, <code>1=reverse</code>, <code>2=pingpong</code>, <code>3=random</code></td>
+</tr>
+<tr>
+<td><code>x(...)</code></td>
+<td>Number of repeats (<code>0 = infinite</code>)</td>
+</tr>
+<tr>
+<td><code>e(...)</code></td>
+<td>Easing type (0 = linear, 1–9 = anime.js presets)</td>
+</tr>
+<tr>
+<td><code>h(...)</code></td>
+<td>Hold time at each point in milliseconds</td>
+</tr>
+<tr>
+<td><code>_next(...)</code></td>
+<td>Optional cue to trigger after traversal ends</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>✅ Examples</h2>
+<h3>Traverse between 3 points once:</h3>
+<pre><code>cue_traverse_p(p1,p2,p3)_o(dot)_s(1.5)_x(1)
+</code></pre>
+<h3>Infinite pingpong movement:</h3>
+<pre><code>cue_traverse_p(p1,p2,p3)_o(dot)_d(2)_x(0)
+</code></pre>
+<h3>Traverse with hold, ease, and jump to another cue:</h3>
+<pre><code>cue_traverse_p(A,B,C)_o(cursor)_s(3)_e(2)_h(300)_next(cue_done)
+</code></pre>
+<hr>
+<h2>⚠️ Notes</h2>
+<ul>
+<li>Objects must be <code>&lt;circle&gt;</code>, <code>&lt;ellipse&gt;</code>, or <code>&lt;rect&gt;</code> to be correctly positioned.</li>
+<li><code>p(...)</code> must contain <strong>at least two</strong> valid point IDs.</li>
+<li><code>_next(...)</code> cue will only be triggered after <strong>final traversal loop</strong> finishes (or never, if infinite).</li>
+<li>Traversal will pause playback if <code>isPlaying</code> is false at start.</li>
+</ul>
+<hr>
+<h3>🎯 Triggering Other Objects via Intersections</h3>
+<p>As the animated object (defined via <code>o(...)</code>) moves through the points listed in <code>p(...)</code>, the system checks whether any point ID matches the <code>data-id</code> of other SVG elements.</p>
+<p>When a match is found:</p>
+<ul>
+<li>The corresponding element is <strong>animated using its <code>data-id</code> definition</strong></li>
+<li>This allows <code>cueTraverse</code> to function like a <strong>trigger engine</strong></li>
+<li>It’s useful for triggering visual pulses, spins, or dynamic elements connected to spatial locations in the score</li>
+</ul>
+<h4>🧪 Example</h4>
+<pre><code>c-t_p(p1,p2,p3)_o(pulsetrig01)
+</code></pre>
+<p>If you have an element like:</p>
+<pre><code class="language-html">&lt;circle id=&quot;pulse&quot; data-id=&quot;pulsetrig01 obj_scale_seq[1,1.5,1]_bounce&quot; /&gt;
+</code></pre>
+<p>When the animated object reaches a point named <code>pulsetrig01</code>, the element above will animate according to its <code>data-id</code>.</p>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

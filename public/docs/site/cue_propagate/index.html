@@ -1,0 +1,181 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_propagate</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>cue_propagate — Group-Level Parameter Propagation</h1>
+<p><code>propagate(...)</code> is a pre-parser macro that expands a cue or animation template across all direct children of an SVG <code>&lt;g&gt;</code> element. Each child receives a unique instance of the template with independently evaluated parameters.</p>
+<hr>
+<h2>Purpose</h2>
+<p>To apply variations of an animation or cue to <em>multiple similar objects</em> without manually writing separate IDs. Typical uses:</p>
+<ul>
+<li>evenly distributing random timing or values across many elements</li>
+<li>giving each object slightly different speed, scale, rotation, or other parameters</li>
+<li>generating unique <code>uid:</code> values for each item in a group</li>
+</ul>
+<p><code>propagate(...)</code> runs <strong>before cue/animation parsing</strong> and rewrites child element IDs into fully expanded DSL strings.</p>
+<hr>
+<h2>Syntax</h2>
+<pre><code>propagate(
+  TEMPLATE,
+  ARG1,
+  ARG2,
+  ...
+)
+</code></pre>
+<h3>• <code>TEMPLATE</code></h3>
+<p>A <strong>new-DSL animation or cue definition</strong>, e.g.:</p>
+<pre><code>scale(values:[${1}, ${2}], mode:alternate, dur:${3}, uid:circs)
+</code></pre>
+<h3>• <code>${n}</code> placeholders</h3>
+<p>Inside the template, <code>${1}</code>, <code>${2}</code>, <code>${3}</code>, ... are replaced with the <strong>evaluated values</strong> of <code>ARG1</code>, <code>ARG2</code>, <code>ARG3</code>, etc.</p>
+<p>Each <strong>occurrence</strong> is evaluated independently, allowing fresh randomisation.</p>
+<hr>
+<h2>UID Handling</h2>
+<ul>
+<li>If <code>uid:NAME</code> appears in the template → becomes <code>uid:NAME_0</code>, <code>uid:NAME_1</code>, …</li>
+<li>If no <code>uid:</code> is present → one is appended automatically:</li>
+</ul>
+<pre><code>uid:prop_GROUPINDEX_CHILDINDEX
+</code></pre>
+<p>Example: <code>uid:prop_3_2</code></p>
+<hr>
+<h2>Example</h2>
+<p>Group of 6 circles with unique scale range and timing between <strong>1–2</strong>:</p>
+<pre><code>propagate(
+  scale(values:[${1}, ${2}], mode:alternate, dur:${3}, uid:circs),
+  rnd(1,2),        // ${1}: min scale
+  rnd(1,2),        // ${2}: max scale
+  rnd(0.4,1.2)     // ${3}: duration
+)
+</code></pre>
+<p>Possible expanded IDs:</p>
+<pre><code>scale(values:[1.14,1.92], mode:alternate, dur:0.66, uid:circs_0)
+scale(values:[1.83,1.21], mode:alternate, dur:1.07, uid:circs_1)
+scale(values:[1.05,1.99], mode:alternate, dur:0.48, uid:circs_2)
+...
+</code></pre>
+<hr>
+<h2>Evaluation Rules</h2>
+<ul>
+<li>Arguments (<code>ARG1</code>, <code>ARG2</code>, …) may contain:
+<ul>
+<li><code>rnd(min,max)</code></li>
+<li><code>rnd([a,b,c])</code></li>
+<li>numeric literals</li>
+<li>string literals</li>
+</ul>
+</li>
+<li>Each <code>${n}</code> in the template triggers an independent evaluation of <code>ARGn</code>.</li>
+</ul>
+<p>This enables effects like:</p>
+<pre><code>scale(values:[${1},${1}], dur:${2})
+</code></pre>
+<p>Where the two <code>${1}</code> occurrences receive <strong>different random values</strong>.</p>
+<hr>
+<h2>Non-Recursive</h2>
+<p>Only <strong>direct children</strong> of the <code>&lt;g id=&quot;propagate(...)&quot;&gt;</code> are expanded.</p>
+<p>Nested groups are left as-is unless you manually apply propagate to them.</p>
+<hr>
+<h2>Execution Order</h2>
+<p><code>propagate(svgElement)</code> must run <strong>before any animation or cue parsing</strong>, typically inside <code>initializeSVG()</code>:</p>
+<pre><code class="language-js">// Expand propagate(...) groups before parsing
+propagate(svgElement);
+</code></pre>
+<p>If used in page overlays, it must run before <code>animationAssign(...)</code> and cue scanning.</p>
+<hr>
+<h2>Supported Contexts</h2>
+<ul>
+<li>Main score SVG</li>
+<li>Subpages / page mode SVG</li>
+<li>Cue-triggered dynamic page loads</li>
+</ul>
+<hr>
+<h2>When to Use</h2>
+<p>Use <code>propagate(...)</code> when:</p>
+<ul>
+<li>you have many similar shapes needing slight variation</li>
+<li>you want per-object timing/scale/rotation differences</li>
+<li>you want a template-based param generator for groups</li>
+<li>you want unique uids for each instance automatically</li>
+</ul>
+<hr>
+<h2>When Not to Use</h2>
+<p>Avoid propagate when:</p>
+<ul>
+<li>objects require coordinated timing (use shared seqdur instead)</li>
+<li>nested group structure must remain untouched</li>
+<li>ordering or indexing inside the SVG is unpredictable</li>
+</ul>
+<hr>
+<h2>Notes</h2>
+<ul>
+<li><code>propagate(...)</code> is <strong>not</strong> parsed by the DSL directly.</li>
+<li>It is a <em>preprocessor</em> that rewrites IDs into pure DSL expressions.</li>
+<li>After expansion, each child is parsed as if you wrote it manually.</li>
+</ul>
+<hr>
+<h2>Version Compatibility</h2>
+<p>This documentation refers to the <strong>new Oscilla DSL (2025)</strong> with:</p>
+<ul>
+<li>function-style cues</li>
+<li>named parameters</li>
+<li>canonical <code>uid:</code> handling</li>
+<li>no legacy <code>_uid(...)</code> microsyntax</li>
+</ul>
+<hr>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

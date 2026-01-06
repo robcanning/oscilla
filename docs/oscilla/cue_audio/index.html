@@ -1,0 +1,463 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Cue Audio</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>Audio Cues — <code>audio</code>, <code>audioPool</code>, <code>audioImpulse</code></h1>
+<p>Oscilla's audio system provides three related cue types:</p>
+<ul>
+<li><strong>audio(...)</strong> — play a specific file</li>
+<li><strong>audioPool(...)</strong> — select one file from a discovered folder</li>
+<li><strong>audioImpulse(...)</strong> — stochastic repeated triggering from a pool</li>
+</ul>
+<p>All cues use generic <code>key:value</code> parameter syntax.</p>
+<hr>
+<h2>1. <code>audio(...)</code> — Play a Single File</h2>
+<p>Lowest-level audio playback building block.</p>
+<h3>Example</h3>
+<pre><code>audio(src:kick, amp:0.9, loop:1, fade:0.3, pan:-0.5, pitch:1.2)
+</code></pre>
+<h3>Parameters</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src</code> (required)</td>
+<td>filename/stem, <code>.wav</code> auto-added</td>
+</tr>
+<tr>
+<td><code>amp</code></td>
+<td>gain 0–1 (default 1)</td>
+</tr>
+<tr>
+<td><code>pan</code></td>
+<td>stereo position -1 (left) to 1 (right), default 0</td>
+</tr>
+<tr>
+<td><code>pitch</code></td>
+<td>playback rate multiplier (default 1). Values &lt; 1 slow down, &gt; 1 speed up</td>
+</tr>
+<tr>
+<td><code>loop</code></td>
+<td>1=once, N&gt;1 repeats, 0=infinite</td>
+</tr>
+<tr>
+<td><code>fade</code></td>
+<td>applies to both fadeIn and fadeOut</td>
+</tr>
+<tr>
+<td><code>fadeIn</code></td>
+<td>fade-in seconds or percentage (e.g. <code>&quot;20%&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>fadeOut</code></td>
+<td>fade-out seconds or percentage (e.g. <code>&quot;50%&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>toggle</code></td>
+<td>second trigger stops instead of restarting</td>
+</tr>
+<tr>
+<td><code>uid</code></td>
+<td>playback identity (default = src)</td>
+</tr>
+</tbody>
+</table>
+<p>Files load from the project <code>/audio</code> folder, falling back to shared <code>/audio</code>.</p>
+<p>Playback state is tracked so UI and buttons can reflect on/off.</p>
+<hr>
+<h2>2. <code>audioPool(...)</code> — One-Shot Selection From a Folder</h2>
+<p>A pool is built dynamically by scanning a folder — you never list filenames manually.</p>
+<h3>Example</h3>
+<pre><code>audioPool(
+  path:sfx/birds,
+  format:wav,
+  mode:shuffle,
+  amp:rand(0.2, 0.8),
+  pan:rand(-1, 1),
+  pitch:rand(0.8, 1.2),
+  fadein:0.05,
+  fadeout:&quot;30%&quot;,
+  poly:4,
+  uid:birdsA,
+  osc:1,
+  oscaddr:&quot;/audio/pool/birds&quot;
+)
+</code></pre>
+<h3>Behaviour</h3>
+<ul>
+<li>Server enumerates files in <code>path:</code></li>
+<li>Every trigger selects <strong>one</strong> file</li>
+<li>Optional randomisation per trigger</li>
+<li>Overlays show filename and evaluated params (amp, pan, pitch)</li>
+<li>Optional OSC mirror sends each hit to external software</li>
+</ul>
+<h3>Parameters</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>path</code> (required)</td>
+<td>folder inside project audio</td>
+</tr>
+<tr>
+<td><code>glob</code></td>
+<td>optional filter hint</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>extension (default <code>wav</code>)</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td><code>shuffle</code> (no repeat until exhausted) or <code>rand</code> (pure random)</td>
+</tr>
+<tr>
+<td><code>amp</code></td>
+<td>number or <code>rand(a, b)</code></td>
+</tr>
+<tr>
+<td><code>pan</code></td>
+<td>stereo -1 to 1, or <code>rand(-1, 1)</code></td>
+</tr>
+<tr>
+<td><code>pitch</code></td>
+<td>playback rate, or <code>rand(a, b)</code></td>
+</tr>
+<tr>
+<td><code>fadein</code></td>
+<td>seconds or percentage string</td>
+</tr>
+<tr>
+<td><code>fadeout</code></td>
+<td>seconds or percentage string</td>
+</tr>
+<tr>
+<td><code>fade</code></td>
+<td>shorthand for both fadein and fadeout</td>
+</tr>
+<tr>
+<td><code>loop</code></td>
+<td>loop the selected file</td>
+</tr>
+<tr>
+<td><code>poly</code></td>
+<td>overlapping voices (default 1, 0=unlimited)</td>
+</tr>
+<tr>
+<td><code>uid</code></td>
+<td>identity of this pool</td>
+</tr>
+<tr>
+<td><code>osc</code></td>
+<td>enable OSC mirroring (1=on)</td>
+</tr>
+<tr>
+<td><code>oscaddr</code></td>
+<td>custom OSC address</td>
+</tr>
+</tbody>
+</table>
+<p>Polyphony applies <strong>per pool</strong>.</p>
+<hr>
+<h2>3. <code>audioImpulse(...)</code> — Stochastic Repeating Process</h2>
+<p>Uses the same pool logic, but runs autonomously and keeps firing hits at a configurable rate.</p>
+<h3>Example</h3>
+<pre><code>audioImpulse(
+  path:sfx/rain,
+  rate:40,
+  jitter:0.4,
+  amp:rand(0.1, 0.5),
+  pan:rand(-1, 1),
+  pitch:rand(0.5, 2),
+  fadein:0.1,
+  fadeout:rand(&quot;10%&quot;, &quot;60%&quot;),
+  poly:6,
+  lifetime:region,
+  uid:rainfall,
+  osc:1,
+  oscaddr:&quot;/audio/impulse/rain&quot;
+)
+</code></pre>
+<h3>Timing Parameters</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rate</code></td>
+<td>events per minute</td>
+</tr>
+<tr>
+<td><code>jitter</code></td>
+<td>timing randomisation 0–1 (0=steady, 1=fully random)</td>
+</tr>
+<tr>
+<td><code>poly</code></td>
+<td>overlapping voices (default 6, 0=unlimited)</td>
+</tr>
+</tbody>
+</table>
+<h3>Sound Parameters</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>amp</code></td>
+<td>gain 0–1, or <code>rand(a, b)</code></td>
+</tr>
+<tr>
+<td><code>pan</code></td>
+<td>stereo -1 to 1, or <code>rand(-1, 1)</code></td>
+</tr>
+<tr>
+<td><code>pitch</code></td>
+<td>playback rate, or <code>rand(a, b)</code></td>
+</tr>
+<tr>
+<td><code>fadein</code></td>
+<td>seconds or percentage</td>
+</tr>
+<tr>
+<td><code>fadeout</code></td>
+<td>seconds or percentage</td>
+</tr>
+<tr>
+<td><code>fade</code></td>
+<td>shorthand for both</td>
+</tr>
+</tbody>
+</table>
+<h3>Lifetime Modes</h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>process</code></td>
+<td>runs until explicitly stopped</td>
+</tr>
+<tr>
+<td><code>region</code></td>
+<td>runs only while playhead is inside the cue element</td>
+</tr>
+</tbody>
+</table>
+<p>In region mode, overlays update live and disappear when leaving the region.</p>
+<h3>OSC Parameters</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>osc</code></td>
+<td>enable OSC mirroring (1=on)</td>
+</tr>
+<tr>
+<td><code>oscaddr</code></td>
+<td>custom OSC address (default <code>/oscilla/audio/impulse</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Fade Values</h2>
+<p>Fades can be specified as:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Example</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Seconds</td>
+<td><code>fadeout:0.5</code></td>
+<td>0.5 second fade</td>
+</tr>
+<tr>
+<td>Percentage</td>
+<td><code>fadeout:&quot;50%&quot;</code></td>
+<td>50% of the file's duration</td>
+</tr>
+<tr>
+<td>Random seconds</td>
+<td><code>fadeout:rand(0.1, 0.5)</code></td>
+<td>random between 0.1–0.5 seconds</td>
+</tr>
+<tr>
+<td>Random percentage</td>
+<td><code>fadeout:rand(&quot;10%&quot;, &quot;60%&quot;)</code></td>
+<td>random between 10%–60% of duration</td>
+</tr>
+</tbody>
+</table>
+<p>Percentage-based fades automatically adjust to each file's actual duration (accounting for pitch changes).</p>
+<hr>
+<h2>Random Expressions</h2>
+<p>Evaluated <strong>per hit</strong>:</p>
+<pre><code>amp:rand(0.2, 0.9)       // random amplitude
+pan:rand(-1, 1)          // random stereo position
+pitch:rand(0.5, 2)       // random playback speed
+fadeout:rand(0.05, 0.3)  // random fade in seconds
+fadeout:rand(&quot;10%&quot;,&quot;50%&quot;) // random fade as percentage
+</code></pre>
+<p>For integer random values, use <code>irand(a, b)</code>.</p>
+<hr>
+<h2>OSC Output</h2>
+<p>When <code>osc:1</code> is enabled, each audio hit sends an OSC message.</p>
+<h3>Message Format</h3>
+<pre><code>/oscilla/audio/impulse sfffff filename amp pan pitch fadeIn fadeOut
+/oscilla/audio/pool    sfffff filename amp pan pitch fadeIn fadeOut
+</code></pre>
+<h3>Custom Address</h3>
+<p>Use <code>oscaddr</code> to specify a custom OSC path:</p>
+<pre><code>audioImpulse(path:sfx, osc:1, oscaddr:&quot;/myapp/texture/rain&quot;)
+</code></pre>
+<p>This sends to <code>/oscilla/myapp/texture/rain</code>.</p>
+<h3>Example OSC Output</h3>
+<pre><code>/oscilla/audio/impulse/x1 sfffff &quot;sfx/birdgone.wav&quot; 0.45 -0.32 1.2 0.2 0.8
+</code></pre>
+<p>Arguments: <code>filename (string)</code>, <code>amp</code>, <code>pan</code>, <code>pitch</code>, <code>fadeIn</code>, <code>fadeOut</code> (all floats)</p>
+<hr>
+<h2>Stopping</h2>
+<ul>
+<li>Internal stop on fade completion or toggle</li>
+<li>Region exit automatically cleans up the process</li>
+<li>Programmatic helpers:
+<ul>
+<li><code>stopAudioImpulse(uid)</code> — stop a specific impulse process</li>
+<li><code>stopAllAudio()</code> — stop all audio playback</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>Visual Overlays</h2>
+<p>Audio cues display overlays showing:</p>
+<ul>
+<li><strong>audioPool</strong>: filename and params, auto-destroys after 1.5s</li>
+<li><strong>audioImpulse</strong>: persistent overlay showing current file, amp, pan, pitch — updates each hit, destroys on region exit</li>
+</ul>
+<hr>
+<h2>Quick Examples</h2>
+<pre><code>// Simple drone with slow fade
+audio(src:drone, loop:0, fade:2)
+
+// Percussive one-shots with stereo spread
+audioPool(path:sfx/wood, mode:shuffle, pan:rand(-0.8, 0.8), poly:5)
+
+// Pitched-down atmosphere
+audio(src:atmosphere, pitch:0.5, loop:0, fadeIn:3, fadeOut:5)
+
+// Rainfall texture inside a passage with OSC output
+audioImpulse(
+  path:sfx/rain,
+  rate:30,
+  jitter:0.5,
+  amp:rand(0.2, 0.6),
+  pan:rand(-1, 1),
+  pitch:rand(0.8, 1.3),
+  fadeout:&quot;40%&quot;,
+  lifetime:region,
+  osc:1,
+  oscaddr:&quot;/texture/rain&quot;
+)
+
+// Bird sounds with percentage-based random fades
+audioImpulse(
+  path:sfx/birds,
+  rate:20,
+  amp:rand(0.4, 1),
+  pan:rand(-1, 1),
+  pitch:rand(0.1, 2),
+  fadein:0.2,
+  fadeout:rand(&quot;1%&quot;, &quot;60%&quot;),
+  lifetime:region,
+  uid:birdgroup,
+  osc:1,
+  oscaddr:&quot;/audio/birds&quot;
+)
+</code></pre>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

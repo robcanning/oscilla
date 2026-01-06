@@ -1,0 +1,169 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_page</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h2>page(...) — navigate pages or scrolling positions in the score</h2>
+<p>Triggers navigation between SVG score pages or scroll positions.<br>
+The cue can load a single page, sequence multiple pages, loop sections,<br>
+choose randomly from options, randomize order, or define composite playlists
+using pattern-based syntax. It forms the structural backbone for cue-based
+navigation and timeline control in Oscilla scores.</p>
+<h3>Syntax</h3>
+<p>page(<pageId>)
+page(Pseq([<page1>:<dur>,<page2>:<dur>],<repeats>))
+page(Pxrand([<page1>,<page2>,<page3>],<repeats>))
+page(Pshuf([<page1>,<page2>,<page3>],<repeats>))
+page(Prand([<page1>,<page2>,<page3>],<repeats>))
+page(Pchoose([<page1>,<page2>,<page3>]))
+page(Pseq([page1:3, page2:3],1), after:mode(scroll@F))
+page(Pseq([Pseq([page1:2,page2:2],2),page3:4],1))</p>
+<h3>Arguments</h3>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>page</strong></td>
+<td>ID of a single page or scroll section to load</td>
+</tr>
+<tr>
+<td><strong>Pseq</strong></td>
+<td>sequential playback of listed pages or subpatterns</td>
+</tr>
+<tr>
+<td><strong>Prand</strong></td>
+<td>random selection with replacement</td>
+</tr>
+<tr>
+<td><strong>Pxrand</strong></td>
+<td>random order, reshuffled each repeat cycle</td>
+</tr>
+<tr>
+<td><strong>Pshuf</strong></td>
+<td>random order, shuffled once and repeated as fixed order</td>
+</tr>
+<tr>
+<td><strong>Pchoose</strong></td>
+<td>choose one random page from a list (per trigger)</td>
+</tr>
+<tr>
+<td><strong>repeats</strong></td>
+<td>number of cycles for the pattern (<code>inf</code> = infinite)</td>
+</tr>
+<tr>
+<td><strong>:<dur></strong></td>
+<td>optional duration for each page (in seconds)</td>
+</tr>
+<tr>
+<td><strong>after:</strong></td>
+<td>optional post-action (e.g. <code>mode(scroll@F)</code>)</td>
+</tr>
+<tr>
+<td><strong>mode:</strong></td>
+<td>switch playback display mode (<code>scroll</code> or <code>page</code>)</td>
+</tr>
+<tr>
+<td><strong>@uid</strong></td>
+<td>rehearsal mark or cue ID to jump to after sequence completes</td>
+</tr>
+</tbody>
+</table>
+<h3>Behavior</h3>
+<ul>
+<li><code>page(page1)</code> jumps immediately to the given page or scroll position.</li>
+<li><code>page(Pseq([page1:2,page2:2],3))</code> loops between pages 1 and 2 three times.</li>
+<li><code>page(Prand([page1,page2,page3],5))</code> selects five random pages with replacement.</li>
+<li><code>page(Pshuf([page1,page2,page3],2))</code> shuffles once and repeats the same order twice.</li>
+<li><code>page(Pxrand([page1,page2,page3],2))</code> reshuffles the list for each repetition.</li>
+<li><code>page(Pchoose([page1,page2,page3]))</code> chooses one random page each time the cue is triggered.</li>
+<li>Durations can be specified using <code>pageId:seconds</code> (e.g. <code>page1:5</code>).</li>
+<li>The <code>after:</code> clause defines what happens when the sequence ends (e.g. returning to scroll mode).</li>
+<li><code>after:mode(scroll@F)</code> jumps to scroll mode at rehearsal mark F and resumes playback.</li>
+<li><code>after:mode(scrollPaused@F)</code> jumps to scroll mode at mark F and stays paused.</li>
+<li>All navigation is synchronized across connected clients.</li>
+</ul>
+<h3>Examples</h3>
+<p>page(page1)
+page(Pseq([page1:2,page2:2],3))
+page(Prand([page1,page2,page3],4))
+page(Pxrand([pageA,pageB,pageC],2))
+page(Pshuf([pageIntro,pageMid,pageEnd],1))
+page(Pchoose([pageA,pageB,pageC]))
+page(Pseq([page1:3],1), after:mode(scroll@F))
+page(Pseq([page1:3],1), after:mode(scrollPaused@F))
+page(Pseq([Pseq([page1:2,page2:2],2),page3:4],1))</p>
+<h3>Notes</h3>
+<ul>
+<li>Pattern parentheses <code>()</code> are required for lists and sequences.</li>
+<li>Repetition counts follow the pattern syntax (<code>Pseq([...],&lt;count&gt;)</code>).</li>
+<li>Durations follow the page name with a colon (<code>page1:4</code> = 4 s).</li>
+<li>The <code>@</code> suffix defines a rehearsal mark or cue ID to jump to after completion.</li>
+<li><code>Pshuf</code> and <code>Pxrand</code> follow SuperCollider semantics:
+<ul>
+<li><strong>Pshuf</strong>: shuffled once, same order repeated.</li>
+<li><strong>Pxrand</strong>: reshuffled on each repeat.</li>
+</ul>
+</li>
+<li><code>after:</code> supports <code>scroll</code> and <code>scrollPaused</code> modes; <code>:hold(n)</code> extension planned.</li>
+<li>All page and mode changes are fully synchronized across connected clients.</li>
+</ul>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

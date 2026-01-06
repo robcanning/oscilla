@@ -1,0 +1,129 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_choice</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1><code>cueChoice</code> — Performer-Driven SVG Animation Selector</h1>
+<p>The <code>cueChoice(...)</code> cue displays a selection of SVG-based animations or images in a grid, allowing a performer to select one by clicking. The selected visual is displayed full screen for a set duration, after which the score resumes scrolling.</p>
+<hr>
+<h2>🔤 Syntax</h2>
+<pre><code>cueChoice(choiceA)_dur(10)_choiceB_dur(5)_choiceC
+</code></pre>
+<ul>
+<li>Each <code>choice</code> refers to an <code>.svg</code> file inside the <code>animations/</code> directory</li>
+<li><code>dur(N)</code> sets the display duration (in seconds) for the preceding choice</li>
+<li>If no duration is given, defaults to <code>30</code> seconds</li>
+<li>Multiple choices can be defined in sequence</li>
+</ul>
+<hr>
+<h2>✅ Behavior</h2>
+<ol>
+<li><strong>Pauses the score</strong> playback</li>
+<li><strong>Displays</strong> the choices in a full-screen grid</li>
+<li><strong>Allows</strong> the performer to click a choice</li>
+<li>Loads the selected SVG into fullscreen for the given duration</li>
+<li>After countdown:
+<ul>
+<li>Fades out the animation</li>
+<li>Resumes scrolling playback</li>
+</ul>
+</li>
+</ol>
+<p>All non-choice UI is blurred while the selection interface is active.</p>
+<hr>
+<h2>✅ Example</h2>
+<pre><code>cueChoice(spiral)_dur(10)_grid-lines_dur(6)_quiet-line
+</code></pre>
+<p>This displays three clickable thumbnails:</p>
+<ul>
+<li><code>spiral.svg</code> for 10s</li>
+<li><code>grid-lines.svg</code> for 6s</li>
+<li><code>quiet-line.svg</code> for 30s (default)</li>
+</ul>
+<hr>
+<h2>🛠️ Technical Notes</h2>
+<ul>
+<li>The cue parses the <code>_choice_dur_</code> sequence dynamically from the cue ID</li>
+<li>Choices are loaded from <code>animations/{choice}.svg</code></li>
+<li>SVG files must exist and be well-formed</li>
+<li>SVG thumbnails are rendered using <code>&lt;object type=&quot;image/svg+xml&quot;&gt;</code></li>
+</ul>
+<hr>
+<h2>🚧 TODO: Page-Based <code>_next(...)</code> Logic</h2>
+<pre><code>// TODO: Add support for automatic cue chaining after animation ends.
+// After the fullscreen SVG fades out, the system should check whether
+// the SVG contains a reference to the next cue (e.g. &lt;meta data-next=&quot;cueId&quot; /&gt;)
+// and automatically trigger that cue. This would support fully paged, non-scrolling paradigms.
+</code></pre>
+<hr>
+<h2>🎼 Compositional Context: Indeterminacy, Choice, and Hypertext</h2>
+<p>The <code>cueChoice</code> system introduces elements of <strong>indeterminacy</strong> and <strong>user agency</strong> into the score. By offering multiple potential directions through performer interaction, the music becomes <strong>hypertextual</strong>—capable of branching, forking, and diverging into alternate temporal experiences.</p>
+<p>This is especially powerful in:</p>
+<ul>
+<li>🎭 Performer-led improvisation</li>
+<li>🎲 Chance-based forms</li>
+<li>🌐 Non-linear or networked scores</li>
+<li>🤖 Computer-augmented compositions</li>
+</ul>
+<p>While each user may choose a different visual/sonic path, shared structural moments (e.g. the end of a scene or cue) can act as <strong>rejoining points</strong>, where parallel paths converge into a unified timeline again.</p>
+<hr>
+<h2>🚧 TODO: Computer-Chosen Variants</h2>
+<pre><code class="language-txt">// TODO: Add a mode where the computer, not the performer, chooses the animation.
+// This allows fully generative branching where a cueChoice acts as a decision point
+// in an algorithmic or AI-driven form, supporting autopoietic music or score-as-agent design.
+</code></pre>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

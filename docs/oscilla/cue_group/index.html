@@ -1,0 +1,145 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_group</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h2>cueGroup(...) — manage groups of cues or UI elements</h2>
+<p>Injects or activates predefined groups of cues, buttons, or interface elements<br>
+defined within the SVG score. <code>cueGroup</code> is used to dynamically load reusable<br>
+sections of the interface — such as navigation panels, menus, or overlays —<br>
+when a page or section of the score is displayed.</p>
+<h3>Syntax</h3>
+<p>cueGroup(<groupName>)
+cueGroup(mainMenu)
+cueGroup(performance)
+cueGroup(instrumentA)
+cueGroup(overlayControls)</p>
+<p>sql
+Copy code</p>
+<h3>Arguments</h3>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>groupName</strong></td>
+<td>The ID of a group defined in the SVG (e.g. <code>mainMenu</code>, <code>performance</code>)</td>
+</tr>
+<tr>
+<td><strong>page</strong></td>
+<td>(optional) Page context, if called within a page cue</td>
+</tr>
+<tr>
+<td><strong>overlay</strong></td>
+<td>Boolean flag determining whether the group overlays existing elements</td>
+</tr>
+<tr>
+<td><strong>onLoad</strong></td>
+<td>Optional callback to run when group is injected</td>
+</tr>
+</tbody>
+</table>
+<h3>Behavior</h3>
+<ul>
+<li>
+<p><code>cueGroup(mainMenu)</code> injects the SVG group with ID <code>mainMenu</code> into the active page.</p>
+</li>
+<li>
+<p><code>cueGroup(performance)</code> activates a group of controls defined under <code>&lt;g id=&quot;performance&quot;&gt;</code>.</p>
+</li>
+<li>
+<p>Groups are defined in the SVG by their <strong>plain ID name</strong> — not with <code>cueGroup(...)</code>.<br>
+Example:</p>
+<g id="mainMenu">
+  <rect ... />
+  <text>Start</text>
+</g>
+</li>
+</ul>
+<p>When a new page is loaded, the cue system checks for any group names requested
+by cueGroup(...) and injects them automatically into the page.</p>
+<p>Multiple groups can coexist; newly injected ones replace or overlay previous ones
+depending on configuration.</p>
+<p>All group injections and removals are synchronized across connected clients.</p>
+<h3>Examples</h3>
+<p>cueGroup(mainMenu)
+cueGroup(performance)
+cueGroup(instrumentA)
+cueGroup(pageOverlay)</p>
+<h3>Notes</h3>
+<ul>
+<li>
+<p>Group definitions use normal SVG group IDs (e.g. <g id="mainMenu">) —
+the cueGroup(<name>) syntax is used only when recalling that group.</p>
+</li>
+<li>
+<p>Each group can contain any combination of cue buttons, labels, or graphical controls.</p>
+</li>
+<li>
+<p>When a cue:page loads, the system looks for requested groups and injects them
+using handleGroupCue().</p>
+</li>
+<li>
+<p>Future updates may include group-level transitions (fade in/out)
+and conditional or delayed loading behavior.</p>
+</li>
+</ul>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

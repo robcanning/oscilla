@@ -1,0 +1,216 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_osc</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>cue:osc --- Discrete OSC Event Cue</h1>
+<p><code>osc(...)</code> sends a <strong>single OSC message</strong> when triggered.</p>
+<p>It is <strong>event-based</strong>, not continuous. It turns drawn objects into
+<strong>discrete control events</strong>, typically consumed by environments like
+SuperCollider, Pd, or Max.</p>
+<p>It works especially well with <code>propagate()</code>, because a simple drawing
+can become many individual OSC triggers.</p>
+<hr>
+<h2>BASIC FORM</h2>
+<p>osc(addr:<name>, <param>:<source>, ...)</p>
+<p>Required:</p>
+<p>Key      Meaning</p>
+<hr>
+<p><code>addr</code>   OSC address name (without leading <code>/</code>)</p>
+<p>Example:</p>
+<p>osc(addr:voice, pitch:y, env:size)</p>
+<hr>
+<h2>EVENT BEHAVIOUR</h2>
+<ul>
+<li>Sends <strong>one OSC message per trigger</strong></li>
+<li>No looping, no animation, no scheduler</li>
+<li>Values are sampled <strong>at the moment of triggering</strong></li>
+<li>Cue completes immediately</li>
+</ul>
+<p><code>osc()</code> is a <em>logical cue</em>, not an animation cue.</p>
+<hr>
+<h2>VISUAL PARAMETER SOURCES (NORMALISED)</h2>
+<p>All visual sources are normalised to <code>0–1</code>.</p>
+<p>Source       Meaning</p>
+<hr>
+<p><code>x</code>          Object centre X position
+<code>y</code>          Object centre Y position
+<code>size</code>       Max(width, height) mapped to viewport
+<code>scale</code>      Current visual scale value
+<code>rotation</code>   0--360 mapped to 0--1
+<code>opacity</code>    Computed opacity
+<code>fill</code>       Numeric colour hash</p>
+<p>Example:</p>
+<p>osc(addr:voice, pitch:y, amp:size)</p>
+<p>Here the Y-axis produces a <strong>continuous control pitch</strong>, interpreted
+downstream.</p>
+<hr>
+<h2>SEMANTIC PITCH VALUES</h2>
+<p>Beyond visual values, <code>osc()</code> supports <strong>typed pitch declarations</strong>.</p>
+<h3>Hz (absolute)</h3>
+<p>osc(addr:voice, pitch:hz(440))</p>
+<h3>MIDI note number</h3>
+<p>osc(addr:voice, pitch:midi(60))</p>
+<h3>Scale degree + octave</h3>
+<p>osc(addr:voice, pitch:deg(5,3))</p>
+<p>Represents:</p>
+<ul>
+<li>scale degree = 5</li>
+<li>absolute octave = 3</li>
+</ul>
+<p>The receiver chooses how to interpret the scale.</p>
+<hr>
+<h2>OPTIONAL ROOT OVERRIDE</h2>
+<p>You may specify a <strong>root</strong> in the cue:</p>
+<p>osc(addr:voice, pitch:deg(2,4), root:48)</p>
+<p>If omitted, the receiver uses its global default (<code>~oscRoot</code> in SC).</p>
+<hr>
+<h2>PITCH PRIORITY</h2>
+<p>When multiple forms are present, resolution is:</p>
+<ol>
+<li><code>deg(d,o)</code> (scale-based symbolic pitch)</li>
+<li><code>hz()</code> / <code>midi()</code> (absolute pitch)</li>
+<li>visual mapping (e.g., <code>pitch:y</code>)</li>
+</ol>
+<p>Only one pitch representation is used per event.</p>
+<hr>
+<h2>TRIGGERS</h2>
+<p>Key                         Meaning</p>
+<hr>
+<p><code>trig:auto</code>                 Send immediately
+<code>trig:playhead</code>             Fire when playhead intersects
+<code>trig:click</code>                Fire on user click
+<code>prestate:ghostClickable</code>   Arm interaction ahead of time</p>
+<p>Example:</p>
+<p>osc(addr:voice, pitch:deg(0,4), trig:playhead)</p>
+<hr>
+<h2>UID (OPTIONAL)</h2>
+<p>osc(addr:voice, pitch:y, uid:v1)</p>
+<p>UID can be used downstream to associate events with voices/players/etc.</p>
+<hr>
+<h2>OSC OUTPUT FORMAT (AUTHORITATIVE)</h2>
+<p><code>osc()</code> currently sends <strong>positional arguments</strong>, not keyed pairs.</p>
+<h3>GENERAL PACKET FORMAT</h3>
+<p>/oscilla/<addr>
+pitchType, pitchA, pitchB, size, env, density, [optional root]</p>
+<p>Where:</p>
+<p>Field         Meaning</p>
+<hr>
+<p><code>pitchType</code>   0=none, 1=deg/oct, 2=hz, 3=midi, 4=y-control
+<code>pitchA</code>      meaning depends on pitchType
+<code>pitchB</code>      octave (deg mode only)
+<code>size</code>        0--1
+<code>env</code>         0--1
+<code>density</code>     0--1 (area-derived)
+<code>root</code>        optional per-event root override</p>
+<h3>Examples</h3>
+<h4>Control pitch from Y</h4>
+<p>/oscilla/voice
+1 5 3 0.41 0.41 0.12</p>
+<h4>Absolute pitch</h4>
+<p>/oscilla/voice
+2 440 0 0.18 0.22 0.10</p>
+<h4>Degree + octave + root override</h4>
+<p>/oscilla/voice
+1 5 3 0.33 0.20 0.15 48</p>
+<p>Receivers are expected to decode according to this positional layout.</p>
+<hr>
+<h2>USE WITH propagate()</h2>
+<p>propagate(
+osc(
+addr:voice,
+pitch:y,
+env:size,
+trig:playhead
+)
+)</p>
+<h3>Degree constellation examples</h3>
+<p>propagate(
+osc(
+addr:pontalist,
+pitch:deg(irand(0,11), irand(0,2)),
+env:size
+)
+)</p>
+<p>propagate(
+osc(
+addr:pontalist,
+pitch:deg(${1}, ${2}),
+env:size,
+root:48
+),
+rnd([0,2,4,5,7,9,11]),
+rnd([0,1,2,3,4,5])
+)</p>
+<hr>
+<h2>DESIGN NOTES</h2>
+<ul>
+<li>stateless</li>
+<li>no DOM ID use</li>
+<li>no continuous OSC streaming</li>
+<li>no scale-logic baked into DSL</li>
+<li>musical interpretation lives downstream</li>
+<li>arguments are positional, compact, and receiver-focused</li>
+</ul>
+<hr>
+<h2>SUMMARY</h2>
+<blockquote>
+<p><code>osc()</code> converts visual gestures into <strong>one-shot OSC control events</strong>,
+supporting symbolic, absolute, and control-driven pitch --- while
+leaving musical semantics to the instrument.</p>
+</blockquote>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

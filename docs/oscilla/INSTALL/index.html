@@ -1,0 +1,251 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>INSTALL</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>Oscilla — Installation Guide</h1>
+<p>Oscilla is a browser-based, Node.js-powered system for creating and performing synchronized graphic scores.<br>
+It runs locally on your computer or over your local network, directly in your web browser.</p>
+<hr>
+<h2>Requirements</h2>
+<p>Before installing Oscilla, make sure the following are installed:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Node.js + npm</strong></td>
+<td>To run the Oscilla local server</td>
+</tr>
+<tr>
+<td><strong>Git</strong> (optional)</td>
+<td>To clone and update the repository (or download a ZIP instead)</td>
+</tr>
+<tr>
+<td><strong>Inkscape</strong></td>
+<td>Required to create and edit SVG-based score projects</td>
+</tr>
+<tr>
+<td><strong>Modern web browser</strong></td>
+<td>Chrome, Firefox, Safari, or Edge</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Windows Installation</h2>
+<h3>1. Install Inkscape</h3>
+<p>Download and install from:<br>
+<a href="https://inkscape.org/release/windows/">https://inkscape.org/release/windows/</a></p>
+<h3>2. Install Node.js and npm</h3>
+<p>Download from:<br>
+<a href="https://nodejs.org/en/download">https://nodejs.org/en/download</a></p>
+<p>Choose the <strong>Windows Installer (.msi)</strong> version.<br>
+During setup:</p>
+<ul>
+<li>Check <strong>Add to PATH</strong></li>
+<li>Leave default options selected</li>
+</ul>
+<p>After installation, open PowerShell and verify:</p>
+<pre><code class="language-powershell">node -v
+npm -v
+</code></pre>
+<h3>3. Install Git (optional)</h3>
+<p>If you want to use Git for updates, install it from:<br>
+<a href="https://git-scm.com/download/win">https://git-scm.com/download/win</a></p>
+<p>If you prefer not to use Git, skip this step and use the ZIP download option below.</p>
+<h3>4. Get Oscilla</h3>
+<p><strong>Option A – Using Git:</strong></p>
+<pre><code class="language-powershell">git clone https://github.com/robcanning/oscilla.git
+cd oscilla
+</code></pre>
+<p><strong>Option B – Download ZIP:</strong></p>
+<ol>
+<li>Visit <a href="https://github.com/robcanning/oscilla/releases">https://github.com/robcanning/oscilla/releases</a></li>
+<li>Download the latest <strong>Source code (zip)</strong></li>
+<li>Extract it and open PowerShell inside that folder</li>
+</ol>
+<h3>5. Install and Run</h3>
+<pre><code class="language-powershell">npm install
+npm start
+</code></pre>
+<p>Then open your browser at<br>
+<a href="http://localhost:8001">http://localhost:8001</a></p>
+<hr>
+<h2>Linux Installation</h2>
+<h3>1. Install Inkscape</h3>
+<pre><code class="language-bash">sudo apt update
+sudo apt install inkscape
+</code></pre>
+<h3>2. Install Node.js and npm</h3>
+<p>To install Node 20.x using NodeSource:</p>
+<pre><code class="language-bash">curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+</code></pre>
+<p>Verify installation:</p>
+<pre><code class="language-bash">node -v
+npm -v
+</code></pre>
+<h3>3. Install Git (optional)</h3>
+<pre><code class="language-bash">sudo apt install git
+</code></pre>
+<p>Or skip this and download the ZIP file instead.</p>
+<h3>4. Get Oscilla</h3>
+<p><strong>Option A – Git clone:</strong></p>
+<pre><code class="language-bash">git clone https://github.com/robcanning/oscilla.git
+cd oscilla
+</code></pre>
+<p><strong>Option B – ZIP download:</strong></p>
+<ol>
+<li>Go to <a href="https://github.com/robcanning/oscilla/releases">https://github.com/robcanning/oscilla/releases</a></li>
+<li>Download the <code>.zip</code></li>
+<li>Extract it and open the folder in a terminal</li>
+</ol>
+<h3>5. Install and Run</h3>
+<pre><code class="language-bash">npm install
+npm start
+</code></pre>
+<p>Then visit<br>
+<a href="http://localhost:8001">http://localhost:8001</a></p>
+<hr>
+<h2>macOS Installation</h2>
+<h3>1. Install Inkscape</h3>
+<p>Download and install from:<br>
+<a href="https://inkscape.org/release/macos/">https://inkscape.org/release/macos/</a></p>
+<p>After installing, open Inkscape from the <strong>Applications</strong> folder.</p>
+<h3>2. Install Node.js and npm</h3>
+<p>Download the macOS installer (.pkg) from:<br>
+<a href="https://nodejs.org/en/download">https://nodejs.org/en/download</a></p>
+<p>Double-click the installer and follow the prompts.</p>
+<p>To verify installation:</p>
+<ol>
+<li>Open <strong>Terminal</strong> (Applications → Utilities → Terminal)</li>
+<li>Type:<pre><code class="language-bash">node -v
+npm -v
+</code></pre>
+</li>
+</ol>
+<p>Both should display version numbers.</p>
+<h3>3. Install Git (optional)</h3>
+<p>If you want to use Git, download it from:<br>
+<a href="https://git-scm.com/download/mac">https://git-scm.com/download/mac</a></p>
+<p>Alternatively, skip Git and use the ZIP download below.</p>
+<h3>4. Get Oscilla</h3>
+<p><strong>Option A – Using Git:</strong></p>
+<pre><code class="language-bash">git clone https://github.com/robcanning/oscilla.git
+cd oscilla
+</code></pre>
+<p><strong>Option B – ZIP file:</strong></p>
+<ol>
+<li>Go to <a href="https://github.com/robcanning/oscilla/releases">https://github.com/robcanning/oscilla/releases</a></li>
+<li>Download the latest <code>.zip</code></li>
+<li>Double-click to extract</li>
+<li>Open the <strong>oscilla</strong> folder</li>
+</ol>
+<h3>5. Install and Run</h3>
+<ol>
+<li>Open <strong>Terminal</strong></li>
+<li>Drag the extracted folder into the Terminal window and press Enter</li>
+<li>Type:<pre><code class="language-bash">npm install
+npm start
+</code></pre>
+</li>
+</ol>
+<p>Then open<br>
+<a href="http://localhost:8001">http://localhost:8001</a></p>
+<hr>
+<h2>Test the Demo Project</h2>
+<p>Once Oscilla is running, open this in your browser:</p>
+<pre><code>http://localhost:8001/?project=helper-score
+</code></pre>
+<p>You should see the demo score titled <em>helper-score</em>.</p>
+<hr>
+<h2>Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>npm: command not found</code></td>
+<td>Reinstall Node.js using the official installer</td>
+</tr>
+<tr>
+<td><code>git: command not found</code></td>
+<td>Install Git or use the ZIP download option</td>
+</tr>
+<tr>
+<td>Port 8001 already in use</td>
+<td>Close other servers or change the port in <code>server.js</code></td>
+</tr>
+<tr>
+<td>Blank screen</td>
+<td>Check browser console (<code>Ctrl+Shift+I</code>) for missing files</td>
+</tr>
+<tr>
+<td><code>module not found</code></td>
+<td>Run <code>npm install</code> again inside the <code>oscilla</code> folder</td>
+</tr>
+</tbody>
+</table>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

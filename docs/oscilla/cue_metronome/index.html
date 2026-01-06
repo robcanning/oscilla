@@ -1,0 +1,264 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_metronome</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>cue:metronome <em>(with autostart support)</em></h1>
+<p>Triggers a visual and/or audible metronome marker at the cue’s location or a specified <code>target:</code> element.
+The metronome can follow scrolling objects, stay fixed to the viewport, and optionally send OSC messages.</p>
+<p>The metronome <strong>can also autostart</strong>, meaning it runs automatically when the SVG is loaded in either page mode or scroll mode without needing a cue trigger crossing.</p>
+<hr>
+<h3>🧭 Syntax</h3>
+<pre><code>cue:metro(bpm:&lt;number&gt;,beats:&lt;number&gt;,visual:&lt;type&gt;,audio:&lt;0|1&gt;,
+           position:&lt;fixed|scrolling&gt;,osc:&lt;0|1&gt;,uid:&lt;string&gt;,
+           target:&lt;uid&gt;,hideTarget:&lt;0|1&gt;,showcount:&lt;0|1&gt;,hold:&lt;seconds&gt;,
+           colour:&lt;csscolour&gt;,size:&lt;pixels&gt;,trig:&lt;auto|edge&gt;)
+</code></pre>
+<hr>
+<h3>⚙️ Parameters</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>bpm</strong></td>
+<td>number</td>
+<td><code>120</code></td>
+<td>Beats per minute. Controls metronome speed.</td>
+</tr>
+<tr>
+<td><strong>beats</strong></td>
+<td>number</td>
+<td><code>4</code></td>
+<td>Number of beats per cycle.</td>
+</tr>
+<tr>
+<td><strong>visual</strong></td>
+<td>string</td>
+<td><code>&quot;circle&quot;</code></td>
+<td>Visual style (<code>circle</code>, <code>hex</code>, future shapes).</td>
+</tr>
+<tr>
+<td><strong>audio</strong></td>
+<td><code>0</code> / <code>1</code></td>
+<td><code>0</code></td>
+<td>Enables click sound.</td>
+</tr>
+<tr>
+<td><strong>position</strong></td>
+<td><code>&quot;fixed&quot;</code> / <code>&quot;scrolling&quot;</code></td>
+<td><code>&quot;fixed&quot;</code></td>
+<td>Follow-scrolling or fixed overlay.</td>
+</tr>
+<tr>
+<td><strong>osc</strong></td>
+<td><code>0</code> / <code>1</code></td>
+<td><code>0</code></td>
+<td>Publishes OSC beat messages.</td>
+</tr>
+<tr>
+<td><strong>uid</strong></td>
+<td>string</td>
+<td><code>&quot;default&quot;</code></td>
+<td>Unique metronome identifier.</td>
+</tr>
+<tr>
+<td><strong>target</strong></td>
+<td>uid</td>
+<td>—</td>
+<td>Anchor element (scrolling mode only).</td>
+</tr>
+<tr>
+<td><strong>hideTarget</strong></td>
+<td><code>0</code> / <code>1</code></td>
+<td><code>1</code></td>
+<td>Hide target element when starting.</td>
+</tr>
+<tr>
+<td><strong>showcount</strong></td>
+<td><code>0</code> / <code>1</code></td>
+<td><code>1</code></td>
+<td>Show count number inside shape.</td>
+</tr>
+<tr>
+<td><strong>hold</strong></td>
+<td>seconds</td>
+<td><code>0</code></td>
+<td>Stop after defined duration.</td>
+</tr>
+<tr>
+<td><strong>colour</strong></td>
+<td>CSS color</td>
+<td><code>&quot;red&quot;</code></td>
+<td>Circle colour.</td>
+</tr>
+<tr>
+<td><strong>size</strong></td>
+<td>pixels</td>
+<td><code>50</code></td>
+<td>Circle diameter.</td>
+</tr>
+<tr>
+<td><strong>trig</strong></td>
+<td><code>&quot;auto&quot;</code> / <code>&quot;edge&quot;</code></td>
+<td><code>&quot;edge&quot;</code></td>
+<td>Whether to autostart or trigger when playhead crosses.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3>🪄 Behaviour</h3>
+<ul>
+<li>Runs as <strong>overlay DOM</strong> element (not part of the SVG).</li>
+<li>Follows scrolling or stays screen-fixed depending on <code>position:</code>.</li>
+<li>Supports <strong>audio click</strong> and <strong>OSC output</strong>.</li>
+<li>Supports <strong>multiple concurrent</strong> metronomes (UID required).</li>
+<li>Can target another SVG element and hide it on activation.</li>
+</ul>
+<hr>
+<h3>🚀 Autostart Mode (NEW)</h3>
+<h4>🧠 When is a metronome autostarted?</h4>
+<p>Whenever the cue contains:</p>
+<pre><code>trig:auto
+</code></pre>
+<p>Example:</p>
+<pre><code>cue:metro(bpm:90,visual:hex,uid:m21,trig:auto)
+</code></pre>
+<h4>🔁 When does autostart happen?</h4>
+<ul>
+<li>In <strong>page overlay mode</strong> (during PDF-style view)</li>
+<li>In <strong>scroll mode</strong> (timeline view)</li>
+<li><strong>After the SVG and DOM are initialized</strong></li>
+<li><strong>Before</strong> the animation clock starts</li>
+</ul>
+<h4>🏷️ What does autostart actually do?</h4>
+<p>Autostart metronomes fully initialise as if they had been triggered by the scrolling playhead:</p>
+<ul>
+<li>Overlay DOM is created</li>
+<li>Beat scheduler starts</li>
+<li>UI is visible</li>
+<li>OSC messages begin</li>
+<li>Audio (if enabled) clicks on beat 1,2,3,4…</li>
+</ul>
+<h4>🗂️ Multiple autostarts supported</h4>
+<p>Each metronome UID becomes its <strong>own independent instance</strong>.</p>
+<hr>
+<h3>🔊 Example cues</h3>
+<table>
+<thead>
+<tr>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Autostart metronome at load</td>
+<td><code>cue:metro(bpm:90,visual:hex,trig:auto,uid:m1)</code></td>
+</tr>
+<tr>
+<td>Two autostarts with different tones</td>
+<td><code>cue:metro(bpm:70,trig:auto,uid:A)</code> + <code>cue:metro(bpm:110,trig:auto,uid:B)</code></td>
+</tr>
+<tr>
+<td>Standard (on crossing), no autostart</td>
+<td><code>cue:metro(bpm:100,visual:circle,uid:M)</code></td>
+</tr>
+<tr>
+<td>Scroll-following autostart</td>
+<td><code>cue:metro(bpm:120,position:scrolling,target:x1,trig:auto,uid:hex1)</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3>🎯 OSC Message Example</h3>
+<pre><code>/oscilla/metro
+{
+  &quot;uid&quot;: &quot;m21&quot;,
+  &quot;client&quot;: &quot;rob&quot;,
+  &quot;bpm&quot;: 90,
+  &quot;beat&quot;: 3
+}
+</code></pre>
+<hr>
+<h3>🎛️ Implementation Notes (for developers)</h3>
+<ul>
+<li>Autostart hooks run <strong>after</strong> DOM insertion and SVG setup.</li>
+<li>Autostart routines are separate from cue crossing logic:
+<ul>
+<li>No tracking in <code>triggeredCues</code></li>
+<li>No playhead position checks required</li>
+</ul>
+</li>
+<li>Overlay visibility ensured via:<pre><code>div.style.zIndex = &quot;99999&quot;;
+</code></pre>
+</li>
+</ul>
+<hr>
+<h3>🚫 Known Limitations</h3>
+<ul>
+<li>Multiple autostarts in high BPM (&gt;200) may need scheduler improvements.</li>
+<li>OSC feedback not currently aware of phase differences between UIDs.</li>
+<li>Appearance position is based on CSS absolute, not SVG hitbox.</li>
+</ul>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

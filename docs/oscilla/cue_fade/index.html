@@ -1,0 +1,135 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_fade</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h2>cue:fade(...) — fade or pulse an SVG element</h2>
+<p>Fades the opacity of the triggering SVG object (or a specified target) between
+two opacity values. Can be used for smooth fade-ins, fade-outs, or pulsing
+effects. The transition speed, easing, and timing can all be controlled.</p>
+<h3>Syntax</h3>
+<pre><code>cue:fade(mode:&lt;in|out|pulse|blink&gt;, dur:&lt;seconds&gt;,
+          from:&lt;0–1&gt;, to:&lt;0–1&gt;, ease:&lt;easing&gt;,
+          time:&lt;seconds&gt;, delay:&lt;seconds&gt;, hold:&lt;seconds&gt;,
+          target:&lt;id&gt;)
+</code></pre>
+<h3>Arguments</h3>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>mode</strong></td>
+<td>type of fade: <code>&quot;in&quot;</code>, <code>&quot;out&quot;</code>, <code>&quot;pulse&quot;</code>, or <code>&quot;blink&quot;</code></td>
+</tr>
+<tr>
+<td><strong>dur</strong></td>
+<td>duration of the fade in seconds</td>
+</tr>
+<tr>
+<td><strong>from</strong></td>
+<td>starting opacity (0 = transparent, 1 = opaque)</td>
+</tr>
+<tr>
+<td><strong>to</strong></td>
+<td>ending opacity</td>
+</tr>
+<tr>
+<td><strong>ease</strong></td>
+<td>easing type (e.g. <code>linear</code>, <code>easeInOutSine</code>, etc.)</td>
+</tr>
+<tr>
+<td><strong>time</strong></td>
+<td>start time offset in seconds (optional, for cue scheduling)</td>
+</tr>
+<tr>
+<td><strong>delay</strong></td>
+<td>delay before fade starts (seconds)</td>
+</tr>
+<tr>
+<td><strong>hold</strong></td>
+<td>time to hold at final opacity before reset or removal</td>
+</tr>
+<tr>
+<td><strong>target</strong></td>
+<td>optional target element ID; if omitted, applies to the cue element itself</td>
+</tr>
+</tbody>
+</table>
+<h3>Behavior</h3>
+<ul>
+<li><code>cue:fade(mode:in)</code> smoothly fades in from <code>from</code> to <code>to</code> opacity.</li>
+<li><code>cue:fade(mode:out)</code> fades out in reverse.</li>
+<li><code>cue:fade(mode:pulse)</code> fades in and out continuously while active.</li>
+<li><code>cue:fade(mode:blink)</code> alternates visibility quickly (use short <code>dur</code>).</li>
+<li>The cue supports timing offsets and can be combined with OSC or other cue types.</li>
+<li>When <code>target</code> is not provided, the fade applies to the object containing the cue.</li>
+<li>The <code>hold</code> argument determines how long the element stays visible before reverting or fading away.</li>
+</ul>
+<h3>Examples</h3>
+<pre><code>cue:fade(mode:in, dur:2, from:0, to:1)
+cue:fade(mode:out, dur:3, ease:easeOutSine)
+cue:fade(mode:pulse, dur:1.5, from:0.2, to:1)
+cue:fade(mode:blink, dur:0.5, time:10)
+cue:fade(mode:in, dur:2, from:0, to:1, target:circle1)
+cue:fade(mode:pulse, dur:2, hold:5, target:obj_light)
+</code></pre>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

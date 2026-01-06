@@ -1,0 +1,183 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_stopwatch</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">cue_audio</a></li>
+    <li><a href="/docs/cue_text/">cue_text</a></li>
+    <li><a href="/docs/cue_nav/">cue_nav</a></li>
+    <li><a href="/docs/cue_pause/">cue_pause</a></li>
+    <li><a href="/docs/cue_repeat/">cue_repeat</a></li>
+    <li><a href="/docs/cue_traverse/">cue_traverse</a></li>
+    <li><a href="/docs/cue_osc/">cue_osc</a></li>
+    <li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
+    <li><a href="/docs/cue_page/">cue_page</a></li>
+    <li><a href="/docs/cue_group/">cue_group</a></li>
+    <li><a href="/docs/cue_choice/">cue_choice</a></li>
+    <li><a href="/docs/cue_stop/">cue_stop</a></li>
+    <li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
+    <li><a href="/docs/cue_media/">cue_media</a></li>
+    <li><a href="/docs/cue_video/">cue_video</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/anim_scale/">Scale</a></li>
+    <li><a href="/docs/anim_rotate/">Rotation</a></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>stopwatch <em>(with autostart support)</em></h1>
+<p>Displays a stopwatch overlay above the score.
+Stopwatch overlays may show the <strong>main stopwatch time</strong> or create their own <strong>independent stopwatch</strong>.</p>
+<p>This cue now supports <strong>autostart</strong>, meaning it can begin running automatically when the SVG is loaded — in both page and scroll modes — without requiring the playhead to cross.</p>
+<hr>
+<h3>🧭 Syntax</h3>
+<pre><code>stopwatch(source:&lt;main|new&gt;, hold:&lt;seconds&gt;, scroll:&lt;true|false&gt;,
+          offsetX:&lt;pixels&gt;, style:&quot;&lt;css rules&gt;&quot;, trig:&lt;auto|edge&gt;)
+</code></pre>
+<hr>
+<h3>⚙️ Arguments</h3>
+<table>
+<thead>
+<tr>
+<th>Arg</th>
+<th>Values</th>
+<th>Default</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>source</strong></td>
+<td><code>&quot;main&quot;</code> / <code>&quot;new&quot;</code></td>
+<td><code>&quot;main&quot;</code></td>
+<td>Use global clock or create/reset local stopwatch</td>
+</tr>
+<tr>
+<td><strong>hold</strong></td>
+<td>seconds</td>
+<td><code>0</code></td>
+<td>When &gt;0, overlay fades+removes at timeout</td>
+</tr>
+<tr>
+<td><strong>scroll</strong></td>
+<td><code>true</code> / <code>false</code></td>
+<td><code>false</code></td>
+<td>Follows scrolling score or fixed overlay</td>
+</tr>
+<tr>
+<td><strong>offsetX</strong></td>
+<td>px</td>
+<td><code>0</code></td>
+<td>X-offset from cue location</td>
+</tr>
+<tr>
+<td><strong>style</strong></td>
+<td>CSS</td>
+<td>—</td>
+<td>Inline CSS, use <code>;</code> separated</td>
+</tr>
+<tr>
+<td><strong>trig</strong></td>
+<td><code>&quot;auto&quot;</code> / <code>&quot;edge&quot;</code></td>
+<td><code>&quot;edge&quot;</code></td>
+<td><code>auto</code> means autostart on load</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3>🪄 Behaviour</h3>
+<ul>
+<li><code>source:main</code> displays the <strong>global</strong> stopwatch time</li>
+<li><code>source:new</code> starts (or resets) a <strong>private timer</strong></li>
+<li>If <code>hold &gt; 0</code>, the stopwatch fades after expiry</li>
+<li>If <code>hold = 0</code>, click dismisses it</li>
+<li>Multiple independent stopwatches can run concurrently</li>
+<li>Autostart requires no playhead crossing</li>
+</ul>
+<hr>
+<h2>🚀 Autostart (NEW)</h2>
+<p>Autostart activates when:</p>
+<pre><code>trig:auto
+</code></pre>
+<p>Example:</p>
+<pre><code>stopwatch(source:new,style:&quot;font-size:3em;color:red&quot;,trig:auto)
+</code></pre>
+<p>Autostart behaviour:</p>
+<ul>
+<li>Works in <strong>page overlay</strong> and <strong>scroll</strong> modes</li>
+<li>Executed <strong>after SVG and DOM are fully initialized</strong></li>
+<li>Overlay appears immediately</li>
+<li>Does not require playhead position</li>
+<li>Does not use trigger dedupe</li>
+</ul>
+<hr>
+<h3>🧪 Autostart Examples</h3>
+<p><strong>Main stopwatch, always visible</strong></p>
+<pre><code>stopwatch(source:main,style:&quot;font-size:2.5em;&quot;,trig:auto)
+</code></pre>
+<p><strong>Independent timer with 10s hold</strong></p>
+<pre><code>stopwatch(source:new,hold:10,style:&quot;font-size:2em;&quot;,trig:auto)
+</code></pre>
+<p><strong>Scrolling stopwatch</strong></p>
+<pre><code>stopwatch(source:new,scroll:true,trig:auto)
+</code></pre>
+<p><strong>Stylised overlay</strong></p>
+<pre><code>stopwatch(source:new,
+          style:&quot;font-size:4em;color:#0ff;text-shadow:0 0 5px #000;&quot;,
+          trig:auto)
+</code></pre>
+<hr>
+<h3>🎯 Edge-triggered Examples (non-autostart)</h3>
+<pre><code>stopwatch(source:new)
+stopwatch(source:main,scroll:true)
+stopwatch(source:new,hold:8,offsetX:-30)
+</code></pre>
+<hr>
+<h3>🎛️ Developer Notes</h3>
+<ul>
+<li>Autostart runs <strong>once</strong>, after initialization</li>
+<li>Stopwatch overlay is a <strong>DOM absolute positioned element</strong></li>
+<li>High stacking ensured using:<pre><code>div.style.zIndex = &quot;99999&quot;
+</code></pre>
+</li>
+<li>Autostart does not use <code>triggeredCues</code></li>
+</ul>
+<hr>
+<h3>🚫 Known Limitations</h3>
+<ul>
+<li>Overlap of multiple autostarts is a user-design choice</li>
+<li>Very large fonts may clip on small screens</li>
+</ul>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>
