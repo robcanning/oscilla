@@ -17,34 +17,46 @@
 
   <h3>Cues</h3>
   <ul>
-    <li><a href="/oscilla/docs/cue_audio/">cue_audio</a></li>
-    <li><a href="/oscilla/docs/cue_text/">cue_text</a></li>
-    <li><a href="/oscilla/docs/cue_nav/">cue_nav</a></li>
-    <li><a href="/oscilla/docs/cue_pause/">cue_pause</a></li>
-    <li><a href="/oscilla/docs/cue_repeat/">cue_repeat</a></li>
-    <li><a href="/oscilla/docs/cue_traverse/">cue_traverse</a></li>
-    <li><a href="/oscilla/docs/cue_osc/">cue_osc</a></li>
-    <li><a href="/oscilla/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
-    <li><a href="/oscilla/docs/cue_page/">cue_page</a></li>
-    <li><a href="/oscilla/docs/cue_group/">cue_group</a></li>
-    <li><a href="/oscilla/docs/cue_choice/">cue_choice</a></li>
-    <li><a href="/oscilla/docs/cue_stop/">cue_stop</a></li>
-    <li><a href="/oscilla/docs/cue_stopwatch/">cue_stopwatch</a></li>
-    <li><a href="/oscilla/docs/cue_media/">cue_media</a></li>
-    <li><a href="/oscilla/docs/cue_video/">cue_video</a></li>
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
   </ul>
 
   <h3>Animation</h3>
   <ul>
-    <li><a href="/oscilla/docs/anim_scale/">Scale</a></li>
-    <li><a href="/oscilla/docs/anim_rotate/">Rotation</a></li>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/oscilla/docs/cue_o2p/">Object to Path o2p()</a></li>
+
+  </ul>
+
+    <h3>Cheatsheet</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cheatsheet/">cheatsheet</a></li>
+  </ul>
+
+      <h3>Install</h3>
+  <ul>
+    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
+    <li><a href="/oscilla/docs/QUICKSTART/">Install (QUICKSTART)</a></li>
+
   </ul>
 
   <h3>System</h3>
   <ul>
     <li><a href="/oscilla/docs/cueSystem/">Cue System</a></li>
     <li><a href="/oscilla/docs/cuehandler_architecture/">Architecture</a></li>
-    <li><a href="/oscilla/docs/cue_propagate/">Propagation & Reuse</a></li>
   </ul>
 </nav>
 
@@ -53,7 +65,7 @@
       <h1>Cue Handler Architecture — oscillaScore / Rotula.Score</h1>
 <p>This file documents the internal logic and architecture for implementing new cue types in the oscillaScore (Rotula.Score) system.</p>
 <hr>
-<h2>🔁 Cue Trigger Lifecycle</h2>
+<h2>Cue Trigger Lifecycle</h2>
 <ol>
 <li>SVG cue element (e.g. <code>&lt;text id=&quot;cueAudio(kick.wav)&quot;&gt;</code>) is intersected by the scrolling playhead.</li>
 <li>The <code>handleCueTrigger(cueId, isRemote)</code> function is invoked.</li>
@@ -64,7 +76,7 @@
 <li>Cue is broadcast via WebSocket to other clients (unless <code>isRemote === true</code>).</li>
 </ol>
 <hr>
-<h2>🧱 Core Components</h2>
+<h2>Core Components</h2>
 <h3><code>handleCueTrigger(cueId, isRemote = false)</code></h3>
 <p>Main dispatcher for cue execution:</p>
 <ul>
@@ -93,7 +105,7 @@
 <li>Coercion to boolean, float, int</li>
 </ul>
 <hr>
-<h2>🎯 <code>cueHandlers</code> Registry</h2>
+<h2><code>cueHandlers</code> Registry</h2>
 <p>A global map of known cue types:</p>
 <pre><code class="language-js">cueHandlers = {
   cuePause: handlePauseCue,
@@ -108,7 +120,7 @@
 </code></pre>
 <p>Each value is a function that accepts the cueId and parsed parameters.</p>
 <hr>
-<h2>✅ Adding a New Cue Handler</h2>
+<h2>Adding a New Cue Handler</h2>
 <h3>1. Create the handler function</h3>
 <pre><code class="language-js">const handleMyCue = (cueId, cueParams) =&gt; {
   console.log(&quot;[DEBUG] Running cue:&quot;, cueId, cueParams);
@@ -132,7 +144,7 @@
 <li><code>window.runningAnimations</code>, <code>window.pauseTimeout</code></li>
 </ul>
 <hr>
-<h2>🧠 Design Notes</h2>
+<h2>Design Notes</h2>
 <ul>
 <li>Cues should degrade gracefully if not supported.</li>
 <li>Most cues run once and are stateful.</li>
@@ -140,14 +152,14 @@
 <li>OSC cues are dispatched via WebSocket with structured JSON.</li>
 </ul>
 <hr>
-<h2>🧪 Debugging Tips</h2>
+<h2>Debugging Tips</h2>
 <ul>
 <li>Use <code>[DEBUG]</code> console logs consistently</li>
 <li>Confirm WebSocket is connected (<code>wsEnabled &amp;&amp; socket.readyState === WebSocket.OPEN</code>)</li>
 <li>Test cue triggering both locally and remotely</li>
 </ul>
 <hr>
-<h2>🧩 Cue Types Currently Supported</h2>
+<h2>Cue Types Currently Supported</h2>
 <table>
 <thead>
 <tr>
@@ -191,7 +203,7 @@
 </tbody>
 </table>
 <hr>
-<h2>✅ Best Practices</h2>
+<h2>Best Practices</h2>
 <ul>
 <li>Keep cue handlers atomic (1 cue = 1 effect)</li>
 <li>Avoid hardcoding visuals/UI into handlers</li>
@@ -199,7 +211,7 @@
 <li>Broadcast only when <code>!isRemote</code></li>
 </ul>
 <hr>
-<h2>📂 Suggested Files</h2>
+<h2>Suggested Files</h2>
 <ul>
 <li><code>cue_[type].md</code> for documentation</li>
 <li><code>handle[type]Cue()</code> for implementation</li>

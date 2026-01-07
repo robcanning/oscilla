@@ -9,7 +9,7 @@ This file documents the internal logic and architecture for implementing new cue
 
 ---
 
-## 🔁 Cue Trigger Lifecycle
+## Cue Trigger Lifecycle
 
 1. SVG cue element (e.g. `<text id="cueAudio(kick.wav)">`) is intersected by the scrolling playhead.
 2. The `handleCueTrigger(cueId, isRemote)` function is invoked.
@@ -21,7 +21,7 @@ This file documents the internal logic and architecture for implementing new cue
 
 ---
 
-## 🧱 Core Components
+##  Core Components
 
 ### `handleCueTrigger(cueId, isRemote = false)`
 
@@ -56,7 +56,7 @@ Supports:
 
 ---
 
-## 🎯 `cueHandlers` Registry
+##  `cueHandlers` Registry
 
 A global map of known cue types:
 ```js
@@ -76,7 +76,7 @@ Each value is a function that accepts the cueId and parsed parameters.
 
 ---
 
-## ✅ Adding a New Cue Handler
+##  Adding a New Cue Handler
 
 ### 1. Create the handler function
 ```js
@@ -109,7 +109,7 @@ You can use these globals and helpers:
 
 ---
 
-## 🧠 Design Notes
+##  Design Notes
 
 - Cues should degrade gracefully if not supported.
 - Most cues run once and are stateful.
@@ -118,7 +118,7 @@ You can use these globals and helpers:
 
 ---
 
-## 🧪 Debugging Tips
+##  Debugging Tips
 
 - Use `[DEBUG]` console logs consistently
 - Confirm WebSocket is connected (`wsEnabled && socket.readyState === WebSocket.OPEN`)
@@ -126,7 +126,7 @@ You can use these globals and helpers:
 
 ---
 
-## 🧩 Cue Types Currently Supported
+## Cue Types Currently Supported
 
 | Cue Type         | Description                                 |
 |------------------|---------------------------------------------|
@@ -141,7 +141,7 @@ You can use these globals and helpers:
 
 ---
 
-## ✅ Best Practices
+##  Best Practices
 
 - Keep cue handlers atomic (1 cue = 1 effect)
 - Avoid hardcoding visuals/UI into handlers
@@ -150,7 +150,7 @@ You can use these globals and helpers:
 
 ---
 
-## 📂 Suggested Files
+##  Suggested Files
 
 - `cue_[type].md` for documentation
 - `handle[type]Cue()` for implementation

@@ -2,12 +2,12 @@
 title: CueDSL_Parser_Guide
 layout: docs_layout.njk
 ---
-# 🎼 OscillaScore CueDSL Parser and Runtime Integration
+# OscillaScore CueDSL Parser and Runtime Integration
 **Technical Overview & Migration Guide**
 
 ---
 
-## 1️⃣ Purpose
+## Purpose
 
 OscillaScore’s **CueDSL** (Cue Domain-Specific Language) provides a unified textual syntax for describing time-based or event-based actions within SVG scores — e.g.:
 
@@ -20,7 +20,7 @@ The parser translates human-readable cue strings into **structured AST objects**
 
 ---
 
-## 2️⃣ Architecture Overview
+##  Architecture Overview
 
 ### Flow Diagram
 
@@ -42,7 +42,7 @@ The parser translates human-readable cue strings into **structured AST objects**
 
 ---
 
-## 3️⃣ Why CST → AST
+## Why CST → AST
 
 Chevrotain generates a **CST** that mirrors the grammar hierarchy.  
 This is verbose but precise — great for debugging.
@@ -74,7 +74,7 @@ This separation makes the system:
 
 ---
 
-## 4️⃣ Example: `cue:page` DSL
+##  Example: `cue:page` DSL
 
 ### Input
 
@@ -122,7 +122,7 @@ export async function handlePageCueFromAST(ast) {
 
 ---
 
-## 5️⃣ Adding a New Cue Type
+## Adding a New Cue Type
 
 Adding a new cue (e.g. `cue:audio`, `cue:traverse`, `cue:repeat`) involves **three layers**:
 
@@ -164,7 +164,7 @@ $.RULE("cueRoot", () => {
 
 ---
 
-### 🧠 Step 2: Extend `cstToAst()`
+### Step 2: Extend `cstToAst()`
 
 Transform that CST into a clean AST node:
 
@@ -178,7 +178,7 @@ if (c.audioCue) {
 
 ---
 
-### ⚙️ Step 3: Add a runtime handler in `cues.js`
+### Step 3: Add a runtime handler in `cues.js`
 
 ```js
 export async function handleAudioCueFromAST(ast) {
@@ -204,12 +204,12 @@ export async function handleCueFromAST(ast) {
 
 ---
 
-## 6️⃣ Debugging Tips
+##  Debugging Tips
 
 Use the built-in CST logger at any time:
 
 ```js
-console.log("✅ Parsed CST structure ↓↓↓");
+console.log("Parsed CST structure ↓↓↓");
 printCST(cst);
 ```
 
@@ -230,7 +230,7 @@ This shows exactly what the parser recognized and helps pinpoint rule mismatches
 
 ---
 
-## 7️⃣ Migration Strategy for Legacy Cues
+##  Migration Strategy for Legacy Cues
 
 | Legacy cue | Current format | Target format | Migration strategy |
 |-------------|----------------|----------------|---------------------|
@@ -244,7 +244,7 @@ no more regex chains or duplicated logic.
 
 ---
 
-## 8️⃣ Best Practices for New Grammar Design
+##  Best Practices for New Grammar Design
 
 - **Start small:** one top-level token per cue (`Audio`, `Page`, `Repeat`, etc.)
 - **Avoid ambiguity:** ensure unique prefixes so Chevrotain doesn’t raise “Ambiguous Alternatives”.
@@ -254,7 +254,7 @@ no more regex chains or duplicated logic.
 
 ---
 
-## 9️⃣ Refactoring Outlook
+## Refactoring Outlook
 
 Once all cues migrate:
 - You can remove the `cstToAst()` step if the grammar stabilizes and you prefer direct AST returns.
@@ -263,21 +263,21 @@ Once all cues migrate:
 
 ---
 
-## 🔚 Summary
+## Summary
 
-✅ **You now have:**
+ **You now have:**
 - A working, extensible DSL architecture for Oscilla cues.  
 - Robust debugging and validation via Chevrotain’s CST.  
 - Modular runtime logic that can handle any cue type through a shared AST schema.
 
-🛠️ **Next steps:**
+ **Next steps:**
 1. Migrate remaining cue families (`audio`, `repeat`, `traverse`, `text`).
 2. Centralize all runtime handlers in `cues.js`.
 3. Write one unified `handleCueFromAST(ast)` dispatcher.
 
 ---
 
-### 💡 TL;DR
+###  TL;DR
 
 > Each cue string → CST → AST → runtime.  
 > Add one grammar rule, one AST extractor, one runtime function.  

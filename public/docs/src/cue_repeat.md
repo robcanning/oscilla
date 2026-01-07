@@ -9,7 +9,7 @@ The `cueRepeat(...)` cue type enables controlled repetition of score sections us
 
 ---
 
-## 🔤 Syntax
+## Syntax
 
 ```
 cue_repeat_s(startId)_e(endId)_x(count)_r(resumeId)_d(direction)_a(action)
@@ -24,7 +24,7 @@ cue_repeat_s(startId)_e(endId)_x(count)_r(resumeId)_d(direction)_a(action)
 
 ---
 
-## ✅ Examples
+##  Examples
 
 ### Repeat a single section 3 times
 ```
@@ -38,15 +38,15 @@ cue_repeat_s(A)_e(B)_x(2)_r(C)
 
 ---
 
-## 🛠️ Server-Side Logic (⚠️ Under Repair)
+## 🛠️ Server-Side Logic (Under Repair)
 
 The server currently **tracks active repeats** and **broadcasts loop state** to clients. However:
 
-> ⚠️ **BUG**: Repeat coordination is currently broken in multi-client setups.
+>  **BUG**: Repeat coordination is currently broken in multi-client setups.
 > - Only one client handles jumps correctly
 > - Others may desync or re-trigger independently
 
-### ❗TODO [HIGH PRIORITY]:
+### TODO [HIGH PRIORITY]:
 
 - Fix server broadcast/resync logic so that all connected clients:
   - Share repeat state
@@ -55,15 +55,15 @@ The server currently **tracks active repeats** and **broadcasts loop state** to 
 
 ---
 
-## 🔁 TODO: Support Nested Repeats
+## TODO: Support Nested Repeats
 
 Nested or overlapping repeat blocks (e.g., a repeat inside a larger form) are not currently supported.
 
-> 🧩 **Planned**: Stack-based repeat state with entry/exit markers for nested structures.
+> **Planned**: Stack-based repeat state with entry/exit markers for nested structures.
 
 ---
 
-## 🧠 Notes
+## Notes
 
 - A repeat is considered "active" once it is triggered
 - After each loop, the playhead jumps back to `startId`
@@ -72,7 +72,7 @@ Nested or overlapping repeat blocks (e.g., a repeat inside a larger form) are no
 
 ---
 
-## 🧩 Related Cues
+## Related Cues
 
 - [`cuePause(...)`](cuePause.md) — pause playback with optional countdown
 - [`cueAudio(...)`](cueAudio.md) — play local or OSC-triggered audio

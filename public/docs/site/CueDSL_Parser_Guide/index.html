@@ -17,50 +17,62 @@
 
   <h3>Cues</h3>
   <ul>
-    <li><a href="/oscilla/docs/cue_audio/">cue_audio</a></li>
-    <li><a href="/oscilla/docs/cue_text/">cue_text</a></li>
-    <li><a href="/oscilla/docs/cue_nav/">cue_nav</a></li>
-    <li><a href="/oscilla/docs/cue_pause/">cue_pause</a></li>
-    <li><a href="/oscilla/docs/cue_repeat/">cue_repeat</a></li>
-    <li><a href="/oscilla/docs/cue_traverse/">cue_traverse</a></li>
-    <li><a href="/oscilla/docs/cue_osc/">cue_osc</a></li>
-    <li><a href="/oscilla/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
-    <li><a href="/oscilla/docs/cue_page/">cue_page</a></li>
-    <li><a href="/oscilla/docs/cue_group/">cue_group</a></li>
-    <li><a href="/oscilla/docs/cue_choice/">cue_choice</a></li>
-    <li><a href="/oscilla/docs/cue_stop/">cue_stop</a></li>
-    <li><a href="/oscilla/docs/cue_stopwatch/">cue_stopwatch</a></li>
-    <li><a href="/oscilla/docs/cue_media/">cue_media</a></li>
-    <li><a href="/oscilla/docs/cue_video/">cue_video</a></li>
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
   </ul>
 
   <h3>Animation</h3>
   <ul>
-    <li><a href="/oscilla/docs/anim_scale/">Scale</a></li>
-    <li><a href="/oscilla/docs/anim_rotate/">Rotation</a></li>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/oscilla/docs/cue_o2p/">Object to Path o2p()</a></li>
+
+  </ul>
+
+    <h3>Cheatsheet</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cheatsheet/">cheatsheet</a></li>
+  </ul>
+
+      <h3>Install</h3>
+  <ul>
+    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
+    <li><a href="/oscilla/docs/QUICKSTART/">Install (QUICKSTART)</a></li>
+
   </ul>
 
   <h3>System</h3>
   <ul>
     <li><a href="/oscilla/docs/cueSystem/">Cue System</a></li>
     <li><a href="/oscilla/docs/cuehandler_architecture/">Architecture</a></li>
-    <li><a href="/oscilla/docs/cue_propagate/">Propagation & Reuse</a></li>
   </ul>
 </nav>
 
 
     <main class="docs-content">
-      <h1>🎼 OscillaScore CueDSL Parser and Runtime Integration</h1>
+      <h1>OscillaScore CueDSL Parser and Runtime Integration</h1>
 <p><strong>Technical Overview &amp; Migration Guide</strong></p>
 <hr>
-<h2>1️⃣ Purpose</h2>
+<h2>Purpose</h2>
 <p>OscillaScore’s <strong>CueDSL</strong> (Cue Domain-Specific Language) provides a unified textual syntax for describing time-based or event-based actions within SVG scores — e.g.:</p>
 <pre><code>cue:page(seq: page1:4, loop(page2:2,page3:3){x:2}, mode:scroll)
 </code></pre>
 <p>This system replaces a collection of independent regex parsers (<code>cueAudio(...)</code>, <code>cueRepeat_*</code>, etc.) with a single robust grammar built using <strong>Chevrotain 11+</strong>.<br>
 The parser translates human-readable cue strings into <strong>structured AST objects</strong> that drive runtime behavior in <code>cues.js</code>.</p>
 <hr>
-<h2>2️⃣ Architecture Overview</h2>
+<h2>Architecture Overview</h2>
 <h3>Flow Diagram</h3>
 <pre><code>┌────────────┐        ┌────────────┐        ┌──────────────┐        ┌─────────────┐
 │ SVG cue ID │ ─────▶ │ parser.js  │ ─────▶ │ AST object   │ ─────▶ │ cues.js     │
@@ -95,7 +107,7 @@ The parser translates human-readable cue strings into <strong>structured AST obj
 </tbody>
 </table>
 <hr>
-<h2>3️⃣ Why CST → AST</h2>
+<h2>Why CST → AST</h2>
 <p>Chevrotain generates a <strong>CST</strong> that mirrors the grammar hierarchy.<br>
 This is verbose but precise — great for debugging.</p>
 <p>The <strong>AST</strong> is a simplified domain model used by the runtime.<br>
@@ -120,7 +132,7 @@ Example:</p>
 <li>Safe for multiple cue families using one parser</li>
 </ul>
 <hr>
-<h2>4️⃣ Example: <code>cue:page</code> DSL</h2>
+<h2>Example: <code>cue:page</code> DSL</h2>
 <h3>Input</h3>
 <pre><code>cue:page(seq: page1:4, loop(page2:2,page3:3){x:2}, mode:scroll)
 </code></pre>
@@ -157,7 +169,7 @@ Example:</p>
 }
 </code></pre>
 <hr>
-<h2>5️⃣ Adding a New Cue Type</h2>
+<h2>Adding a New Cue Type</h2>
 <p>Adding a new cue (e.g. <code>cue:audio</code>, <code>cue:traverse</code>, <code>cue:repeat</code>) involves <strong>three layers</strong>:</p>
 <h3>🧱 Step 1: Grammar in <code>parser.js</code></h3>
 <p>Add a new sub-rule:</p>
@@ -189,7 +201,7 @@ Example:</p>
 });
 </code></pre>
 <hr>
-<h3>🧠 Step 2: Extend <code>cstToAst()</code></h3>
+<h3>Step 2: Extend <code>cstToAst()</code></h3>
 <p>Transform that CST into a clean AST node:</p>
 <pre><code class="language-js">if (c.audioCue) {
   const file = c.audioCue[0].children.filename[0].image;
@@ -198,7 +210,7 @@ Example:</p>
 }
 </code></pre>
 <hr>
-<h3>⚙️ Step 3: Add a runtime handler in <code>cues.js</code></h3>
+<h3>Step 3: Add a runtime handler in <code>cues.js</code></h3>
 <pre><code class="language-js">export async function handleAudioCueFromAST(ast) {
   const { file, params } = ast;
   console.log(`[CueDSL] 🎧 Playing ${file} with`, params);
@@ -217,9 +229,9 @@ Example:</p>
 }
 </code></pre>
 <hr>
-<h2>6️⃣ Debugging Tips</h2>
+<h2>Debugging Tips</h2>
 <p>Use the built-in CST logger at any time:</p>
-<pre><code class="language-js">console.log(&quot;✅ Parsed CST structure ↓↓↓&quot;);
+<pre><code class="language-js">console.log(&quot;Parsed CST structure ↓↓↓&quot;);
 printCST(cst);
 </code></pre>
 <p>You’ll see hierarchical token traces like:</p>
@@ -234,7 +246,7 @@ printCST(cst);
 </code></pre>
 <p>This shows exactly what the parser recognized and helps pinpoint rule mismatches.</p>
 <hr>
-<h2>7️⃣ Migration Strategy for Legacy Cues</h2>
+<h2>Migration Strategy for Legacy Cues</h2>
 <table>
 <thead>
 <tr>
@@ -274,7 +286,7 @@ printCST(cst);
 <p>Each migration simply adds a grammar rule + small runtime adapter —<br>
 no more regex chains or duplicated logic.</p>
 <hr>
-<h2>8️⃣ Best Practices for New Grammar Design</h2>
+<h2>Best Practices for New Grammar Design</h2>
 <ul>
 <li><strong>Start small:</strong> one top-level token per cue (<code>Audio</code>, <code>Page</code>, <code>Repeat</code>, etc.)</li>
 <li><strong>Avoid ambiguity:</strong> ensure unique prefixes so Chevrotain doesn’t raise “Ambiguous Alternatives”.</li>
@@ -283,7 +295,7 @@ no more regex chains or duplicated logic.</p>
 <li><strong>Keep AST consistent:</strong> every cue should produce <code>{type, args}</code> or <code>{type, params}</code> objects.</li>
 </ul>
 <hr>
-<h2>9️⃣ Refactoring Outlook</h2>
+<h2>Refactoring Outlook</h2>
 <p>Once all cues migrate:</p>
 <ul>
 <li>You can remove the <code>cstToAst()</code> step if the grammar stabilizes and you prefer direct AST returns.</li>
@@ -291,21 +303,21 @@ no more regex chains or duplicated logic.</p>
 <li>Runtime logic across cues will share common structures for looping, timing, randomization, etc.</li>
 </ul>
 <hr>
-<h2>🔚 Summary</h2>
-<p>✅ <strong>You now have:</strong></p>
+<h2>Summary</h2>
+<p><strong>You now have:</strong></p>
 <ul>
 <li>A working, extensible DSL architecture for Oscilla cues.</li>
 <li>Robust debugging and validation via Chevrotain’s CST.</li>
 <li>Modular runtime logic that can handle any cue type through a shared AST schema.</li>
 </ul>
-<p>🛠️ <strong>Next steps:</strong></p>
+<p><strong>Next steps:</strong></p>
 <ol>
 <li>Migrate remaining cue families (<code>audio</code>, <code>repeat</code>, <code>traverse</code>, <code>text</code>).</li>
 <li>Centralize all runtime handlers in <code>cues.js</code>.</li>
 <li>Write one unified <code>handleCueFromAST(ast)</code> dispatcher.</li>
 </ol>
 <hr>
-<h3>💡 TL;DR</h3>
+<h3>TL;DR</h3>
 <blockquote>
 <p>Each cue string → CST → AST → runtime.<br>
 Add one grammar rule, one AST extractor, one runtime function.<br>

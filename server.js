@@ -115,7 +115,7 @@ app.get('/shared/*', (req, res, next) => {
 
 // --- Serve rendered Oscilla docs (Eleventy output) ---
 app.use(
-  "/docs",
+  "/oscilla/docs",
   express.static(path.join(process.cwd(), "public/docs/site"), {
     extensions: ["html"], // lets /docs/cue_audio resolve to index.html
   })
