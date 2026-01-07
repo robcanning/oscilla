@@ -1,129 +1,22 @@
-
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>cue_pause</title>
-
-  <link rel="stylesheet" href="/oscilla/docs/style.css">
-</head>
-
-
-
-<body>
-  <div class="docs-container">
-    <nav class="sidebar">
-  <h2>Docs</h2>
-
-  <h3>Cues</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
-    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
-    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
-    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
-    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
-    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
-    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
-    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
-    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
-    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
-    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
-    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
-    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
-    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
-  </ul>
-
-  <h3>Animation</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
-    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
-    <li><a href="/oscilla/docs/cue_o2p/">Object to Path o2p()</a></li>
-
-  </ul>
-
-    <h3>Cheatsheet</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cheatsheet/">cheatsheet</a></li>
-  </ul>
-
-      <h3>Install</h3>
-  <ul>
-    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
-    <li><a href="/oscilla/docs/QUICKSTART/">Install (QUICKSTART)</a></li>
-
-  </ul>
-
-  <h3>System</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cueSystem/">Cue System</a></li>
-    <li><a href="/oscilla/docs/cuehandler_architecture/">Architecture</a></li>
-  </ul>
-</nav>
-
-
-    <main class="docs-content">
-      <h1><code>cuePause</code> — Pause Playback with Optional Countdown and Resume</h1>
-<p>The <code>cuePause(...)</code> cue temporarily halts playback for a specified number of seconds. It can optionally show a visual countdown timer and trigger a jump or cue afterward.</p>
-<hr>
+<h1>pause(...) --- Temporarily Halt Playback (Countdown + Optional Follow-On Cue)</h1>
+<p>The <code>pause(...)</code> cue temporarily stops playback for a fixed duration. It
+may optionally display a countdown overlay and can automatically trigger
+another cue when finished.</p>
+<p>Playback and synchronization are completely frozen during a pause.</p>
 <h2>Syntax</h2>
-<pre><code>cuePause(duration)_count(true|false)_resume(cueId)
-</code></pre>
-<ul>
-<li><code>duration</code> → Duration of pause in seconds (required)</li>
-<li><code>count(true|false)</code> → Whether to show countdown UI (optional)
-<ul>
-<li><code>true</code> (default): show countdown if pause &gt; 2s</li>
-<li><code>false</code>: never show countdown</li>
-</ul>
-</li>
-<li><code>resume(cueId)</code> → Jump to this cue after the pause ends (optional)
-<ul>
-<li>Defaults to current cue (i.e. resume in place)</li>
-</ul>
-</li>
-</ul>
-<hr>
-<h2>Examples</h2>
-<h3>Basic 3-second pause with countdown:</h3>
-<pre><code>cuePause(3)
-</code></pre>
-<h3>5-second pause with countdown explicitly disabled:</h3>
-<pre><code>cuePause(5)_count(false)
-</code></pre>
-<h3>Pause 4 seconds and then jump to <code>sectionB</code>:</h3>
-<pre><code>cuePause(4)_resume(sectionB)
-</code></pre>
-<h3>Disable countdown <em>and</em> jump to <code>outro</code> after pause:</h3>
-<pre><code>cuePause(2)_count(false)_resume(outro)
-</code></pre>
-<hr>
-<h2>Playback Control Notes</h2>
-<ul>
-<li>During pause, synchronization is disabled (<code>ignoreSyncDuringPause = true</code>).</li>
-<li>The countdown is only shown if:
-<ul>
-<li>Duration &gt; 2000 ms</li>
-<li>And <code>count(false)</code> is <strong>not</strong> specified</li>
-</ul>
-</li>
-</ul>
-<hr>
-<h2>TODO: Support <code>_next(...)</code></h2>
-<pre><code class="language-txt">// TODO: Add support for next(...) to automatically trigger another cue after pause ends.
-// This allows daisy-chaining actions like cuePause(...) → cueAudio(...) or cue_animation(...).
-</code></pre>
-<hr>
-<h2>Related Cues</h2>
-<ul>
-<li><a href="cueAudio.md"><code>cueAudio(...)</code></a> — trigger browser or OSC-based audio</li>
-<li><a href="cueRepeat.md"><code>cueRepeat(...)</code></a> — handle repeat/jump logic</li>
-<li><a href="cueTraverse.md"><code>cueTraverse(...)</code></a> — move objects through points</li>
-</ul>
-
-    </main>
-  </div>
-</body>
-
-
-
-</html>
+<p>pause(dur:SECONDS, count:BOOL, next:CUEID, uid:NAME)</p>
+<h2>Daisy-chaining with <code>next(...)</code></h2>
+<p><code>next(...)</code> does <strong>not</strong> make the pause jump anywhere by itself.</p>
+<p>Instead, it tells Oscilla:</p>
+<blockquote>
+<p>&quot;When the pause finishes, trigger this other cue.&quot;</p>
+</blockquote>
+<p>pause(dur:4, next:sectionB)</p>
+<p>What happens:</p>
+<ol>
+<li>pause\</li>
+<li>countdown (if enabled)\</li>
+<li>the cue named <code>sectionB</code> is triggered</li>
+</ol>
+<p>If <code>sectionB</code> happens to be a navigation cue, the score may jump --- but
+it is the <strong>navigation cue</strong> doing the jump, not the pause system.</p>

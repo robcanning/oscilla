@@ -1,56 +1,51 @@
 ---
-title: cue_stop
 layout: docs_layout.njk
+title: cue_stop
 ---
 
-# `cueStop` — Halt Playback and End the Score
+# `stop(...)` --- Toggle Playback (On / Off)
 
-The `cueStop` cue is used to completely stop score playback at a designated point. It is often placed at the end of a piece or to mark a terminal branch of an open-form structure.
+The `stop(...)` cue toggles the transport:
 
----
+-   if playback is running → it stops
+-   if playback is already stopped → it starts again
+
+It does not end the score and it does not freeze the system.
 
 ## Syntax
 
-```
-cueStop
-```
+    stop()
+    stop(uid:NAME)
+    stop(next:CUEID)
 
-- No parameters are needed.
-- Once triggered, the score stops moving and does not automatically resume.
+### Parameters
 
----
+  -----------------------------------------------------------------------
+             param        required         description
+  ---------------- ----------------------- ------------------------------
+             `uid`            ✖            Only needed if multiple
+                                           identical `stop(...)` cues
+                                           appear
 
-## Behavior
+            `next`            ✖            Trigger another cue
+                                           immediately after `stop(...)`
+                                           runs
+  -----------------------------------------------------------------------
 
-- Playback animation halts
-- No further cues are processed
-- Intended to be **final** in the performance flow unless manually resumed
+## Behaviour
 
----
+-   toggles playback (stop ↔ start)
+-   briefly ignores sync echoes
+-   `next(...)` triggers another cue **immediately** (does not wait for
+    resume / spacebar)
 
-## Use Cases
+### Examples
 
-- End of a fixed-form or open-form piece
-- Conditional endpoint after a `cueRepeat(...)` or `cueChoice(...)`
-- Used in installations or performances where a visual/aural endpoint is necessary
-
----
-
-## TODO: Visual Fadeout & End Page Logic
-
-```txt
-// TODO: Extend cueStop to optionally fade the screen to black or white.
-// Optional parameter could define background color:
-//   cue_stop_color(black), cue_stop_color(white), cue_stop_color(#ccc)
-//
-// TODO: Add ability to specify a final page or SVG to show after stopping.
-// This could support 'end-page' visuals, credits, or performer instructions.
-```
-
----
+    stop()
+    stop(uid:s1)
+    stop(next:nav(End))
 
 ## Related
 
-- [`cuePause(...)`](cuePause.md) — temporarily halt with countdown
-- [`cueRepeat(...)`](cueRepeat.md) — repeat sections
-- [`cueChoice(...)`](cueChoice.md) — user-chosen form branching
+-   `pause(...)`
+-   `nav(...)`

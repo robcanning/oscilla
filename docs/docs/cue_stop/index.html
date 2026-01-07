@@ -62,45 +62,43 @@
 
 
     <main class="docs-content">
-      <h1><code>cueStop</code> — Halt Playback and End the Score</h1>
-<p>The <code>cueStop</code> cue is used to completely stop score playback at a designated point. It is often placed at the end of a piece or to mark a terminal branch of an open-form structure.</p>
-<hr>
+      <h1><code>stop(...)</code> --- Toggle Playback (On / Off)</h1>
+<p>The <code>stop(...)</code> cue toggles the transport:</p>
+<ul>
+<li>if playback is running → it stops</li>
+<li>if playback is already stopped → it starts again</li>
+</ul>
+<p>It does not end the score and it does not freeze the system.</p>
 <h2>Syntax</h2>
-<pre><code>cueStop
-</code></pre>
+<p>stop()
+stop(uid:NAME)
+stop(next:CUEID)</p>
+<h3>Parameters</h3>
+<hr>
+<p>param        required         description</p>
+<hr>
+<p><code>uid</code>            ✖            Only needed if multiple
+identical <code>stop(...)</code> cues
+appear</p>
+<p><code>next</code>            ✖            Trigger another cue
+immediately after <code>stop(...)</code>
+runs</p>
+<hr>
+<h2>Behaviour</h2>
 <ul>
-<li>No parameters are needed.</li>
-<li>Once triggered, the score stops moving and does not automatically resume.</li>
+<li>toggles playback (stop ↔ start)</li>
+<li>briefly ignores sync echoes</li>
+<li><code>next(...)</code> triggers another cue <strong>immediately</strong> (does not wait for
+resume / spacebar)</li>
 </ul>
-<hr>
-<h2>Behavior</h2>
-<ul>
-<li>Playback animation halts</li>
-<li>No further cues are processed</li>
-<li>Intended to be <strong>final</strong> in the performance flow unless manually resumed</li>
-</ul>
-<hr>
-<h2>Use Cases</h2>
-<ul>
-<li>End of a fixed-form or open-form piece</li>
-<li>Conditional endpoint after a <code>cueRepeat(...)</code> or <code>cueChoice(...)</code></li>
-<li>Used in installations or performances where a visual/aural endpoint is necessary</li>
-</ul>
-<hr>
-<h2>TODO: Visual Fadeout &amp; End Page Logic</h2>
-<pre><code class="language-txt">// TODO: Extend cueStop to optionally fade the screen to black or white.
-// Optional parameter could define background color:
-//   cue_stop_color(black), cue_stop_color(white), cue_stop_color(#ccc)
-//
-// TODO: Add ability to specify a final page or SVG to show after stopping.
-// This could support 'end-page' visuals, credits, or performer instructions.
-</code></pre>
-<hr>
+<h3>Examples</h3>
+<p>stop()
+stop(uid:s1)
+stop(next:nav(End))</p>
 <h2>Related</h2>
 <ul>
-<li><a href="cuePause.md"><code>cuePause(...)</code></a> — temporarily halt with countdown</li>
-<li><a href="cueRepeat.md"><code>cueRepeat(...)</code></a> — repeat sections</li>
-<li><a href="cueChoice.md"><code>cueChoice(...)</code></a> — user-chosen form branching</li>
+<li><code>pause(...)</code></li>
+<li><code>nav(...)</code></li>
 </ul>
 
     </main>
