@@ -38,7 +38,7 @@ cue_repeat_s(A)_e(B)_x(2)_r(C)
 
 ---
 
-## 🛠️ Server-Side Logic (Under Repair)
+## Server-Side Logic (Under Repair)
 
 The server currently **tracks active repeats** and **broadcasts loop state** to clients. However:
 

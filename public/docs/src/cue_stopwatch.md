@@ -11,7 +11,7 @@ This cue now supports **autostart**, meaning it can begin running automatically 
 
 ---
 
-### 🧭 Syntax
+### Syntax
 
 ```
 stopwatch(source:<main|new>, hold:<seconds>, scroll:<true|false>,
@@ -20,7 +20,7 @@ stopwatch(source:<main|new>, hold:<seconds>, scroll:<true|false>,
 
 ---
 
-### ⚙️ Arguments
+### Arguments
 
 | Arg | Values | Default | Behaviour |
 |-----|--------|---------|-----------|
@@ -33,7 +33,7 @@ stopwatch(source:<main|new>, hold:<seconds>, scroll:<true|false>,
 
 ---
 
-### 🪄 Behaviour
+### Behaviour
 
 - `source:main` displays the **global** stopwatch time
 - `source:new` starts (or resets) a **private timer**
@@ -44,7 +44,7 @@ stopwatch(source:<main|new>, hold:<seconds>, scroll:<true|false>,
 
 ---
 
-## 🚀 Autostart (NEW)
+## Autostart (NEW)
 
 Autostart activates when:
 
@@ -68,7 +68,7 @@ Autostart behaviour:
 
 ---
 
-### 🧪 Autostart Examples
+### Autostart Examples
 
 **Main stopwatch, always visible**
 ```
@@ -94,7 +94,7 @@ stopwatch(source:new,
 
 ---
 
-### 🎯 Edge-triggered Examples (non-autostart)
+### Edge-triggered Examples (non-autostart)
 
 ```
 stopwatch(source:new)
@@ -104,7 +104,7 @@ stopwatch(source:new,hold:8,offsetX:-30)
 
 ---
 
-### 🎛️ Developer Notes
+### Developer Notes
 
 - Autostart runs **once**, after initialization
 - Stopwatch overlay is a **DOM absolute positioned element**
@@ -116,7 +116,7 @@ stopwatch(source:new,hold:8,offsetX:-30)
 
 ---
 
-### 🚫 Known Limitations
+### Known Limitations
 
 - Overlap of multiple autostarts is a user-design choice
 - Very large fonts may clip on small screens

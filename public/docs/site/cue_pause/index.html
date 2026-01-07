@@ -65,7 +65,7 @@
       <h1><code>cuePause</code> — Pause Playback with Optional Countdown and Resume</h1>
 <p>The <code>cuePause(...)</code> cue temporarily halts playback for a specified number of seconds. It can optionally show a visual countdown timer and trigger a jump or cue afterward.</p>
 <hr>
-<h2>🔤 Syntax</h2>
+<h2>Syntax</h2>
 <pre><code>cuePause(duration)_count(true|false)_resume(cueId)
 </code></pre>
 <ul>
@@ -83,7 +83,7 @@
 </li>
 </ul>
 <hr>
-<h2>✅ Examples</h2>
+<h2>Examples</h2>
 <h3>Basic 3-second pause with countdown:</h3>
 <pre><code>cuePause(3)
 </code></pre>
@@ -97,7 +97,7 @@
 <pre><code>cuePause(2)_count(false)_resume(outro)
 </code></pre>
 <hr>
-<h2>🧭 Playback Control Notes</h2>
+<h2>Playback Control Notes</h2>
 <ul>
 <li>During pause, synchronization is disabled (<code>ignoreSyncDuringPause = true</code>).</li>
 <li>The countdown is only shown if:
@@ -108,12 +108,12 @@
 </li>
 </ul>
 <hr>
-<h2>🛠️ TODO: Support <code>_next(...)</code></h2>
+<h2>TODO: Support <code>_next(...)</code></h2>
 <pre><code class="language-txt">// TODO: Add support for next(...) to automatically trigger another cue after pause ends.
 // This allows daisy-chaining actions like cuePause(...) → cueAudio(...) or cue_animation(...).
 </code></pre>
 <hr>
-<h2>🧩 Related Cues</h2>
+<h2>Related Cues</h2>
 <ul>
 <li><a href="cueAudio.md"><code>cueAudio(...)</code></a> — trigger browser or OSC-based audio</li>
 <li><a href="cueRepeat.md"><code>cueRepeat(...)</code></a> — handle repeat/jump logic</li>

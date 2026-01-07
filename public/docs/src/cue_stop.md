@@ -9,7 +9,7 @@ The `cueStop` cue is used to completely stop score playback at a designated poin
 
 ---
 
-## 🔤 Syntax
+## Syntax
 
 ```
 cueStop
@@ -20,7 +20,7 @@ cueStop
 
 ---
 
-## ✅ Behavior
+## Behavior
 
 - Playback animation halts
 - No further cues are processed
@@ -28,7 +28,7 @@ cueStop
 
 ---
 
-## 🧠 Use Cases
+## Use Cases
 
 - End of a fixed-form or open-form piece
 - Conditional endpoint after a `cueRepeat(...)` or `cueChoice(...)`
@@ -36,7 +36,7 @@ cueStop
 
 ---
 
-## 🚧 TODO: Visual Fadeout & End Page Logic
+## TODO: Visual Fadeout & End Page Logic
 
 ```txt
 // TODO: Extend cueStop to optionally fade the screen to black or white.
@@ -49,7 +49,7 @@ cueStop
 
 ---
 
-## 🧩 Related
+## Related
 
 - [`cuePause(...)`](cuePause.md) — temporarily halt with countdown
 - [`cueRepeat(...)`](cueRepeat.md) — repeat sections

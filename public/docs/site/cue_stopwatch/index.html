@@ -67,12 +67,12 @@
 Stopwatch overlays may show the <strong>main stopwatch time</strong> or create their own <strong>independent stopwatch</strong>.</p>
 <p>This cue now supports <strong>autostart</strong>, meaning it can begin running automatically when the SVG is loaded — in both page and scroll modes — without requiring the playhead to cross.</p>
 <hr>
-<h3>🧭 Syntax</h3>
+<h3>Syntax</h3>
 <pre><code>stopwatch(source:&lt;main|new&gt;, hold:&lt;seconds&gt;, scroll:&lt;true|false&gt;,
           offsetX:&lt;pixels&gt;, style:&quot;&lt;css rules&gt;&quot;, trig:&lt;auto|edge&gt;)
 </code></pre>
 <hr>
-<h3>⚙️ Arguments</h3>
+<h3>Arguments</h3>
 <table>
 <thead>
 <tr>
@@ -122,7 +122,7 @@ Stopwatch overlays may show the <strong>main stopwatch time</strong> or create t
 </tbody>
 </table>
 <hr>
-<h3>🪄 Behaviour</h3>
+<h3>Behaviour</h3>
 <ul>
 <li><code>source:main</code> displays the <strong>global</strong> stopwatch time</li>
 <li><code>source:new</code> starts (or resets) a <strong>private timer</strong></li>
@@ -132,7 +132,7 @@ Stopwatch overlays may show the <strong>main stopwatch time</strong> or create t
 <li>Autostart requires no playhead crossing</li>
 </ul>
 <hr>
-<h2>🚀 Autostart (NEW)</h2>
+<h2>Autostart (NEW)</h2>
 <p>Autostart activates when:</p>
 <pre><code>trig:auto
 </code></pre>
@@ -148,7 +148,7 @@ Stopwatch overlays may show the <strong>main stopwatch time</strong> or create t
 <li>Does not use trigger dedupe</li>
 </ul>
 <hr>
-<h3>🧪 Autostart Examples</h3>
+<h3>Autostart Examples</h3>
 <p><strong>Main stopwatch, always visible</strong></p>
 <pre><code>stopwatch(source:main,style:&quot;font-size:2.5em;&quot;,trig:auto)
 </code></pre>
@@ -164,13 +164,13 @@ Stopwatch overlays may show the <strong>main stopwatch time</strong> or create t
           trig:auto)
 </code></pre>
 <hr>
-<h3>🎯 Edge-triggered Examples (non-autostart)</h3>
+<h3>Edge-triggered Examples (non-autostart)</h3>
 <pre><code>stopwatch(source:new)
 stopwatch(source:main,scroll:true)
 stopwatch(source:new,hold:8,offsetX:-30)
 </code></pre>
 <hr>
-<h3>🎛️ Developer Notes</h3>
+<h3>Developer Notes</h3>
 <ul>
 <li>Autostart runs <strong>once</strong>, after initialization</li>
 <li>Stopwatch overlay is a <strong>DOM absolute positioned element</strong></li>
@@ -180,7 +180,7 @@ stopwatch(source:new,hold:8,offsetX:-30)
 <li>Autostart does not use <code>triggeredCues</code></li>
 </ul>
 <hr>
-<h3>🚫 Known Limitations</h3>
+<h3>Known Limitations</h3>
 <ul>
 <li>Overlap of multiple autostarts is a user-design choice</li>
 <li>Very large fonts may clip on small screens</li>

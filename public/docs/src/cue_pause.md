@@ -9,7 +9,7 @@ The `cuePause(...)` cue temporarily halts playback for a specified number of sec
 
 ---
 
-## 🔤 Syntax
+## Syntax
 
 ```
 cuePause(duration)_count(true|false)_resume(cueId)
@@ -24,7 +24,7 @@ cuePause(duration)_count(true|false)_resume(cueId)
 
 ---
 
-## ✅ Examples
+## Examples
 
 ### Basic 3-second pause with countdown:
 ```
@@ -48,7 +48,7 @@ cuePause(2)_count(false)_resume(outro)
 
 ---
 
-## 🧭 Playback Control Notes
+## Playback Control Notes
 
 - During pause, synchronization is disabled (`ignoreSyncDuringPause = true`).
 - The countdown is only shown if:
@@ -57,7 +57,7 @@ cuePause(2)_count(false)_resume(outro)
 
 ---
 
-## 🛠️ TODO: Support `_next(...)`
+## TODO: Support `_next(...)`
 
 ```txt
 // TODO: Add support for next(...) to automatically trigger another cue after pause ends.
@@ -66,7 +66,7 @@ cuePause(2)_count(false)_resume(outro)
 
 ---
 
-## 🧩 Related Cues
+## Related Cues
 
 - [`cueAudio(...)`](cueAudio.md) — trigger browser or OSC-based audio
 - [`cueRepeat(...)`](cueRepeat.md) — handle repeat/jump logic

@@ -18,7 +18,7 @@ Rotation can be:
 
 ------------------------------------------------------------------------
 
-## 🔁 BASIC FORMS
+## BASIC FORMS
 
 ### Continuous
 
@@ -50,7 +50,7 @@ Delays motion after trigger:
 
 ------------------------------------------------------------------------
 
-## 👻 PRESTART VISIBILITY --- `prestate:<show|hide|ghost>`
+## PRESTART VISIBILITY --- `prestate:<show|hide|ghost>`
 
 Controls appearance before rotation begins.
 
@@ -73,7 +73,7 @@ waits.
 
 ------------------------------------------------------------------------
 
-## 🔄 CONTINUOUS ROTATION
+## CONTINUOUS ROTATION
 
     rotate(dir:1, dur:2)
     rotate(dir:-1, dur:3, ease:"easeInOutSine")
@@ -84,7 +84,7 @@ waits.
 
 ------------------------------------------------------------------------
 
-## 🆔 UID --- Live Updates
+## UID --- Live Updates
 
 UID lets multiple cues address the same animation:
 
@@ -93,7 +93,7 @@ UID lets multiple cues address the same animation:
 
 ------------------------------------------------------------------------
 
-## 🌐 OSC OUTPUT (optional)
+## OSC OUTPUT (optional)
 
 Rotation can send OSC every frame or per‑step.
 
@@ -143,7 +143,7 @@ Overlays can be globally toggled.
 
 ------------------------------------------------------------------------
 
-## 📋 FULL PARAMETER LIST
+## FULL PARAMETER LIST
 
   Key          Description
   ------------ -----------------------------
@@ -163,7 +163,7 @@ Overlays can be globally toggled.
 
 ------------------------------------------------------------------------
 
-## ⭐ EXAMPLES
+## EXAMPLES
 
     rotate(values:[0,120,240], dur:4, tdelay:2)
 
@@ -177,7 +177,7 @@ Overlays can be globally toggled.
 
 ------------------------------------------------------------------------
 
-## ✔ Summary
+## Summary
 
 -   declarative rotation cue
 -   works in page + scroll modes

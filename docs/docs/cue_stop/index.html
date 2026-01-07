@@ -65,7 +65,7 @@
       <h1><code>cueStop</code> — Halt Playback and End the Score</h1>
 <p>The <code>cueStop</code> cue is used to completely stop score playback at a designated point. It is often placed at the end of a piece or to mark a terminal branch of an open-form structure.</p>
 <hr>
-<h2>🔤 Syntax</h2>
+<h2>Syntax</h2>
 <pre><code>cueStop
 </code></pre>
 <ul>
@@ -73,21 +73,21 @@
 <li>Once triggered, the score stops moving and does not automatically resume.</li>
 </ul>
 <hr>
-<h2>✅ Behavior</h2>
+<h2>Behavior</h2>
 <ul>
 <li>Playback animation halts</li>
 <li>No further cues are processed</li>
 <li>Intended to be <strong>final</strong> in the performance flow unless manually resumed</li>
 </ul>
 <hr>
-<h2>🧠 Use Cases</h2>
+<h2>Use Cases</h2>
 <ul>
 <li>End of a fixed-form or open-form piece</li>
 <li>Conditional endpoint after a <code>cueRepeat(...)</code> or <code>cueChoice(...)</code></li>
 <li>Used in installations or performances where a visual/aural endpoint is necessary</li>
 </ul>
 <hr>
-<h2>🚧 TODO: Visual Fadeout &amp; End Page Logic</h2>
+<h2>TODO: Visual Fadeout &amp; End Page Logic</h2>
 <pre><code class="language-txt">// TODO: Extend cueStop to optionally fade the screen to black or white.
 // Optional parameter could define background color:
 //   cue_stop_color(black), cue_stop_color(white), cue_stop_color(#ccc)
@@ -96,7 +96,7 @@
 // This could support 'end-page' visuals, credits, or performer instructions.
 </code></pre>
 <hr>
-<h2>🧩 Related</h2>
+<h2>Related</h2>
 <ul>
 <li><a href="cuePause.md"><code>cuePause(...)</code></a> — temporarily halt with countdown</li>
 <li><a href="cueRepeat.md"><code>cueRepeat(...)</code></a> — repeat sections</li>
