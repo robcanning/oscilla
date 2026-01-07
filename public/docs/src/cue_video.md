@@ -2,7 +2,7 @@
 title: cue_video
 layout: docs_layout.njk
 ---
-## `cue:video` (Concise Reference)
+## `video()`
 
 **Purpose:** Spawn and control HTML5 video overlays during a score.
 

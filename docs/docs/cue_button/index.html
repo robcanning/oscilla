@@ -1,0 +1,54 @@
+<h1><code>button()</code> --- Clickable Buttons Inside the Score</h1>
+<p><code>button()</code> creates clickable UI buttons that trigger cues directly from
+within the score. It overlays a real HTML button on top of an invisible
+SVG placeholder.</p>
+<h2>Syntax</h2>
+<p>Place an element whose <strong>ID begins with</strong> <code>button(</code>:</p>
+<p>id=&quot;button(triggerExpr …)&quot;</p>
+<p>Examples:</p>
+<p>button(nav(page:2))
+button(pause(4))
+button(osc(param:grainRate,val:0.2))</p>
+<h2>Labels</h2>
+<p>Automatic label priority:</p>
+<ol>
+<li><code>style(label:&quot;…&quot;)</code> override\</li>
+<li>UID in the trigger\</li>
+<li>cue action\</li>
+<li>fallback <code>&quot;button&quot;</code></li>
+</ol>
+<p>Example:</p>
+<p>button(nav(page:3))_style(label:&quot;Next Page&quot;)</p>
+<h2>Styling</h2>
+<p>button(nav(page:3))_style(
+label:&quot;Next&quot;,
+size:&quot;120x45&quot;,
+color:&quot;#0379ff&quot;,
+textcolor:&quot;#ffffff&quot;,
+font:&quot;Inter&quot;,
+fontsize:16,
+active:&quot;flash&quot;
+)</p>
+<h3>Supported keys</h3>
+<p>Key              Meaning</p>
+<hr>
+<p>label            Custom button text
+size:&quot;W×H&quot;       Width + height (px)
+color            Background
+textcolor        Text color
+font             Font family
+fontsize         Font size (px)
+active:&quot;flash&quot;   Flash animation when clicked</p>
+<h2>Positioning</h2>
+<p>Buttons are positioned based on the SVG placeholder and aligned into UI
+containers (<code>singlePage-content</code>, <code>pageOverlay</code>, or <code>scoreInner</code>). The
+SVG marker is hidden unless part of <code>reuse()</code>.</p>
+<p>Optional offsets:</p>
+<p>button(nav(page:4))_offsetX(10)_offsetY(-8)</p>
+<h2>Removing / Hiding</h2>
+<p>Hide markers:</p>
+<p>hideAllButtonPlaceholders(svgRoot)</p>
+<p>Destroy all created buttons:</p>
+<p>destroyAllCueButtons()</p>
+<hr>
+<p>This file describes observed behavior from the current implementation.</p>
