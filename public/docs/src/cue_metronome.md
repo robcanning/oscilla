@@ -2,7 +2,7 @@
 title: cue_metronome
 layout: docs_layout.njk
 ---
-# cue:metronome _(with autostart support)_
+# metronome _(with autostart support)_
 
 Triggers a visual and/or audible metronome marker at the cue’s location or a specified `target:` element.
 The metronome can follow scrolling objects, stay fixed to the viewport, and optionally send OSC messages.
@@ -11,10 +11,10 @@ The metronome **can also autostart**, meaning it runs automatically when the SVG
 
 ---
 
-### 🧭 Syntax
+### Syntax
 
 ```
-cue:metro(bpm:<number>,beats:<number>,visual:<type>,audio:<0|1>,
+metro(bpm:<number>,beats:<number>,visual:<type>,audio:<0|1>,
            position:<fixed|scrolling>,osc:<0|1>,uid:<string>,
            target:<uid>,hideTarget:<0|1>,showcount:<0|1>,hold:<seconds>,
            colour:<csscolour>,size:<pixels>,trig:<auto|edge>)
@@ -22,7 +22,7 @@ cue:metro(bpm:<number>,beats:<number>,visual:<type>,audio:<0|1>,
 
 ---
 
-### ⚙️ Parameters
+### Parameters
 
 | Parameter | Type | Default | Description |
 |------------|------|----------|--------------|
@@ -43,7 +43,7 @@ cue:metro(bpm:<number>,beats:<number>,visual:<type>,audio:<0|1>,
 
 ---
 
-### 🪄 Behaviour
+### Behaviour
 
 - Runs as **overlay DOM** element (not part of the SVG).
 - Follows scrolling or stays screen-fixed depending on `position:`.
@@ -53,9 +53,9 @@ cue:metro(bpm:<number>,beats:<number>,visual:<type>,audio:<0|1>,
 
 ---
 
-### 🚀 Autostart Mode (NEW)
+### Autostart Mode (NEW)
 
-#### 🧠 When is a metronome autostarted?
+#### When is a metronome autostarted?
 
 Whenever the cue contains:
 
@@ -69,14 +69,14 @@ Example:
 cue:metro(bpm:90,visual:hex,uid:m21,trig:auto)
 ```
 
-#### 🔁 When does autostart happen?
+#### When does autostart happen?
 
 - In **page overlay mode** (during PDF-style view)
 - In **scroll mode** (timeline view)
 - **After the SVG and DOM are initialized**
 - **Before** the animation clock starts
 
-#### 🏷️ What does autostart actually do?
+#### What does autostart actually do?
 
 Autostart metronomes fully initialise as if they had been triggered by the scrolling playhead:
 
@@ -86,24 +86,24 @@ Autostart metronomes fully initialise as if they had been triggered by the scrol
 - OSC messages begin
 - Audio (if enabled) clicks on beat 1,2,3,4…
 
-#### 🗂️ Multiple autostarts supported
+#### Multiple autostarts supported
 
 Each metronome UID becomes its **own independent instance**.
 
 ---
 
-### 🔊 Example cues
+### Example cues
 
 | Description | Example |
 |--------------|----------|
-| Autostart metronome at load | `cue:metro(bpm:90,visual:hex,trig:auto,uid:m1)` |
-| Two autostarts with different tones | `cue:metro(bpm:70,trig:auto,uid:A)` + `cue:metro(bpm:110,trig:auto,uid:B)` |
-| Standard (on crossing), no autostart | `cue:metro(bpm:100,visual:circle,uid:M)` |
-| Scroll-following autostart | `cue:metro(bpm:120,position:scrolling,target:x1,trig:auto,uid:hex1)` |
+| Autostart metronome at load | `metro(bpm:90,visual:hex,trig:auto,uid:m1)` |
+| Two autostarts  | `metro(bpm:70,trig:auto,uid:A)` + `cue:metro(bpm:110,trig:auto,uid:B)` |
+| Standard (on crossing), no autostart | `metro(bpm:100,visual:circle,uid:M)` |
+| Scroll-following autostart | `metro(bpm:120,position:scrolling,target:x1,trig:auto,uid:hex1)` |
 
 ---
 
-### 🎯 OSC Message Example
+### OSC Message Example
 
 ```
 /oscilla/metro
@@ -117,7 +117,7 @@ Each metronome UID becomes its **own independent instance**.
 
 ---
 
-### 🎛️ Implementation Notes (for developers)
+### Implementation Notes (for developers)
 
 - Autostart hooks run **after** DOM insertion and SVG setup.
 - Autostart routines are separate from cue crossing logic:
@@ -130,7 +130,7 @@ Each metronome UID becomes its **own independent instance**.
 
 ---
 
-### 🚫 Known Limitations
+### Known Limitations
 
 - Multiple autostarts in high BPM (>200) may need scheduler improvements.
 - OSC feedback not currently aware of phase differences between UIDs.

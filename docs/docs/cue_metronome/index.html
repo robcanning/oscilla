@@ -62,19 +62,19 @@
 
 
     <main class="docs-content">
-      <h1>cue:metronome <em>(with autostart support)</em></h1>
+      <h1>metronome <em>(with autostart support)</em></h1>
 <p>Triggers a visual and/or audible metronome marker at the cue’s location or a specified <code>target:</code> element.
 The metronome can follow scrolling objects, stay fixed to the viewport, and optionally send OSC messages.</p>
 <p>The metronome <strong>can also autostart</strong>, meaning it runs automatically when the SVG is loaded in either page mode or scroll mode without needing a cue trigger crossing.</p>
 <hr>
-<h3>🧭 Syntax</h3>
-<pre><code>cue:metro(bpm:&lt;number&gt;,beats:&lt;number&gt;,visual:&lt;type&gt;,audio:&lt;0|1&gt;,
+<h3>Syntax</h3>
+<pre><code>metro(bpm:&lt;number&gt;,beats:&lt;number&gt;,visual:&lt;type&gt;,audio:&lt;0|1&gt;,
            position:&lt;fixed|scrolling&gt;,osc:&lt;0|1&gt;,uid:&lt;string&gt;,
            target:&lt;uid&gt;,hideTarget:&lt;0|1&gt;,showcount:&lt;0|1&gt;,hold:&lt;seconds&gt;,
            colour:&lt;csscolour&gt;,size:&lt;pixels&gt;,trig:&lt;auto|edge&gt;)
 </code></pre>
 <hr>
-<h3>⚙️ Parameters</h3>
+<h3>Parameters</h3>
 <table>
 <thead>
 <tr>
@@ -172,7 +172,7 @@ The metronome can follow scrolling objects, stay fixed to the viewport, and opti
 </tbody>
 </table>
 <hr>
-<h3>🪄 Behaviour</h3>
+<h3>Behaviour</h3>
 <ul>
 <li>Runs as <strong>overlay DOM</strong> element (not part of the SVG).</li>
 <li>Follows scrolling or stays screen-fixed depending on <code>position:</code>.</li>
@@ -181,22 +181,22 @@ The metronome can follow scrolling objects, stay fixed to the viewport, and opti
 <li>Can target another SVG element and hide it on activation.</li>
 </ul>
 <hr>
-<h3>🚀 Autostart Mode (NEW)</h3>
-<h4>🧠 When is a metronome autostarted?</h4>
+<h3>Autostart Mode (NEW)</h3>
+<h4>When is a metronome autostarted?</h4>
 <p>Whenever the cue contains:</p>
 <pre><code>trig:auto
 </code></pre>
 <p>Example:</p>
 <pre><code>cue:metro(bpm:90,visual:hex,uid:m21,trig:auto)
 </code></pre>
-<h4>🔁 When does autostart happen?</h4>
+<h4>When does autostart happen?</h4>
 <ul>
 <li>In <strong>page overlay mode</strong> (during PDF-style view)</li>
 <li>In <strong>scroll mode</strong> (timeline view)</li>
 <li><strong>After the SVG and DOM are initialized</strong></li>
 <li><strong>Before</strong> the animation clock starts</li>
 </ul>
-<h4>🏷️ What does autostart actually do?</h4>
+<h4>What does autostart actually do?</h4>
 <p>Autostart metronomes fully initialise as if they had been triggered by the scrolling playhead:</p>
 <ul>
 <li>Overlay DOM is created</li>
@@ -205,10 +205,10 @@ The metronome can follow scrolling objects, stay fixed to the viewport, and opti
 <li>OSC messages begin</li>
 <li>Audio (if enabled) clicks on beat 1,2,3,4…</li>
 </ul>
-<h4>🗂️ Multiple autostarts supported</h4>
+<h4>Multiple autostarts supported</h4>
 <p>Each metronome UID becomes its <strong>own independent instance</strong>.</p>
 <hr>
-<h3>🔊 Example cues</h3>
+<h3>Example cues</h3>
 <table>
 <thead>
 <tr>
@@ -219,24 +219,24 @@ The metronome can follow scrolling objects, stay fixed to the viewport, and opti
 <tbody>
 <tr>
 <td>Autostart metronome at load</td>
-<td><code>cue:metro(bpm:90,visual:hex,trig:auto,uid:m1)</code></td>
+<td><code>metro(bpm:90,visual:hex,trig:auto,uid:m1)</code></td>
 </tr>
 <tr>
-<td>Two autostarts with different tones</td>
-<td><code>cue:metro(bpm:70,trig:auto,uid:A)</code> + <code>cue:metro(bpm:110,trig:auto,uid:B)</code></td>
+<td>Two autostarts</td>
+<td><code>metro(bpm:70,trig:auto,uid:A)</code> + <code>cue:metro(bpm:110,trig:auto,uid:B)</code></td>
 </tr>
 <tr>
 <td>Standard (on crossing), no autostart</td>
-<td><code>cue:metro(bpm:100,visual:circle,uid:M)</code></td>
+<td><code>metro(bpm:100,visual:circle,uid:M)</code></td>
 </tr>
 <tr>
 <td>Scroll-following autostart</td>
-<td><code>cue:metro(bpm:120,position:scrolling,target:x1,trig:auto,uid:hex1)</code></td>
+<td><code>metro(bpm:120,position:scrolling,target:x1,trig:auto,uid:hex1)</code></td>
 </tr>
 </tbody>
 </table>
 <hr>
-<h3>🎯 OSC Message Example</h3>
+<h3>OSC Message Example</h3>
 <pre><code>/oscilla/metro
 {
   &quot;uid&quot;: &quot;m21&quot;,
@@ -246,7 +246,7 @@ The metronome can follow scrolling objects, stay fixed to the viewport, and opti
 }
 </code></pre>
 <hr>
-<h3>🎛️ Implementation Notes (for developers)</h3>
+<h3>Implementation Notes (for developers)</h3>
 <ul>
 <li>Autostart hooks run <strong>after</strong> DOM insertion and SVG setup.</li>
 <li>Autostart routines are separate from cue crossing logic:
@@ -260,7 +260,7 @@ The metronome can follow scrolling objects, stay fixed to the viewport, and opti
 </li>
 </ul>
 <hr>
-<h3>🚫 Known Limitations</h3>
+<h3>Known Limitations</h3>
 <ul>
 <li>Multiple autostarts in high BPM (&gt;200) may need scheduler improvements.</li>
 <li>OSC feedback not currently aware of phase differences between UIDs.</li>
