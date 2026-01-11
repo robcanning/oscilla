@@ -1,34 +1,96 @@
 ---
-title: oscilla_cheatsheet
+title: Cheatsheet
 layout: docs_layout.njk
 ---
 
-# Oscilla Cheatsheet (Draft)
+# Oscilla Cheatsheet
 
-pause(dur:20, uid:1a)
+Compact one-line examples for rapid reference.
 
-cue:fade(mode:in, dur:2, from:0, to:1, target:circle1)
+---
 
-cue:fade(mode:pulse, dur:1.5, from:0.2, to:1)
+## Timing & Navigation
 
-cue:fade(mode:blink, dur:0.5, time:10)
+pause(dur:4)
+pause(dur:12, count:true)
+pause(dur:4, next:nav(page3))
+nav(page3)
+nav(scroll@A)
+nav(scrollPaused@B)
+stop()
+stop(uid:s1)
+stop(next:nav(End))
+page(page1)
+page(Pseq([page1:2,page2:2],3))
+page(Prand([pageA,pageB,pageC],4))
+page(Pshuf([page1,page2,page3],1))
+page(Pchoose([pageA,pageB]))
+repeat(start:A, end:C, x:3)
+stopwatch(source:new, trig:auto)
+stopwatch(source:main, scroll:true)
+metro(bpm:90, visual:hex, trig:auto)
 
-o2p(path:c01, mode:rev, dur:45, loop:0, ease:linear, prestate:ghostClickable(0))
+---
 
-o2p(path:p03, mode:fwd, rotate:spin, rotspeed:7, rotdir:-1,  dur:55, dir:-1, start:0.6, tdelay:10, prestate:ghostClickable(18000), loop:0, ease:linear)
+## Media & Sound
 
-rotate(dir:1, dur: 120, uid:124, prestate:ghostClickable(playhead,2000,0.7))
+audio(file:hit.wav)
+audio(file:drone.wav, loop:0)
+audio(file:click.wav, amp:0.25)
+video(file:intro.mp4, size:fs, clickable:1)
+video(file:clip.webm, target:markerA, size:640x360, loop:0)
+text(src:foo.txt, dur:3, autostart:1)
+text(src:foo.txt, order:rnd, dur:2, loop:0)
+text(src:foo.txt, yslots:3, yslotmode:sequence)
+fade(mode:out, dur:2, from:1, to:0)
+fade(mode:in, dur:1, target:title)
+fade(mode:pulse, dur:6, from:0.2, to:1)
 
-rotate(dir:-1, dur:85, uid:123, osc:1, oscaddr:"/spat/src01", prestate:ghostClickable(playhead,10000,0.6))
+---
 
-propagate( osc( addr:pontalist, pitch:deg(irand(0,11), irand(0,2)), env:size ) )
+## OSC & External Control
 
-propagate( osc( addr:pontalist, pitch:deg(${1}, ${2}), env:size, root:48 ), rnd([0,2,4,5,7,9,11]), rnd([0,1,2,3,4,5]) )
+osc(addr:voice, pitch:y, amp:size)
+osc(addr:voice, pitch:hz(440))
+osc(addr:voice, pitch:midi(60))
+osc(addr:voice, pitch:deg(2,4), root:48)
+osc(addr:voice, pitch:y, uid:v1)
+oscCtrl(addr:"/fx/pan", min:-1, max:1)
+oscCtrl(addr:"/fx/pan", min:-1, max:1, mode:continuous)
+oscCtrl(addr:"/fx/ring/freq", min:60, max:800)
 
-video(file:intro.mp4,size:fs,clickable:1,audio:1,fadeIn:0.5)
+---
 
-video(file:clip.webm,target:markerA,location:scroll,size:640x360,loop:0,opacity:0.9)
+## Interaction & Structure
 
-metro(bpm:90,visual:hex,trig:auto,uid:m1)
+button(trigger:nav(page3))
+button(trigger:pause(dur:12,count:true))
+button(trigger:nav(scroll@A), style(size:"120x45", fontsize:36))
+choice(A,B,C)
+group(cueA, cueB, cueC)
+propagate(scale(values:[${1},${2}], dur:${3}), rnd(0.8,1.2), rnd(1.2,1.6), rnd(0.4,1.2))
+reuse(mainMenu)
+use(mainMenu)
+traverse(points:p1,p2,p3, dir:fwd, loop:0)
 
-metro(bpm:120,position:scrolling,target:x1,trig:auto,uid:hex1)
+---
+
+## Synthesis
+
+synth(uid:pad3, freq:[440,477,644,777], env:{a:1.5})
+synth(uid:pad3, freq:Pseq(400,800,1600,800), dur:0.2)
+synth(uid:filt, wave:saw, freq:330, filter:{type:lp,freq:Pseq(400,800),q:0.7})
+synth(uid:pad3, freq:Pseq(400,800), env:{a:4}, delay:{time:0.4,fb:0.85,mix:0.7})
+
+---
+
+## Animation
+
+scale(values:[1,1.4], mode:alternate, dur:1.2)
+rotate(dir:1, dur:120)
+o2p(path:p01, mode:fwd, dur:45, loop:0)
+color(values:[#f00,#0ff], dur:2)
+
+---
+
+Docs: https://robcanning.github.io/oscilla/docs/
