@@ -1,0 +1,318 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>cue_synth</title>
+
+  <link rel="stylesheet" href="/oscilla/docs/style.css">
+</head>
+
+
+
+<body>
+
+  <div class="docs-container">
+    <nav class="sidebar">
+  
+<h3>Docs</h3>
+<ul>
+  <li><a href="/oscilla/docs/">Overview</a></li>
+</ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/oscilla/docs/cue_button">button()</a></li>
+
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/oscilla/docs/cue_o2p/">Object to Path o2p()</a></li>
+  </ul>
+
+ <h3> <a href="/oscilla/docs/cheatsheet/">Cheatsheet</a></h3>
+ <h3> <a href="/oscilla/docs/workflow/">Workflow</a> </h3>
+
+  <ul>
+    <li><a href="/oscilla/docs/QUICKSTART/"> Quickstart Install)</a></li>
+    <li><a href="/oscilla/docs/INSTALL/">Full Install Steps</a></li>
+  </ul>
+
+</nav>
+
+
+    <main class="docs-content">
+
+    <nav class="docs-nav">
+      <a id="docs-prev" href="#" aria-label="Previous page">← Prev</a>
+      <a href="/oscilla/docs/">Docs Index</a>
+      <a id="docs-next" href="#" aria-label="Next page">Next →</a>
+    </nav>
+
+    <h1><code>synth()</code> — Web Audio Synth &amp; Drone Cue</h1>
+<p>The <code>synth()</code> cue creates a lightweight Web Audio–based sound source directly inside Oscilla. It is designed for <strong>reference tones, drones, textures, chords, and simple patterned sound processes</strong>, not for full synthesiser emulation.</p>
+<p>The synth cue follows the same design philosophy as Oscilla’s animation and audio cues:</p>
+<ul>
+<li>explicit, readable parameters</li>
+<li>deterministic behaviour</li>
+<li>optional pattern sequencing</li>
+<li>safe defaults (low amplitude, click-free envelopes)</li>
+<li>optional OSC mirroring</li>
+</ul>
+<p>Sound is intended to <strong>support the score</strong>, not replace external audio systems.</p>
+<hr>
+<h2>Basic Usage</h2>
+<h3>Minimal reference tone</h3>
+<pre><code class="language-dsl">synth(uid:refA, wave:sine, freq:440, amp:0.1)
+</code></pre>
+<hr>
+<h3>Pitch name instead of Hz</h3>
+<pre><code class="language-dsl">synth(uid:tuning, wave:sine, freq:A4, amp:0.08)
+</code></pre>
+<hr>
+<h2>Noise Sources</h2>
+<pre><code class="language-dsl">synth(uid:wind, wave:noise, amp:0.07)
+</code></pre>
+<p>Accepted aliases:</p>
+<pre><code class="language-dsl">wave:white
+wave:pink
+wave:brown
+</code></pre>
+<hr>
+<h2>Amplitude Envelope (ADSR)</h2>
+<pre><code class="language-dsl">synth(
+  uid:env1,
+  wave:saw,
+  freq:220,
+  amp:0.12,
+  env:{a:0.5, d:0.2, s:0.7, r:1.2}
+)
+</code></pre>
+<hr>
+<h2>Chords (Array Frequencies)</h2>
+<p>The <code>freq</code> parameter may be a <strong>list of frequencies</strong>, producing a chord. Each value is rendered as a parallel oscillator voice sharing the same envelope and effects chain.</p>
+<pre><code class="language-dsl">synth(
+  uid:pad3,
+  wave:sine,
+  freq:[440, 477, 644, 777],
+  env:{a:1.5},
+  amp:0.12
+)
+</code></pre>
+<hr>
+<h2>Patterned Parameters</h2>
+<h3>Frequency sequence</h3>
+<pre><code class="language-dsl">synth(
+  uid:seq1,
+  wave:triangle,
+  freq:Pseq(220, 330, 440),
+  dur:Pseq(1, 1, 2),
+  amp:0.08
+)
+</code></pre>
+<hr>
+<h3>Patterned chord progression</h3>
+<pre><code class="language-dsl">synth(
+  uid:chordSeq,
+  wave:saw,
+  freq:Pseq(
+    [220, 330, 440],
+    [247, 370, 494],
+    [196, 294, 392]
+  ),
+  dur:1.5,
+  env:{a:1.2},
+  amp:0.1
+)
+</code></pre>
+<hr>
+<h3>Random pitch</h3>
+<pre><code class="language-dsl">synth(
+  uid:randFreq,
+  wave:square,
+  freq:Prand(200, 400, 600),
+  dur:0.8,
+  amp:0.09
+)
+</code></pre>
+<hr>
+<h3>Amplitude pattern</h3>
+<pre><code class="language-dsl">synth(
+  uid:ampSteps,
+  wave:saw,
+  freq:440,
+  amp:[0.05, 0.1, 0.15, 0.1],
+  dur:1
+)
+</code></pre>
+<hr>
+<h2>Filters</h2>
+<pre><code class="language-dsl">synth(
+  uid:filterSeq,
+  wave:saw,
+  freq:330,
+  filter:{type:lp, freq:Pseq(400, 800, 1600, 800), q:0.7},
+  dur:0.5,
+  amp:0.08
+)
+</code></pre>
+<hr>
+<h2>Delay</h2>
+<pre><code class="language-dsl">synth(
+  uid:delayLead,
+  wave:square,
+  freq:550,
+  amp:0.12,
+  delay:{time:0.25, fb:0.35, mix:0.2}
+)
+</code></pre>
+<hr>
+<h2>Reverb</h2>
+<pre><code class="language-dsl">synth(
+  uid:revDrone,
+  wave:sine,
+  freq:110,
+  amp:0.07,
+  reverb:{mix:0.3, time:2, damp:3000}
+)
+</code></pre>
+<hr>
+<h2>Glide</h2>
+<pre><code class="language-dsl">synth(
+  uid:glide1,
+  wave:sine,
+  freq:Pseq(220, 330, 440),
+  dur:1,
+  glide:0.1,
+  amp:0.1
+)
+</code></pre>
+<hr>
+<h2>Interpolation Mode</h2>
+<pre><code class="language-dsl">synth(
+  uid:stepSeq,
+  wave:triangle,
+  freq:Pshuf(300, 450, 600),
+  interp:step,
+  dur:1,
+  amp:0.08
+)
+</code></pre>
+<hr>
+<h2>Pan</h2>
+<pre><code class="language-dsl">synth(
+  uid:panTest,
+  wave:sine,
+  freq:440,
+  pan:-0.6,
+  amp:0.09
+)
+</code></pre>
+<hr>
+<h2>OSC Mirroring</h2>
+<pre><code class="language-dsl">synth(
+  uid:oscLead,
+  osc:1,
+  oscAddr:/synth/lead,
+  wave:saw,
+  freq:440,
+  amp:0.1
+)
+</code></pre>
+<hr>
+<h2>Stop</h2>
+<pre><code class="language-dsl">synthStop(uid:seq1, rel:0.5)
+</code></pre>
+<hr>
+<h2>Summary</h2>
+<p>The <code>synth()</code> cue provides simple, reliable sound generation for reference tones, drones, chords, and patterned textures, fully integrated into Oscilla’s cue and pattern system.</p>
+
+
+    </main>
+  </div>
+
+<p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+
+
+<script>
+(function () {
+  // Collect sidebar links in visual order
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar) return;
+
+  const links = Array.from(
+    sidebar.querySelectorAll("a[href]")
+  ).map(a => a.href);
+
+  const current = window.location.href.replace(/#.*$/, "");
+  const index = links.findIndex(href => href === current);
+
+  const prev = index > 0 ? links[index - 1] : null;
+  const next = index >= 0 && index < links.length - 1
+    ? links[index + 1]
+    : null;
+
+  // Wire prev/next buttons if present
+  const prevBtn = document.getElementById("docs-prev");
+  const nextBtn = document.getElementById("docs-next");
+
+  if (prevBtn) {
+    if (prev) prevBtn.href = prev;
+    else prevBtn.style.visibility = "hidden";
+  }
+
+  if (nextBtn) {
+    if (next) nextBtn.href = next;
+    else nextBtn.style.visibility = "hidden";
+  }
+
+  // Keyboard navigation
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+    if (e.key === "ArrowLeft" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowRight" && next) {
+      window.location.href = next;
+    }
+
+    // Optional: vertical navigation
+    if (e.key === "ArrowUp" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowDown" && next) {
+      window.location.href = next;
+    }
+  });
+})();
+</script>
+
+
+</body>
+
+
+
+</html>
