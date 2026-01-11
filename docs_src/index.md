@@ -21,7 +21,7 @@ Oscilla integrates timing, animation, media control, and OSC output into a singl
 
 **Start here:**
 
- **https://robcanning.github.io/oscilla/docs/**
+ **[https://robcanning.github.io/oscilla/docs/](https://robcanning.github.io/oscilla/docs/)**
 
 The documentation includes:
 - Complete cue reference
@@ -63,7 +63,7 @@ Oscilla uses a cue-driven execution model. Cues are embedded directly in SVG IDs
 - `fade()` — fade visual or UI elements
 
 Full syntax and parameters for each cue are documented here:  
- https://robcanning.github.io/oscilla/docs/
+ **[Cue Documentation](https://robcanning.github.io/oscilla/docs/)**
 
 ---
 
@@ -84,7 +84,7 @@ Animations can be:
 - synchronized across clients  
 
 Animation syntax is documented here:  
- https://robcanning.github.io/oscilla/docs/cheatsheet/
+ **[Animation Cheatsheet](https://robcanning.github.io/oscilla/docs/cheatsheet/)**
 
 ---
 
@@ -115,7 +115,6 @@ Scores are authored as **SVG files**, typically using **Inkscape**.
 - Refresh the browser to see changes
 
 Authoring workflow:  
- https://robcanning.github.io/oscilla/docs/workflow/
+ **[Workflow Documentation](https://robcanning.github.io/oscilla/docs/workflow/)**
 
 ---
-
