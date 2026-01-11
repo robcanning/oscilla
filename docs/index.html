@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap" rel="stylesheet">
 
-  <title>OscillaScore</title>
+  <title>Oscilla</title>
 
   <!-- Pico CSS for layout -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
@@ -64,227 +64,105 @@
 
 
 <main>
-  <p>OscillaScore is an open-source platform for creating and performing time-based, animated notation in the browser. It supports collaborative performance, synthesis control, and visual experimentation using simple SVG and web technologies.</p>
-<p style="text-align: left;">
+  <p>Oscilla is an open-source platform for creating and performing animated, cue-driven graphic scores in the browser. Scores are authored as SVG documents and executed as synchronized, networked performance environments.</p>
+<p>Oscilla integrates timing, animation, media control, and OSC output into a single browser-native score engine.</p>
+<p style="text-align:left;">
   <a href="./assets/oscilla-title-logo.png" target="_blank">
-    <img src="./assets/oscilla-title-logo.png" alt="OscillaScore Title" style="width: 100%; height: auto; border-radius: 6px;" />
+    <img src="./assets/oscilla-title-logo.png"
+         alt="Oscilla title"
+         style="width:100%;height:auto;border-radius:6px;" />
   </a>
 </p>
-<h2>What Can OscillaScore Do?</h2>
+<hr>
+<h2>Documentation</h2>
+<p><strong>Start here:</strong></p>
+<p><strong>https://robcanning.github.io/oscilla/docs/</strong></p>
+<p>The documentation includes:</p>
 <ul>
-<li>Synchronize score playback across local devices or remote performers</li>
-<li>Trigger audio, events, or OSC messages via cues</li>
-<li>Combine open-form and fixed-form structures for hybrid performance formats</li>
-<li>Animate shapes, symbols, and cues using custom SVG syntax</li>
-<li>Run entirely in the browser — no installation required</li>
+<li>Complete cue reference</li>
+<li>Animation and transformation syntax</li>
+<li>Authoring workflow (Inkscape → browser)</li>
+<li>System architecture</li>
+<li>Cheatsheets and examples</li>
 </ul>
 <hr>
+<h2>Core Cue System</h2>
+<p>Oscilla uses a cue-driven execution model. Cues are embedded directly in SVG IDs and are evaluated in real time during score playback.</p>
+<h3>Available Cue Types</h3>
+<p><strong>Timing &amp; Navigation</strong></p>
 <ul>
-<li>Full documentation and source code on <a href="https://github.com/robcanning/oscilla">GitHub</a></li>
+<li><code>pause()</code> — pause playback</li>
+<li><code>stop()</code> — halt playback</li>
+<li><code>nav()</code> — navigation and mode control</li>
+<li><code>page()</code> — page-based score navigation</li>
+<li><code>stopwatch()</code> — time display and control</li>
+<li><code>metronome()</code> — tempo reference</li>
 </ul>
-<h2>What Kind of Software Is OscillaScore?</h2>
-<p>Oscilla is a hybrid system that sits between score playback engine, cue-based media framework, and distributed performance interface. It is designed to support composers and performers working with contemporary forms of notation, multimedia integration, and distributed coordination.</p>
-<p><strong>It is:</strong></p>
+<p><strong>Media &amp; Sound</strong></p>
 <ul>
-<li>A performance framework for distributed setups, allowing composers and performers to coordinate audio, animation, and media in real time</li>
-<li>A cue-driven score playback and control system for structured, time-based, and media-integrated works</li>
-<li>A networked playback environment supporting multi-client synchronization via WebSockets and OSC</li>
-<li>A score authoring platform supporting compact mini-syntax for animation, transformation, and timing control using SVG ID conventions</li>
+<li><code>audio()</code> — audio file playback</li>
+<li><code>synth()</code> — browser-based synthesis</li>
+<li><code>video()</code> — video playback</li>
 </ul>
-<p><strong>It is not:</strong></p>
+<p><strong>OSC &amp; External Control</strong></p>
 <ul>
-<li>A full-featured notation program like MuseScore or Sibelius</li>
-<li>A DAW or audio sequencing environment</li>
+<li><code>osc()</code> — OSC message output</li>
+<li><code>oscCtrl()</code> — OSC routing and control</li>
 </ul>
-<p>Nonetheless, when integrated with external tools such as Inkscape or conventional notation software, OscillaScore offers a robust environment for the composition and design of animated and spatial graphic scores. This hybrid approach supports a range of experimental, electroacoustic, and intermedia practices, enabling composers to work beyond the constraints of traditional notation.</p>
-<h2>Conceptual Overview</h2>
-<p>OscillaScore supports both fixed-form and open-form works, and can be used in isolation as a powerful environment for structuring electronic music compositions. It accommodates a range of artistic practices including:</p>
+<p><strong>Interaction &amp; Structure</strong></p>
 <ul>
-<li>Animated graphic or symbolic scores</li>
-<li>Distributed improvisation and comporovisation</li>
-<li>Time-based cue sequences and gesture triggers</li>
-<li>Media scores involving video, audio, or text prompts</li>
-<li>Live networked performances and collaborative rehearsals</li>
+<li><code>button()</code> — interactive UI elements</li>
+<li><code>propagate()</code> — propagate cue state</li>
+<li><code>reuse()</code> — reuse cue definitions</li>
+<li><code>text()</code> — timed and sequenced text</li>
+<li><code>fade()</code> — fade visual or UI elements</li>
 </ul>
-<p>It builds on the lineage of drawing-based music systems like Xenakis’s UPIC, reimagining the score as a spatial interface for sonic control. With support for animation and OSC, OscillaScore acts as both a form of notation and a performable instrument, allowing users to control sound through movement, timing, and visual gesture.</p>
-<p><strong>It operates under two main paradigms:</strong></p>
-<ul>
-<li>A scrolling score model, suited for linear, horizontally-unfolding timelines</li>
-<li>A page-based or hypertextual model, allowing spatial, nonlinear, or interactive structures</li>
-</ul>
-<p>These paradigms can coexist within a single score, enabling hybrid forms that mix continuous motion with branching or triggerable segments.</p>
-<p>OscillaScore tightly integrates notation, performer cues, media triggers, and animation into a unified timing and control system. This allows complex audiovisual structures to be executed with precise coordination — ensuring seamless transitions between written material, live gestures, and multimedia elements.</p>
-<p>Composers and performers can author complex transformations, animations, and media events using a concise SVG ID-based syntax paired with a powerful cue system.</p>
-<h2>Use Cases</h2>
-<p>OscillaScore supports a wide range of use cases, including:</p>
-<ul>
-<li><strong>Score composition for ensembles</strong>: Design dynamic, cue-based scores using SVG animations and transformation syntax tailored for group performance</li>
-<li><strong>Rehearsal and performance for ensembles</strong>: Share synchronized score playback with multiple musicians in real time using WebSockets or OSC</li>
-<li><strong>Telematic and distributed improvisation</strong>: Use cues and visual animations to coordinate remote performers across networks</li>
-<li><strong>Mixed-media or hypermedia works</strong>: Integrate text, video, sound, and interactivity in dynamic score designs<br>
-<strong>Solo electronic music composition</strong>: Structure and trigger sound processes in synthesis tools like SuperCollider or Pure Data using animated SVG cues and OSC output</li>
-<li><strong>Interactive installations</strong>: Embed visual or spatial scores in gallery contexts with OSC-driven sound interaction</li>
-</ul>
-<p style="text-align: left;">
-  <a href="./assets/oscilla-ponysays-canning-dublin.png" target="_blank">
-    <img src="./assets/oscilla-ponysays-canning-dublin.png" alt="OscillaScore Live" style="width: 100%; height: auto; border-radius: 6px;" />
-  </a>
-</p>
-<p style="font-size: 0.9em; color: #666; max-width: 100%; text-align: left; margin-top: -0.5em;">
-  <em>PonySays trio performing <strong>Rob Canning's composition <em>1:10,560 (6 inches to the Mile)</em></strong>, 2025 — intermedia score for electric guitar, synthesiser, and drums — at Dublin Sound Lab’s Music Current Festival, Project Arts Centre, Dublin. The musicians performed using iPads synchronized over a local network with Oscilla, while the projector was connected as a fourth client displaying the score to the audience.</em>
-</p>
+<p>Full syntax and parameters for each cue are documented here:<br>
+https://robcanning.github.io/oscilla/docs/</p>
 <hr>
-<h2>Create Oscilla Scores with Inkscape</h2>
-<p>OscillaScore is designed to work seamlessly with <a href="https://inkscape.org/">Inkscape</a> — a free and open-source vector graphics editor. It is also compatible with other SVG-capable tools such as Adobe Illustrator, though some advanced features may vary in support. If you encounter any issues, please report them via the <a href="https://github.com/robcanning/oscilla/discussions">GitHub Discussions</a> or the <a href="https://matrix.to/#/#oscilla:matrix.org">Oscilla Matrix room</a>.</p>
+<h2>Animation System</h2>
+<p>Oscilla supports continuous and discrete animation directly tied to score timing.</p>
+<h3>Animation Namespaces</h3>
 <ul>
-<li>Download: <a href="https://inkscape.org/release/">inkscape.org/release</a></li>
-<li>Use OscillaScore templates and naming conventions for animated SVG scores</li>
-<li>See <a href="https://github.com/robcanning/oscilla">GitHub</a> for templates and examples</li>
+<li><code>scale()</code> — uniform or non-uniform scaling</li>
+<li><code>rotate()</code> — continuous or stepped rotation</li>
+<li><code>o2p()</code> — object-to-path traversal</li>
 </ul>
-<hr>
-<h2>Interactive Help Score File</h2>
-<p>Oscilla comes with an interactive help file help.svg. Here are some screenshots from the help score:</p>
-<div id="gallery" class="grid">
-<p><a href="./assets/oscilla_interface_screenshot.png"
-       data-pswp-width="1920"
-       data-pswp-height="1080"
-       target="_blank" class="thumbnail">
-<img src="./assets/oscilla_interface_screenshot.png"
-           alt="oscilla interface screenshot" />
-</a></p>
-<p><a href="./assets/oscilla-help-cues.png"
-       data-pswp-width="1920"
-       data-pswp-height="1080"
-       target="_blank" class="thumbnail">
-<img src="./assets/oscilla-help-cues.png"
-           alt="oscilla-help-cues" />
-</a></p>
-<p><a href="./assets/oscilla-help-cues2.png"
-       data-pswp-width="1920"
-       data-pswp-height="1080"
-       target="_blank" class="thumbnail">
-<img src="./assets/oscilla-help-cues2.png"
-           alt="oscilla-help-cues2" />
-</a></p>
-<p><a href="./assets/oscilla-help-osc1.png"
-       data-pswp-width="1920"
-       data-pswp-height="1080"
-       target="_blank" class="thumbnail">
-<img src="./assets/oscilla-help-osc1.png"
-           alt="oscilla-help-osc1" />
-</a></p>
-<p><a href="./assets/oscilla-help-osc2.png"
-       data-pswp-width="1920"
-       data-pswp-height="1080"
-       target="_blank" class="thumbnail">
-<img src="./assets/oscilla-help-osc2.png"
-           alt="oscilla-help-osc2" />
-</a></p>
-<p><a href="./assets/oscilla-help-paths1.png"
-       data-pswp-width="1920"
-       data-pswp-height="1080"
-       target="_blank" class="thumbnail">
-<img src="./assets/oscilla-help-paths1.png"
-           alt="oscilla-help-paths1" />
-</a></p>
-<p><a href="./assets/oscilla-help-paths2.png"
-       data-pswp-width="1920"
-       data-pswp-height="1080"
-       target="_blank" class="thumbnail">
-<img src="./assets/oscilla-help-paths2.png"
-           alt="oscilla-help-paths2" />
-</a></p>
-<p><a href="./assets/oscilla-help-rotation1.png"
-       data-pswp-width="1920"
-       data-pswp-height="1080"
-       target="_blank" class="thumbnail">
-<img src="./assets/oscilla-help-rotation1.png"
-           alt="oscilla-help-rotation1" />
-</a></p>
-<p><a href="./assets/oscilla-help-raster.png"
-       data-pswp-width="1920"
-       data-pswp-height="1080"
-       target="_blank" class="thumbnail">
-<img src="./assets/oscilla-help-raster.png"
-           alt="oscilla-help-raster" />
-</a></p>
-</div>
-<style>
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.5rem;
-  }
-
-  .thumbnail img {
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-  }
-</style>
-<hr>
-<h2>PonySays Trio using Oscilla @ MusicCurrent Festival 2025</h2>
-<div class="video-container">
-  <iframe src="https://www.youtube.com/watch?v=LTae9fubyyM"
-          title="YouTube video player"
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          referrerpolicy="strict-origin-when-cross-origin"
-          allowfullscreen>
-  </iframe>
-</div>
-<style>
-  .video-container {
-    position: relative;
-    padding-bottom: 56.25%; /* 16:9 aspect ratio */
-    height: 0;
-    overflow: hidden;
-    max-width: 100%;
-    margin-bottom: 1rem;
-  }
-
-  .video-container iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-</style>
-<hr>
-<h2>Workshops</h2>
-<p>OscillaScore workshops explore graphic notation, live performance, and networked interaction. These sessions are designed for composers, improvisers, and artists working at the intersection of sound, code, and visual media — exploring new modes of performance, interaction, and notation. OscillaScore workshops can be adapted to:</p>
+<p>Animations can be:</p>
 <ul>
-<li>Experimental music ensembles</li>
-<li>Improvisation collectives</li>
-<li>Composition/technology courses</li>
-<li>Hacklabs and interdisciplinary events</li>
+<li>time-based or duration-based</li>
+<li>looped, alternating, or one-shot</li>
+<li>nested and combined</li>
+<li>synchronized across clients</li>
 </ul>
-<p>Workshops typically include live demos, collaborative score creation, and integrations with synthesis, spatial sound, or video. Please get in touch if you are interested in hosting a workshop.</p>
-<p style="text-align: left;">
-  <a href="./assets/oscilla-workshop-cmc2025.png" target="_blank">
-    <img src="./assets/oscilla-workshop-cmc2025.png" alt="Oscilla Workshop CMC 2025" style="width: 100%; height: auto; border-radius: 6px;" />
-  </a>
-</p>
-<p style="font-size: 0.9em; color: #666; max-width: 100%; text-align: left; margin-top: -0.5em;">
-  <em>The first Oscilla workshop hosted by the Contemporary Music Centre of Ireland as part of the Music Current Festival 2025. More details at <a href="https://www.cmc.ie/events/2025/apr/music-current-2025-rob-canning-digital-score-workshop" target="_blank">cmc.ie</a>.<br>
-  Photo © Contemporary Music Centre of Ireland, 2025.</em>
-</p>
+<p>Animation syntax is documented here:<br>
+https://robcanning.github.io/oscilla/docs/cheatsheet/</p>
 <hr>
-<h2>Papers in Preparation</h2>
-<p>One or more research papers related to Oscilla are currently in preparation for submission to peer-reviewed academic conferences. Due to the requirements of the double-blind review process, these preprints cannot be shared publicly at this stage. They will be made available here once the review process has concluded.</p>
-<h2>Community &amp; Support</h2>
+<h2>What Kind of System Is Oscilla?</h2>
+<p>Oscilla is a <strong>modular score execution platform</strong> combining:</p>
 <ul>
-<li><a href="https://github.com/robcanning/oscilla/discussions">GitHub Discussions</a></li>
-<li><a href="https://matrix.to/#/#oscilla:matrix.org">Join Matrix Chat</a></li>
-<li><a href="https://toot.si/@rob">Follow @rob@toot.si</a> on Mastodon</li>
+<li>cue-based timing and control</li>
+<li>animated graphic notation</li>
+<li>networked synchronization (WebSockets / OSC)</li>
+<li>browser-native media playback</li>
 </ul>
+<p>It is designed for composers and performers working with animated, spatial, and networked scores.</p>
+<p>The system is described in:</p>
+<blockquote>
+<p>R. Canning, <em>OscillaScore: A Modular Platform for Graphic Notation in Networked Music Performance</em>,<br>
+Proceedings of the International Conference on Technologies for Music Notation and Representation (TENOR), Beijing, 2025.</p>
+</blockquote>
 <hr>
-<h2>Contact</h2>
-<h2>For workshops, collaborations, or support:
-Email: <a href="mailto:r&#115;ca&#110;ning&#64;g&#109;ail&#46;com">rscanning@gmail.com</a></h2>
+<h2>Authoring Scores</h2>
+<p>Scores are authored as <strong>SVG files</strong>, typically using <strong>Inkscape</strong>.</p>
+<ul>
+<li>SVG IDs define timing, animation, and cues</li>
+<li>No custom file formats or export steps</li>
+<li>Refresh the browser to see changes</li>
+</ul>
+<p>Authoring workflow:<br>
+https://robcanning.github.io/oscilla/docs/workflow/</p>
+<hr>
 
 </main>
 
