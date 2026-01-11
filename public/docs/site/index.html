@@ -74,35 +74,78 @@
 
     <main class="docs-content">
       <h1>Oscilla Documentation</h1>
+<p>This documentation describes the cue system, animation model, authoring workflow, and internal architecture of Oscilla.<br>
+All behaviour is authored directly in SVG and executed at runtime in the browser.</p>
+<hr>
 <h2>Cue Reference</h2>
+<p>Cues are the primary execution units in Oscilla. They control timing, navigation, media playback, interaction, and external communication.</p>
+<h3>Timing &amp; Navigation</h3>
 <ul>
-<li><a href="/docs/cue_audio/">cue_audio</a></li>
-<li><a href="/docs/cue_text/">cue_text</a></li>
-<li><a href="/docs/cue_nav/">cue_nav</a></li>
-<li><a href="/docs/cue_pause/">cue_pause</a></li>
-<li><a href="/docs/cue_repeat/">cue_repeat</a></li>
-<li><a href="/docs/cue_traverse/">cue_traverse</a></li>
-<li><a href="/docs/cue_osc/">cue_osc</a></li>
-<li><a href="/docs/cue_oscCtrl/">cue_oscCtrl</a></li>
-<li><a href="/docs/cue_page/">cue_page</a></li>
-<li><a href="/docs/cue_group/">cue_group</a></li>
-<li><a href="/docs/cue_choice/">cue_choice</a></li>
-<li><a href="/docs/cue_stop/">cue_stop</a></li>
-<li><a href="/docs/cue_stopwatch/">cue_stopwatch</a></li>
-<li><a href="/docs/cue_media/">cue_media</a></li>
-<li><a href="/docs/cue_video/">cue_video</a></li>
+<li><a href="/docs/cue_pause/"><code>pause()</code></a> — pause playback</li>
+<li><a href="/docs/cue_stop/"><code>stop()</code></a> — halt playback</li>
+<li><a href="/docs/cue_nav/"><code>nav()</code></a> — navigation and mode control</li>
+<li><a href="/docs/cue_page/"><code>page()</code></a> — page-based navigation</li>
+<li><a href="/docs/cue_stopwatch/"><code>stopwatch()</code></a> — time display and control</li>
+<li><a href="/docs/cue_repeat/"><code>repeat()</code></a> — repeat and loop structures</li>
 </ul>
+<hr>
+<h3>Media &amp; Sound</h3>
+<ul>
+<li><a href="/docs/cue_audio/"><code>audio()</code></a> — audio file playback</li>
+<li><a href="/docs/cue_media/"><code>media()</code></a> — generic media triggering</li>
+<li><a href="/docs/cue_video/"><code>video()</code></a> — video playback</li>
+<li><a href="/docs/cue_text/"><code>text()</code></a> — timed and sequenced text</li>
+<li><a href="/docs/cue_fade/"><code>fade()</code></a> — fade visual or UI elements</li>
+</ul>
+<hr>
+<h3>OSC &amp; External Control</h3>
+<ul>
+<li><a href="/docs/cue_osc/"><code>osc()</code></a> — OSC message output</li>
+<li><a href="/docs/cue_oscCtrl/"><code>oscCtrl()</code></a> — OSC routing and control</li>
+</ul>
+<hr>
+<h3>Interaction &amp; Structure</h3>
+<ul>
+<li><a href="/docs/cue_button/"><code>button()</code></a> — interactive UI buttons</li>
+<li><a href="/docs/cue_choice/"><code>choice()</code></a> — performer or system choices</li>
+<li><a href="/docs/cue_group/"><code>group()</code></a> — cue grouping and structuring</li>
+<li><a href="/docs/cue_propagate/"><code>propagate()</code></a> — propagate cue state</li>
+<li><a href="/docs/cue_reuse/"><code>reuse()</code></a> — reuse cue definitions</li>
+<li><a href="/docs/cue_traverse/"><code>traverse()</code></a> — object traversal across points or paths</li>
+</ul>
+<hr>
 <h2>Animation</h2>
+<p>Oscilla supports continuous and discrete animation tied directly to score timing.</p>
 <ul>
-<li><a href="/docs/anim_scale/">Scale Animation</a></li>
-<li><a href="/docs/anim_rotate/">Rotation Animation</a></li>
+<li><a href="/docs/anim_scale/"><code>scale()</code></a> — uniform and non-uniform scaling</li>
+<li><a href="/docs/anim_rotate/"><code>rotate()</code></a> — continuous and stepped rotation</li>
+<li><a href="/docs/cue_o2p/"><code>o2p()</code></a> — object-to-path traversal</li>
+<li><code>color()</code> — <strong>color animation (documentation forthcoming)</strong></li>
 </ul>
+<hr>
 <h2>System</h2>
+<p>Documentation for the internal execution model and architecture.</p>
 <ul>
-<li><a href="/docs/cueSystem/">Cue System Overview</a></li>
-<li><a href="/docs/cuehandler_architecture/">Cue Handler Architecture</a></li>
-<li><a href="/docs/cue_propagate/">Propagation &amp; Reuse</a></li>
+<li><a href="/docs/cueSystem/">Cue System Overview</a> — cue lifecycle and execution model</li>
+<li><a href="/docs/cuehandler_architecture/">Cue Handler Architecture</a> — internal structure</li>
+<li><a href="/docs/cue_propagate/">Propagation &amp; Reuse</a> — shared state and reuse logic</li>
 </ul>
+<hr>
+<h2>Authoring Workflow</h2>
+<ul>
+<li><a href="/docs/workflow/">Workflow</a> — SVG authoring and browser execution</li>
+<li><a href="/docs/cheatsheet/">Cheatsheet</a> — compact syntax reference</li>
+<li><a href="/docs/INSTALL/">Installation</a></li>
+<li><a href="/docs/QUICKSTART/">Quickstart</a></li>
+</ul>
+<hr>
+<h2>Further Reading</h2>
+<p>The design and rationale of Oscilla are described in:</p>
+<blockquote>
+<p>R. Canning, <em>OscillaScore: A Modular Platform for Graphic Notation in Networked Music Performance</em>,<br>
+Proceedings of the International Conference on Technologies for Music Notation and Representation (TENOR), Beijing, 2025.</p>
+</blockquote>
+<hr>
 
     </main>
   </div>
