@@ -42,6 +42,10 @@ import { handleStopCue } from './oscillaStop.js';
 import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues, checkImpulseRegions } from "./oscillaAudio.js";
 import { dismissPauseCountdown, pauseDismissClickHandler, handlePauseCue } from "./oscillaPause.js";
 
+import { checkSynthRegions} from "./oscillaSynth.js";
+
+
+
 // ===========================
 // Global Window Bindings
 // ===========================
@@ -664,6 +668,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof checkImpulseRegions === "function") {
       checkImpulseRegions();
     }
+
+        if (typeof checkSynthRegions === "function") {
+      checkSynthRegions();
+    }
+
 
 
     // ----------------------------------

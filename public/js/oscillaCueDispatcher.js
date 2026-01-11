@@ -56,6 +56,9 @@ import {
   handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues,
   handleAudioPoolCue, handleAudioImpulseCue
 } from "./oscillaAudio.js";
+
+import { handleSynthCue } from "./oscillaSynth.js";
+
 import { propagate } from "./oscillaPropagate.js";
 import { handleSpeedCue, handleSpeedRamp } from "./oscillaSpeed.js";
 import { stopAllCueTexts } from "./oscillaText.js";
@@ -380,7 +383,10 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
       return handleAudioImpulseCue(ast, cueElement, { fromCueTrigger: true });
     }
 
-
+    case "cueSynth": {
+      console.log("[dispatch] synth AST →", ast);
+      return handleSynthCue(ast, cueElement, { fromCueTrigger: true });
+    }
 
 
 
@@ -438,7 +444,7 @@ function splitCueId(id) {
     .map(s => s.endsWith(")") ? s : s + ")");
 }
 
-const CUE_PREFIX_RE = /^(?:cue:)?(oscCtrl|osc|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|audioPool|audioImpulse|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;
+const CUE_PREFIX_RE = /^(?:cue:)?(oscCtrl|osc|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|audioPool|audioImpulse|synth|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;
 
 /**
  * assignCues(svgRoot)
