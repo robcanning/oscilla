@@ -11,9 +11,14 @@
 
 
 <body>
+
   <div class="docs-container">
     <nav class="sidebar">
-  <h2>Docs</h2>
+  
+<h3>Docs</h3>
+<ul>
+  <li><a href="/oscilla/docs/">Overview</a></li>
+</ul>
 
   <h3>Cues</h3>
   <ul>
@@ -33,7 +38,6 @@
     <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
     <li><a href="/oscilla/docs/cue_button">button()</a></li>
 
-
     <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
     <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
 
@@ -44,36 +48,28 @@
     <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
     <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
     <li><a href="/oscilla/docs/cue_o2p/">Object to Path o2p()</a></li>
-
   </ul>
 
-    <h3>Cheatsheet</h3>
+ <h3> <a href="/oscilla/docs/cheatsheet/">Cheatsheet</a></h3>
+ <h3> <a href="/oscilla/docs/workflow/">Workflow</a> </h3>
+
   <ul>
-    <li><a href="/oscilla/docs/cheatsheet/">Cheatsheet</a></li>
+    <li><a href="/oscilla/docs/QUICKSTART/"> Quickstart Install)</a></li>
+    <li><a href="/oscilla/docs/INSTALL/">Full Install Steps</a></li>
   </ul>
 
-     <h3>Workflow</h3>
-  <ul>
-    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
-  </ul>
-
-      <h3>Install</h3>
-  <ul>
-    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
-    <li><a href="/oscilla/docs/QUICKSTART/">Install (QUICKSTART)</a></li>
-
-  </ul>
-
-  <h3>System</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cueSystem/">Cue System</a></li>
-    <li><a href="/oscilla/docs/cuehandler_architecture/">Architecture</a></li>
-  </ul>
 </nav>
 
 
     <main class="docs-content">
-      <h2><code>video()</code></h2>
+
+    <nav class="docs-nav">
+      <a id="docs-prev" href="#" aria-label="Previous page">← Prev</a>
+      <a href="/oscilla/docs/">Docs Index</a>
+      <a id="docs-next" href="#" aria-label="Next page">Next →</a>
+    </nav>
+
+    <h2><code>video()</code></h2>
 <p><strong>Purpose:</strong> Spawn and control HTML5 video overlays during a score.</p>
 <p><strong>Required</strong></p>
 <ul>
@@ -168,8 +164,70 @@
 <p><strong>Note:</strong> <code>size:fs</code> always positions at <code>(0,0)</code> and ignores target geometry; all other sizes center on <code>target</code> (or the cue position) with optional <code>offsetX/offsetY</code>. Default audio is muted; use <code>audio:1</code> to unmute. By default, same <code>file+target</code> cues reuse the existing element unless <code>uid</code> or <code>new:1</code> is supplied.</p>
 </blockquote>
 
+
     </main>
   </div>
+
+<p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+
+
+<script>
+(function () {
+  // Collect sidebar links in visual order
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar) return;
+
+  const links = Array.from(
+    sidebar.querySelectorAll("a[href]")
+  ).map(a => a.href);
+
+  const current = window.location.href.replace(/#.*$/, "");
+  const index = links.findIndex(href => href === current);
+
+  const prev = index > 0 ? links[index - 1] : null;
+  const next = index >= 0 && index < links.length - 1
+    ? links[index + 1]
+    : null;
+
+  // Wire prev/next buttons if present
+  const prevBtn = document.getElementById("docs-prev");
+  const nextBtn = document.getElementById("docs-next");
+
+  if (prevBtn) {
+    if (prev) prevBtn.href = prev;
+    else prevBtn.style.visibility = "hidden";
+  }
+
+  if (nextBtn) {
+    if (next) nextBtn.href = next;
+    else nextBtn.style.visibility = "hidden";
+  }
+
+  // Keyboard navigation
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+    if (e.key === "ArrowLeft" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowRight" && next) {
+      window.location.href = next;
+    }
+
+    // Optional: vertical navigation
+    if (e.key === "ArrowUp" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowDown" && next) {
+      window.location.href = next;
+    }
+  });
+})();
+</script>
+
+
 </body>
 
 

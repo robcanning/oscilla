@@ -17,71 +17,81 @@
 </head>
 
 <body>
+<!-- Splash / Project Launcher -->
+<div id="splash" role="dialog" aria-modal="true">
+  <div class="splash-container">
 
-  <div id="rotula-splash-screen" class="rotula-splash hidden">
-    <h1>Welcome to Oscilla</h1>
-    <p>Select an existing score or upload a new one.</p>
+    <!-- Title -->
+    <header class="title-section">
+      <h1 id="splash-title" class="splash-title">Oscilla</h1>
+      <h2 id="splash-subtitle" class="splash-subtitle">
+        Interactive Graphic Score System
+      </h2>
+      <img src="assets/logo.svg" alt="Oscilla logo" class="logo" />
 
-    <h2>Available Scores:</h2>
-    <ul id="score-list">
-      <li>
-        <button onclick="loadScore('svg/default.svg')">🎼 Load Default Score</button>
-      </li>
-    </ul>
+      <p id="splash-message" class="splash-message">
+        Loading available projects…
+      </p>
+    </header>
 
-    <h2>Upload a New Score:</h2>
-    <input type="file" id="upload-score" accept=".svg" />
-  </div>
+    <!-- Project list -->
+    <section id="project-grid" class="project-grid"></section>
 
-  <!-- Splash -->
-  <div id="splash">
-    <div class="splash-container">
+    <!-- Manual entry fallback -->
+    <section id="manual-entry" class="manual-entry" hidden>
+      <p>Projects could not be listed automatically.</p>
+      <input
+        id="manual-project-input"
+        type="text"
+        placeholder="Enter project name"
+        autocomplete="off"
+      />
+      <button id="manual-load-btn">Load Project</button>
+    </section>
 
-      <div class="title-section">
-        <h1 id="splash-title" class="splash-title">Oscilla</h1>
-        <h2 id="splash-subtitle" class="splash-subtitle">Interactive Graphic Score System</h2>
-        <img src="assets/logo.svg" alt="Oscilla Logo" class="logo" />
+    <!-- Help -->
+    <section class="help-section">
+      <h3>Help & Documentation</h3>
+      <p class="project-card">
+        Load the <em>help score</em> for in-score documentation and examples.
+      </p>
 
-        <p id="splash-message" class="splash-message">
-          Loading available projects...
-        </p>
-      </div>
+      <a
+        class="project-card"
+        href="https://robcanning.github.io/oscilla/docs/"
+        target="_blank"
+        rel="noopener"
+      >
+        Online Documentation
+      </a>
+    </section>
 
-      <div id="project-grid" class="project-grid"></div>
+    <!-- Meta -->
+    <footer class="meta-section">
+      <hr class="meta-divider" />
 
-      <div id="manual-entry" class="manual-entry" style="display: none;">
-        <p>Could not automatically list projects.</p>
-        <input id="manual-project-input" type="text" placeholder="Enter project name manually" />
-        <button id="manual-load-btn">Load Project</button>
-      </div>
+      <p class="meta-line">
+        <strong>Version:</strong> 0.2.4 &nbsp;|&nbsp;
+        <strong>Author:</strong> Rob Canning © 2024–2025
+      </p>
 
-      <div class="help-section">
-        <h3>Help & Documentation</h3>
-        <p class="project-card">Load the helper-score for in-score documentation.</p><br>
-        <a class="project-card" href="https://github.com/robcanning/oscilla/tree/main/md_docs" target="_blank">
-          Online Documentation
+      <p class="meta-line">
+        <a
+          href="https://robcanning.github.io/oscilla/"
+          target="_blank"
+          rel="noopener"
+        >
+          robcanning.github.io/oscilla
         </a>
-      </div>
+      </p>
 
-      <div class="meta-section">
-        <hr class="meta-divider" />
-        <p class="meta-line">
-          <strong>Version:</strong> 0.2.4 &nbsp; | &nbsp;
-          <strong>Author:</strong> Rob Canning © 2024–2025
-        </p>
-        <p class="meta-line">
-          <a href="https://robcanning.github.io/oscilla/" target="_blank">
-            https://robcanning.github.io/oscilla/
-          </a>
-        </p>
-        <p class="meta-line small">
-          Built with Node.js, Anime.js & WebSockets — Open Source (GPL-3.0)
-        </p>
-      </div>
+      <p class="meta-line small">
+        Built with Node.js, Anime.js & WebSockets — Open Source (GPL-3.0)
+      </p>
+    </footer>
 
-    </div>
   </div>
-
+</div>
 
 
 

@@ -11,13 +11,83 @@
 
 
 <body>
+
   <div class="docs-container">
     {% include "sidebar.njk" %}
 
     <main class="docs-content">
-      {{ content | safe }}
+
+    <nav class="docs-nav">
+      <a id="docs-prev" href="#" aria-label="Previous page">← Prev</a>
+      <a href="{{ '/docs/' | url }}">Docs Index</a>
+      <a id="docs-next" href="#" aria-label="Next page">Next →</a>
+    </nav>
+
+    {{ content | safe }}
+
     </main>
   </div>
+
+<p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+
+
+<script>
+(function () {
+  // Collect sidebar links in visual order
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar) return;
+
+  const links = Array.from(
+    sidebar.querySelectorAll("a[href]")
+  ).map(a => a.href);
+
+  const current = window.location.href.replace(/#.*$/, "");
+  const index = links.findIndex(href => href === current);
+
+  const prev = index > 0 ? links[index - 1] : null;
+  const next = index >= 0 && index < links.length - 1
+    ? links[index + 1]
+    : null;
+
+  // Wire prev/next buttons if present
+  const prevBtn = document.getElementById("docs-prev");
+  const nextBtn = document.getElementById("docs-next");
+
+  if (prevBtn) {
+    if (prev) prevBtn.href = prev;
+    else prevBtn.style.visibility = "hidden";
+  }
+
+  if (nextBtn) {
+    if (next) nextBtn.href = next;
+    else nextBtn.style.visibility = "hidden";
+  }
+
+  // Keyboard navigation
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+    if (e.key === "ArrowLeft" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowRight" && next) {
+      window.location.href = next;
+    }
+
+    // Optional: vertical navigation
+    if (e.key === "ArrowUp" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowDown" && next) {
+      window.location.href = next;
+    }
+  });
+})();
+</script>
+
+
 </body>
 
 

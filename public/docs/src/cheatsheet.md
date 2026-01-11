@@ -1,7 +1,8 @@
 ---
 title: Cheatsheet
-layout: docs_layout.njk
+layout: cheatsheet.njk
 ---
+
 
 # Oscilla Cheatsheet
 

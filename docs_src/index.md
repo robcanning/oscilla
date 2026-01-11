@@ -7,14 +7,6 @@ Oscilla is an open-source platform for creating and performing animated, cue-dri
 
 Oscilla integrates timing, animation, media control, and OSC output into a single browser-native score engine.
 
-<p style="text-align:left;">
-  <a href="./assets/oscilla-title-logo.png" target="_blank">
-    <img src="./assets/oscilla-title-logo.png"
-         alt="Oscilla title"
-         style="width:100%;height:auto;border-radius:6px;" />
-  </a>
-</p>
-
 ---
 
 ## Documentation

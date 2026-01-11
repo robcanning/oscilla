@@ -1,41 +1,147 @@
+/* =========================================================
+   Layout
+   ========================================================= */
+
 .docs-container {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 1.5rem;
+  grid-template-columns: 200px 1fr;
+  gap: 1.2rem;
   align-items: start;
 }
+
+/* =========================================================
+   Sidebar
+   ========================================================= */
 
 .sidebar {
   position: sticky;
   top: 1rem;
-  padding: 1rem;
+  padding: 0.75rem;
   border-right: 1px solid #ddd;
-  font-size: 0.95rem;
+
+  font-size: 0.85rem;
+  line-height: 1.25;
 }
 
 .sidebar h2 {
-  margin-top: 0;
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.sidebar h3 {
+  margin: 0.4rem 0 0.2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .sidebar ul {
   list-style: none;
+  margin: 0 0 0.35rem 0;
   padding-left: 0;
 }
 
 .sidebar li {
-  margin: 0.25rem 0;
+  margin: 0.15rem 0;
 }
 
 .sidebar a {
-  text-decoration: none;
+  display: inline-block;
+  line-height: 1.2;
   color: #333;
+  text-decoration: none;
 }
 
 .sidebar a:hover {
   text-decoration: underline;
 }
 
+.sidebar h3 a {
+  color: inherit;
+}
+
+.sidebar a[href].active {
+  font-weight: 600;
+}
+
+/* =========================================================
+   Docs Content
+   ========================================================= */
+
 .docs-content {
   min-width: 0;
-  padding: 0.5rem 0;
+  padding: 0.25rem 0;
+
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+/* Headings */
+.docs-content h1 {
+  margin: 0 0 0.6rem;
+  font-size: 2rem;
+}
+
+.docs-content h2 {
+  margin: 1rem 0 0.35rem;
+  font-size: 1.2rem;
+}
+
+.docs-content h3 {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 1.05rem;
+}
+
+/* Paragraphs */
+.docs-content p {
+  margin: 0.3rem 0 0.6rem;
+}
+
+/* Lists */
+.docs-content ul,
+.docs-content ol {
+  margin: 0.25rem 0 0.6rem 1.2rem;
+}
+
+.docs-content li {
+  margin: 0.15rem 0;
+}
+
+/* Code blocks */
+.docs-content pre {
+  margin: 0.4rem 0 0.75rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+  line-height: 1.25;
+}
+
+.docs-content code {
+  font-size: 0.85em;
+}
+
+/* =========================================================
+   Docs Navigation (prev / next / index)
+   ========================================================= */
+
+.docs-nav {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.6rem;
+}
+
+.docs-nav a {
+  color: #666;
+  text-decoration: none;
+}
+
+.docs-nav a:hover {
+  color: #000;
+}
+
+/* Optional helper text */
+.docs-hint {
+  font-size: 0.75rem;
+  color: #999;
+  margin-bottom: 0.4rem;
 }
