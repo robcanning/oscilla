@@ -22,12 +22,11 @@ oscilla/
 ├─ public/
 │  ├─ scores/
 │  │  └─ myProject/
-│  │     ├─ score.svg
-│  │     ├─ audio/
-│  │     ├─ pages/
-│  │     └─ preferences.json
+│  │     ├─ score.svg        ← required
+│  │     ├─ audio/           ← optional
+│  │     ├─ pages/           ← optional
+│  │     └─ preferences.json ← generated
 ```
-Only `score.svg` is required.  
 
 ## Preferences (preferences.json)
 
@@ -197,9 +196,7 @@ button(trigger:nav(scroll@A), style(size:"120x45", fontsize:36))
 
 propagate(
   scale(values:[${1},${2}], dur:${3}),
-  rnd(0.8,1.2),
-  rnd(1.2,1.6),
-  rnd(0.4,1.2)
+  rnd(0.8,1.2), rnd(1.2,1.6), rnd(0.4,1.2)
 )
 
 propagate(
@@ -207,30 +204,42 @@ propagate(
     addr:pontalist,
     pitch:deg(irand(0,11), irand(0,2)),
     env:size, uid:irand1235
-  )
-)
+  ))
 
 propagate(
   osc(
     addr:pontalist,
-    pitch:y,
-    env:width,
-    bright:height,
-    density:area,
+    pitch:y, env:width,
+    bright:height, density:area,
     trig:playhead,
-    uid:pontalist04
-  )
-)
+  ))
 
-
+propagate(
+  osc(
+    addr:voice,
+    pitch:deg(${1}, 3),
+    env:size, uid:rnd123
+  ),
+  rnd([0,2,4,5,7,9,11]) )
 
 reuse(mainMenu)
 use(mainMenu)
 ```
 
+## Nesting
+
+Behaviour stacks outer → inner; shapes inherit all enclosing cues.
+```
+<g id="o2p(...)">
+  <g id="rotate(...)">
+    <g id="propagate( osc(...) )">
+      <!-- shapes -->
+    </g>
+  </g>
+</g>
+```
 
 ## Links
-
 ```
 Docs: https://robcanning.github.io/oscilla/docs/
 Repo: https://github.com/robcanning/oscilla

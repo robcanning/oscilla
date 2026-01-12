@@ -42,12 +42,11 @@ npm start
 ├─ public/
 │  ├─ scores/
 │  │  └─ myProject/
-│  │     ├─ score.svg
-│  │     ├─ audio/
-│  │     ├─ pages/
-│  │     └─ preferences.json
+│  │     ├─ score.svg        ← required
+│  │     ├─ audio/           ← optional
+│  │     ├─ pages/           ← optional
+│  │     └─ preferences.json ← generated
 </code></pre>
-<p>Only <code>score.svg</code> is required.</p>
 <h2>Preferences (preferences.json)</h2>
 <pre><code>projectTitle, projectAuthor, projectDescription, darkMode, defaultPlaybackSpeed, defaultViewMode, defaultPage, playzoneColor, playheadColor, playheadBorder, playheadWidth, audioSync, oscOutput, overlayMode, loopPlayback
 </code></pre>
@@ -170,9 +169,7 @@ button(trigger:nav(scroll@A), style(size:&quot;120x45&quot;, fontsize:36))
 
 propagate(
   scale(values:[${1},${2}], dur:${3}),
-  rnd(0.8,1.2),
-  rnd(1.2,1.6),
-  rnd(0.4,1.2)
+  rnd(0.8,1.2), rnd(1.2,1.6), rnd(0.4,1.2)
 )
 
 propagate(
@@ -180,25 +177,36 @@ propagate(
     addr:pontalist,
     pitch:deg(irand(0,11), irand(0,2)),
     env:size, uid:irand1235
-  )
-)
+  ))
 
 propagate(
   osc(
     addr:pontalist,
-    pitch:y,
-    env:width,
-    bright:height,
-    density:area,
+    pitch:y, env:width,
+    bright:height, density:area,
     trig:playhead,
-    uid:pontalist04
-  )
-)
+  ))
 
-
+propagate(
+  osc(
+    addr:voice,
+    pitch:deg(${1}, 3),
+    env:size, uid:rnd123
+  ),
+  rnd([0,2,4,5,7,9,11]) )
 
 reuse(mainMenu)
 use(mainMenu)
+</code></pre>
+<h2>Nesting</h2>
+<p>Behaviour stacks outer → inner; shapes inherit all enclosing cues.</p>
+<pre><code>&lt;g id=&quot;o2p(...)&quot;&gt;
+  &lt;g id=&quot;rotate(...)&quot;&gt;
+    &lt;g id=&quot;propagate( osc(...) )&quot;&gt;
+      &lt;!-- shapes --&gt;
+    &lt;/g&gt;
+  &lt;/g&gt;
+&lt;/g&gt;
 </code></pre>
 <h2>Links</h2>
 <pre><code>Docs: https://robcanning.github.io/oscilla/docs/
