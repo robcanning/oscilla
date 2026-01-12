@@ -18,7 +18,9 @@ body.cheatsheet {
   height: 100vh;
 
   margin: 0 auto;
-  padding: 1rem 0;
+  padding: 1rem;
+    padding-bottom: 0;
+
 
   display: flex;
   flex-direction: column;
