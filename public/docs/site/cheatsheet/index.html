@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Cheatsheet</title>
+<link href="https://iosevka-webfonts.github.io/iosevka-term/iosevka-term.css" rel="stylesheet" />
 
   <link rel="stylesheet" href="/oscilla/docs/style.css">
   <link rel="stylesheet" href="/oscilla/docs/cheatsheet.css">
@@ -25,86 +26,170 @@
     </nav>
   </header>
 
-  <!-- Main content -->
-  <main class="cheatsheet-content">
-    <h1>Oscilla Cheatsheet</h1>
-<p>Compact one-line examples for rapid reference.</p>
-<hr>
+<div class="cheatsheet-page">
+
+  <div class="cheatsheet-columns">
+    <h1>OSCILLA Cheatsheet</h1>
+<h2>Quick Install</h2>
+<pre><code>git clone https://github.com/robcanning/oscilla.git
+cd oscilla
+npm install
+npm start
+</code></pre>
+<p>Open in browser: http://localhost:8001</p>
+<h2>Project Structure</h2>
+<pre><code>oscilla/
+├─ public/
+│  ├─ scores/
+│  │  └─ myProject/
+│  │     ├─ score.svg
+│  │     ├─ audio/
+│  │     ├─ pages/
+│  │     └─ preferences.json
+</code></pre>
+<p>Only <code>score.svg</code> is required.</p>
+<h2>Preferences (preferences.json)</h2>
+<pre><code>projectTitle, projectAuthor, projectDescription, darkMode, defaultPlaybackSpeed, defaultViewMode, defaultPage, playzoneColor, playheadColor, playheadBorder, playheadWidth, audioSync, oscOutput, overlayMode, loopPlayback
+</code></pre>
+<h2>Workflow (Inkscape → Oscilla)</h2>
+<pre><code>1. Author in Inkscape
+- Draw shapes, text, paths
+- Save to: public/scores/myProject/score.svg
+2. Add Behaviour via IDs
+- Open XML Editor (Ctrl + Shift + X)
+- Edit element IDs
+Example: pause(dur:12, count:true)
+3. Open Project http://localhost:8001 or
+- http://localhost:8001/?project=myProject
+4. Edit → Save → Refresh
+</code></pre>
 <h2>Timing &amp; Navigation</h2>
-<p>pause(dur:4)
+<pre><code>stop(uid:s1) | stop(next:nav(End))
+
 pause(dur:12, count:true)
 pause(dur:4, next:nav(page3))
-nav(page3)
-nav(scroll@A)
-nav(scrollPaused@B)
-stop()
-stop(uid:s1)
-stop(next:nav(End))
+
+nav(page3) | nav(scroll@A) | nav(scrollPaused@B)
+
 page(page1)
 page(Pseq([page1:2,page2:2],3))
 page(Prand([pageA,pageB,pageC],4))
-page(Pshuf([page1,page2,page3],1))
 page(Pchoose([pageA,pageB]))
-repeat(start:A, end:C, x:3)
+
 stopwatch(source:new, trig:auto)
 stopwatch(source:main, scroll:true)
-metro(bpm:90, visual:hex, trig:auto)</p>
-<hr>
-<h2>Media &amp; Sound</h2>
-<p>audio(file:hit.wav)
-audio(file:drone.wav, loop:0)
-audio(file:click.wav, amp:0.25)
-video(file:intro.mp4, size:fs, clickable:1)
-video(file:clip.webm, target:markerA, size:640x360, loop:0)
-text(src:foo.txt, dur:3, autostart:1)
+
+metro(bpm:90, visual:hex, trig:auto)
+</code></pre>
+<h2>Animation — Scale</h2>
+<pre><code>scale(values:[1,1.5,1], dur:2)
+scale(min:1, max:1.3, dur:2, loop:0)
+scale(values:[1,2,1], dur:2, tdelay:3)
+scaleXY([1,1.3],[1,0.6], dur:1)
+scale(Pseq([1,1.4,1],inf), dur:Prand([0.5,1],inf))
+</code></pre>
+<h2>Animation — Rotate</h2>
+<pre><code>rotate(dir:1, dur:1)
+rotate(values:[0,120,240], dur:2)
+rotate(values:Pseq([0,45,10],inf), dur:Pseq([1,0.2,2],inf))
+rotate(values:[0,120,240], tdelay:2)
+rotate(values:Pshuf([0,180],inf), dur:1, mode:alternate)
+</code></pre>
+<h2>Animation — Object-to-Path (o2p)</h2>
+<pre><code>o2p(path:orbitA, dur:8, tdelay:3, prestate:hide)
+o2p(path:spiral, rotate:aligned, rotoffset:-90)
+o2p(path:ring, start:0.2, end:0.9, mode:alt)
+o2p(path:circle, rotate:spin, rotspeed:2, rotdir:-1)
+o2p(path:orbitA, dur:8, loop:3)
+</code></pre>
+<h2>Animation — Color</h2>
+<pre><code>color(uid:shape1, values:[#f00,#0f0], dur:2)
+color(uid:shape2, values:[#00f,#fff,#00f], dur:4)
+color(uid:bars*, values:[#f80,#08f], mode:alternate, dur:1.2)
+color(uid:rect, values:Pseq([#f00,#ff0,#0ff],3), dur:3)
+color(uid:bgStripe, values:[#000,#444,#888,#ccc], dur:6)
+</code></pre>
+<h2>Animation — Fade</h2>
+<pre><code>fade(mode:out, dur:2, from:1, to:0)
+fade(mode:in, dur:1, target:title)
+fade(mode:pulse, dur:6, from:0.2, to:1)
+</code></pre>
+<h2>Animation - Text</h2>
+<pre><code>text(src:foo.txt, dur:3, autostart:1)
 text(src:foo.txt, order:rnd, dur:2, loop:0)
 text(src:foo.txt, yslots:3, yslotmode:sequence)
-fade(mode:out, dur:2, from:1, to:0)
-fade(mode:in, dur:1, target:title)
-fade(mode:pulse, dur:6, from:0.2, to:1)</p>
-<hr>
+</code></pre>
+<h2>Audio</h2>
+<pre><code>audio(uid:a1, src:click)
+audio(uid:a2, src:loop, loop:0, fade:1.2)
+audio(uid:a3, src:hit, pan:rand(-1,1), pitch:rand(0.8,1.3))
+audio(uid:a4, src:voice, toggle:true, fadeOut:0.3)
+
+audioPool(uid:p1, path:sfx)
+audioPool(uid:p2, path:perc, mode:rand)
+audioPool(uid:p3, path:foley, amp:rand(0.4,0.9), pan:rand(-0.7,0.7))
+audioPool(uid:p4, path:tones, pitch:rand(0.5,2), fade:rand(10%,40%))
+
+audioImpulse(uid:i1, path:perc, rate:30)
+audioImpulse(uid:i2, path:clicks, rate:20, jitter:0.5)
+audioImpulse(uid:i3, path:metal, rate:12, pan:rand(-1,1), pitch:rand(0.7,1.4))
+audioImpulse(uid:i4, path:textures, rate:6, jitter:0.8, amp:rand(0.2,0.6))
+</code></pre>
+<h2>Synthesis</h2>
+<pre><code>synth(uid:ref, wave:sine, freq:440)
+synth(uid:noise, wave:noise)
+synth(uid:region, freq:220)
+synth(uid:fixedDur, freq:220, dur:5)
+synth(uid:persist, freq:110, lifetime:process)
+synth(uid:env, freq:220, env:{a:0.5,r:1})
+synth(uid:chord, freq:[440,477,644])
+synth(uid:seq, freq:Pseq(220,330,440), dur:1)
+synth(uid:filter, freq:330, filter:{type:lp,freq:Pseq(400,1200)})
+synth(uid:osc, freq:330, osc:1, oscAddr:/synth/a)
+</code></pre>
+<h2>Video</h2>
+<pre><code>video(file:intro.mp4, size:fs, clickable:1)
+video(file:clip.webm, target:markerA, size:640x360, loop:0)
+</code></pre>
 <h2>OSC &amp; External Control</h2>
-<p>osc(addr:voice, pitch:y, amp:size)
+<pre><code>osc(addr:voice, pitch:y, amp:size)
 osc(addr:voice, pitch:hz(440))
 osc(addr:voice, pitch:midi(60))
 osc(addr:voice, pitch:deg(2,4), root:48)
 osc(addr:voice, pitch:y, uid:v1)
+
 oscCtrl(addr:&quot;/fx/pan&quot;, min:-1, max:1)
 oscCtrl(addr:&quot;/fx/pan&quot;, min:-1, max:1, mode:continuous)
-oscCtrl(addr:&quot;/fx/ring/freq&quot;, min:60, max:800)</p>
-<hr>
+oscCtrl(addr:&quot;/fx/ring/freq&quot;, min:60, max:800)
+</code></pre>
 <h2>Interaction &amp; Structure</h2>
-<p>button(trigger:nav(page3))
+<pre><code>button(trigger:nav(page3))
 button(trigger:pause(dur:12,count:true))
 button(trigger:nav(scroll@A), style(size:&quot;120x45&quot;, fontsize:36))
-choice(A,B,C)
-group(cueA, cueB, cueC)
-propagate(scale(values:[${1},${2}], dur:${3}), rnd(0.8,1.2), rnd(1.2,1.6), rnd(0.4,1.2))
+
+propagate(
+  scale(values:[${1},${2}], dur:${3}),
+  rnd(0.8,1.2),
+  rnd(1.2,1.6),
+  rnd(0.4,1.2)
+)
+
 reuse(mainMenu)
 use(mainMenu)
-traverse(points:p1,p2,p3, dir:fwd, loop:0)</p>
-<hr>
-<h2>Synthesis</h2>
-<p>synth(uid:pad3, freq:[440,477,644,777], env:{a:1.5})
-synth(uid:pad3, freq:Pseq(400,800,1600,800), dur:0.2)
-synth(uid:filt, wave:saw, freq:330, filter:{type:lp,freq:Pseq(400,800),q:0.7})
-synth(uid:pad3, freq:Pseq(400,800), env:{a:4}, delay:{time:0.4,fb:0.85,mix:0.7})</p>
-<hr>
-<h2>Animation</h2>
-<p>scale(values:[1,1.4], mode:alternate, dur:1.2)
-rotate(dir:1, dur:120)
-o2p(path:p01, mode:fwd, dur:45, loop:0)
-color(values:[#f00,#0ff], dur:2)</p>
-<hr>
-<p>Docs: https://robcanning.github.io/oscilla/docs/</p>
+</code></pre>
+<h2>Links</h2>
+<pre><code>Docs: https://robcanning.github.io/oscilla/docs/
+Repo: https://github.com/robcanning/oscilla
+</code></pre>
 
-  </main>
+  </div>
 
-  <!-- Footer -->
-<footer class="cheatsheet-footer">
-  <span>© Rob Canning / Oscilla</span>
-  <span class="cheatsheet-footer-right">Cheatsheet — subject to change</span>
-</footer>
+  <footer class="cheatsheet-footer">
+    <span>© Rob Canning / Oscilla</span>
+    <span class="cheatsheet-footer-right">Cheatsheet — subject to change</span>
+  </footer>
+
+</div>
 
   <!-- Sidebar-ordered prev/next logic (same as docs) -->
   <script>

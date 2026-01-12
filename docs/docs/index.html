@@ -77,62 +77,59 @@ All behaviour is authored directly in SVG and executed at runtime in the browser
 <p>Cues are the primary execution units in Oscilla. They control timing, navigation, media playback, interaction, and external communication.</p>
 <h3>Timing &amp; Navigation</h3>
 <ul>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_pause/"><code>pause()</code></a> — pause playback</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_stop/"><code>stop()</code></a> — halt playback</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_nav/"><code>nav()</code></a> — navigation and mode control</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_page/"><code>page()</code></a> — page-based navigation</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_stopwatch/"><code>stopwatch()</code></a> — time display and control</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_repeat/"><code>repeat()</code></a> — repeat and loop structures</li>
-</ul>
-<hr>
-<h3>Media &amp; Sound</h3>
-<ul>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_audio/"><code>audio()</code></a> — audio file playback</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_media/"><code>media()</code></a> — generic media triggering</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_video/"><code>video()</code></a> — video playback</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_text/"><code>text()</code></a> — timed and sequenced text</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_fade/"><code>fade()</code></a> — fade visual or UI elements</li>
-</ul>
-<hr>
-<h3>OSC &amp; External Control</h3>
-<ul>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_osc/"><code>osc()</code></a> — OSC message output</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_oscCtrl/"><code>oscCtrl()</code></a> — OSC routing and control</li>
+<li><a href="cue_stop/"><code>stop()</code></a> — halt playback</li>
+<li><a href="cue_pause/"><code>pause()</code></a> — pause playback</li>
+<li><a href="cue_nav/"><code>nav()</code></a> — navigation and mode control</li>
+<li><a href="cue_page/"><code>page()</code></a> — page-based navigation</li>
+<li><a href="cue_stopwatch/"><code>stopwatch()</code></a> — time display and control</li>
+<li><a href="cue_repeat/"><code>repeat()</code></a> — repeat and loop structures</li>
 </ul>
 <hr>
 <h3>Interaction &amp; Structure</h3>
 <ul>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_button/"><code>button()</code></a> — interactive UI buttons</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_choice/"><code>choice()</code></a> — performer or system choices</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_group/"><code>group()</code></a> — cue grouping and structuring</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_propagate/"><code>propagate()</code></a> — propagate cue state</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_reuse/"><code>reuse()</code></a> — reuse cue definitions</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_traverse/"><code>traverse()</code></a> — object traversal across points or paths</li>
+<li><a href="cue_button/"><code>button()</code></a> — interactive UI buttons</li>
+<li><a href="cue_propagate/"><code>propagate()</code></a> — propagate cue state</li>
+<li><a href="cue_reuse/"><code>reuse()</code></a> — reuse cue definitions</li>
+<li><a href="cue_traverse/"><code>traverse()</code></a> — object traversal across points or paths</li>
 </ul>
 <hr>
 <h2>Animation</h2>
 <p>Oscilla supports continuous and discrete animation tied directly to score timing.</p>
 <ul>
-<li><a href="https://robcanning.github.io/oscilla/docs/anim_scale/"><code>scale()</code></a> — uniform and non-uniform scaling</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/anim_rotate/"><code>rotate()</code></a> — continuous and stepped rotation</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_o2p/"><code>o2p()</code></a> — object-to-path traversal</li>
+<li><a href="anim_scale/"><code>scale()</code></a> — uniform and non-uniform scaling</li>
+<li><a href="anim_rotate/"><code>rotate()</code></a> — continuous and stepped rotation</li>
+<li><a href="cue_o2p/"><code>o2p()</code></a> — object-to-path traversal</li>
 <li><code>color()</code> — <strong>color animation (documentation forthcoming)</strong></li>
+<li><a href="cue_fade/"><code>fade()</code></a> — fade visual or UI elements</li>
+<li><a href="cue_text/"><code>text()</code></a> — timed and sequenced text</li>
+</ul>
+<hr>
+<h3>A/V &amp; Synthesis</h3>
+<ul>
+<li><a href="cue_audio/"><code>audio()</code></a> — audio file playback</li>
+<li><a href="cue_video/"><code>video()</code></a> — video playback</li>
+<li><a href="cue_synth/"><code>synth()</code></a> — in-browser synthesis</li>
+</ul>
+<hr>
+<h3>OSC &amp; External Control</h3>
+<ul>
+<li><a href="cue_osc/"><code>osc()</code></a> — OSC message output</li>
+<li><a href="cue_oscCtrl/"><code>oscCtrl()</code></a> — OSC routing and control</li>
+</ul>
+<hr>
+<h2>Authoring Workflow</h2>
+<ul>
+<li><a href="workflow/">Workflow</a> — SVG authoring and browser execution</li>
+<li><a href="cheatsheet/">Cheatsheet</a> — compact syntax reference</li>
 </ul>
 <hr>
 <h2>System</h2>
 <p>Documentation for the internal execution model and architecture.</p>
 <ul>
-<li><a href="https://robcanning.github.io/oscilla/docs/cueSystem/">Cue System Overview</a> — cue lifecycle and execution model</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cuehandler_architecture/">Cue Handler Architecture</a> — internal structure</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cue_propagate/">Propagation &amp; Reuse</a> — shared state and reuse logic</li>
-</ul>
-<hr>
-<h2>Authoring Workflow</h2>
-<ul>
-<li><a href="https://robcanning.github.io/oscilla/docs/workflow/">Workflow</a> — SVG authoring and browser execution</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/cheatsheet/">Cheatsheet</a> — compact syntax reference</li>
-<li><a href="https://robcanning.github.io/oscilla/docs/INSTALL/">Installation</a></li>
-<li><a href="https://robcanning.github.io/oscilla/docs/QUICKSTART/">Quickstart</a></li>
+<li><a href="INSTALL/">Installation</a></li>
+<li><a href="QUICKSTART/">Quickstart</a></li>
+<li><a href="cueSystem/">Cue System Overview</a> — cue lifecycle and execution model</li>
+<li><a href="cuehandler_architecture/">Cue Handler Architecture</a> — internal structure</li>
 </ul>
 <hr>
 <h2>Further Reading</h2>

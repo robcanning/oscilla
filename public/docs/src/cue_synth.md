@@ -3,33 +3,30 @@ title: cue_synth
 layout: docs_layout.njk
 ---
 
-# `synth()` — Web Audio Synth & Drone Cue
+# `synth()` — Web Audio Synth Cue
 
-The `synth()` cue creates a lightweight Web Audio–based sound source directly inside Oscilla. It is designed for **reference tones, drones, textures, chords, and simple patterned sound processes**, not for full synthesiser emulation.
+The `synth()` cue creates a lightweight Web Audio sound source inside Oscilla.
+It is intended for **reference tones, drones, textures, chords, and simple patterned sound processes**, integrated directly into the score timeline.
 
-The synth cue follows the same design philosophy as Oscilla’s animation and audio cues:
+The design prioritises:
 
-- explicit, readable parameters
-- deterministic behaviour
+- deterministic, cue-scoped behaviour
+- readable parameter syntax
+- low default amplitudes and click-free envelopes
 - optional pattern sequencing
-- safe defaults (low amplitude, click-free envelopes)
 - optional OSC mirroring
 
-Sound is intended to **support the score**, not replace external audio systems.
+The synth is not intended as a full synthesiser environment. For full electroacoustic work, Oscilla is designed to operate in conjunction with external audio systems via OSC (e.g. SuperCollider, Pure Data, Max). The built-in synth provides a bounded, score-aligned sound source intended for rehearsal contexts away from a complete setup, as well as for simple tone cues, drones, and basic animation- or pattern-driven sound sequences embedded directly in the score.
 
 ---
 
 ## Basic Usage
 
-### Minimal reference tone
-
 ```dsl
 synth(uid:refA, wave:sine, freq:440, amp:0.1)
 ```
 
----
-
-### Pitch name instead of Hz
+Pitch may be specified as Hz or note name:
 
 ```dsl
 synth(uid:tuning, wave:sine, freq:A4, amp:0.08)
@@ -37,19 +34,49 @@ synth(uid:tuning, wave:sine, freq:A4, amp:0.08)
 
 ---
 
-## Noise Sources
+## Wave Types
+
+The following `wave` values are supported:
 
 ```dsl
-synth(uid:wind, wave:noise, amp:0.07)
+sine
+square
+saw
+triangle
+noise
 ```
 
-Accepted aliases:
+Oscillator waveforms map directly to standard Web Audio oscillator types.
+
+`noise` produces a broadband noise source generated from a looping audio buffer. No spectral colouring is applied.
+
+---
+
+## Lifetime and Duration
+
+### Region-based lifetime (default)
+
+When `synth()` is attached to a cue element, the synth starts when the playhead enters the cue’s bounding box and stops when the playhead exits it.
 
 ```dsl
-wave:white
-wave:pink
-wave:brown
+synth(uid:regionTone, wave:sine, freq:220, amp:0.06)
 ```
+
+### Explicit duration
+
+```dsl
+synth(uid:fixedDur, wave:sine, freq:220, dur:5, amp:0.07)
+```
+
+The synth stops automatically after the specified number of seconds.
+
+### Persistent process lifetime
+
+```dsl
+synth(uid:persist, wave:saw, freq:110, lifetime:process, amp:0.05)
+```
+
+The synth continues until explicitly stopped.
 
 ---
 
@@ -65,11 +92,18 @@ synth(
 )
 ```
 
+Envelope parameters:
+
+- `a` — attack (seconds)
+- `d` — decay (seconds)
+- `s` — sustain level (0–1)
+- `r` — release (seconds)
+
 ---
 
-## Chords (Array Frequencies)
+## Chords
 
-The `freq` parameter may be a **list of frequencies**, producing a chord. Each value is rendered as a parallel oscillator voice sharing the same envelope and effects chain.
+If `freq` is an array, multiple oscillators are created and summed as a chord.
 
 ```dsl
 synth(
@@ -81,9 +115,20 @@ synth(
 )
 ```
 
+All voices share the same envelope and effects chain.
+
 ---
 
 ## Patterned Parameters
+
+The following parameters may be static values, arrays, or pattern functions:
+
+- `freq`
+- `amp`
+- `dur`
+- `filter.freq`
+- `filter.q`
+- `pan`
 
 ### Frequency sequence
 
@@ -97,8 +142,6 @@ synth(
 )
 ```
 
----
-
 ### Patterned chord progression
 
 ```dsl
@@ -111,12 +154,9 @@ synth(
     [196, 294, 392]
   ),
   dur:1.5,
-  env:{a:1.2},
   amp:0.1
 )
 ```
-
----
 
 ### Random pitch
 
@@ -127,20 +167,6 @@ synth(
   freq:Prand(200, 400, 600),
   dur:0.8,
   amp:0.09
-)
-```
-
----
-
-### Amplitude pattern
-
-```dsl
-synth(
-  uid:ampSteps,
-  wave:saw,
-  freq:440,
-  amp:[0.05, 0.1, 0.15, 0.1],
-  dur:1
 )
 ```
 
@@ -159,6 +185,15 @@ synth(
 )
 ```
 
+Supported filter types:
+
+```dsl
+lp
+hp
+bp
+notch
+```
+
 ---
 
 ## Delay
@@ -168,8 +203,8 @@ synth(
   uid:delayLead,
   wave:square,
   freq:550,
-  amp:0.12,
-  delay:{time:0.25, fb:0.35, mix:0.2}
+  delay:{time:0.25, fb:0.35, mix:0.2},
+  amp:0.12
 )
 ```
 
@@ -182,25 +217,27 @@ synth(
   uid:revDrone,
   wave:sine,
   freq:110,
-  amp:0.07,
-  reverb:{mix:0.3, time:2, damp:3000}
+  reverb:{mix:0.3, time:2, damp:3000},
+  amp:0.07
 )
 ```
 
 ---
 
-## Glide
+## Glide (Frequency Only)
 
 ```dsl
 synth(
   uid:glide1,
   wave:sine,
   freq:Pseq(220, 330, 440),
-  dur:1,
   glide:0.1,
+  dur:1,
   amp:0.1
 )
 ```
+
+`glide` specifies the time (seconds) used to interpolate frequency changes between steps. It applies only to pitch.
 
 ---
 
@@ -217,6 +254,9 @@ synth(
 )
 ```
 
+- `interp:smooth` — ramps between values
+- `interp:step` — immediate value changes
+
 ---
 
 ## Pan
@@ -230,6 +270,8 @@ synth(
   amp:0.09
 )
 ```
+
+Pan may be static or patterned but does not support continuous modulation.
 
 ---
 
@@ -248,14 +290,17 @@ synth(
 
 ---
 
-## Stop
+## Stopping a Synth
 
 ```dsl
 synthStop(uid:seq1, rel:0.5)
 ```
 
+The optional `rel` parameter specifies release time in seconds.
+
 ---
 
 ## Summary
 
-The `synth()` cue provides simple, reliable sound generation for reference tones, drones, chords, and patterned textures, fully integrated into Oscilla’s cue and pattern system.
+The `synth()` cue provides a bounded, score-aligned sound source suitable for reference tones, drones, chords, and simple patterned textures. All behaviour is deterministic and cue-scoped, and integrates directly with Oscilla’s timing and animation model.
+
