@@ -96,17 +96,4 @@ The system is described in:
 > R. Canning, *OscillaScore: A Modular Platform for Graphic Notation in Networked Music Performance*,  
 > Proceedings of the International Conference on Technologies for Music Notation and Representation (TENOR), Beijing, 2025.
 
----
 
-## Authoring Scores
-
-Scores are authored as **SVG files**, typically using **Inkscape**.
-
-- SVG IDs define timing, animation, and cues
-- No custom file formats or export steps
-- Refresh the browser to see changes
-
-Authoring workflow:  
- **[Workflow Documentation](https://robcanning.github.io/oscilla/docs/workflow/)**
-
----
