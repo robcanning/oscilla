@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>{{ title or "OSCILLA Cheatsheet" }}</title>
+<link href="https://iosevka-webfonts.github.io/iosevka-term/iosevka-term.css" rel="stylesheet" />
+
+  <link rel="stylesheet" href="{{ '/docs/style.css' | url }}">
+  <link rel="stylesheet" href="{{ '/docs/cheatsheet.css' | url }}">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body class="cheatsheet">
+
+  <!-- Header -->
+  <header class="cheatsheet-header">
+    <nav class="cheatsheet-nav">
+      <a href="{{ '/docs/' | url }}">← Docs Index</a>
+
+      <!-- Optional: sidebar-ordered navigation -->
+      <span class="cheatsheet-arrows">
+        <a id="docs-prev" href="#" aria-label="Previous page">← Prev</a>
+        <a id="docs-next" href="#" aria-label="Next page">Next →</a>
+      </span>
+    </nav>
+  </header>
+
+<div class="cheatsheet-page">
+
+  <div class="cheatsheet-columns">
+    {{ content | safe }}
+  </div>
+
+  <footer class="cheatsheet-footer">
+    <span>© Rob Canning / Oscilla</span>
+    <span class="cheatsheet-footer-right">Cheatsheet — subject to change</span>
+  </footer>
+
+</div>
+
+  <!-- Sidebar-ordered prev/next logic (same as docs) -->
+  <script>
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(
+      sidebar.querySelectorAll("a[href]")
+    ).map(a => a.href);
+
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1
+      ? links[index + 1]
+      : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+  })();
+  </script>
+
+</body>
+</html>
