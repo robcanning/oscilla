@@ -57,6 +57,14 @@ pause(dur:12, count:true) // with countdown
 pause(dur:4, next:nav(page3)) // chaining
 ```
 ```
+speed(value:0.5, uid:s2) // half speed
+speed(add:0.1, uid:s3) // a bit faster
+// ramp to speed over x seconds
+speed(value:1.3, dur:2, uid:s4) 
+speed(value:1.4, dur:6, ease:linear)
+
+```
+```
 nav(page3) •  nav(scroll@A) // AKA Navigate  
 nav(scrollPaused@B) // jump and wait
 nav(Coda) // jump to object id Coda
