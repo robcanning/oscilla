@@ -8,16 +8,21 @@ layout: docs_layout.njk
 This documentation describes the cue system, animation model, authoring workflow, and internal architecture of Oscilla.  
 All behaviour is authored directly in SVG and executed at runtime in the browser.
 
----
+## INSTALL
+- [Installation](INSTALL/)
+- [Quickstart](QUICKSTART/)
+
+## Authoring Workflow
+- [Workflow](workflow/) — SVG authoring and browser execution
+- [Cheatsheet](cheatsheet/) — compact syntax reference
 
 ## Cue Reference
-
 Cues are the primary execution units in Oscilla. They control timing, navigation, media playback, interaction, and external communication.
 
 ### Timing & Navigation
-
 - [`stop()`](cue_stop/) — halt playback
 - [`pause()`](cue_pause/) — pause playback
+- [`speed()`](cue_speed/) — speed control
 - [`nav()`](cue_nav/) — navigation and mode control
 - [`page()`](cue_page/) — page-based navigation
 - [`stopwatch()`](cue_stopwatch/) — time display and control
@@ -30,7 +35,6 @@ Cues are the primary execution units in Oscilla. They control timing, navigation
 - [`button()`](cue_button/) — interactive UI buttons
 - [`propagate()`](cue_propagate/) — propagate cue state
 - [`reuse()`](cue_reuse/) — reuse cue definitions
-- [`traverse()`](cue_traverse/) — object traversal across points or paths
 
 ---
 
@@ -41,6 +45,7 @@ Oscilla supports continuous and discrete animation tied directly to score timing
 - [`scale()`](anim_scale/) — uniform and non-uniform scaling
 - [`rotate()`](anim_rotate/) — continuous and stepped rotation
 - [`o2p()`](cue_o2p/) — object-to-path traversal
+- [`traverse()`](cue_traverse/) — object traversal across points or paths
 - `color()` — **color animation (documentation forthcoming)**
 - [`fade()`](cue_fade/) — fade visual or UI elements
 - [`text()`](cue_text/) — timed and sequenced text
@@ -59,26 +64,6 @@ Oscilla supports continuous and discrete animation tied directly to score timing
 
 - [`osc()`](cue_osc/) — OSC message output
 - [`oscCtrl()`](cue_oscCtrl/) — OSC routing and control
-
----
-
-## Authoring Workflow
-
-- [Workflow](workflow/) — SVG authoring and browser execution
-- [Cheatsheet](cheatsheet/) — compact syntax reference
-
-
----
-
-## System
-
-Documentation for the internal execution model and architecture.
-- [Installation](INSTALL/)
-- [Quickstart](QUICKSTART/)
-- [Cue System Overview](cueSystem/) — cue lifecycle and execution model
-- [Cue Handler Architecture](cuehandler_architecture/) — internal structure
-
----
 
 
 ## Further Reading

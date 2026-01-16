@@ -1,3 +1,8 @@
+---
+title: Synch Architecture
+layout: docs_layout.njk
+---
+
 # Oscilla Multi-Client Visual Synchronization
 
 ## Overview
