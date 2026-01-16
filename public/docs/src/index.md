@@ -12,9 +12,13 @@ All behaviour is authored directly in SVG and executed at runtime in the browser
 - [Installation](INSTALL/)
 - [Quickstart](QUICKSTART/)
 
+---
+
 ## Authoring Workflow
 - [Workflow](workflow/) — SVG authoring and browser execution
 - [Cheatsheet](cheatsheet/) — compact syntax reference
+
+---
 
 ## Cue Reference
 Cues are the primary execution units in Oscilla. They control timing, navigation, media playback, interaction, and external communication.
