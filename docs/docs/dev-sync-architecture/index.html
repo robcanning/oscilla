@@ -1,0 +1,210 @@
+<h1>Oscilla Multi-Client Visual Synchronization</h1>
+<h2>Overview</h2>
+<p>Oscilla synchronizes a scrolling SVG score across multiple clients so the playhead is always over the <strong>same score content</strong> regardless of screen size or aspect ratio.</p>
+<p><strong>Core principle</strong>: Sync only <strong>world coordinates</strong> (<code>playheadX</code>). Each client computes its own pixel positions locally.</p>
+<hr>
+<h2>Key Terms</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scoreWidth</code></td>
+<td>SVG width in viewBox units (world space). Shared by all clients.</td>
+</tr>
+<tr>
+<td><code>playheadX</code></td>
+<td>Playback position in world units. <strong>This is what gets synced.</strong></td>
+</tr>
+<tr>
+<td><code>localRenderedWidth</code></td>
+<td>Actual pixel width of SVG on this client</td>
+</tr>
+<tr>
+<td><code>localScale</code></td>
+<td><code>localRenderedWidth / scoreWidth</code> — computed per client</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>How It Works</h2>
+<pre><code>Server broadcasts:  playheadX = 10000  (world units)
+
+iPad (1024px tall viewport):
+  SVG renders 8000px wide → localScale = 0.195
+  screenX = 10000 × 0.195 = 1950px
+
+Desktop (1200px tall viewport):
+  SVG renders 9400px wide → localScale = 0.229
+  screenX = 10000 × 0.229 = 2290px
+
+Both show the SAME score content under the playhead.
+</code></pre>
+<hr>
+<h2>DOM Structure</h2>
+<pre><code class="language-html">&lt;div id=&quot;scoreContainer&quot;&gt;      &lt;!-- overflow:hidden, no native scroll --&gt;
+  &lt;div id=&quot;scrollStage&quot;&gt;       &lt;!-- translated via transform --&gt;
+    &lt;div id=&quot;scoreInner&quot;&gt;
+      &lt;svg&gt;...&lt;/svg&gt;           &lt;!-- height:100vh, width:auto --&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&quot;playhead&quot;&gt;            &lt;!-- fixed at 50% viewport --&gt;
+</code></pre>
+<hr>
+<h2>Core Functions</h2>
+<h3>scrollToPlayheadVisual() — oscillaTransport.js</h3>
+<p>The main sync function. Measures local SVG width and applies transform:</p>
+<pre><code class="language-javascript">export function scrollToPlayheadVisual() {
+  const container = window.scoreContainer;
+  const stage = document.getElementById(&quot;scrollStage&quot;);
+  const svg = stage?.querySelector(&quot;svg&quot;);
+  if (!container || !stage || !svg || !window.scoreWidth) return;
+
+  container.scrollLeft = 0;
+  container.scrollTop = 0;
+
+  const localRenderedWidth = svg.getBoundingClientRect().width;
+  const localScale = localRenderedWidth / window.scoreWidth;
+  
+  window.localScale = localScale;
+  window.localRenderedWidth = localRenderedWidth;
+
+  const worldPx = window.playheadX * localScale;
+  const pad = container.clientWidth / 2;
+  const translateX = pad - worldPx;
+
+  stage.style.transform = `translate3d(${translateX}px, 0, 0)`;
+}
+</code></pre>
+<h3>Sync Message Handler — app.js</h3>
+<p>Receives server state, stores world values, triggers visual update:</p>
+<pre><code class="language-javascript">case &quot;sync&quot;: {
+  window.scoreWidth = state.scoreWidth;
+  window.duration = state.duration;
+  window.elapsedTime = state.elapsedTime;
+  window.isPlaying = state.isPlaying;
+  window.serverSyncPlayheadX = state.playheadX;
+  
+  scrollToPlayheadVisual();
+}
+</code></pre>
+<h3>Animation Loop — app.js</h3>
+<p>Advances playhead locally, applies drift correction, updates visual:</p>
+<pre><code class="language-javascript">window.animate = (currentTime) =&gt; {
+  // Advance playhead in world units
+  window.playheadX += (dt * speedMultiplier / duration) * scoreWidth;
+  
+  // Drift correction against server
+  if (window.serverSyncPlayheadX != null) {
+    const drift = window.serverSyncPlayheadX - window.playheadX;
+    if (Math.abs(drift) &gt; scoreWidth * 0.05) {
+      window.playheadX = window.serverSyncPlayheadX; // snap
+    } else {
+      window.playheadX += drift * 1.3 * dt; // smooth
+    }
+  }
+  
+  scrollToPlayheadVisual();
+  requestAnimationFrame(window.animate);
+};
+</code></pre>
+<hr>
+<h2>Critical CSS</h2>
+<pre><code class="language-css">#scoreContainer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+#scrollStage {
+  width: max-content;
+  transform-origin: left top;
+  will-change: transform;
+}
+
+#scoreInner {
+  display: inline-block;
+  width: max-content;
+}
+
+#scoreInner svg {
+  width: auto;
+  height: 100vh !important;
+}
+</code></pre>
+<hr>
+<h2>Server State — server.js</h2>
+<pre><code class="language-javascript">let sharedState = {
+  playheadX: 0,           // world units — the key sync value
+  scoreWidth: null,       // world units — from SVG viewBox
+  elapsedTime: 0,
+  duration: null,
+  isPlaying: false,
+  speedMultiplier: 1.0,
+  startTimestamp: null
+};
+</code></pre>
+<p>Server broadcasts state at ~4Hz. Clients receive <code>playheadX</code> and convert to local pixels.</p>
+<hr>
+<h2>File Reference</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>oscillaTransport.js</code></td>
+<td><code>scrollToPlayheadVisual()</code> — computes local scale, applies transform</td>
+</tr>
+<tr>
+<td><code>app.js</code></td>
+<td>Sync handler, animation loop, drift correction</td>
+</tr>
+<tr>
+<td><code>server.js</code></td>
+<td>Broadcasts <code>playheadX</code> and <code>scoreWidth</code> to all clients</td>
+</tr>
+<tr>
+<td><code>styles.css</code></td>
+<td>SVG sizing (<code>height: 100vh</code>), transform properties</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Debugging</h2>
+<pre><code class="language-javascript">// Run in console on each client:
+console.log(&quot;scoreWidth:&quot;, window.scoreWidth);           // should match
+console.log(&quot;playheadX:&quot;, window.playheadX);             // should be close
+console.log(&quot;localScale:&quot;, window.localScale);           // will differ (OK)
+console.log(&quot;localRenderedWidth:&quot;, window.localRenderedWidth); // will differ (OK)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Playheads offset</td>
+<td><code>scoreWidth</code> same on all clients?</td>
+</tr>
+<tr>
+<td>Transform not applied</td>
+<td><code>localRenderedWidth &gt; 0</code>?</td>
+</tr>
+<tr>
+<td>Playhead jumps</td>
+<td><code>serverSyncPlayheadX</code> valid?</td>
+</tr>
+</tbody>
+</table>
