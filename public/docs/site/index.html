@@ -90,13 +90,23 @@
     <h1>Oscilla Documentation</h1>
 <p>This documentation describes the cue system, animation model, authoring workflow, and internal architecture of Oscilla.<br>
 All behaviour is authored directly in SVG and executed at runtime in the browser.</p>
-<hr>
+<h2>INSTALL</h2>
+<ul>
+<li><a href="INSTALL/">Installation</a></li>
+<li><a href="QUICKSTART/">Quickstart</a></li>
+</ul>
+<h2>Authoring Workflow</h2>
+<ul>
+<li><a href="workflow/">Workflow</a> — SVG authoring and browser execution</li>
+<li><a href="cheatsheet/">Cheatsheet</a> — compact syntax reference</li>
+</ul>
 <h2>Cue Reference</h2>
 <p>Cues are the primary execution units in Oscilla. They control timing, navigation, media playback, interaction, and external communication.</p>
 <h3>Timing &amp; Navigation</h3>
 <ul>
 <li><a href="cue_stop/"><code>stop()</code></a> — halt playback</li>
 <li><a href="cue_pause/"><code>pause()</code></a> — pause playback</li>
+<li><a href="cue_speed/"><code>speed()</code></a> — speed control</li>
 <li><a href="cue_nav/"><code>nav()</code></a> — navigation and mode control</li>
 <li><a href="cue_page/"><code>page()</code></a> — page-based navigation</li>
 <li><a href="cue_stopwatch/"><code>stopwatch()</code></a> — time display and control</li>
@@ -108,7 +118,6 @@ All behaviour is authored directly in SVG and executed at runtime in the browser
 <li><a href="cue_button/"><code>button()</code></a> — interactive UI buttons</li>
 <li><a href="cue_propagate/"><code>propagate()</code></a> — propagate cue state</li>
 <li><a href="cue_reuse/"><code>reuse()</code></a> — reuse cue definitions</li>
-<li><a href="cue_traverse/"><code>traverse()</code></a> — object traversal across points or paths</li>
 </ul>
 <hr>
 <h2>Animation</h2>
@@ -117,6 +126,7 @@ All behaviour is authored directly in SVG and executed at runtime in the browser
 <li><a href="anim_scale/"><code>scale()</code></a> — uniform and non-uniform scaling</li>
 <li><a href="anim_rotate/"><code>rotate()</code></a> — continuous and stepped rotation</li>
 <li><a href="cue_o2p/"><code>o2p()</code></a> — object-to-path traversal</li>
+<li><a href="cue_traverse/"><code>traverse()</code></a> — object traversal across points or paths</li>
 <li><code>color()</code> — <strong>color animation (documentation forthcoming)</strong></li>
 <li><a href="cue_fade/"><code>fade()</code></a> — fade visual or UI elements</li>
 <li><a href="cue_text/"><code>text()</code></a> — timed and sequenced text</li>
@@ -134,22 +144,6 @@ All behaviour is authored directly in SVG and executed at runtime in the browser
 <li><a href="cue_osc/"><code>osc()</code></a> — OSC message output</li>
 <li><a href="cue_oscCtrl/"><code>oscCtrl()</code></a> — OSC routing and control</li>
 </ul>
-<hr>
-<h2>Authoring Workflow</h2>
-<ul>
-<li><a href="workflow/">Workflow</a> — SVG authoring and browser execution</li>
-<li><a href="cheatsheet/">Cheatsheet</a> — compact syntax reference</li>
-</ul>
-<hr>
-<h2>System</h2>
-<p>Documentation for the internal execution model and architecture.</p>
-<ul>
-<li><a href="INSTALL/">Installation</a></li>
-<li><a href="QUICKSTART/">Quickstart</a></li>
-<li><a href="cueSystem/">Cue System Overview</a> — cue lifecycle and execution model</li>
-<li><a href="cuehandler_architecture/">Cue Handler Architecture</a> — internal structure</li>
-</ul>
-<hr>
 <h2>Further Reading</h2>
 <p>The design and rationale of Oscilla are described in:</p>
 <blockquote>
