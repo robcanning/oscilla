@@ -65,6 +65,48 @@ export function getSpeedForPosition(x) {
   return multiplier;
 }
 
+
+/**
+ * ============================================================================
+ * SPEED POSITION WATCHER — runs every frame
+ * ============================================================================
+ */
+
+let lastCheckedSpeed = null;
+
+export function checkSpeedForPosition() {
+  if (!speedCueMap || speedCueMap.length === 0) return;
+  if (!window.scoreWidth || window.playheadX == null) return;
+  
+  const correctSpeed = getSpeedForPosition(window.playheadX);
+  
+  if (correctSpeed === lastCheckedSpeed) return;
+  lastCheckedSpeed = correctSpeed;
+  
+  if (window.speedMultiplier === correctSpeed) return;
+  
+  console.log(`[speedWatch] Position requires speed ${correctSpeed}, currently ${window.speedMultiplier}`);
+  
+  window.speedMultiplier = correctSpeed;
+  window.updateSpeedDisplay?.();
+  
+  if (
+    window.wsEnabled &&
+    window.socket?.readyState === WebSocket.OPEN &&
+    !window.incomingServerUpdate
+  ) {
+    window.socket.send(JSON.stringify({
+      type: "set_speed_multiplier",
+      multiplier: correctSpeed,
+      source: "position_watch"
+    }));
+  }
+}
+
+export function resetSpeedWatcher() {
+  lastCheckedSpeed = null;
+}
+
 /**
  * ============================================================================
  * SPEED RAMP ENGINE — LOCAL ONLY

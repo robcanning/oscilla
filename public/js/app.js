@@ -43,7 +43,7 @@ import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues, chec
 import { dismissPauseCountdown, pauseDismissClickHandler, handlePauseCue } from "./oscillaPause.js";
 
 import { checkSynthRegions} from "./oscillaSynth.js";
-
+import { checkSpeedForPosition, resetSpeedWatcher} from "./oscillaSpeed.js";
 
 
 // ===========================
@@ -667,7 +667,7 @@ if (state.canonicalRenderedWidth) {
     if (window._skipTriggerFrame > 0) window._skipTriggerFrame--;
     else await checkCueTriggers?.(window.elapsedTime);
 
-    // ⭐ region-lifetime audioImpulse watcher
+    //  region-lifetime audioImpulse watcher
     if (typeof checkImpulseRegions === "function") {
       checkImpulseRegions();
     }
@@ -675,7 +675,9 @@ if (state.canonicalRenderedWidth) {
         if (typeof checkSynthRegions === "function") {
       checkSynthRegions();
     }
-
+        if (typeof checkSpeedForPosition === "function") {
+      checkSpeedForPosition();
+    }
 
 
     // ----------------------------------
