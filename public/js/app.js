@@ -443,7 +443,13 @@ if (state.canonicalRenderedWidth) {
               if (state.duration > 0) window.duration = state.duration;
               window.elapsedTime = state.elapsedTime;
               window.isPlaying = state.isPlaying;
-              if (state.playheadX !== undefined) window.serverSyncPlayheadX = state.playheadX;
+              
+              // Only accept server playhead position if we haven't just manually navigated
+              if (state.playheadX !== undefined) {
+                if (!window.ignoreNextSync && !window.recentlyRecalculatedPlayhead) {
+                  window.serverSyncPlayheadX = state.playheadX;
+                }
+              }
               scrollToPlayheadVisual?.();
 
               if (window.isPlaying && !wasPlaying) {
@@ -648,8 +654,12 @@ if (state.canonicalRenderedWidth) {
       );
 
 
-      // Drift correction
-      if (window.serverSyncPlayheadX != null) {
+      // Drift correction — but NOT right after manual navigation (rewind/seek/jump)
+      if (
+        window.serverSyncPlayheadX != null &&
+        !window.ignoreNextSync &&
+        !window.recentlyRecalculatedPlayhead
+      ) {
         const drift = window.serverSyncPlayheadX - window.playheadX;
         if (Math.abs(drift) > refWidth * 0.05) {
           window.playheadX = window.serverSyncPlayheadX;

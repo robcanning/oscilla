@@ -36649,12 +36649,12 @@
        style="font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#ff0000;stroke:#ff0000"
        x="11018.16"
        y="912.05725"
-       id="speed(1, dur:2)"><tspan
+       id="speed(3, dur:1)"><tspan
          sodipodi:role="line"
          id="tspan191"
          x="11018.16"
          y="912.05725"
-         style="font-size:21.3333px">speed(1, dur:2)</tspan></text><text
+         style="font-size:21.3333px">speed(3, dur:1)</tspan></text><text
        xml:space="preserve"
        style="font-size:21.3333px;font-family:FreeMono;-inkscape-font-specification:FreeMono;text-align:start;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#ff0000;stroke:#ff0000"
        x="11569.482"
@@ -37205,7 +37205,7 @@
          sodipodi:role="line"
          id="tspan1"
          x="11036.942"
-         y="904.32324">bug</tspan></text></g><g
+         y="904.32324">bug?</tspan></text></g><g
      inkscape:groupmode="layer"
      id="layer6"
      inkscape:label="STAVE_MATERIAL"

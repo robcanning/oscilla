@@ -190,7 +190,25 @@ export async function loadProject(projectName, options = {}) {
     }
 
     applyDarkMode(!!prefs.darkMode);
-    if (prefs.defaultPlaybackSpeed) setSpeed(prefs.defaultPlaybackSpeed);
+
+    // ============================================================
+    // 🎚️ BASE SPEED MULTIPLIER — from preferences
+    // ============================================================
+    // This is the "global tempo" multiplier that all speed cues multiply against.
+    // e.g., baseSpeedMultiplier = 0.3 means:
+    //   - speed(1) in score → actual speed = 1 × 0.3 = 0.3
+    //   - speed(3) in score → actual speed = 3 × 0.3 = 0.9
+    // ============================================================
+    if (prefs.defaultPlaybackSpeed && prefs.defaultPlaybackSpeed > 0) {
+      window.baseSpeedMultiplier = prefs.defaultPlaybackSpeed;
+      window.speedMultiplier = prefs.defaultPlaybackSpeed; // initial speed before any cues
+      window.updateSpeedDisplay?.();
+      console.log(`[Prefs] 🎚️ Base speed multiplier set to ${prefs.defaultPlaybackSpeed}`);
+    } else {
+      window.baseSpeedMultiplier = 1;
+      window.speedMultiplier = 1;
+      console.log("[Prefs] 🎚️ Using default base speed: 1.0");
+    }
 
 
 
@@ -251,97 +269,45 @@ export async function loadProject(projectName, options = {}) {
       }
 
       console.log("[Prefs] ✅ UI build complete — now displaying dialog.");
+
       dlg.show();
     };
 
 
 
-    document.addEventListener("sl-select", (e) => {
-      console.log("[Menu] sl-select:", e.detail.item?.value);
 
-      if (e.detail.item?.value === "preferences") {
-        console.log("[Menu] → openPreferencesDialog() requested");
-        openPreferencesDialog?.();
-      }
-    });
+    // Expose for external UI
+    window.openPreferencesDialog = openPreferencesDialog;
 
 
+    // 3️⃣ Determine and load view mode
+    const viewMode = prefs.defaultViewMode || "scroll";
 
-    document.getElementById("preferences-save").addEventListener("click", async () => {
-      const form = document.getElementById("preferences-form");
-      const prefs = { ...window.currentProjectPrefs };
+    const container = document.getElementById("scoreContainer")
+      || document.getElementById("scoreInner")
+      || document.querySelector("#scoreContainer");
 
-      form.querySelectorAll("[data-pref-key]").forEach(el => {
-        const key = el.dataset.prefKey;
-        if (el.tagName === "SL-SWITCH") {
-          prefs[key] = el.checked;
-        } else if (el.type === "number") {
-          prefs[key] = Number(el.value);
-        } else {
-          prefs[key] = el.value;
-        }
-      });
-
-      window.currentProjectPrefs = prefs;
-
-      // ✅ Save to server
-      await fetch(`/save-preferences/${window.currentProjectName}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(prefs, null, 2),
-      });
-
-      // ✅ Apply runtime relevant settings here:
-      applyPreferences(prefs);
-
-      document.getElementById("preferences-dialog").hide();
-    });
-
-
-
-
-
-
-
-
-    // this clears the page and jumps back to scroll before new score load
-    window.returnToScrollingScore?.();
-
-    // 3️⃣ Prepare scroll container
-    const container = document.getElementById("scoreContainer");
     if (!container) {
-      console.error("[loadProject] ❌ No #scoreContainer found in DOM.");
-      return;
-    }
-    Object.assign(container.style, {
-      width: "100vw",
-      height: "100vh",
-      overflow: "hidden",
-      whiteSpace: "nowrap",
-      display: "block",
-      position: "relative",
-    });
-
-    // 4️⃣ Load scroll score first (always)
-    await loadScrollMode(container);
-
-    // 5️⃣ Handle initial mode preference
-    const mode = prefs.defaultViewMode || "scroll";
-    const startPage = prefs.defaultPage || "home";
-
-    if (mode === "page" || mode === "hybrid") {
-      const cue = `page(${startPage})`;
-      console.log(`[ProjectLoader] 📄 Starting in ${mode} mode → ${cue}`);
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => window.handleCueTrigger?.(cue))
-      );
+      throw new Error("Could not find #scoreContainer in the DOM.");
     }
 
-    // Update the URL to ?project=name without reloading
-    // ✅ Preserve all query params by only updating project=, not clearing others
-    const url = new URL(window.location.href);
-    url.searchParams.set("project", projectName);
-    history.replaceState({}, "", url.toString());
+    window.scoreContainer = container;
+
+    if (viewMode === "page") {
+      // await loadPageMode(container, prefs.startPage || "main");
+    } else {
+      await loadScrollMode(container);
+    }
+
+    // 4️⃣ Check for query param page override (for direct page links)
+    const params = new URLSearchParams(location.search);
+    const directPage = params.get("page");
+    if (directPage) {
+      console.log(`[loadProject] ➡️ Detected ?page=${directPage} — will switch to page mode.`);
+      // await loadPageMode(container, directPage);
+    }
+
+
     // ------------------------------------------------------------
     // 🕐 Restore last saved playhead (only when NOT a switch)
     // ------------------------------------------------------------

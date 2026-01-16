@@ -1,11 +1,15 @@
-// speed.js
+// oscillaSpeed.js
 
 /**
  * ============================================================================
  * SPEED CUES — POSITIONAL (SVG traversal)
  * ============================================================================
  * speed(x) cues embedded in SVG are POSITION-BASED and apply INSTANTLY.
- * They NEVER ramp and NEVER broadcast during traversal.
+ * They represent a MULTIPLIER against the baseSpeedMultiplier from preferences.
+ * 
+ * Example with baseSpeedMultiplier = 0.3:
+ *   - speed(1) → actual speed = 1 × 0.3 = 0.3
+ *   - speed(3) → actual speed = 3 × 0.3 = 0.9
  */
 
 /**
@@ -45,13 +49,24 @@ export function extractSpeedCues(svgElement) {
   });
 
   newSpeedMap.sort((a, b) => a.position - b.position);
+  console.log(`[speedCues] Extracted ${newSpeedMap.length} speed cues:`, newSpeedMap);
   return newSpeedMap;
 }
 
 export let speedCueMap = [];
 
 /**
- * Returns the active speed multiplier for a given X position.
+ * Updates the shared speedCueMap from external code (e.g., scoreSetup.js)
+ */
+export function setSpeedCueMap(newMap) {
+  speedCueMap.length = 0;
+  speedCueMap.push(...newMap);
+  console.log(`[speedCueMap] Updated with ${speedCueMap.length} cues`);
+}
+
+/**
+ * Returns the CUE speed multiplier for a given X position.
+ * This is the raw value from the speed(x) cue, NOT multiplied by base.
  * Traversal changes are ALWAYS instantaneous.
  */
 export function getSpeedForPosition(x) {
@@ -70,26 +85,46 @@ export function getSpeedForPosition(x) {
  * ============================================================================
  * SPEED POSITION WATCHER — runs every frame
  * ============================================================================
+ * Checks what speed should be at current playheadX and updates if needed.
+ * Respects baseSpeedMultiplier from preferences.
  */
-
-let lastCheckedSpeed = null;
+let lastCheckedCueSpeed = null;
+let lastLogTime = 0;
 
 export function checkSpeedForPosition() {
+  // Guard clauses
   if (!speedCueMap || speedCueMap.length === 0) return;
   if (!window.scoreWidth || window.playheadX == null) return;
+  if (window.isSeeking) return;  // Don't fight with manual seeking
   
-  const correctSpeed = getSpeedForPosition(window.playheadX);
+  const cueSpeed = getSpeedForPosition(window.playheadX);
+  const baseMultiplier = window.baseSpeedMultiplier || 1;
+  const correctSpeed = cueSpeed * baseMultiplier;
+
+  // Throttle logging to once per second
+  const now = Date.now();
+  if (now - lastLogTime > 1000) {
+    console.log(`[speedWatch] pos=${window.playheadX.toFixed(0)}, cue=${cueSpeed}, base=${baseMultiplier}, actual=${correctSpeed.toFixed(2)}, current=${window.speedMultiplier?.toFixed(2)}`);
+    lastLogTime = now;
+  }
   
-  if (correctSpeed === lastCheckedSpeed) return;
-  lastCheckedSpeed = correctSpeed;
+  // Only act if the CUE speed changed (not just floating point drift)
+  if (cueSpeed === lastCheckedCueSpeed) {
+    return;
+  }
   
-  if (window.speedMultiplier === correctSpeed) return;
+  lastCheckedCueSpeed = cueSpeed;
   
-  console.log(`[speedWatch] Position requires speed ${correctSpeed}, currently ${window.speedMultiplier}`);
+  // Skip if already at correct speed (with small tolerance for floating point)
+  if (Math.abs(window.speedMultiplier - correctSpeed) < 0.001) return;
   
+  console.log(`[speedWatch] ⚡ SPEED CHANGE: ${window.speedMultiplier?.toFixed(2)} → ${correctSpeed.toFixed(2)} (cue=${cueSpeed} × base=${baseMultiplier})`);
+  
+  // Update locally
   window.speedMultiplier = correctSpeed;
   window.updateSpeedDisplay?.();
   
+  // Broadcast to server
   if (
     window.wsEnabled &&
     window.socket?.readyState === WebSocket.OPEN &&
@@ -98,14 +133,20 @@ export function checkSpeedForPosition() {
     window.socket.send(JSON.stringify({
       type: "set_speed_multiplier",
       multiplier: correctSpeed,
+      cueSpeed: cueSpeed,
+      baseMultiplier: baseMultiplier,
       source: "position_watch"
     }));
+    console.log(`[speedWatch] 📡 Broadcasted speed=${correctSpeed.toFixed(2)} to server`);
   }
 }
 
 export function resetSpeedWatcher() {
-  lastCheckedSpeed = null;
+  lastCheckedCueSpeed = null;
+  lastLogTime = 0;
+  console.log("[speedWatch] Reset");
 }
+
 
 /**
  * ============================================================================
@@ -113,6 +154,8 @@ export function resetSpeedWatcher() {
  * ============================================================================
  * Ramps animate speed LOCALLY.
  * The server is updated ONLY ONCE at ramp completion.
+ * 
+ * NOTE: Ramp values are ACTUAL speeds (already multiplied by base), not cue values.
  */
 
 let activeSpeedRamp = null;
@@ -195,15 +238,22 @@ function speedRampTick(now) {
 
 /**
  * ============================================================================
- * INSTANT SPEED CHANGE (non-ramped cue)
+ * INSTANT SPEED CHANGE (non-ramped cue, e.g., from cueSpeed trigger)
  * ============================================================================
+ * NOTE: This receives the CUE value and multiplies by baseSpeedMultiplier
  */
-export function handleSpeedCue(_uid, newMultiplier) {
-  newMultiplier = Number(newMultiplier);
-  if (!Number.isFinite(newMultiplier) || newMultiplier <= 0) return;
-  if (window.speedMultiplier === newMultiplier) return;
+export function handleSpeedCue(_uid, cueMultiplier) {
+  cueMultiplier = Number(cueMultiplier);
+  if (!Number.isFinite(cueMultiplier) || cueMultiplier <= 0) return;
 
-  window.speedMultiplier = newMultiplier;
+  const baseMultiplier = window.baseSpeedMultiplier || 1;
+  const actualSpeed = cueMultiplier * baseMultiplier;
+
+  if (Math.abs(window.speedMultiplier - actualSpeed) < 0.001) return;
+
+  console.log(`[cueSpeed] Instant change: cue=${cueMultiplier} × base=${baseMultiplier} = ${actualSpeed}`);
+
+  window.speedMultiplier = actualSpeed;
   window.updateSpeedDisplay?.();
 
   if (
@@ -214,7 +264,9 @@ export function handleSpeedCue(_uid, newMultiplier) {
     window.socket.send(
       JSON.stringify({
         type: "set_speed_multiplier",
-        multiplier: newMultiplier,
+        multiplier: actualSpeed,
+        cueSpeed: cueMultiplier,
+        baseMultiplier: baseMultiplier,
         playheadX: window.playheadX ?? null,
         t: Date.now(),
       })
@@ -222,29 +274,64 @@ export function handleSpeedCue(_uid, newMultiplier) {
   }
 }
 
+
+/**
+ * Force-update speed based on current position.
+ * Called after seek/rewind/jump operations.
+ */
+export function updateSpeedFromPosition() {
+  if (!speedCueMap || speedCueMap.length === 0) return;
+  
+  const cueSpeed = getSpeedForPosition(window.playheadX);
+  const baseMultiplier = window.baseSpeedMultiplier || 1;
+  const correctSpeed = cueSpeed * baseMultiplier;
+  
+  console.log(`[speedUpdate] Position ${window.playheadX?.toFixed(0)} → cue=${cueSpeed} × base=${baseMultiplier} = ${correctSpeed}`);
+  
+  window.speedMultiplier = correctSpeed;
+  window.updateSpeedDisplay?.();
+  
+  // Broadcast to server
+  if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+    window.socket.send(JSON.stringify({
+      type: "set_speed_multiplier",
+      multiplier: correctSpeed,
+      source: "seek_update"
+    }));
+  }
+}
+
+
 /**
  * ============================================================================
  * EXECUTE cueSpeed AST (parser already supports this)
  * ============================================================================
  * This is the ONLY place ramps should be triggered from cues.
+ * Values here are CUE values (will be multiplied by base).
  */
 export function executeSpeedCue(ast) {
   if (!ast || ast.type !== "cueSpeed") return;
 
-  const current = Number(window.speedMultiplier ?? 1);
-  let target = current;
+  const baseMultiplier = window.baseSpeedMultiplier || 1;
+  const currentActual = Number(window.speedMultiplier ?? baseMultiplier);
+  const currentCue = currentActual / baseMultiplier; // reverse to get cue value
+  
+  let targetCue = currentCue;
 
   if (Number.isFinite(ast.add)) {
-    target = current + ast.add;
+    targetCue = currentCue + ast.add;
   } else if (Number.isFinite(ast.value)) {
-    target = ast.value;
+    targetCue = ast.value;
   }
 
-  if (!Number.isFinite(target) || target <= 0) return;
+  if (!Number.isFinite(targetCue) || targetCue <= 0) return;
+
+  const targetActual = targetCue * baseMultiplier;
 
   if (Number.isFinite(ast.dur) && ast.dur > 0) {
-    handleSpeedRamp(current, target, ast.dur, ast.ease);
+    // Ramp operates on ACTUAL speeds
+    handleSpeedRamp(currentActual, targetActual, ast.dur, ast.ease);
   } else {
-    handleSpeedCue(ast.uid, target);
+    handleSpeedCue(ast.uid, targetCue);
   }
 }

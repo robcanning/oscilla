@@ -5,9 +5,8 @@ import {
 } from "./reuse.js";
 
 
-import { extractSpeedCues } from "./oscillaSpeed.js";
 import { hideAllButtonPlaceholders } from "./oscillaButton.js";
-
+import { setSpeedCueMap, extractSpeedCues } from './oscillaSpeed.js';
 
 // Rehearsal mark logic ////////////////////////////////////////////////////////
 
@@ -369,9 +368,11 @@ export const extractScoreElements = (svgElement) => {
 
 
 
-  speedCueMap.length = 0; // clear old values
-  speedCueMap.push(...extractSpeedCues(svgElement));
-  speedCueMap = extractSpeedCues(svgElement);
+
+// In extractScoreElements:
+const newSpeedCues = extractSpeedCues(svgElement);
+setSpeedCueMap(newSpeedCues);
+console.log(`[scoreSetup] Loaded ${newSpeedCues.length} speed cues`);
 
 
 

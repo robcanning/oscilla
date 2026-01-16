@@ -40,7 +40,7 @@
  */
 
 
-import { getSpeedForPosition } from "./oscillaSpeed.js";
+import { getSpeedForPosition, updateSpeedFromPosition } from "./oscillaSpeed.js";
 import { resetAllFadePriming } from "./oscillaFade.js";
 import { stopAllCueTexts } from "./oscillaText.js";
 import { destroyAllHitLabels } from "./oscillaHitLabels.js";
@@ -127,7 +127,9 @@ export const rewindToStart = () => {
   // resetStopwatch(); // Reset stopwatch
 
   scrollToPlayheadVisual();
-  window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  // window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  updateSpeedFromPosition();
+  
   window.updateSpeedDisplay();
 
   // updatePosition();
@@ -198,7 +200,9 @@ export const rewind = () => {
 
 
   //  Apply and store correct speed based on the new playhead position
-  window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  // window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  updateSpeedFromPosition();
+
   // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
   window.updateSpeedDisplay();
 
@@ -268,7 +272,9 @@ export const forward = () => {
   window.resetCueEdgeTracking();
 
   //  Apply and store correct speed based on the new playhead position
-  window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  //window.speedMultiplier = getSpeedForPosition(window.playheadX);
+  updateSpeedFromPosition();
+
   window.updateSpeedDisplay();
 
   // updatePosition();
@@ -340,20 +346,28 @@ export function adjustSpeed(delta) {
  * @param {number} newSpeed - The new speed multiplier
  */
 export function setSpeed(relativeMultiplier) {
-  // fallback for safety
   if (!window.baseSpeedMultiplier) {
     window.baseSpeedMultiplier = 1;
   }
 
   const actual = relativeMultiplier * window.baseSpeedMultiplier;
-
   window.speedMultiplier = actual;
 
-  console.log(
-    `[Speed] base=${window.baseSpeedMultiplier}, `
-    + `relative=${relativeMultiplier}, actual=${actual}`
-  );
+  console.log(`[Speed] base=${window.baseSpeedMultiplier}, relative=${relativeMultiplier}, actual=${actual}`);
+  
+  window.updateSpeedDisplay?.();
+  
+  // Broadcast to server
+  if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
+    window.socket.send(JSON.stringify({
+      type: "set_speed_multiplier",
+      multiplier: actual,
+      source: "setSpeed"
+    }));
+  }
 }
+
+
 /**
  * Updates the on-screen speed display.
  */
