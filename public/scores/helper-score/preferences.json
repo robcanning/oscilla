@@ -6,7 +6,7 @@
   "projectDescription": "Demonstration score showcasing all cue types and animations.",
   "duration_minutes": 5,
   "darkMode": false,
-  "defaultPlaybackSpeed": 4,
+  "defaultPlaybackSpeed": 1,
   "defaultViewMode": "scroll",
   "defaultPage": "home",
   "playzoneColor": "rgba(0, 128, 0, 0.1)",

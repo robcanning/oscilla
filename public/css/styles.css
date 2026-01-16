@@ -4,7 +4,7 @@
 /* @import url('https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap'); */
 
 html {
-  scrollbar-gutter: stable both-edges;
+  /* scrollbar-gutter: stable both-edges; */
 }
 
 body {
@@ -18,22 +18,6 @@ body {
 
 }
 
-
-/* Font-face for offline Antonio
-@font-face {
-  font-family: 'Antonio';
-  src: url('fonts/Antonio-VariableFont_wght.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Antonio';
-  src: url('fonts/Antonio-VariableFont_wght.ttf') format('truetype');
-  font-weight: bold;
-  font-style: normal;
-
-} */
 
 
 /* 🔹 Remove focus outlines and blue flash from all major containers and SVGs */
@@ -501,6 +485,7 @@ html, body {
   position: fixed;
   inset: 0;
   overflow: hidden;
+  overflow-x: hidden !important;  /* ADD THIS - force no horizontal scroll */
   background: white;
   white-space: nowrap;
   margin: 0 !important;
@@ -529,7 +514,8 @@ html, body {
   max-width: none !important;
   max-height: none !important;
   width: auto;
-    height: auto !important;
+  height: 100vh !important;  /* or 100% */
+    
 
 }
 
@@ -1614,122 +1600,184 @@ body.inverted #score {
 }
 
 
-
-/* =========================================================
-   Non-blocking Launcher Panel
-   ========================================================= */
-
 #splash {
-  position: absolute;
-  top: 12%;
-  left: 50%;
-  transform: translateX(-50%);
-
-  width: 25vw;
-  min-width: 320px;
-  max-width: 420px;
-
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   background: #fff;
   color: #000;
+  z-index: 999999 !important;
+  pointer-events: all;
 
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-
-  z-index: 1000;
-  pointer-events: auto;
 }
-
-/* Hide/show control */
-#splash.hidden {
-  display: none;
-}
-
-/* =========================================================
-   Content
-   ========================================================= */
 
 .splash-container {
-  padding: 1rem 1.25rem;
   text-align: center;
-}
-
-/* Title */
-
-.splash-title {
-  margin: 0;
-  font-size: 2.8rem;
-}
-
-.splash-subtitle {
-  margin: 0.2rem 0 0.8rem;
-  font-size: 1.1rem;
-  color: #777;
+  max-width: 700px;
 }
 
 .logo {
-  width: 64px;
-  margin: 0.5rem 0 0.8rem;
+  width: 100px;
+  height: auto;
+  margin-bottom: 1em;
   opacity: 0.9;
 }
 
-.splash-message {
-  font-size: 0.85rem;
-  color: #666;
-  margin-bottom: 0.8rem;
+.splash-title {
+  font-size: 6.6em;
+  margin: 0;
 }
 
-/* =========================================================
-   Project List
-   ========================================================= */
+.splash-subtitle {
+  font-size: 2.5em;
+  color: #bbb;
+  margin-bottom: 0.8em;
+}
+
+.splash-message {
+  font-size: 1.3em;
+  color: #888;
+}
 
 .project-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin: 0.75rem 0;
+  align-items: center;
+  margin: 1.5em 0;
 }
 
 .project-grid button {
-  font: inherit;
-  padding: 0.35rem 0.5rem;
-  border: none;
   background: none;
+  border: none;
+  color: #6e1f1f;
+  font-size: 1.3em;
+  margin: 0.3em 0;
   cursor: pointer;
-  color: #333;
+  transition: color 0.2s, transform 0.2s;
+
 }
 
 .project-grid button:hover {
-  text-decoration: underline;
+  color: #7df9ff;
+  transform: scale(1.05);
+  background-color: gray;
+
 }
 
-/* =========================================================
-   Manual Entry
-   ========================================================= */
-
 .manual-entry {
-  margin-top: 0.75rem;
+  margin-top: 1.5em;
 }
 
 .manual-entry input {
-  font: inherit;
-  padding: 0.3rem 0.4rem;
+  padding: 0.5em;
+  font-size: 1em;
 }
 
 .manual-entry button {
-  font: inherit;
-  padding: 0.3rem 0.6rem;
-  margin-left: 0.4rem;
+  margin-left: 0.5em;
+  padding: 0.5em 1em;
+  font-size: 1em;
 }
 
-/* =========================================================
-   Footer
-   ========================================================= */
-
 .meta-section {
-  margin-top: 1rem;
-  font-size: 0.75rem;
+  margin-top: 2em;
+  font-size: 1.2em;
+  color: #aaa;
+  line-height: 1.4em;
+}
+
+.meta-line a {
+  color: #000000;
+  text-decoration: none;
+}
+
+.meta-line a:hover {
+  text-decoration: underline;
+}
+
+.meta-line.small {
+  font-size: 1em;
   color: #777;
+  margin-top: 0.5em;
+}
+
+
+/* --- Project Card Styling --- */
+.project-card {
+  font-family: "Fira Code", "JetBrains Mono", monospace;
+  font-size: 0.95em;
+  letter-spacing: 0.03em;
+  background-color: gray;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #140101;
+
+  display: inline-block;
+  border-radius: 8px;
+  min-width: 120px;
+  text-align: center;
+  cursor: pointer;
+
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.12s ease,
+    box-shadow 0.25s ease;
+}
+
+.project-card:hover {
+  background-color: rgba(90, 140, 255, 0.25);
+  border-color: rgba(120, 170, 255, 0.5);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 0 12px rgba(120, 170, 255, 0.3);
+}
+
+.project-card:active {
+  transform: scale(0.98);
+  background-color: rgba(90, 140, 255, 0.35);
+}
+
+/* --- Project Grid Container --- */
+.project-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6em;
+
+  height: 100px;
+  /* fixed height */
+  overflow-y: auto;
+  /* vertical scroll if needed */
+  overflow-x: hidden;
+  /* avoid sideways scrollbars */
+  padding: 0.5em 0.3em;
+
+  scrollbar-width: thin;
+  /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* Optional: WebKit scrollbar styling for consistent dark theme */
+.project-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.project-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.project-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+}
+
+.project-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 

@@ -104,3 +104,8 @@ Smooth, eased speed transition.
 - Only one speed change is active at a time.
 - The performer sees only a cue symbol in the score.
 - The microsyntax appears only in the SVG `id` field.
+
+
+
+# bug check if speed change to server is effecting location so A B C etc doesnt work
+# or was it css changes still fine in ipad mode but needs server restart stale values

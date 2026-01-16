@@ -1,0 +1,240 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Cue Speed</title>
+
+  <link rel="stylesheet" href="/oscilla/docs/style.css">
+</head>
+
+
+
+<body>
+
+  <div class="docs-container">
+    <nav class="sidebar">
+  
+<h3>Docs</h3>
+<ul>
+  <li><a href="/oscilla/docs/">Overview</a></li>
+  ---
+</ul>
+
+  <h3>Cues</h3>
+  <ul>
+    
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
+
+---
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+---
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+---
+    <li><a href="/oscilla/docs/cue_button">button()</a></li>
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
+---
+
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+---
+
+    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+---
+  </ul>
+
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    ---
+
+    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
+    ---
+
+    <li><a href="/oscilla/docs/color/">color()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+
+  </ul>
+---
+ <h3> <a href="/oscilla/docs/cheatsheet/">Cheatsheet</a></h3>
+ ---
+ <h3> <a href="/oscilla/docs/workflow/">Workflow</a> </h3>
+---
+  <ul>
+    <li><a href="/oscilla/docs/QUICKSTART/"> Quickstart Install)</a></li>
+    <li><a href="/oscilla/docs/INSTALL/">Full Install Steps</a></li>
+  </ul>
+
+</nav>
+
+
+    <main class="docs-content">
+
+    <nav class="docs-nav">
+      <a id="docs-prev" href="#" aria-label="Previous page">← Prev</a>
+      <a href="/oscilla/docs/">Docs Index</a>
+      <a id="docs-next" href="#" aria-label="Next page">Next →</a>
+    </nav>
+
+    <h1>speed()</h1>
+<p>Controls the playback scroll speed of the score.</p>
+<p>The <code>speed()</code> cue sets the global playback speed multiplier.<br>
+Speed changes may be applied instantly or gradually over time.</p>
+<hr>
+<h2>Syntax</h2>
+<pre><code>speed(
+  value:&lt;multiplier&gt;,
+  add:&lt;offset&gt;,
+  dur:&lt;seconds&gt;,
+  ease:&lt;easing&gt;,
+  uid:&lt;id&gt;
+)
+</code></pre>
+<p>Shorthand (positional):</p>
+<pre><code>speed(&lt;multiplier&gt;)
+</code></pre>
+<hr>
+<h2>Parameters</h2>
+<ul>
+<li>
+<p><strong>value</strong><br>
+Absolute speed multiplier.<br>
+<code>1</code> = normal speed, <code>0.5</code> = half speed, <code>2</code> = double speed.</p>
+</li>
+<li>
+<p><strong>add</strong><br>
+Relative adjustment applied to the current speed.</p>
+</li>
+<li>
+<p><strong>dur</strong><br>
+Duration of the speed change in seconds.<br>
+If omitted, the speed change is applied immediately.</p>
+</li>
+<li>
+<p><strong>ease</strong><br>
+Easing curve used during a timed speed change.<br>
+Defaults to linear.</p>
+</li>
+<li>
+<p><strong>uid</strong><br>
+Optional unique identifier for synchronization.</p>
+</li>
+</ul>
+<hr>
+<h2>Behaviour</h2>
+<ul>
+<li>When triggered, the cue updates the global playback speed.</li>
+<li>If <code>dur</code> is provided, the speed changes smoothly over the specified duration.</li>
+<li>If <code>dur</code> is omitted, the speed change is applied instantly.</li>
+<li>A new speed cue replaces any previously active speed change.</li>
+<li>Speed changes affect scrolling, timing, and all time-based cues.</li>
+</ul>
+<hr>
+<h2>Examples</h2>
+<pre><code>speed(1)
+</code></pre>
+<p>Normal playback speed.</p>
+<pre><code>speed(0.5)
+</code></pre>
+<p>Half playback speed.</p>
+<pre><code>speed(2)
+</code></pre>
+<p>Double playback speed.</p>
+<pre><code>speed(value:1.25, dur:3)
+</code></pre>
+<p>Gradually increase speed to 1.25× over 3 seconds.</p>
+<pre><code>speed(add:-0.2, dur:2)
+</code></pre>
+<p>Gradually slow down relative to the current speed.</p>
+<pre><code>speed(value:1.4, dur:6, ease:inOutQuad)
+</code></pre>
+<p>Smooth, eased speed transition.</p>
+<hr>
+<h2>Notes</h2>
+<ul>
+<li>Speed cues modify global playback behaviour.</li>
+<li>Only one speed change is active at a time.</li>
+<li>The performer sees only a cue symbol in the score.</li>
+<li>The microsyntax appears only in the SVG <code>id</code> field.</li>
+</ul>
+
+
+    </main>
+  </div>
+
+<p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+
+
+<script>
+(function () {
+  // Collect sidebar links in visual order
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar) return;
+
+  const links = Array.from(
+    sidebar.querySelectorAll("a[href]")
+  ).map(a => a.href);
+
+  const current = window.location.href.replace(/#.*$/, "");
+  const index = links.findIndex(href => href === current);
+
+  const prev = index > 0 ? links[index - 1] : null;
+  const next = index >= 0 && index < links.length - 1
+    ? links[index + 1]
+    : null;
+
+  // Wire prev/next buttons if present
+  const prevBtn = document.getElementById("docs-prev");
+  const nextBtn = document.getElementById("docs-next");
+
+  if (prevBtn) {
+    if (prev) prevBtn.href = prev;
+    else prevBtn.style.visibility = "hidden";
+  }
+
+  if (nextBtn) {
+    if (next) nextBtn.href = next;
+    else nextBtn.style.visibility = "hidden";
+  }
+
+  // Keyboard navigation
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+    if (e.key === "ArrowLeft" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowRight" && next) {
+      window.location.href = next;
+    }
+
+    // Optional: vertical navigation
+    if (e.key === "ArrowUp" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowDown" && next) {
+      window.location.href = next;
+    }
+  });
+})();
+</script>
+
+
+</body>
+
+
+
+</html>

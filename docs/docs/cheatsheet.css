@@ -20,11 +20,11 @@ body.cheatsheet {
   margin: 0 auto;
   padding: 1rem;
     padding-bottom: 0;
-
-
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+    letter-spacing: -0.03em;
+
 }
 
 /* ============================================================
@@ -51,8 +51,14 @@ body.cheatsheet {
    ============================================================ */
 
 .cheatsheet-columns h1 {
-  font-size: 1.9rem;
+  font-size: 1.2rem;
   margin: 0.1rem 0;
+}
+
+.cheatsheet-columns h3 {
+ padding: 0 0;
+  margin: 0 0;
+
 }
 
 .cheatsheet-columns h2 {

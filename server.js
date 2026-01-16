@@ -245,7 +245,7 @@ const sendOscMessage = () => {
 const speedMultiplier = 1; // Default multiplier
 
 const updateElapsedTime = () => {
-  if (!Number.isFinite(sharedState.duration) || sharedState.duration <= 0) return;
+  // if (!Number.isFinite(sharedState.duration) || sharedState.duration <= 0) return;
   if (!sharedState.isPlaying || sharedState.startTimestamp == null) return;
 
   const now = performance.now();
