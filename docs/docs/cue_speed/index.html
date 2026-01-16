@@ -76,6 +76,13 @@
     <li><a href="/oscilla/docs/INSTALL/">Full Install Steps</a></li>
   </ul>
 
+
+  <h3>Dev Docs</h3>
+  <ul>
+
+    </ul>
+
+
 </nav>
 
 
@@ -89,8 +96,7 @@
 
     <h1>speed()</h1>
 <p>Controls the playback scroll speed of the score.</p>
-<p>The <code>speed()</code> cue sets the global playback speed multiplier.<br>
-Speed changes may be applied instantly or gradually over time.</p>
+<p>The <code>speed()</code> cue sets the playback speed multiplier. Speed values are <strong>relative to the base speed</strong> set in project preferences. Speed changes may be applied instantly or gradually over time.</p>
 <hr>
 <h2>Syntax</h2>
 <pre><code>speed(
@@ -109,12 +115,12 @@ Speed changes may be applied instantly or gradually over time.</p>
 <ul>
 <li>
 <p><strong>value</strong><br>
-Absolute speed multiplier.<br>
-<code>1</code> = normal speed, <code>0.5</code> = half speed, <code>2</code> = double speed.</p>
+Speed multiplier relative to the base speed.<br>
+<code>1</code> = base speed, <code>0.5</code> = half base speed, <code>2</code> = double base speed.</p>
 </li>
 <li>
 <p><strong>add</strong><br>
-Relative adjustment applied to the current speed.</p>
+Relative adjustment applied to the current speed multiplier.</p>
 </li>
 <li>
 <p><strong>dur</strong><br>
@@ -132,44 +138,162 @@ Optional unique identifier for synchronization.</p>
 </li>
 </ul>
 <hr>
+<h2>Base Speed Multiplier (Preferences)</h2>
+<p>The <strong>base speed multiplier</strong> is set in your project's <code>preferences.json</code>:</p>
+<pre><code class="language-json">{
+  &quot;defaultPlaybackSpeed&quot;: 0.3
+}
+</code></pre>
+<p>All <code>speed()</code> cues multiply against this base value:</p>
+<table>
+<thead>
+<tr>
+<th>Preference</th>
+<th>Cue</th>
+<th>Actual Speed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0.3</code></td>
+<td><code>speed(1)</code></td>
+<td>0.3 (1 × 0.3)</td>
+</tr>
+<tr>
+<td><code>0.3</code></td>
+<td><code>speed(2)</code></td>
+<td>0.6 (2 × 0.3)</td>
+</tr>
+<tr>
+<td><code>0.3</code></td>
+<td><code>speed(3)</code></td>
+<td>0.9 (3 × 0.3)</td>
+</tr>
+<tr>
+<td><code>1.0</code></td>
+<td><code>speed(0.5)</code></td>
+<td>0.5 (0.5 × 1.0)</td>
+</tr>
+</tbody>
+</table>
+<p>This allows you to:</p>
+<ul>
+<li>Set a <strong>global tempo</strong> for the entire piece in preferences</li>
+<li>Use <code>speed()</code> cues for <strong>relative tempo changes</strong> within the score</li>
+<li>Adjust overall tempo without editing individual cues</li>
+</ul>
+<hr>
+<h2>Two Types of Speed Cues</h2>
+<h3>1. Position-Based Speed Markers</h3>
+<p>Simple speed markers embedded in the SVG that apply <strong>instantly</strong> when the playhead crosses them:</p>
+<pre><code>speed(1)
+speed(2)
+speed(0.5)
+</code></pre>
+<p>These are extracted from SVG elements with IDs starting with <code>speed(</code>. They:</p>
+<ul>
+<li>Apply immediately when crossed</li>
+<li>Are position-aware (rewinding past a marker reverts to the previous speed)</li>
+<li>Automatically sync with the server</li>
+<li>Multiply against <code>baseSpeedMultiplier</code></li>
+</ul>
+<h3>2. Triggered Speed Cues (cueSpeed)</h3>
+<p>Full cue syntax with ramping support:</p>
+<pre><code>cueSpeed(value:2, dur:3)
+</code></pre>
+<p>These support gradual transitions and are triggered like other cues.</p>
+<hr>
+<h2>Position Awareness</h2>
+<p>When you <strong>rewind or seek</strong> to a position before a speed marker, the system automatically applies the correct speed for that position:</p>
+<pre><code>Position:    0 -------- 5000 -------- 10000 -------- 15000
+Markers:     speed(1)   speed(3)      speed(1)
+             
+Playhead at 7000 → speed = 3 × base
+Rewind to 3000   → speed = 1 × base (automatically updated)
+</code></pre>
+<p>This ensures consistent playback regardless of navigation direction.</p>
+<hr>
 <h2>Behaviour</h2>
 <ul>
-<li>When triggered, the cue updates the global playback speed.</li>
-<li>If <code>dur</code> is provided, the speed changes smoothly over the specified duration.</li>
-<li>If <code>dur</code> is omitted, the speed change is applied instantly.</li>
-<li>A new speed cue replaces any previously active speed change.</li>
-<li>Speed changes affect scrolling, timing, and all time-based cues.</li>
+<li>Speed values multiply against <code>baseSpeedMultiplier</code> from preferences</li>
+<li>Position-based markers (<code>speed(x)</code>) apply instantly when crossed</li>
+<li>Triggered cues (<code>cueSpeed</code>) support ramping with <code>dur</code> parameter</li>
+<li>Rewinding past a speed marker reverts to the previous speed</li>
+<li>Speed changes sync to all connected clients via the server</li>
+<li>A new speed cue replaces any previously active speed change</li>
+<li>Speed changes affect scrolling, timing, and all time-based cues</li>
 </ul>
 <hr>
 <h2>Examples</h2>
+<h3>Simple Position Markers (in SVG)</h3>
 <pre><code>speed(1)
 </code></pre>
-<p>Normal playback speed.</p>
+<p>Base playback speed.</p>
 <pre><code>speed(0.5)
 </code></pre>
-<p>Half playback speed.</p>
+<p>Half of base speed.</p>
 <pre><code>speed(2)
 </code></pre>
-<p>Double playback speed.</p>
-<pre><code>speed(value:1.25, dur:3)
+<p>Double base speed.</p>
+<h3>Triggered Cues with Ramping</h3>
+<pre><code>cueSpeed(value:1.25, dur:3)
 </code></pre>
-<p>Gradually increase speed to 1.25× over 3 seconds.</p>
-<pre><code>speed(add:-0.2, dur:2)
+<p>Gradually change to 1.25× base speed over 3 seconds.</p>
+<pre><code>cueSpeed(add:-0.5, dur:2)
 </code></pre>
-<p>Gradually slow down relative to the current speed.</p>
-<pre><code>speed(value:1.4, dur:6, ease:inOutQuad)
+<p>Gradually reduce speed multiplier by 0.5 over 2 seconds.</p>
+<pre><code>cueSpeed(value:2, dur:6, ease:inOutQuad)
 </code></pre>
-<p>Smooth, eased speed transition.</p>
+<p>Smooth, eased speed transition to 2× base speed.</p>
+<hr>
+<h2>Project Setup</h2>
+<h3>preferences.json</h3>
+<pre><code class="language-json">{
+  &quot;defaultPlaybackSpeed&quot;: 0.3,
+  &quot;duration_minutes&quot;: 10,
+  &quot;darkMode&quot;: false
+}
+</code></pre>
+<h3>SVG Score</h3>
+<p>Place speed markers as elements with appropriate IDs:</p>
+<pre><code class="language-xml">&lt;circle id=&quot;speed(1)&quot; cx=&quot;100&quot; cy=&quot;50&quot; r=&quot;5&quot; fill=&quot;blue&quot;/&gt;
+&lt;circle id=&quot;speed(3)&quot; cx=&quot;5000&quot; cy=&quot;50&quot; r=&quot;5&quot; fill=&quot;red&quot;/&gt;
+&lt;circle id=&quot;speed(1)&quot; cx=&quot;10000&quot; cy=&quot;50&quot; r=&quot;5&quot; fill=&quot;blue&quot;/&gt;
+</code></pre>
+<p>The visual element (circle, rect, path, etc.) marks the position; only the <code>id</code> matters for the cue system.</p>
+<hr>
+<h2>Server Synchronization</h2>
+<p>Speed changes are broadcast to all connected clients:</p>
+<pre><code class="language-javascript">{
+  type: &quot;set_speed_multiplier&quot;,
+  multiplier: 0.9,        // actual speed (cue × base)
+  cueSpeed: 3,            // raw cue value
+  baseMultiplier: 0.3,    // from preferences
+  source: &quot;position_watch&quot;
+}
+</code></pre>
+<p>The server maintains the authoritative speed state and syncs it at ~4Hz.</p>
+<hr>
+<h2>Debugging</h2>
+<p>Check speed state in browser console:</p>
+<pre><code class="language-javascript">console.log(&quot;baseSpeedMultiplier:&quot;, window.baseSpeedMultiplier);
+console.log(&quot;speedMultiplier:&quot;, window.speedMultiplier);
+console.log(&quot;speedCueMap:&quot;, window.speedCueMap);  // position-based markers
+</code></pre>
+<p>Watch speed changes in real-time:</p>
+<pre><code>[speedWatch] pos=5000, cue=3, base=0.3, actual=0.90, current=0.30
+[speedWatch] ⚡ SPEED CHANGE: 0.30 → 0.90 (cue=3 × base=0.3)
+</code></pre>
 <hr>
 <h2>Notes</h2>
 <ul>
-<li>Speed cues modify global playback behaviour.</li>
-<li>Only one speed change is active at a time.</li>
-<li>The performer sees only a cue symbol in the score.</li>
-<li>The microsyntax appears only in the SVG <code>id</code> field.</li>
+<li>Speed cues modify global playback behaviour</li>
+<li>Only one speed is active at a time</li>
+<li>The performer sees only a cue symbol in the score</li>
+<li>The microsyntax appears only in the SVG <code>id</code> field</li>
+<li>Position-based speed is automatically restored when seeking/rewinding</li>
+<li>Base speed from preferences allows global tempo control</li>
 </ul>
-<h1>bug check if speed change to server is effecting location so A B C etc doesnt work</h1>
-<h1>or was it css changes still fine in ipad mode but needs server restart stale values</h1>
 
 
     </main>
