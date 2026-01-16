@@ -1331,22 +1331,34 @@ window.viewOrigin = window.viewOrigin || 'left'; // 'center' | 'left'
 export function scrollToPlayheadVisual() {
   const container = window.scoreContainer;
   const stage = document.getElementById("scrollStage");
-  if (!container || !stage || !window.canonicalScale) return;
+  if (!container || !stage) return;
+
+  // Get the actual SVG element
+  const svg = stage.querySelector("svg") || document.querySelector("#scoreInner svg");
+  if (!svg || !window.scoreWidth) return;
 
   container.scrollLeft = 0;
   container.scrollTop = 0;
 
-  const scale = window.canonicalScale;
-  const worldPx = window.playheadX * scale;
+  // Use LOCAL rendered width — allows each client to scale independently
+  const localRenderedWidth = svg.getBoundingClientRect().width;
+  if (localRenderedWidth <= 0) return;
+  
+  const localScale = localRenderedWidth / window.scoreWidth;
+  
+  // Store for other systems that might need it
+  window.localScale = localScale;
+  window.localRenderedWidth = localRenderedWidth;
 
-  // ✅ create equal virtual space on both sides
+  const worldPx = window.playheadX * localScale;
+
+  // Create equal virtual space on both sides
   const pad = container.clientWidth / 2;
 
-  // ✅ shift so playhead stays centered anywhere, including at start
+  // Shift so playhead stays centered anywhere, including at start
   const translateX = pad - worldPx;
 
   stage.style.transform = `translate3d(${translateX}px, 0, 0)`;
 }
-
 
 window.scrollToPlayheadVisual = scrollToPlayheadVisual;

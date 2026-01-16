@@ -498,15 +498,14 @@ html, body {
   height: 100%;
   transform-origin: left top;
   will-change: transform;
-    padding-left: 0 !important; /* will be virtual via translate, not real padding */
-
+  padding-left: 0 !important; /* will be virtual via translate, not real padding */
 }
 
-
 #scoreInner {
-  display: inline-block;  /* THIS MATTERS */
+  display: inline-block;
   height: 100%;
   line-height: 0;
+  width: max-content; /* Let SVG determine width */
 }
 
 #scoreInner svg {
@@ -514,9 +513,7 @@ html, body {
   max-width: none !important;
   max-height: none !important;
   width: auto;
-    height: auto !important;
-    
-
+  height: 100vh !important; /* Scale to full viewport height */
 }
 
 

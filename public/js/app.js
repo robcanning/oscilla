@@ -428,14 +428,17 @@ document.addEventListener('DOMContentLoaded', () => {
               const wasPlaying = window.isPlaying;
               window.scoreWidth = state.scoreWidth;
 
-              if (state.canonicalRenderedWidth) {
-                window.canonicalRenderedWidth = state.canonicalRenderedWidth;
-                window.canonicalScale = state.canonicalRenderedWidth / window.scoreWidth;
-                const inner = document.getElementById("scoreInner");
-                const stage = document.getElementById("scrollStage");
-                if (inner) { inner.style.width = `${state.canonicalRenderedWidth}px`; inner.style.height = "100%"; }
-                if (stage) { stage.style.width = `${state.canonicalRenderedWidth}px`; stage.style.height = "100%"; }
-              }
+if (state.canonicalRenderedWidth) {
+  // Store canonical values for reference, but don't force element widths
+  window.canonicalRenderedWidth = state.canonicalRenderedWidth;
+  // DON'T set canonicalScale here — we'll compute local scale in scrollToPlayheadVisual
+  
+  // Let elements size naturally based on SVG's rendered dimensions
+  const inner = document.getElementById("scoreInner");
+  const stage = document.getElementById("scrollStage");
+  if (inner) { inner.style.width = "max-content"; inner.style.height = "100%"; }
+  if (stage) { stage.style.width = "max-content"; stage.style.height = "100%"; }
+}
 
               if (state.duration > 0) window.duration = state.duration;
               window.elapsedTime = state.elapsedTime;
