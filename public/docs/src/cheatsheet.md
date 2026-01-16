@@ -53,6 +53,8 @@ projectTitle, projectAuthor, projectDescription, darkMode, defaultPlaybackSpeed,
 
 ```
 stop(uid:s1) •  stop(next:nav(End))
+```
+```
 pause(dur:12, count:true) // with countdown
 pause(dur:4, next:nav(page3)) // chaining
 ```
@@ -90,7 +92,8 @@ scaleXY([1,1.3],[1,0.6], dur:1)
 scale(Pseq([1,1.4,1],inf), dur:Prand([0.5,1],inf))
 scale([1,1.5,1],dur:12, mode:loop, osc:1, 
    oscaddr:"scale/spat/4chPan",  hold:0,  uid:aC2l)
-
+```
+```
 rotate(dir:1, dur:1)
 rotate(values:[0,120,240], dur:2)
 rotate(values:Pseq([0,45,10],inf), dur:Pseq([1,0.2,2],inf))
