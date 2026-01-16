@@ -18,41 +18,59 @@
 <h3>Docs</h3>
 <ul>
   <li><a href="/oscilla/docs/">Overview</a></li>
+  ---
 </ul>
 
   <h3>Cues</h3>
   <ul>
-    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
-    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
-    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
-    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
-    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
-    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+    
     <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
-    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
+
+---
     <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
     <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
-    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
-
+---
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+---
+    <li><a href="/oscilla/docs/cue_button">button()</a></li>
     <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
     <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
-    <li><a href="/oscilla/docs/cue_button">button()</a></li>
+---
 
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
     <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
-    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+---
 
+    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+---
   </ul>
+
 
   <h3>Animation</h3>
   <ul>
     <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
     <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
-    <li><a href="/oscilla/docs/cue_o2p/">Object to Path o2p()</a></li>
+    ---
+
+    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
+    ---
+
+    <li><a href="/oscilla/docs/color/">color()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+
   </ul>
-
+---
  <h3> <a href="/oscilla/docs/cheatsheet/">Cheatsheet</a></h3>
+ ---
  <h3> <a href="/oscilla/docs/workflow/">Workflow</a> </h3>
-
+---
   <ul>
     <li><a href="/oscilla/docs/QUICKSTART/"> Quickstart Install)</a></li>
     <li><a href="/oscilla/docs/INSTALL/">Full Install Steps</a></li>
@@ -72,12 +90,12 @@
     <h1><code>cueTraverse</code> — Animate Objects Between SVG Points</h1>
 <p>The <code>cueTraverse(...)</code> cue animates an SVG object along a path defined by a list of point elements (<code>&lt;circle&gt;</code>, <code>&lt;rect&gt;</code>, or <code>&lt;ellipse&gt;</code>). It's useful for moving symbols, playheads, or visual elements dynamically across the score.</p>
 <hr>
-<h2>🔤 Syntax</h2>
+<h2>Syntax</h2>
 <pre><code>cue_traverse_p(p1,p2,p3)_o(objectId)_s(speed)_d(direction)_x(repeats)_e(easeType)_h(holdMs)_next(targetCue)
 </code></pre>
 <p>Each parameter is enclosed in its own parenthesis. The cue name and parameters can be written as a single underscore-delimited string.</p>
 <hr>
-<h2>🧩 Parameter Reference</h2>
+<h2>Parameter Reference</h2>
 <table>
 <thead>
 <tr>
@@ -121,7 +139,7 @@
 </tbody>
 </table>
 <hr>
-<h2>✅ Examples</h2>
+<h2>Examples</h2>
 <h3>Traverse between 3 points once:</h3>
 <pre><code>cue_traverse_p(p1,p2,p3)_o(dot)_s(1.5)_x(1)
 </code></pre>
@@ -132,7 +150,7 @@
 <pre><code>cue_traverse_p(A,B,C)_o(cursor)_s(3)_e(2)_h(300)_next(cue_done)
 </code></pre>
 <hr>
-<h2>⚠️ Notes</h2>
+<h2>Notes</h2>
 <ul>
 <li>Objects must be <code>&lt;circle&gt;</code>, <code>&lt;ellipse&gt;</code>, or <code>&lt;rect&gt;</code> to be correctly positioned.</li>
 <li><code>p(...)</code> must contain <strong>at least two</strong> valid point IDs.</li>
@@ -140,7 +158,7 @@
 <li>Traversal will pause playback if <code>isPlaying</code> is false at start.</li>
 </ul>
 <hr>
-<h3>🎯 Triggering Other Objects via Intersections</h3>
+<h3>Triggering Other Objects via Intersections</h3>
 <p>As the animated object (defined via <code>o(...)</code>) moves through the points listed in <code>p(...)</code>, the system checks whether any point ID matches the <code>data-id</code> of other SVG elements.</p>
 <p>When a match is found:</p>
 <ul>
@@ -148,7 +166,7 @@
 <li>This allows <code>cueTraverse</code> to function like a <strong>trigger engine</strong></li>
 <li>It’s useful for triggering visual pulses, spins, or dynamic elements connected to spatial locations in the score</li>
 </ul>
-<h4>🧪 Example</h4>
+<h4>Example</h4>
 <pre><code>c-t_p(p1,p2,p3)_o(pulsetrig01)
 </code></pre>
 <p>If you have an element like:</p>

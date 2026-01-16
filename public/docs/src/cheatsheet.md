@@ -4,6 +4,10 @@ layout: cheatsheet.njk
 ---
 
 # OSCILLA Cheatsheet
+### Interactive Graphic Notation
+
+## Version
+*v.0.4 beta*
 
 ## Quick Install
 
@@ -49,16 +53,23 @@ projectTitle, projectAuthor, projectDescription, darkMode, defaultPlaybackSpeed,
 
 ```
 stop(uid:s1) •  stop(next:nav(End))
-pause(dur:12, count:true)
-pause(dur:4, next:nav(page3))
-nav(page3) •  nav(scroll@A) •  nav(scrollPaused@B)
+pause(dur:12, count:true) // with countdown
+pause(dur:4, next:nav(page3)) // chaining
+```
+```
+nav(page3) •  nav(scroll@A) // AKA Navigate  
+nav(scrollPaused@B) // jump and wait
+nav(Coda) // jump to object id Coda
+nav(scroll@G, repeats:3, uid:g1) // repeat
+```
+```
 page(page1) // page*.svg in pages/ dir
 page(Pseq([page1:2,page2:2],3))
 page(Prand([pageA,pageB,pageC],4))
 page(Pchoose([pageA,pageB]))
 stopwatch(source:new, trig:auto)
 stopwatch(source:main, scroll:true)
-metro(bpm:90, visual:hex, trig:auto)
+metro(bpm:90, visual:hex, trig:playhead)
 ```
 
 ## Animation — Scale | Rotate | o2p
@@ -71,11 +82,16 @@ scaleXY([1,1.3],[1,0.6], dur:1)
 scale(Pseq([1,1.4,1],inf), dur:Prand([0.5,1],inf))
 scale([1,1.5,1],dur:12, mode:loop, osc:1, 
    oscaddr:"scale/spat/4chPan",  hold:0,  uid:aC2l)
+
 rotate(dir:1, dur:1)
 rotate(values:[0,120,240], dur:2)
 rotate(values:Pseq([0,45,10],inf), dur:Pseq([1,0.2,2],inf))
 rotate(values:[0,120,240], tdelay:2)
 rotate(values:Pshuf([0,180],inf), dur:1, mode:alternate)
+```
+
+**o2p — Object-to-Path Animation**
+```
 o2p(path:orbitA, dur:8, tdelay:3, prestate:hide)
 o2p(path:spiral, rotate:aligned, rotoffset:-90)
 o2p(path:ring, start:0.2, end:0.9, mode:alt)
@@ -90,93 +106,147 @@ color(uid:shape1, vals:[#f00,#0f0], dur:2)
 color(uid:bars*, vals:[#f80,#08f], mode:alt, dur:1.2)
 color(uid:rect, vals:Pseq([#f00,#ff0,#0ff],3), dur:3)
 color(uid:bgStripe, vals:[#000,#444,#888,#ccc], dur:6)
+```
+**fade() any SVG element (self||target)**
+```
 fade(mode:out, dur:2, from:1, to:0)
 fade(mode:in, dur:1, target:title)
 fade(mode:pulse, dur:6, from:0.2, to:1)
+```
+**text() Lines,Words,Chars (File||String)**
+```
 text(src:foo.txt, dur:3, autostart:1)
 text(src:foo.txt, order:rnd, dur:2, loop:0)
 text(src:foo.txt, yslots:3, yslotmode:sequence)
+
+text( src:"foo baz bar",
+  mode:word, order:seq, dur:0.4, gap:10.1
+)
+
+text( src:"ČŽŠ ĐĐĐĐĐ ŠČČ ŠĐĐ ŽŽĐ ŽŽĐ ŠĐČ ",
+  mode:char, order:seq, loop:2,
+  dur:0.1, gap:0.01,  target:center,
+  style:"font-size:48em;color:black;")
+
 ```
 ## Audio | Video
-
+**audio(...) — Play a Single File**
 ```
 audio(uid:a1, src:click)
 audio(uid:a2, src:loop, loop:0, fade:1.2)
-audio(uid:a3, src:hit, pan:rand(-1,1), pitch:rand(0.8,1.3))
-audio(uid:a4, src:voice, toggle:true, fadeOut:0.3)
+audio(uid:a3, src:hit, 
+  pan:rand(-1,1), pitch:rand(0.8,1.3))
+audio(uid:a4, src:voice, 
+  toggle:true, fadeOut:0.3)
+```
+**audioPool(...) — 1-Shot Select from Dir**
+```
 audioPool(uid:p1, path:sfx)
-audioPool(uid:p2, path:perc, mode:rand)
-audioPool(uid:p3, path:foley, amp:rand(0.4,0.9), pan:rand(-0.7,0.7))
-audioPool(uid:p4, path:tones, pitch:rand(0.5,2), fade:rand(10%,40%))
+audioPool(uid:p2, path:foley, mode:rand)
+audioPool(uid:p3, path:perc, 
+  amp:rand(0.4,0.9), pan:rand(-0.7,0.7), 
+  pitch:rand(0.5,2), fade:rand(10%,40%))
+```
+**audioImpulse(...) — Stochastic Process**
+```
 audioImpulse(uid:i1, path:perc, rate:30)
-audioImpulse(uid:i2, path:clicks, rate:20, jitter:0.5)
-audioImpulse(uid:i3, path:metal, rate:12, pan:rand(-1,1), pitch:rand(0.7,1.4))
-audioImpulse(uid:i4, path:textures, rate:6, jitter:0.8, amp:rand(0.2,0.6))
+audioImpulse(uid:i2, path:clicks, rate:20)
+audioImpulse(uid:i3, path:metal, rate:12, 
+  pan:rand(-1,1), pitch:rand(0.7,1.4))
+audioImpulse(uid:i4, path:textures, rate:6, 
+  jitter:0.8, amp:rand(0.2,0.6))
+```
+**video(...) — In-Score Video Playback**
+```
 video(file:intro.mp4, size:fs, clickable:1)
-video(file:clip.webm, target:markerA, size:640x360, loop:0)
+video(file:clip.webm, target:markerA, 
+  size:640x360, loop:0)
+
+video(file:lum.webm,size:500,in:4,out:12, 
+opacity:0.5, loop:0, speed:3.2, 
+target:abc123, location:scroll)
+
+
+
 ```
 
 ## Synthesis
-
+**synth() — Web Audio Synth, FX, Filters**
 ```
 synth(uid:ref, wave:sine, freq:440)
 synth(uid:noise, wave:noise)
 synth(uid:fixedDur, freq:220, dur:5)
-synth(uid:persist, freq:110, lifetime:process)
-synth(uid:env, freq:220, env:{a:0.5,r:1})
+synth(uid:p1, freq:90, lifetime:process)
+synth(uid:env, freq:99, env:{a:0.5,r:1})
 synth(uid:chord, freq:[440,477,644])
-synth(uid:seq, freq:Pseq(220,330,440), dur:1)
-synth(uid:filter, freq:330, filter:{type:lp,freq:Pseq(400,1200)})
-synth(uid:osc, freq:330, osc:1, oscAddr:/synth/a)
-synthStop(uid:persist, rel:0.5)
+synth(uid:seq, freq:Pseq(220,330), dur:1)
+synth(uid:filter, freq:330, 
+  filter:{type:lp,freq:Pseq(400,1200)})
+synth(uid:osc, freq:330, 
+  osc:1, oscAddr:/synth/a)
+
+synthStop(uid:p1, rel:0.5)
 ```
 
 ## OSC / External Control
-
+**osc --- Discrete OSC Event Cue**
 ```
 osc(addr:v1, pitch:y) // y | hz(440) | midi(60) | deg(2,4)
 osc(addr:v2, pitch:y, uid:v1) // Y coord. normalised
-oscCtrl(addr:"/fx/pan") // default 0 → 1 
+```
+**oscCtrl --- Continuous Control Lanes**
+```
+oscCtrl(addr:"/fx/pan") // acts like breakpoint function
 oscCtrl(addr:"/fx/pan", min:-1, max:1, mode:continuous) // mode:event
-oscCtrl(addr:"/fx/ring/freq", min:60, max:800)
+oscCtrl(addr:"/fx/ring/freq", min:60, max:800) // default 0 → 1 
 ```
 
 ## Interaction & Structure
-
+**button() to Trigger any Cue in Score**
 ```
 button(trigger:nav(page3)) 
 button(trigger:pause(dur:12,count:true))
 button(trigger:nav(scroll@A), style(size:"120x45", fontsize:36))
-reuse(mainMenu) • use(mainMenu)
 
-propagate(
+button(target:page(home, uid:12), 
+  style(size:"250x50", 
+  label:"Enter Page Mode", 
+  font:"Arial Black", fontsize:22))
+
+```
+
+**propagate — Group-Level Cue Propagation**
+
+```
+propagate( // need multiple cues? use this.
   scale(values:[${1},${2}], dur:${3}),
   rnd(0.8,1.2), rnd(1.2,1.6), rnd(0.4,1.2) )
 
-propagate(
-  osc(
-    addr:pontalist,
+propagate( // continuous random streams
+  osc( // all objects in group get the cue
+    addr:pontalist, 
     pitch:deg(irand(0,11), irand(0,2)),
     env:size, uid:irand1235 ))
 
 propagate(
-  osc(
-    addr:pontalist,
-    pitch:y, env:width,
+    addr:pontalist, // pitch from Y-axis
+    pitch:y, env:width, 
     bright:height, density:area,
     trig:playhead ))
 
-propagate(
-  osc(
+propagate( 
+  osc( // ramdomise inputs with ${1}
     addr:voice,
     pitch:deg(${1}, 3),
     env:size, uid:rnd123
   ), rnd([0,2,4,5,7,9,11]) )
-
 ```
-
-## Nesting
-
+**Define and Reuse Collections.**
+```
+reuse(mainMenu) • use(mainMenu)
+reuse(audioSampBtns) • use(audioSampBtns)
+```
+**Combine Cues by Nesting Groups**
 ```
 // Behaviour stacks outer → inner; shapes inherit all enclosing cues.
 <g id="o2p(...)">

@@ -1,55 +1,41 @@
 // speed.js
 
 /**
+ * ============================================================================
+ * SPEED CUES — POSITIONAL (SVG traversal)
+ * ============================================================================
+ * speed(x) cues embedded in SVG are POSITION-BASED and apply INSTANTLY.
+ * They NEVER ramp and NEVER broadcast during traversal.
+ */
+
+/**
  * Extracts speed cues from SVG elements whose IDs are in the form:
  *   speed(1.25)
  *   speed(0.8)
  *   speed(2)
  *
  * @param {SVGElement} svgElement
- * @returns {Array<{ position: number, multiplier: number }>}
+ * @returns {Array<{ position: number, multiplier: number, rawId: string }>}
  */
-
-
-
 export function extractSpeedCues(svgElement) {
-  if (!svgElement) {
-    // console.warn("[extractSpeedCues] No SVG element provided.");
-    return [];
-  }
-
-  // console.log("------------------------------------------------------------");
-  // console.log("[extractSpeedCues] 🔍 Scanning for speed() cues in SVG...");
+  if (!svgElement) return [];
 
   const matches = svgElement.querySelectorAll("[id^='speed(']");
-  // console.log(`[extractSpeedCues] Found ${matches.length} candidate elements.`);
-
-  let newSpeedMap = [];
+  const newSpeedMap = [];
 
   matches.forEach((el) => {
     const rawId = el.id;
     const match = rawId.match(/^speed\(\s*([0-9.]+)/);
-
-    if (!match) {
-      // console.log(`[extractSpeedCues] ⚠️ Skipping non-matching ID: ${rawId}`);
-      return;
-    }
+    if (!match) return;
 
     const speedValue = parseFloat(match[1]);
-    if (isNaN(speedValue)) {
-      // console.log(`[extractSpeedCues] ⚠️ Invalid number in: ${rawId}`);
-      return;
-    }
+    if (!Number.isFinite(speedValue)) return;
 
-    // Calculate absolute X position
+    // Absolute X position
     const bbox = el.getBBox();
     const matrix = el.getCTM();
     let x = bbox.x;
     if (matrix) x += matrix.e;
-
-    // console.log(
-    //   `[extractSpeedCues] 🎚 Found speed cue: id="${rawId}" → speed=${speedValue}, x=${x.toFixed(2)}`
-    // );
 
     newSpeedMap.push({
       position: x,
@@ -59,62 +45,48 @@ export function extractSpeedCues(svgElement) {
   });
 
   newSpeedMap.sort((a, b) => a.position - b.position);
-
-  // console.log("[extractSpeedCues] ✅ Final sorted speed map:", newSpeedMap);
-  // console.log("------------------------------------------------------------");
-
   return newSpeedMap;
 }
 
-
-export let speedCueMap = []; // ensure this stays globally shared
+export let speedCueMap = [];
 
 /**
- * Returns the active speed multiplier for a given X position on the score.
- * - Uses the most recent speed cue at or before the given playhead position.
- * - Defaults to 1 if no cue applies.
+ * Returns the active speed multiplier for a given X position.
+ * Traversal changes are ALWAYS instantaneous.
  */
 export function getSpeedForPosition(x) {
   if (!speedCueMap || speedCueMap.length === 0) return 1;
 
   let multiplier = 1;
-  let activeCue = null;
-
   for (const cue of speedCueMap) {
-    if (x >= cue.position) {
-      multiplier = cue.multiplier;
-      activeCue = cue;
-    } else {
-      break;
-    }
+    if (x >= cue.position) multiplier = cue.multiplier;
+    else break;
   }
-
-  console.log(
-    `[getSpeedForPosition] x=${x.toFixed(2)} → multiplier=${multiplier}` +
-    (activeCue ? ` (from "${activeCue.rawId}" @ ${activeCue.position.toFixed(2)})` : " (default)")
-  );
-
   return multiplier;
 }
 
+/**
+ * ============================================================================
+ * SPEED RAMP ENGINE — LOCAL ONLY
+ * ============================================================================
+ * Ramps animate speed LOCALLY.
+ * The server is updated ONLY ONCE at ramp completion.
+ */
 
-
-
-
-// ⚡ Handles cueSpeed: updates playback speed and syncs
-// --- Speed Ramp State ---
 let activeSpeedRamp = null;
 
-// ------------------------------------------------------------
-// handleSpeedRamp(start, end, durationSeconds, easing = "linear")
-// ------------------------------------------------------------
 export function handleSpeedRamp(start, end, durSec, easing = "linear") {
-  if (!Number.isFinite(start) || !Number.isFinite(end) || !Number.isFinite(durSec) || durSec <= 0) {
+  if (
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    !Number.isFinite(durSec) ||
+    durSec <= 0
+  ) {
     console.warn("[cueSpeed] Invalid ramp params:", { start, end, durSec });
     return;
   }
 
-  console.log(`[cueSpeed] Starting ramp: ${start} → ${end} over ${durSec}s`);
+  console.log(`[cueSpeed] Ramp start: ${start} → ${end} over ${durSec}s`);
 
   const startTime = performance.now();
   const durationMs = durSec * 1000;
@@ -122,68 +94,115 @@ export function handleSpeedRamp(start, end, durSec, easing = "linear") {
   // Cancel any existing ramp
   activeSpeedRamp = { start, end, startTime, durationMs, easing };
 
-  // Ensure the animation loop is running
   if (!window.speedRampLoopActive) {
     window.speedRampLoopActive = true;
     requestAnimationFrame(speedRampTick);
   }
 }
 
-function easeLinear(t) { return t; }
+function easeLinear(t) {
+  return t;
+}
 
-// Main ramp animation loop
 function speedRampTick(now) {
   if (!activeSpeedRamp) {
     window.speedRampLoopActive = false;
     return;
   }
 
-  const { start, end, startTime, durationMs, easing } = activeSpeedRamp;
+  const { start, end, startTime, durationMs } = activeSpeedRamp;
   const elapsed = now - startTime;
   let t = Math.min(elapsed / durationMs, 1);
-
-  // Apply easing later — for now just linear:
   t = easeLinear(t);
 
   const value = start + (end - start) * t;
 
+  // LOCAL UPDATE ONLY
   window.speedMultiplier = value;
   window.updateSpeedDisplay?.();
-
-  // Broadcast to server smoothly
-  if (window.socket?.readyState === WebSocket.OPEN && !window.incomingServerUpdate) {
-    window.socket.send(JSON.stringify({
-      type: "set_speed_multiplier",
-      multiplier: value,
-      timestamp: Date.now()
-    }));
-  }
 
   if (t < 1) {
     requestAnimationFrame(speedRampTick);
   } else {
-    console.log(`[cueSpeed] Ramp complete. Final multiplier = ${end}`);
+    // ---- RAMP COMPLETE ----
+    console.log(`[cueSpeed] Ramp complete → ${end}`);
+
+    window.speedMultiplier = end;
+    window.updateSpeedDisplay?.();
+
+    // SINGLE authoritative sync commit
+    if (
+      window.wsEnabled &&
+      window.socket?.readyState === WebSocket.OPEN &&
+      !window.incomingServerUpdate
+    ) {
+      window.socket.send(
+        JSON.stringify({
+          type: "set_speed_multiplier",
+          multiplier: end,
+          playheadX: window.playheadX ?? null,
+          t: Date.now(),
+        })
+      );
+    }
+
     activeSpeedRamp = null;
     window.speedRampLoopActive = false;
   }
 }
 
-
-// ⚡ Handles cueSpeed: updates playback speed and syncs
-export function handleSpeedCue(_id, newMultiplier) {
+/**
+ * ============================================================================
+ * INSTANT SPEED CHANGE (non-ramped cue)
+ * ============================================================================
+ */
+export function handleSpeedCue(_uid, newMultiplier) {
   newMultiplier = Number(newMultiplier);
-  if (!newMultiplier || newMultiplier <= 0) return;
+  if (!Number.isFinite(newMultiplier) || newMultiplier <= 0) return;
   if (window.speedMultiplier === newMultiplier) return;
 
   window.speedMultiplier = newMultiplier;
   window.updateSpeedDisplay?.();
 
-  // broadcast only if not receiving
-  if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN && !window.incomingServerUpdate) {
-    window.socket.send(JSON.stringify({
-      type: "set_speed_multiplier",
-      multiplier: newMultiplier,
-      t: Date.now()
-    }));
+  if (
+    window.wsEnabled &&
+    window.socket?.readyState === WebSocket.OPEN &&
+    !window.incomingServerUpdate
+  ) {
+    window.socket.send(
+      JSON.stringify({
+        type: "set_speed_multiplier",
+        multiplier: newMultiplier,
+        playheadX: window.playheadX ?? null,
+        t: Date.now(),
+      })
+    );
+  }
+}
+
+/**
+ * ============================================================================
+ * EXECUTE cueSpeed AST (parser already supports this)
+ * ============================================================================
+ * This is the ONLY place ramps should be triggered from cues.
+ */
+export function executeSpeedCue(ast) {
+  if (!ast || ast.type !== "cueSpeed") return;
+
+  const current = Number(window.speedMultiplier ?? 1);
+  let target = current;
+
+  if (Number.isFinite(ast.add)) {
+    target = current + ast.add;
+  } else if (Number.isFinite(ast.value)) {
+    target = ast.value;
+  }
+
+  if (!Number.isFinite(target) || target <= 0) return;
+
+  if (Number.isFinite(ast.dur) && ast.dur > 0) {
+    handleSpeedRamp(current, target, ast.dur, ast.ease);
+  } else {
+    handleSpeedCue(ast.uid, target);
   }
 }

@@ -8,7 +8,7 @@ The `cueTraverse(...)` cue animates an SVG object along a path defined by a list
 
 ---
 
-## 🔤 Syntax
+##  Syntax
 
 ```
 cue_traverse_p(p1,p2,p3)_o(objectId)_s(speed)_d(direction)_x(repeats)_e(easeType)_h(holdMs)_next(targetCue)
@@ -18,7 +18,7 @@ Each parameter is enclosed in its own parenthesis. The cue name and parameters c
 
 ---
 
-## 🧩 Parameter Reference
+##  Parameter Reference
 
 | Param     | Meaning                                         |
 |-----------|--------------------------------------------------|
@@ -33,7 +33,7 @@ Each parameter is enclosed in its own parenthesis. The cue name and parameters c
 
 ---
 
-## ✅ Examples
+##  Examples
 
 ### Traverse between 3 points once:
 ```
@@ -52,7 +52,7 @@ cue_traverse_p(A,B,C)_o(cursor)_s(3)_e(2)_h(300)_next(cue_done)
 
 ---
 
-## ⚠️ Notes
+##  Notes
 
 - Objects must be `<circle>`, `<ellipse>`, or `<rect>` to be correctly positioned.
 - `p(...)` must contain **at least two** valid point IDs.
@@ -61,7 +61,7 @@ cue_traverse_p(A,B,C)_o(cursor)_s(3)_e(2)_h(300)_next(cue_done)
 
 ---
 
-### 🎯 Triggering Other Objects via Intersections
+###  Triggering Other Objects via Intersections
 
 As the animated object (defined via `o(...)`) moves through the points listed in `p(...)`, the system checks whether any point ID matches the `data-id` of other SVG elements.
 
@@ -71,7 +71,7 @@ When a match is found:
 - This allows `cueTraverse` to function like a **trigger engine**
 - It’s useful for triggering visual pulses, spins, or dynamic elements connected to spatial locations in the score
 
-#### 🧪 Example
+####  Example
 
 ```
 c-t_p(p1,p2,p3)_o(pulsetrig01)

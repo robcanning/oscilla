@@ -245,6 +245,7 @@ const sendOscMessage = () => {
 const speedMultiplier = 1; // Default multiplier
 
 const updateElapsedTime = () => {
+  if (!Number.isFinite(sharedState.duration) || sharedState.duration <= 0) return;
   if (!sharedState.isPlaying || sharedState.startTimestamp == null) return;
 
   const now = performance.now();
@@ -264,6 +265,14 @@ const updateElapsedTime = () => {
   // Optional: emit OSC time every tick
   sendOscMessage();
 };
+
+
+function retargetStartTimestampFromElapsed(now, elapsedMs, speedMul) {
+  const m = (Number.isFinite(speedMul) && speedMul > 0) ? speedMul : 1;
+  const e = (Number.isFinite(elapsedMs) && elapsedMs >= 0) ? elapsedMs : 0;
+  return now - (e / m);
+}
+
 
 
 
@@ -1137,21 +1146,20 @@ wss.on('connection', (ws, req) => {
       * ✅ Handles play requests from clients.
       * - Updates `playheadX` and ensures synchronization across clients.
       */
-      case "play": {
-        // Ensure scoreWidth & duration defaults are set
-        sharedState.scoreWidth = sharedState.scoreWidth || 1;
+case "play": {
+  sharedState.scoreWidth = sharedState.scoreWidth || 1;
 
-        // If we are resuming playback:
-        // sharedState.elapsedTime is already the last known position (in ms),
-        // so we compute a timebase origin anchored to *right now*:
-        sharedState.startTimestamp = performance.now() - sharedState.elapsedTime;
+  const now = performance.now();
+  sharedState.startTimestamp = retargetStartTimestampFromElapsed(
+    now,
+    sharedState.elapsedTime,
+    sharedState.speedMultiplier
+  );
 
-        sharedState.isPlaying = true;
-
-        // Broadcast the new authoritative transport state
-        broadcastState();
-        break;
-      }
+  sharedState.isPlaying = true;
+  broadcastState();
+  break;
+}
 
 
 
@@ -1235,9 +1243,15 @@ wss.on('connection', (ws, req) => {
         }
 
         // 3. IMPORTANT: Re-anchor transport clock if playback is active
-        if (sharedState.isPlaying) {
-          sharedState.startTimestamp = performance.now() - sharedState.elapsedTime;
-        }
+ if (sharedState.isPlaying) {
+  const now = performance.now();
+  sharedState.startTimestamp = retargetStartTimestampFromElapsed(
+    now,
+    sharedState.elapsedTime,
+    sharedState.speedMultiplier
+  );
+}
+
 
         console.log(
           `[SERVER] 🎯 Jump received → x=${sharedState.playheadX}, ` +
