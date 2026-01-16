@@ -514,7 +514,7 @@ html, body {
   max-width: none !important;
   max-height: none !important;
   width: auto;
-  height: 100vh !important;  /* or 100% */
+    height: auto !important;
     
 
 }
