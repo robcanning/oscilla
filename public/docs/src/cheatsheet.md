@@ -7,7 +7,7 @@ layout: cheatsheet.njk
 ### Interactive Graphic Notation
 
 ## Version
-*v0.29_beta*
+*v0.2.9_beta*
 
 ## Quick Install
 
