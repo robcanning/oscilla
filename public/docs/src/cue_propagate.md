@@ -2,7 +2,7 @@
 title: cue_propagate
 layout: docs_layout.njk
 ---
-# cue_propagate — Group-Level Parameter Propagation
+# propagate() — Group-Level Parameter Propagation
 
 `propagate(...)` is a pre-parser macro that expands a cue or animation template across all direct children of an SVG `<g>` element. Each child receives a unique instance of the template with independently evaluated parameters.
 

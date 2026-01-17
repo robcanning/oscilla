@@ -3,7 +3,7 @@ layout: docs_layout.njk
 title: cue_pause
 ---
 
-# pause(...) --- Temporarily Halt Playback (Countdown + Optional Follow-On Cue)
+# pause(...) --- Temporarily Halt Playback
 
 The `pause(...)` cue temporarily stops playback for a fixed duration. It
 may optionally display a countdown overlay and can automatically trigger

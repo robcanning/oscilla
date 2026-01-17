@@ -86,6 +86,9 @@
 .docs-content h2 {
   margin: 1rem 0 0.35rem;
   font-size: 1.2rem;
+  background-color: #333;
+  color: #999;
+  padding: 3px;
 }
 
 .docs-content h3 {
