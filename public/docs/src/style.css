@@ -149,3 +149,33 @@
   color: #999;
   margin-bottom: 0.4rem;
 }
+
+
+/* =========================================================
+   Mobile / Small Screen Layout
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+  .docs-container {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .sidebar {
+    position: static;
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .docs-content {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .docs-content pre {
+    overflow-x: auto;
+  }
+}
