@@ -126,9 +126,9 @@ body.cheatsheet {
   justify-content: space-between;
   align-items: center;
 
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   border-top: 1px solid #874f4f;
-  padding-top: 0.4rem;
+  padding-top: 0;
 }
 
 .cheatsheet-footer-right {
