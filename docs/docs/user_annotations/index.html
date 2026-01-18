@@ -1,0 +1,294 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>peformer_annotations</title>
+
+  <link rel="stylesheet" href="/oscilla/docs/style.css">
+</head>
+
+
+
+<body>
+
+  <div class="docs-container">
+    <nav class="sidebar">
+  
+<h3>Docs</h3>
+<ul>
+  <li><a href="/oscilla/docs/">Overview</a></li>
+  ---
+</ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
+---
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+---
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+---
+    <li><a href="/oscilla/docs/cue_button">button()</a></li>
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
+---
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+---
+    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+---
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    ---
+    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
+    ---
+    <li><a href="/oscilla/docs/color/">color()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+
+  </ul>
+
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/oscilla/docs/user_annotations/">annotations</a></li>
+  </ul>
+
+  <h3>References</h3>
+  <ul>
+    <li><a href="/oscilla/docs/workflow/">workflow</a></li>
+    <li><a href="/oscilla/docs/cheatsheet/">cheatsheet</a></li>
+    <li><a href="/oscilla/docs/QUICKSTART/"> quickstart install)</a></li>
+    <li><a href="/oscilla/docs/INSTALL/">install</a></li>
+  </ul>
+
+
+  <h3>Dev Docs</h3>
+  <ul>
+    <li><a href="/oscilla/docs/dev-sync-architecture/">sync architecture</a></li>
+
+    </ul>
+
+
+</nav>
+
+
+    <main class="docs-content">
+
+    <nav class="docs-nav">
+      <a id="docs-prev" href="#" aria-label="Previous page">← Prev</a>
+      <a href="/oscilla/docs/">Docs Index</a>
+      <a id="docs-next" href="#" aria-label="Next page">Next →</a>
+    </nav>
+
+    <h1>Performer Annotations</h1>
+<h2>Overview</h2>
+<p>User Annotations allow performers to add <strong>personal notes directly onto the score view</strong> while working with Oscilla.</p>
+<p>Annotations are intended for:</p>
+<ul>
+<li>reminders</li>
+<li>listening cues</li>
+<li>coordination notes</li>
+<li>interpretive decisions</li>
+<li>rehearsal observations</li>
+</ul>
+<p>Annotations <strong>do not change the score</strong> and <strong>do not affect playback or cues</strong>.<br>
+They exist as a separate, optional layer that can be shown or hidden at any time.</p>
+<hr>
+<h2>Entering Annotation Mode</h2>
+<ol>
+<li>Click the <strong>pen icon</strong> in the toolbar</li>
+<li>The cursor changes to indicate annotation mode</li>
+<li>Click anywhere on the score to add a new annotation</li>
+</ol>
+<p>Annotation mode automatically exits after saving a note.</p>
+<hr>
+<h2>Creating an Annotation</h2>
+<p>When you click the score in annotation mode:</p>
+<ol>
+<li>A text editor appears</li>
+<li>Enter your note (multi-line text is supported)</li>
+<li>Choose whether the note is:
+<ul>
+<li><strong>Local</strong> — visible only on your device</li>
+<li><strong>Shared</strong> — visible to other connected clients // TODO</li>
+</ul>
+</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>The annotation appears on the score as:</p>
+<ul>
+<li>a small dot (anchor)</li>
+<li>a text label showing the note</li>
+</ul>
+<hr>
+<h2>Editing an Annotation</h2>
+<ul>
+<li>Click <strong>either the dot or the text</strong> to open the editor</li>
+<li>You can:
+<ul>
+<li>edit the text</li>
+<li>change Local / Shared status</li>
+<li>delete the annotation</li>
+</ul>
+</li>
+</ul>
+<p>Click <strong>Save</strong> to apply changes.</p>
+<hr>
+<h2>Moving an Annotation</h2>
+<ul>
+<li>Click and <strong>drag the text label</strong> to reposition the annotation</li>
+<li>Release to confirm the new position</li>
+<li>The position is saved automatically</li>
+</ul>
+<p>The dot remains visually tied to the text.</p>
+<hr>
+<h2>Deleting an Annotation</h2>
+<ol>
+<li>Click the annotation to open the editor</li>
+<li>Click <strong>Delete</strong></li>
+<li>The annotation is removed immediately</li>
+</ol>
+<hr>
+<h2>Keyboard Behaviour While Editing</h2>
+<p>While typing in the annotation editor:</p>
+<ul>
+<li>All global keyboard shortcuts are temporarily disabled</li>
+<li>This prevents accidental playback or navigation</li>
+<li>Press <strong>Escape</strong> to close the editor</li>
+</ul>
+<p>Normal keyboard controls resume once the editor is closed.</p>
+<hr>
+<h2>Local vs Shared Annotations</h2>
+<h3>Local</h3>
+<ul>
+<li>Stored only in your browser</li>
+<li>Not visible to others</li>
+<li>Suitable for personal rehearsal notes</li>
+</ul>
+<h3>Shared</h3>
+<ul>
+<li>Broadcast to other connected clients</li>
+<li>Read-only for others</li>
+<li>Useful for ensemble coordination</li>
+</ul>
+<p>Shared annotations do not override local ones.</p>
+<hr>
+<h2>Visibility</h2>
+<p>Annotations:</p>
+<ul>
+<li>can be globally shown or hidden</li>
+<li>move with the score when scrolling or paging</li>
+<li>remain aligned to the score content</li>
+</ul>
+<p>They never affect timing, cues, or navigation.</p>
+<hr>
+<h2>What Annotations Do <em>Not</em> Do</h2>
+<p>Annotations:</p>
+<ul>
+<li>do not trigger playback</li>
+<li>do not alter the score</li>
+<li>do not affect synchronization</li>
+<li>do not replace cues or instructions</li>
+</ul>
+<p>They are purely informational.</p>
+<hr>
+<h2>Notes on Use</h2>
+<p>Annotations are best used for:</p>
+<ul>
+<li>marking sections to listen closely</li>
+<li>noting transitions or handovers</li>
+<li>tracking rehearsal decisions</li>
+<li>personal memory aids</li>
+</ul>
+<p>They are intentionally lightweight and non-authoritative.</p>
+<hr>
+<h2>Future Changes</h2>
+<p>This feature is evolving. Possible future additions include:</p>
+<ul>
+<li>filtering annotations by author</li>
+<li>export / import</li>
+<li>visibility modes (rehearsal vs performance)</li>
+</ul>
+
+
+    </main>
+  </div>
+
+<p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+
+
+<script>
+(function () {
+  // Collect sidebar links in visual order
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar) return;
+
+  const links = Array.from(
+    sidebar.querySelectorAll("a[href]")
+  ).map(a => a.href);
+
+  const current = window.location.href.replace(/#.*$/, "");
+  const index = links.findIndex(href => href === current);
+
+  const prev = index > 0 ? links[index - 1] : null;
+  const next = index >= 0 && index < links.length - 1
+    ? links[index + 1]
+    : null;
+
+  // Wire prev/next buttons if present
+  const prevBtn = document.getElementById("docs-prev");
+  const nextBtn = document.getElementById("docs-next");
+
+  if (prevBtn) {
+    if (prev) prevBtn.href = prev;
+    else prevBtn.style.visibility = "hidden";
+  }
+
+  if (nextBtn) {
+    if (next) nextBtn.href = next;
+    else nextBtn.style.visibility = "hidden";
+  }
+
+  // Keyboard navigation
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+    if (e.key === "ArrowLeft" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowRight" && next) {
+      window.location.href = next;
+    }
+
+    // Optional: vertical navigation
+    if (e.key === "ArrowUp" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowDown" && next) {
+      window.location.href = next;
+    }
+  });
+})();
+</script>
+
+
+</body>
+
+
+
+</html>
