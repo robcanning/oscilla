@@ -5,11 +5,6 @@ layout: docs_layout.njk
 
 # Performer Annotations
 
-> **Status:** Draft — subject to change  
-> **Audience:** Performers and workshop participants  
-> **Purpose:** Personal and shared notes attached to the score during rehearsal and performance
-
----
 
 ## Overview
 
