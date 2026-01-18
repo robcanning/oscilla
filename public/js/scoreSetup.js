@@ -8,6 +8,11 @@ import {
 import { hideAllButtonPlaceholders } from "./oscillaButton.js";
 import { setSpeedCueMap, extractSpeedCues } from './oscillaSpeed.js';
 
+import {
+  initOscillaAnnotations,
+  setAnnotationsProject
+} from "./oscillaAnnotations.js";
+
 // Rehearsal mark logic ////////////////////////////////////////////////////////
 
 /**
@@ -694,7 +699,10 @@ export async function setupScore(svgElement) {
   }
       hideAllButtonPlaceholders(svgElement);
   
-
+  
+  // Performer-facing overlays
+  initOscillaAnnotations();
+  setAnnotationsProject(window.currentProjectName);
 
   console.groupEnd();
 }

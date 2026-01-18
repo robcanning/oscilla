@@ -34,6 +34,11 @@ import {
   resumeStopwatch, setupStopwatchFullscreenToggle
 } from './oscillaTimers.js';
 
+import {
+  setAnnotationMode,
+  setAnnotationsEnabled
+} from "./oscillaAnnotations.js";
+
 
 import { handleCueTrigger, checkCueTriggers, parseCueParams, resetTriggeredCues, assignCues } from './oscillaCueDispatcher.js';
 
@@ -291,6 +296,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById("toggle-notes-button")?.addEventListener("click", toggleScoreNotes);
   window.toggleScoreNotes = toggleScoreNotes;
+
+  // ===========================
+  // Performer Notes 
+  // ===========================
+
+let annotationMode = false;
+let annotationsVisible = true;
+
+function initAnnotationControls() {
+  const btn = document.getElementById("annotation-toggle");
+  if (!btn) return;
+
+  btn.addEventListener("click", () => {
+    annotationMode = !annotationMode;
+    setAnnotationMode(annotationMode);
+    btn.classList.toggle("active", annotationMode);
+    console.log("[annotations] mode:", annotationMode);
+  });
+
+  // optional global toggle (later, via preferences)
+  window.toggleAnnotations = (on) => {
+    annotationsVisible = on;
+    setAnnotationsEnabled(on);
+  };
+}
+
+  initAnnotationControls();
+
+
 
   // ===========================
   // Rehearsal Marks

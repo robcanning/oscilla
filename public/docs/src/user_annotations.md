@@ -190,7 +190,6 @@ They exist alongside the score as interpretive traces rather than executable ins
 Possible future extensions include:
 
 - Page-relative time highlights
-- Temporary workshop-only shared annotations
 - Annotation export/import
 - Simple drawing or gesture annotations
 - Rehearsal vs performance visibility modes
