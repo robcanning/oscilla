@@ -51,6 +51,8 @@ window.seekDebounceTime = 300;
 window.seekingTimeout = null;
 
 document.addEventListener('keydown', (event) => {
+  if (window.oscillaTextInputActive && e.key !== "Escape") return;
+
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
     event.preventDefault(); //  Prevents page scrolling
 
@@ -316,6 +318,8 @@ export const forward = () => {
 
 export function initializeSpeedControls() {
   document.addEventListener("keydown", (event) => {
+    if (window.oscillaTextInputActive && e.key !== "Escape") return;
+
     if (event.key === "+" || event.key === "=") {
       adjustSpeed(0.1);
     } else if (event.key === "-") {

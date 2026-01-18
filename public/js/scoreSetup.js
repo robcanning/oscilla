@@ -130,6 +130,9 @@ window.closeRehearsalPopup = closeRehearsalPopup;
 
 //  Allow opening with "R" key
 document.addEventListener("keydown", (event) => {
+
+  if (window.oscillaTextInputActive && e.key !== "Escape") return;
+
   if (event.key.toUpperCase() === "R") {
     openRehearsalPopup();
   }
@@ -182,6 +185,8 @@ window.jumpToRehearsalMark = jumpToRehearsalMark;
 let currentIndex = 0; // Track the current rehearsal mark index
 
 document.addEventListener('keydown', (event) => {
+  if (window.oscillaTextInputActive && e.key !== "Escape") return;
+
   if (!["ArrowUp", "ArrowDown"].includes(event.key)) return; // Only handle up/down keys
 
   if (sortedMarks.length === 0) {

@@ -297,9 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById("toggle-notes-button")?.addEventListener("click", toggleScoreNotes);
   window.toggleScoreNotes = toggleScoreNotes;
 
-  // ===========================
-  // Performer Notes 
-  // ===========================
+// ===========================
+// Performer Notes
+// ===========================
 
 let annotationMode = false;
 let annotationsVisible = true;
@@ -311,7 +311,6 @@ function initAnnotationControls() {
   btn.addEventListener("click", () => {
     annotationMode = !annotationMode;
     setAnnotationMode(annotationMode);
-    btn.classList.toggle("active", annotationMode);
     console.log("[annotations] mode:", annotationMode);
   });
 
@@ -322,7 +321,16 @@ function initAnnotationControls() {
   };
 }
 
-  initAnnotationControls();
+//  React to authoritative state changes
+const annotateBtn = document.getElementById("annotation-toggle");
+
+window.addEventListener("oscilla:annotation-mode", (e) => {
+  const active = e.detail.active;
+  annotateBtn.classList.toggle("active", active);
+});
+
+// init once after DOM ready
+initAnnotationControls();
 
 
 
@@ -823,17 +831,31 @@ if (state.canonicalRenderedWidth) {
   });
 
   // Keyboard shortcuts
-  document.addEventListener('keydown', (event) => {
-    const key = event.key.toUpperCase();
-    if (key === 'H') toggleKeybindingsPopup();
-    else if (key === 'F') toggleFullscreen();
-    else if (key === 'T') toggleSplashScreen?.();
-    else if (key === 'R') openRehearsalPopup();
-    else if (event.key === ' ') {
-      event.preventDefault();
-      window.isPlaying ? window.pausePlayback() : window.startPlayback();
+document.addEventListener(
+  "keydown",
+  (event) => {
+    // block all shortcuts while typing in editor
+    if (window.oscillaTextInputActive && event.key !== "Escape") {
+      event.stopPropagation();
+      return;
     }
-  });
+
+    const key = event.key.toUpperCase();
+
+    if (key === "H") toggleKeybindingsPopup();
+    else if (key === "F") toggleFullscreen();
+    else if (key === "T") toggleSplashScreen?.();
+    else if (key === "R") openRehearsalPopup();
+    else if (event.key === " ") {
+      event.preventDefault();
+      window.isPlaying
+        ? window.pausePlayback()
+        : window.startPlayback();
+    }
+  },
+  true // 🔑 CAPTURE PHASE — THIS IS ESSENTIAL
+);
+
 
   // Initialize UI state
   wsToggleButton.style.borderColor = 'green';
