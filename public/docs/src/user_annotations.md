@@ -1,208 +1,155 @@
-# User Annotations (Draft Specification)
+---
+title: peformer_annotations
+layout: docs_layout.njk
+---
 
-> **Status:** Draft / work in progress — subject to change  
-> **Scope:** Performer-facing annotations in Oscilla  
-> **Audience:** Performers, composers, workshop participants, developers
+# Performer Annotations
+
+> **Status:** Draft — subject to change  
+> **Audience:** Performers and workshop participants  
+> **Purpose:** Personal and shared notes attached to the score during rehearsal and performance
 
 ---
 
-## 1. Overview
+## Overview
 
-User annotations in Oscilla provide a **performer-facing layer for reflection, listening, and interpretation** that exists alongside the executable score but **does not alter the score itself**.
+User Annotations allow performers to add **personal notes directly onto the score view** while working with Oscilla.
 
-Annotations are designed for **general score-based performance contexts**, including situations where musical activity continues between explicit cues, across silent regions, or through sustained instructions that are not tied to discrete notational objects.
+Annotations are intended for:
+- reminders
+- listening cues
+- coordination notes
+- interpretive decisions
+- rehearsal observations
 
-Crucially:
-
-- Annotations **do not live in the SVG score**
-- Annotations **do not affect playback, cues, or execution**
-- Annotations are **optional, toggleable, and non-authoritative**
-
-They are intended as a rehearsal and interpretation aid, not a compositional mechanism.
-
----
-
-## 2. Design Intent
-
-The annotation system is guided by the following principles:
-
-1. **Performer-centred**  
-   Annotations capture performer observations, reminders, and interpretive notes that arise during rehearsal or performance.
-
-2. **Non-invasive**  
-   The score remains unchanged. Annotations are rendered in a browser overlay layer and can be hidden at any time.
-
-3. **Performer-owned**  
-   Annotations belong to performers, not the score author. Multiple performers may annotate the same score differently.
-
-4. **Space-aware**  
-   Empty space, sustained activity, and implicit instruction are considered meaningful and annotatable.
-
-5. **Incremental and provisional**  
-   The system is intentionally minimal and expected to evolve through use.
+Annotations **do not change the score** and **do not affect playback or cues**.  
+They exist as a separate, optional layer that can be shown or hidden at any time.
 
 ---
 
-## 3. Basic Usage
+## Entering Annotation Mode
 
-### 3.1 Entering Annotation Mode
+1. Click the **pen icon** in the toolbar  
+2. The cursor changes to indicate annotation mode  
+3. Click anywhere on the score to add a new annotation
 
-When annotation mode is enabled (via a pen icon in the toolbar):
-
-- The cursor changes to indicate annotation mode
-- Clicking on the score creates a new annotation anchor
-- A small text editor appears near the click location
-
-Annotation mode can be exited at any time.
-
-### 3.2 Creating an Annotation
-
-To create an annotation:
-
-1. Enable annotation mode
-2. Click anywhere on the score (including empty space)
-3. Enter a short text note
-4. Choose whether the annotation is:
-   - **Local** (stored only in this browser)
-   - **Shared** (broadcast to other connected clients)
-5. Save the annotation
-
-A small pin and text preview will appear at the annotated location.
-
-### 3.3 Viewing and Editing
-
-- Annotations can be globally shown or hidden
-- Clicking an annotation opens it for editing
-- Annotations can be updated or removed by their author
+Annotation mode automatically exits after saving a note.
 
 ---
 
-## 4. Anchoring Model
+## Creating an Annotation
 
-Annotations are **anchored**, not embedded. Each annotation records *how* it relates to the score rather than modifying the score itself.
+When you click the score in annotation mode:
 
-### 4.1 Anchor Types
+1. A text editor appears
+2. Enter your note (multi-line text is supported)
+3. Choose whether the note is:
+   - **Local** — visible only on your device
+   - **Shared** — visible to other connected clients // TODO
+4. Click **Save**
 
-Annotations may use one or more of the following contextual anchors:
-
-- **Element anchor**  
-  Links the annotation to a specific SVG element or cue ID
-
-- **Position anchor**  
-  Anchors the annotation to a position in score space, even if no object exists there
-
-- **Time anchor**  
-  Records the current performance time using the Oscilla stopwatch
-
-There is no hierarchy between these anchor types. The system treats empty space and implicit instruction as meaningful.
-
-### 4.2 Scroll Mode
-
-In scroll mode:
-
-- Position anchors are stored relative to the score container
-- Annotations may record the current playhead position
-- Stopwatch time is captured for contextual reference
-
-This supports annotations such as:
-
-> “Continue texture here until next cue”
-
-—even when no visible object is present.
-
-### 4.3 Page Mode
-
-In page mode:
-
-- Annotations are scoped to the currently active page
-- Positions are stored relative to the page overlay
-- Stopwatch time remains the authoritative time reference
-
-Page-relative annotations allow performers to mark reminders, strategies, or transitions that occur within a page, regardless of how long the page is viewed.
+The annotation appears on the score as:
+- a small dot (anchor)
+- a text label showing the note
 
 ---
 
-## 5. Time Semantics
+## Editing an Annotation
 
-Oscilla maintains a single authoritative notion of performance time via its **stopwatch**.
+- Click **either the dot or the text** to open the editor
+- You can:
+  - edit the text
+  - change Local / Shared status
+  - delete the annotation
 
-Annotations do not introduce a new clock. Instead, they:
-
-- Record the stopwatch time at creation
-- May later support page-relative time (time since page entry)
-
-This aligns annotation timing with experienced performance time, not notated duration.
-
----
-
-## 6. Persistence and Sharing
-
-### 6.1 Local Annotations
-
-Local annotations:
-
-- Are stored in the browser (per project)
-- Persist across reloads on the same device
-- Are visible only to the local performer
-
-This mode is suitable for private rehearsal notes and personal performance strategies.
-
-### 6.2 Shared Annotations
-
-Shared annotations:
-
-- Are transmitted via the Oscilla server
-- Appear for other connected clients
-- Are read-only for non-authors
-
-Shared annotations support ensemble rehearsal and coordination but remain optional and non-binding.
-
-Server-side persistence is currently session-based and may change in future versions.
+Click **Save** to apply changes.
 
 ---
 
-## 7. Rendering and Visibility
+## Moving an Annotation
 
-Annotations are rendered as **HTML overlay elements**, not SVG objects.
+- Click and **drag the text label** to reposition the annotation
+- Release to confirm the new position
+- The position is saved automatically
 
-- They do not interfere with score interaction
-- They can be globally toggled on/off
-- They appear only when their relevant context (scroll/page) is active
-
-This ensures annotations remain a lightweight, performer-facing layer.
+The dot remains visually tied to the text.
 
 ---
 
-## 8. Relationship to the Score
+## Deleting an Annotation
+
+1. Click the annotation to open the editor
+2. Click **Delete**
+3. The annotation is removed immediately
+
+---
+
+## Keyboard Behaviour While Editing
+
+While typing in the annotation editor:
+- All global keyboard shortcuts are temporarily disabled
+- This prevents accidental playback or navigation
+- Press **Escape** to close the editor
+
+Normal keyboard controls resume once the editor is closed.
+
+---
+
+## Local vs Shared Annotations
+
+### Local
+- Stored only in your browser
+- Not visible to others
+- Suitable for personal rehearsal notes
+
+### Shared
+- Broadcast to other connected clients
+- Read-only for others
+- Useful for ensemble coordination
+
+Shared annotations do not override local ones.
+
+---
+
+## Visibility
 
 Annotations:
+- can be globally shown or hidden
+- move with the score when scrolling or paging
+- remain aligned to the score content
 
-- Do **not** trigger cues
-- Do **not** alter navigation
-- Do **not** affect timing or playback
-
-They exist alongside the score as interpretive traces rather than executable instructions.
-
----
-
-## 9. Future Directions (Non-binding)
-
-Possible future extensions include:
-
-- Page-relative time highlights
-- Annotation export/import
-- Simple drawing or gesture annotations
-- Rehearsal vs performance visibility modes
-
-These are exploratory and not part of the current specification.
+They never affect timing, cues, or navigation.
 
 ---
 
-## 10. Status
+## What Annotations Do *Not* Do
 
-This document describes a **provisional design** intended to support performer reflection across a wide range of score-based practices.
+Annotations:
+- do not trigger playback
+- do not alter the score
+- do not affect synchronization
+- do not replace cues or instructions
 
-The annotation system is expected to evolve through real-world use, workshops, and critical feedback.
+They are purely informational.
 
-**Nothing in this specification should be considered stable or final.**
+---
+
+## Notes on Use
+
+Annotations are best used for:
+- marking sections to listen closely
+- noting transitions or handovers
+- tracking rehearsal decisions
+- personal memory aids
+
+They are intentionally lightweight and non-authoritative.
+
+---
+
+## Future Changes
+
+This feature is evolving. Possible future additions include:
+- filtering annotations by author
+- export / import
+- visibility modes (rehearsal vs performance)
 
