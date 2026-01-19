@@ -1834,11 +1834,11 @@ body.inverted #score {
 
 
 /* Before JS runs, hide any element declaring a cue text(...) */
-[id^="text("] {
+/* [id^="text("] {
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
-}
+} */
 
 
 

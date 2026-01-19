@@ -1,5 +1,6 @@
 // ========================================================================
 // oscillaText.js — Slot-based text display with time-based soft eviction
+// (DROP-IN FIX: single-instance per UID + click-to-dismiss + hard cleanup)
 // ========================================================================
 
 /* ------------------------------------------------------------------------
@@ -37,7 +38,6 @@ function rafWait(ms, token) {
     requestAnimationFrame(loop);
   });
 }
-
 
 /* ------------------------------------------------------------------------
    2) Pause/Resume System
@@ -82,7 +82,6 @@ export function resumeAllCueTexts() {
   }
 }
 
-
 /* ------------------------------------------------------------------------
    3) Parameter Parsing
 -------------------------------------------------------------------------*/
@@ -113,7 +112,7 @@ function parseCueTextParams(ast, cueElement) {
   const yslots = Math.max(1, Number(params.yslots) || 1);  // Always >= 1
   const yoffset = Number(params.yoffset ?? 100);
   const yslotmode = unquote(params.yslotmode || "sequence").toLowerCase();
-  
+
   // Overlap: 0-1, controls how long layers persist beyond their base duration
   // 0 = layer starts fading immediately when next unit appears
   // 1 = layer persists for full additional duration (2x total lifespan)
@@ -131,42 +130,41 @@ function parseCueTextParams(ast, cueElement) {
 
   return {
     rawParams: params,
-    
+
     // Content
     content: unquote(params.src || params.content || ""),
     style: unquote(params.style || ""),
-    
+
     // Target placement
     targetId: unquote(params.target || "self"),
     offsetX: Number(params.offsetX || 0),
     offsetY: Number(params.offsetY || 0),
-    
+
     // Sequencing
     order,
     mode,
     infinite,
     loopCount,
-    
+
     // Timing
     tdelay,
     dur,
     fadePercent,
-    
+
     // Slot system
     yslots,
     yoffset,
     yslotmode,
     overlap,
-    
+
     // Prestate
     prestate,
-    
+
     // Identity
     cueUid: String(params.uid || cueElement?.id || `cueText_${unquote(params.target || "center")}`),
     persist: params.persist == 1,
   };
 }
-
 
 /* ------------------------------------------------------------------------
    4) Text Content Loading
@@ -174,18 +172,18 @@ function parseCueTextParams(ast, cueElement) {
 
 function toUnitsFromText(str, mode) {
   if (!str) return [];
-  
+
   if (mode === "word") {
     return str.split(/\s+/).filter(Boolean).map(tok => {
       const [text, durStr] = tok.split(":");
       return { text, dur: durStr ? Number(durStr) : null };
     });
   }
-  
+
   if (mode === "char") {
     return str.split("").map(ch => ({ text: ch, dur: null }));
   }
-  
+
   // Default: line mode
   return str.split(/[\r\n;]+/).filter(Boolean).map(line => {
     const [text, durStr] = line.split(":");
@@ -202,7 +200,7 @@ async function loadCueTextUnits(content, mode) {
           ? `${window.sharedDir}texts/`
           : "/texts/";
     const filePath = content.startsWith("/") ? content : `${baseTextDir}${content}`;
-    
+
     try {
       const resp = await fetch(filePath);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -214,7 +212,6 @@ async function loadCueTextUnits(content, mode) {
   }
   return toUnitsFromText(content, mode);
 }
-
 
 /* ------------------------------------------------------------------------
    5) Slot System
@@ -238,7 +235,7 @@ function initSlotState(yslots) {
 function computeNextSlot(slotState, yslots, yslotmode) {
   let next;
   const { index, dir, order } = slotState;
-  
+
   switch (yslotmode) {
     case "singlestep":
       next = index + dir;
@@ -247,11 +244,11 @@ function computeNextSlot(slotState, yslots, yslotmode) {
         next = index + slotState.dir;
       }
       break;
-      
+
     case "random":
       next = 1 + Math.floor(Math.random() * yslots);
       break;
-      
+
     case "shuffle":
       if (!order.length) {
         slotState.order = Array.from({ length: yslots }, (_, i) => i + 1);
@@ -259,14 +256,14 @@ function computeNextSlot(slotState, yslots, yslotmode) {
       }
       next = slotState.order.shift();
       break;
-      
+
     case "sequence":
     default:
       next = index + 1;
       if (next > yslots) next = 1;
       break;
   }
-  
+
   slotState.index = next;
   return next;
 }
@@ -308,25 +305,8 @@ function applySlotPosition(layer, slotIndex, params, anchorBox) {
   }
 }
 
-
 /* ------------------------------------------------------------------------
    6) Layer Management with Time-Based Auto-Eviction
-   
-   Architecture:
-   - Each layer has a total lifespan = durMs + (overlap * durMs)
-   - After durMs (when next unit starts), layer begins fading out
-   - Fade-out duration = overlap * durMs
-   - overlap=0: instant fade → 1 layer visible
-   - overlap=0.5: 50% extra linger → ~1-2 layers visible  
-   - overlap=1: 100% extra linger → up to all slots filled
-   
-   Timeline for overlap=0.5, durMs=1000:
-   ─────────────────────────────────────────────────────
-   Layer 1: [███████████|▓▓▓▓▓░]
-                        ↑ fade starts at 1000ms
-                              ↑ removed at 1500ms
-   Layer 2:            [███████████|▓▓▓▓▓░]
-   ─────────────────────────────────────────────────────
 -------------------------------------------------------------------------*/
 
 /**
@@ -337,7 +317,7 @@ function createTextLayer(text, uid, baseStyle) {
   layer.className = "cue-text-overlay";
   layer.dataset.uid = uid;
   layer.textContent = text;
-  
+
   // Apply base styles first, then ensure transition starts as none
   layer.style.cssText = `
     position: fixed;
@@ -354,42 +334,37 @@ function createTextLayer(text, uid, baseStyle) {
     cursor: pointer;
     ${baseStyle}
   `;
-  
+
   // Set these AFTER cssText to ensure they're not overridden
   layer.style.opacity = "0";
   layer.style.transition = "none";
-  
+
   return layer;
 }
 
 /**
  * Schedule a layer for automatic eviction after its lifespan
- * 
- * @param {HTMLElement} layer - The layer to evict
- * @param {number} durMs - Base duration (time until fade starts)
- * @param {number} fadeOutMs - Fade-out duration
- * @param {Set} layerRegistry - Set to track active layers for cleanup
  */
 function scheduleLayerEviction(layer, durMs, fadeOutMs, layerRegistry) {
   // Add to registry
   layerRegistry.add(layer);
-  
+
   // After durMs: start fading out
   const fadeTimeout = setTimeout(() => {
     layer.style.pointerEvents = "none";
     layer.style.transition = `opacity ${fadeOutMs}ms ease`;
     layer.style.opacity = 0;
-    
+
     // After fade completes: remove from DOM
     const removeTimeout = setTimeout(() => {
       layerRegistry.delete(layer);
       try { layer.remove(); } catch {}
     }, fadeOutMs + 50);
-    
+
     // Store timeout for potential cleanup
     layer._removeTimeout = removeTimeout;
   }, durMs);
-  
+
   // Store timeout for potential cleanup
   layer._fadeTimeout = fadeTimeout;
 }
@@ -408,35 +383,34 @@ function placeTextInSlot({
 }) {
   const { durMs, fadeMs, overlap, yslots } = timing;
   const { uid, yoffset, offsetX, offsetY, style } = position;
-  
+
   // Create new layer
   const layer = createTextLayer(text, uid, style);
   layer.addEventListener("click", onClickHandler);
-  
+
   // Position in slot
   applySlotPosition(layer, slotIndex, { offsetX, offsetY, yoffset, yslots }, anchorBox);
-  
+
   // Add to DOM
   document.body.appendChild(layer);
-  
+
   // --------------------------------------------------
   // Single-slot crossfade mode (yslots === 1)
   // --------------------------------------------------
   if (yslots === 1) {
-    // For single slot: crossfade with existing layer
     // overlap controls crossfade duration (0 = instant switch, 1 = full fadeMs crossfade)
     const crossfadeMs = Math.max(50, Math.round(overlap * fadeMs));
-    
+
     // Trigger fade-out on any existing layers in registry
     for (const existingLayer of layerRegistry) {
       existingLayer.style.pointerEvents = "none";
       existingLayer.style.setProperty('transition', `opacity ${crossfadeMs}ms ease-out`, 'important');
       existingLayer.style.setProperty('opacity', '0', 'important');
-      
+
       // Clear existing timeouts
       if (existingLayer._fadeTimeout) clearTimeout(existingLayer._fadeTimeout);
       if (existingLayer._removeTimeout) clearTimeout(existingLayer._removeTimeout);
-      
+
       // Schedule removal
       const layerToRemove = existingLayer;
       setTimeout(() => {
@@ -444,74 +418,48 @@ function placeTextInSlot({
         try { layerToRemove.remove(); } catch {}
       }, crossfadeMs + 50);
     }
-    
+
     // Fade in new layer simultaneously
-    console.log(`[cueText] crossfade: ${crossfadeMs}ms for "${text.substring(0, 20)}..."`);
     void layer.offsetHeight;
     layer.style.setProperty('transition', `opacity ${crossfadeMs}ms ease-in`, 'important');
     layer.style.setProperty('opacity', '1', 'important');
-    
+
     // Register new layer
     layerRegistry.add(layer);
-    
-    // Schedule this layer's eviction (it will be crossfaded out when next layer arrives)
-    // For single slot, we don't auto-evict - next placeTextInSlot call handles it
-    // But we still need timeout cleanup if sequence ends
+
+    // If sequence ends, fade out after durMs
     const fadeTimeout = setTimeout(() => {
-      // Only fade out if still in registry (not already replaced)
       if (layerRegistry.has(layer)) {
         layer.style.pointerEvents = "none";
         layer.style.setProperty('transition', `opacity ${fadeMs}ms ease-out`, 'important');
         layer.style.setProperty('opacity', '0', 'important');
-        
+
         setTimeout(() => {
           layerRegistry.delete(layer);
           try { layer.remove(); } catch {}
         }, fadeMs + 50);
       }
     }, durMs);
-    
+
     layer._fadeTimeout = fadeTimeout;
-    
+
     return layer;
   }
-  
+
   // --------------------------------------------------
   // Multi-slot mode (yslots > 1)
   // --------------------------------------------------
-  
+
   // Fade in
-  console.log(`[cueText] fade-in: ${fadeMs}ms for "${text.substring(0, 20)}..."`);
   void layer.offsetHeight;
   layer.style.setProperty('transition', `opacity ${fadeMs}ms ease-in`, 'important');
   layer.style.setProperty('opacity', '1', 'important');
-  
-  // Calculate lifespan and fade-out timing
-  // 
-  // Goal: overlap=1 should allow all yslots to be filled simultaneously
-  // 
-  // With yslots=3, overlap=1:
-  //   - Layer 1 appears at t=0
-  //   - Layer 2 appears at t=durMs  
-  //   - Layer 3 appears at t=2*durMs
-  //   - For all 3 to be visible, Layer 1 must survive until t=2*durMs
-  //   - So total lifespan = durMs * yslots = 3*durMs
-  //
-  // Formula:
-  //   lingerMs = overlap * durMs * (yslots - 1)
-  //   totalLifespan = durMs + lingerMs
-  //
-  // overlap=0 → lingerMs=0, lifespan=durMs (only 1 visible)
-  // overlap=0.5, yslots=3 → lingerMs=durMs, lifespan=2*durMs (~2 visible)
-  // overlap=1, yslots=3 → lingerMs=2*durMs, lifespan=3*durMs (all 3 visible)
-  
+
   const lingerMs = Math.round(overlap * durMs * (yslots - 1));
   const fadeOutMs = Math.max(50, lingerMs);
-  
-  // Schedule automatic eviction
-  // Layer stays at full opacity for durMs, then fades out over fadeOutMs
+
   scheduleLayerEviction(layer, durMs, fadeOutMs, layerRegistry);
-  
+
   return layer;
 }
 
@@ -520,15 +468,13 @@ function placeTextInSlot({
  */
 function evictAllLayers(layerRegistry, fadeMs = 150) {
   for (const layer of layerRegistry) {
-    // Clear pending timeouts
     if (layer._fadeTimeout) clearTimeout(layer._fadeTimeout);
     if (layer._removeTimeout) clearTimeout(layer._removeTimeout);
-    
-    // Immediate fade out
+
     layer.style.pointerEvents = "none";
     layer.style.transition = `opacity ${fadeMs}ms ease`;
     layer.style.opacity = 0;
-    
+
     setTimeout(() => {
       try { layer.remove(); } catch {}
     }, fadeMs + 50);
@@ -536,18 +482,39 @@ function evictAllLayers(layerRegistry, fadeMs = 150) {
   layerRegistry.clear();
 }
 
+/* ------------------------------------------------------------------------
+   6.5) HARD CLEANUP HELPERS (NEW)
+-------------------------------------------------------------------------*/
+
+// 🔧 FIX: hard remove all DOM layers for a given uid (including timeouts)
+function hardRemoveLayersByUid(uid) {
+  const selector = `.cue-text-overlay[data-uid="${CSS.escape(uid)}"]`;
+  document.querySelectorAll(selector).forEach(el => {
+    if (el._fadeTimeout) clearTimeout(el._fadeTimeout);
+    if (el._removeTimeout) clearTimeout(el._removeTimeout);
+    try { el.remove(); } catch {}
+  });
+}
+
+// 🔧 FIX: cancel token + cleanup layers + remove initial div defensively
+function cancelTokenAndCleanup(uid, token, layerRegistry, initialDiv) {
+  if (token) token.cancel = true;
+  try { evictAllLayers(layerRegistry, 120); } catch {}
+  try { hardRemoveLayersByUid(uid); } catch {}
+  try { initialDiv?.remove?.(); } catch {}
+}
 
 /* ------------------------------------------------------------------------
    7) Prestate Handling
-   
+
    Supports: show, hide, ghost, fadein(ms), ghostClickable(ms)
 -------------------------------------------------------------------------*/
 
-async function handlePrestate(div, prestate, tdelay, token, parsed, onClickTogglePause) {
+async function handlePrestate(div, prestate, tdelay, token, parsed, onClickDismiss) {
   const p = prestate;
   let requiresClickToStart = false;
   let ghostClickableMs = 500;
-  
+
   // Parse prestate
   if (p && typeof p === "object" && p.type === "func") {
     if (p.name === "fadein") {
@@ -563,7 +530,7 @@ async function handlePrestate(div, prestate, tdelay, token, parsed, onClickToggl
     }
   } else if (typeof p === "string") {
     const s = p.toLowerCase().trim();
-    
+
     if (s === "hide") {
       div.style.opacity = "0";
     } else if (s === "ghost") {
@@ -580,7 +547,7 @@ async function handlePrestate(div, prestate, tdelay, token, parsed, onClickToggl
       requiresClickToStart = true;
     }
   }
-  
+
   // Handle ghostClickable flow
   if (requiresClickToStart) {
     // Wait for tdelay before showing ghost
@@ -588,31 +555,31 @@ async function handlePrestate(div, prestate, tdelay, token, parsed, onClickToggl
       await rafWait(tdelay * 1000, token);
       if (token.cancel) return false;
     }
-    
+
     // Fade to ghost state
     div.style.transition = `opacity ${ghostClickableMs}ms ease`;
     void div.offsetHeight;
     div.style.opacity = "0.3";
     div.style.pointerEvents = "auto";
     div.style.cursor = "pointer";
-    
+
     // Wait for click to start
     const started = await new Promise(resolve => {
       const clickToStart = (e) => {
         e.stopPropagation();
         e.preventDefault();
         div.removeEventListener("click", clickToStart);
-        
+
         // Fade to full opacity
         div.style.transition = "opacity 400ms ease";
         void div.offsetHeight;
         div.style.opacity = "1";
-        
-        // Switch to pause/resume handler
-        div.addEventListener("click", onClickTogglePause);
+
+        // 🔧 FIX: after ghostClickable start, click should DISMISS (not pause)
+        div.addEventListener("click", onClickDismiss);
         resolve(true);
       };
-      
+
       const checkCancel = () => {
         if (token.cancel) {
           div.removeEventListener("click", clickToStart);
@@ -621,23 +588,22 @@ async function handlePrestate(div, prestate, tdelay, token, parsed, onClickToggl
           requestAnimationFrame(checkCancel);
         }
       };
-      
+
       div.addEventListener("click", clickToStart);
       checkCancel();
     });
-    
+
     return started;
   }
-  
+
   // Regular tdelay (non-ghostClickable)
   if (tdelay > 0) {
     await rafWait(tdelay * 1000, token);
     if (token.cancel) return false;
   }
-  
+
   return true;
 }
-
 
 /* ------------------------------------------------------------------------
    8) Main Handler
@@ -646,13 +612,28 @@ async function handlePrestate(div, prestate, tdelay, token, parsed, onClickToggl
 export async function handleCueTextFromAST(ast, cueElement = null) {
   try {
     console.groupCollapsed("%c[cueText] ENTER handler", "color:#6cf;font-weight:bold");
-    
+
     // -------------------------------------------------
     // Parse parameters
     // -------------------------------------------------
     const parsed = parseCueTextParams(ast, cueElement);
     console.log("[cueText] Parsed params:", parsed);
-    
+
+    // -------------------------------------------------
+    // 🔧 FIX: enforce SINGLE active instance per cueUid
+    // If retriggered, cancel old + hard cleanup of its DOM layers
+    // -------------------------------------------------
+    if (!window.activeCueTexts) window.activeCueTexts = new Map();
+    const existing = window.activeCueTexts.get(parsed.cueUid);
+    if (existing) {
+      existing.cancel = true;
+      // best-effort: remove any layers immediately
+      hardRemoveLayersByUid(parsed.cueUid);
+      // also remove any remembered "div"
+      try { existing.div?.remove?.(); } catch {}
+      window.activeCueTexts.delete(parsed.cueUid);
+    }
+
     // -------------------------------------------------
     // Load content units
     // -------------------------------------------------
@@ -662,7 +643,7 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       console.groupEnd();
       return;
     }
-    
+
     // -------------------------------------------------
     // Create initial overlay (used for prestate/ghostClickable)
     // -------------------------------------------------
@@ -672,100 +653,89 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
       parsed.style
     );
     document.body.appendChild(initialDiv);
-    
+
     // Position initial div
     const anchorBox = computeSlotAnchor(parsed, cueElement);
     const slotState = initSlotState(parsed.yslots);
-    
+
     applySlotPosition(initialDiv, slotState.index, {
       offsetX: parsed.offsetX,
       offsetY: parsed.offsetY,
       yoffset: parsed.yoffset,
       yslots: parsed.yslots
     }, anchorBox);
-    
+
+    // -------------------------------------------------
+    // Layer registry for tracking active layers
+    // -------------------------------------------------
+    const layerRegistry = new Set();
+
     // -------------------------------------------------
     // Register token
     // -------------------------------------------------
-    if (!window.activeCueTexts) window.activeCueTexts = new Map();
     const token = {
       cancel: false,
       div: initialDiv,
       persist: parsed.persist
     };
     window.activeCueTexts.set(parsed.cueUid, token);
-    
+
     // -------------------------------------------------
-    // Click handlers
+    // 🔧 FIX: click should DISMISS always
     // -------------------------------------------------
-    const onClickTogglePause = (e) => {
+    const onClickDismiss = (e) => {
       e?.stopPropagation?.();
       e?.preventDefault?.();
-      if (!token) return;
-      
-      if (!token.paused) {
-        token.paused = true;
-        console.log("[cueText] Paused:", parsed.cueUid);
-      } else {
-        resumeTextToken(token);
-        console.log("[cueText] Resumed:", parsed.cueUid);
-      }
+      cancelTokenAndCleanup(parsed.cueUid, token, layerRegistry, initialDiv);
     };
-    
-    const onClickCancel = () => {
-      token.cancel = true;
-    };
-    
+
     // -------------------------------------------------
-    // Handle prestate
+    // Prestate handling
     // -------------------------------------------------
-    const isGhostClickable = 
+    const isGhostClickable =
       (parsed.prestate?.type === "func" && parsed.prestate.name === "ghostClickable") ||
       (typeof parsed.prestate === "string" && parsed.prestate.toLowerCase().startsWith("ghostclickable("));
-    
+
+    // For non-ghostClickable: clicking initial div dismisses immediately
+    // For ghostClickable: handlePrestate will attach click-to-start, then attach dismiss
     if (!isGhostClickable) {
-      initialDiv.addEventListener("click", onClickCancel);
+      initialDiv.addEventListener("click", onClickDismiss);
     }
-    
+
     const prestateOk = await handlePrestate(
       initialDiv,
       parsed.prestate,
       parsed.tdelay,
       token,
       parsed,
-      onClickTogglePause
+      onClickDismiss
     );
-    
+
     if (!prestateOk || token.cancel) {
-      try { initialDiv.remove(); } catch {}
+      cancelTokenAndCleanup(parsed.cueUid, token, layerRegistry, initialDiv);
       window.activeCueTexts.delete(parsed.cueUid);
       console.groupEnd();
       return;
     }
-    
+
     // Remove initial div (will be replaced by sequence)
     try { initialDiv.remove(); } catch {}
-    
-    // -------------------------------------------------
-    // Layer registry for tracking active layers
-    // -------------------------------------------------
-    const layerRegistry = new Set();
-    
+
     // -------------------------------------------------
     // Play sequence function
     // -------------------------------------------------
     async function playSequenceOnce() {
       for (const unit of units) {
         if (token.cancel) break;
-        
+
         // Compute timing
         const durMs = (unit.dur ?? parsed.dur) * 1000;
         // Fade-in: minimum 150ms, up to 70% of duration
         const fadeMs = clamp(parsed.fadePercent * durMs, 150, durMs * 0.7);
-        
+
         // Get next slot
         const nextSlot = computeNextSlot(slotState, parsed.yslots, parsed.yslotmode);
-        
+
         // Place text with automatic time-based eviction
         placeTextInSlot({
           text: unit.text,
@@ -786,15 +756,19 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
           },
           anchorBox,
           layerRegistry,
-          onClickHandler: onClickTogglePause
+          // 🔧 FIX: click dismiss, not pause/resume
+          onClickHandler: onClickDismiss
         });
-        
-        // Wait for duration (respecting pause)
+
+        // Wait for duration (respecting pause), but allow immediate cancel cleanup
         await waitIfPaused(token);
+        if (token.cancel) break;
+
         await rafWait(durMs, token);
+        if (token.cancel) break;
       }
     }
-    
+
     // -------------------------------------------------
     // Main playback loop
     // -------------------------------------------------
@@ -808,36 +782,27 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
         await playSequenceOnce();
       }
     }
-    
+
     // -------------------------------------------------
     // Final cleanup
     // -------------------------------------------------
     console.log("[cueText] Final cleanup for UID:", parsed.cueUid);
-    
-    evictAllLayers(layerRegistry, 150);
-    
+
+    cancelTokenAndCleanup(parsed.cueUid, token, layerRegistry, null);
+
     // Defensive: clean up any stray layers
     setTimeout(() => {
-      document.querySelectorAll(
-        `.cue-text-overlay[data-uid="${CSS.escape(parsed.cueUid)}"]`
-      ).forEach(el => {
-        el.style.transition = "opacity 100ms ease";
-        el.style.opacity = 0;
-        setTimeout(() => {
-          try { el.remove(); } catch {}
-        }, 150);
-      });
+      hardRemoveLayersByUid(parsed.cueUid);
     }, 200);
-    
+
     window.activeCueTexts.delete(parsed.cueUid);
     console.groupEnd();
-    
+
   } catch (err) {
     console.error("[cueText] FATAL:", err);
     console.groupEnd?.();
   }
 }
-
 
 /* ------------------------------------------------------------------------
    9) Stop All Overlays
@@ -845,26 +810,17 @@ export async function handleCueTextFromAST(ast, cueElement = null) {
 
 export function stopAllCueTexts() {
   if (!window.activeCueTexts) return;
-  
+
   for (const [uid, token] of window.activeCueTexts.entries()) {
     if (!token.persist) {
       token.cancel = true;
-      
+
       // Clean up all layers with this UID
-      document.querySelectorAll(
-        `.cue-text-overlay[data-uid="${CSS.escape(uid)}"]`
-      ).forEach(el => {
-        // Clear any pending timeouts
-        if (el._fadeTimeout) clearTimeout(el._fadeTimeout);
-        if (el._removeTimeout) clearTimeout(el._removeTimeout);
-        
-        el.style.transition = "opacity 100ms ease";
-        el.style.opacity = 0;
-        setTimeout(() => {
-          try { el.remove(); } catch {}
-        }, 150);
-      });
-      
+      hardRemoveLayersByUid(uid);
+
+      // Remove any remembered div
+      try { token.div?.remove?.(); } catch {}
+
       window.activeCueTexts.delete(uid);
     }
   }

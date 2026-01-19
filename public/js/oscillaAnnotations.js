@@ -157,15 +157,24 @@ function getPageContentContainer() {
     return document.getElementById("singlePage-content");
 }
 
-function getScoreClickPlacement(evt, container) {
-    const rect = container.getBoundingClientRect();
-    const sx = container.scrollLeft || 0;
-    const sy = container.scrollTop || 0;
+function getScoreClickPlacement(evt) {
+    // IMPORTANT:
+    // placement.x/y are stored in oscilla-score-inner coordinates (scroll-content space),
+    // because the score annotation layer is appended to .oscilla-score-inner.
+    const score = getScoreContainer();
+    if (!score) return null;
+
+    const inner = getScoreScrollInner?.() || score.querySelector(".oscilla-score-inner");
+    if (!inner) return null;
+
+    const r = inner.getBoundingClientRect();
+
     return {
-        x: sx + (evt.clientX - rect.left),
-        y: sy + (evt.clientY - rect.top),
+        x: evt.clientX - r.left,
+        y: evt.clientY - r.top,
     };
 }
+
 
 function getPageClickPlacement(evt, content) {
     // Page overlay typically doesn't scroll; still compute relative coords.
@@ -348,24 +357,24 @@ function getScoreScrollInner() {
 
 
 
-function positionPin(pin, annotation) {
-    const score = getScoreContainer();
-    if (!score || !annotation.placement) return;
-
-    const sx = score.scrollLeft || 0;
-    const sy = score.scrollTop || 0;
-
-    pin.style.left = `${annotation.placement.x - sx}px`;
-    pin.style.top = `${annotation.placement.y - sy}px`;
+function positionAnnotation(el, annotation) {
+    // IMPORTANT:
+    // Since the score layer is inside .oscilla-score-inner, left/top must be set directly
+    // from stored placement (inner-space). No scroll/container math here.
+    if (!el || !annotation?.placement) return;
+    el.style.left = `${annotation.placement.x}px`;
+    el.style.top = `${annotation.placement.y}px`;
 }
+
 
 
 function makePinEl(annotation, onClick) {
     const pin = document.createElement("div");
     pin.className = "osc-anno-pin";
     pin.style.position = "absolute";
-    pin.style.left = `${annotation.placement.x}px`;
-    pin.style.top = `${annotation.placement.y}px`;
+
+    positionAnnotation(pin, annotation);
+
     pin.style.pointerEvents = "auto";
     pin.style.userSelect = "none";
 
@@ -440,8 +449,8 @@ function makePinEl(annotation, onClick) {
             annotation.placement.x = nx;
             annotation.placement.y = ny;
 
-            pin.style.left = `${nx}px`;
-            pin.style.top = `${ny}px`;
+            positionAnnotation(pin, annotation);
+
         };
 
         const onUp = () => {
@@ -632,7 +641,8 @@ function renderAll() {
 
         const pin = makePinEl(item, (ann) => openEditForExisting(ann));
         layer.appendChild(pin);
-    }
+            positionAnnotation(pin, item);
+}
 }
 function closeEditor() {
     // always clear keyboard guard
@@ -734,73 +744,6 @@ function openEditorAt({
     state.activeEditor = editor;
 }
 
-openEditorAt({
-    screenX: screenX,
-    screenY: screenY,
-    initialText: "",
-    initialScope: null,
-    initialFontSize: lastAnnotationFontSize,
-
-    onSave: function ({ text, scope, style }) {
-        const fontSize =
-            (style && style.fontSize) || lastAnnotationFontSize || 12;
-
-        const item = {
-            id: ulidLike(),
-            project: state.project,
-            author: {
-                id: getAuthorId(),
-                label: getAuthorLabel()
-            },
-            createdAt: nowMs(),
-            updatedAt: nowMs(),
-
-            scope: scope,
-            kind: "text",
-            text: text,
-
-            style: {
-                color: "rgba(255,255,255,0.9)",
-                fontSize: fontSize
-            },
-
-            anchor: {
-                mode: "scroll",
-                pageId: null,
-                elementId: elementId || null,
-                position: {
-                    playheadX:
-                        typeof window.playheadX === "number"
-                            ? window.playheadX
-                            : null,
-                    scoreX: placement.x,
-                    scoreY: placement.y
-                },
-                time: {
-                    stopwatch: getStopwatchTime()
-                }
-            },
-
-            placement: {
-                x: placement.x,
-                y: placement.y,
-                space: "score"
-            },
-
-            _lastScreenX: screenX,
-            _lastScreenY: screenY
-        };
-
-        // remember font size for next annotation
-        lastAnnotationFontSize = fontSize;
-
-        addAnnotation(item);
-        setAnnotationMode(false);
-    }
-});
-
-
-
 function addAnnotation(item) {
     state.items.push(item);
 
@@ -869,75 +812,77 @@ function onScoreClick(evt) {
     const { mode } = getModeContext();
     if (mode !== "scroll") return;
 
-    const placement = getScoreClickPlacement(evt, score);
-    const elementId = withinScoreClickTarget(evt.target);
+    const placement = getScoreClickPlacement(evt);
+    if (!placement) return;
+
+const elementId = withinScoreClickTarget(evt.target);
 
     // capture last screen coords (used if editing later)
     const screenX = evt.clientX + 10;
     const screenY = evt.clientY + 10;
-openEditorAt({
-    screenX,
-    screenY,
-    initialText: "",
-    initialFontSize: lastAnnotationFontSize, // ✅ remember last used size
+    openEditorAt({
+        screenX,
+        screenY,
+        initialText: "",
+        initialFontSize: lastAnnotationFontSize, // ✅ remember last used size
 
-    onSave: ({ text, scope, style }) => {
-        const fontSize =
-            style?.fontSize ?? lastAnnotationFontSize ?? 12;
+        onSave: ({ text, scope, style }) => {
+            const fontSize =
+                style?.fontSize ?? lastAnnotationFontSize ?? 12;
 
-        const item = {
-            id: ulidLike(),
-            project: state.project,
-            author: {
-                id: getAuthorId(),
-                label: getAuthorLabel()
-            },
-            createdAt: nowMs(),
-            updatedAt: nowMs(),
-
-            scope,
-            kind: "text",
-            text,
-
-            style: {
-                color: "rgba(255,255,255,0.9)",
-                fontSize // ✅ persist per annotation
-            },
-
-            anchor: {
-                mode: "scroll",
-                pageId: null,
-                elementId: elementId || null,
-                position: {
-                    playheadX:
-                        typeof window.playheadX === "number"
-                            ? window.playheadX
-                            : null,
-                    scoreX: placement.x,
-                    scoreY: placement.y
+            const item = {
+                id: ulidLike(),
+                project: state.project,
+                author: {
+                    id: getAuthorId(),
+                    label: getAuthorLabel()
                 },
-                time: {
-                    stopwatch: getStopwatchTime()
-                }
-            },
+                createdAt: nowMs(),
+                updatedAt: nowMs(),
 
-            placement: {
-                x: placement.x,
-                y: placement.y,
-                space: "score"
-            },
+                scope,
+                kind: "text",
+                text,
 
-            _lastScreenX: screenX,
-            _lastScreenY: screenY
-        };
+                style: {
+                    color: "rgba(255,255,255,0.9)",
+                    fontSize // ✅ persist per annotation
+                },
 
-        // 🔁 remember font size for NEXT annotation
-        lastAnnotationFontSize = fontSize;
+                anchor: {
+                    mode: "scroll",
+                    pageId: null,
+                    elementId: elementId || null,
+                    position: {
+                        playheadX:
+                            typeof window.playheadX === "number"
+                                ? window.playheadX
+                                : null,
+                        scoreX: placement.x,
+                        scoreY: placement.y
+                    },
+                    time: {
+                        stopwatch: getStopwatchTime()
+                    }
+                },
 
-        addAnnotation(item);
-        setAnnotationMode(false);
-    }
-});
+                placement: {
+                    x: placement.x,
+                    y: placement.y,
+                    space: "score"
+                },
+
+                _lastScreenX: screenX,
+                _lastScreenY: screenY
+            };
+
+            // 🔁 remember font size for NEXT annotation
+            lastAnnotationFontSize = fontSize;
+
+            addAnnotation(item);
+            setAnnotationMode(false);
+        }
+    });
 
 }
 

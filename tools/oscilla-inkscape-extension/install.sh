@@ -45,6 +45,9 @@ cp "$SCRIPT_DIR/oscilla_toolbar.py" "$EXT_PATH/"
 cp "$SCRIPT_DIR/oscilla_toolbar_standalone.py" "$EXT_PATH/"
 cp "$SCRIPT_DIR/oscilla_apply_cue.inx" "$EXT_PATH/"
 cp "$SCRIPT_DIR/oscilla_apply_cue.py" "$EXT_PATH/"
+cp "$SCRIPT_DIR/oscilla_smart_cues.inx" "$EXT_PATH/"
+cp "$SCRIPT_DIR/oscilla_smart_cues.py" "$EXT_PATH/"
+cp "$SCRIPT_DIR/oscilla_presets.json" "$EXT_PATH/"
 
 # Install quick-apply extensions if they exist
 if [ -d "$SCRIPT_DIR/quick-apply" ]; then
