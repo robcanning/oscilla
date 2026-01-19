@@ -1,0 +1,159 @@
+<h1>Oscilla Inkscape Extension (Experimental)</h1>
+<blockquote>
+<p><strong>Status:</strong> Experimental / in active development<br>
+<strong>Stability:</strong> Low – interfaces and behaviour may change without notice</p>
+</blockquote>
+<p>This Inkscape extension provides early tooling for working with <strong>Oscilla / OscillaScore</strong> directly inside Inkscape. It is intended to make it easier to <strong>inspect, add, and apply Oscilla cue IDs</strong> while drawing or editing SVG scores.</p>
+<p>At this stage, the goal is simply to make it <strong>possible to try the workflow</strong>, not to provide a polished or complete feature set.</p>
+<hr>
+<h2>What this extension is (for now)</h2>
+<ul>
+<li>A collection of Inkscape extensions (<code>.inx</code> + <code>.py</code>) related to Oscilla</li>
+<li>Adds <strong>Oscilla-related menus and tools</strong> inside Inkscape</li>
+<li>Includes:
+<ul>
+<li>Cue inspector</li>
+<li>Toolbar / quick cue helpers</li>
+<li>Quick-apply cue presets (speed, rotate, scale, audio, nav, etc.)</li>
+</ul>
+</li>
+</ul>
+<p>Think of it as a <strong>bridge between drawing and cue authoring</strong>, not a replacement for manual editing or understanding the Oscilla cue system.</p>
+<hr>
+<h2>What this extension is <em>not</em></h2>
+<ul>
+<li>Not stable</li>
+<li>Not a full GUI for Oscilla</li>
+<li>Not guaranteed to match current Oscilla runtime behaviour</li>
+<li>Not yet documented feature-by-feature</li>
+</ul>
+<p>If something behaves oddly, that is expected at this stage.</p>
+<hr>
+<h2>Requirements</h2>
+<ul>
+<li>Inkscape <strong>1.2 or newer</strong> (tested primarily on Linux)</li>
+<li>Python available to Inkscape (standard Inkscape setup)</li>
+</ul>
+<hr>
+<h2>Installation</h2>
+<h3>Option 1: Install using the script (recommended first try)</h3>
+<p>From the extension directory:</p>
+<pre><code class="language-bash">./install.sh
+</code></pre>
+<p>This attempts to copy the extension files into Inkscape’s user extensions folder.</p>
+<p>If this works, restart Inkscape and skip to <strong>Finding the extension</strong> below.</p>
+<hr>
+<h3>Option 2: Manual installation (if the script fails)</h3>
+<ol>
+<li>Locate your Inkscape user extensions directory:</li>
+</ol>
+<pre><code class="language-bash">inkscape --user-extension-directory
+</code></pre>
+<p>Typical location on Linux:</p>
+<pre><code class="language-text">~/.config/inkscape/extensions/
+</code></pre>
+<ol start="2">
+<li>Copy the entire folder:</li>
+</ol>
+<pre><code class="language-bash">oscilla-inkscape-extension/
+</code></pre>
+<p>into the extensions directory, so you end up with:</p>
+<pre><code class="language-text">~/.config/inkscape/extensions/oscilla-inkscape-extension/
+</code></pre>
+<ol start="3">
+<li>Restart Inkscape</li>
+</ol>
+<hr>
+<h2>Verifying installation</h2>
+<p>After restarting Inkscape:</p>
+<ul>
+<li>Open <strong>Extensions</strong> in the menu bar</li>
+<li>Look for an <strong>Oscilla</strong> or <strong>Oscilla-related</strong> submenu</li>
+<li>If menus appear, the extension is installed</li>
+</ul>
+<p>If nothing appears:</p>
+<ul>
+<li>Check the Inkscape <strong>Extensions → Extensions Manager → Errors</strong></li>
+<li>Verify Python files are executable</li>
+<li>Restart Inkscape again</li>
+</ul>
+<hr>
+<h2>How to try it (basic usage)</h2>
+<p>This is intentionally minimal and exploratory.</p>
+<h3>General idea</h3>
+<ol>
+<li>Draw or select an SVG object</li>
+<li>Use an Oscilla extension entry</li>
+<li>The extension will typically:
+<ul>
+<li>Inspect existing <code>id</code> values</li>
+<li>Modify or append Oscilla-style cue IDs</li>
+</ul>
+</li>
+</ol>
+<h3>Typical things to try</h3>
+<ul>
+<li>Apply a <strong>quick cue</strong> (rotate, scale, speed, pause, etc.)</li>
+<li>Inspect an object’s Oscilla ID</li>
+<li>Use quick-apply presets to generate valid cue syntax</li>
+</ul>
+<p>The resulting SVG should remain <strong>plain SVG</strong> with <code>id</code> attributes — nothing magic or hidden.</p>
+<hr>
+<h2>Quick Apply presets</h2>
+<p>The <code>quick-apply/</code> tools are small, single-purpose helpers that:</p>
+<ul>
+<li>Apply a predefined Oscilla cue pattern</li>
+<li>Are meant for <strong>speed and experimentation</strong>, not correctness</li>
+</ul>
+<p>Examples include:</p>
+<ul>
+<li>Rotation (CW / CCW / swing)</li>
+<li>Scale pulse / grow</li>
+<li>Speed up / slow down</li>
+<li>Audio triggers</li>
+<li>Navigation (scroll / page)</li>
+</ul>
+<p>These are likely to change or be replaced.</p>
+<hr>
+<h2>Known limitations</h2>
+<ul>
+<li>UI and naming may be inconsistent</li>
+<li>No validation against the Oscilla runtime</li>
+<li>No guarantee cues match current parser rules</li>
+<li>Error messages may be cryptic or absent</li>
+</ul>
+<p>This is expected for now.</p>
+<hr>
+<h2>Recommended workflow</h2>
+<ul>
+<li>Use the extension to <strong>sketch ideas quickly</strong></li>
+<li>Inspect the resulting SVG <code>id</code> attributes</li>
+<li>Refine or fix cues manually as needed</li>
+<li>Treat the extension as a helper, not an authority</li>
+</ul>
+<hr>
+<h2>Reporting issues / feedback</h2>
+<p>Because this is experimental:</p>
+<ul>
+<li>Expect breakage</li>
+<li>Please report:
+<ul>
+<li>Inkscape version</li>
+<li>OS</li>
+<li>Which tool was used</li>
+<li>What you expected vs what happened</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>Future documentation</h2>
+<p>Once the feature set stabilises, this page will be expanded with:</p>
+<ul>
+<li>Clear feature descriptions</li>
+<li>Stable naming</li>
+<li>Screenshots</li>
+<li>Workflow examples</li>
+</ul>
+<p>Until then, this document is intentionally light.</p>
+<hr>
+<p><em>Last updated: early experimental phase</em></p>
