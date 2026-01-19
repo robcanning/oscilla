@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <n>OSCILLA Cue Inspector</n>
+  <id>org.oscilla.cue_inspector</id>
+  
+  <param name="action" type="optiongroup" appearance="combo" gui-text="Action:">
+    <option value="inspect">🔍 Inspect Current Cue</option>
+    <option value="clear">🗑 Clear Cue (reset ID)</option>
+    <option value="copy">📋 Copy Cue to Clipboard</option>
+    <option value="list_all">📜 List All Cues in Document</option>
+    <option value="validate">✅ Validate Cue Syntax</option>
+    <option value="extract_uid">🏷 Extract UIDs</option>
+  </param>
+  
+  <separator/>
+  <label appearance="header">Batch Operations</label>
+  <param name="batch_action" type="optiongroup" appearance="combo" gui-text="Batch Action:">
+    <option value="none">None</option>
+    <option value="prefix_uid">Add UID prefix to all</option>
+    <option value="clear_all">Clear all cues</option>
+    <option value="find_replace">Find/Replace in cues</option>
+  </param>
+  <param name="batch_value" type="string" gui-text="Batch Value:"></param>
+  <param name="batch_replace" type="string" gui-text="Replace With:"></param>
+  
+  <effect>
+    <object-type>all</object-type>
+    <effects-menu>
+      <submenu name="OSCILLA"/>
+    </effects-menu>
+  </effect>
+  
+  <script>
+    <command location="inx" interpreter="python">oscilla_inspector.py</command>
+  </script>
+  
+</inkscape-extension>

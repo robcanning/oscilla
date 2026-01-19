@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <name>OSCILLA Quick Cues</name>
+  <id>org.oscilla.quick_cues</id>
+  
+  <param name="preset" type="optiongroup" appearance="combo" gui-text="Quick Cue Preset:">
+    <!-- Timing Presets -->
+    <option value="stop_basic">⏹ Stop (basic)</option>
+    <option value="pause_4s">⏸ Pause 4 seconds</option>
+    <option value="pause_8s_count">⏸ Pause 8s with countdown</option>
+    <option value="speed_half">🐢 Half Speed</option>
+    <option value="speed_double">🐇 Double Speed</option>
+    
+    <!-- Navigation Presets -->
+    <option value="nav_page">📄 Nav to Page</option>
+    <option value="nav_scroll">📜 Nav to Scroll Position</option>
+    <option value="nav_coda">🎵 Nav to Coda</option>
+    
+    <!-- Animation Presets -->
+    <option value="scale_pulse">💓 Scale Pulse</option>
+    <option value="scale_grow">📈 Scale Grow</option>
+    <option value="rotate_spin">🔄 Rotate Continuous</option>
+    <option value="rotate_swing">🔀 Rotate Swing</option>
+    <option value="o2p_orbit">🪐 Object-to-Path Orbit</option>
+    
+    <!-- Color/Fade Presets -->
+    <option value="fade_in">🌅 Fade In</option>
+    <option value="fade_out">🌆 Fade Out</option>
+    <option value="fade_pulse">💫 Fade Pulse</option>
+    <option value="color_cycle">🌈 Color Cycle</option>
+    
+    <!-- Audio Presets -->
+    <option value="audio_oneshot">🔊 Audio One-Shot</option>
+    <option value="audio_loop">🔁 Audio Loop</option>
+    <option value="audio_pool">🎲 Audio Pool Random</option>
+    <option value="audio_impulse">⚡ Audio Impulse</option>
+    
+    <!-- Synth Presets -->
+    <option value="synth_tone">🎹 Synth Tone</option>
+    <option value="synth_noise">📻 Synth Noise</option>
+    <option value="synth_chord">🎶 Synth Chord</option>
+    
+    <!-- OSC Presets -->
+    <option value="osc_pitch_y">📡 OSC Pitch from Y</option>
+    <option value="osc_ctrl_pan">🎚 OSC Control Pan</option>
+    
+    <!-- Interaction Presets -->
+    <option value="button_nav">🔘 Button Navigate</option>
+    <option value="button_pause">🔘 Button Pause</option>
+    
+    <!-- Metro/Stopwatch -->
+    <option value="metro_120">🥁 Metro 120 BPM</option>
+    <option value="metro_90">🥁 Metro 90 BPM</option>
+    <option value="stopwatch">⏱ Stopwatch</option>
+  </param>
+  
+  <separator/>
+  <label appearance="header">Customize Preset</label>
+  <param name="custom_value1" type="string" gui-text="Value 1 (varies by preset):"></param>
+  <param name="custom_value2" type="string" gui-text="Value 2 (varies by preset):"></param>
+  <param name="custom_uid" type="string" gui-text="Custom UID (optional):"></param>
+  
+  <separator/>
+  <label>Value meanings vary by preset:</label>
+  <label>• Nav: V1=target (page1, scroll@A)</label>
+  <label>• Scale/Rotate: V1=duration</label>
+  <label>• Audio: V1=filename, V2=amp</label>
+  <label>• Synth: V1=freq, V2=wave</label>
+  <label>• OSC: V1=address</label>
+  <label>• Metro: V1=bpm</label>
+  
+  <effect>
+    <object-type>all</object-type>
+    <effects-menu>
+      <submenu name="OSCILLA"/>
+    </effects-menu>
+  </effect>
+  
+  <script>
+    <command location="inx" interpreter="python">oscilla_quick_cues.py</command>
+  </script>
+  
+</inkscape-extension>

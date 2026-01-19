@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <name>OSCILLA Cue Editor</name>
+  <id>org.oscilla.cue_editor</id>
+  
+  <param name="tab" type="notebook">
+    
+    <!-- TIMING & NAVIGATION TAB -->
+    <page name="timing" gui-text="Timing &amp; Navigation">
+      <param name="timing_type" type="optiongroup" appearance="combo" gui-text="Cue Type:">
+        <option value="stop">stop</option>
+        <option value="pause">pause</option>
+        <option value="speed">speed</option>
+        <option value="nav">nav</option>
+        <option value="page">page</option>
+        <option value="stopwatch">stopwatch</option>
+        <option value="metro">metro</option>
+      </param>
+      
+      <separator/>
+      <label appearance="header">Stop Parameters</label>
+      <param name="stop_uid" type="string" gui-text="UID:"></param>
+      <param name="stop_next" type="string" gui-text="Next (e.g. nav(End)):"></param>
+      
+      <separator/>
+      <label appearance="header">Pause Parameters</label>
+      <param name="pause_dur" type="float" min="0" max="999" gui-text="Duration (sec):">4</param>
+      <param name="pause_count" type="bool" gui-text="Show Countdown:">false</param>
+      <param name="pause_next" type="string" gui-text="Next Action:"></param>
+      
+      <separator/>
+      <label appearance="header">Speed Parameters</label>
+      <param name="speed_value" type="float" min="0.1" max="10" gui-text="Speed Value:">1.0</param>
+      <param name="speed_add" type="float" min="-5" max="5" gui-text="Speed Add:">0</param>
+      <param name="speed_dur" type="float" min="0" max="60" gui-text="Ramp Duration:">0</param>
+      <param name="speed_ease" type="optiongroup" appearance="combo" gui-text="Easing:">
+        <option value="">None</option>
+        <option value="linear">linear</option>
+        <option value="ease">ease</option>
+        <option value="ease-in">ease-in</option>
+        <option value="ease-out">ease-out</option>
+      </param>
+      <param name="speed_uid" type="string" gui-text="UID:"></param>
+      
+      <separator/>
+      <label appearance="header">Nav Parameters</label>
+      <param name="nav_target" type="string" gui-text="Target (page/scroll@/id):">page1</param>
+      <param name="nav_paused" type="bool" gui-text="Paused (scrollPaused):">false</param>
+      <param name="nav_repeats" type="int" min="0" max="99" gui-text="Repeats:">0</param>
+      <param name="nav_uid" type="string" gui-text="UID:"></param>
+      
+      <separator/>
+      <label appearance="header">Page Parameters</label>
+      <param name="page_name" type="string" gui-text="Page Name:">page1</param>
+      <param name="page_pattern" type="optiongroup" appearance="combo" gui-text="Pattern:">
+        <option value="">Single</option>
+        <option value="Pseq">Pseq (sequential)</option>
+        <option value="Prand">Prand (random)</option>
+        <option value="Pchoose">Pchoose (choose)</option>
+      </param>
+      <param name="page_list" type="string" gui-text="Pages (comma sep):"></param>
+      <param name="page_repeats" type="int" min="0" max="99" gui-text="Pattern Repeats:">1</param>
+      
+      <separator/>
+      <label appearance="header">Stopwatch Parameters</label>
+      <param name="sw_source" type="optiongroup" appearance="combo" gui-text="Source:">
+        <option value="new">new</option>
+        <option value="main">main</option>
+      </param>
+      <param name="sw_trig" type="optiongroup" appearance="combo" gui-text="Trigger:">
+        <option value="auto">auto</option>
+        <option value="playhead">playhead</option>
+      </param>
+      <param name="sw_scroll" type="bool" gui-text="Scroll:">false</param>
+      <param name="sw_hold" type="float" min="0" max="999" gui-text="Hold (sec):">0</param>
+      <param name="sw_offsetX" type="int" min="-500" max="500" gui-text="Offset X:">0</param>
+      
+      <separator/>
+      <label appearance="header">Metro Parameters</label>
+      <param name="metro_bpm" type="int" min="20" max="300" gui-text="BPM:">120</param>
+      <param name="metro_beats" type="int" min="1" max="16" gui-text="Beats:">4</param>
+      <param name="metro_visual" type="optiongroup" appearance="combo" gui-text="Visual:">
+        <option value="">None</option>
+        <option value="hex">hex</option>
+        <option value="circle">circle</option>
+        <option value="bar">bar</option>
+      </param>
+      <param name="metro_position" type="optiongroup" appearance="combo" gui-text="Position:">
+        <option value="">Fixed</option>
+        <option value="scrolling">scrolling</option>
+      </param>
+      <param name="metro_trig" type="optiongroup" appearance="combo" gui-text="Trigger:">
+        <option value="auto">auto</option>
+        <option value="playhead">playhead</option>
+      </param>
+      <param name="metro_target" type="string" gui-text="Target:"></param>
+      <param name="metro_colour" type="string" gui-text="Colour (#hex):"></param>
+      <param name="metro_audio" type="bool" gui-text="Audio:">false</param>
+      <param name="metro_osc" type="bool" gui-text="OSC:">false</param>
+      <param name="metro_uid" type="string" gui-text="UID:"></param>
+    </page>
+    
+    <!-- ANIMATION TAB -->
+    <page name="animation" gui-text="Animation">
+      <param name="anim_type" type="optiongroup" appearance="combo" gui-text="Animation Type:">
+        <option value="scale">scale</option>
+        <option value="scaleXY">scaleXY</option>
+        <option value="rotate">rotate</option>
+        <option value="o2p">o2p (object-to-path)</option>
+      </param>
+      
+      <separator/>
+      <label appearance="header">Scale Parameters</label>
+      <param name="scale_values" type="string" gui-text="Values [1,1.5,1]:">1,1.5,1</param>
+      <param name="scale_min" type="float" min="0" max="10" gui-text="Min (alt mode):">1</param>
+      <param name="scale_max" type="float" min="0" max="10" gui-text="Max (alt mode):">1.5</param>
+      <param name="scale_dur" type="float" min="0.1" max="60" gui-text="Duration:">2</param>
+      <param name="scale_loop" type="int" min="-1" max="99" gui-text="Loop (-1=inf):">0</param>
+      <param name="scale_tdelay" type="float" min="0" max="60" gui-text="Trigger Delay:">0</param>
+      <param name="scale_mode" type="optiongroup" appearance="combo" gui-text="Mode:">
+        <option value="">Default</option>
+        <option value="loop">loop</option>
+        <option value="alt">alt</option>
+      </param>
+      <param name="scale_hold" type="float" min="0" max="60" gui-text="Hold:">0</param>
+      <param name="scale_osc" type="bool" gui-text="OSC Output:">false</param>
+      <param name="scale_oscaddr" type="string" gui-text="OSC Address:"></param>
+      <param name="scale_uid" type="string" gui-text="UID:"></param>
+      
+      <separator/>
+      <label appearance="header">ScaleXY Parameters</label>
+      <param name="scalexy_x" type="string" gui-text="X Values [1,1.3]:">1,1.3</param>
+      <param name="scalexy_y" type="string" gui-text="Y Values [1,0.6]:">1,0.6</param>
+      <param name="scalexy_dur" type="float" min="0.1" max="60" gui-text="Duration:">1</param>
+      
+      <separator/>
+      <label appearance="header">Rotate Parameters</label>
+      <param name="rotate_values" type="string" gui-text="Values [0,120,240]:">0,120,240</param>
+      <param name="rotate_dir" type="optiongroup" appearance="combo" gui-text="Direction:">
+        <option value="">Values</option>
+        <option value="1">Clockwise (1)</option>
+        <option value="-1">Counter-CW (-1)</option>
+      </param>
+      <param name="rotate_dur" type="float" min="0.1" max="60" gui-text="Duration:">2</param>
+      <param name="rotate_tdelay" type="float" min="0" max="60" gui-text="Trigger Delay:">0</param>
+      <param name="rotate_mode" type="optiongroup" appearance="combo" gui-text="Mode:">
+        <option value="">Default</option>
+        <option value="alt">alt</option>
+        <option value="loop">loop</option>
+      </param>
+      
+      <separator/>
+      <label appearance="header">Object-to-Path (o2p) Parameters</label>
+      <param name="o2p_path" type="string" gui-text="Path ID:">orbitA</param>
+      <param name="o2p_dur" type="float" min="0.1" max="120" gui-text="Duration:">8</param>
+      <param name="o2p_tdelay" type="float" min="0" max="60" gui-text="Trigger Delay:">0</param>
+      <param name="o2p_prestate" type="optiongroup" appearance="combo" gui-text="Pre-state:">
+        <option value="">None</option>
+        <option value="hide">hide</option>
+        <option value="show">show</option>
+      </param>
+      <param name="o2p_rotate" type="optiongroup" appearance="combo" gui-text="Rotate:">
+        <option value="">None</option>
+        <option value="aligned">aligned</option>
+        <option value="spin">spin</option>
+      </param>
+      <param name="o2p_rotoffset" type="int" min="-180" max="180" gui-text="Rot Offset:">0</param>
+      <param name="o2p_rotspeed" type="float" min="0" max="10" gui-text="Rot Speed:">1</param>
+      <param name="o2p_rotdir" type="optiongroup" appearance="combo" gui-text="Rot Direction:">
+        <option value="1">CW (1)</option>
+        <option value="-1">CCW (-1)</option>
+      </param>
+      <param name="o2p_start" type="float" min="0" max="1" gui-text="Start (0-1):">0</param>
+      <param name="o2p_end" type="float" min="0" max="1" gui-text="End (0-1):">1</param>
+      <param name="o2p_mode" type="optiongroup" appearance="combo" gui-text="Mode:">
+        <option value="">Default</option>
+        <option value="alt">alt</option>
+        <option value="loop">loop</option>
+      </param>
+      <param name="o2p_loop" type="int" min="0" max="99" gui-text="Loop Count:">0</param>
+    </page>
+    
+    <!-- COLOR & FADE TAB -->
+    <page name="color" gui-text="Color &amp; Fade">
+      <param name="color_type" type="optiongroup" appearance="combo" gui-text="Effect Type:">
+        <option value="color">color</option>
+        <option value="fade">fade</option>
+      </param>
+      
+      <separator/>
+      <label appearance="header">Color Parameters</label>
+      <param name="color_uid" type="string" gui-text="Target UID (* for wildcard):"></param>
+      <param name="color_vals" type="string" gui-text="Colors (#hex,#hex):>#f00,#0f0</param>
+      <param name="color_dur" type="float" min="0.1" max="60" gui-text="Duration:">2</param>
+      <param name="color_mode" type="optiongroup" appearance="combo" gui-text="Mode:">
+        <option value="">Default</option>
+        <option value="alt">alt</option>
+        <option value="loop">loop</option>
+      </param>
+      
+      <separator/>
+      <label appearance="header">Fade Parameters</label>
+      <param name="fade_mode" type="optiongroup" appearance="combo" gui-text="Fade Mode:">
+        <option value="out">out</option>
+        <option value="in">in</option>
+        <option value="pulse">pulse</option>
+      </param>
+      <param name="fade_dur" type="float" min="0.1" max="60" gui-text="Duration:">2</param>
+      <param name="fade_from" type="float" min="0" max="1" gui-text="From (opacity):">1</param>
+      <param name="fade_to" type="float" min="0" max="1" gui-text="To (opacity):">0</param>
+      <param name="fade_target" type="string" gui-text="Target (optional):"></param>
+    </page>
+    
+    <!-- TEXT TAB -->
+    <page name="text" gui-text="Text">
+      <param name="text_src_type" type="optiongroup" appearance="combo" gui-text="Source Type:">
+        <option value="file">File</option>
+        <option value="string">String</option>
+      </param>
+      <param name="text_src" type="string" gui-text="Source (file/string):">foo.txt</param>
+      <param name="text_mode" type="optiongroup" appearance="combo" gui-text="Mode:">
+        <option value="">Lines</option>
+        <option value="word">word</option>
+        <option value="char">char</option>
+      </param>
+      <param name="text_order" type="optiongroup" appearance="combo" gui-text="Order:">
+        <option value="seq">seq</option>
+        <option value="rnd">rnd</option>
+      </param>
+      <param name="text_dur" type="float" min="0.01" max="60" gui-text="Duration:">3</param>
+      <param name="text_gap" type="float" min="0" max="60" gui-text="Gap:">0</param>
+      <param name="text_loop" type="int" min="0" max="99" gui-text="Loop:">0</param>
+      <param name="text_autostart" type="bool" gui-text="Autostart:">true</param>
+      <param name="text_yslots" type="int" min="1" max="20" gui-text="Y Slots:">1</param>
+      <param name="text_yslotmode" type="optiongroup" appearance="combo" gui-text="Y Slot Mode:">
+        <option value="">Default</option>
+        <option value="sequence">sequence</option>
+        <option value="random">random</option>
+      </param>
+      <param name="text_target" type="string" gui-text="Target:"></param>
+      <param name="text_style" type="string" gui-text="CSS Style:"></param>
+    </page>
+    
+    <!-- AUDIO TAB -->
+    <page name="audio" gui-text="Audio">
+      <param name="audio_type" type="optiongroup" appearance="combo" gui-text="Audio Type:">
+        <option value="audio">audio (single file)</option>
+        <option value="audioPool">audioPool (directory)</option>
+        <option value="audioImpulse">audioImpulse (stochastic)</option>
+      </param>
+      
+      <separator/>
+      <label appearance="header">Audio (Single File)</label>
+      <param name="audio_src" type="string" gui-text="Source File:">sound.wav</param>
+      <param name="audio_loop" type="int" min="0" max="99" gui-text="Loop:">0</param>
+      <param name="audio_amp" type="float" min="0" max="2" gui-text="Amplitude:">1</param>
+      <param name="audio_pan" type="string" gui-text="Pan (-1 to 1, or rand):">0</param>
+      <param name="audio_pitch" type="string" gui-text="Pitch (or rand):">1</param>
+      <param name="audio_fade" type="float" min="0" max="60" gui-text="Fade In:">0</param>
+      <param name="audio_fadeout" type="float" min="0" max="60" gui-text="Fade Out:">0</param>
+      <param name="audio_uid" type="string" gui-text="UID:"></param>
+      
+      <separator/>
+      <label appearance="header">AudioPool / AudioImpulse</label>
+      <param name="pool_path" type="string" gui-text="Directory Path:">sfx</param>
+      <param name="pool_mode" type="optiongroup" appearance="combo" gui-text="Mode (pool):">
+        <option value="">Sequential</option>
+        <option value="rand">rand</option>
+      </param>
+      <param name="impulse_rate" type="int" min="1" max="100" gui-text="Rate (impulse):">30</param>
+      <param name="impulse_jitter" type="float" min="0" max="1" gui-text="Jitter:">0</param>
+      <param name="pool_amp" type="string" gui-text="Amp (or rand range):">1</param>
+      <param name="pool_pan" type="string" gui-text="Pan (or rand range):">0</param>
+      <param name="pool_pitch" type="string" gui-text="Pitch (or rand range):">1</param>
+      <param name="pool_fade" type="string" gui-text="Fade (or rand %):"></param>
+      <param name="pool_uid" type="string" gui-text="UID:"></param>
+    </page>
+    
+    <!-- VIDEO TAB -->
+    <page name="video" gui-text="Video">
+      <param name="video_file" type="string" gui-text="Video File:">intro.mp4</param>
+      <param name="video_size" type="string" gui-text="Size (px or 'fs'):">fs</param>
+      <param name="video_in" type="float" min="0" max="9999" gui-text="In Point (sec):">0</param>
+      <param name="video_out" type="float" min="0" max="9999" gui-text="Out Point (sec):">0</param>
+      <param name="video_opacity" type="float" min="0" max="1" gui-text="Opacity:">1</param>
+      <param name="video_loop" type="int" min="0" max="99" gui-text="Loop:">0</param>
+      <param name="video_speed" type="float" min="0.1" max="10" gui-text="Speed:">1</param>
+      <param name="video_clickable" type="bool" gui-text="Clickable:">true</param>
+      <param name="video_target" type="string" gui-text="Target (element ID):"></param>
+      <param name="video_location" type="optiongroup" appearance="combo" gui-text="Location:">
+        <option value="">Default</option>
+        <option value="scroll">scroll</option>
+        <option value="fixed">fixed</option>
+      </param>
+    </page>
+    
+    <!-- SYNTH TAB -->
+    <page name="synth" gui-text="Synth">
+      <param name="synth_action" type="optiongroup" appearance="combo" gui-text="Action:">
+        <option value="synth">synth (start)</option>
+        <option value="synthStop">synthStop</option>
+      </param>
+      <param name="synth_uid" type="string" gui-text="UID (required):">synth1</param>
+      <param name="synth_wave" type="optiongroup" appearance="combo" gui-text="Waveform:">
+        <option value="sine">sine</option>
+        <option value="triangle">triangle</option>
+        <option value="square">square</option>
+        <option value="sawtooth">sawtooth</option>
+        <option value="noise">noise</option>
+      </param>
+      <param name="synth_freq" type="string" gui-text="Freq (hz or [array]):">440</param>
+      <param name="synth_dur" type="float" min="0" max="999" gui-text="Duration (0=inf):">0</param>
+      <param name="synth_lifetime" type="optiongroup" appearance="combo" gui-text="Lifetime:">
+        <option value="">Default</option>
+        <option value="process">process</option>
+      </param>
+      <param name="synth_env" type="string" gui-text="Envelope {a:,r:}:"></param>
+      <param name="synth_filter_type" type="optiongroup" appearance="combo" gui-text="Filter Type:">
+        <option value="">None</option>
+        <option value="lp">lowpass</option>
+        <option value="hp">highpass</option>
+        <option value="bp">bandpass</option>
+      </param>
+      <param name="synth_filter_freq" type="string" gui-text="Filter Freq:">1000</param>
+      <param name="synth_osc" type="bool" gui-text="OSC Output:">false</param>
+      <param name="synth_oscaddr" type="string" gui-text="OSC Address:"></param>
+      <param name="synth_rel" type="float" min="0" max="10" gui-text="Release (stop):">0.5</param>
+    </page>
+    
+    <!-- OSC TAB -->
+    <page name="osc" gui-text="OSC">
+      <param name="osc_type" type="optiongroup" appearance="combo" gui-text="OSC Type:">
+        <option value="osc">osc (discrete event)</option>
+        <option value="oscCtrl">oscCtrl (continuous)</option>
+      </param>
+      
+      <separator/>
+      <label appearance="header">OSC Event Parameters</label>
+      <param name="osc_addr" type="string" gui-text="Address:">v1</param>
+      <param name="osc_pitch" type="optiongroup" appearance="combo" gui-text="Pitch Source:">
+        <option value="y">y (normalized)</option>
+        <option value="hz">hz (specify)</option>
+        <option value="midi">midi (specify)</option>
+        <option value="deg">deg (degree,octave)</option>
+      </param>
+      <param name="osc_pitch_val" type="string" gui-text="Pitch Value:"></param>
+      <param name="osc_uid" type="string" gui-text="UID:"></param>
+      
+      <separator/>
+      <label appearance="header">OSC Control Lane Parameters</label>
+      <param name="oscctrl_addr" type="string" gui-text="Address:">/fx/pan</param>
+      <param name="oscctrl_min" type="float" min="-9999" max="9999" gui-text="Min:">0</param>
+      <param name="oscctrl_max" type="float" min="-9999" max="9999" gui-text="Max:">1</param>
+      <param name="oscctrl_mode" type="optiongroup" appearance="combo" gui-text="Mode:">
+        <option value="">Default</option>
+        <option value="continuous">continuous</option>
+        <option value="event">event</option>
+      </param>
+    </page>
+    
+    <!-- INTERACTION TAB -->
+    <page name="interaction" gui-text="Interaction">
+      <param name="int_type" type="optiongroup" appearance="combo" gui-text="Type:">
+        <option value="button">button</option>
+        <option value="reuse">reuse (define)</option>
+        <option value="use">use (reference)</option>
+      </param>
+      
+      <separator/>
+      <label appearance="header">Button Parameters</label>
+      <param name="btn_trigger" type="string" gui-text="Trigger Cue:">nav(page1)</param>
+      <param name="btn_target" type="string" gui-text="Target (optional):"></param>
+      <param name="btn_size" type="string" gui-text="Size (WxH):"></param>
+      <param name="btn_label" type="string" gui-text="Label:"></param>
+      <param name="btn_font" type="string" gui-text="Font:"></param>
+      <param name="btn_fontsize" type="int" min="8" max="72" gui-text="Font Size:">16</param>
+      
+      <separator/>
+      <label appearance="header">Reuse/Use Parameters</label>
+      <param name="reuse_name" type="string" gui-text="Collection Name:">mainMenu</param>
+    </page>
+    
+    <!-- PROPAGATE TAB -->
+    <page name="propagate" gui-text="Propagate">
+      <label>Propagate applies a cue template to all children in a group.</label>
+      <param name="prop_cue_type" type="optiongroup" appearance="combo" gui-text="Inner Cue Type:">
+        <option value="osc">osc</option>
+        <option value="scale">scale</option>
+        <option value="rotate">rotate</option>
+        <option value="color">color</option>
+        <option value="fade">fade</option>
+      </param>
+      
+      <separator/>
+      <label appearance="header">OSC Propagate</label>
+      <param name="prop_osc_addr" type="string" gui-text="Address:">voice</param>
+      <param name="prop_osc_pitch" type="optiongroup" appearance="combo" gui-text="Pitch:">
+        <option value="y">y</option>
+        <option value="deg">deg (randomized)</option>
+      </param>
+      <param name="prop_osc_env" type="optiongroup" appearance="combo" gui-text="Envelope Map:">
+        <option value="">None</option>
+        <option value="size">size</option>
+        <option value="width">width</option>
+        <option value="height">height</option>
+        <option value="area">area</option>
+      </param>
+      <param name="prop_osc_trig" type="optiongroup" appearance="combo" gui-text="Trigger:">
+        <option value="">Default</option>
+        <option value="playhead">playhead</option>
+        <option value="auto">auto</option>
+      </param>
+      
+      <separator/>
+      <label appearance="header">Scale/Rotate Propagate</label>
+      <param name="prop_scale_randomize" type="bool" gui-text="Randomize Values:">true</param>
+      <param name="prop_scale_min" type="float" min="0.1" max="5" gui-text="Min Scale:">0.8</param>
+      <param name="prop_scale_max" type="float" min="0.1" max="5" gui-text="Max Scale:">1.6</param>
+      <param name="prop_dur_min" type="float" min="0.1" max="10" gui-text="Min Duration:">0.4</param>
+      <param name="prop_dur_max" type="float" min="0.1" max="10" gui-text="Max Duration:">1.2</param>
+    </page>
+    
+    <!-- UTILITY TAB -->
+    <page name="utility" gui-text="Utility">
+      <param name="util_action" type="optiongroup" appearance="combo" gui-text="Action:">
+        <option value="view">View Current ID</option>
+        <option value="clear">Clear ID (reset)</option>
+        <option value="append">Append to Existing</option>
+        <option value="custom">Custom Cue String</option>
+      </param>
+      <param name="custom_cue" type="string" gui-text="Custom Cue:"></param>
+      <label>Use 'Append' to add multiple cues to one element.</label>
+      <label>Separate multiple cues with a space or wrap in groups.</label>
+    </page>
+    
+  </param>
+  
+  <effect>
+    <object-type>all</object-type>
+    <effects-menu>
+      <submenu name="OSCILLA"/>
+    </effects-menu>
+  </effect>
+  
+  <script>
+    <command location="inx" interpreter="python">oscilla_cues.py</command>
+  </script>
+  
+</inkscape-extension>
