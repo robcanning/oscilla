@@ -1,3 +1,8 @@
+---
+title: inkscape_extension
+layout: docs_layout.njk
+---
+
 # Oscilla Inkscape Extension (Experimental)
 
 > **Status:** Experimental / in active development  
