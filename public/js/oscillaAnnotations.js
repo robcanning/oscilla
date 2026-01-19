@@ -26,7 +26,10 @@ const POLL_SOCKET_MS = 500;
 
 window.oscillaTextInputActive = false;
 
+let lastAnnotationFontSize = 12;
 
+let sharedAnnotationsRequested = false;
+let sharedAnnotationsHydrated = false;
 
 
 function ulidLike() {
@@ -172,7 +175,13 @@ function getPageClickPlacement(evt, content) {
         y: evt.clientY - rect.top,
     };
 }
-function makeEditor({ x, y, initialText = "" }) {
+function makeEditor({
+    x,
+    y,
+    initialText = "",
+    initialScope = null,
+    initialFontSize = null
+}) {
     const wrap = document.createElement("div");
     wrap.className = "osc-anno-editor";
     wrap.style.position = "fixed";
@@ -206,6 +215,35 @@ function makeEditor({ x, y, initialText = "" }) {
     ta.style.lineHeight = "1.3";
     wrap.appendChild(ta);
 
+
+    // -----------------------------
+    // Font size control
+    // -----------------------------
+    const fontRow = document.createElement("div");
+    fontRow.style.display = "flex";
+    fontRow.style.alignItems = "center";
+    fontRow.style.gap = "8px";
+    fontRow.style.marginTop = "6px";
+
+    const fontLabel = document.createElement("label");
+    fontLabel.textContent = "Font size";
+    fontLabel.style.fontSize = "12px";
+    fontLabel.style.opacity = "0.9";
+
+    const fontInput = document.createElement("input");
+    fontInput.type = "number";
+    fontInput.min = 8;
+    fontInput.max = 32;
+    fontInput.step = 1;
+    fontInput.value = initialFontSize ?? 12;
+    fontInput.style.width = "60px";
+
+    fontRow.appendChild(fontLabel);
+    fontRow.appendChild(fontInput);
+    wrap.appendChild(fontRow);
+
+
+
     // -----------------------------
     // Footer row (buttons + scope)
     // -----------------------------
@@ -226,8 +264,13 @@ function makeEditor({ x, y, initialText = "" }) {
 
     const scopeChk = document.createElement("input");
     scopeChk.type = "checkbox";
-    scopeChk.checked = state.shareByDefault;
 
+    scopeChk.checked =
+        initialScope === "shared"
+            ? true
+            : initialScope === "local"
+                ? false
+                : state.shareByDefault;
     scopeLabel.appendChild(scopeChk);
     scopeLabel.appendChild(document.createTextNode("Share"));
     footer.appendChild(scopeLabel);
@@ -254,7 +297,7 @@ function makeEditor({ x, y, initialText = "" }) {
     btnCancel.style.cursor = "pointer";
     footer.appendChild(btnCancel);
 
-    return { wrap, ta, scopeChk, btnSave, btnCancel, footer };
+    return { wrap, ta, scopeChk, fontInput, btnSave, btnCancel, footer };
 }
 
 
@@ -341,7 +384,8 @@ function makePinEl(annotation, onClick) {
     label.style.display = "block";
     label.style.whiteSpace = "pre-wrap";
     label.style.lineHeight = "1.4";
-    label.style.fontSize = "12px";
+    const fs = annotation.style?.fontSize ?? 12;
+    label.style.fontSize = `${fs}px`;
     label.style.padding = "4px 8px";
     label.style.borderRadius = "8px";
     label.style.background = "rgba(0,0,0,0.6)";
@@ -439,6 +483,78 @@ function makePinEl(annotation, onClick) {
 }
 
 
+function openEditForExisting(annotation) {
+    const x =
+        annotation._lastScreenX ?? window.innerWidth / 2;
+    const y =
+        annotation._lastScreenY ?? window.innerHeight / 2;
+
+    openEditorAt({
+        screenX: x,
+        screenY: y,
+        initialText: annotation.text,
+        initialScope: annotation.scope,
+        initialFontSize:
+            annotation.style?.fontSize ?? lastAnnotationFontSize,
+
+        onSave: ({ text, scope, style }) => {
+            const fontSize =
+                style?.fontSize ?? lastAnnotationFontSize ?? 12;
+
+            updateAnnotation(annotation.id, {
+                text,
+                scope,
+                style: {
+                    ...(annotation.style || {}),
+                    fontSize
+                }
+            });
+
+            // remember last-used size
+            lastAnnotationFontSize = fontSize;
+        },
+
+        onDelete: () => {
+            deleteAnnotation(annotation.id);
+            setAnnotationMode(false);
+        }
+    });
+}
+
+
+
+export function loadSharedAnnotations(project, items) {
+    if (!project || project !== state.project) return;
+    if (!Array.isArray(items)) return;
+
+    //  already hydrated → ignore repeat list responses
+    if (sharedAnnotationsHydrated) return;
+
+    let added = 0;
+
+    items.forEach((item) => {
+        if (!item?.id) return;
+        if (item.scope !== "shared") return;
+
+        const exists = state.items.some((x) => x.id === item.id);
+        if (exists) return;
+
+        state.items.push(item);
+        added++;
+    });
+
+    sharedAnnotationsHydrated = true;
+
+    if (added > 0) {
+        console.log(
+            `[annotations]  loaded ${added} shared annotations for ${project}`
+        );
+        renderAll();
+    }
+}
+
+
+
 
 
 
@@ -532,6 +648,8 @@ function openEditorAt({
     screenX,
     screenY,
     initialText,
+    initialScope,
+    initialFontSize,
     onSave,
     onDelete
 }) {
@@ -545,7 +663,9 @@ function openEditorAt({
     const editor = makeEditor({
         x: screenX,
         y: screenY,
-        initialText
+        initialText,
+        initialScope,
+        initialFontSize
     });
 
     document.body.appendChild(editor.wrap);
@@ -569,13 +689,19 @@ function openEditorAt({
             return;
         }
 
+        const fontSize = parseInt(editor.fontInput.value, 10) || 12;
+
         onSave?.({
             text,
             scope: editor.scopeChk.checked ? "shared" : "local",
+            style: {
+                fontSize
+            }
         });
 
         closeEditor();
     };
+
 
     // -----------------------------
     // Delete (only for existing annotations)
@@ -608,25 +734,71 @@ function openEditorAt({
     state.activeEditor = editor;
 }
 
-function openEditForExisting(annotation) {
-    const x = annotation._lastScreenX ?? window.innerWidth / 2;
-    const y = annotation._lastScreenY ?? window.innerHeight / 2;
+openEditorAt({
+    screenX: screenX,
+    screenY: screenY,
+    initialText: "",
+    initialScope: null,
+    initialFontSize: lastAnnotationFontSize,
 
-    openEditorAt({
-        screenX: x,
-        screenY: y,
-        initialText: annotation.text,
+    onSave: function ({ text, scope, style }) {
+        const fontSize =
+            (style && style.fontSize) || lastAnnotationFontSize || 12;
 
-        onSave: ({ text, scope }) => {
-            updateAnnotation(annotation.id, { text, scope });
-        },
+        const item = {
+            id: ulidLike(),
+            project: state.project,
+            author: {
+                id: getAuthorId(),
+                label: getAuthorLabel()
+            },
+            createdAt: nowMs(),
+            updatedAt: nowMs(),
 
-        onDelete: () => {
-            deleteAnnotation(annotation.id);
-            setAnnotationMode(false);
-        },
-    });
-}
+            scope: scope,
+            kind: "text",
+            text: text,
+
+            style: {
+                color: "rgba(255,255,255,0.9)",
+                fontSize: fontSize
+            },
+
+            anchor: {
+                mode: "scroll",
+                pageId: null,
+                elementId: elementId || null,
+                position: {
+                    playheadX:
+                        typeof window.playheadX === "number"
+                            ? window.playheadX
+                            : null,
+                    scoreX: placement.x,
+                    scoreY: placement.y
+                },
+                time: {
+                    stopwatch: getStopwatchTime()
+                }
+            },
+
+            placement: {
+                x: placement.x,
+                y: placement.y,
+                space: "score"
+            },
+
+            _lastScreenX: screenX,
+            _lastScreenY: screenY
+        };
+
+        // remember font size for next annotation
+        lastAnnotationFontSize = fontSize;
+
+        addAnnotation(item);
+        setAnnotationMode(false);
+    }
+});
+
 
 
 function addAnnotation(item) {
@@ -703,51 +875,70 @@ function onScoreClick(evt) {
     // capture last screen coords (used if editing later)
     const screenX = evt.clientX + 10;
     const screenY = evt.clientY + 10;
+openEditorAt({
+    screenX,
+    screenY,
+    initialText: "",
+    initialFontSize: lastAnnotationFontSize, // ✅ remember last used size
 
-    openEditorAt({
-        screenX,
-        screenY,
-        initialText: "",
-        onSave: ({ text, scope }) => {
-            const item = {
-                id: ulidLike(),
-                project: state.project,
-                author: { id: getAuthorId(), label: getAuthorLabel() },
-                createdAt: nowMs(),
-                updatedAt: nowMs(),
-                scope,
-                kind: "text",
-                text,
-                style: { color: "rgba(255,255,255,0.9)" },
+    onSave: ({ text, scope, style }) => {
+        const fontSize =
+            style?.fontSize ?? lastAnnotationFontSize ?? 12;
 
-                anchor: {
-                    mode: "scroll",
-                    pageId: null,
-                    elementId: elementId || null,
-                    position: {
-                        playheadX: typeof window.playheadX === "number" ? window.playheadX : null,
-                        scoreX: placement.x,
-                        scoreY: placement.y,
-                    },
-                    time: {
-                        stopwatch: getStopwatchTime(),
-                    },
+        const item = {
+            id: ulidLike(),
+            project: state.project,
+            author: {
+                id: getAuthorId(),
+                label: getAuthorLabel()
+            },
+            createdAt: nowMs(),
+            updatedAt: nowMs(),
+
+            scope,
+            kind: "text",
+            text,
+
+            style: {
+                color: "rgba(255,255,255,0.9)",
+                fontSize // ✅ persist per annotation
+            },
+
+            anchor: {
+                mode: "scroll",
+                pageId: null,
+                elementId: elementId || null,
+                position: {
+                    playheadX:
+                        typeof window.playheadX === "number"
+                            ? window.playheadX
+                            : null,
+                    scoreX: placement.x,
+                    scoreY: placement.y
                 },
+                time: {
+                    stopwatch: getStopwatchTime()
+                }
+            },
 
-                placement: {
-                    x: placement.x,
-                    y: placement.y,
-                    space: "score",
-                },
+            placement: {
+                x: placement.x,
+                y: placement.y,
+                space: "score"
+            },
 
-                _lastScreenX: screenX,
-                _lastScreenY: screenY,
-            };
-            addAnnotation(item);
-            setAnnotationMode(false);
+            _lastScreenX: screenX,
+            _lastScreenY: screenY
+        };
 
-        },
-    });
+        // 🔁 remember font size for NEXT annotation
+        lastAnnotationFontSize = fontSize;
+
+        addAnnotation(item);
+        setAnnotationMode(false);
+    }
+});
+
 }
 
 function onPageClick(evt) {
@@ -836,15 +1027,32 @@ function attachEventListeners() {
     if (page) page.addEventListener("click", onPageClick, true);
 }
 
+
 function loadProjectAnnotations(project) {
+
+    sharedAnnotationsHydrated = false;
+
+    const isNewProject = state.project !== project;
+
     state.project = project;
     state.items = loadLocal(project);
 
-    // Optionally request shared annotations list (if server supports it)
-    wsSend("annotation_list_request", { project });
+    if (isNewProject) {
+        sharedAnnotationsRequested = false;
+    }
+
+    if (!sharedAnnotationsRequested) {
+        sharedAnnotationsRequested = true;
+        wsSend("annotation_list_request", { project });
+
+        console.log(
+            `[annotations] requesting shared annotations for ${project}`
+        );
+    }
 
     renderAll();
 }
+
 
 function socketPoll() {
     const ws = getWs();

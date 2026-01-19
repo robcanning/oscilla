@@ -36,7 +36,8 @@ import {
 
 import {
   setAnnotationMode,
-  setAnnotationsEnabled
+  setAnnotationsEnabled,
+  loadSharedAnnotations
 } from "./oscillaAnnotations.js";
 
 
@@ -284,18 +285,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===========================
   // Score Notes Toggle
   // ===========================
-  const toggleScoreNotes = () => {
-    const svg = document.querySelector("svg");
-    if (!svg) return;
-    const notes = svg.querySelectorAll('[id^="note-"]');
-    if (!notes.length) return;
-    const currentlyVisible = notes[0].style.display !== "none";
-    notes.forEach(note => note.style.display = currentlyVisible ? "none" : "block");
-    document.getElementById("toggle-notes-button")?.classList.toggle("active", !currentlyVisible);
-  };
+const toggleScoreNotes = () => {
+  const notes = document.querySelectorAll("svg [id^='note']");
+  if (!notes.length) return;
 
-  document.getElementById("toggle-notes-button")?.addEventListener("click", toggleScoreNotes);
-  window.toggleScoreNotes = toggleScoreNotes;
+  const currentlyVisible = notes[0].style.display !== "none";
+
+  notes.forEach(note => {
+    note.style.display = currentlyVisible ? "none" : "";
+  });
+
+  document
+    .getElementById("toggle-notes-button")
+    ?.classList.toggle("active", !currentlyVisible);
+};
+
+document
+  .getElementById("toggle-notes-button")
+  ?.addEventListener("click", toggleScoreNotes);
+
+window.toggleScoreNotes = toggleScoreNotes;
+
 
 // ===========================
 // Performer Notes
@@ -397,6 +407,10 @@ initAnnotationControls();
 
             case "client_list":
               updateClientList(data.clients);
+              break;
+
+            case "annotation_list_response":
+              loadSharedAnnotations(data.project, data.items);
               break;
 
             case "set_speed_multiplier":
@@ -853,7 +867,7 @@ document.addEventListener(
         : window.startPlayback();
     }
   },
-  true // 🔑 CAPTURE PHASE — THIS IS ESSENTIAL
+  true 
 );
 
 

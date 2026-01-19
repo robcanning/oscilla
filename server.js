@@ -357,6 +357,25 @@ const broadcastClientList = () => {
   });
 };
 
+
+
+
+// -----------------------------------------------------------
+//  Shared Annotations (session-scoped)
+// -----------------------------------------------------------
+// project → Map(annotationId → annotationObject)
+
+const annotationsByProject = {};
+
+function broadcastToOthers(ws, payload) {
+  const msg = JSON.stringify(payload);
+  wss.clients.forEach(client => {
+    if (client !== ws && client.readyState === WebSocket.OPEN) {
+      client.send(msg);
+    }
+  });
+}
+
 ////////////////////////////////
 let cuePauseAcks = new Set(); // ✅ Moved to global scope so it persists for all clients
 
@@ -993,6 +1012,105 @@ wss.on('connection', (ws, req) => {
 
 
 
+      case "annotation_list_request": {
+        const { project } = data;
+        if (!project) {
+          console.warn("[ANNOTATION] Invalid annotation_list_request payload");
+          break;
+        }
+
+        const items =
+          annotationsByProject[project]
+            ? Object.values(annotationsByProject[project])
+            : [];
+
+        console.log(
+          `[ANNOTATION] 📤 list request  project=${project}  count=${items.length}`
+        );
+
+        // reply ONLY to requesting client
+        ws.send(JSON.stringify({
+          type: "annotation_list_response",
+          project,
+          items
+        }));
+
+        break;
+      }
+
+
+      case "annotation_add": {
+        const { project, item } = data;
+        if (!project || !item?.id) {
+          console.warn("[ANNOTATION] Invalid annotation_add payload");
+          break;
+        }
+
+        annotationsByProject[project] ??= {};
+        annotationsByProject[project][item.id] = item;
+
+        console.log(
+          `[ANNOTATION] ➕ add  project=${project}  id=${item.id}`
+        );
+
+        broadcastToOthers(ws, {
+          type: "annotation_add",
+          project,
+          item
+        });
+
+        break;
+      }
+
+      case "annotation_update": {
+        const { project, item } = data;
+        if (!project || !item?.id) {
+          console.warn("[ANNOTATION] Invalid annotation_update payload");
+          break;
+        }
+
+        annotationsByProject[project] ??= {};
+        annotationsByProject[project][item.id] = item;
+
+        console.log(
+          `[ANNOTATION] ✏️ update  project=${project}  id=${item.id}`
+        );
+
+        broadcastToOthers(ws, {
+          type: "annotation_update",
+          project,
+          item
+        });
+
+        break;
+      }
+
+      case "annotation_delete": {
+        const { project, id } = data;
+        if (!project || !id) {
+          console.warn("[ANNOTATION] Invalid annotation_delete payload");
+          break;
+        }
+
+        if (annotationsByProject[project]) {
+          delete annotationsByProject[project][id];
+        }
+
+        console.log(
+          `[ANNOTATION] 🗑 delete  project=${project}  id=${id}`
+        );
+
+        broadcastToOthers(ws, {
+          type: "annotation_delete",
+          project,
+          id
+        });
+
+        break;
+      }
+
+
+
 
       /**
       * ✅ Handles manual pause requests from a client.
@@ -1146,20 +1264,20 @@ wss.on('connection', (ws, req) => {
       * ✅ Handles play requests from clients.
       * - Updates `playheadX` and ensures synchronization across clients.
       */
-case "play": {
-  sharedState.scoreWidth = sharedState.scoreWidth || 1;
+      case "play": {
+        sharedState.scoreWidth = sharedState.scoreWidth || 1;
 
-  const now = performance.now();
-  sharedState.startTimestamp = retargetStartTimestampFromElapsed(
-    now,
-    sharedState.elapsedTime,
-    sharedState.speedMultiplier
-  );
+        const now = performance.now();
+        sharedState.startTimestamp = retargetStartTimestampFromElapsed(
+          now,
+          sharedState.elapsedTime,
+          sharedState.speedMultiplier
+        );
 
-  sharedState.isPlaying = true;
-  broadcastState();
-  break;
-}
+        sharedState.isPlaying = true;
+        broadcastState();
+        break;
+      }
 
 
 
@@ -1243,14 +1361,14 @@ case "play": {
         }
 
         // 3. IMPORTANT: Re-anchor transport clock if playback is active
- if (sharedState.isPlaying) {
-  const now = performance.now();
-  sharedState.startTimestamp = retargetStartTimestampFromElapsed(
-    now,
-    sharedState.elapsedTime,
-    sharedState.speedMultiplier
-  );
-}
+        if (sharedState.isPlaying) {
+          const now = performance.now();
+          sharedState.startTimestamp = retargetStartTimestampFromElapsed(
+            now,
+            sharedState.elapsedTime,
+            sharedState.speedMultiplier
+          );
+        }
 
 
         console.log(

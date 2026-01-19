@@ -442,7 +442,6 @@ async function loadScrollMode(container) {
 
 
   window.hideControls?.();
-  window.toggleScoreNotes();
 
 
 }

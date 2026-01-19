@@ -379,10 +379,10 @@ export const extractScoreElements = (svgElement) => {
 
 
 
-// In extractScoreElements:
-const newSpeedCues = extractSpeedCues(svgElement);
-setSpeedCueMap(newSpeedCues);
-console.log(`[scoreSetup] Loaded ${newSpeedCues.length} speed cues`);
+  // In extractScoreElements:
+  const newSpeedCues = extractSpeedCues(svgElement);
+  setSpeedCueMap(newSpeedCues);
+  console.log(`[scoreSetup] Loaded ${newSpeedCues.length} speed cues`);
 
 
 
@@ -700,11 +700,16 @@ export async function setupScore(svgElement) {
 
     // 3) Expand <g id="use(name)"> inclusions
     autoInjectUseBlocks(svgElement);
-    console.log("[setupScore] ✅ Reusable blocks ready.");
+    console.log("[setupScore] Reusable blocks ready.");
   }
-      hideAllButtonPlaceholders(svgElement);
-  
-  
+
+
+  hideAllButtonPlaceholders(svgElement);
+
+  console.log("[scoreSetup]  Score fully expanded — enabling note toggle");
+  window.toggleScoreNotes?.();
+
+
   // Performer-facing overlays
   initOscillaAnnotations();
   setAnnotationsProject(window.currentProjectName);
