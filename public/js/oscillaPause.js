@@ -187,18 +187,21 @@ export function dismissPauseCountdown(forceNoResume = false, receivedFromServer 
 
 
 export function clearPauseTimers() {
-    if (window.pauseCountdownInterval) {
-        clearInterval(window.pauseCountdownInterval);
-        window.pauseCountdownInterval = null;
-        console.log("[DEBUG] Pause countdown timer cleared.");
+    if (window._pauseCountdownTimer) {
+        clearInterval(window._pauseCountdownTimer);
+        window._pauseCountdownTimer = null;
+        console.log("[DEBUG] Pause countdown interval cleared.");
     }
 
-    if (window.pauseTimeout) {
-        clearTimeout(window.pauseTimeout);
-        window.pauseTimeout = null;
-        console.log("[DEBUG] Pause timeout cleared.");
+    if (window._pauseResumeTimer) {
+        clearTimeout(window._pauseResumeTimer);
+        window._pauseResumeTimer = null;
+        console.log("[DEBUG] Pause resume timeout cleared.");
     }
 }
+
+
+
 /**
  * Resumes playback after pause and synchronizes across clients.
  * Respects nav(mode:scrollPaused@X) via window._resumeAfterJump.
