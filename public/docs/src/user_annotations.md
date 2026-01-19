@@ -5,6 +5,15 @@ layout: docs_layout.njk
 
 # Performer Annotations
 
+<figure class="doc-image">
+  <img
+    src="{{ '/docs/img/oscilla-performer-annotations.png' | url }}"
+    alt="Oscilla Inkscape Extension"
+  >
+  <figcaption>Oscilla Performer Annotations </figcaption>
+</figure>
+
+
 ## Overview
 
 Performer Annotations allow performers to add **personal notes directly onto the score view** while working with Oscilla.

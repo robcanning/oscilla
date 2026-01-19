@@ -219,3 +219,12 @@
   color: var(--text-faint);
   margin-bottom: 0.4rem;
 }
+
+.doc-image img {
+  max-width: 70%;
+  height: auto;
+}
+
+.doc-image {
+  text-align: center;
+}

@@ -12,6 +12,16 @@ This Inkscape extension provides early tooling for working with **Oscilla / Osci
 
 At this stage, the goal is simply to make it **possible to try the workflow**, not to provide a polished or complete feature set.
 
+
+<figure class="doc-image">
+  <img
+    src="{{ '/docs/img/oscilla-inkscape-extension.png' | url }}"
+    alt="Oscilla Inkscape Extension"
+  >
+  <figcaption>Oscilla Inkscape Extension panel</figcaption>
+</figure>
+
+
 ---
 
 ## What this extension is (for now)
