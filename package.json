@@ -1,16 +1,18 @@
 {
-  "name": "oscillascore",
-  "version": "1.0.0",
-  "description": "oscillaScore GUI",
+  "name": "oscilla",
+  "version": "0.4.0",
+  "description": "Oscilla — networked animated score system",
   "main": "server.js",
+  "bin": "server.js",
+
   "scripts": {
     "start": "node server.js",
-    "gui": "electron server-gui.js"
+    "build": "pkg ."
   },
+
   "dependencies": {
     "chevrotain": "^11.0.3",
     "express": "^4.21.2",
-    "fs": "^0.0.1-security",
     "osc": "^2.4.5",
     "pm2": "^6.0.10",
     "svg-path-commander": "^2.1.10",
@@ -19,8 +21,25 @@
     "xml-js": "^1.6.11",
     "yargs": "^17.7.2"
   },
+
   "devDependencies": {
-    "electron": "^35.2.0",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "pkg": "^5.8.1"
+  },
+
+  "pkg": {
+    "assets": [
+      "public/**/*",
+      "scores/**/*",
+      "audio/**/*",
+      "preferences.json"
+    ],
+    "targets": [
+      "node18-linux-x64",
+      "node18-macos-x64",
+      "node18-macos-arm64",
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
   }
 }

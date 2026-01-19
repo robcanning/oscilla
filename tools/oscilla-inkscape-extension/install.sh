@@ -40,6 +40,18 @@ cp "$SCRIPT_DIR/oscilla_quick_cues.inx" "$EXT_PATH/"
 cp "$SCRIPT_DIR/oscilla_quick_cues.py" "$EXT_PATH/"
 cp "$SCRIPT_DIR/oscilla_inspector.inx" "$EXT_PATH/"
 cp "$SCRIPT_DIR/oscilla_inspector.py" "$EXT_PATH/"
+cp "$SCRIPT_DIR/oscilla_toolbar.inx" "$EXT_PATH/"
+cp "$SCRIPT_DIR/oscilla_toolbar.py" "$EXT_PATH/"
+cp "$SCRIPT_DIR/oscilla_toolbar_standalone.py" "$EXT_PATH/"
+cp "$SCRIPT_DIR/oscilla_apply_cue.inx" "$EXT_PATH/"
+cp "$SCRIPT_DIR/oscilla_apply_cue.py" "$EXT_PATH/"
+
+# Install quick-apply extensions if they exist
+if [ -d "$SCRIPT_DIR/quick-apply" ]; then
+    echo "Installing quick-apply extensions..."
+    cp "$SCRIPT_DIR/quick-apply/"*.inx "$EXT_PATH/"
+    cp "$SCRIPT_DIR/quick-apply/"*.py "$EXT_PATH/"
+fi
 
 echo ""
 echo "✅ Installation complete!"

@@ -23,6 +23,13 @@ const osc = require('osc');
 const fs = require('fs');
 const path = require('path');
 
+
+// ---------------------------------------------
+// pkg-safe base directory
+// ---------------------------------------------
+const IS_PKG = !!process.pkg;
+const BASE_DIR = IS_PKG ? process.cwd() : __dirname;
+
 // ---------------------------------------------
 // Express App Setup
 // ---------------------------------------------
@@ -73,63 +80,98 @@ app.get('/config', (req, res) => {
 // Server Launch 
 // ---------------------------------------------
 
-// --- Static file serving ---
-app.use(express.static('public')); // root public assets
-app.use('/scores', express.static(path.join(process.cwd(), 'public/scores')));
-app.use('/shared', express.static(path.join(process.cwd(), 'public/shared')));
+/// ---------------------------------------------
+// pkg-safe paths (READ vs WRITE)
+// ---------------------------------------------
+// READ_DIR  → bundled assets (pkg snapshot)
+// WRITE_DIR → user-writable working directory
 
-// --- Simple HTML directory lister ---
+// const IS_PKG = !!process.pkg;
+
+const READ_DIR = __dirname;
+const WRITE_DIR = IS_PKG ? process.cwd() : __dirname;
+
+console.log("[CONFIG] READ_DIR  =", READ_DIR);
+console.log("[CONFIG] WRITE_DIR =", WRITE_DIR);
+
+// ---------------------------------------------
+// Static file serving (READ ONLY)
+// ---------------------------------------------
+
+app.use(express.static(path.join(READ_DIR, "public")));
+app.use("/scores", express.static(path.join(READ_DIR, "public/scores")));
+app.use("/shared", express.static(path.join(READ_DIR, "public/shared")));
+
+// ---------------------------------------------
+// Simple HTML directory lister
+// ---------------------------------------------
+
 function listDirectory(dirPath, webPath) {
   const entries = fs.readdirSync(dirPath, { withFileTypes: true });
   const links = entries.map(e => {
-    const name = e.name + (e.isDirectory() ? '/' : '');
+    const name = e.name + (e.isDirectory() ? "/" : "");
     return `<a href="${webPath}${name}">${name}</a><br>`;
   });
-  return `<html><body>${links.join('')}</body></html>`;
+  return `<html><body>${links.join("")}</body></html>`;
 }
 
-// --- Directory listing for /scores/... ---
-app.get('/scores/*', (req, res, next) => {
-  const subPath = req.params[0] || '';
-  const dir = path.join(process.cwd(), 'public/scores', subPath);
+// ---------------------------------------------
+// Directory listing for /scores (READ)
+// ---------------------------------------------
+
+app.get("/scores/*", (req, res, next) => {
+  const subPath = req.params[0] || "";
+  const dir = path.join(READ_DIR, "public/scores", subPath);
   try {
     if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
-      res.type('html').send(listDirectory(dir, req.path.endsWith('/') ? req.path : req.path + '/'));
+      res.type("html").send(
+        listDirectory(dir, req.path.endsWith("/") ? req.path : req.path + "/")
+      );
     } else next();
-  } catch (err) {
-    next();
-  }
-});
-// --- Directory listing for /shared/... (outside public) ---
-app.get('/shared/*', (req, res, next) => {
-  const subPath = req.params[0] || '';
-  const dir = path.join(process.cwd(), 'public/shared', subPath);
-  try {
-    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
-      res.type('html').send(listDirectory(dir, req.path.endsWith('/') ? req.path : req.path + '/'));
-    } else next();
-  } catch (err) {
+  } catch {
     next();
   }
 });
 
-// --- Serve rendered Oscilla docs (Eleventy output) ---
+// ---------------------------------------------
+// Directory listing for /shared (READ)
+// ---------------------------------------------
+
+app.get("/shared/*", (req, res, next) => {
+  const subPath = req.params[0] || "";
+  const dir = path.join(READ_DIR, "public/shared", subPath);
+  try {
+    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+      res.type("html").send(
+        listDirectory(dir, req.path.endsWith("/") ? req.path : req.path + "/")
+      );
+    } else next();
+  } catch {
+    next();
+  }
+});
+
+// ---------------------------------------------
+// Serve rendered Oscilla docs (READ)
+// ---------------------------------------------
+
 app.use(
   "/oscilla/docs",
-  express.static(path.join(process.cwd(), "public/docs/site"), {
-    extensions: ["html"], // lets /docs/cue_audio resolve to index.html
+  express.static(path.join(READ_DIR, "public/docs/site"), {
+    extensions: ["html"]
   })
 );
 
-
-// app.use(express.static('dist'));
+// ---------------------------------------------
+// API: audio list (READ)
+// ---------------------------------------------
 
 app.get("/api/audio-list/:project/:dir*", (req, res) => {
   const project = req.params.project;
   const dirPart = req.params.dir || "";
 
   const dirPath = path.join(
-    process.cwd(),
+    READ_DIR,
     "public",
     "scores",
     project,
@@ -150,19 +192,27 @@ app.get("/api/audio-list/:project/:dir*", (req, res) => {
       .filter(name => /\.(wav|aiff|aif|mp3|ogg)$/i.test(name));
 
     res.json({ files });
-
   } catch (err) {
     console.error("[API] audio-list failed:", err);
     res.status(500).json({ error: "Could not read directory" });
   }
 });
 
+// ---------------------------------------------
+// API: save preferences (WRITE)
+// ---------------------------------------------
 
 app.post("/save-preferences/:project", express.json(), (req, res) => {
   const project = req.params.project;
   const prefs = req.body;
 
-  const file = path.join(__dirname, "public", "scores", project, "preferences.json");
+  const file = path.join(
+    WRITE_DIR,
+    "public",
+    "scores",
+    project,
+    "preferences.json"
+  );
 
   try {
     fs.writeFileSync(file, JSON.stringify(prefs, null, 2), "utf8");
@@ -173,6 +223,7 @@ app.post("/save-preferences/:project", express.json(), (req, res) => {
     res.status(500).json({ error: "Failed to write preferences.json" });
   }
 });
+
 
 
 const server = app.listen(port, () => {

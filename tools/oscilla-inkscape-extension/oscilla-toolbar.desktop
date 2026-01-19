@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=OSCILLA Toolbar
+Comment=Quick cue toolbar for OSCILLA graphic notation
+Exec=python3 /path/to/oscilla_toolbar_standalone.py
+Icon=inkscape
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;Graphics;
+Keywords=music;notation;svg;inkscape;oscilla;

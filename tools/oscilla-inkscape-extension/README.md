@@ -8,6 +8,12 @@ OSCILLA is an interactive graphic notation system that uses SVG element IDs to d
 
 ## Features
 
+### ⌨️ Quick Apply (Keyboard Shortcuts)
+**29 individual mini-extensions** that can be bound to keyboard shortcuts for instant, dialog-free cue application:
+- Select element → press shortcut → cue applied instantly
+- Bind in: `Edit → Preferences → Interface → Keyboard` → search "OSCILLA"
+- Suggested shortcuts: `Ctrl+Alt+P` for Pause, `Ctrl+Alt+S` for Scale, etc.
+
 ### 🎛 OSCILLA Cue Editor
 The main extension with comprehensive controls for all OSCILLA cue types:
 
@@ -21,6 +27,16 @@ The main extension with comprehensive controls for all OSCILLA cue types:
 - **OSC**: discrete events and continuous control lanes
 - **Interaction**: buttons, reusable collections
 - **Propagate**: group-level cue application
+
+### 🎛 Standalone Toolbar
+A floating GTK toolbar that runs **outside** of Inkscape's extension system - no dialog popups, no freezing:
+```bash
+python3 oscilla_toolbar_standalone.py
+```
+- Stays open while you work
+- Click buttons to copy cues to clipboard
+- Paste into Inkscape's Object Properties (Ctrl+Shift+O) → ID field
+- Or bind it to a keyboard shortcut / add to your desktop
 
 ### ⚡ OSCILLA Quick Cues
 Preset templates for rapid workflow:
@@ -56,6 +72,24 @@ Document management and debugging tools:
    ```
 
 3. Restart Inkscape
+
+### Quick Apply Extensions (Optional but Recommended)
+
+For keyboard-shortcut workflow, also install the quick-apply extensions:
+
+```bash
+# Generate the quick-apply files
+cd oscilla-inkscape-extension
+python3 generate_quick_apply.py
+
+# Copy to extensions folder
+cp quick-apply/*.inx quick-apply/*.py ~/.config/inkscape/extensions/
+```
+
+Then bind shortcuts in Inkscape:
+1. `Edit → Preferences → Interface → Keyboard`
+2. Search for "OSCILLA"
+3. Assign shortcuts (e.g., `Ctrl+Alt+P` for Pause)
 
 ### Method 2: Using the Install Script
 

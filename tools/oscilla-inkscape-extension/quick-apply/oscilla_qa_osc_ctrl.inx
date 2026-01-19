@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <n>QA: OSC Ctrl Pan</n>
+  <id>org.oscilla.qa.osc_ctrl</id>
+  <effect needs-live-preview="false">
+    <object-type>all</object-type>
+    <effects-menu>
+      <submenu name="OSCILLA">
+        <submenu name="Quick Apply"/>
+      </submenu>
+    </effects-menu>
+  </effect>
+  <script>
+    <command location="inx" interpreter="python">oscilla_qa_osc_ctrl.py</command>
+  </script>
+</inkscape-extension>
