@@ -104,7 +104,7 @@ export function checkSpeedForPosition() {
   // Throttle logging to once per second
   const now = Date.now();
   if (now - lastLogTime > 1000) {
-    console.log(`[speedWatch] pos=${window.playheadX.toFixed(0)}, cue=${cueSpeed}, base=${baseMultiplier}, actual=${correctSpeed.toFixed(2)}, current=${window.speedMultiplier?.toFixed(2)}`);
+    // console.log(`[speedWatch] pos=${window.playheadX.toFixed(0)}, cue=${cueSpeed}, base=${baseMultiplier}, actual=${correctSpeed.toFixed(2)}, current=${window.speedMultiplier?.toFixed(2)}`);
     lastLogTime = now;
   }
   

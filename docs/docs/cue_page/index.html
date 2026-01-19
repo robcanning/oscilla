@@ -12,8 +12,20 @@
 
 <body>
 
-  <div class="docs-container">
-    <nav class="sidebar">
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu">
+      ☰
+    </button>
+
+    <div class="docs-header-title">
+      Oscilla Docs
+    </div>
+  </header>
+
+
+<div class="docs-container">
+  <nav class="sidebar">
 
   <h3>Docs</h3>
   <ul>
@@ -71,15 +83,7 @@
 
 </nav>
 
-
-    <main class="docs-content">
-
-    <nav class="docs-nav">
-      <a id="docs-prev" href="#" aria-label="Previous page">← Prev</a>
-      <a href="/oscilla/docs/">Docs Index</a>
-      <a id="docs-next" href="#" aria-label="Next page">Next →</a>
-    </nav>
-
+  <main class="docs-content">
     <h2>page(...) — navigate pages or scrolling positions in the score</h2>
 <p>Triggers navigation between SVG score pages or scroll positions.<br>
 The cue can load a single page, sequence multiple pages, loop sections,<br>
@@ -190,14 +194,34 @@ page(Pseq([Pseq([page1:2,page2:2],2),page3:4],1))</p>
 <li>All page and mode changes are fully synchronized across connected clients.</li>
 </ul>
 
+  </main>
+</div>
 
-    </main>
-  </div>
 
 <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
 
 
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("sidebar-open");
+    });
+  });
+
 <script>
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("sidebar-open");
+    });
+  });
+
+
 (function () {
   // Collect sidebar links in visual order
   const sidebar = document.querySelector(".sidebar");

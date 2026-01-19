@@ -12,8 +12,20 @@
 
 <body>
 
-  <div class="docs-container">
-    <nav class="sidebar">
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu">
+      ☰
+    </button>
+
+    <div class="docs-header-title">
+      Oscilla Docs
+    </div>
+  </header>
+
+
+<div class="docs-container">
+  <nav class="sidebar">
 
   <h3>Docs</h3>
   <ul>
@@ -71,15 +83,7 @@
 
 </nav>
 
-
-    <main class="docs-content">
-
-    <nav class="docs-nav">
-      <a id="docs-prev" href="#" aria-label="Previous page">← Prev</a>
-      <a href="/oscilla/docs/">Docs Index</a>
-      <a id="docs-next" href="#" aria-label="Next page">Next →</a>
-    </nav>
-
+  <main class="docs-content">
     <h1>propagate() — Group-Level Parameter Propagation</h1>
 <p><code>propagate(...)</code> is a pre-parser macro that expands a cue or animation template across all direct children of an SVG <code>&lt;g&gt;</code> element. Each child receives a unique instance of the template with independently evaluated parameters.</p>
 <hr>
@@ -202,14 +206,34 @@ propagate(svgElement);
 </ul>
 <hr>
 
+  </main>
+</div>
 
-    </main>
-  </div>
 
 <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
 
 
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("sidebar-open");
+    });
+  });
+
 <script>
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("sidebar-open");
+    });
+  });
+
+
 (function () {
   // Collect sidebar links in visual order
   const sidebar = document.querySelector(".sidebar");

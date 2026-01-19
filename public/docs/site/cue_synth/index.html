@@ -12,8 +12,20 @@
 
 <body>
 
-  <div class="docs-container">
-    <nav class="sidebar">
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu">
+      ☰
+    </button>
+
+    <div class="docs-header-title">
+      Oscilla Docs
+    </div>
+  </header>
+
+
+<div class="docs-container">
+  <nav class="sidebar">
 
   <h3>Docs</h3>
   <ul>
@@ -71,15 +83,7 @@
 
 </nav>
 
-
-    <main class="docs-content">
-
-    <nav class="docs-nav">
-      <a id="docs-prev" href="#" aria-label="Previous page">← Prev</a>
-      <a href="/oscilla/docs/">Docs Index</a>
-      <a id="docs-next" href="#" aria-label="Next page">Next →</a>
-    </nav>
-
+  <main class="docs-content">
     <h1><code>synth()</code> — Web Audio Synth Cue</h1>
 <p>The <code>synth()</code> cue creates a lightweight Web Audio sound source inside Oscilla.
 It is intended for <strong>reference tones, drones, textures, chords, and simple patterned sound processes</strong>, integrated directly into the score timeline.</p>
@@ -290,14 +294,34 @@ notch
 <h2>Summary</h2>
 <p>The <code>synth()</code> cue provides a bounded, score-aligned sound source suitable for reference tones, drones, chords, and simple patterned textures. All behaviour is deterministic and cue-scoped, and integrates directly with Oscilla’s timing and animation model.</p>
 
+  </main>
+</div>
 
-    </main>
-  </div>
 
 <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
 
 
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("sidebar-open");
+    });
+  });
+
 <script>
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("sidebar-open");
+    });
+  });
+
+
 (function () {
   // Collect sidebar links in visual order
   const sidebar = document.querySelector(".sidebar");

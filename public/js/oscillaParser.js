@@ -670,37 +670,54 @@ export class CueParser extends CstParser {
     // ------------------------------------------------------------
     // cueSpeedTop (grammar) — supports speed(3) and keyed params
     // ------------------------------------------------------------
-    $.RULE("cueSpeedTop", () => {
-      $.CONSUME(Identifier, { LABEL: "speedFn" });
-      $.CONSUME(LParen);
+   $.RULE("cueSpeedTop", () => {
+  $.CONSUME(Identifier, { LABEL: "speedFn" });
+  $.CONSUME(LParen);
 
-      $.OPTION(() => {
-        $.OR([
-          {
-            ALT: () => {
-              $.CONSUME(NumberLiteral, { LABEL: "shorthand" });
-              $.OPTION1(() => {
-                $.CONSUME(Comma);
-                $.AT_LEAST_ONE_SEP({
-                  SEP: Comma,
-                  DEF: () => $.SUBRULE($.genericParam)
-                });
-              });
-            }
-          },
-          {
-            ALT: () => {
-              $.AT_LEAST_ONE_SEP1({
-                SEP: Comma,
-                DEF: () => $.SUBRULE1($.genericParam)
-              });
-            }
-          }
-        ]);
-      });
+  $.OPTION(() => {
+    $.OR([
+      // Case 1: String literal first (for ui("#selector", ...))
+      {
+        GATE: () => $.LA(1).tokenType === StringLiteral,
+        ALT: () => {
+          $.CONSUME(StringLiteral, { LABEL: "selectorArg" });
+          $.OPTION1(() => {
+            $.CONSUME(Comma);
+            $.AT_LEAST_ONE_SEP({
+              SEP: Comma,
+              DEF: () => $.SUBRULE($.genericParam)
+            });
+          });
+        }
+      },
+      // Case 2: Number shorthand (speed(3))
+      {
+        GATE: () => $.LA(1).tokenType === NumberLiteral,
+        ALT: () => {
+          $.CONSUME(NumberLiteral, { LABEL: "shorthand" });
+          $.OPTION2(() => {
+            $.CONSUME1(Comma);
+            $.AT_LEAST_ONE_SEP1({
+              SEP: Comma,
+              DEF: () => $.SUBRULE1($.genericParam)
+            });
+          });
+        }
+      },
+      // Case 3: Key-value pairs only
+      {
+        ALT: () => {
+          $.AT_LEAST_ONE_SEP2({
+            SEP: Comma,
+            DEF: () => $.SUBRULE2($.genericParam)
+          });
+        }
+      }
+    ]);
+  });
 
-      $.CONSUME(RParen);
-    });
+  $.CONSUME(RParen);
+});
 
     $.RULE("cueNavTop", () => {
       $.CONSUME(Nav);
@@ -889,11 +906,12 @@ export class CueParser extends CstParser {
         { ALT: () => $.SUBRULE($.cuePauseTop) },
 
         {
-          GATE: () =>
-            $.LA(1).tokenType === Identifier &&
-            $.LA(1).image === "speed",
-          ALT: () => $.SUBRULE($.cueSpeedTop)
-        },
+
+  GATE: () =>
+    $.LA(1).tokenType === Identifier &&
+    ["speed", "ui"].includes($.LA(1).image),
+  ALT: () => $.SUBRULE($.cueSpeedTop)
+},
 
         { ALT: () => $.SUBRULE($.cueStopTop) },
         { ALT: () => $.SUBRULE($.cueButtonTop) },
@@ -1075,6 +1093,71 @@ function extractObjectLiteral(objNode) {
 // ============================================================================
 
 export function cstToAst(cst) {
+
+ console.log("[cstToAst] ENTER, cst.name:", cst.name);
+  console.log("[cstToAst] cst.children:", JSON.stringify(cst.children, null, 2));
+// ============================================================================
+// FIXED: ui() cstToAst extraction
+// ============================================================================
+// Replace your existing ui() block in cstToAst (around line 1086) with this:
+// ============================================================================
+
+// ------------------------------------------------------------
+// ui(...) — UI / CSS control cue
+// ------------------------------------------------------------
+// First, extract the actual cueSpeedTop node (handle both direct and nested)
+
+
+if (speedNode && speedNode.children?.speedFn?.[0]?.image === "ui") {
+  const args = [];
+  const ch = speedNode.children;
+  
+  // ✅ Extract selector from selectorArg (StringLiteral first argument)
+  const selectorToken = ch.selectorArg?.[0];
+  if (selectorToken) {
+    const selectorValue = selectorToken.image.replace(/^["']|["']$/g, "");
+    args.push({ type: "selector", value: selectorValue });
+    console.log("[cstToAst:ui] Found selector:", selectorValue);
+  }
+  
+  // ✅ Extract key:value params from genericParam array
+  const params = ch.genericParam || [];
+  for (const p of params) {
+    const key = p.children.key?.[0]?.image;
+    
+    // Get the raw value - it's stored directly as a token in .value
+    const valToken = p.children.value?.[0];
+    let raw = valToken?.image;
+    
+    if (!key || raw === undefined) continue;
+
+    // Parse the value
+    let value;
+    if (raw === "true") {
+      value = true;
+    } else if (raw === "false") {
+      value = false;
+    } else if (!isNaN(raw) && raw !== "") {
+      value = Number(raw);
+    } else {
+      value = raw.replace(/^["']|["']$/g, "");
+    }
+
+    args.push({ type: key, value });
+    console.log(`[cstToAst:ui] Found param: ${key} = ${value}`);
+  }
+
+  console.log("[cstToAst:ui] Final args:", JSON.stringify(args, null, 2));
+
+  return {
+    type: "cueUi",
+    args
+  };
+}
+
+
+
+
   // ============================================================================
   // 🔹 cue:fade(mode:in,dur:2,from:0,to:1)
   // ============================================================================
@@ -1435,6 +1518,13 @@ export function cstToAst(cst) {
 
     return { type: "cueMetronome", args };
   }
+
+
+
+
+
+
+
 
   // ------------------------------------------------------------
   // cue:speed(...)  CST → AST

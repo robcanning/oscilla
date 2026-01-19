@@ -65,6 +65,7 @@ import { stopAllCueTexts } from "./oscillaText.js";
 import { handleOscCue } from "./oscillaOSC.js";
 import { handleOscCtrlCue } from "./oscillaOscCtrl.js";
 import { handleStopCue } from "./oscillaStop.js";
+import { handleUICue } from "./oscillaUI.js";
 
 // import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
 
@@ -288,6 +289,11 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
   // ---------------------------
   switch (ast.type) {
 
+  case "cueUi":
+    console.log("[AST]", ast);
+
+    return handleUICue(ast);
+
     // Animation handlers
     case "cueScale": {
       handleScaleCue(ast, cueElement, { fromCueTrigger: true });
@@ -444,7 +450,7 @@ function splitCueId(id) {
     .map(s => s.endsWith(")") ? s : s + ")");
 }
 
-const CUE_PREFIX_RE = /^(?:cue:)?(oscCtrl|osc|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|audioPool|audioImpulse|synth|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;
+const CUE_PREFIX_RE = /^(?:cue:)?(oscCtrl|osc|ui|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|audioPool|audioImpulse|synth|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;
 
 /**
  * assignCues(svgRoot)
@@ -825,97 +831,12 @@ window.resetCueEdgeTracking = function () {
 
 
 
-// export function parseCueLegacy(cueId) {
-//   // Extract cue type (e.g. cuePage, cueAudio, etc.)
-//   const typeMatch = cueId.match(/^([a-zA-Z][a-zA-Z0-9]*)/);
-//   const type = typeMatch ? typeMatch[1] : null;
-//   if (!type) return { type: cueId, cueParams: {}, cleanedId: cueId };
-
-//   const cueParams = {};
-//   let rest = cueId.slice(type.length);
-
-//   // --- 🧠 Extract first parenthetical block safely (choice)
-//   if (rest.startsWith("(")) {
-//     let depth = 0;
-//     let endIndex = -1;
-//     for (let i = 0; i < rest.length; i++) {
-//       const ch = rest[i];
-//       if (ch === "(") depth++;
-//       else if (ch === ")") {
-//         depth--;
-//         if (depth === 0) {
-//           endIndex = i;
-//           break;
-//         }
-//       }
-//     }
-
-//     if (endIndex !== -1) {
-//       const inner = rest.slice(1, endIndex); // everything between ( ... )
-//       cueParams.choice = isNaN(inner) ? inner.trim() : parseFloat(inner);
-//       rest = rest.slice(endIndex + 1); // ✅ keep suffix intact (e.g. _wait(20)_next(page3))
-//     }
-//   }
-
-//   // --- ✅ Parse all suffixes, multiline-safe
-//   const regex = /_([a-zA-Z0-9]+)\(([\s\S]*?)\)/g;
-//   let match;
-//   while ((match = regex.exec(rest)) !== null) {
-//     const [, key, value] = match;
-
-//     if (key === "style") {
-//       const rawStyle = match[2];
-//       const kvRegex = /([\w-]+)\s*:\s*(("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|rgba?\([^)]*\)|[^,]+))/g;
-//       const obj = {};
-//       let m;
-//       while ((m = kvRegex.exec(rawStyle)) !== null) {
-//         const kRaw = m[1].trim().toLowerCase();
-//         let vRaw = m[2].trim().replace(/^["']|["']$/g, "");
-//         if (!/^rgba?\(/i.test(vRaw) && !isNaN(vRaw) && vRaw !== "") vRaw = parseFloat(vRaw);
-//         obj[kRaw] = vRaw;
-//       }
-//       cueParams.style = obj;
-//     } else {
-//       // 🔧 Handle numbers and strings
-//       cueParams[key] = isNaN(value) ? value.trim() : parseFloat(value);
-//     }
-//   }
-
-//   return { type, cueParams, cleanedId: cueId };
-// }
-
-
-// function parseKeyValueParams(str, cueParams) {
-//   const regex = /_([a-zA-Z0-9]+)\(([^)]+)\)/g;
-//   let m;
-//   while ((m = regex.exec(str)) !== null) {
-//     const [, key, value] = m;
-//     cueParams[key] = isNaN(value) ? value : parseFloat(value);
-//   }
-// }
-
-
 if (window.triggeredCues)
   window.triggeredCues.clear();
 window._cueInsideState?.clear();
 
 
 
-
-
-
-
-
-// /**
-//  * waitForCueCompletion()
-//  * ----------------------
-//  * Future placeholder — currently just a delay fallback.
-//  * Later this will listen for cue-specific completion events.
-//  */
-// async function waitForCueCompletion(ref) {
-//   // TODO: implement real completion tracking
-//   await delay(1000); // fallback 1s per cue
-// }
 
 
 
@@ -1147,7 +1068,7 @@ export function cancelPendingStartByUid(uid) {
 
 
 //////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////
+
 
 
 
