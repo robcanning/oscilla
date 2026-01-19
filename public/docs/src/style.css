@@ -2,6 +2,11 @@
    Color variables (easy to tweak later)
    ========================================================= */
 
+   body, html {  
+    padding: 0;
+    margin: 0;
+  }
+
 :root {
   --bg-main: #0d1117;          /* page background */
   --bg-panel: #161b22;         /* sidebar / code blocks */
@@ -28,7 +33,8 @@
   grid-template-columns: 220px 1fr;
   gap: 1.2rem;
   align-items: start;
-
+  padding: 0;
+  margin: 0;
   background-color: var(--bg-main);
   color: var(--text-main);
 }
