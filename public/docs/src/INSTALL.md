@@ -2,78 +2,129 @@
 title: INSTALL
 layout: docs_layout.njk
 ---
+
 # Oscilla — Installation Guide
 
-Oscilla is a browser-based, Node.js-powered system for creating and performing synchronized graphic scores.  
-It runs locally on your computer or over your local network, directly in your web browser.
+Oscilla is a browser‑based system for creating and performing synchronized graphic scores.
+It can be run **either as a standalone desktop application** (recommended for most users)
+**or** via **Node.js** for development and advanced workflows.
 
 ---
 
-## Requirements
+## Option 1 — Standalone Application (Recommended)
 
-Before installing Oscilla, make sure the following are installed:
+Standalone builds are available for **Linux**, **macOS (Intel & Apple Silicon)**, and **Windows**.
+
+**No Node.js, npm, or Git required.**
+
+### Download
+
+Download the latest release from:
+
+https://github.com/robcanning/oscilla/releases
+
+Choose the build for your operating system:
+
+- **Linux** — AppImage
+- **macOS** — `.app` (Intel or Apple Silicon)
+- **Windows** — `.exe`
+
+### Run
+
+- **Linux**: Make the AppImage executable and run it
+  ```bash
+  chmod +x Oscilla-*.AppImage
+  ./Oscilla-*.AppImage
+  ```
+
+- **macOS**: Open the `.app`
+  - You may need to right‑click → **Open** the first time
+
+- **Windows**: Double‑click the `.exe`
+
+Oscilla will start its local server automatically and open in your browser.
+
+### Open Oscilla
+
+If it does not open automatically, visit:
+
+```
+http://localhost:8001
+```
+
+### Requirements for Standalone Use
 
 | Tool | Purpose |
-|------|----------|
-| **Node.js + npm** | To run the Oscilla local server |
-| **Git** (optional) | To clone and update the repository (or download a ZIP instead) |
-| **Inkscape** | Required to create and edit SVG-based score projects |
+|------|--------|
+| **Inkscape** | Create and edit SVG‑based score projects |
 | **Modern web browser** | Chrome, Firefox, Safari, or Edge |
 
 ---
 
-## Windows Installation
+## Option 2 — Node.js / npm Installation (Advanced / Development)
+
+This option is intended for:
+- contributors and developers
+- users modifying Oscilla source code
+- custom server integrations
+
+### Requirements
+
+| Tool | Purpose |
+|------|--------|
+| **Node.js + npm** | Run the Oscilla local server |
+| **Inkscape** | Create and edit SVG score projects |
+| **Modern web browser** | View and perform scores |
+| **Git** (optional) | Clone and update the repository |
+
+---
+
+## Windows (Node.js Route)
 
 ### 1. Install Inkscape
-Download and install from:  
-[https://inkscape.org/release/windows/](https://inkscape.org/release/windows/)
 
-### 2. Install Node.js and npm
-Download from:  
-[https://nodejs.org/en/download](https://nodejs.org/en/download)
+https://inkscape.org/release/windows/
 
-Choose the **Windows Installer (.msi)** version.  
-During setup:
-- Check **Add to PATH**
-- Leave default options selected
+### 2. Install Node.js
 
-After installation, open PowerShell and verify:
+https://nodejs.org/en/download
+
+Choose the **Windows Installer (.msi)** and ensure:
+- **Add to PATH** is enabled
+
+Verify:
 ```powershell
 node -v
 npm -v
 ```
 
-### 3. Install Git (optional)
-If you want to use Git for updates, install it from:  
-[https://git-scm.com/download/win](https://git-scm.com/download/win)
+### 3. Get Oscilla
 
-If you prefer not to use Git, skip this step and use the ZIP download option below.
-
-### 4. Get Oscilla
-
-**Option A – Using Git:**
+**Option A — Git**
 ```powershell
 git clone https://github.com/robcanning/oscilla.git
 cd oscilla
 ```
 
-**Option B – Download ZIP:**
-1. Visit [https://github.com/robcanning/oscilla/releases](https://github.com/robcanning/oscilla/releases)
-2. Download the latest **Source code (zip)**
-3. Extract it and open PowerShell inside that folder
+**Option B — ZIP**
+1. Download from https://github.com/robcanning/oscilla/releases
+2. Extract the ZIP
+3. Open PowerShell in the extracted folder
 
-### 5. Install and Run
+### 4. Install & Run
 ```powershell
 npm install
 npm start
 ```
 
-Then open your browser at  
-[http://localhost:8001](http://localhost:8001)
+Open:
+```
+http://localhost:8001
+```
 
 ---
 
-## Linux Installation
+## Linux (Node.js Route)
 
 ### 1. Install Inkscape
 ```bash
@@ -81,125 +132,108 @@ sudo apt update
 sudo apt install inkscape
 ```
 
-### 2. Install Node.js and npm
-To install Node 20.x using NodeSource:
+### 2. Install Node.js (20.x recommended)
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 ```
 
-Verify installation:
+Verify:
 ```bash
 node -v
 npm -v
 ```
 
-### 3. Install Git (optional)
-```bash
-sudo apt install git
-```
-Or skip this and download the ZIP file instead.
+### 3. Get Oscilla
 
-### 4. Get Oscilla
-
-**Option A – Git clone:**
 ```bash
 git clone https://github.com/robcanning/oscilla.git
 cd oscilla
 ```
 
-**Option B – ZIP download:**
-1. Go to [https://github.com/robcanning/oscilla/releases](https://github.com/robcanning/oscilla/releases)
-2. Download the `.zip`
-3. Extract it and open the folder in a terminal
+Or download and extract the ZIP from the releases page.
 
-### 5. Install and Run
+### 4. Install & Run
 ```bash
 npm install
 npm start
 ```
 
-Then visit  
-[http://localhost:8001](http://localhost:8001)
+Open:
+```
+http://localhost:8001
+```
 
 ---
 
-## macOS Installation
+## macOS (Node.js Route)
 
 ### 1. Install Inkscape
-Download and install from:  
-[https://inkscape.org/release/macos/](https://inkscape.org/release/macos/)
 
-After installing, open Inkscape from the **Applications** folder.
+https://inkscape.org/release/macos/
 
-### 2. Install Node.js and npm
-Download the macOS installer (.pkg) from:  
-[https://nodejs.org/en/download](https://nodejs.org/en/download)
+### 2. Install Node.js
 
-Double-click the installer and follow the prompts.
+https://nodejs.org/en/download
 
-To verify installation:
-1. Open **Terminal** (Applications → Utilities → Terminal)
-2. Type:
-   ```bash
-   node -v
-   npm -v
-   ```
+Verify:
+```bash
+node -v
+npm -v
+```
 
-Both should display version numbers.
+### 3. Get Oscilla
 
-### 3. Install Git (optional)
-If you want to use Git, download it from:  
-[https://git-scm.com/download/mac](https://git-scm.com/download/mac)
-
-Alternatively, skip Git and use the ZIP download below.
-
-### 4. Get Oscilla
-
-**Option A – Using Git:**
 ```bash
 git clone https://github.com/robcanning/oscilla.git
 cd oscilla
 ```
 
-**Option B – ZIP file:**
-1. Go to [https://github.com/robcanning/oscilla/releases](https://github.com/robcanning/oscilla/releases)
-2. Download the latest `.zip`
-3. Double-click to extract
-4. Open the **oscilla** folder
+Or download and extract the ZIP from the releases page.
 
-### 5. Install and Run
-1. Open **Terminal**
-2. Drag the extracted folder into the Terminal window and press Enter
-3. Type:
-   ```bash
-   npm install
-   npm start
-   ```
+### 4. Install & Run
+```bash
+npm install
+npm start
+```
 
-Then open  
-[http://localhost:8001](http://localhost:8001)
+Open:
+```
+http://localhost:8001
+```
 
 ---
 
 ## Test the Demo Project
 
-Once Oscilla is running, open this in your browser:
+Once Oscilla is running:
 
 ```
 http://localhost:8001/?project=helper-score
 ```
 
-You should see the demo score titled *helper-score*.
+You should see the demo score **helper‑score**.
+
+---
+
+## Inkscape Extension (Optional)
+
+Oscilla includes an optional **Inkscape extension** to assist with:
+- creating score templates
+- inserting cue elements
+- managing IDs and layers
+
+See the documentation for installation and usage details.
 
 ---
 
 ## Troubleshooting
 
 | Problem | Solution |
-|----------|-----------|
-| `npm: command not found` | Reinstall Node.js using the official installer |
-| `git: command not found` | Install Git or use the ZIP download option |
-| Port 8001 already in use | Close other servers or change the port in `server.js` |
-| Blank screen | Check browser console (`Ctrl+Shift+I`) for missing files |
-| `module not found` | Run `npm install` again inside the `oscilla` folder |
+|--------|----------|
+| App does not start | Ensure port **8001** is free |
+| Browser shows blank screen | Check browser console for errors |
+| `npm` not found | Reinstall Node.js |
+| Inkscape SVG not loading | Ensure SVG is saved as **Plain SVG** |
+| Port conflict | Change port in `server.js` |
+
