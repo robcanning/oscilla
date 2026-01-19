@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-  <n>QA: Fade Out</n>
-  <id>org.oscilla.qa.fade_out</id>
+  <name>OSCILLA Smart Cues Editor</name>
+  <id>org.oscilla.smart_cues_launcher</id>
   <effect needs-live-preview="false">
     <object-type>all</object-type>
     <effects-menu>
-      <submenu name="OSCILLA">
-        <submenu name="Quick Apply"/>
-      </submenu>
+      <submenu name="OSCILLA"/>
     </effects-menu>
   </effect>
   <script>
-    <command location="inx" interpreter="python">oscilla_qa_fade_out.py</command>
+    <command location="inx" interpreter="python">oscilla_smart_cues_launcher.py</command>
   </script>
 </inkscape-extension>

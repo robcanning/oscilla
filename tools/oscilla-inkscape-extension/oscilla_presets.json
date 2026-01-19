@@ -1,0 +1,197 @@
+{
+  "version": "1.0",
+  "description": "OSCILLA Quick Cues Presets - Edit this file to customize presets",
+  
+  "timing": {
+    "stop": [
+      {"name": "Basic Stop", "params": {}},
+      {"name": "Stop with UID", "params": {"uid": "s1"}},
+      {"name": "Stop then Navigate", "params": {"next": "nav(End)"}}
+    ],
+    "pause": [
+      {"name": "Short Pause (4s)", "params": {"dur": 4}},
+      {"name": "Long Pause (12s)", "params": {"dur": 12}},
+      {"name": "Pause with Countdown", "params": {"dur": 8, "count": true}},
+      {"name": "Pause then Navigate", "params": {"dur": 4, "next": "nav(page2)"}}
+    ],
+    "speed": [
+      {"name": "Half Speed", "params": {"value": 0.5}},
+      {"name": "Double Speed", "params": {"value": 2.0}},
+      {"name": "Gradual Slowdown", "params": {"value": 0.5, "dur": 3}},
+      {"name": "Speed Ramp Up", "params": {"value": 1.5, "dur": 2, "ease": "linear"}},
+      {"name": "Increment Speed", "params": {"add": 0.2}}
+    ],
+    "nav": [
+      {"name": "Go to Page", "params": {"target": "page1"}},
+      {"name": "Scroll to Marker", "params": {"target": "scroll@A"}},
+      {"name": "Scroll Paused", "params": {"target": "scrollPaused@B"}},
+      {"name": "Jump to Coda", "params": {"target": "Coda"}},
+      {"name": "Repeat Section", "params": {"target": "scroll@A", "repeats": 3}}
+    ],
+    "page": [
+      {"name": "Single Page", "params": {"name": "page1"}},
+      {"name": "Sequential Pages", "params": {"pattern": "Pseq", "pages": "page1,page2,page3", "repeats": 2}},
+      {"name": "Random Pages", "params": {"pattern": "Prand", "pages": "pageA,pageB,pageC", "repeats": 4}},
+      {"name": "Choose Page", "params": {"pattern": "Pchoose", "pages": "pageA,pageB"}}
+    ],
+    "stopwatch": [
+      {"name": "New Timer", "params": {"source": "new", "trig": "auto"}},
+      {"name": "Main Timer", "params": {"source": "main", "scroll": true}},
+      {"name": "Held Timer", "params": {"source": "new", "hold": 6, "offsetX": -40}}
+    ],
+    "metro": [
+      {"name": "120 BPM Basic", "params": {"bpm": 120}},
+      {"name": "90 BPM Visual", "params": {"bpm": 90, "visual": "hex"}},
+      {"name": "Fast with Audio", "params": {"bpm": 140, "visual": "circle", "audio": true}},
+      {"name": "Scrolling Metro", "params": {"bpm": 120, "position": "scrolling", "trig": "playhead"}},
+      {"name": "Custom Color", "params": {"bpm": 110, "beats": 3, "colour": "#3f9", "audio": true, "osc": true}}
+    ]
+  },
+  
+  "animation": {
+    "scale": [
+      {"name": "Gentle Pulse", "params": {"values": "1,1.2,1", "dur": 2}},
+      {"name": "Strong Pulse", "params": {"values": "1,1.5,1", "dur": 1.5}},
+      {"name": "Breathe Loop", "params": {"min": 1, "max": 1.3, "dur": 3, "loop": 0}},
+      {"name": "Delayed Start", "params": {"values": "1,1.4,1", "dur": 2, "tdelay": 3}},
+      {"name": "With OSC Output", "params": {"values": "1,1.5,1", "dur": 12, "mode": "loop", "osc": true, "oscaddr": "scale/spat"}}
+    ],
+    "scaleXY": [
+      {"name": "Stretch Horizontal", "params": {"x": "1,1.5", "y": "1,0.8", "dur": 2}},
+      {"name": "Stretch Vertical", "params": {"x": "1,0.8", "y": "1,1.5", "dur": 2}},
+      {"name": "Squash & Stretch", "params": {"x": "1,1.3", "y": "1,0.6", "dur": 1}}
+    ],
+    "rotate": [
+      {"name": "Spin Clockwise", "params": {"dir": 1, "dur": 2}},
+      {"name": "Spin Counter-CW", "params": {"dir": -1, "dur": 2}},
+      {"name": "Swing 3-Point", "params": {"values": "0,120,240", "dur": 3}},
+      {"name": "Pendulum", "params": {"values": "0,45,-45,0", "dur": 2, "mode": "alt"}},
+      {"name": "Random Shuffle", "params": {"values": "0,90,180,270", "dur": 1, "mode": "alt"}}
+    ],
+    "o2p": [
+      {"name": "Basic Orbit", "params": {"path": "orbitPath", "dur": 8}},
+      {"name": "Hidden Start", "params": {"path": "orbitA", "dur": 8, "tdelay": 3, "prestate": "hide"}},
+      {"name": "Aligned Rotation", "params": {"path": "spiral", "dur": 6, "rotate": "aligned", "rotoffset": -90}},
+      {"name": "Spinning Along Path", "params": {"path": "ring", "dur": 10, "rotate": "spin", "rotspeed": 2, "rotdir": -1}},
+      {"name": "Partial Path", "params": {"path": "arc", "dur": 4, "start": 0.2, "end": 0.8}},
+      {"name": "Alternating", "params": {"path": "line", "dur": 3, "mode": "alt"}}
+    ]
+  },
+  
+  "visual": {
+    "color": [
+      {"name": "Red to Green", "params": {"vals": "#f00,#0f0", "dur": 2}},
+      {"name": "Rainbow Cycle", "params": {"vals": "#f00,#ff0,#0f0,#0ff,#00f,#f0f", "dur": 6}},
+      {"name": "Warm Pulse", "params": {"vals": "#f80,#fc0,#f80", "dur": 1.5, "mode": "loop"}},
+      {"name": "Cool Pulse", "params": {"vals": "#08f,#0cf,#08f", "dur": 1.5, "mode": "loop"}},
+      {"name": "Grayscale", "params": {"vals": "#000,#444,#888,#ccc,#fff", "dur": 4}}
+    ],
+    "fade": [
+      {"name": "Fade In", "params": {"mode": "in", "dur": 2}},
+      {"name": "Fade Out", "params": {"mode": "out", "dur": 2}},
+      {"name": "Slow Fade In", "params": {"mode": "in", "dur": 5, "from": 0, "to": 1}},
+      {"name": "Pulse Opacity", "params": {"mode": "pulse", "dur": 3, "from": 0.2, "to": 1}},
+      {"name": "Fade to Target", "params": {"mode": "in", "dur": 2, "target": "titleText"}}
+    ],
+    "text": [
+      {"name": "From File (Lines)", "params": {"src": "poem.txt", "dur": 3}},
+      {"name": "Random Order", "params": {"src": "words.txt", "order": "rnd", "dur": 2}},
+      {"name": "Word by Word", "params": {"src": "sentence.txt", "mode": "word", "dur": 0.5}},
+      {"name": "Character Reveal", "params": {"src": "title.txt", "mode": "char", "dur": 0.1, "gap": 0.05}},
+      {"name": "Inline String", "params": {"srctype": "string", "src": "Hello World", "mode": "char", "dur": 0.2}},
+      {"name": "Multi-line Slots", "params": {"src": "lines.txt", "yslots": 3, "yslotmode": "sequence", "dur": 2}}
+    ]
+  },
+  
+  "audio": {
+    "audio": [
+      {"name": "One-shot", "params": {"src": "sound.wav"}},
+      {"name": "Looping", "params": {"src": "ambient.wav", "loop": 0}},
+      {"name": "Quiet Loop", "params": {"src": "bg.wav", "loop": 0, "amp": 0.5}},
+      {"name": "Random Pan", "params": {"src": "hit.wav", "pan": "rand(-1,1)"}},
+      {"name": "Random Pitch", "params": {"src": "note.wav", "pitch": "rand(0.8,1.3)"}},
+      {"name": "With Fade", "params": {"src": "swell.wav", "fade": 2, "fadeOut": 1}}
+    ],
+    "audioPool": [
+      {"name": "Sequential", "params": {"path": "sfx"}},
+      {"name": "Random Selection", "params": {"path": "sfx", "mode": "rand"}},
+      {"name": "Randomized Params", "params": {"path": "perc", "mode": "rand", "amp": "rand(0.4,0.9)", "pan": "rand(-0.7,0.7)", "pitch": "rand(0.5,2)"}}
+    ],
+    "audioImpulse": [
+      {"name": "Fast Clicks", "params": {"path": "clicks", "rate": 30}},
+      {"name": "Slow Textures", "params": {"path": "textures", "rate": 6}},
+      {"name": "With Jitter", "params": {"path": "perc", "rate": 12, "jitter": 0.8}},
+      {"name": "Randomized", "params": {"path": "metal", "rate": 15, "pan": "rand(-1,1)", "pitch": "rand(0.7,1.4)", "amp": "rand(0.2,0.6)"}}
+    ],
+    "video": [
+      {"name": "Fullscreen", "params": {"file": "intro.mp4", "size": "fs"}},
+      {"name": "Fixed Size", "params": {"file": "clip.webm", "size": 500}},
+      {"name": "With In/Out Points", "params": {"file": "long.mp4", "size": 800, "in": 4, "out": 12}},
+      {"name": "Semi-transparent Loop", "params": {"file": "overlay.webm", "size": 400, "opacity": 0.5, "loop": 0}},
+      {"name": "Fast Playback", "params": {"file": "timelapse.mp4", "size": "fs", "speed": 3}}
+    ]
+  },
+  
+  "synth": {
+    "synth": [
+      {"name": "Simple Sine", "params": {"wave": "sine", "freq": 440}},
+      {"name": "Bass Tone", "params": {"wave": "sine", "freq": 80}},
+      {"name": "Noise", "params": {"wave": "noise"}},
+      {"name": "Square Wave", "params": {"wave": "square", "freq": 220}},
+      {"name": "With Envelope", "params": {"wave": "sine", "freq": 330, "env": "{a:0.5,r:1}"}},
+      {"name": "Chord", "params": {"wave": "sine", "freq": "[440,550,660]"}},
+      {"name": "Fixed Duration", "params": {"wave": "triangle", "freq": 440, "dur": 5}},
+      {"name": "With Filter", "params": {"wave": "sawtooth", "freq": 110, "filter_type": "lp", "filter_freq": 800}},
+      {"name": "OSC Output", "params": {"wave": "sine", "freq": 440, "osc": true, "oscAddr": "/synth/main"}}
+    ],
+    "synthStop": [
+      {"name": "Quick Stop", "params": {"uid": "s1", "rel": 0.1}},
+      {"name": "Slow Release", "params": {"uid": "s1", "rel": 2}}
+    ]
+  },
+  
+  "osc": {
+    "osc": [
+      {"name": "Pitch from Y", "params": {"addr": "voice1", "pitch": "y"}},
+      {"name": "Fixed Hz", "params": {"addr": "voice1", "pitch_type": "hz", "pitch_val": 440}},
+      {"name": "MIDI Note", "params": {"addr": "voice1", "pitch_type": "midi", "pitch_val": 60}},
+      {"name": "Scale Degree", "params": {"addr": "voice1", "pitch_type": "deg", "pitch_val": "2,4"}}
+    ],
+    "oscCtrl": [
+      {"name": "Pan Control", "params": {"addr": "/fx/pan", "min": -1, "max": 1}},
+      {"name": "Filter Freq", "params": {"addr": "/fx/filter/freq", "min": 60, "max": 2000}},
+      {"name": "Volume", "params": {"addr": "/mix/vol", "min": 0, "max": 1}},
+      {"name": "Continuous Mode", "params": {"addr": "/ctrl/xy", "min": 0, "max": 1, "mode": "continuous"}}
+    ]
+  },
+  
+  "interaction": {
+    "button": [
+      {"name": "Navigate Button", "params": {"trigger": "nav(page1)"}},
+      {"name": "Pause Button", "params": {"trigger": "pause(dur:8,count:true)"}},
+      {"name": "Scroll Button", "params": {"trigger": "nav(scroll@A)"}},
+      {"name": "Styled Button", "params": {"trigger": "nav(home)", "label": "Home", "size": "200x50", "font": "Arial", "fontsize": 18}}
+    ],
+    "reuse": [
+      {"name": "Define Menu", "params": {"name": "mainMenu"}},
+      {"name": "Define Controls", "params": {"name": "audioControls"}}
+    ],
+    "use": [
+      {"name": "Use Menu", "params": {"name": "mainMenu"}},
+      {"name": "Use Controls", "params": {"name": "audioControls"}}
+    ]
+  },
+  
+  "propagate": {
+    "propagate_osc": [
+      {"name": "Y-Pitch to All", "params": {"addr": "voice", "pitch": "y", "env": "size", "trig": "playhead"}},
+      {"name": "Random Degrees", "params": {"addr": "voice", "pitch": "deg", "randomize": true}}
+    ],
+    "propagate_scale": [
+      {"name": "Random Pulses", "params": {"randomize": true, "min": 0.8, "max": 1.4, "dur_min": 0.5, "dur_max": 2}}
+    ],
+    "propagate_rotate": [
+      {"name": "Random Spins", "params": {"randomize": true, "dur_min": 1, "dur_max": 4}}
+    ]
+  }
+}

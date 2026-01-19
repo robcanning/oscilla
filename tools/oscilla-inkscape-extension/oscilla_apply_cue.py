@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 OSCILLA Apply Cue - Reads cue from temp file and applies to selection.
-This is called by the standalone toolbar via Inkscape's action system.
+This is called by the Smart Cues editor via Inkscape's action system.
 
 The workflow:
-1. Standalone toolbar writes cue to /tmp/oscilla_cue.txt
-2. User triggers this extension via keyboard shortcut
+1. Smart Cues editor writes cue to /tmp/oscilla_cue.txt
+2. User triggers this extension via keyboard shortcut (e.g., Ctrl+Shift+Q)
 3. Extension reads the file and applies the cue
 
-Bind this to a shortcut like Ctrl+Shift+Q for quick application.
+Supports append mode: if cue starts with "APPEND:", it appends to existing ID.
 """
 
 import inkex
@@ -23,7 +23,7 @@ class OscillaApplyCue(inkex.EffectExtension):
     def effect(self):
         # Read cue from temp file
         if not os.path.exists(TEMP_FILE):
-            inkex.errormsg("No cue queued. Use the OSCILLA toolbar first.")
+            inkex.errormsg("No cue queued. Use the OSCILLA Smart Cues editor first.")
             return
         
         try:
@@ -37,14 +37,29 @@ class OscillaApplyCue(inkex.EffectExtension):
             inkex.errormsg("Empty cue file.")
             return
         
+        # Check for append mode
+        append_mode = False
+        if cue.startswith("APPEND:"):
+            append_mode = True
+            cue = cue[7:]  # Remove "APPEND:" prefix
+        
         # Apply to selection
         if not self.svg.selection:
-            inkex.errormsg("No elements selected.")
+            inkex.errormsg("No elements selected in Inkscape.")
             return
         
         count = 0
         for elem in self.svg.selection.values():
-            elem.set("id", cue)
+            if append_mode:
+                current_id = elem.get("id", "")
+                if current_id:
+                    new_id = f"{current_id} {cue}"
+                else:
+                    new_id = cue
+            else:
+                new_id = cue
+            
+            elem.set("id", new_id)
             count += 1
         
         # Clear the temp file
