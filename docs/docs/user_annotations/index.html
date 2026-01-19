@@ -3,7 +3,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>peformer_annotations</title>
+  <title>performer_annotations</title>
 
   <link rel="stylesheet" href="/oscilla/docs/style.css">
 </head>
@@ -95,7 +95,7 @@
 
     <h1>Performer Annotations</h1>
 <h2>Overview</h2>
-<p>User Annotations allow performers to add <strong>personal notes directly onto the score view</strong> while working with Oscilla.</p>
+<p>Performer Annotations allow performers to add <strong>personal notes directly onto the score view</strong> while working with Oscilla.</p>
 <p>Annotations are intended for:</p>
 <ul>
 <li>reminders</li>
@@ -106,41 +106,45 @@
 </ul>
 <p>Annotations <strong>do not change the score</strong> and <strong>do not affect playback or cues</strong>.<br>
 They exist as a separate, optional layer that can be shown or hidden at any time.</p>
+<blockquote>
+<p><strong>Note:</strong> Because annotations can be placed freely in time and space, Oscilla can be used in a <strong>minimal, annotation-only mode</strong> (without an SVG score). In this case, annotations function as a very lightweight textual score. This mode is intentionally limited, but can be useful for sketches, instructions, or rehearsal frameworks.</p>
+</blockquote>
 <hr>
 <h2>Entering Annotation Mode</h2>
 <ol>
 <li>Click the <strong>pen icon</strong> in the toolbar</li>
 <li>The cursor changes to indicate annotation mode</li>
-<li>Click anywhere on the score to add a new annotation</li>
+<li>Click anywhere on the score area to add a new annotation</li>
 </ol>
 <p>Annotation mode automatically exits after saving a note.</p>
 <hr>
 <h2>Creating an Annotation</h2>
-<p>When you click the score in annotation mode:</p>
+<p>When you click the score area in annotation mode:</p>
 <ol>
 <li>A text editor appears</li>
 <li>Enter your note (multi-line text is supported)</li>
 <li>Choose whether the note is:
 <ul>
 <li><strong>Local</strong> — visible only on your device</li>
-<li><strong>Shared</strong> — visible to other connected clients // TODO</li>
+<li><strong>Shared</strong> — visible to other connected clients</li>
 </ul>
 </li>
 <li>Click <strong>Save</strong></li>
 </ol>
-<p>The annotation appears on the score as:</p>
+<p>The annotation appears as:</p>
 <ul>
 <li>a small dot (anchor)</li>
-<li>a text label showing the note</li>
+<li>a text label displaying the note</li>
 </ul>
 <hr>
 <h2>Editing an Annotation</h2>
 <ul>
-<li>Click <strong>either the dot or the text</strong> to open the editor</li>
+<li>Click <strong>either the dot or the text label</strong> to open the editor</li>
 <li>You can:
 <ul>
 <li>edit the text</li>
 <li>change Local / Shared status</li>
+<li>adjust font size</li>
 <li>delete the annotation</li>
 </ul>
 </li>
@@ -154,13 +158,6 @@ They exist as a separate, optional layer that can be shown or hidden at any time
 <li>The position is saved automatically</li>
 </ul>
 <p>The dot remains visually tied to the text.</p>
-<hr>
-<h2>Deleting an Annotation</h2>
-<ol>
-<li>Click the annotation to open the editor</li>
-<li>Click <strong>Delete</strong></li>
-<li>The annotation is removed immediately</li>
-</ol>
 <hr>
 <h2>Keyboard Behaviour While Editing</h2>
 <p>While typing in the annotation editor:</p>
@@ -181,7 +178,7 @@ They exist as a separate, optional layer that can be shown or hidden at any time
 <h3>Shared</h3>
 <ul>
 <li>Broadcast to other connected clients</li>
-<li>Read-only for others</li>
+<li>Read-only for other performers</li>
 <li>Useful for ensemble coordination</li>
 </ul>
 <p>Shared annotations do not override local ones.</p>
@@ -219,7 +216,7 @@ They exist as a separate, optional layer that can be shown or hidden at any time
 <p>This feature is evolving. Possible future additions include:</p>
 <ul>
 <li>filtering annotations by author</li>
-<li>export / import</li>
+<li>export / import of annotation files</li>
 <li>visibility modes (rehearsal vs performance)</li>
 </ul>
 
