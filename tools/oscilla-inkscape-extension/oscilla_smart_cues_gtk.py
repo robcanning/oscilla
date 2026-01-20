@@ -350,6 +350,7 @@ class OscillaSmartCuesWindow(Gtk.Window):
         super().__init__(title="OSCILLA Smart Cues")
         self.set_default_size(400, 600)
         self.set_border_width(10)
+        self.set_keep_above(True)  # Stay on top of other windows
         
         # Current state
         self.current_category = "timing"
@@ -437,6 +438,10 @@ class OscillaSmartCuesWindow(Gtk.Window):
         # Buttons
         btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         btn_box.set_halign(Gtk.Align.END)
+        
+        save_preset_btn = Gtk.Button(label="Save Preset")
+        save_preset_btn.connect("clicked", self.on_save_preset_clicked)
+        btn_box.pack_start(save_preset_btn, False, False, 0)
         
         copy_btn = Gtk.Button(label="Copy to Clipboard")
         copy_btn.connect("clicked", self.on_copy_clicked)
@@ -852,6 +857,88 @@ class OscillaSmartCuesWindow(Gtk.Window):
                 pass
         
         return False
+    
+    def on_save_preset_clicked(self, button):
+        """Save current parameters as a new preset."""
+        # Create dialog to get preset name
+        dialog = Gtk.Dialog(
+            title="Save Preset",
+            parent=self,
+            flags=0
+        )
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_SAVE, Gtk.ResponseType.OK
+        )
+        dialog.set_default_size(300, 100)
+        
+        box = dialog.get_content_area()
+        box.set_spacing(10)
+        box.set_margin_start(10)
+        box.set_margin_end(10)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+        
+        label = Gtk.Label(label="Preset name:")
+        label.set_xalign(0)
+        box.add(label)
+        
+        entry = Gtk.Entry()
+        entry.set_text(f"My {self.current_cue} preset")
+        entry.set_activates_default(True)
+        box.add(entry)
+        
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        dialog.show_all()
+        
+        response = dialog.run()
+        preset_name = entry.get_text().strip()
+        dialog.destroy()
+        
+        if response != Gtk.ResponseType.OK or not preset_name:
+            return
+        
+        # Gather current parameter values
+        params = {}
+        for name, (param, widget) in self.param_widgets.items():
+            value = self.get_param_value(param, widget)
+            # Only save non-default, non-empty values
+            if value != param.default and value != "" and value is not None:
+                if param.widget_type == "check" and not value:
+                    continue
+                params[name] = value
+        
+        # Load existing presets
+        try:
+            with open(PRESETS_FILE, 'r') as f:
+                presets = json.load(f)
+        except:
+            presets = {}
+        
+        # Ensure structure exists
+        if self.current_category not in presets:
+            presets[self.current_category] = {}
+        if self.current_cue not in presets[self.current_category]:
+            presets[self.current_category][self.current_cue] = []
+        
+        # Add new preset
+        presets[self.current_category][self.current_cue].append({
+            "name": preset_name,
+            "params": params
+        })
+        
+        # Save back to file
+        try:
+            with open(PRESETS_FILE, 'w') as f:
+                json.dump(presets, f, indent=2)
+            
+            # Refresh preset dropdown
+            self.presets = presets
+            self.populate_preset_combo()
+            
+            self.status_label.set_text(f"Saved preset: {preset_name}")
+        except Exception as e:
+            self.status_label.set_text(f"Error saving preset: {e}")
 
 
 def main():

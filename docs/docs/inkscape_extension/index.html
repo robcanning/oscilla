@@ -86,172 +86,391 @@
 </nav>
 
   <main class="docs-content">
-    <h1>Oscilla Inkscape Extension (Experimental)</h1>
-<blockquote>
-<p><strong>Status:</strong> Experimental / in active development<br>
-<strong>Stability:</strong> Low – interfaces and behaviour may change without notice</p>
-</blockquote>
-<p>This Inkscape extension provides early tooling for working with <strong>Oscilla / OscillaScore</strong> directly inside Inkscape. It is intended to make it easier to <strong>inspect, add, and apply Oscilla cue IDs</strong> while drawing or editing SVG scores.</p>
-<p>At this stage, the goal is simply to make it <strong>possible to try the workflow</strong>, not to provide a polished or complete feature set.</p>
-<figure class="doc-image">
-  <img
-    src="/oscilla/docs/img/oscilla-inkscape-extension.png"
-    alt="Oscilla Inkscape Extension"
-  >
-  <figcaption>Oscilla Inkscape Extension panel</figcaption>
-</figure>
-<hr>
-<h2>What this extension is (for now)</h2>
-<ul>
-<li>A collection of Inkscape extensions (<code>.inx</code> + <code>.py</code>) related to Oscilla</li>
-<li>Adds <strong>Oscilla-related menus and tools</strong> inside Inkscape</li>
-<li>Includes:
-<ul>
-<li>Cue inspector</li>
-<li>Toolbar / quick cue helpers</li>
-<li>Quick-apply cue presets (speed, rotate, scale, audio, nav, etc.)</li>
-</ul>
-</li>
-</ul>
-<p>Think of it as a <strong>bridge between drawing and cue authoring</strong>, not a replacement for manual editing or understanding the Oscilla cue system.</p>
-<hr>
-<h2>What this extension is <em>not</em></h2>
-<ul>
-<li>Not stable</li>
-<li>Not a full GUI for Oscilla</li>
-<li>Not guaranteed to match current Oscilla runtime behaviour</li>
-<li>Not yet documented feature-by-feature</li>
-</ul>
-<p>If something behaves oddly, that is expected at this stage.</p>
-<hr>
-<h2>Requirements</h2>
-<ul>
-<li>Inkscape <strong>1.2 or newer</strong> (tested primarily on Linux)</li>
-<li>Python available to Inkscape (standard Inkscape setup)</li>
-</ul>
-<hr>
+    <h1>OSCILLA Inkscape Extension</h1>
+<p>A smart cue editor for creating OSCILLA interactive graphic notation within Inkscape.</p>
+<h2>Overview</h2>
+<p>The OSCILLA Inkscape Extension provides a graphical interface for applying OSCILLA DSL cues to SVG elements. Instead of manually typing cue syntax into element IDs, you select cue types from organized categories, configure parameters using appropriate widgets, and apply them directly to selected elements.</p>
 <h2>Installation</h2>
-<h3>Option 1: Install using the script (recommended first try)</h3>
-<p>From the extension directory:</p>
-<pre><code class="language-bash">./install.sh
+<h3>Automatic Installation</h3>
+<pre><code class="language-bash">cd oscilla-inkscape-extension
+./install.sh
 </code></pre>
-<p>This attempts to copy the extension files into Inkscape’s user extensions folder.</p>
-<p>If this works, restart Inkscape and skip to <strong>Finding the extension</strong> below.</p>
-<hr>
-<h3>Option 2: Manual installation (if the script fails)</h3>
+<p>The installer detects your operating system and copies files to the correct Inkscape extensions folder.</p>
+<h3>Manual Installation</h3>
+<p>Copy all files to your Inkscape extensions folder:</p>
+<table>
+<thead>
+<tr>
+<th>OS</th>
+<th>Extensions Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linux</td>
+<td><code>~/.config/inkscape/extensions/</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td><code>~/Library/Application Support/org.inkscape.Inkscape/config/inkscape/extensions/</code></td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><code>%APPDATA%\inkscape\extensions\</code></td>
+</tr>
+</tbody>
+</table>
+<p>Restart Inkscape after installation.</p>
+<h2>First-Time Setup: Keyboard Shortcut</h2>
+<p>For efficient workflow, bind &quot;Apply Queued Cue&quot; to a keyboard shortcut:</p>
 <ol>
-<li>Locate your Inkscape user extensions directory:</li>
+<li>In Inkscape: <strong>Edit → Preferences → Interface → Keyboard</strong></li>
+<li>In the search box, type <code>Apply Queued</code></li>
+<li>Click on the &quot;Apply Queued Cue&quot; entry</li>
+<li>Press your desired shortcut (recommended: <code>Ctrl+Shift+Q</code>)</li>
+<li>Click <strong>Close</strong></li>
 </ol>
-<pre><code class="language-bash">inkscape --user-extension-directory
-</code></pre>
-<p>Typical location on Linux:</p>
-<pre><code class="language-text">~/.config/inkscape/extensions/
-</code></pre>
-<ol start="2">
-<li>Copy the entire folder:</li>
-</ol>
-<pre><code class="language-bash">oscilla-inkscape-extension/
-</code></pre>
-<p>into the extensions directory, so you end up with:</p>
-<pre><code class="language-text">~/.config/inkscape/extensions/oscilla-inkscape-extension/
-</code></pre>
-<ol start="3">
-<li>Restart Inkscape</li>
-</ol>
-<hr>
-<h2>Verifying installation</h2>
-<p>After restarting Inkscape:</p>
-<ul>
-<li>Open <strong>Extensions</strong> in the menu bar</li>
-<li>Look for an <strong>Oscilla</strong> or <strong>Oscilla-related</strong> submenu</li>
-<li>If menus appear, the extension is installed</li>
-</ul>
-<p>If nothing appears:</p>
-<ul>
-<li>Check the Inkscape <strong>Extensions → Extensions Manager → Errors</strong></li>
-<li>Verify Python files are executable</li>
-<li>Restart Inkscape again</li>
-</ul>
-<hr>
-<h2>How to try it (basic usage)</h2>
-<p>This is intentionally minimal and exploratory.</p>
-<h3>General idea</h3>
+<p>This shortcut applies cues configured in the Smart Cues Editor to your selected elements.</p>
+<p>For detailed keyboard shortcut documentation, see the <a href="https://inkscape-manuals.readthedocs.io/en/latest/interface.html#keyboard-shortcuts">Inkscape Keyboard Shortcut Guide</a>.</p>
+<h2>Components</h2>
+<p>The extension consists of two parts under <strong>Extensions → OSCILLA</strong>:</p>
+<h3>OSCILLA Smart Cues Editor</h3>
+<p>The main interface for building cues. Opens as a floating window that stays on top of Inkscape while you work.</p>
+<p><strong>Note:</strong> The editor cannot dock inside Inkscape - it remains a separate floating window. However, it stays on top so you can see both windows simultaneously.</p>
+<h3>Apply Queued Cue</h3>
+<p>Applies the configured cue to selected elements in Inkscape. Bind this to a keyboard shortcut for the fastest workflow.</p>
+<h2>Workflow</h2>
+<h3>Standard Workflow</h3>
 <ol>
-<li>Draw or select an SVG object</li>
-<li>Use an Oscilla extension entry</li>
-<li>The extension will typically:
+<li><strong>Open the Smart Cues Editor:</strong> Extensions → OSCILLA → OSCILLA Smart Cues Editor</li>
+<li><strong>Keep the editor open</strong> - it floats above Inkscape</li>
+<li><strong>Configure your cue:</strong>
 <ul>
-<li>Inspect existing <code>id</code> values</li>
-<li>Modify or append Oscilla-style cue IDs</li>
+<li>Select a category (Timing, Animation, Visual, etc.)</li>
+<li>Select a cue type</li>
+<li>Optionally select a preset</li>
+<li>Adjust parameters as needed</li>
 </ul>
 </li>
+<li><strong>Click &quot;Apply to Selection&quot;</strong> - this queues the cue</li>
+<li><strong>In Inkscape:</strong> Select one or more elements</li>
+<li><strong>Press your keyboard shortcut</strong> (e.g., <code>Ctrl+Shift+Q</code>) - cue is applied!</li>
 </ol>
-<h3>Typical things to try</h3>
+<h3>Quick Workflow with Presets</h3>
+<p>Once you've saved presets for your commonly used cues:</p>
+<ol>
+<li>Open Smart Cues Editor (keep it open)</li>
+<li>Select preset from dropdown</li>
+<li>Click &quot;Apply to Selection&quot;</li>
+<li>Select element in Inkscape → Press <code>Ctrl+Shift+Q</code></li>
+</ol>
+<h3>Stacking Multiple Cues</h3>
+<p>To add multiple cues to one element:</p>
+<ol>
+<li>Apply the first cue normally</li>
+<li>Check <strong>Append to existing ID</strong></li>
+<li>Configure and apply additional cues</li>
+</ol>
+<p>Result: <code>pause(dur:4) scale(values:[1,1.3,1], dur:2)</code></p>
+<h2>Using the Smart Cues Editor</h2>
+<h3>Interface Elements</h3>
+<h4>Category Dropdown</h4>
+<p>Select from seven cue categories:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Cue Types</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Timing &amp; Navigation</td>
+<td>stop, pause, speed, nav, page, stopwatch, metro</td>
+</tr>
+<tr>
+<td>Animation</td>
+<td>scale, scaleXY, rotate, o2p</td>
+</tr>
+<tr>
+<td>Visual</td>
+<td>color, fade, text</td>
+</tr>
+<tr>
+<td>Audio / Video</td>
+<td>audio, audioPool, audioImpulse, video</td>
+</tr>
+<tr>
+<td>Synth</td>
+<td>synth, synthStop</td>
+</tr>
+<tr>
+<td>OSC</td>
+<td>osc, oscCtrl</td>
+</tr>
+<tr>
+<td>Interaction</td>
+<td>button, reuse, use</td>
+</tr>
+</tbody>
+</table>
+<h4>Cue Type Dropdown</h4>
+<p>Shows available cues for the selected category. When you select a cue type, only the relevant parameters appear below.</p>
+<h4>Preset Dropdown</h4>
+<p>Load pre-configured parameter combinations. Select &quot;-- Custom --&quot; to configure parameters manually.</p>
+<h4>Parameters Area</h4>
+<p>Dynamic parameter widgets appropriate to each parameter type:</p>
+<table>
+<thead>
+<tr>
+<th>Widget</th>
+<th>Used For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Text entry</td>
+<td>Free text, file paths, color values</td>
+</tr>
+<tr>
+<td>Spin button</td>
+<td>Integer values with increment/decrement</td>
+</tr>
+<tr>
+<td>Float spinner</td>
+<td>Decimal values with precision</td>
+</tr>
+<tr>
+<td>Dropdown</td>
+<td>Fixed option selection</td>
+</tr>
+<tr>
+<td>Checkbox</td>
+<td>Boolean on/off values</td>
+</tr>
+<tr>
+<td>Color button</td>
+<td>Color picker (alongside text entry)</td>
+</tr>
+</tbody>
+</table>
+<h4>Preview</h4>
+<p>Shows the cue string as you configure parameters. Updates in real-time. Wraps long cues across multiple lines.</p>
+<h4>Append Checkbox</h4>
+<p>When checked, the cue is added to the element's existing ID rather than replacing it. Use this to stack multiple cues on one element.</p>
+<h4>Buttons</h4>
+<table>
+<thead>
+<tr>
+<th>Button</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Save Preset</td>
+<td>Save current parameters as a reusable preset</td>
+</tr>
+<tr>
+<td>Copy to Clipboard</td>
+<td>Copies the cue string for manual pasting</td>
+</tr>
+<tr>
+<td>Apply to Selection</td>
+<td>Queues the cue for application via keyboard shortcut</td>
+</tr>
+</tbody>
+</table>
+<h2>Presets</h2>
+<h3>Using Presets</h3>
+<p>Presets provide quick access to common cue configurations. Select from the Preset dropdown to auto-fill parameters, then adjust as needed.</p>
+<h3>Saving Presets</h3>
+<ol>
+<li>Configure parameters as desired</li>
+<li>Click <strong>Save Preset</strong></li>
+<li>Enter a name for the preset</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>The preset is immediately available in the Smart Cues Editor dropdown.</p>
+<h3>Customizing Presets Manually</h3>
+<p>Presets are stored in <code>oscilla_presets.json</code> in your extensions folder. You can edit this file directly.</p>
+<h4>File Location</h4>
+<table>
+<thead>
+<tr>
+<th>OS</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linux</td>
+<td><code>~/.config/inkscape/extensions/oscilla_presets.json</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td><code>~/Library/Application Support/org.inkscape.Inkscape/config/inkscape/extensions/oscilla_presets.json</code></td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><code>%APPDATA%\inkscape\extensions\oscilla_presets.json</code></td>
+</tr>
+</tbody>
+</table>
+<h4>Structure</h4>
+<pre><code class="language-json">{
+  &quot;category_id&quot;: {
+    &quot;cue_name&quot;: [
+      {
+        &quot;name&quot;: &quot;Preset Display Name&quot;,
+        &quot;params&quot;: {
+          &quot;param_name&quot;: value
+        }
+      }
+    ]
+  }
+}
+</code></pre>
+<h4>Example: Adding Pause Presets</h4>
+<pre><code class="language-json">{
+  &quot;timing&quot;: {
+    &quot;pause&quot;: [
+      {
+        &quot;name&quot;: &quot;Short Pause (4s)&quot;,
+        &quot;params&quot;: {
+          &quot;dur&quot;: 4
+        }
+      },
+      {
+        &quot;name&quot;: &quot;Long Pause with Countdown&quot;,
+        &quot;params&quot;: {
+          &quot;dur&quot;: 12,
+          &quot;count&quot;: true
+        }
+      }
+    ]
+  }
+}
+</code></pre>
+<h4>Category IDs</h4>
+<p>Use these exact category IDs in the JSON:</p>
+<table>
+<thead>
+<tr>
+<th>Display Name</th>
+<th>Category ID</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Timing &amp; Navigation</td>
+<td><code>timing</code></td>
+</tr>
+<tr>
+<td>Animation</td>
+<td><code>animation</code></td>
+</tr>
+<tr>
+<td>Visual</td>
+<td><code>visual</code></td>
+</tr>
+<tr>
+<td>Audio / Video</td>
+<td><code>audio</code></td>
+</tr>
+<tr>
+<td>Synth</td>
+<td><code>synth</code></td>
+</tr>
+<tr>
+<td>OSC</td>
+<td><code>osc</code></td>
+</tr>
+<tr>
+<td>Interaction</td>
+<td><code>interaction</code></td>
+</tr>
+</tbody>
+</table>
+<h4>Cue Names</h4>
+<p>Use the exact cue name as shown (case-sensitive):</p>
+<p><code>stop</code>, <code>pause</code>, <code>speed</code>, <code>nav</code>, <code>page</code>, <code>stopwatch</code>, <code>metro</code>, <code>scale</code>, <code>scaleXY</code>, <code>rotate</code>, <code>o2p</code>, <code>color</code>, <code>fade</code>, <code>text</code>, <code>audio</code>, <code>audioPool</code>, <code>audioImpulse</code>, <code>video</code>, <code>synth</code>, <code>synthStop</code>, <code>osc</code>, <code>oscCtrl</code>, <code>button</code>, <code>reuse</code>, <code>use</code></p>
+<h4>Validating Your Presets</h4>
+<p>After editing, verify the JSON is valid:</p>
+<pre><code class="language-bash">python3 -m json.tool oscilla_presets.json &gt; /dev/null &amp;&amp; echo &quot;Valid JSON&quot;
+</code></pre>
+<p>Restart the Smart Cues Editor to load updated presets.</p>
+<h2>Troubleshooting</h2>
+<h3>Extension not appearing in menu</h3>
+<ol>
+<li>Restart Inkscape completely</li>
+<li>Verify files are in the correct extensions folder</li>
+<li>Check for Python errors: <code>python3 -c &quot;import oscilla_smart_cues_gtk&quot;</code></li>
+</ol>
+<h3>Editor won't open</h3>
+<p>Check the launcher script is executable and Python 3 with GTK is available:</p>
+<pre><code class="language-bash">python3 -c &quot;import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; print('GTK OK')&quot;
+</code></pre>
+<h3>Cue not applying to element</h3>
+<ol>
+<li>Ensure an element is selected in Inkscape</li>
+<li>Ensure you've clicked &quot;Apply to Selection&quot; in the Smart Cues Editor</li>
+<li>Press your keyboard shortcut (e.g., <code>Ctrl+Shift+Q</code>)</li>
+<li>If still not working, check <code>/tmp/oscilla_cue.txt</code> exists after clicking Apply</li>
+</ol>
+<h3>Keyboard shortcut not working</h3>
+<ol>
+<li>Verify the shortcut is bound: Edit → Preferences → Interface → Keyboard → search &quot;Apply Queued&quot;</li>
+<li>Make sure Inkscape window is focused when pressing the shortcut</li>
+<li>Try a different shortcut combination if there's a conflict</li>
+</ol>
+<h3>Presets not loading</h3>
+<ol>
+<li>Validate JSON syntax: <code>python3 -m json.tool oscilla_presets.json</code></li>
+<li>Check category and cue names match exactly (case-sensitive)</li>
+<li>Restart the Smart Cues Editor</li>
+</ol>
+<h3>Editor not staying on top</h3>
+<p>On some systems/window managers, &quot;always on top&quot; may not work. Try:</p>
 <ul>
-<li>Apply a <strong>quick cue</strong> (rotate, scale, speed, pause, etc.)</li>
-<li>Inspect an object’s Oscilla ID</li>
-<li>Use quick-apply presets to generate valid cue syntax</li>
+<li>Right-click the window title bar → &quot;Always on Top&quot; (if available)</li>
+<li>Use your window manager's settings to pin the window</li>
 </ul>
-<p>The resulting SVG should remain <strong>plain SVG</strong> with <code>id</code> attributes — nothing magic or hidden.</p>
-<hr>
-<h2>Quick Apply presets</h2>
-<p>The <code>quick-apply/</code> tools are small, single-purpose helpers that:</p>
-<ul>
-<li>Apply a predefined Oscilla cue pattern</li>
-<li>Are meant for <strong>speed and experimentation</strong>, not correctness</li>
-</ul>
-<p>Examples include:</p>
-<ul>
-<li>Rotation (CW / CCW / swing)</li>
-<li>Scale pulse / grow</li>
-<li>Speed up / slow down</li>
-<li>Audio triggers</li>
-<li>Navigation (scroll / page)</li>
-</ul>
-<p>These are likely to change or be replaced.</p>
-<hr>
-<h2>Known limitations</h2>
-<ul>
-<li>UI and naming may be inconsistent</li>
-<li>No validation against the Oscilla runtime</li>
-<li>No guarantee cues match current parser rules</li>
-<li>Error messages may be cryptic or absent</li>
-</ul>
-<p>This is expected for now.</p>
-<hr>
-<h2>Recommended workflow</h2>
-<ul>
-<li>Use the extension to <strong>sketch ideas quickly</strong></li>
-<li>Inspect the resulting SVG <code>id</code> attributes</li>
-<li>Refine or fix cues manually as needed</li>
-<li>Treat the extension as a helper, not an authority</li>
-</ul>
-<hr>
-<h2>Reporting issues / feedback</h2>
-<p>Because this is experimental:</p>
-<ul>
-<li>Expect breakage</li>
-<li>Please report:
-<ul>
-<li>Inkscape version</li>
-<li>OS</li>
-<li>Which tool was used</li>
-<li>What you expected vs what happened</li>
-</ul>
-</li>
-</ul>
-<hr>
-<h2>Future documentation</h2>
-<p>Once the feature set stabilises, this page will be expanded with:</p>
-<ul>
-<li>Clear feature descriptions</li>
-<li>Stable naming</li>
-<li>Screenshots</li>
-<li>Workflow examples</li>
-</ul>
-<p>Until then, this document is intentionally light.</p>
-<hr>
-<p><em>Last updated: early experimental phase</em></p>
+<h2>Files</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>oscilla_smart_cues_gtk.py</code></td>
+<td>Main GTK editor application</td>
+</tr>
+<tr>
+<td><code>oscilla_smart_cues_launcher.py</code></td>
+<td>Inkscape extension that launches editor</td>
+</tr>
+<tr>
+<td><code>oscilla_smart_cues_launcher.inx</code></td>
+<td>Menu entry definition</td>
+</tr>
+<tr>
+<td><code>oscilla_apply_cue.py</code></td>
+<td>Extension that applies cue to selection</td>
+</tr>
+<tr>
+<td><code>oscilla_apply_cue.inx</code></td>
+<td>Menu entry definition</td>
+</tr>
+<tr>
+<td><code>oscilla_presets.json</code></td>
+<td>User-editable preset configurations</td>
+</tr>
+</tbody>
+</table>
 
   </main>
 </div>
