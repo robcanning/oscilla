@@ -1,33 +1,32 @@
-
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>cue_stopwatch</title>
-
   <link rel="stylesheet" href="/oscilla/docs/style.css">
 </head>
 
-
-
 <body>
 
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
 
   <header class="docs-header">
-    <button class="docs-menu-toggle" aria-label="Toggle menu">
-      ☰
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
     </button>
-
-    <div class="docs-header-title">
-      Oscilla Docs
-    </div>
+    <a href="/oscilla/docs/" class="docs-header-title">Oscilla Docs</a>
   </header>
 
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
 
-<div class="docs-container">
-  <nav class="sidebar">
-
-  <h3>Docs</h3>
+  <h3>Getting Started</h3>
   <ul>
     <li><a href="/oscilla/docs/">Overview</a></li>
     <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
@@ -35,7 +34,6 @@
     <li><a href="/oscilla/docs/cheatsheet/">Cheatsheet</a></li>
     <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
     <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
-
   </ul>
 
   <h3>Cues</h3>
@@ -67,7 +65,6 @@
     <li><a href="/oscilla/docs/color/">color()</a></li>
     <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
     <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
-
   </ul>
 
   <h3>Performer</h3>
@@ -87,8 +84,14 @@
 
 </nav>
 
-  <main class="docs-content">
-    <h1>stopwatch <em>(with autostart support)</em></h1>
+    
+    <main class="docs-content">
+      <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+      
+      <h1>stopwatch <em>(with autostart support)</em></h1>
 <p>Displays a stopwatch overlay above the score.
 Stopwatch overlays may show the <strong>main stopwatch time</strong> or create their own <strong>independent stopwatch</strong>.</p>
 <p>This cue now supports <strong>autostart</strong>, meaning it can begin running automatically when the SVG is loaded — in both page and scroll modes — without requiring the playhead to cross.</p>
@@ -212,92 +215,91 @@ stopwatch(source:new,hold:8,offsetX:-30)
 <li>Very large fonts may clip on small screens</li>
 </ul>
 
-  </main>
-</div>
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
 
-
-<p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
-
-
+  <script>
   document.addEventListener("DOMContentLoaded", () => {
     const btn = document.querySelector(".docs-menu-toggle");
-    if (!btn) return;
-
-    btn.addEventListener("click", () => {
-      document.body.classList.toggle("sidebar-open");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
     });
   });
 
-<script>
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
 
-  document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.querySelector(".docs-menu-toggle");
-    if (!btn) return;
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
 
-    btn.addEventListener("click", () => {
-      document.body.classList.toggle("sidebar-open");
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
     });
-  });
 
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
 
-(function () {
-  // Collect sidebar links in visual order
-  const sidebar = document.querySelector(".sidebar");
-  if (!sidebar) return;
-
-  const links = Array.from(
-    sidebar.querySelectorAll("a[href]")
-  ).map(a => a.href);
-
-  const current = window.location.href.replace(/#.*$/, "");
-  const index = links.findIndex(href => href === current);
-
-  const prev = index > 0 ? links[index - 1] : null;
-  const next = index >= 0 && index < links.length - 1
-    ? links[index + 1]
-    : null;
-
-  // Wire prev/next buttons if present
-  const prevBtn = document.getElementById("docs-prev");
-  const nextBtn = document.getElementById("docs-next");
-
-  if (prevBtn) {
-    if (prev) prevBtn.href = prev;
-    else prevBtn.style.visibility = "hidden";
-  }
-
-  if (nextBtn) {
-    if (next) nextBtn.href = next;
-    else nextBtn.style.visibility = "hidden";
-  }
-
-  // Keyboard navigation
-  document.addEventListener("keydown", e => {
-    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-
-    if (e.key === "ArrowLeft" && prev) {
-      window.location.href = prev;
-    }
-
-    if (e.key === "ArrowRight" && next) {
-      window.location.href = next;
-    }
-
-    // Optional: vertical navigation
-    if (e.key === "ArrowUp" && prev) {
-      window.location.href = prev;
-    }
-
-    if (e.key === "ArrowDown" && next) {
-      window.location.href = next;
-    }
-  });
-})();
-</script>
-
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
 
 </body>
-
-
-
 </html>

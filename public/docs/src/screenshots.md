@@ -6,7 +6,7 @@ layout: docs_layout.njk
 
 # Screenshots of Oscilla
 
-## oscilla reherrsal mark navigation panel
+## oscilla rehearsal mark navigation panel
 
 <figure class="doc-image">
   <img
@@ -17,7 +17,7 @@ layout: docs_layout.njk
 </figure>
 
 
-## Oscilla Preferences GUI
+## Oscilla Preferences GUI and "Hamburger" Dropdown Menu
 <figure class="doc-image">
   <img
     src="{{ '/docs/img/oscilla-preferences-gui.png' | url }}"
