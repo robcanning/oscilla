@@ -87,6 +87,9 @@ const OscCtrlNode = createToken({ name: "OscCtrlNode", pattern: /\boscCtrlNode\b
 
 const O2P = createToken({ name: "O2P", pattern: /\bo2p\b/, longer_alt: Identifier });
 
+// ✅ NEW: Dedicated Ui keyword
+const Ui = createToken({ name: "Ui", pattern: /\bui\b/, longer_alt: Identifier });
+
 const After = createToken({ name: "After", pattern: /after\b/ });
 
 const RangeLiteral = createToken({
@@ -118,7 +121,7 @@ const PatternName = createToken({
 export const allTokens = [
   Cue, Fade, Page, Stopwatch, Video, Text, Pause, Stop,
   Audio, AudioPool, AudioImpulse, Synth, Button, Nav,
-  Rotate, Scale, ScaleXY, O2P,
+  Rotate, Scale, ScaleXY, O2P, Ui,
   Osc, OscCtrl, OscCtrlNode,
   After, PatternName, Choose,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
@@ -670,54 +673,37 @@ export class CueParser extends CstParser {
     // ------------------------------------------------------------
     // cueSpeedTop (grammar) — supports speed(3) and keyed params
     // ------------------------------------------------------------
-   $.RULE("cueSpeedTop", () => {
-  $.CONSUME(Identifier, { LABEL: "speedFn" });
-  $.CONSUME(LParen);
+    $.RULE("cueSpeedTop", () => {
+      $.CONSUME(Identifier, { LABEL: "speedFn" });
+      $.CONSUME(LParen);
 
-  $.OPTION(() => {
-    $.OR([
-      // Case 1: String literal first (for ui("#selector", ...))
-      {
-        GATE: () => $.LA(1).tokenType === StringLiteral,
-        ALT: () => {
-          $.CONSUME(StringLiteral, { LABEL: "selectorArg" });
-          $.OPTION1(() => {
-            $.CONSUME(Comma);
-            $.AT_LEAST_ONE_SEP({
-              SEP: Comma,
-              DEF: () => $.SUBRULE($.genericParam)
-            });
-          });
-        }
-      },
-      // Case 2: Number shorthand (speed(3))
-      {
-        GATE: () => $.LA(1).tokenType === NumberLiteral,
-        ALT: () => {
-          $.CONSUME(NumberLiteral, { LABEL: "shorthand" });
-          $.OPTION2(() => {
-            $.CONSUME1(Comma);
-            $.AT_LEAST_ONE_SEP1({
-              SEP: Comma,
-              DEF: () => $.SUBRULE1($.genericParam)
-            });
-          });
-        }
-      },
-      // Case 3: Key-value pairs only
-      {
-        ALT: () => {
-          $.AT_LEAST_ONE_SEP2({
-            SEP: Comma,
-            DEF: () => $.SUBRULE2($.genericParam)
-          });
-        }
-      }
-    ]);
-  });
+      $.OPTION(() => {
+        $.OR([
+          {
+            ALT: () => {
+              $.CONSUME(NumberLiteral, { LABEL: "shorthand" });
+              $.OPTION1(() => {
+                $.CONSUME(Comma);
+                $.AT_LEAST_ONE_SEP({
+                  SEP: Comma,
+                  DEF: () => $.SUBRULE($.genericParam)
+                });
+              });
+            }
+          },
+          {
+            ALT: () => {
+              $.AT_LEAST_ONE_SEP1({
+                SEP: Comma,
+                DEF: () => $.SUBRULE1($.genericParam)
+              });
+            }
+          }
+        ]);
+      });
 
-  $.CONSUME(RParen);
-});
+      $.CONSUME(RParen);
+    });
 
     $.RULE("cueNavTop", () => {
       $.CONSUME(Nav);
@@ -879,6 +865,29 @@ export class CueParser extends CstParser {
       $.SUBRULE($.animGenericParamList);
     });
 
+    // ============================================================
+    // ✅ NEW: cueUiTop — dedicated rule for ui() cues
+    // Supports: ui("#selector", opacity:0, dur:0.3, visible:false)
+    // ============================================================
+    $.RULE("cueUiTop", () => {
+      $.CONSUME(Ui);
+      $.CONSUME(LParen);
+
+      // First argument: selector (StringLiteral)
+      $.CONSUME(StringLiteral, { LABEL: "selector" });
+
+      // Optional additional params (key:value)
+      $.OPTION(() => {
+        $.CONSUME(Comma);
+        $.AT_LEAST_ONE_SEP({
+          SEP: Comma,
+          DEF: () => $.SUBRULE($.genericParam)
+        });
+      });
+
+      $.CONSUME(RParen);
+    });
+
     // -----------------------
     // cueTop — main entry point
     // -----------------------
@@ -905,13 +914,16 @@ export class CueParser extends CstParser {
 
         { ALT: () => $.SUBRULE($.cuePauseTop) },
 
-        {
+        // ✅ NEW: Dedicated ui() rule
+        { ALT: () => $.SUBRULE($.cueUiTop) },
 
-  GATE: () =>
-    $.LA(1).tokenType === Identifier &&
-    ["speed", "ui"].includes($.LA(1).image),
-  ALT: () => $.SUBRULE($.cueSpeedTop)
-},
+        // speed() still uses cueSpeedTop
+        {
+          GATE: () =>
+            $.LA(1).tokenType === Identifier &&
+            $.LA(1).image === "speed",
+          ALT: () => $.SUBRULE($.cueSpeedTop)
+        },
 
         { ALT: () => $.SUBRULE($.cueStopTop) },
         { ALT: () => $.SUBRULE($.cueButtonTop) },
@@ -1094,68 +1106,75 @@ function extractObjectLiteral(objNode) {
 
 export function cstToAst(cst) {
 
- console.log("[cstToAst] ENTER, cst.name:", cst.name);
-  console.log("[cstToAst] cst.children:", JSON.stringify(cst.children, null, 2));
-// ============================================================================
-// FIXED: ui() cstToAst extraction
-// ============================================================================
-// Replace your existing ui() block in cstToAst (around line 1086) with this:
-// ============================================================================
+  // ============================================================
+  // ✅ NEW: cueUiTop → AST
+  // ============================================================
+  const uiNode =
+    cst.children?.cueUiTop?.[0] ||
+    (cst.name === "cueUiTop" ? cst : null);
 
-// ------------------------------------------------------------
-// ui(...) — UI / CSS control cue
-// ------------------------------------------------------------
-// First, extract the actual cueSpeedTop node (handle both direct and nested)
+  if (uiNode) {
+    const args = [];
+    const ch = uiNode.children;
 
-
-if (speedNode && speedNode.children?.speedFn?.[0]?.image === "ui") {
-  const args = [];
-  const ch = speedNode.children;
-  
-  // ✅ Extract selector from selectorArg (StringLiteral first argument)
-  const selectorToken = ch.selectorArg?.[0];
-  if (selectorToken) {
-    const selectorValue = selectorToken.image.replace(/^["']|["']$/g, "");
-    args.push({ type: "selector", value: selectorValue });
-    console.log("[cstToAst:ui] Found selector:", selectorValue);
-  }
-  
-  // ✅ Extract key:value params from genericParam array
-  const params = ch.genericParam || [];
-  for (const p of params) {
-    const key = p.children.key?.[0]?.image;
-    
-    // Get the raw value - it's stored directly as a token in .value
-    const valToken = p.children.value?.[0];
-    let raw = valToken?.image;
-    
-    if (!key || raw === undefined) continue;
-
-    // Parse the value
-    let value;
-    if (raw === "true") {
-      value = true;
-    } else if (raw === "false") {
-      value = false;
-    } else if (!isNaN(raw) && raw !== "") {
-      value = Number(raw);
-    } else {
-      value = raw.replace(/^["']|["']$/g, "");
+    // Extract selector
+    const selectorToken = ch.selector?.[0];
+    if (selectorToken) {
+      const selectorValue = selectorToken.image.replace(/^["']|["']$/g, "");
+      args.push({ type: "selector", value: selectorValue });
     }
 
-    args.push({ type: key, value });
-    console.log(`[cstToAst:ui] Found param: ${key} = ${value}`);
+    // Extract key:value params
+    const params = ch.genericParam || [];
+    for (const p of params) {
+      const key = p.children.key?.[0]?.image;
+      const valToken = p.children.value?.[0];
+
+      if (!key) continue;
+
+      let raw = valToken?.image;
+
+      if (raw === undefined && valToken?.children) {
+        // Handle nested value structures
+        if (valToken.children.NumberLiteral?.[0]) {
+          raw = valToken.children.NumberLiteral[0].image;
+        } else if (valToken.children.StringLiteral?.[0]) {
+          raw = valToken.children.StringLiteral[0].image;
+        } else if (valToken.children.True?.[0]) {
+          raw = "true";
+        } else if (valToken.children.False?.[0]) {
+          raw = "false";
+        } else if (valToken.children.Identifier?.[0]) {
+          raw = valToken.children.Identifier[0].image;
+        }
+      }
+
+      if (raw === undefined) continue;
+
+      // Parse the value
+      let value;
+      if (raw === "true") {
+        value = true;
+      } else if (raw === "false") {
+        value = false;
+      } else if (!isNaN(raw) && raw !== "") {
+        value = Number(raw);
+      } else {
+        value = raw.replace(/^["']|["']$/g, "");
+      }
+
+      args.push({ type: key, value });
+    }
+
+    if (OSCILLA_DSL_DEBUG) {
+      console.log("[cstToAst:cueUi] args:", args);
+    }
+
+    return {
+      type: "cueUi",
+      args
+    };
   }
-
-  console.log("[cstToAst:ui] Final args:", JSON.stringify(args, null, 2));
-
-  return {
-    type: "cueUi",
-    args
-  };
-}
-
-
 
 
   // ============================================================================

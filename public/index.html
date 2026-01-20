@@ -385,47 +385,70 @@
       </div>
 
 
-      <div id="right-controls" class="gui-grid-2x2">
+<!-- Updated right-controls: 2x3 grid with playhead/playzone toggle -->
+<div id="right-controls" class="gui-grid-2x3">
 
-        <!-- Stop Audio -->
-        <button id="stop-audio-button" class="gui-button side-button" title="Stop all audio">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
-            <rect x="6" y="6" width="12" height="12" rx="2" />
-          </svg>
-        </button>
+  <!-- Stop Audio -->
+  <button id="stop-audio-button" class="gui-button side-button" title="Stop all audio">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+  </button>
 
-        <!-- Invert Display -->
-        <button id="invert-button" class="gui-button side-button" title="Invert display colors">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v20" />
-            <path d="M5 12a7 7 0 0 1 7-7v14a7 7 0 0 1-7-7z" />
-          </svg>
-        </button>
+  <!-- Invert Display -->
+  <button id="invert-button" class="gui-button side-button" title="Invert display colors">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2v20" />
+      <path d="M5 12a7 7 0 0 1 7-7v14a7 7 0 0 1-7-7z" />
+    </svg>
+  </button>
 
-        <!-- Websocket On/Off -->
-        <button id="ws-toggle-button" class="gui-button side-button" title="Network / WebSocket status">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 8a10 10 0 0 1 20 0" />
-            <path d="M5 12a7 7 0 0 1 14 0" />
-            <path d="M8 16a4 4 0 0 1 8 0" />
-            <circle cx="12" cy="20" r="1" />
-          </svg>
-        </button>
+  <!-- Websocket On/Off -->
+  <button id="ws-toggle-button" class="gui-button side-button" title="Network / WebSocket status">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 8a10 10 0 0 1 20 0" />
+      <path d="M5 12a7 7 0 0 1 14 0" />
+      <path d="M8 16a4 4 0 0 1 8 0" />
+      <circle cx="12" cy="20" r="1" />
+    </svg>
+  </button>
 
-        <!-- Pin Controls -->
-        <button class="gui-button side-button" id="pin-controls" title="Pin controls">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 17v5" />
-            <path d="M5 7l5 5-5 5" />
-            <path d="M19 7l-5 5 5 5" />
-            <path d="M2 7h20" />
-          </svg>
-        </button>
+  <!-- Pin Controls -->
+  <button class="gui-button side-button" id="pin-controls" title="Pin controls">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 17v5" />
+      <path d="M5 7l5 5-5 5" />
+      <path d="M19 7l-5 5 5 5" />
+      <path d="M2 7h20" />
+    </svg>
+  </button>
 
-      </div>
+  <!-- Playhead/Playzone Toggle (cycles: both → playhead only → playzone only → none → both) -->
+  <button id="playhead-toggle-button" class="gui-button side-button" title="Toggle playhead/playzone visibility" data-state="both">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
+      <!-- Playhead line -->
+      <line id="playhead-icon-line" x1="12" y1="3" x2="12" y2="21" stroke-width="3" />
+      <!-- Playzone rect -->
+      <rect id="playhead-icon-zone" x="6" y="8" width="12" height="8" rx="1" fill="currentColor" opacity="0.3" />
+    </svg>
+  </button>
+
+  <!-- Dummy / Placeholder -->
+  <button id="dummy-button" class="gui-button side-button" title="(Reserved)" disabled>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" opacity="0.3">
+      <circle cx="12" cy="12" r="8" />
+    </svg>
+  </button>
+
+</div>
+
+
+
     </div>
 
 

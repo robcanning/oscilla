@@ -209,6 +209,33 @@ svg {
   margin-right: 10px;     /* tweak as needed */
 }
 
+
+
+  .gui-grid-2x3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 4px;
+  }
+
+
+
+#playhead-toggle-button[data-state="none"] {
+  opacity: 0.5;
+}
+
+#playhead-toggle-button[data-state="playhead"] #playhead-icon-zone,
+#playhead-toggle-button[data-state="none"] #playhead-icon-zone {
+  opacity: 0;
+}
+
+#playhead-toggle-button[data-state="playzone"] #playhead-icon-line,
+#playhead-toggle-button[data-state="none"] #playhead-icon-line {
+  opacity: 0.2;
+}
+
+
+
 /* ----------------------------------------------------
    SEEK BAR
 ---------------------------------------------------- */

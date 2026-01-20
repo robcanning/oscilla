@@ -1380,3 +1380,212 @@ export function scrollToPlayheadVisual() {
 }
 
 window.scrollToPlayheadVisual = scrollToPlayheadVisual;
+
+
+
+// ============================================================================
+// Playhead / Playzone Toggle Button Listener
+// ============================================================================
+// Add this code to oscillaUI.js (or your main app initialization)
+//
+// Cycles through 4 states:
+//   1. "both"     → playhead + playzone visible
+//   2. "playhead" → playhead only
+//   3. "playzone" → playzone only  
+//   4. "none"     → neither visible
+// ============================================================================
+
+/**
+ * Visibility state for playhead/playzone
+ * Can be: "both" | "playhead" | "playzone" | "none"
+ */
+let playheadVisibilityState = "both";
+
+/**
+ * Initialize the playhead toggle button listener
+ * Call this once after DOM is ready
+ */
+export function initPlayheadToggle() {
+  const btn = document.getElementById("playhead-toggle-button");
+  if (!btn) {
+    console.warn("[playheadToggle] Button #playhead-toggle-button not found");
+    return;
+  }
+
+  btn.addEventListener("click", cyclePlayheadVisibility);
+  
+  // Initialize icon state
+  updatePlayheadToggleIcon(btn, playheadVisibilityState);
+  
+  console.log("[playheadToggle] Initialized");
+}
+
+/**
+ * Cycle through visibility states: both → playhead → playzone → none → both
+ */
+function cyclePlayheadVisibility() {
+  const states = ["both", "playhead", "playzone", "none"];
+  const currentIndex = states.indexOf(playheadVisibilityState);
+  const nextIndex = (currentIndex + 1) % states.length;
+  
+  playheadVisibilityState = states[nextIndex];
+  
+  applyPlayheadVisibility(playheadVisibilityState);
+  
+  const btn = document.getElementById("playhead-toggle-button");
+  if (btn) {
+    btn.dataset.state = playheadVisibilityState;
+    btn.title = getPlayheadToggleTitle(playheadVisibilityState);
+    updatePlayheadToggleIcon(btn, playheadVisibilityState);
+  }
+  
+  console.log(`[playheadToggle] State: ${playheadVisibilityState}`);
+}
+
+/**
+ * Apply visibility to playhead and playzone elements
+ */
+function applyPlayheadVisibility(state) {
+  // Get playhead element(s) - adjust selector as needed for your app
+  const playhead = document.getElementById("playhead") 
+    || document.querySelector(".playhead")
+    || document.querySelector("[data-playhead]");
+    
+  // Get playzone element(s) - adjust selector as needed
+  const playzone = document.getElementById("playzone")
+    || document.querySelector(".playzone")
+    || document.querySelector("[data-playzone]");
+
+  const showPlayhead = (state === "both" || state === "playhead");
+  const showPlayzone = (state === "both" || state === "playzone");
+
+  // Apply to playhead
+  if (playhead) {
+    playhead.style.opacity = showPlayhead ? "" : "0";
+    playhead.style.pointerEvents = showPlayhead ? "" : "none";
+    // Alternative: use visibility or display
+    // playhead.style.visibility = showPlayhead ? "visible" : "hidden";
+  }
+
+  // Apply to playzone
+  if (playzone) {
+    playzone.style.opacity = showPlayzone ? "" : "0";
+    playzone.style.pointerEvents = showPlayzone ? "" : "none";
+  }
+
+  // Dispatch event for other modules to react
+  window.dispatchEvent(new CustomEvent("oscilla:playheadVisibility", {
+    detail: { 
+      state,
+      playheadVisible: showPlayhead,
+      playzoneVisible: showPlayzone
+    }
+  }));
+}
+
+/**
+ * Update the toggle button icon to reflect current state
+ */
+function updatePlayheadToggleIcon(btn, state) {
+  const lineEl = btn.querySelector("#playhead-icon-line");
+  const zoneEl = btn.querySelector("#playhead-icon-zone");
+
+  if (!lineEl || !zoneEl) return;
+
+  switch (state) {
+    case "both":
+      lineEl.style.opacity = "1";
+      zoneEl.style.opacity = "0.3";
+      break;
+    case "playhead":
+      lineEl.style.opacity = "1";
+      zoneEl.style.opacity = "0";
+      break;
+    case "playzone":
+      lineEl.style.opacity = "0.2";
+      zoneEl.style.opacity = "0.5";
+      break;
+    case "none":
+      lineEl.style.opacity = "0.2";
+      zoneEl.style.opacity = "0";
+      break;
+  }
+}
+
+/**
+ * Get tooltip text for current state
+ */
+function getPlayheadToggleTitle(state) {
+  switch (state) {
+    case "both":     return "Showing: Playhead + Playzone (click to cycle)";
+    case "playhead": return "Showing: Playhead only (click to cycle)";
+    case "playzone": return "Showing: Playzone only (click to cycle)";
+    case "none":     return "Showing: Neither (click to cycle)";
+    default:         return "Toggle playhead/playzone visibility";
+  }
+}
+
+/**
+ * Programmatically set visibility state
+ * @param {"both"|"playhead"|"playzone"|"none"} state 
+ */
+export function setPlayheadVisibility(state) {
+  const validStates = ["both", "playhead", "playzone", "none"];
+  if (!validStates.includes(state)) {
+    console.warn(`[playheadToggle] Invalid state: ${state}`);
+    return;
+  }
+  
+  playheadVisibilityState = state;
+  applyPlayheadVisibility(state);
+  
+  const btn = document.getElementById("playhead-toggle-button");
+  if (btn) {
+    btn.dataset.state = state;
+    btn.title = getPlayheadToggleTitle(state);
+    updatePlayheadToggleIcon(btn, state);
+  }
+}
+
+/**
+ * Get current visibility state
+ * @returns {"both"|"playhead"|"playzone"|"none"}
+ */
+export function getPlayheadVisibility() {
+  return playheadVisibilityState;
+}
+
+// ============================================================================
+// CSS for the button states (add to your stylesheet)
+// ============================================================================
+/*
+.gui-grid-2x3 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4px;
+}
+
+
+*/
+
+
+// ============================================================================
+// Auto-initialize if DOM is ready
+// ============================================================================
+console.log("[playheadToggle] Script loaded, readyState:", document.readyState);
+
+if (document.readyState === "loading") {
+  console.log("[playheadToggle] DOM still loading, adding DOMContentLoaded listener");
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("[playheadToggle] DOMContentLoaded fired, calling initPlayheadToggle()");
+    initPlayheadToggle();
+  });
+} else {
+  // DOM already loaded, init immediately (but defer to next tick)
+  console.log("[playheadToggle] DOM already ready, scheduling init on next tick");
+  setTimeout(() => {
+    console.log("[playheadToggle] Next tick, calling initPlayheadToggle()");
+    initPlayheadToggle();
+  }, 0);
+}
