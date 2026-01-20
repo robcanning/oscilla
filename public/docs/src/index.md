@@ -18,14 +18,6 @@ All behaviour is authored directly in SVG and executed at runtime in the browser
 - [Workflow](workflow/) — SVG authoring and browser execution
 - [Cheatsheet](cheatsheet/) — compact syntax reference
 
-<figure class="doc-image">
-  <img
-    src="{{ '/docs/img/oscilla-preferences-gui.png' | url }}"
-    alt="Oscilla Preferences"
-  >
-  <figcaption>Oscilla Interface and Preferences GUI</figcaption>
-</figure>
-
 
 ---
 
