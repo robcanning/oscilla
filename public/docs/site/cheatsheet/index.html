@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cheatsheet</title>
   <link href="https://iosevka-webfonts.github.io/iosevka-term/iosevka-term.css" rel="stylesheet">
-  <link rel="stylesheet" href="/oscilla/docs/style.css">
   <link rel="stylesheet" href="/oscilla/docs/cheatsheet.css">
 </head>
 
@@ -13,11 +12,7 @@
 
   <header class="cheatsheet-header">
     <nav class="cheatsheet-nav">
-      <a href="/oscilla/docs/" class="cheatsheet-back">← Docs Index</a>
-      <span class="cheatsheet-arrows">
-        <a id="docs-prev" href="#" aria-label="Previous page">← Prev</a>
-        <a id="docs-next" href="#" aria-label="Next page">Next →</a>
-      </span>
+      <a href="/oscilla/docs/">← Docs Index</a>
     </nav>
   </header>
 
@@ -247,45 +242,6 @@ Repo: https://github.com/robcanning/oscilla
       <span class="cheatsheet-footer-right">Cheatsheet — subject to change</span>
     </footer>
   </div>
-
-  <script>
-  (function () {
-    // Note: This cheatsheet doesn't include the sidebar, 
-    // so prev/next won't work unless you embed sidebar links data.
-    // If you need prev/next to work, consider either:
-    // 1. Including a hidden sidebar
-    // 2. Defining the nav order in a data file
-    // 3. Using Eleventy's collections for pagination
-    
-    const prevBtn = document.getElementById("docs-prev");
-    const nextBtn = document.getElementById("docs-next");
-    
-    // Hide nav buttons if sidebar isn't present
-    const sidebar = document.querySelector(".sidebar");
-    if (!sidebar) {
-      if (prevBtn) prevBtn.style.visibility = "hidden";
-      if (nextBtn) nextBtn.style.visibility = "hidden";
-      return;
-    }
-
-    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
-    const current = window.location.href.replace(/#.*$/, "");
-    const index = links.findIndex(href => href === current);
-
-    const prev = index > 0 ? links[index - 1] : null;
-    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
-
-    if (prevBtn) {
-      if (prev) prevBtn.href = prev;
-      else prevBtn.style.visibility = "hidden";
-    }
-
-    if (nextBtn) {
-      if (next) nextBtn.href = next;
-      else nextBtn.style.visibility = "hidden";
-    }
-  })();
-  </script>
 
 </body>
 </html>

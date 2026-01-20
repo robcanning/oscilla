@@ -550,19 +550,99 @@ body {
 }
 
 /* ---------------------------------------------------------
+   Cheatsheet Styles (in-browser)
+   --------------------------------------------------------- */
+
+.cheatsheet-content {
+  max-width: none;
+}
+
+.cheatsheet-intro {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.print-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-main);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.print-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-faint);
+}
+
+.cheatsheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.cheatsheet-section {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.cheatsheet-section h3 {
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--link);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cheatsheet-section pre {
+  margin: 0;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  background: var(--bg-code);
+  border: none;
+}
+
+.cheatsheet-section code {
+  font-size: 0.8rem;
+}
+
+.cheatsheet-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------
    Print Styles
    --------------------------------------------------------- */
 
 @media print {
+  /* Hide navigation chrome */
   .docs-header,
   .docs-menu-toggle,
   .sidebar,
   .sidebar-overlay,
   .docs-nav,
-  .docs-hint {
+  .docs-hint,
+  .print-btn {
     display: none !important;
   }
 
+  /* Reset layout */
   .docs-container {
     display: block;
     padding: 0;
@@ -571,10 +651,73 @@ body {
   .docs-content {
     max-width: none;
     padding: 0;
+    margin: 0;
   }
 
+  /* Light theme for print */
   body {
     background: white;
     color: black;
+    font-size: 10pt;
+  }
+
+  /* ---------------------------------------------------------
+     Cheatsheet Print Layout
+     --------------------------------------------------------- */
+
+  .cheatsheet-content h1 {
+    font-size: 16pt;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+
+  .cheatsheet-intro {
+    display: none; /* Hide intro text and print button */
+  }
+
+  .cheatsheet-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .cheatsheet-section {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.4rem 0.5rem;
+    page-break-inside: avoid;
+  }
+
+  .cheatsheet-section h3 {
+    font-size: 9pt;
+    margin: 0 0 0.3rem;
+    padding-bottom: 0.2rem;
+    color: #0066cc;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .cheatsheet-section pre {
+    margin: 0;
+    padding: 0.25rem;
+    font-size: 7.5pt;
+    line-height: 1.4;
+    background: #fff;
+    border: 1px solid #eee;
+  }
+
+  .cheatsheet-footer {
+    margin-top: 0.5rem;
+    padding-top: 0.25rem;
+    font-size: 7pt;
+    color: #666;
+    border-top: 1px solid #ddd;
+  }
+
+  /* Fit on one page (A4/Letter landscape works best) */
+  @page {
+    size: landscape;
+    margin: 0.5cm;
   }
 }

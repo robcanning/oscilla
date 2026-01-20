@@ -39,6 +39,19 @@
   </div>
 
   <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
   document.addEventListener("DOMContentLoaded", () => {
     const btn = document.querySelector(".docs-menu-toggle");
     const overlay = document.querySelector(".sidebar-overlay");

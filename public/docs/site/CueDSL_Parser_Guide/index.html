@@ -31,7 +31,7 @@
     <li><a href="/oscilla/docs/">Overview</a></li>
     <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
     <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
-    <li><a href="/oscilla/docs/cheatsheet/">Cheatsheet</a></li>
+<li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
     <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
     <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
   </ul>
@@ -359,6 +359,19 @@ The rest — parsing, debugging, and sequencing — is already done.</p>
   </div>
 
   <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
   document.addEventListener("DOMContentLoaded", () => {
     const btn = document.querySelector(".docs-menu-toggle");
     const overlay = document.querySelector(".sidebar-overlay");

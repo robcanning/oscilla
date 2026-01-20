@@ -1,6 +1,6 @@
 ---
 title: Cheatsheet
-layout: cheatsheet.njk
+layout: cheatsheet_layout.njk
 ---
 
 # OSCILLA Cheatsheet

@@ -104,6 +104,39 @@
 <pre><code>score.svg
 </code></pre>
 <p>This is the only file required for a project to work.</p>
+<h3>Page Size</h3>
+<p>Oscilla expects specific page dimensions depending on your score type:</p>
+<table>
+<thead>
+<tr>
+<th>Score Type</th>
+<th>Width</th>
+<th>Height</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scrolling</td>
+<td>40000px</td>
+<td>1024px</td>
+<td>Continuous horizontal scores</td>
+</tr>
+<tr>
+<td>Paged</td>
+<td>1366px</td>
+<td>1024px</td>
+<td>Discrete pages, optimized for iPad Pro</td>
+</tr>
+</tbody>
+</table>
+<p>Set these in Inkscape via <strong>File → Document Properties → Page Size</strong>.</p>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>The 1024px height is optimized for tablet display (iPad Pro landscape)</li>
+<li>For scrolling scores, width directly affects playback duration — wider scores take longer to traverse at a given speed</li>
+<li>Adjust playback speed globally in <code>preferences.json</code> to compensate for different score widths</li>
+</ul>
 <h3>Optional files and folders</h3>
 <p>Other resources are only needed if your score uses them:</p>
 <pre><code class="language-text">myProject/
