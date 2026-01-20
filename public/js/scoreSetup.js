@@ -8,10 +8,107 @@ import {
 import { hideAllButtonPlaceholders } from "./oscillaButton.js";
 import { setSpeedCueMap, extractSpeedCues } from './oscillaSpeed.js';
 
+
+
 import {
   initOscillaAnnotations,
-  setAnnotationsProject
+  setAnnotationsProject,
+  exportAnnotationsJSON,
+  importAnnotationsJSON
 } from "./oscillaAnnotations.js";
+
+
+
+
+// ============================================================
+// 🔹 ANNOTATION MENU EXPORT / IMPORT (SAFE UI WIRING)
+// ============================================================
+
+function wireAnnotationMenuItems() {
+  const exportItem = document.getElementById("annotations-export");
+  const importItem = document.getElementById("annotations-import");
+
+  if (exportItem) {
+    exportItem.addEventListener("click", () => {
+      exportAnnotationsJSON();
+    });
+  }
+
+  if (importItem) {
+    importItem.addEventListener("click", () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "application/json";
+      input.onchange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          importAnnotationsJSON(file);
+        }
+      };
+      input.click();
+    });
+  }
+}
+
+
+
+
+
+////////////////////////////////////
+let hamburgerMenuWired = false;
+
+function wireHamburgerMenu() {
+
+  if (hamburgerMenuWired) return;
+  hamburgerMenuWired = true;
+
+  const menu = document.querySelector("#hamburger-container sl-menu");
+
+
+  const dropdown = document.querySelector("#hamburger-container sl-menu");
+  if (!dropdown) return;
+
+  menu.addEventListener("sl-select", e => {
+    const value = e.detail.item.value;
+
+    switch (value) {
+      case "annotations-export":
+        exportAnnotationsJSON();
+        break;
+
+      case "annotations-import": {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "application/json";
+        input.onchange = e => {
+          const file = e.target.files?.[0];
+          if (file) importAnnotationsJSON(file);
+        };
+        input.click();
+        break;
+      }
+
+      case "help-local":
+        window.open(
+          "http://localhost:8001/oscilla/docs",
+          "_blank",
+          "noopener"
+        );
+        break;
+
+      case "preferences":
+        openPreferencesDialog();
+        break;
+    }
+  });
+
+}
+
+
+
+
+
+
 
 // Rehearsal mark logic ////////////////////////////////////////////////////////
 
@@ -713,6 +810,10 @@ export async function setupScore(svgElement) {
   // Performer-facing overlays
   initOscillaAnnotations();
   setAnnotationsProject(window.currentProjectName);
+
+
+  requestAnimationFrame(wireHamburgerMenu);
+
 
   console.groupEnd();
 }

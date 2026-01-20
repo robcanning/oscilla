@@ -839,10 +839,19 @@ if (state.canonicalRenderedWidth) {
   wsToggleButton?.addEventListener('click', toggleCommunication);
   closeKeybindingsButton?.addEventListener('click', () => keybindingsPopup?.classList.add('hidden'));
 
-  document.getElementById("hamburger-menu")?.addEventListener("sl-select", e => {
-    if (e.detail.item.value === "preferences") openPreferencesDialog();
-    if (e.detail.item.value === "load") document.getElementById("project-dialog")?.show();
-  });
+const menu = document.querySelector("#hamburger-container sl-menu");
+
+menu?.addEventListener("sl-select", e => {
+  const value = e.detail.item.value;
+
+  if (value === "preferences") {
+    openPreferencesDialog();
+  }
+
+  if (value === "load") {
+    document.getElementById("project-dialog")?.show();
+  }
+});
 
   // Keyboard shortcuts
 document.addEventListener(

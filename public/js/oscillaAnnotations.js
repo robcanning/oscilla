@@ -367,7 +367,6 @@ function positionAnnotation(el, annotation) {
 }
 
 
-
 function makePinEl(annotation, onClick) {
     const pin = document.createElement("div");
     pin.className = "osc-anno-pin";
@@ -378,9 +377,8 @@ function makePinEl(annotation, onClick) {
     pin.style.pointerEvents = "auto";
     pin.style.userSelect = "none";
 
-
     // -----------------------------
-    // Label (drag + click)
+    // Label (drag + click) — HARD ISOLATED
     // -----------------------------
     const label = document.createElement("div");
     label.textContent =
@@ -388,10 +386,26 @@ function makePinEl(annotation, onClick) {
             ? annotation.text.slice(0, 300) + "…"
             : annotation.text;
 
-    label.style.marginTop = "6px";
-    label.style.maxWidth = "260px";
-    label.style.display = "block";
+    // --- layout isolation (CRITICAL) ---
+    label.style.position = "relative";
+    label.style.display = "inline-block";
+    label.style.minWidth = "max-content";
+    label.style.maxWidth = "360px";
+    label.style.boxSizing = "border-box";
+    label.style.contain = "layout paint";
+
+    // --- text behaviour reset ---
     label.style.whiteSpace = "pre-wrap";
+    label.style.wordBreak = "break-word";
+    label.style.overflowWrap = "anywhere";
+    label.style.writingMode = "horizontal-tb";
+    label.style.textOrientation = "mixed";
+    label.style.direction = "ltr";
+    label.style.hyphens = "none";
+    label.style.lineBreak = "auto";
+
+    // --- visuals ---
+    label.style.marginTop = "6px";
     label.style.lineHeight = "1.4";
     const fs = annotation.style?.fontSize ?? 12;
     label.style.fontSize = `${fs}px`;
@@ -403,7 +417,6 @@ function makePinEl(annotation, onClick) {
     label.style.backdropFilter = "blur(4px)";
     label.style.cursor = "grab";
     label.style.pointerEvents = "auto";
-
 
     pin.appendChild(label);
 
@@ -443,14 +456,10 @@ function makePinEl(annotation, onClick) {
                 moved = true;
             }
 
-            const nx = baseX + dx;
-            const ny = baseY + dy;
-
-            annotation.placement.x = nx;
-            annotation.placement.y = ny;
+            annotation.placement.x = baseX + dx;
+            annotation.placement.y = baseY + dy;
 
             positionAnnotation(pin, annotation);
-
         };
 
         const onUp = () => {
@@ -1183,3 +1192,64 @@ export function destroyOscillaAnnotations() {
     state.initialized = false;
     console.log("[annotations] Destroyed");
 }
+
+
+export function exportAnnotationsJSON() {
+    const payload = {
+        project: state.project,
+        exportedAt: nowMs(),
+        version: 1,
+        items: state.items
+    };
+
+    const blob = new Blob(
+        [JSON.stringify(payload, null, 2)],
+        { type: "application/json" }
+    );
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `annotations.${state.project}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+}
+
+
+export function importAnnotationsJSON(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            const data = JSON.parse(reader.result);
+            if (!Array.isArray(data.items)) {
+                console.warn("[annotations] invalid import file");
+                return;
+            }
+
+            // merge by id (do not clobber blindly)
+            const byId = new Map(state.items.map(a => [a.id, a]));
+            for (const item of data.items) {
+                if (!item?.id) continue;
+                byId.set(item.id, item);
+            }
+
+            state.items = [...byId.values()];
+            saveLocal(state.project, state.items);
+            renderAll();
+
+            console.log(
+                `[annotations] imported ${data.items.length} annotations`
+            );
+        } catch (e) {
+            console.error("[annotations] import failed", e);
+        }
+    };
+    reader.readAsText(file);
+}
+
+
+
+
+// export function wireAnnotationMenuItems() { ---- this is in scoreSetup.js
+ 

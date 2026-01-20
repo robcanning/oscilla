@@ -493,21 +493,23 @@ export function initializeTopbarPin() {
 
 
 // ---------------------------------------------------------
-// ⏳ Unified Hide Controls Timer (respects pin state, never resets on re-call)
+// Unified Hide Controls Timer (respects pin state, never resets on re-call)
 // ---------------------------------------------------------
 window.hideControlsLater = function (delay = 4000) {
-  // if controls are pinned, block any hide timer setup entirely
-  if (window.controlsPinned) {
-    console.log("[UI] Controls pinned — ignoring hideControlsLater call.");
+  // Respect BOTH pin modes
+  if (window.controlsPinned || window.topbarPinned) {
     clearTimeout(window._hideControlsTimer);
+    console.log("[UI] Pin active — auto-hide suppressed");
     return;
   }
 
   clearTimeout(window._hideControlsTimer);
   window._hideControlsTimer = setTimeout(() => {
-    if (!window.controlsPinned) {
+    if (!window.controlsPinned && !window.topbarPinned) {
       hideControls();
-      console.log("[UI] Auto-hide executed (unpinned).");
+      console.log("[UI] Auto-hide executed");
+    } else {
+      console.log("[UI] Auto-hide skipped (pin active)");
     }
   }, delay);
 };
@@ -1040,16 +1042,20 @@ function showControlsAndAutoHide() {
   const MOVE_THRESHOLD = 10;     // px movement allowed before it's treated as scroll
   const SHOW_DURATION = 4000;    // ms controls stay visible
 
-  function revealControlsTemporarily() {
-    console.log("[TAP] 🎛️ Showing controls (via double tap)");
-    showControls();
+function revealControlsTemporarily() {
+  showControls();
 
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => {
-      console.log("[TAP] ⏳ Hiding controls (timeout expired)");
+  clearTimeout(hideTimeout);
+  hideTimeout = setTimeout(() => {
+    if (!window.controlsPinned && !window.topbarPinned) {
       hideControls();
-    }, SHOW_DURATION);
-  }
+      console.log("[TAP]  Hiding controls (timeout expired)");
+    } else {
+      console.log("[TAP] ⏸ Pin active — skipping auto-hide");
+    }
+  }, SHOW_DURATION);
+}
+
 
   let lastTapTime = 0;
   let tapTimeout;

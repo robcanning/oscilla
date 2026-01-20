@@ -12,8 +12,8 @@
   <script type="module">
     import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.0/cdn/shoelace.js';
   </script>
-<link href="https://iosevka-webfonts.github.io/iosevka-term/iosevka-term.css" rel="stylesheet" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.0/dist/themes/light.css" />
+  <link href="https://iosevka-webfonts.github.io/iosevka-term/iosevka-term.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.0/dist/themes/light.css" />
 </head>
 
 <body>
@@ -87,158 +87,157 @@
 
 
   <!-- 🔹 Top Bar -->
-<div id="top-bar" class="gui-bar gui-sticky-top">
+  <div id="top-bar" class="gui-bar gui-sticky-top">
 
-  <!-- Clients -->
-  <div id="client-list" class="gui-cluster">
-    Clients: 0
-  </div>
+    <!-- Clients -->
+    <div id="client-list" class="gui-cluster">
+      Clients: 0
+    </div>
 
-  <!-- Stopwatch -->
-  <div id="stopwatch-cluster" class="gui-cluster">
+    <!-- Stopwatch -->
+    <div id="stopwatch-cluster" class="gui-cluster">
 
-    <div id="stopwatch">00:00</div>
+      <div id="stopwatch">00:00</div>
 
-    <div id="stopwatch-controls" class="gui-cluster">
+      <div id="stopwatch-controls" class="gui-cluster">
 
-      <!-- Start -->
-      <button id="startBtn" class="gui-button" title="Start">
-        <svg viewBox="0 0 24 24" width="18" height="18"
-             fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="6 4 20 12 6 20 6 4" />
-        </svg>
-      </button>
+        <!-- Start -->
+        <button id="startBtn" class="gui-button" title="Start">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="6 4 20 12 6 20 6 4" />
+          </svg>
+        </button>
 
-      <!-- Pause -->
-      <button id="pauseBtn" class="gui-button" title="Pause">
-        <svg viewBox="0 0 24 24" width="18" height="18"
-             fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round">
-          <rect x="6" y="4" width="4" height="16" />
-          <rect x="14" y="4" width="4" height="16" />
-        </svg>
-      </button>
+        <!-- Pause -->
+        <button id="pauseBtn" class="gui-button" title="Pause">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="4" width="4" height="16" />
+            <rect x="14" y="4" width="4" height="16" />
+          </svg>
+        </button>
 
-      <!-- Reset -->
-      <button id="resetBtn" class="gui-button" title="Reset">
-        <svg viewBox="0 0 24 24" width="18" height="18"
-             fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round">
-          <rect x="4" y="4" width="16" height="16" rx="2" />
-        </svg>
-      </button>
+        <!-- Reset -->
+        <button id="resetBtn" class="gui-button" title="Reset">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2" />
+          </svg>
+        </button>
+
+      </div>
 
     </div>
 
+
+    <!--  mid side actions -->
+    <div id="topbar-actions" class="gui-cluster">
+
+      <!-- 🔹 OSC CONTROLS GROUP -->
+      <div class="gui-cluster osc-tools">
+
+        <!-- Mute OSC -->
+        <button id="osc-mute-btn" class="gui-button" title="Mute OSC">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+            <line x1="23" y1="9" x2="17" y2="15" />
+            <line x1="17" y1="9" x2="23" y2="15" />
+          </svg>
+        </button>
+
+        <!-- Overlay toggle -->
+        <button id="overlay-toggle" class="gui-button" title="OSC Overlay">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="14" rx="2" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        </button>
+
+        <!-- OSC preview -->
+        <div id="cue-info" class="osc-monitor gui-cluster">
+          <strong>OSC:</strong>
+          <div class="osc-line" id="osc-latest">waiting…</div>
+        </div>
+
+        <button id="annotation-toggle" class="gui-button" title="Annotations">
+          ✎
+        </button>
+
+      </div>
+
+
+
+      <!-- 🔹 VIEW / NAV CONTROLS GROUP -->
+      <div class="gui-cluster view-tools">
+
+        <span id="mode-toggle">scroll</span>
+
+        <button id="pin-topbar" class="gui-button" title="Pin top bar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 17v5" />
+            <path d="M5 7l5 5-5 5" />
+            <path d="M19 7l-5 5 5 5" />
+            <path d="M2 7h20" />
+          </svg>
+        </button>
+        <div id="hamburger-container">
+          <sl-dropdown>
+
+            <button id="hamburger-menu" class="gui-button gui-button--square hamburger-btn" slot="trigger"
+              aria-haspopup="true" aria-expanded="false">
+              <svg viewBox="0 0 24 24" class="hamburger-icon" aria-hidden="true">
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+
+<sl-menu>
+  <sl-menu-item value="pages">Pages
+    <sl-menu slot="submenu" id="pages-submenu"></sl-menu>
+  </sl-menu-item>
+
+  <sl-menu-item value="projects">Projects
+    <sl-menu slot="submenu" id="projects-submenu"></sl-menu>
+  </sl-menu-item>
+
+  <sl-divider></sl-divider>
+
+  <sl-menu-item value="annotations-export">
+    Export annotations…
+  </sl-menu-item>
+
+  <sl-menu-item value="annotations-import">
+    Import annotations…
+  </sl-menu-item>
+
+  <sl-divider></sl-divider>
+
+  <sl-menu-item value="preferences">
+    Preferences
+  </sl-menu-item>
+
+    <sl-menu-item value="help-local">
+    Local help
+  </sl-menu-item>
+</sl-menu>
+
+
+
+          </sl-dropdown>
+        </div>
+
+
+      </div>
+
+    </div>
+
+
   </div>
-
-
-  <!--  mid side actions -->
- <div id="topbar-actions" class="gui-cluster">
-
-  <!-- 🔹 OSC CONTROLS GROUP -->
-<div class="gui-cluster osc-tools">
-
-  <!-- Mute OSC -->
-  <button id="osc-mute-btn" class="gui-button" title="Mute OSC">
-    <svg viewBox="0 0 24 24" width="18" height="18"
-         fill="none" stroke="currentColor" stroke-width="2"
-         stroke-linecap="round" stroke-linejoin="round">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-      <line x1="23" y1="9" x2="17" y2="15" />
-      <line x1="17" y1="9" x2="23" y2="15" />
-    </svg>
-  </button>
-
-  <!-- Overlay toggle -->
-  <button id="overlay-toggle" class="gui-button" title="OSC Overlay">
-    <svg viewBox="0 0 24 24" width="18" height="18"
-         fill="none" stroke="currentColor" stroke-width="2"
-         stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="4" width="18" height="14" rx="2" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  </button>
-
-  <!-- OSC preview -->
-  <div id="cue-info" class="osc-monitor gui-cluster">
-    <strong>OSC:</strong>
-    <div class="osc-line" id="osc-latest">waiting…</div>
-  </div>
-
-<button
-  id="annotation-toggle"
-  class="gui-button"
-  title="Annotations"
->
-  ✎
-</button>
-
-</div>
-
-
-
-  <!-- 🔹 VIEW / NAV CONTROLS GROUP -->
-  <div class="gui-cluster view-tools">
-
-    <span id="mode-toggle">scroll</span>
-
-    <button id="pin-topbar" class="gui-button" title="Pin top bar">
-      <svg viewBox="0 0 24 24" width="18" height="18"
-           fill="none" stroke="currentColor" stroke-width="2"
-           stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 17v5"/>
-        <path d="M5 7l5 5-5 5"/>
-        <path d="M19 7l-5 5 5 5"/>
-        <path d="M2 7h20"/>
-      </svg>
-    </button>
-<div id="hamburger-container">
-  <sl-dropdown>
-
-<button
-  id="hamburger-menu"
-  class="gui-button gui-button--square hamburger-btn"
-  slot="trigger"
-  aria-haspopup="true"
-  aria-expanded="false"
->
-  <svg
-    viewBox="0 0 24 24"
-    class="hamburger-icon"
-    aria-hidden="true"
-  >
-    <line x1="3" y1="6"  x2="21" y2="6"></line>
-    <line x1="3" y1="12" x2="21" y2="12"></line>
-    <line x1="3" y1="18" x2="21" y2="18"></line>
-  </svg>
-</button>
-
-    <sl-menu>
-      <sl-menu-item id="pages-submenu-root">Pages
-        <sl-menu slot="submenu" id="pages-submenu"></sl-menu>
-      </sl-menu-item>
-
-      <sl-menu-item id="projects-submenu-root">Projects
-        <sl-menu slot="submenu" id="projects-submenu"></sl-menu>
-      </sl-menu-item>
-
-      <sl-divider></sl-divider>
-
-      <sl-menu-item value="preferences">Preferences</sl-menu-item>
-    </sl-menu>
-
-  </sl-dropdown>
-</div>
-
-
-  </div>
-
-</div>
-
-
-</div>
 
 
   <!-- Project Dialog -->
@@ -385,67 +384,68 @@
       </div>
 
 
-<!-- Updated right-controls: 2x3 grid with playhead/playzone toggle -->
-<div id="right-controls" class="gui-grid-2x3">
+      <!-- Updated right-controls: 2x3 grid with playhead/playzone toggle -->
+      <div id="right-controls" class="gui-grid-2x3">
 
-  <!-- Stop Audio -->
-  <button id="stop-audio-button" class="gui-button side-button" title="Stop all audio">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
-      <rect x="6" y="6" width="12" height="12" rx="2" />
-    </svg>
-  </button>
+        <!-- Stop Audio -->
+        <button id="stop-audio-button" class="gui-button side-button" title="Stop all audio">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
+            <rect x="6" y="6" width="12" height="12" rx="2" />
+          </svg>
+        </button>
 
-  <!-- Invert Display -->
-  <button id="invert-button" class="gui-button side-button" title="Invert display colors">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2v20" />
-      <path d="M5 12a7 7 0 0 1 7-7v14a7 7 0 0 1-7-7z" />
-    </svg>
-  </button>
+        <!-- Invert Display -->
+        <button id="invert-button" class="gui-button side-button" title="Invert display colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20" />
+            <path d="M5 12a7 7 0 0 1 7-7v14a7 7 0 0 1-7-7z" />
+          </svg>
+        </button>
 
-  <!-- Websocket On/Off -->
-  <button id="ws-toggle-button" class="gui-button side-button" title="Network / WebSocket status">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round">
-      <path d="M2 8a10 10 0 0 1 20 0" />
-      <path d="M5 12a7 7 0 0 1 14 0" />
-      <path d="M8 16a4 4 0 0 1 8 0" />
-      <circle cx="12" cy="20" r="1" />
-    </svg>
-  </button>
+        <!-- Websocket On/Off -->
+        <button id="ws-toggle-button" class="gui-button side-button" title="Network / WebSocket status">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 8a10 10 0 0 1 20 0" />
+            <path d="M5 12a7 7 0 0 1 14 0" />
+            <path d="M8 16a4 4 0 0 1 8 0" />
+            <circle cx="12" cy="20" r="1" />
+          </svg>
+        </button>
 
-  <!-- Pin Controls -->
-  <button class="gui-button side-button" id="pin-controls" title="Pin controls">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 17v5" />
-      <path d="M5 7l5 5-5 5" />
-      <path d="M19 7l-5 5 5 5" />
-      <path d="M2 7h20" />
-    </svg>
-  </button>
+        <!-- Pin Controls -->
+        <button class="gui-button side-button" id="pin-controls" title="Pin controls">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 17v5" />
+            <path d="M5 7l5 5-5 5" />
+            <path d="M19 7l-5 5 5 5" />
+            <path d="M2 7h20" />
+          </svg>
+        </button>
 
-  <!-- Playhead/Playzone Toggle (cycles: both → playhead only → playzone only → none → both) -->
-  <button id="playhead-toggle-button" class="gui-button side-button" title="Toggle playhead/playzone visibility" data-state="both">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round">
-      <!-- Playhead line -->
-      <line id="playhead-icon-line" x1="12" y1="3" x2="12" y2="21" stroke-width="3" />
-      <!-- Playzone rect -->
-      <rect id="playhead-icon-zone" x="6" y="8" width="12" height="8" rx="1" fill="currentColor" opacity="0.3" />
-    </svg>
-  </button>
+        <!-- Playhead/Playzone Toggle (cycles: both → playhead only → playzone only → none → both) -->
+        <button id="playhead-toggle-button" class="gui-button side-button" title="Toggle playhead/playzone visibility"
+          data-state="both">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <!-- Playhead line -->
+            <line id="playhead-icon-line" x1="12" y1="3" x2="12" y2="21" stroke-width="3" />
+            <!-- Playzone rect -->
+            <rect id="playhead-icon-zone" x="6" y="8" width="12" height="8" rx="1" fill="currentColor" opacity="0.3" />
+          </svg>
+        </button>
 
-  <!-- Dummy / Placeholder -->
-  <button id="dummy-button" class="gui-button side-button" title="(Reserved)" disabled>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round" opacity="0.3">
-      <circle cx="12" cy="12" r="8" />
-    </svg>
-  </button>
+        <!-- Dummy / Placeholder -->
+        <button id="dummy-button" class="gui-button side-button" title="(Reserved)" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" opacity="0.3">
+            <circle cx="12" cy="12" r="8" />
+          </svg>
+        </button>
 
-</div>
+      </div>
 
 
 
