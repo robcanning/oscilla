@@ -1910,6 +1910,6 @@ body.inverted #score {
 
 
 .logo {
-  width: 400px;     /* ← increase this */
+  width: 500px;     /* ← increase this */
   height: auto;     /* keep aspect ratio */
 }

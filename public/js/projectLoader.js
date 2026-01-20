@@ -9,6 +9,8 @@ import { initializeObserver } from "./oscillaObserver.js";
 import { setSpeed, applyDarkMode, toggleSplashScreen, hideSplashScreen } from "./oscillaTransport.js";
 import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 
+let loadInProgress = false;
+let projectMenuWired = false;
 
 export function cleanupProjectOverlays() {
   console.log("[Cleanup] Removing overlays, videos, audio, metronomes, stopwatches, cue buttons…");
@@ -30,24 +32,44 @@ export function cleanupProjectOverlays() {
   // --- Cue Buttons
   document.querySelectorAll(".oscilla-cue-button").forEach(el => el.remove());
 
-
   // --- VIDEO CLEANUP ---
   document.querySelectorAll(".cue-video").forEach(vid => {
-    try { vid.pause(); } catch (e) { }
-    try { vid.src = ""; } catch (e) { }
+    try { vid.pause(); } catch (e) {}
+    try { vid.src = ""; } catch (e) {}
     vid.remove();
   });
 
+  // --- Other common overlay containers (defensive, cheap) ---
+  try {
+    const idsToClear = [
+      "singlePage-content",
+      "media-content",
+      "cue-choice-container"
+    ];
+    idsToClear.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = "";
+    });
+
+    // hide popups if present
+    const hideIds = ["singlePage-container", "media-popup", "video-popup", "pause-countdown"];
+    hideIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add("hidden");
+    });
+  } catch (e) {
+    console.warn("[Cleanup] overlay container cleanup warning:", e);
+  }
 
   // ---------------------------------------------------
-  //   AUDIO CUE CLEANUP 
+  //   AUDIO CUE CLEANUP
   // ---------------------------------------------------
   if (window.activeAudioCues) {
     console.log("[Cleanup] Stopping active audio cues…");
     for (const voice of window.activeAudioCues) {
-      try { voice.src.stop(); } catch (e) { }
-      try { voice.src.disconnect(); } catch (e) { }
-      try { voice.gainNode.disconnect(); } catch (e) { }
+      try { voice.src.stop(); } catch (e) {}
+      try { voice.src.disconnect(); } catch (e) {}
+      try { voice.gainNode.disconnect(); } catch (e) {}
     }
     window.activeAudioCues.clear();
   }
@@ -74,28 +96,22 @@ window.applyPreferences = function applyPreferences(prefs) {
   // 4. Loop playback
   window.loopPlayback = !!prefs.loopPlayback;
 
-// 5. Playhead + playzone styling
-try {
+  // 5. Playhead + playzone styling
+  try {
+    const playhead = document.getElementById("playhead");
+    if (playhead) {
+      if (prefs.playheadColor)  playhead.style.backgroundColor = prefs.playheadColor;
+      if (prefs.playheadWidth)  playhead.style.width = prefs.playheadWidth;
+      if (prefs.playheadBorder) playhead.style.borderRight = prefs.playheadBorder;
+    }
 
-  // ---- PLAYHEAD ----
-  const playhead = document.getElementById("playhead");
-  if (playhead) {
-    if (prefs.playheadColor)  playhead.style.backgroundColor = prefs.playheadColor;
-    if (prefs.playheadWidth)  playhead.style.width = prefs.playheadWidth;
-    if (prefs.playheadBorder) playhead.style.borderRight = prefs.playheadBorder;
+    const zone = document.getElementById("playzone");
+    if (zone) {
+      if (prefs.playzoneColor) zone.style.backgroundColor = prefs.playzoneColor;
+    }
+  } catch (err) {
+    console.warn("[Prefs] playhead/playzone styling failed:", err);
   }
-
-  // ---- PLAYZONE ----
-  const zone = document.getElementById("playzone");
-  if (zone) {
-    if (prefs.playzoneColor) zone.style.backgroundColor = prefs.playzoneColor;
-  }
-
-} catch (err) {
-  console.warn("[Prefs] playhead/playzone styling failed:", err);
-}
-
-
 };
 
 
@@ -103,15 +119,23 @@ try {
 // 🚀 Main entry point
 // ------------------------------------------------------------
 export async function loadProject(projectName, options = {}) {
+  if (loadInProgress) {
+    console.warn("[loadProject] ⏳ Load already in progress — ignoring:", projectName);
+    return;
+  }
+
+  loadInProgress = true;
+
   try {
-
-        console.log("[Project] 🔁 hard cleanup before mode switch");
-
-    destroyAllHitLabels("project-load / mode-switch");
-
-
     console.log(`\n[loadProject] 🚀 Loading project: ${projectName}`);
     const { resetOnLoad = false } = options;
+
+    // Freeze cue-triggering while we rebuild DOM/state
+    window.suppressCueTriggers = true;
+
+    // Pause playback during switch (defensive)
+    window.isPlaying = false;
+    window.animationPaused = true;
 
     // What was previously loaded in *this* session?
     const previousProject = window.currentProject || null;
@@ -128,15 +152,23 @@ export async function loadProject(projectName, options = {}) {
     const switchingAcrossReload = !!lastProject && lastProject !== projectName;
     const shouldReset = resetOnLoad || switchingInSession || switchingAcrossReload;
 
+    // HARD CLEANUP FIRST (this is what splash “gets for free” by being first load)
+    console.log("[Project] 🔁 hard cleanup before mode switch");
+    cleanupProjectOverlays();
+    destroyAllHitLabels("project-load / mode-switch");
+
+    // Reset cue state that tends to cause “misfire at load”
+    window._prevCueLefts = new Map();
+    window._cueInsideState = new Map();
+    window.triggeredCues = new Set();
+    window.cues = []; // important if other code pushes into it
+
     if (shouldReset) {
       console.log(`[Project] Resetting playhead for new project "${projectName}".`);
       window.playheadX = 0;
       window.elapsedTime = 0;
       if (window.scoreContainer) window.scoreContainer.scrollLeft = 0;
 
-      // ------------------------------------------------------------
-      // 🧹 Clear any old saved playhead position for this project
-      // ------------------------------------------------------------
       const key = `oscilla_lastPos_${projectName}`;
       if (localStorage.getItem(key)) {
         localStorage.removeItem(key);
@@ -157,11 +189,6 @@ export async function loadProject(projectName, options = {}) {
     window.canonicalRenderedWidth = null;
     window.canonicalScale = null;
 
-    // cleanupProjectOverlays(); // clear buttons videos metronomes etc
-    // destroyAllCueButtons();
-
-
-
     // Tell server this project should start fresh
     if (window.socket) {
       window.socket.send(JSON.stringify({
@@ -170,38 +197,28 @@ export async function loadProject(projectName, options = {}) {
       }));
     }
 
-
     // 2️⃣ Load and apply preferences
     const prefs = await loadPreferences(window.projectBase);
-
     applyPreferences(prefs);
 
-    // ✅ Make available to Preferences dialog and runtime
     window.currentProjectPrefs = prefs;
     window.currentProjectName = projectName;
 
-    // ✅ Duration normalization (minutes → ms)
+    // Duration normalization (minutes → ms)
     if (prefs.duration_minutes && prefs.duration_minutes > 0) {
       window.duration = prefs.duration_minutes * 60 * 1000;
       console.log(`[Duration] 🎼 Set from prefs: ${prefs.duration_minutes} min → ${window.duration} ms`);
     } else {
-      window.duration = 10 * 60 * 1000; // fallback: 10 min
+      window.duration = 10 * 60 * 1000;
       console.log("[Duration] ⏱ Using default duration: 10 minutes");
     }
 
     applyDarkMode(!!prefs.darkMode);
 
-    // ============================================================
-    // 🎚️ BASE SPEED MULTIPLIER — from preferences
-    // ============================================================
-    // This is the "global tempo" multiplier that all speed cues multiply against.
-    // e.g., baseSpeedMultiplier = 0.3 means:
-    //   - speed(1) in score → actual speed = 1 × 0.3 = 0.3
-    //   - speed(3) in score → actual speed = 3 × 0.3 = 0.9
-    // ============================================================
+    // Base speed multiplier
     if (prefs.defaultPlaybackSpeed && prefs.defaultPlaybackSpeed > 0) {
       window.baseSpeedMultiplier = prefs.defaultPlaybackSpeed;
-      window.speedMultiplier = prefs.defaultPlaybackSpeed; // initial speed before any cues
+      window.speedMultiplier = prefs.defaultPlaybackSpeed;
       window.updateSpeedDisplay?.();
       console.log(`[Prefs] 🎚️ Base speed multiplier set to ${prefs.defaultPlaybackSpeed}`);
     } else {
@@ -210,87 +227,10 @@ export async function loadProject(projectName, options = {}) {
       console.log("[Prefs] 🎚️ Using default base speed: 1.0");
     }
 
-
-
-    // create preferences dialog from json
-    window.openPreferencesDialog = function openPreferencesDialog() {
-      console.log("[Prefs] openPreferencesDialog() called");
-
-      const dlg = document.getElementById("preferences-dialog");
-      const form = document.getElementById("preferences-form");
-
-      console.log("[Prefs] dialog:", dlg);
-      console.log("[Prefs] form:", form);
-
-      // Where prefs should come from
-      const prefs = window.currentProjectPrefs;
-      const projectName = window.currentProjectName;
-
-      console.log("[Prefs] currentProjectName:", projectName);
-      console.log("[Prefs] currentProjectPrefs:", prefs);
-
-      if (!prefs) {
-        console.warn("[Prefs] ❌ No preferences loaded — aborting UI build");
-        dlg.show();
-        return;
-      }
-
-      form.innerHTML = ""; // clear
-
-      for (const [key, value] of Object.entries(prefs)) {
-        if (key.startsWith("_")) {
-          console.log(`[Prefs] Skipping metadata key: ${key}`);
-          continue;
-        }
-
-        console.log(`[Prefs] Building field: ${key} =`, value);
-
-        const label = document.createElement("label");
-        label.textContent = key;
-
-        let input;
-        if (typeof value === "boolean") {
-          input = document.createElement("sl-switch");
-          input.checked = value;
-        } else if (typeof value === "number") {
-          input = document.createElement("input");
-          input.type = "number";
-          input.value = value;
-        } else {
-          input = document.createElement("input");
-          input.type = "text";
-          input.value = value;
-        }
-
-        input.dataset.prefKey = key;
-
-        form.appendChild(label);
-        form.appendChild(input);
-      }
-
-      console.log("[Prefs] ✅ UI build complete — now displaying dialog.");
-
-      dlg.show();
-    };
-
-
-
-
-    // Expose for external UI
-    window.openPreferencesDialog = openPreferencesDialog;
-
-
     // 3️⃣ Determine and load view mode
     const viewMode = prefs.defaultViewMode || "scroll";
-
-    const container = document.getElementById("scoreContainer")
-      || document.getElementById("scoreInner")
-      || document.querySelector("#scoreContainer");
-
-    if (!container) {
-      throw new Error("Could not find #scoreContainer in the DOM.");
-    }
-
+    const container = document.getElementById("scoreContainer") || document.querySelector("#scoreContainer");
+    if (!container) throw new Error("Could not find #scoreContainer in the DOM.");
     window.scoreContainer = container;
 
     if (viewMode === "page") {
@@ -299,7 +239,7 @@ export async function loadProject(projectName, options = {}) {
       await loadScrollMode(container);
     }
 
-    // 4️⃣ Check for query param page override (for direct page links)
+    // 4️⃣ Optional ?page override
     const params = new URLSearchParams(location.search);
     const directPage = params.get("page");
     if (directPage) {
@@ -307,14 +247,10 @@ export async function loadProject(projectName, options = {}) {
       // await loadPageMode(container, directPage);
     }
 
-
-    // ------------------------------------------------------------
-    // 🕐 Restore last saved playhead (only when NOT a switch)
-    // ------------------------------------------------------------
+    // Restore last saved playhead (only when NOT a switch)
     const savedPos = localStorage.getItem(`oscilla_lastPos_${projectName}`);
     if (!shouldReset && savedPos) {
       console.log(`[Resume] Queuing jump to last playhead position: ${savedPos}px`);
-
       setTimeout(() => {
         if (window.scoreContainer) {
           window.playheadX = parseFloat(savedPos);
@@ -326,36 +262,25 @@ export async function loadProject(projectName, options = {}) {
       }, 300);
     }
 
-    // populate the project menu
-    window.loadProject = new Proxy(window.loadProject, {
-      apply(target, thisArg, args) {
-        const result = Reflect.apply(target, thisArg, args);
-        requestAnimationFrame(populateProjectMenu);
-        return result;
-      }
-    });
-
-    // ✅ Build page registry FIRST, then refresh menu
+    // Page registry + menus
     if (typeof window.buildPageRegistryFromDirIndex === "function") {
       await window.buildPageRegistryFromDirIndex();
     }
-
     if (typeof window.refreshAllPagesMenu === "function") {
       window.refreshAllPagesMenu();
     }
 
-
     console.log(`[loadProject] ✅ Project "${projectName}" fully loaded.`);
-
-
-    // initializeObserver();
-
-
     hideSplashScreen();
+
   } catch (err) {
     console.error(`[loadProject] ❌ Failed to load project "${projectName}":`, err);
+  } finally {
+    window.suppressCueTriggers = false;
+    loadInProgress = false;
   }
 }
+
 
 // ------------------------------------------------------------
 // ⚙️ Load preferences.json (if available)
@@ -380,6 +305,7 @@ async function loadPreferences(basePath) {
     return defaults;
   }
 }
+
 
 // ------------------------------------------------------------
 // 🧾 SCROLL MODE — load main score.svg
@@ -407,7 +333,6 @@ async function loadScrollMode(container) {
   // Clear container
   container.innerHTML = "";
 
-  // ✅ Create transform isolation wrapper (scroll/pan layer)
   const stage = document.createElement("div");
   stage.id = "scrollStage";
   Object.assign(stage.style, {
@@ -419,7 +344,6 @@ async function loadScrollMode(container) {
     lineHeight: "0"
   });
 
-  // ✅ Create world-width wrapper (the element that gets the canonical scaled size)
   const inner = document.createElement("div");
   inner.id = "scoreInner";
   Object.assign(inner.style, {
@@ -429,22 +353,17 @@ async function loadScrollMode(container) {
     lineHeight: "0"
   });
 
-  // ✅ Build the correct DOM hierarchy
   container.appendChild(stage);
   stage.appendChild(inner);
   inner.appendChild(svg);
 
   window.mode = "scroll";
-
   console.log("[ScrollMode] ✅ Loaded score.svg into #scrollStage → #scoreInner → <svg>");
+
   if (typeof initializeSVG === "function") initializeSVG(svg);
-
-
-
   window.hideControls?.();
-
-
 }
+
 
 // ------------------------------------------------------------
 // 📂 Utility: resolve project path
@@ -452,21 +371,17 @@ async function loadScrollMode(container) {
 export function resolveProjectPath(type, filename) {
   if (!filename) return "";
   switch (type) {
-    case "audio":
-      return `${window.audioDir}${filename}`;
-    case "text":
-      return `${window.textDir}${filename}`;
-    case "video":
-      return `${window.videoDir}${filename}`;
-    case "page":
-      return `${window.pagesDir}${filename}`;
-    default:
-      return `${window.projectBase}${filename}`;
+    case "audio": return `${window.audioDir}${filename}`;
+    case "text":  return `${window.textDir}${filename}`;
+    case "video": return `${window.videoDir}${filename}`;
+    case "page":  return `${window.pagesDir}${filename}`;
+    default:      return `${window.projectBase}${filename}`;
   }
 }
 
 window.resolveProjectPath = resolveProjectPath;
 window.loadProject = loadProject;
+
 
 // ------------------------------------------------------------
 // 🔗 Auto-load project & optional page
@@ -486,8 +401,7 @@ if (projectFromURL) {
       }, 650);
     }
   });
-}
-else {
+} else {
   if (typeof window.showSplashScreen === "function") {
     window.showSplashScreen();
   } else {
@@ -496,6 +410,9 @@ else {
 }
 
 
+// ------------------------------------------------------------
+// 🧩 Project submenu population (wire once)
+// ------------------------------------------------------------
 async function populateProjectMenu() {
   console.log("[ProjectMenu] 🟡 Starting populateProjectMenu()");
 
@@ -505,18 +422,26 @@ async function populateProjectMenu() {
     return;
   }
 
+  // Wire selection handler ONCE
+  if (!projectMenuWired) {
+    projectMenuWired = true;
+    submenu.addEventListener("sl-select", (e) => {
+      const v = e.detail?.item?.value;
+      if (typeof v === "string" && v.startsWith("project:")) {
+        const project = v.split(":")[1];
+        console.log(`[ProjectMenu] 🟢 Loading project: ${project}`);
+        window.loadProject?.(project, { resetOnLoad: true });
+      }
+    });
+  }
+
   try {
     console.log("[ProjectMenu] Fetching /scores/…");
     const res = await fetch("/scores/");
     const text = await res.text();
 
-    console.log("[ProjectMenu] Raw fetch response:\n", text.substring(0, 300), "…");
-
-    // ✅ Correct regex for href="/scores/NAME/"
     const matches = [...text.matchAll(/href="\/scores\/([^"\/]+)\//g)];
-    const projects = matches.map(m => m[1]).filter(x => !x.startsWith("."));
-
-    console.log("[ProjectMenu] Extracted projects:", projects);
+    const projects = matches.map(m => m[1]).filter(x => x && !x.startsWith("."));
 
     submenu.innerHTML = "";
 
@@ -535,15 +460,6 @@ async function populateProjectMenu() {
       submenu.appendChild(item);
     });
 
-    submenu.addEventListener("sl-select", (e) => {
-      const v = e.detail.item.value;
-      if (v.startsWith("project:")) {
-        const project = v.split(":")[1];
-        console.log(`[ProjectMenu] 🟢 Loading project: ${project}`);
-        window.loadProject?.(project, { resetOnLoad: true });
-      }
-    });
-
     console.log("[ProjectMenu] ✅ Project submenu updated:", projects);
 
   } catch (err) {
@@ -552,10 +468,4 @@ async function populateProjectMenu() {
 }
 
 document.addEventListener("DOMContentLoaded", populateProjectMenu);
-
-document.addEventListener("DOMContentLoaded", populateProjectMenu);
-
-
 window.populateProjectMenu = populateProjectMenu;
-
-document.addEventListener("DOMContentLoaded", populateProjectMenu);
