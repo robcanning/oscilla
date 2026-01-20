@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title or "OSCILLA Cheatsheet" }}</title>
+  <link href="https://iosevka-webfonts.github.io/iosevka-term/iosevka-term.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ '/docs/cheatsheet.css' | url }}">
+</head>
+
+<body class="cheatsheet">
+
+  <header class="cheatsheet-header">
+    <nav class="cheatsheet-nav">
+      <a href="{{ '/docs/' | url }}">← Docs Index</a>
+    </nav>
+  </header>
+
+  <div class="cheatsheet-page">
+    <div class="cheatsheet-columns">
+      {{ content | safe }}
+    </div>
+
+    <footer class="cheatsheet-footer">
+      <span>© Rob Canning / Oscilla</span>
+      <span class="cheatsheet-footer-right">Cheatsheet — subject to change</span>
+    </footer>
+  </div>
+
+</body>
+</html>
