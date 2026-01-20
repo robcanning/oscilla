@@ -107,6 +107,8 @@
 .docs-content {
   min-width: 0;
   padding: 0.25rem 0;
+  margin-top: 3.7rem; /* same as header height */
+
 
   font-size: 0.95rem;
   line-height: 1.55;
@@ -227,12 +229,12 @@
 }
 
 .doc-image img {
-  max-width: 70%;
+  max-width: 40%;
   height: auto;
 }
 
 .doc-image {
-  text-align: center;
+  text-align: left;
 }
 
 .doc-image img {
@@ -240,7 +242,7 @@
 }
 
 .doc-image img:active {
-  transform: scale(1.4);
+  transform: scale(2);
 }
 
 

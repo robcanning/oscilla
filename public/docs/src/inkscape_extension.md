@@ -4,8 +4,16 @@ layout: docs_layout.njk
 ---
 
 # OSCILLA Inkscape Extension
+<figure class="doc-image">
+  <img
+    src="{{ '/docs/img/oscilla-inkscape-extension.png' | url }}"
+    alt="Oscilla Inkscape Extension"
+  >
+  <figcaption>A smart cue editor for creating OSCILLA interactive graphic notation within Inkscape.
+ </figcaption>
+</figure>
 
-A smart cue editor for creating OSCILLA interactive graphic notation within Inkscape.
+
 
 ## Overview
 
@@ -23,13 +31,6 @@ cd oscilla-inkscape-extension
 The installer detects your operating system and copies files to the correct Inkscape extensions folder.
 
 
-<figure class="doc-image">
-  <img
-    src="{{ '/docs/img/oscilla-inkscape-extension.png' | url }}"
-    alt="Oscilla Inkscape Extension"
-  >
-  <figcaption>Oscilla Inkscape Extension </figcaption>
-</figure>
 
 
 ### Manual Installation

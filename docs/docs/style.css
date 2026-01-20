@@ -29,6 +29,7 @@
    ========================================================= */
 
 .docs-container {
+  top: 3.7rem; /* same as header height */
   display: grid;
   grid-template-columns: 220px 1fr;
   gap: 1.2rem;
@@ -227,12 +228,12 @@
 }
 
 .doc-image img {
-  max-width: 70%;
+  max-width: 40%;
   height: auto;
 }
 
 .doc-image {
-  text-align: center;
+  text-align: left;
 }
 
 .doc-image img {
@@ -240,7 +241,7 @@
 }
 
 .doc-image img:active {
-  transform: scale(1.4);
+  transform: scale(2);
 }
 
 
