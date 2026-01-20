@@ -6,6 +6,7 @@ layout: docs_layout.njk
 
 # Screenshots of Oscilla
 
+## oscilla reherrsal mark navigation panel
 
 <figure class="doc-image">
   <img
@@ -16,7 +17,7 @@ layout: docs_layout.njk
 </figure>
 
 
-
+## Oscilla Preferences GUI
 <figure class="doc-image">
   <img
     src="{{ '/docs/img/oscilla-preferences-gui.png' | url }}"
@@ -26,6 +27,7 @@ layout: docs_layout.njk
 </figure>
 
 
+## Oscilla Server Running in Terminal 
 <figure class="doc-image">
   <img
     src="{{ '/docs/img/oscilla-server-terminal.png' | url }}"
