@@ -92,69 +92,183 @@
       </nav>
       
       <h1>Oscilla Documentation</h1>
-<p>This documentation describes the cue system, animation model, authoring workflow, and internal architecture of Oscilla.<br>
-All behaviour is authored directly in SVG and executed at runtime in the browser.</p>
-<h2>INSTALL</h2>
-<ul>
-<li><a href="INSTALL/">Installation</a></li>
-<li><a href="QUICKSTART/">Quickstart</a></li>
-</ul>
+<p>This documentation describes the cue system, animation model, authoring workflow, and internal architecture of Oscilla. All behaviour is authored directly in SVG and executed at runtime in the browser.</p>
 <hr>
-<h2>Authoring Workflow</h2>
+<h2>Getting Started</h2>
 <ul>
+<li><a href="INSTALL/">Installation</a> — setup and dependencies</li>
+<li><a href="QUICKSTART/">Quickstart</a> — your first Oscilla score</li>
 <li><a href="workflow/">Workflow</a> — SVG authoring and browser execution</li>
 <li><a href="cheatsheet/">Cheatsheet</a> — compact syntax reference</li>
+<li><a href="screenshots/">Screenshots</a> — visual examples</li>
 </ul>
 <hr>
 <h2>Cue Reference</h2>
 <p>Cues are the primary execution units in Oscilla. They control timing, navigation, media playback, interaction, and external communication.</p>
 <h3>Timing &amp; Navigation</h3>
-<ul>
-<li><a href="cue_stop/"><code>stop()</code></a> — halt playback</li>
-<li><a href="cue_pause/"><code>pause()</code></a> — pause playback</li>
-<li><a href="cue_speed/"><code>speed()</code></a> — speed control</li>
-<li><a href="cue_nav/"><code>nav()</code></a> — navigation and mode control</li>
-<li><a href="cue_page/"><code>page()</code></a> — page-based navigation</li>
-<li><a href="cue_stopwatch/"><code>stopwatch()</code></a> — time display and control</li>
-<li><a href="cue_repeat/"><code>repeat()</code></a> — repeat and loop structures</li>
-</ul>
-<hr>
+<table>
+<thead>
+<tr>
+<th>Cue</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="cue_stop/"><code>stop()</code></a></td>
+<td>Halt playback</td>
+</tr>
+<tr>
+<td><a href="cue_pause/"><code>pause()</code></a></td>
+<td>Pause playback</td>
+</tr>
+<tr>
+<td><a href="cue_speed/"><code>speed()</code></a></td>
+<td>Playback speed control</td>
+</tr>
+<tr>
+<td><a href="cue_stopwatch/"><code>stopwatch()</code></a></td>
+<td>Time display and control</td>
+</tr>
+<tr>
+<td><a href="cue_metronome/"><code>metronome()</code></a></td>
+<td>Metronome and beat sync</td>
+</tr>
+<tr>
+<td><a href="cue_page/"><code>page()</code></a></td>
+<td>Page-based navigation</td>
+</tr>
+<tr>
+<td><a href="cue_nav/"><code>nav()</code></a></td>
+<td>Navigation and mode control</td>
+</tr>
+</tbody>
+</table>
 <h3>Interaction &amp; Structure</h3>
-<ul>
-<li><a href="cue_button/"><code>button()</code></a> — interactive UI buttons</li>
-<li><a href="cue_propagate/"><code>propagate()</code></a> — propagate cue state</li>
-<li><a href="cue_reuse/"><code>reuse()</code></a> — reuse cue definitions</li>
-</ul>
+<table>
+<thead>
+<tr>
+<th>Cue</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="cue_button/"><code>button()</code></a></td>
+<td>Interactive UI buttons</td>
+</tr>
+<tr>
+<td><a href="cue_propagate/"><code>propagate()</code></a></td>
+<td>Propagate cue state</td>
+</tr>
+<tr>
+<td><a href="cue_reuse/"><code>reuse()</code></a></td>
+<td>Reuse cue definitions</td>
+</tr>
+</tbody>
+</table>
+<h3>Media &amp; Synthesis</h3>
+<table>
+<thead>
+<tr>
+<th>Cue</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="cue_text/"><code>text()</code></a></td>
+<td>Timed and sequenced text</td>
+</tr>
+<tr>
+<td><a href="cue_audio/"><code>audio()</code></a></td>
+<td>Audio file playback</td>
+</tr>
+<tr>
+<td><a href="cue_video/"><code>video()</code></a></td>
+<td>Video playback</td>
+</tr>
+<tr>
+<td><a href="cue_synth/"><code>synth()</code></a></td>
+<td>In-browser synthesis</td>
+</tr>
+</tbody>
+</table>
+<h3>OSC &amp; External Control</h3>
+<table>
+<thead>
+<tr>
+<th>Cue</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="cue_osc/"><code>osc()</code></a></td>
+<td>OSC message output</td>
+</tr>
+<tr>
+<td><a href="cue_oscCtrl/"><code>oscCtrl()</code></a></td>
+<td>OSC routing and control</td>
+</tr>
+</tbody>
+</table>
 <hr>
 <h2>Animation</h2>
 <p>Oscilla supports continuous and discrete animation tied directly to score timing.</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="cue_scale/"><code>scale()</code></a></td>
+<td>Uniform and non-uniform scaling</td>
+</tr>
+<tr>
+<td><a href="cue_rotate/"><code>rotate()</code></a></td>
+<td>Continuous and stepped rotation</td>
+</tr>
+<tr>
+<td><a href="cue_o2p/"><code>o2p()</code></a></td>
+<td>Object-to-path traversal</td>
+</tr>
+<tr>
+<td><a href="traverse/"><code>traverse()</code></a></td>
+<td>Object traversal across points or paths</td>
+</tr>
+<tr>
+<td><a href="color/"><code>color()</code></a></td>
+<td>Color animation</td>
+</tr>
+<tr>
+<td><a href="cue_fade/"><code>fade()</code></a></td>
+<td>Fade visual or UI elements</td>
+</tr>
+<tr>
+<td><a href="cue_ui/"><code>ui()</code></a></td>
+<td>UI element animation</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Tools</h2>
 <ul>
-<li><a href="anim_scale/"><code>scale()</code></a> — uniform and non-uniform scaling</li>
-<li><a href="anim_rotate/"><code>rotate()</code></a> — continuous and stepped rotation</li>
-<li><a href="cue_o2p/"><code>o2p()</code></a> — object-to-path traversal</li>
-<li><a href="cue_traverse/"><code>traverse()</code></a> — object traversal across points or paths</li>
-<li><code>color()</code> — <strong>color animation (documentation forthcoming)</strong></li>
-<li><a href="cue_fade/"><code>fade()</code></a> — fade visual or UI elements</li>
-<li><a href="cue_text/"><code>text()</code></a> — timed and sequenced text</li>
+<li><a href="inkscape_extension/">Inkscape Extension</a> — author Oscilla cues directly in Inkscape</li>
 </ul>
 <hr>
-<h3>A/V &amp; Synthesis</h3>
+<h2>Developer</h2>
 <ul>
-<li><a href="cue_audio/"><code>audio()</code></a> — audio file playback</li>
-<li><a href="cue_video/"><code>video()</code></a> — video playback</li>
-<li><a href="cue_synth/"><code>synth()</code></a> — in-browser synthesis</li>
+<li><a href="dev-sync-architecture/">Sync Architecture</a> — internal timing and sync model</li>
 </ul>
 <hr>
-<h3>OSC &amp; External Control</h3>
-<ul>
-<li><a href="cue_osc/"><code>osc()</code></a> — OSC message output</li>
-<li><a href="cue_oscCtrl/"><code>oscCtrl()</code></a> — OSC routing and control</li>
-</ul>
 <h2>Further Reading</h2>
 <p>The design and rationale of Oscilla are described in:</p>
 <blockquote>
-<p>R. Canning, <em>OscillaScore: A Modular Platform for Graphic Notation in Networked Music Performance</em>,<br>
-Proceedings of the International Conference on Technologies for Music Notation and Representation (TENOR), Beijing, 2025.</p>
+<p>R. Canning, <em>OscillaScore: A Modular Platform for Graphic Notation in Networked Music Performance</em>, Proceedings of the International Conference on Technologies for Music Notation and Representation (TENOR), Beijing, 2025.</p>
 </blockquote>
 
       

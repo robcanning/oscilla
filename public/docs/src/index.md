@@ -5,41 +5,59 @@ layout: docs_layout.njk
 
 # Oscilla Documentation
 
-This documentation describes the cue system, animation model, authoring workflow, and internal architecture of Oscilla.  
-All behaviour is authored directly in SVG and executed at runtime in the browser.
-
-## INSTALL
-- [Installation](INSTALL/)
-- [Quickstart](QUICKSTART/)
+This documentation describes the cue system, animation model, authoring workflow, and internal architecture of Oscilla. All behaviour is authored directly in SVG and executed at runtime in the browser.
 
 ---
 
-## Authoring Workflow
+## Getting Started
+
+- [Installation](INSTALL/) — setup and dependencies
+- [Quickstart](QUICKSTART/) — your first Oscilla score
 - [Workflow](workflow/) — SVG authoring and browser execution
 - [Cheatsheet](cheatsheet/) — compact syntax reference
-
+- [Screenshots](screenshots/) — visual examples
 
 ---
 
 ## Cue Reference
+
 Cues are the primary execution units in Oscilla. They control timing, navigation, media playback, interaction, and external communication.
 
 ### Timing & Navigation
-- [`stop()`](cue_stop/) — halt playback
-- [`pause()`](cue_pause/) — pause playback
-- [`speed()`](cue_speed/) — speed control
-- [`nav()`](cue_nav/) — navigation and mode control
-- [`page()`](cue_page/) — page-based navigation
-- [`stopwatch()`](cue_stopwatch/) — time display and control
-- [`repeat()`](cue_repeat/) — repeat and loop structures
 
----
+| Cue | Description |
+|-----|-------------|
+| [`stop()`](cue_stop/) | Halt playback |
+| [`pause()`](cue_pause/) | Pause playback |
+| [`speed()`](cue_speed/) | Playback speed control |
+| [`stopwatch()`](cue_stopwatch/) | Time display and control |
+| [`metronome()`](cue_metronome/) | Metronome and beat sync |
+| [`page()`](cue_page/) | Page-based navigation |
+| [`nav()`](cue_nav/) | Navigation and mode control |
 
 ### Interaction & Structure
 
-- [`button()`](cue_button/) — interactive UI buttons
-- [`propagate()`](cue_propagate/) — propagate cue state
-- [`reuse()`](cue_reuse/) — reuse cue definitions
+| Cue | Description |
+|-----|-------------|
+| [`button()`](cue_button/) | Interactive UI buttons |
+| [`propagate()`](cue_propagate/) | Propagate cue state |
+| [`reuse()`](cue_reuse/) | Reuse cue definitions |
+
+### Media & Synthesis
+
+| Cue | Description |
+|-----|-------------|
+| [`text()`](cue_text/) | Timed and sequenced text |
+| [`audio()`](cue_audio/) | Audio file playback |
+| [`video()`](cue_video/) | Video playback |
+| [`synth()`](cue_synth/) | In-browser synthesis |
+
+### OSC & External Control
+
+| Cue | Description |
+|-----|-------------|
+| [`osc()`](cue_osc/) | OSC message output |
+| [`oscCtrl()`](cue_oscCtrl/) | OSC routing and control |
 
 ---
 
@@ -47,33 +65,32 @@ Cues are the primary execution units in Oscilla. They control timing, navigation
 
 Oscilla supports continuous and discrete animation tied directly to score timing.
 
-- [`scale()`](anim_scale/) — uniform and non-uniform scaling
-- [`rotate()`](anim_rotate/) — continuous and stepped rotation
-- [`o2p()`](cue_o2p/) — object-to-path traversal
-- [`traverse()`](cue_traverse/) — object traversal across points or paths
-- `color()` — **color animation (documentation forthcoming)**
-- [`fade()`](cue_fade/) — fade visual or UI elements
-- [`text()`](cue_text/) — timed and sequenced text
+| Function | Description |
+|----------|-------------|
+| [`scale()`](cue_scale/) | Uniform and non-uniform scaling |
+| [`rotate()`](cue_rotate/) | Continuous and stepped rotation |
+| [`o2p()`](cue_o2p/) | Object-to-path traversal |
+| [`traverse()`](traverse/) | Object traversal across points or paths |
+| [`color()`](color/) | Color animation |
+| [`fade()`](cue_fade/) | Fade visual or UI elements |
+| [`ui()`](cue_ui/) | UI element animation |
 
 ---
 
-### A/V & Synthesis
+## Tools
 
-- [`audio()`](cue_audio/) — audio file playback
-- [`video()`](cue_video/) — video playback
-- [`synth()`](cue_synth/) — in-browser synthesis
+- [Inkscape Extension](inkscape_extension/) — author Oscilla cues directly in Inkscape
 
 ---
 
-### OSC & External Control
+## Developer
 
-- [`osc()`](cue_osc/) — OSC message output
-- [`oscCtrl()`](cue_oscCtrl/) — OSC routing and control
+- [Sync Architecture](dev-sync-architecture/) — internal timing and sync model
 
+---
 
 ## Further Reading
 
 The design and rationale of Oscilla are described in:
 
-> R. Canning, *OscillaScore: A Modular Platform for Graphic Notation in Networked Music Performance*,  
-> Proceedings of the International Conference on Technologies for Music Notation and Representation (TENOR), Beijing, 2025.
+> R. Canning, *OscillaScore: A Modular Platform for Graphic Notation in Networked Music Performance*, Proceedings of the International Conference on Technologies for Music Notation and Representation (TENOR), Beijing, 2025.
