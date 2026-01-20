@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cuehandler_architecture</title>
+  <link rel="stylesheet" href="/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <a href="/docs/" class="docs-header-title">Oscilla Docs</a>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/docs/workflow/">Workflow</a></li>
+<li><a href="/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_stop/">stop()</a></li>
+    <li><a href="/docs/cue_pause/">pause()</a></li>
+    <li><a href="/docs/cue_speed/">speed()</a></li>
+    <li><a href="/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/docs/cue_page/">page()</a></li>
+    <li><a href="/docs/cue_nav/">nav()</a></li>
+    <li><a href="/docs/cue_button">button()</a></li>
+    <li><a href="/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/docs/cue_text/">text()</a></li>
+    <li><a href="/docs/cue_audio/">audio()</a></li>
+    <li><a href="/docs/cue_video/">video()</a></li>
+    <li><a href="/docs/cue_synth/">synth()</a></li>
+    <li><a href="/docs/cue_osc/">osc()</a></li>
+    <li><a href="/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/cue_scale/">scale()</a></li>
+    <li><a href="/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/docs/traverse/">traverse()</a></li>
+    <li><a href="/docs/color/">color()</a></li>
+    <li><a href="/docs/cue_fade/">fade()</a></li>
+    <li><a href="/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/docs/user_annotations/">Annotations</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+    <li><a href="/docs/dev-sync-architecture/">Sync Architecture</a></li>
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+      <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+      
+      <h1>Cue Handler Architecture — oscillaScore / Rotula.Score</h1>
+<p>This file documents the internal logic and architecture for implementing new cue types in the oscillaScore (Rotula.Score) system.</p>
+<hr>
+<h2>Cue Trigger Lifecycle</h2>
+<ol>
+<li>SVG cue element (e.g. <code>&lt;text id=&quot;cueAudio(kick.wav)&quot;&gt;</code>) is intersected by the scrolling playhead.</li>
+<li>The <code>handleCueTrigger(cueId, isRemote)</code> function is invoked.</li>
+<li>Cue type and parameters are parsed via <code>parseCueParams(cueId)</code>.</li>
+<li>Cue is dispatched to the relevant function in <code>cueHandlers[type]</code>.</li>
+<li>Function performs the cue behavior (e.g. play sound, pause playback).</li>
+<li>Cue is recorded in <code>triggeredCues</code> to prevent re-triggering.</li>
+<li>Cue is broadcast via WebSocket to other clients (unless <code>isRemote === true</code>).</li>
+</ol>
+<hr>
+<h2>Core Components</h2>
+<h3><code>handleCueTrigger(cueId, isRemote = false)</code></h3>
+<p>Main dispatcher for cue execution:</p>
+<ul>
+<li>Parses cue type and parameters</li>
+<li>Delegates to handler in <code>cueHandlers</code></li>
+<li>Skips if already triggered</li>
+<li>Broadcasts to other clients if needed</li>
+</ul>
+<h3><code>parseCueParams(cueId)</code></h3>
+<p>Parses cue strings like:</p>
+<pre><code class="language-txt">cueAudio(file.wav)_loop(3)_amp(0.8)
+</code></pre>
+<p>Returns:</p>
+<pre><code class="language-js">{
+  type: &quot;cueAudio&quot;,
+  cueParams: {
+    choice: &quot;file.wav&quot;,
+    loop: 3,
+    amp: 0.8
+  }
+}
+</code></pre>
+<p>Supports:</p>
+<ul>
+<li><code>param(value)</code> format</li>
+<li>Coercion to boolean, float, int</li>
+</ul>
+<hr>
+<h2><code>cueHandlers</code> Registry</h2>
+<p>A global map of known cue types:</p>
+<pre><code class="language-js">cueHandlers = {
+  cuePause: handlePauseCue,
+  cueStop: handleStopCue,
+  cueRepeat: handleRepeatCue,
+  cueAudio: handleAudioCue,
+  cueChoice: handleCueChoice,
+  cueTraverse: handleTraverseCue,
+  cueOsc: handleOscCue,
+  ...
+}
+</code></pre>
+<p>Each value is a function that accepts the cueId and parsed parameters.</p>
+<hr>
+<h2>Adding a New Cue Handler</h2>
+<h3>1. Create the handler function</h3>
+<pre><code class="language-js">const handleMyCue = (cueId, cueParams) =&gt; {
+  console.log(&quot;[DEBUG] Running cue:&quot;, cueId, cueParams);
+  // Your logic here
+};
+</code></pre>
+<h3>2. Register in <code>cueHandlers</code></h3>
+<pre><code class="language-js">cueHandlers[&quot;cue_mycue&quot;] = handleMyCue;
+</code></pre>
+<h3>3. Trigger in SVG</h3>
+<pre><code class="language-xml">&lt;text id=&quot;cue_mycue(foo)_duration(5)&quot;&gt;Do Something&lt;/text&gt;
+</code></pre>
+<hr>
+<h2>🛠️ DOM + Playback Utilities</h2>
+<p>You can use these globals and helpers:</p>
+<ul>
+<li><code>playheadX</code>: current playhead horizontal position</li>
+<li><code>isPlaying</code>: whether animation is running</li>
+<li><code>stopAnimation()</code> / <code>startAnimation()</code></li>
+<li><code>togglePlayButton()</code></li>
+<li><code>window.runningAnimations</code>, <code>window.pauseTimeout</code></li>
+</ul>
+<hr>
+<h2>Design Notes</h2>
+<ul>
+<li>Cues should degrade gracefully if not supported.</li>
+<li>Most cues run once and are stateful.</li>
+<li>Repeats (<code>cueRepeat</code>) and choice cues (<code>cueChoice</code>) may modify navigation or playback.</li>
+<li>OSC cues are dispatched via WebSocket with structured JSON.</li>
+</ul>
+<hr>
+<h2>Debugging Tips</h2>
+<ul>
+<li>Use <code>[DEBUG]</code> console logs consistently</li>
+<li>Confirm WebSocket is connected (<code>wsEnabled &amp;&amp; socket.readyState === WebSocket.OPEN</code>)</li>
+<li>Test cue triggering both locally and remotely</li>
+</ul>
+<hr>
+<h2>Cue Types Currently Supported</h2>
+<table>
+<thead>
+<tr>
+<th>Cue Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cuePause(...)</code></td>
+<td>Pause with optional countdown UI</td>
+</tr>
+<tr>
+<td><code>cueStop</code></td>
+<td>Stop playback entirely</td>
+</tr>
+<tr>
+<td><code>cueAudio(...)</code></td>
+<td>Play audio locally (Wavesurfer) or via OSC</td>
+</tr>
+<tr>
+<td><code>cueChoice(...)</code></td>
+<td>Fullscreen performer choices from SVGs</td>
+</tr>
+<tr>
+<td><code>cueRepeat(...)</code></td>
+<td>Repeat from start to end <code>x</code> times</td>
+</tr>
+<tr>
+<td><code>cueTraverse(...)</code></td>
+<td>Move object between points on screen</td>
+</tr>
+<tr>
+<td><code>cue_animation(...)</code></td>
+<td>Trigger fullscreen SVG animation</td>
+</tr>
+<tr>
+<td><code>cue_osc_*</code></td>
+<td>Send OSC: trigger, pulse, random, set, etc.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Best Practices</h2>
+<ul>
+<li>Keep cue handlers atomic (1 cue = 1 effect)</li>
+<li>Avoid hardcoding visuals/UI into handlers</li>
+<li>Use cueParams for everything dynamic</li>
+<li>Broadcast only when <code>!isRemote</code></li>
+</ul>
+<hr>
+<h2>Suggested Files</h2>
+<ul>
+<li><code>cue_[type].md</code> for documentation</li>
+<li><code>handle[type]Cue()</code> for implementation</li>
+</ul>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

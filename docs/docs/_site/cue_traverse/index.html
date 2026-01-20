@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cue_traverse</title>
+  <link rel="stylesheet" href="/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <a href="/docs/" class="docs-header-title">Oscilla Docs</a>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/docs/workflow/">Workflow</a></li>
+<li><a href="/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_stop/">stop()</a></li>
+    <li><a href="/docs/cue_pause/">pause()</a></li>
+    <li><a href="/docs/cue_speed/">speed()</a></li>
+    <li><a href="/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/docs/cue_page/">page()</a></li>
+    <li><a href="/docs/cue_nav/">nav()</a></li>
+    <li><a href="/docs/cue_button">button()</a></li>
+    <li><a href="/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/docs/cue_text/">text()</a></li>
+    <li><a href="/docs/cue_audio/">audio()</a></li>
+    <li><a href="/docs/cue_video/">video()</a></li>
+    <li><a href="/docs/cue_synth/">synth()</a></li>
+    <li><a href="/docs/cue_osc/">osc()</a></li>
+    <li><a href="/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/cue_scale/">scale()</a></li>
+    <li><a href="/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/docs/traverse/">traverse()</a></li>
+    <li><a href="/docs/color/">color()</a></li>
+    <li><a href="/docs/cue_fade/">fade()</a></li>
+    <li><a href="/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/docs/user_annotations/">Annotations</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+    <li><a href="/docs/dev-sync-architecture/">Sync Architecture</a></li>
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+      <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+      
+      <h1><code>cueTraverse</code> — Animate Objects Between SVG Points</h1>
+<p>The <code>cueTraverse(...)</code> cue animates an SVG object along a path defined by a list of point elements (<code>&lt;circle&gt;</code>, <code>&lt;rect&gt;</code>, or <code>&lt;ellipse&gt;</code>). It's useful for moving symbols, playheads, or visual elements dynamically across the score.</p>
+<hr>
+<h2>Syntax</h2>
+<pre><code>cue_traverse_p(p1,p2,p3)_o(objectId)_s(speed)_d(direction)_x(repeats)_e(easeType)_h(holdMs)_next(targetCue)
+</code></pre>
+<p>Each parameter is enclosed in its own parenthesis. The cue name and parameters can be written as a single underscore-delimited string.</p>
+<hr>
+<h2>Parameter Reference</h2>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>p(...)</code></td>
+<td>List of point IDs (e.g. <code>p(p1,p2,p3)</code>)</td>
+</tr>
+<tr>
+<td><code>o(...)</code></td>
+<td>Object ID to move</td>
+</tr>
+<tr>
+<td><code>s(...)</code></td>
+<td>Speed in pixels per second (e.g. <code>s(2.5)</code>)</td>
+</tr>
+<tr>
+<td><code>d(...)</code></td>
+<td>Direction: <code>0=forward</code>, <code>1=reverse</code>, <code>2=pingpong</code>, <code>3=random</code></td>
+</tr>
+<tr>
+<td><code>x(...)</code></td>
+<td>Number of repeats (<code>0 = infinite</code>)</td>
+</tr>
+<tr>
+<td><code>e(...)</code></td>
+<td>Easing type (0 = linear, 1–9 = anime.js presets)</td>
+</tr>
+<tr>
+<td><code>h(...)</code></td>
+<td>Hold time at each point in milliseconds</td>
+</tr>
+<tr>
+<td><code>_next(...)</code></td>
+<td>Optional cue to trigger after traversal ends</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Examples</h2>
+<h3>Traverse between 3 points once:</h3>
+<pre><code>cue_traverse_p(p1,p2,p3)_o(dot)_s(1.5)_x(1)
+</code></pre>
+<h3>Infinite pingpong movement:</h3>
+<pre><code>cue_traverse_p(p1,p2,p3)_o(dot)_d(2)_x(0)
+</code></pre>
+<h3>Traverse with hold, ease, and jump to another cue:</h3>
+<pre><code>cue_traverse_p(A,B,C)_o(cursor)_s(3)_e(2)_h(300)_next(cue_done)
+</code></pre>
+<hr>
+<h2>Notes</h2>
+<ul>
+<li>Objects must be <code>&lt;circle&gt;</code>, <code>&lt;ellipse&gt;</code>, or <code>&lt;rect&gt;</code> to be correctly positioned.</li>
+<li><code>p(...)</code> must contain <strong>at least two</strong> valid point IDs.</li>
+<li><code>_next(...)</code> cue will only be triggered after <strong>final traversal loop</strong> finishes (or never, if infinite).</li>
+<li>Traversal will pause playback if <code>isPlaying</code> is false at start.</li>
+</ul>
+<hr>
+<h3>Triggering Other Objects via Intersections</h3>
+<p>As the animated object (defined via <code>o(...)</code>) moves through the points listed in <code>p(...)</code>, the system checks whether any point ID matches the <code>data-id</code> of other SVG elements.</p>
+<p>When a match is found:</p>
+<ul>
+<li>The corresponding element is <strong>animated using its <code>data-id</code> definition</strong></li>
+<li>This allows <code>cueTraverse</code> to function like a <strong>trigger engine</strong></li>
+<li>It’s useful for triggering visual pulses, spins, or dynamic elements connected to spatial locations in the score</li>
+</ul>
+<h4>Example</h4>
+<pre><code>c-t_p(p1,p2,p3)_o(pulsetrig01)
+</code></pre>
+<p>If you have an element like:</p>
+<pre><code class="language-html">&lt;circle id=&quot;pulse&quot; data-id=&quot;pulsetrig01 obj_scale_seq[1,1.5,1]_bounce&quot; /&gt;
+</code></pre>
+<p>When the animated object reaches a point named <code>pulsetrig01</code>, the element above will animate according to its <code>data-id</code>.</p>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

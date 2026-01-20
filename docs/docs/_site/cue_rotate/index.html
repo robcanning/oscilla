@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cue_rotate</title>
+  <link rel="stylesheet" href="/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <a href="/docs/" class="docs-header-title">Oscilla Docs</a>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/docs/workflow/">Workflow</a></li>
+<li><a href="/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_stop/">stop()</a></li>
+    <li><a href="/docs/cue_pause/">pause()</a></li>
+    <li><a href="/docs/cue_speed/">speed()</a></li>
+    <li><a href="/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/docs/cue_page/">page()</a></li>
+    <li><a href="/docs/cue_nav/">nav()</a></li>
+    <li><a href="/docs/cue_button">button()</a></li>
+    <li><a href="/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/docs/cue_text/">text()</a></li>
+    <li><a href="/docs/cue_audio/">audio()</a></li>
+    <li><a href="/docs/cue_video/">video()</a></li>
+    <li><a href="/docs/cue_synth/">synth()</a></li>
+    <li><a href="/docs/cue_osc/">osc()</a></li>
+    <li><a href="/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/cue_scale/">scale()</a></li>
+    <li><a href="/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/docs/traverse/">traverse()</a></li>
+    <li><a href="/docs/color/">color()</a></li>
+    <li><a href="/docs/cue_fade/">fade()</a></li>
+    <li><a href="/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/docs/user_annotations/">Annotations</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+    <li><a href="/docs/dev-sync-architecture/">Sync Architecture</a></li>
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+      <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+      
+      <h1>rotate() --- Rotation Cue</h1>
+<p><code>rotate(...)</code> rotates an SVG element using either:</p>
+<ul>
+<li><strong>continuous rotation</strong>, or</li>
+<li>a <strong>sequence / pattern of angle values</strong></li>
+</ul>
+<p>Rotation can be:</p>
+<ul>
+<li>smooth interpolated</li>
+<li>stepped</li>
+<li>looping, alternating, or one‑shot</li>
+<li>optionally sending OSC messages (with live overlays).</li>
+</ul>
+<hr>
+<h2>BASIC FORMS</h2>
+<h3>Continuous</h3>
+<p>rotate(dir:1, dur:1)</p>
+<h3>Sequence</h3>
+<p>rotate(values:[0,120,240], dur:2)</p>
+<h3>Pattern sequences</h3>
+<p>rotate(values:Pseq([0,45,10],inf), dur:Pseq([1,0.2,2],inf))</p>
+<hr>
+<h2>⚡ TRIGGERING</h2>
+<ul>
+<li><code>auto</code> (page load / mode)</li>
+<li><code>edge</code> (playhead collision)</li>
+<li>cue activation</li>
+</ul>
+<hr>
+<h2>⏱ TRIGGER DELAY --- <code>tdelay:&lt;seconds&gt;</code></h2>
+<p>Delays motion after trigger:</p>
+<p>rotate(values:[0,120,240], tdelay:2)</p>
+<hr>
+<h2>PRESTART VISIBILITY --- <code>prestate:&lt;show|hide|ghost&gt;</code></h2>
+<p>Controls appearance before rotation begins.</p>
+<p>rotate(values:[0,90,180], tdelay:4, prestate:ghost)</p>
+<p>The element adopts the <strong>initial rotation angle immediately</strong>, then
+waits.</p>
+<hr>
+<h2>🎚 SEQUENCE PARAMETERS</h2>
+<p>Key        Meaning</p>
+<hr>
+<p><code>values</code>   list of angles or pattern
+<code>dur</code>      seconds per step (or pattern)
+<code>mode</code>     <code>loop</code>, <code>once</code>, <code>alternate</code>
+<code>interp</code>   <code>smooth</code> or <code>step</code>
+<code>hold</code>     pause after tween (smooth only)</p>
+<hr>
+<h2>CONTINUOUS ROTATION</h2>
+<p>rotate(dir:1, dur:2)
+rotate(dir:-1, dur:3, ease:&quot;easeInOutSine&quot;)</p>
+<ul>
+<li><code>dir:1</code> → clockwise</li>
+<li><code>dir:-1</code> → counter‑clockwise</li>
+<li><code>loop:0</code> (default) = infinite</li>
+</ul>
+<hr>
+<h2>UID --- Live Updates</h2>
+<p>UID lets multiple cues address the same animation:</p>
+<p>rotate(values:[0,90,180], uid:r1)
+rotate(uid:r1, dur:0.5)</p>
+<hr>
+<h2>OSC OUTPUT (optional)</h2>
+<p>Rotation can send OSC every frame or per‑step.</p>
+<p>Enable via:</p>
+<p>osc:1</p>
+<p>Specify an OSC address:</p>
+<p>rotate(values:[0,90,180], osc:1, oscaddr:&quot;/spatialisation/source1&quot;)</p>
+<h3>Payload format</h3>
+<p>Every message includes:</p>
+<p>Field         Meaning</p>
+<hr>
+<p><code>deg</code>         wrapped degrees <strong>0--360</strong>
+<code>rad</code>         radians (<code>deg * π/180</code>)
+<code>norm</code>        normalized 0--1 (<code>deg/360</code>)
+<code>uid</code>         animation UID
+<code>timestamp</code>   ms since epoch</p>
+<p>Example conceptual payload:</p>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;osc_rotate&quot;,
+  &quot;uid&quot;: &quot;r1&quot;,
+  &quot;deg&quot;: 135.0,
+  &quot;rad&quot;: 2.356,
+  &quot;norm&quot;: 0.375,
+  &quot;addr&quot;: &quot;/spatialisation/source1&quot;
+}
+</code></pre>
+<blockquote>
+<p>NOTE: Internally angles may accumulate, but outgoing OSC <strong>always
+wraps to 0--360</strong>.</p>
+</blockquote>
+<h3>On‑screen overlays</h3>
+<p>When OSC is enabled, a small overlay shows:</p>
+<p>/spatialisation/source1 — deg:135.0</p>
+<p>Overlays can be globally toggled.</p>
+<hr>
+<h2>FULL PARAMETER LIST</h2>
+<p>Key          Description</p>
+<hr>
+<p><code>values</code>     angle sequence or pattern
+<code>dur</code>        duration or pattern
+<code>mode</code>       loop logic
+<code>interp</code>     step or smooth
+<code>hold</code>       pause after tween
+<code>dir</code>        direction (continuous mode)
+<code>ease</code>       easing curve
+<code>uid</code>        animation identity
+<code>trig</code>       trigger mode
+<code>tdelay</code>     trigger delay
+<code>prestate</code>   visual pre‑start state
+<code>osc</code>        enable OSC (0/1/2)
+<code>oscaddr</code>    explicit OSC address</p>
+<hr>
+<h2>EXAMPLES</h2>
+<p>rotate(values:[0,120,240], dur:4, tdelay:2)</p>
+<p>rotate(values:Pshuf([0,180],inf),
+dur:1,
+mode:alternate,
+osc:1,
+oscaddr:&quot;/fx/rot1&quot;)</p>
+<p>rotate(dir:-1, dur:3, prestate:hide, tdelay:1)</p>
+<hr>
+<h2>Summary</h2>
+<ul>
+<li>declarative rotation cue</li>
+<li>works in page + scroll modes</li>
+<li>full control of timing + interpolation</li>
+<li>OSC‑ready with wrapped degrees, radians, and normalized values</li>
+<li>optional debug overlays</li>
+</ul>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

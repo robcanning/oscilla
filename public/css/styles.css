@@ -1705,10 +1705,10 @@ body.inverted #score {
 }
 
 .meta-section {
-  margin-top: 2em;
-  font-size: 1.2em;
+  margin-top: 1em;
+  font-size: 1em;
   color: #aaa;
-  line-height: 1.4em;
+  line-height: 1.2em;
 }
 
 .meta-line a {
@@ -1721,7 +1721,7 @@ body.inverted #score {
 }
 
 .meta-line.small {
-  font-size: 1em;
+  font-size: 0.6em;
   color: #777;
   margin-top: 0.5em;
 }
@@ -1730,7 +1730,7 @@ body.inverted #score {
 /* --- Project Card Styling --- */
 .project-card {
   font-family: "Fira Code", "JetBrains Mono", monospace;
-  font-size: 0.95em;
+  font-size: 0.75em;
   letter-spacing: 0.03em;
   background-color: gray;
 
@@ -1906,4 +1906,10 @@ body.inverted #score {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+
+.logo {
+  width: 400px;     /* ← increase this */
+  height: auto;     /* keep aspect ratio */
 }

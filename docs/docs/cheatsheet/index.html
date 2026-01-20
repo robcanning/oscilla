@@ -3,277 +3,245 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Oscilla Cheatsheet</title>
-  <link rel="stylesheet" href="/oscilla/docs/style.css">
+  <title>Cheatsheet</title>
+  <link href="https://iosevka-webfonts.github.io/iosevka-term/iosevka-term.css" rel="stylesheet">
+  <link rel="stylesheet" href="/oscilla/docs/cheatsheet.css">
 </head>
 
-<body>
+<body class="cheatsheet">
 
-  <!-- Mobile overlay (closes sidebar when tapped) -->
-  <div class="sidebar-overlay" aria-hidden="true"></div>
-
-  <header class="docs-header">
-    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <line x1="3" y1="12" x2="21" y2="12"></line>
-        <line x1="3" y1="18" x2="21" y2="18"></line>
-      </svg>
-    </button>
-    <a href="/oscilla/docs/" class="docs-header-title">Oscilla Docs</a>
+  <header class="cheatsheet-header">
+    <nav class="cheatsheet-nav">
+      <a href="/oscilla/docs/">← Docs Index</a>
+    </nav>
   </header>
 
-  <div class="docs-container">
-    <nav class="sidebar" aria-label="Documentation navigation">
-
-  <h3>Getting Started</h3>
-  <ul>
-    <li><a href="/oscilla/docs/">Overview</a></li>
-    <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
-    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
-    <li><a href="/oscilla/docs/cheatsheet/">Cheatsheet</a></li>
-    <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
-    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
-  </ul>
-
-  <h3>Cues</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
-    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
-    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
-    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
-    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
-    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
-    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
-    <li><a href="/oscilla/docs/cue_button">button()</a></li>
-    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
-    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
-    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
-    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
-    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
-    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
-    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
-    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
-  </ul>
-
-  <h3>Animation</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
-    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
-    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
-    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
-    <li><a href="/oscilla/docs/color/">color()</a></li>
-    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
-    <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
-  </ul>
-
-  <h3>Performer</h3>
-  <ul>
-    <li><a href="/oscilla/docs/user_annotations/">Annotations</a></li>
-  </ul>
-
-  <h3>Tools</h3>
-  <ul>
-    <li><a href="/oscilla/docs/inkscape_extension/">Inkscape Extension</a></li>
-  </ul>
-
-  <h3>Developer</h3>
-  <ul>
-    <li><a href="/oscilla/docs/dev-sync-architecture/">Sync Architecture</a></li>
-  </ul>
-
-</nav>
-
-    
-    <main class="docs-content">
-      <nav class="docs-nav" aria-label="Page navigation">
-        <a id="docs-prev" href="#">← Previous</a>
-        <a id="docs-next" href="#">Next →</a>
-      </nav>
-      
-      <div class="cheatsheet-content">
-<h1>Cheatsheet</h1>
-<p class="cheatsheet-intro">Quick reference for Oscilla cue syntax. <button class="print-btn" onclick="window.print()">Print / Save PDF</button></p>
-<div class="cheatsheet-grid">
-<div class="cheatsheet-section">
-<h3>Timing &amp; Navigation</h3>
-<pre><code class="language-text">stop()
-pause()
-pause(toggle)
-speed(1.5)
-speed(0.5,2)         # speed, duration
-stopwatch()
-stopwatch(hidden)
-metronome(120)
-metronome(120,4)     # bpm, beats
+  <div class="cheatsheet-page">
+    <div class="cheatsheet-columns">
+      <h1>OSCILLA Cheatsheet</h1>
+<h3>Interactive Graphic Notation</h3>
+<h2>Version</h2>
+<p><em>v0.2.9_beta</em></p>
+<h2>Quick Install</h2>
+<pre><code>git clone https://github.com/robcanning/oscilla.git
+cd oscilla; npm install; npm start
+Open in browser: http://localhost:8001
 </code></pre>
-</div>
-<div class="cheatsheet-section">
-<h3>Page &amp; Navigation</h3>
-<pre><code class="language-text">page(2)
-page(next)
-page(prev)
-nav(loop)
-nav(bounce)
-nav(stop)
+<h2>Project Structure</h2>
+<pre><code>oscilla/             # cp template dir
+├─ public/           # ⟶ rename OR
+│  ├─ scores/        # scroll:40000×1024
+│  │  └─ myProject/  # page:1366×1024px
+│  │     ├─ score.svg        ⟶ required
+│  │     ├─ audio/ video/    ⟶ optional
+│  │     ├─ pages/ text/     ⟶ optional
+│  │     └─ preferences.json ⟶ generated
 </code></pre>
-</div>
-<div class="cheatsheet-section">
-<h3>Interaction</h3>
-<pre><code class="language-text">button(start)
-button(stop)
-button(page,3)
-propagate(groupId)
-reuse(cueId)
+<h2>Preferences (preferences.json)</h2>
+<pre><code>projectTitle, projectAuthor, projectDescription, darkMode, defaultPlaybackSpeed, defaultViewMode, defaultPage, playzoneColor, playheadColor, playheadBorder, playheadWidth, audioSync, oscOutput, overlayMode, loopPlayback
 </code></pre>
-</div>
-<div class="cheatsheet-section">
-<h3>Animation</h3>
-<pre><code class="language-text">scale(2)
-scale(0.5,1.5)       # x, y
-scale(2,3s)          # scale, duration
-rotate(360)
-rotate(360,5s)       # degrees, duration
-fade(0)
-fade(1,2s)           # opacity, duration
-color(#ff0000)
-color(#ff0000,3s)
+<h2>Workflow (Inkscape → Oscilla)</h2>
+<pre><code>1. Author in Inkscape - shapes,paths etc.
+- Save: public/scores/myProject/score.svg
+2. Add Behaviour via IDs
+- Open XML Editor (Ctrl+Shift+X)
+- Edit element IDs [e.g. pause(dur:12)]
+3. Open Project http://localhost:8001 or
+- http://localhost:8001/?project=myProject
+4. Edit → Save → Refresh
 </code></pre>
-</div>
-<div class="cheatsheet-section">
-<h3>Traversal</h3>
-<pre><code class="language-text">o2p(pathId)
-o2p(pathId,10s)
-traverse(point1,point2)
-traverse(pathId)
+<h2>Timing &amp; Navigation</h2>
+<pre><code>stop(uid:s1) •  stop(next:nav(End))
 </code></pre>
-</div>
-<div class="cheatsheet-section">
-<h3>Text</h3>
-<pre><code class="language-text">text(Hello)
-text(Line1|Line2|Line3)
-text(content,2s)     # text, interval
+<pre><code>pause(dur:12, count:true) // with countdown
+pause(dur:4, next:nav(page3)) // chaining
 </code></pre>
-</div>
-<div class="cheatsheet-section">
-<h3>Media</h3>
-<pre><code class="language-text">audio(file.mp3)
-audio(file.mp3,0.8)  # file, volume
-video(file.mp4)
-video(file.mp4,loop)
-synth(440)
-synth(440,sine)      # freq, waveform
-synth(C4,triangle)
+<pre><code>speed(value:0.5, uid:s2) // half speed
+speed(add:0.1, uid:s3) // a bit faster
+speed(value:1.3, dur:2, uid:s4) //ramp
+speed(value:1.4, dur:6, ease:linear)
 </code></pre>
-</div>
-<div class="cheatsheet-section">
-<h3>OSC</h3>
-<pre><code class="language-text">osc(/address,value)
-osc(/note,64,100)
-oscCtrl(fader1,/volume)
-oscCtrl(button1,/trigger)
+<pre><code>nav(page3) •  nav(scroll@A) // AKA Navigate  
+nav(scrollPaused@B) // jump and wait
+nav(Coda) // jump to object id Coda
+nav(scroll@G, repeats:3, uid:g1) // repeat
 </code></pre>
-</div>
-<div class="cheatsheet-section">
-<h3>UI</h3>
-<pre><code class="language-text">ui(show)
-ui(hide)
-ui(toggle)
-fade(0)              # hide element
-fade(1,0.5s)         # fade in
+<pre><code>page(page1) // page*.svg in pages/ dir
+page(Pseq([page1:2,page2:2],3))
+page(Prand([pageA,pageB,pageC],4))
+page(Pchoose([pageA,pageB]))
 </code></pre>
-</div>
-</div>
-<footer class="cheatsheet-footer">
-  Oscilla Cheatsheet — subject to change | © Rob Canning
-</footer>
-</div>
+<pre><code>stopwatch(source:new, trig:auto)
+stopwatch(source:main, scroll:true)
+stopwatch(source:new, hold:6, offsetX:-40)
+</code></pre>
+<pre><code>metro(bpm:90, visual:hex, trig:playhead)
+metro(bpm:120,position:scrolling,
+  target:beat1,uid:scrollA)
+</code></pre>
+<pre><code>metro(bpm:110,beats:3,colour:#3f9,
+  audio:1,osc:1,uid:green,trig:auto)
+</code></pre>
+<h2>Animation — Scale | Rotate | o2p</h2>
+<pre><code>scale(values:[1,1.5,1], dur:2)
+scale(min:1, max:1.3, dur:2, loop:0)
+scale(values:[1,2,1], dur:2, tdelay:3)
+scaleXY([1,1.3],[1,0.6], dur:1)
+scale(Pseq([1,1.4,1],inf), dur:Prand([0.5,1],inf))
+scale([1,1.5,1],dur:12, mode:loop, osc:1, 
+   oscaddr:&quot;scale/spat/4chPan&quot;,  hold:0,  uid:aC2l)
+</code></pre>
+<pre><code>rotate(dir:1, dur:1)
+rotate(values:[0,120,240], dur:2)
+rotate(values:Pseq([0,45,10],inf), dur:Pseq([1,0.2,2],inf))
+rotate(values:[0,120,240], tdelay:2)
+rotate(values:Pshuf([0,180],inf), dur:1, mode:alt)
+</code></pre>
+<p><strong>o2p — Object-to-Path Animation</strong></p>
+<pre><code>o2p(path:orbitA, dur:8, tdelay:3, prestate:hide)
+o2p(path:spiral, rotate:aligned, rotoffset:-90)
+o2p(path:ring, start:0.2, end:0.9, mode:alt)
+o2p(path:c1, rotate:spin,rotspeed:2,rotdir:-1)
+o2p(path:orbitA, dur:8, loop:3)
+</code></pre>
+<h2>Animation — Color | Fade | Text</h2>
+<pre><code>color(uid:shape1, vals:[#f00,#0f0], dur:2)
+color(uid:bars*, vals:[#f80,#08f], mode:alt, dur:1.2)
+color(uid:rect, vals:Pseq([#f00,#ff0,#0ff],3), dur:3)
+color(uid:bgStripe, vals:[#000,#444,#888,#ccc], dur:6)
+</code></pre>
+<p><strong>fade() any SVG element (self||target)</strong></p>
+<pre><code>fade(mode:out, dur:2, from:1, to:0)
+fade(mode:in, dur:1, target:title)
+fade(mode:pulse, dur:6, from:0.2, to:1)
+</code></pre>
+<p><strong>text() Lines,Words,Chars (File||String)</strong></p>
+<pre><code>text(src:foo.txt, dur:3, autostart:1)
+text(src:foo.txt, order:rnd, dur:2, loop:0)
+text(src:foo.txt, yslots:3, yslotmode:sequence)
+text( src:&quot;foo baz bar&quot;,
+  mode:word, order:seq, dur:0.4, gap:10.1)
+</code></pre>
+<pre><code>text( src:&quot;ČŽŠ ĐĐĐĐĐ ŠČČ ŠĐĐ ŽŽĐ ŽŽĐ ŠĐČ &quot;,
+  mode:char, order:seq, loop:2,
+  dur:0.1, gap:0.01,  target:center,
+  style:&quot;font-size:48em;color:black;&quot;)
+</code></pre>
+<h2>Audio | Video</h2>
+<p><strong>audio(...) — Play a Single File</strong></p>
+<pre><code>audio(src:noise.wav, 
+  loop:2, amp:1, fade:1.5, uid:p8)
+</code></pre>
+<pre><code>audio(src:hit, pan:rand(-1,1), uid:a3, 
+  pitch:rand(0.8,1.3),  fadeOut:0.3)
+</code></pre>
+<p><strong>audioPool(...) — 1-Shot Select from Dir</strong></p>
+<pre><code>audioPool(uid:p1, path:sfx)
+audioPool(uid:p2, path:foley, mode:rand)
+</code></pre>
+<pre><code>audioPool(uid:p3, path:perc, amp:rand(0.4,0.9), 
+  pan:rand(-0.7,0.7),pitch:rand(0.5,2),fade:rand(10%,40%))
+</code></pre>
+<p><strong>audioImpulse(...) — Stochastic Process</strong></p>
+<pre><code>audioImpulse(uid:i1, path:perc, rate:30)
+audioImpulse(uid:i2, path:clicks, rate:20)
+audioImpulse(uid:i3, path:metal, rate:12, 
+  pan:rand(-1,1), pitch:rand(0.7,1.4))
+audioImpulse(uid:i4, path:textures, rate:6, 
+  jitter:0.8, amp:rand(0.2,0.6))
+</code></pre>
+<p><strong>video(...) — In-Score Video Playback</strong></p>
+<pre><code>video(file:intro.mp4, size:fs, clickable:1)
+</code></pre>
+<pre><code>video(file:lum.webm,size:500,in:4,out:12, 
+  opacity:0.5, loop:0, speed:3.2, 
+  target:abc123, location:scroll)
+</code></pre>
+<h2>Synthesis</h2>
+<p><strong>synth() — Web Audio Synth, FX, Filters</strong></p>
+<pre><code>synth(uid:ref, wave:sine, freq:440)
+synth(uid:noise, wave:noise)
+synth(uid:fixedDur, freq:220, dur:5)
+synth(uid:p1, freq:90, lifetime:process)
+synth(uid:env, freq:99, env:{a:0.5,r:1})
+synth(uid:chord, freq:[440,477,644])
+synth(uid:seq, freq:Pseq(220,330), dur:1)
+synth(uid:filter, freq:330, 
+  filter:{type:lp,freq:Pseq(400,1200)})
+synth(uid:osc, freq:330, 
+  osc:1, oscAddr:/synth/a)
+synthStop(uid:p1, rel:0.5)
+</code></pre>
+<h2>OSC / External Control</h2>
+<p><strong>osc --- Discrete OSC Event Cue</strong></p>
+<pre><code>osc(addr:v1, pitch:y) // y | hz(440) | midi(60) | deg(2,4)
+osc(addr:v2, pitch:y, uid:v1) // Y coord. normalised
+</code></pre>
+<p><strong>oscCtrl --- Continuous Control Lanes</strong></p>
+<pre><code>oscCtrl(addr:&quot;/fx/pan&quot;) // acts like breakpoint function // default 0 → 1 
+oscCtrl(addr:&quot;/fx/pan&quot;, min:-1, max:1, mode:continuous) // mode:event
+oscCtrl(addr:&quot;/fx/ring/freq&quot;, min:60, max:800) // default 0 → 1 
+</code></pre>
+<h2>Interaction &amp; Structure</h2>
+<p><strong>button() to Trigger any Cue in Score</strong></p>
+<pre><code>button(trigger:nav(page3)) 
+button(trigger:pause(dur:12,count:true))
+button(trigger:nav(scroll@A))
+</code></pre>
+<pre><code>button(target:page(home, uid:12), 
+  style(size:&quot;250x50&quot;, label:&quot;Home&quot;, 
+  font:&quot;Arial Black&quot;, fontsize:22))
+</code></pre>
+<p><strong>propagate — Group-Level Cue Propagation</strong></p>
+<pre><code>propagate( // need multiple cues? use this.
+  scale(values:[${1},${2}], dur:${3}),
+  rnd(0.8,1.2), rnd(1.2,1.6), rnd(0.4,1.2) )
+</code></pre>
+<pre><code>propagate( // continuous random streams
+osc( // all objects in group get the cue
+  addr:pontalist, 
+  pitch:deg(irand(0,11), irand(0,2)),
+  env:size, uid:irand1235 ))
+</code></pre>
+<pre><code>propagate(// ------------------------
+    addr:pontalist, // pitch from Y-axis
+    pitch:y, env:width, 
+    bright:height, density:area,
+    trig:playhead ))
+</code></pre>
+<pre><code>propagate( // ------------------------
+  osc( // ramdomise inputs with ${1}
+    addr:voice,
+    pitch:deg(${1}, 3),
+    env:size, uid:rnd123
+  ), rnd([0,2,4,5,7,9,11]) )
+</code></pre>
+<p><strong>Define and Reuse Collections.</strong></p>
+<pre><code>reuse(mainMenu) • use(mainMenu)
+reuse(audioSampBtns) • use(audioSampBtns)
+</code></pre>
+<p><strong>Combine Cues by Nesting Groups</strong></p>
+<pre><code>// Behaviour stacks outer → inner; shapes inherit all enclosing cues.
+&lt;g id=&quot;o2p(...)&quot;&gt;
+  &lt;g id=&quot;rotate(...)&quot;&gt;
+    &lt;g id=&quot;propagate( osc(...) )&quot;&gt;
+      &lt;!-- shapes --&gt;
+    &lt;/g&gt;
+  &lt;/g&gt;
+&lt;/g&gt;
+</code></pre>
+<h2>Links</h2>
+<pre><code>Docs: https://robcanning.github.io/oscilla/docs/
+Repo: https://github.com/robcanning/oscilla
+</code></pre>
 
-      
-      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
-    </main>
+    </div>
+
+    <footer class="cheatsheet-footer">
+      <span>© Rob Canning / Oscilla</span>
+      <span class="cheatsheet-footer-right">Cheatsheet — subject to change</span>
+    </footer>
   </div>
-
-  <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.querySelector(".docs-menu-toggle");
-    const overlay = document.querySelector(".sidebar-overlay");
-    const sidebar = document.querySelector(".sidebar");
-    
-    function toggleSidebar() {
-      const isOpen = document.body.classList.toggle("sidebar-open");
-      btn?.setAttribute("aria-expanded", isOpen);
-    }
-    
-    function closeSidebar() {
-      document.body.classList.remove("sidebar-open");
-      btn?.setAttribute("aria-expanded", "false");
-    }
-    
-    btn?.addEventListener("click", toggleSidebar);
-    overlay?.addEventListener("click", closeSidebar);
-    
-    // Close sidebar on escape key
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
-        closeSidebar();
-      }
-    });
-    
-    // Close sidebar when clicking a link (mobile)
-    sidebar?.addEventListener("click", (e) => {
-      if (e.target.tagName === "A" && window.innerWidth <= 900) {
-        closeSidebar();
-      }
-    });
-  });
-
-  // Sidebar-ordered prev/next navigation
-  (function () {
-    const sidebar = document.querySelector(".sidebar");
-    if (!sidebar) return;
-
-    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
-    const current = window.location.href.replace(/#.*$/, "");
-    const index = links.findIndex(href => href === current);
-
-    const prev = index > 0 ? links[index - 1] : null;
-    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
-
-    const prevBtn = document.getElementById("docs-prev");
-    const nextBtn = document.getElementById("docs-next");
-
-    if (prevBtn) {
-      if (prev) prevBtn.href = prev;
-      else prevBtn.style.visibility = "hidden";
-    }
-
-    if (nextBtn) {
-      if (next) nextBtn.href = next;
-      else nextBtn.style.visibility = "hidden";
-    }
-
-    // Mark current page in sidebar
-    sidebar.querySelectorAll("a[href]").forEach(a => {
-      if (a.href === current) {
-        a.classList.add("active");
-        a.setAttribute("aria-current", "page");
-      }
-    });
-
-    // Keyboard navigation
-    document.addEventListener("keydown", e => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-
-      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
-        window.location.href = prev;
-      }
-      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
-        window.location.href = next;
-      }
-    });
-  })();
-  </script>
 
 </body>
 </html>

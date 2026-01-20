@@ -1,0 +1,139 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>reuse</title>
+
+  <link rel="stylesheet" href="/docs/style.css">
+</head>
+
+
+
+<body>
+  <div class="docs-container">
+    <nav class="sidebar">
+  <h2>Docs</h2>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_audio/">audio()</a></li>
+    <li><a href="/docs/cue_text/">text()</a></li>
+    <li><a href="/docs/cue_nav/">nav()</a></li>
+    <li><a href="/docs/cue_pause/">pause()</a></li>
+    <li><a href="/docs/cue_osc/">osc()</a></li>
+    <li><a href="/docs/cue_oscCtrl/">oscCtrl()</a></li>
+    <li><a href="/docs/cue_stop/">stop()</a></li>
+    <li><a href="/docs/cue_page/">page()</a></li>
+    <li><a href="/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/docs/cue_video/">video()</a></li>
+
+    <li><a href="/docs/cue_propagate/">Propagation & Reuse</a></li>
+
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/cue_scale/">scale()</a></li>
+    <li><a href="/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/docs/cue_o2p/">Object to Path o2p()</a></li>
+
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><a href="/docs/cueSystem/">Cue System</a></li>
+    <li><a href="/docs/cuehandler_architecture/">Architecture</a></li>
+  </ul>
+</nav>
+
+
+    <main class="docs-content">
+      <h1>Reusable Blocks with <code>use(name)</code></h1>
+<p><code>use(name)</code> allows you to define a visual or interactive structure once and reuse it anywhere in the score or on any page. This avoids copy/paste in Inkscape and keeps layouts consistent.</p>
+<h2>Defining a Reusable Block</h2>
+<p>Any SVG group whose ID begins with:</p>
+<pre><code>reuse-
+</code></pre>
+<p>is treated as a reusable block.</p>
+<p>Example:</p>
+<pre><code class="language-svg">&lt;g id=&quot;reuse-mainMenu&quot;&gt;
+   &lt;!-- Buttons, text, shapes, animations --&gt;
+&lt;/g&gt;
+</code></pre>
+<p>This block is registered automatically when its SVG is loaded.</p>
+<hr>
+<h2>Using the Block Elsewhere</h2>
+<p>To insert the reusable block somewhere else, place a placeholder group:</p>
+<pre><code class="language-svg">&lt;g id=&quot;use(mainMenu)&quot;&gt;&lt;/g&gt;
+</code></pre>
+<p>When the score initializes, the placeholder is replaced with a cloned instance of the reusable block, preserving:</p>
+<ul>
+<li>cueButtons</li>
+<li>cueText elements</li>
+<li>animations and object-followers</li>
+<li>internal transforms and visual structure</li>
+</ul>
+<p>The placeholder itself is removed.</p>
+<hr>
+<h2>Placement Modes</h2>
+<p>There are two placement modes depending on how <code>use()</code> is written:</p>
+<table>
+<thead>
+<tr>
+<th>Syntax</th>
+<th>Placement Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>use(name)</code></td>
+<td>Inserts the block at <strong>its original authored coordinates</strong> (as designed in its source SVG).</td>
+</tr>
+<tr>
+<td><code>use(name)@self</code></td>
+<td>Inserts the block <strong>at the location of the placeholder</strong>, inheriting the placeholder’s transform.</td>
+</tr>
+</tbody>
+</table>
+<h3>Example (<code>@self</code> Placement)</h3>
+<pre><code class="language-svg">&lt;g transform=&quot;translate(300,200)&quot;&gt;
+  &lt;g id=&quot;use(mainMenu)@self&quot;&gt;&lt;/g&gt;
+&lt;/g&gt;
+</code></pre>
+<p>Result: <code>mainMenu</code> appears exactly at <code>(300,200)</code>.</p>
+<hr>
+<h2>Behaviour and Guarantees</h2>
+<ul>
+<li>The injected block receives <strong>unique IDs</strong> to avoid collisions.</li>
+<li>The placeholder <code>&lt;g id=&quot;use(...)&quot; /&gt;</code> is <strong>removed</strong> automatically.</li>
+<li>Reusable blocks can be defined in <strong>any SVG inside <code>/pages/</code></strong>.</li>
+<li>All internal behaviour is preserved, including:
+<ul>
+<li>cue triggers</li>
+<li>animations (rotate, scale, obj2path)</li>
+<li>cue buttons and overlays</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>Summary</h2>
+<p>Define once:</p>
+<pre><code class="language-svg">&lt;g id=&quot;reuse-name&quot;&gt;…&lt;/g&gt;
+</code></pre>
+<p>Use anywhere:</p>
+<pre><code class="language-svg">&lt;g id=&quot;use(name)&quot;&gt;&lt;/g&gt;
+</code></pre>
+<p>Or place at placeholder position:</p>
+<pre><code class="language-svg">&lt;g id=&quot;use(name)@self&quot;&gt;&lt;/g&gt;
+</code></pre>
+<p>This system keeps Oscilla scores modular, clean, and visually authored directly in Inkscape—no handwritten layout code required.</p>
+
+    </main>
+  </div>
+</body>
+
+
+
+</html>

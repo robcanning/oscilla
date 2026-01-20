@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>add_new_cue_template</title>
   <link rel="stylesheet" href="/oscilla/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.svg">
+
 </head>
 
 <body>
@@ -20,7 +22,14 @@
         <line x1="3" y1="18" x2="21" y2="18"></line>
       </svg>
     </button>
-    <a href="/oscilla/docs/" class="docs-header-title">Oscilla Docs</a>
+      <a href="/oscilla/docs/" class="docs-brand">
+        <img
+          src="/oscilla/docs/img/logos/logo-header-docs.svg"
+          alt="Oscilla"
+          class="docs-logo"
+          aria-hidden="true"
+        >
+      </a>
   </header>
 
   <div class="docs-container">
@@ -31,7 +40,7 @@
     <li><a href="/oscilla/docs/">Overview</a></li>
     <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
     <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
-    <li><a href="/oscilla/docs/cheatsheet/">Cheatsheet</a></li>
+<li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
     <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
     <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
   </ul>
@@ -202,6 +211,19 @@ $.RULE(&quot;metronomeCue&quot;, () =&gt; {
   </div>
 
   <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
   document.addEventListener("DOMContentLoaded", () => {
     const btn = document.querySelector(".docs-menu-toggle");
     const overlay = document.querySelector(".sidebar-overlay");

@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title or "Oscilla Documentation" }}</title>
   <link rel="stylesheet" href="{{ '/docs/style.css' | url }}">
+  <link rel="icon" type="image/svg+xml" href="{{ '/docs/favicon.svg' | url }}">
+
 </head>
 
 <body>
@@ -20,7 +22,14 @@
         <line x1="3" y1="18" x2="21" y2="18"></line>
       </svg>
     </button>
-    <a href="{{ '/docs/' | url }}" class="docs-header-title">Oscilla Docs</a>
+      <a href="{{ '/docs/' | url }}" class="docs-brand">
+        <img
+          src="{{ '/docs/img/logos/logo-header-docs.svg' | url }}"
+          alt="Oscilla"
+          class="docs-logo"
+          aria-hidden="true"
+        >
+      </a>
   </header>
 
   <div class="docs-container">

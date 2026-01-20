@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>performer_annotations</title>
+  <link rel="stylesheet" href="/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <a href="/docs/" class="docs-header-title">Oscilla Docs</a>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/docs/workflow/">Workflow</a></li>
+<li><a href="/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_stop/">stop()</a></li>
+    <li><a href="/docs/cue_pause/">pause()</a></li>
+    <li><a href="/docs/cue_speed/">speed()</a></li>
+    <li><a href="/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/docs/cue_page/">page()</a></li>
+    <li><a href="/docs/cue_nav/">nav()</a></li>
+    <li><a href="/docs/cue_button">button()</a></li>
+    <li><a href="/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/docs/cue_text/">text()</a></li>
+    <li><a href="/docs/cue_audio/">audio()</a></li>
+    <li><a href="/docs/cue_video/">video()</a></li>
+    <li><a href="/docs/cue_synth/">synth()</a></li>
+    <li><a href="/docs/cue_osc/">osc()</a></li>
+    <li><a href="/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/cue_scale/">scale()</a></li>
+    <li><a href="/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/docs/traverse/">traverse()</a></li>
+    <li><a href="/docs/color/">color()</a></li>
+    <li><a href="/docs/cue_fade/">fade()</a></li>
+    <li><a href="/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/docs/user_annotations/">Annotations</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+    <li><a href="/docs/dev-sync-architecture/">Sync Architecture</a></li>
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+      <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+      
+      <h1>Performer Annotations</h1>
+<figure class="doc-image">
+  <img
+    src="/docs/img/oscilla-performer-annotations.png"
+    alt="Oscilla Inkscape Extension"
+  >
+  <figcaption>Oscilla Performer Annotations </figcaption>
+</figure>
+<h2>Overview</h2>
+<p>Performer Annotations allow performers to add <strong>personal notes directly onto the score view</strong> while working with Oscilla.</p>
+<p>Annotations are intended for:</p>
+<ul>
+<li>reminders</li>
+<li>listening cues</li>
+<li>coordination notes</li>
+<li>interpretive decisions</li>
+<li>rehearsal observations</li>
+</ul>
+<p>Annotations <strong>do not change the score</strong> and <strong>do not affect playback or cues</strong>.<br>
+They exist as a separate, optional layer that can be shown or hidden at any time.</p>
+<blockquote>
+<p><strong>Note:</strong> Because annotations can be placed freely in time and space, Oscilla can be used in a <strong>minimal, annotation-only mode</strong> (without an SVG score). In this case, annotations function as a very lightweight textual score. This mode is intentionally limited, but can be useful for sketches, instructions, or rehearsal frameworks.</p>
+</blockquote>
+<hr>
+<h2>Entering Annotation Mode</h2>
+<ol>
+<li>Click the <strong>pen icon</strong> in the toolbar</li>
+<li>The cursor changes to indicate annotation mode</li>
+<li>Click anywhere on the score area to add a new annotation</li>
+</ol>
+<p>Annotation mode automatically exits after saving a note.</p>
+<hr>
+<h2>Creating an Annotation</h2>
+<p>When you click the score area in annotation mode:</p>
+<ol>
+<li>A text editor appears</li>
+<li>Enter your note (multi-line text is supported)</li>
+<li>Choose whether the note is:
+<ul>
+<li><strong>Local</strong> — visible only on your device</li>
+<li><strong>Shared</strong> — visible to other connected clients</li>
+</ul>
+</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>The annotation appears as:</p>
+<ul>
+<li>a small dot (anchor)</li>
+<li>a text label displaying the note</li>
+</ul>
+<hr>
+<h2>Editing an Annotation</h2>
+<ul>
+<li>Click <strong>either the dot or the text label</strong> to open the editor</li>
+<li>You can:
+<ul>
+<li>edit the text</li>
+<li>change Local / Shared status</li>
+<li>adjust font size</li>
+<li>delete the annotation</li>
+</ul>
+</li>
+</ul>
+<p>Click <strong>Save</strong> to apply changes.</p>
+<hr>
+<h2>Moving an Annotation</h2>
+<ul>
+<li>Click and <strong>drag the text label</strong> to reposition the annotation</li>
+<li>Release to confirm the new position</li>
+<li>The position is saved automatically</li>
+</ul>
+<p>The dot remains visually tied to the text.</p>
+<hr>
+<h2>Keyboard Behaviour While Editing</h2>
+<p>While typing in the annotation editor:</p>
+<ul>
+<li>All global keyboard shortcuts are temporarily disabled</li>
+<li>This prevents accidental playback or navigation</li>
+<li>Press <strong>Escape</strong> to close the editor</li>
+</ul>
+<p>Normal keyboard controls resume once the editor is closed.</p>
+<hr>
+<h2>Local vs Shared Annotations</h2>
+<h3>Local</h3>
+<ul>
+<li>Stored only in your browser</li>
+<li>Not visible to others</li>
+<li>Suitable for personal rehearsal notes</li>
+</ul>
+<h3>Shared</h3>
+<ul>
+<li>Broadcast to other connected clients</li>
+<li>Read-only for other performers</li>
+<li>Useful for ensemble coordination</li>
+</ul>
+<p>Shared annotations do not override local ones.</p>
+<hr>
+<h2>Visibility</h2>
+<p>Annotations:</p>
+<ul>
+<li>can be globally shown or hidden</li>
+<li>move with the score when scrolling or paging</li>
+<li>remain aligned to the score content</li>
+</ul>
+<p>They never affect timing, cues, or navigation.</p>
+<hr>
+<h2>What Annotations Do <em>Not</em> Do</h2>
+<p>Annotations:</p>
+<ul>
+<li>do not trigger playback</li>
+<li>do not alter the score</li>
+<li>do not affect synchronization</li>
+<li>do not replace cues or instructions</li>
+</ul>
+<p>They are purely informational.</p>
+<hr>
+<h2>Notes on Use</h2>
+<p>Annotations are best used for:</p>
+<ul>
+<li>marking sections to listen closely</li>
+<li>noting transitions or handovers</li>
+<li>tracking rehearsal decisions</li>
+<li>personal memory aids</li>
+</ul>
+<p>They are intentionally lightweight and non-authoritative.</p>
+<hr>
+<h2>Future Changes</h2>
+<p>This feature is evolving. Possible future additions include:</p>
+<ul>
+<li>filtering annotations by author</li>
+<li>export / import of annotation files</li>
+<li>visibility modes (rehearsal vs performance)</li>
+</ul>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

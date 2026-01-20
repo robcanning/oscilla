@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cue_repeat</title>
+  <link rel="stylesheet" href="/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <a href="/docs/" class="docs-header-title">Oscilla Docs</a>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/docs/workflow/">Workflow</a></li>
+<li><a href="/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_stop/">stop()</a></li>
+    <li><a href="/docs/cue_pause/">pause()</a></li>
+    <li><a href="/docs/cue_speed/">speed()</a></li>
+    <li><a href="/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/docs/cue_page/">page()</a></li>
+    <li><a href="/docs/cue_nav/">nav()</a></li>
+    <li><a href="/docs/cue_button">button()</a></li>
+    <li><a href="/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/docs/cue_text/">text()</a></li>
+    <li><a href="/docs/cue_audio/">audio()</a></li>
+    <li><a href="/docs/cue_video/">video()</a></li>
+    <li><a href="/docs/cue_synth/">synth()</a></li>
+    <li><a href="/docs/cue_osc/">osc()</a></li>
+    <li><a href="/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/cue_scale/">scale()</a></li>
+    <li><a href="/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/docs/traverse/">traverse()</a></li>
+    <li><a href="/docs/color/">color()</a></li>
+    <li><a href="/docs/cue_fade/">fade()</a></li>
+    <li><a href="/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/docs/user_annotations/">Annotations</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+    <li><a href="/docs/dev-sync-architecture/">Sync Architecture</a></li>
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+      <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+      
+      <h1><code>cueRepeat</code> — Structured Playback Loops and Jumps</h1>
+<p>The <code>cueRepeat(...)</code> cue type enables controlled repetition of score sections using cue-based jump logic. It is designed for da capo, dal segno, and custom repeat behaviors.</p>
+<hr>
+<h2>Syntax</h2>
+<pre><code>cue_repeat_s(startId)_e(endId)_x(count)_r(resumeId)_d(direction)_a(action)
+</code></pre>
+<ul>
+<li><code>s(startId)</code> → ID of the cue where the repeat loop starts (<strong>required</strong>)</li>
+<li><code>e(endId)</code> → ID where the repeat loop ends (optional, defaults to current cue)</li>
+<li><code>x(count)</code> → Number of times to repeat the loop (<strong>required</strong>)</li>
+<li><code>r(resumeId)</code> → Cue to jump to after repeats complete (optional, defaults to cue location)</li>
+<li><code>d(direction)</code> → Direction of traversal (<code>forward</code> or <code>reverse</code>) (optional)</li>
+<li><code>a(action)</code> → What to do at loop end: <code>jump</code>, <code>pause</code>, or <code>none</code> (optional)</li>
+</ul>
+<hr>
+<h2>Examples</h2>
+<h3>Repeat a single section 3 times</h3>
+<pre><code>cue_repeat_s(intro)_x(3)
+</code></pre>
+<h3>Repeat section from <code>A</code> to <code>B</code> 2 times, then jump to <code>C</code></h3>
+<pre><code>cue_repeat_s(A)_e(B)_x(2)_r(C)
+</code></pre>
+<hr>
+<h2>Server-Side Logic (Under Repair)</h2>
+<p>The server currently <strong>tracks active repeats</strong> and <strong>broadcasts loop state</strong> to clients. However:</p>
+<blockquote>
+<p><strong>BUG</strong>: Repeat coordination is currently broken in multi-client setups.</p>
+<ul>
+<li>Only one client handles jumps correctly</li>
+<li>Others may desync or re-trigger independently</li>
+</ul>
+</blockquote>
+<h3>TODO [HIGH PRIORITY]:</h3>
+<ul>
+<li>Fix server broadcast/resync logic so that all connected clients:
+<ul>
+<li>Share repeat state</li>
+<li>Jump together in sync</li>
+<li>Recover gracefully on reconnect</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>TODO: Support Nested Repeats</h2>
+<p>Nested or overlapping repeat blocks (e.g., a repeat inside a larger form) are not currently supported.</p>
+<blockquote>
+<p><strong>Planned</strong>: Stack-based repeat state with entry/exit markers for nested structures.</p>
+</blockquote>
+<hr>
+<h2>Notes</h2>
+<ul>
+<li>A repeat is considered &quot;active&quot; once it is triggered</li>
+<li>After each loop, the playhead jumps back to <code>startId</code></li>
+<li>On final repeat, it jumps to <code>resumeId</code> or stays in place</li>
+<li>Use <code>cueRepeat(...)</code> cues at or near the end of the section being looped</li>
+</ul>
+<hr>
+<h2>Related Cues</h2>
+<ul>
+<li><a href="cuePause.md"><code>cuePause(...)</code></a> — pause playback with optional countdown</li>
+<li><a href="cueAudio.md"><code>cueAudio(...)</code></a> — play local or OSC-triggered audio</li>
+<li><a href="cueTraverse.md"><code>cueTraverse(...)</code></a> — animate objects through points or steps</li>
+</ul>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

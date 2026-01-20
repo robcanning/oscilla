@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>README_updated</title>
+  <link rel="stylesheet" href="/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <a href="/docs/" class="docs-header-title">Oscilla Docs</a>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/docs/workflow/">Workflow</a></li>
+<li><a href="/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/docs/cue_stop/">stop()</a></li>
+    <li><a href="/docs/cue_pause/">pause()</a></li>
+    <li><a href="/docs/cue_speed/">speed()</a></li>
+    <li><a href="/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/docs/cue_page/">page()</a></li>
+    <li><a href="/docs/cue_nav/">nav()</a></li>
+    <li><a href="/docs/cue_button">button()</a></li>
+    <li><a href="/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/docs/cue_text/">text()</a></li>
+    <li><a href="/docs/cue_audio/">audio()</a></li>
+    <li><a href="/docs/cue_video/">video()</a></li>
+    <li><a href="/docs/cue_synth/">synth()</a></li>
+    <li><a href="/docs/cue_osc/">osc()</a></li>
+    <li><a href="/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/docs/cue_scale/">scale()</a></li>
+    <li><a href="/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/docs/traverse/">traverse()</a></li>
+    <li><a href="/docs/color/">color()</a></li>
+    <li><a href="/docs/cue_fade/">fade()</a></li>
+    <li><a href="/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/docs/user_annotations/">Annotations</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+    <li><a href="/docs/dev-sync-architecture/">Sync Architecture</a></li>
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+      <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+      
+      <h1>oscillaScore</h1>
+<p><em>A score authoring and networked performance environment using SVG, WebSockets, and OSC.</em></p>
+<p>oscillaScore is a flexible, browser-based environment for creating and performing time-based and media-enhanced scores. Whether working with traditional notation, improvisation frameworks, or audiovisual compositions, users can coordinate performances across multiple devices in real time using SVG, WebSockets, and OSC (Open Sound Control).</p>
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#conceptual-overview">Conceptual Overview</a></li>
+<li><a href="#use-cases">Use Cases</a></li>
+<li><a href="#project-structure">Project Structure</a></li>
+<li><a href="#user-requirements">User Requirements</a></li>
+<li><a href="#developer-dependencies">Developer Dependencies</a></li>
+<li><a href="#installing--running-the-server">Installing &amp; Running the Server</a></li>
+<li><a href="#workflow-overview">Workflow Overview</a></li>
+<li><a href="#cue-targeting--advanced-triggering">Cue Targeting &amp; Advanced Triggering</a></li>
+<li><a href="#cue-system-overview">Cue System Overview</a></li>
+<li><a href="#animation-syntax-mini-notation">Animation Syntax (Mini Notation)</a></li>
+<li><a href="#osc--websocket-integration">OSC &amp; WebSocket Integration</a></li>
+<li><a href="#score-management-rehearsal-marks--score-annotations">Score Management: Rehearsal Marks &amp; Score Annotations</a></li>
+<li><a href="#playback-interface">Playback Interface</a></li>
+<li><a href="#extensibility">Extensibility</a></li>
+<li><a href="#background--previous-research">Background &amp; Previous Research</a></li>
+<li><a href="#status--development">Status &amp; Development</a></li>
+<li><a href="#compatibility--tools">Compatibility &amp; Tools</a></li>
+</ul>
+<h2>What Kind of Software Is oscillaScore?</h2>
+<p>oscillaScore is best described as a hybrid system that sits between score playback engine, cue-based media framework, and distributed performance interface.</p>
+<p>It is:</p>
+<ul>
+<li>A <strong>cue-driven score playback and control system</strong> for structured, time-based, and media-integrated works.</li>
+<li>A <strong>networked playback environment</strong> supporting multi-client synchronization via WebSockets and OSC.</li>
+<li>A <strong>performance framework</strong> for distributed setups, allowing composers and performers to coordinate audio, animation, and media in real time.</li>
+<li>A <strong>score authoring platform</strong> supporting compact mini-syntax for animation, transformation, and timing control using SVG ID conventions.</li>
+</ul>
+<p>It is <strong>not</strong>:</p>
+<ul>
+<li>A real-time collaborative score editor.</li>
+<li>A DAW or audio sequencing environment.</li>
+<li>A full-featured notation program like MuseScore or Sibelius.</li>
+</ul>
+<p>oscillaScore is designed to support composers and performers working with contemporary forms of notation, multimedia integration, and distributed coordination.</p>
+<h2>Conceptual Overview</h2>
+<p>oscillaScore supports both <strong>fixed-form</strong> and <strong>open-form</strong> works, and can be used in isolation as a powerful environment for structuring electronic music compositions. It accommodates a range of artistic practices including:</p>
+<ul>
+<li>Animated graphic or symbolic scores.</li>
+<li>Distributed improvisation and comporovisation.</li>
+<li>Time-based cue sequences and gesture triggers.</li>
+<li>Media scores involving video, audio, or text prompts.</li>
+<li>Live networked performances and collaborative rehearsals.</li>
+</ul>
+<p>It builds on the lineage of drawing-based music systems like Xenakis’s UPIC, reimagining the <strong>score as a spatial interface</strong> for sonic control. With support for animation and OSC, oscillaScore acts as both a form of <strong>notation</strong> and a <strong>performable instrument</strong>, allowing users to control sound through movement, timing, and visual gesture.</p>
+<p>It operates under two main paradigms:</p>
+<ul>
+<li>A <strong>scrolling score model</strong>, suited for linear, horizontally-unfolding timelines.</li>
+<li>A <strong>page-based or hypertextual model</strong>, allowing spatial, nonlinear, or interactive structures.</li>
+</ul>
+<p>These paradigms can <strong>coexist within a single score</strong>, enabling hybrid forms that mix continuous motion with branching or triggerable segments.</p>
+<p>oscillaScore tightly integrates notation, performer cues, media triggers, and animation into a unified timing and control system. This allows complex audiovisual structures to be executed with precise coordination — ensuring seamless transitions between written material, live gestures, and multimedia elements.</p>
+<p>Composers and performers can author complex transformations, animations, and media events using a concise SVG ID-based syntax paired with a powerful cue system.</p>
+<h2>Use Cases</h2>
+<p>oscillaScore supports a wide range of use cases, including:</p>
+<ul>
+<li><strong>Solo electronic music composition</strong>: Compose and structure media-rich or animated works within a single local environment.</li>
+<li><strong>Rehearsal and performance for ensembles</strong>: Share synchronized, cue-driven scores with multiple musicians in real time.</li>
+<li><strong>Telematic and distributed improvisation</strong>: Use cues and visual animations to coordinate remote performers across networks.</li>
+<li><strong>Interactive installations</strong>: Embed visual or spatial scores in gallery contexts with OSC-driven sound interaction.</li>
+<li><strong>Mixed-media or hypermedia works</strong>: Integrate text, video, sound, and interactivity in dynamic score designs.</li>
+</ul>
+<hr>
+<h2>Project Structure</h2>
+<p>Here is an overview of the typical oscillaScore project directory:</p>
+<pre><code class="language-text">oscillaScore/
+├── README.md             # Project overview and usage instructions
+├── server.js              # WebSocket + OSC server backend
+├── /public/               # Static frontend served to clients
+│   ├── index.html         # Main launch point with playback UI
+│   ├── js/                # Client-side JavaScript (e.g. app.js, anime.js, path-utils.js)
+│   ├── css/               # Interface styles (e.g. desktop/mobile)
+│   ├── scores/            # User-uploaded or demo SVG scores
+│   ├── templates/         # Optional starter SVG score templates
+│   └── docs/              # Internal documentation and usage guides
+├── /config/               # Server configuration and PM2 scripts
+└── /scripts/              # Deployment and utility scripts
+
+</code></pre>
+<p>This structure supports live editing, versioning of scores, and server-side deployment.</p>
+<hr>
+<h2>User Requirements</h2>
+<p>To run oscillaScore locally and support multi-client synchronization, you will need:</p>
+<ul>
+<li><strong>Node.js</strong> and <strong>npm</strong> — for installing and running the server</li>
+<li><strong>git</strong> (or download a ZIP of the repository if you prefer not to use git)</li>
+<li>(Optional) <strong>PM2</strong> — for managing server processes in production</li>
+</ul>
+<p>If you don't use <code>git</code>, you can download the repository as a ZIP from GitHub or GitLab, extract it, then run the setup commands from the extracted folder.</p>
+<h3>Network Requirements</h3>
+<p>For authoring and single-client use, simply open <code>http://localhost:8001</code> on the same machine running the server.</p>
+<p>For multi-performer setups, all clients and the host machine must be on the <strong>same local network</strong> (LAN) to enable real-time synchronization. A reliable setup is to connect all devices to a dedicated Wi-Fi router, with the server hosted on a laptop connected to that network.</p>
+<p>To point client devices to the score interface, use the local IP address of the server machine (e.g., <code>http://192.168.0.42:8001</code>). You can find your local IP in your system's network settings.</p>
+<p>Setting a <strong>static IP address</strong> for the server is highly recommended to ensure consistent access across sessions.</p>
+<p>See <code>docs/multi-client-setup.html</code> for more detailed instructions on LAN setup and IP configuration.</p>
+<hr>
+<h2>Installing &amp; Running the Server</h2>
+<pre><code class="language-bash">git clone https://github.com/YOURNAME/oscillaScore.git
+cd oscillaScore
+npm install
+node server.js  # Starts WebSocket + OSC server
+</code></pre>
+<p>Then open <code>index.html</code> in your browser or navigate to the default local server address:</p>
+<pre><code>http://localhost:8001
+</code></pre>
+<p>The system listens for incoming OSC messages, SVG uploads, and client sync events.</p>
+<hr>
+<h2>Workflow Overview</h2>
+<ol>
+<li><strong>Start with a template</strong> by pressing  &quot;s&quot;  to open the score/template loader interface and download an example. Then edit it in Inkscape or another vector graphics editor using horizontal or page-based SVG layouts. The default starting point is the horizontally scrolling template. To enter a page-based paradigm, initiate a collision with a page-based cue such as <code>cue_anime</code>, <code>cue_choice</code>, or <code>cue_video</code> and continue score logic from there. It is recommended to keep the original Inkscape file as your master version, and use <strong>Save a Copy</strong> to create a <strong>Plain SVG</strong> version for use in the score player. This avoids compatibility issues related to Inkscape-specific metadata.</li>
+<li><strong>Tag elements</strong> using <code>id</code> attributes with cue or animation syntax. In Inkscape, select an object and press <strong>Ctrl+Shift+X</strong> to open the XML Editor and assign or edit its <code>id</code>.</li>
+<li><strong>Upload your SVG</strong> through the interface or place it in the <code>/scores/</code> folder. Press `` to open the score/template loader interface, which allows you to browse and select from available files.</li>
+<li><strong>Perform the score</strong> using time-based scroll, page navigation, or cue-triggered logic.</li>
+</ol>
+<hr>
+<h2>Cue Targeting &amp; Advanced Triggering</h2>
+<p>In some cases, such as with <code>cue_traverse</code>, you may want to trigger the animation of a secondary object when a separate, primary cue element reaches the playhead. In these cases, the primary visual object uses a standard <code>id</code>, while the functional cue name is placed in a <code>data-id</code> attribute. This structure supports <strong>triggerable mode</strong> via <code>_t(1)</code>, where the animation remains dormant until activated by the playhead reaching the associated cue.</p>
+<hr>
+<h2>Cue System Overview</h2>
+<p>Cue handlers are triggered by specially named IDs embedded in the SVG. Supported types include:</p>
+<ul>
+<li><code>cuePause(duration)</code> – pauses playback. If the duration is &gt; 3 seconds, a visual countdown appears.</li>
+<li><code>cueStop()</code> – stops playback entirely.</li>
+<li><code>cueRepeat(s: startId, e: endId, x: repeatCount, r: resumeId)</code> – repeat a region for a set number of times.</li>
+<li><code>cueTraverse(o: objectId, p: pointList)</code> – moves an object between defined points.</li>
+<li><code>cueAudio(file: 'filename.wav', loop: 2, amp: 1.0)</code> – plays an audio sample.</li>
+<li><code>cueVideo(file: 'clip.mp4')</code> – video playback trigger.</li>
+<li><code>cueAnimation(choice: 'overlay', dur: 10)</code> / <code>cueAnimejs(choice: 'svg-file', dur: 5)</code> – trigger fullscreen or inline animations.</li>
+<li><code>cueChoice(choice: 'A', dur: 8)</code> – user-triggered choice with optional duration.</li>
+<li><code>cueP5(sketch: 'name')</code> – load an interactive P5.js sketch.</li>
+<li><code>cueOscTrigger(value)</code> – sends an OSC message with a numeric trigger.</li>
+<li><code>cueOscValue(value)</code> – sends a scalar OSC value.</li>
+<li><code>cueOscSet(param, value)</code> – sends a key-value OSC pair.</li>
+<li><code>cueOscRandom(min, max)</code> – sends a random value in a range.</li>
+<li><code>cueOscPulse(rate, duration)</code> – sends repeated OSC pulses.</li>
+<li><code>cueOscBurst(count, interval)</code> – sends a burst of OSC messages.</li>
+</ul>
+<p>All cue types use camelCase formatting: <code>cueType(...)</code>.</p>
+<p>Use short form <code>cuePause(6)</code> for anonymous parameters (<code>choice</code>), or <code>cuePause(duration: 6)</code> for named parameters.</p>
+<h3>📌 Dynamic Cue Assignment with <code>assignCues(...)</code></h3>
+<p>You can programmatically generate cue IDs for multiple objects in a group using:</p>
+<pre><code class="language-xml">&lt;g id=&quot;assignCues(cueOscTrigger(rnd[1,9]))&quot;&gt;
+</code></pre>
+<p>This creates a randomized cue ID (e.g. <code>cueOscTrigger(5)</code>) for each child inside the group. Supported value generators include <code>rnd[min,max]</code> and <code>ypos[min,max]</code> (based on vertical position). See <code>assignCues()</code> in <code>app.js</code> for implementation details.</p>
+<p>See <code>docs/cue_system.html</code> and <code>docs/cue_traverse_documentation.html</code> for full syntax.</p>
+<h2>Animation Syntax (Mini Notation)</h2>
+<p>SVG elements can be animated using expressive ID-based syntax:</p>
+<pre><code class="language-svg">&lt;g id=&quot;r_rpm(5)_deg[0,90,180]_dir(1)_ease(2)&quot; /&gt;
+&lt;circle id=&quot;s[1.0,1.5,1.0]_seqdur(4)_ease(3)&quot; /&gt;
+</code></pre>
+<p>Supported animations include:</p>
+<ul>
+<li>Rotation: <code>r_...</code> or <code>obj_rotate_*</code></li>
+<li>Scale: <code>s[...]</code>, <code>sXY[...]</code>, <code>sX[...]</code>, <code>sY[...]</code></li>
+<li>Path-following: <code>o2p(...)</code> or <code>obj2path-*</code></li>
+</ul>
+<p>Modifiers include:</p>
+<ul>
+<li><code>rpm</code>, <code>deg</code>, <code>dir</code>, <code>ease</code></li>
+<li>Sequence durations: <code>seqdur(...)</code></li>
+<li>Triggerable mode: <code>_t(1)</code></li>
+<li>Regenerating random values: <code>rndNx</code>, <code>rnd(...)x</code></li>
+</ul>
+<p>See <code>docs/animations.html</code> for full syntax and examples.</p>
+<hr>
+<h2>OSC &amp; WebSocket Integration</h2>
+<p>oscillaScore supports <strong>outbound OSC</strong> for real-time communication with audio engines such as SuperCollider, Pure Data, Max/MSP, and others. OSC messages are emitted automatically based on certain cue events and object animations.</p>
+<p>The <strong>incoming and outgoing OSC ports</strong> are shown clearly in the server GUI or printed in the initial console output from <code>server.js</code>. These settings can be configured as needed for local or networked setups. with audio engines such as SuperCollider, Pure Data, Max/MSP, and others. OSC messages are emitted automatically based on cue events and object animations.</p>
+<h3>📤 Cue-Triggered OSC</h3>
+<p>OSC messages are emitted when explicit OSC cue IDs are used in the SVG, such as <code>cue_osc_trigger_12</code>, <code>cue_osc_trigger_start</code>, etc. These cues send OSC messages like:</p>
+<pre><code>/cue/trigger &lt;cue_id&gt;
+/stopwatch &lt;elapsed_time&gt;
+</code></pre>
+<p>These can be mapped in synthesis environments to control playback, effects, or spatial parameters.</p>
+<h3>🌀 Path-Following OSC: <code>o2p(...)</code></h3>
+<p>Objects with IDs like <code>o2p(path-42)_osc(1)</code> emit continuous OSC messages during animation as they move along SVG paths. These act as <strong>real-time OSC data loops</strong> that can control synthesis parameters dynamically.</p>
+<p><strong>Example message:</strong></p>
+<pre><code>/obj2path/path-42 0.435 0.001 2.35
+</code></pre>
+<ul>
+<li>
+<p><strong>Address:</strong> <code>/obj2path/&lt;pathId&gt;</code></p>
+</li>
+<li>
+<p><strong>Arguments:</strong></p>
+<ul>
+<li><code>x</code> (normalized 0–1): horizontal position</li>
+<li><code>y</code> (normalized 0–1): vertical position</li>
+<li><code>angle</code> (in degrees): current orientation</li>
+</ul>
+</li>
+</ul>
+<p>This makes <code>o2p(...)</code> ideal for:</p>
+<ul>
+<li>Controlling filter frequency (e.g., map <code>x</code> to cutoff)</li>
+<li>Panning or spatialization (e.g., use <code>y</code> or <code>angle</code>)</li>
+<li>Modulating effects like reverb or delay dynamically</li>
+</ul>
+<p><strong>Each path-following object becomes a loopable OSC control source.</strong></p>
+<p>You can run multiple such objects in parallel, each emitting its own OSC stream, with fully customizable path shapes, motion speed, direction, and easing.</p>
+<blockquote>
+<p>To prevent flooding, only one client emits OSC in multi-user setups. The server assigns a primary OSC sender and suppresses duplicate streams from others. See <code>docs/osc-o2p.html</code> for full details.</p>
+</blockquote>
+<hr>
+<h2>Score Management: Rehearsal Marks &amp; Score Annotations</h2>
+<p>oscillaScore includes features that support flexible score navigation and rehearsal workflows:</p>
+<ul>
+<li>
+<p><strong>Rehearsal Marks</strong>: Defined using XML IDs such as <code>rehearsal_A</code>, <code>rehearsal_B</code>, etc., these labeled waypoints allow performers and conductors to quickly jump to specific sections. They can be used interactively during rehearsal or referenced by cue logic such as repeats or da capo.</p>
+</li>
+<li>
+<p><strong>Score Annotations</strong>: SVG elements with XML IDs beginning with <code>note-</code> (e.g., <code>note-intro</code>, <code>note-clarinet</code>) define embedded annotations. These can display programme notes, instructions, or media overlays at specific times or in response to cues.</p>
+</li>
+</ul>
+<p>These features allow composers and performers to structure scores in ways that facilitate rehearsal, collaboration, and interactive performance.</p>
+<h2>Playback Interface</h2>
+<p>The oscillaScore playback interface provides an intuitive and performance-ready control surface with the following features:</p>
+<ul>
+<li><strong>Traditional media controls</strong>: Play, pause, rewind, and jump to cue.</li>
+<li><strong>Rehearsal mark navigation</strong>: Quickly jump between <code>rehearsal_A</code>, <code>rehearsal_B</code>, etc., from a dropdown or shortcut interface.</li>
+<li><strong>Elapsed time</strong>: View synchronized global time via a shared stopwatch, updated across all connected clients.</li>
+<li><strong>Client overview</strong>: See a list of connected clients for multi-user coordination.</li>
+<li><strong>Annotation toggles</strong>: Show or hide score annotations (defined with <code>note-...</code> IDs), programme notes, and popup overlays.</li>
+<li><strong>Score management tools</strong>: Upload new SVG scores or score segments, download existing scores, or access prebuilt templates directly from the interface.</li>
+</ul>
+<p>This interface supports both rehearsals and live performance scenarios, enabling structured and spontaneous interaction with the score.</p>
+<hr>
+<h2>Extensibility</h2>
+<ul>
+<li><strong>Custom cues</strong> can be defined by editing <code>app.js</code>.</li>
+<li><strong>Media triggers</strong> support audio, video, animation, and external tools.</li>
+<li><strong>SVG templates</strong> included for fast prototyping.</li>
+<li><strong>Program notes and overlays</strong> available through GUI.</li>
+</ul>
+<hr>
+<h2>Background &amp; Previous Research</h2>
+<p>oscillaScore also generalises elements from composition-specific systems developed by the author during doctoral research. These include interactive, networked, and modular approaches to notation and performance, informed by earlier works such as:</p>
+<ul>
+<li>Canning, R. (2014). <em>Interactive parallax scrolling score interface for composed networked improvisation</em>. In Proceedings of the International Conference on New Interfaces for Musical Expression (pp. 144–146).</li>
+<li>Canning, R. (2012). <em>Real-time web technologies in the networked performance environment</em>. Ann Arbor, MI: Michigan Publishing, University of Michigan Library.</li>
+<li>Canning, R. (2011). <em>The M2 Compositions: A Technical Overview of a Modular Work Flow Towards the Creation of a Video Score</em>. In Proceedings of the International Computer Music Conference (ICMC 2011), Huddersfield, UK.</li>
+</ul>
+<p>oscillaScore was first used in the creation and performance of the animated graphic score <em>Six inches to the Mile</em> by Rob Canning (2025), commissioned by the Arts Council of Ireland / An Chomhairle Ealaíon for the Stuttgart-based new music ensemble <strong>Pony Says</strong>. The piece premiered at the <strong>Music Current Festival</strong> in April 2025.</p>
+<h2>Technical Summary</h2>
+<p>oscillaScore is built on a modular architecture combining real-time browser-based rendering, cue handling, and OSC messaging.</p>
+<p><strong>Core components:</strong></p>
+<ul>
+<li><strong>Client frontend:</strong> HTML + SVG + JavaScript (served from <code>/public/</code>)</li>
+<li><strong>Server backend:</strong> Node.js with Express and WebSocket support</li>
+<li><strong>OSC integration:</strong> Bi-directional OSC messaging using <code>osc</code> and <code>ws</code> libraries</li>
+<li><strong>Animation engine:</strong> Powered by <code>anime.js</code> for smooth visual transformations</li>
+<li><strong>Path handling:</strong> Uses <code>svg-path-commander</code> to animate and analyze SVG path traversal</li>
+<li><strong>Trigger system:</strong> Based on ID naming conventions (<code>cue_*</code>, <code>obj_rotate_*</code>, etc.) parsed at runtime</li>
+</ul>
+<p><strong>Data model:</strong></p>
+<ul>
+<li>Scores are plain SVG files with embedded ID-based instructions</li>
+<li>Playback and cue logic is synchronized via WebSocket broadcasts</li>
+<li>In multi-client setups, all clients may emit OSC messages to the server, which then filters and forwards only one message back to the destination as needed. The server acts as a gatekeeper to prevent duplication, but depending on the cue type, some filtering may occur client-side or be cue-specific.</li>
+</ul>
+<p>This design allows performance-ready coordination of media, animation, and interaction across distributed client devices.</p>
+<hr>
+<h2>Status &amp; Development</h2>
+<p>oscillaScore is under active development. Feedback, contributions, and collaboration inquiries are welcome. You can:</p>
+<ul>
+<li>Email questions, bug reports, or feature requests to <a href="mailto:rc@kiben.net"><strong>rc@kiben.net</strong></a></li>
+<li>Submit Git pull requests via the project repository</li>
+<li>Join as a beta tester to help improve cross-device compatibility and cue behavior</li>
+</ul>
+<h3>Developer Dependencies</h3>
+<p>oscillaScore uses the following project libraries and tools:</p>
+<ul>
+<li><strong>Express</strong> — web framework for serving the frontend</li>
+<li><strong>ws</strong> — WebSocket server for real-time synchronization</li>
+<li><strong>osc</strong> — OSC message handling</li>
+<li><strong>anime.js</strong> — animation engine for SVG transformations</li>
+<li><strong>svg-path-commander</strong> — used for path manipulation and transformation flattening</li>
+</ul>
+<h3>Known Limitation</h3>
+<p>The system is currently optimized for iPad Pro resolution and layout. If using laptops or desktops, use the browser’s responsive design mode (e.g., in Chrome DevTools) to emulate an iPad Pro screen. Without identical resolutions, clients will be misaligned from the outset. Resolving this display alignment issue is a high priority for the first stable release.</p>
+<hr>
+<hr>
+<p>Cue ID Format:</p>
+<ul>
+<li>Must begin with <code>cue_</code> followed by cue type, e.g. <code>cue_audio</code>, <code>cue_pause</code>, <code>cue_speed</code></li>
+<li>First parameter may be <code>key(value)</code> or just <code>(value)</code> (interpreted as <code>choice</code>)</li>
+<li>Additional parameters must be <code>key(value)</code></li>
+<li>Example: cue_audio(file(moog-bass)_loop(3)_amp(0.8))</li>
+<li>All cue types and expected keys are documented in [cue_handlers.md]</li>
+</ul>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>
