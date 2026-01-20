@@ -3,6 +3,10 @@ title: oscilla_screenshots
 layout: docs_layout.njk
 ---
 
+
+# Screenshots of Oscilla
+
+
 <figure class="doc-image">
   <img
     src="{{ '/docs/img/oscilla-interface-rehearsalmarks.png' | url }}"
@@ -21,3 +25,13 @@ layout: docs_layout.njk
   <figcaption>Oscilla Interface and Preferences GUI</figcaption>
 </figure>
 
+
+<figure class="doc-image">
+  <img
+    src="{{ '/docs/img/oscilla-server-terminal.png' | url }}"
+    alt="Oscilla Preferences"
+  >
+  <figcaption>Oscilla Server Running in Terminal (via npm / node)</figcaption>
+</figure>
+
+oscilla-server-terminal.png
