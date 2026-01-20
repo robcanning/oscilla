@@ -22,6 +22,16 @@ cd oscilla-inkscape-extension
 
 The installer detects your operating system and copies files to the correct Inkscape extensions folder.
 
+
+<figure class="doc-image">
+  <img
+    src="{{ '/docs/img/oscilla-inkscape-extension.png' | url }}"
+    alt="Oscilla Inkscape Extension"
+  >
+  <figcaption>Oscilla Inkscape Extension </figcaption>
+</figure>
+
+
 ### Manual Installation
 
 Copy all files to your Inkscape extensions folder:
