@@ -1,0 +1,194 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>oscilla_screenshots</title>
+
+  <link rel="stylesheet" href="/oscilla/docs/style.css">
+</head>
+
+
+
+<body>
+
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu">
+      ☰
+    </button>
+
+    <div class="docs-header-title">
+      Oscilla Docs
+    </div>
+  </header>
+
+
+<div class="docs-container">
+  <nav class="sidebar">
+
+  <h3>Docs</h3>
+  <ul>
+    <li><a href="/oscilla/docs/">Overview</a></li>
+    <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
+    <li><a href="/oscilla/docs/cheatsheet/">Cheatsheet</a></li>
+    <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
+
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+    <li><a href="/oscilla/docs/cue_button">button()</a></li>
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
+    <li><a href="/oscilla/docs/color/">color()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+    <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
+
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/oscilla/docs/user_annotations/">Annotations</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/oscilla/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+    <li><a href="/oscilla/docs/dev-sync-architecture/">Sync Architecture</a></li>
+  </ul>
+
+</nav>
+
+  <main class="docs-content">
+    <figure class="doc-image">
+  <img
+    src="/oscilla/docs/img/oscilla-interface-rehearsalmarks.png"
+    alt="Oscilla Rehearsal Mark Navigation"
+  >
+  <figcaption>Oscilla Rehearsal Mark Navigation</figcaption>
+</figure>
+<figure class="doc-image">
+  <img
+    src="/oscilla/docs/img/oscilla-preferences-gui.png"
+    alt="Oscilla Preferences"
+  >
+  <figcaption>Oscilla Interface and Preferences GUI</figcaption>
+</figure>
+
+  </main>
+</div>
+
+
+<p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("sidebar-open");
+    });
+  });
+
+<script>
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("sidebar-open");
+    });
+  });
+
+
+(function () {
+  // Collect sidebar links in visual order
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar) return;
+
+  const links = Array.from(
+    sidebar.querySelectorAll("a[href]")
+  ).map(a => a.href);
+
+  const current = window.location.href.replace(/#.*$/, "");
+  const index = links.findIndex(href => href === current);
+
+  const prev = index > 0 ? links[index - 1] : null;
+  const next = index >= 0 && index < links.length - 1
+    ? links[index + 1]
+    : null;
+
+  // Wire prev/next buttons if present
+  const prevBtn = document.getElementById("docs-prev");
+  const nextBtn = document.getElementById("docs-next");
+
+  if (prevBtn) {
+    if (prev) prevBtn.href = prev;
+    else prevBtn.style.visibility = "hidden";
+  }
+
+  if (nextBtn) {
+    if (next) nextBtn.href = next;
+    else nextBtn.style.visibility = "hidden";
+  }
+
+  // Keyboard navigation
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+    if (e.key === "ArrowLeft" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowRight" && next) {
+      window.location.href = next;
+    }
+
+    // Optional: vertical navigation
+    if (e.key === "ArrowUp" && prev) {
+      window.location.href = prev;
+    }
+
+    if (e.key === "ArrowDown" && next) {
+      window.location.href = next;
+    }
+  });
+})();
+</script>
+
+
+</body>
+
+
+
+</html>
