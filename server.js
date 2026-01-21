@@ -37,7 +37,7 @@ const argv = yargs(hideBin(process.argv)).argv;
 // Third-party modules (ESM)
 // ------------------------------------------------------------
 
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import express from "express";
 import osc from "osc";
 import multer from "multer";
@@ -51,14 +51,7 @@ const app = express();
 // ✅ REQUIRED for your new project APIs
 app.use(express.json());
 
-// ------------------------------------------------------------
-// pkg-safe base directory
-// ------------------------------------------------------------
-
-const IS_PKG = !!process.pkg;
-const BASE_DIR = IS_PKG ? process.cwd() : __dirname;
-
-
+const upload = multer();
 
 // ---------------------------------------------
 // Runtime Configuration: Port & OSC Settings
@@ -81,16 +74,7 @@ const websocketHost = argv['ws-host'] || process.env.WS_HOST || 'localhost';
 const websocketPort = argv['ws-port'] || process.env.WS_PORT || port;     // Defaults to HTTP port if not specified
 
 
-// ------------------------------------------------------------
-// VERSION (single source of truth)
-// ------------------------------------------------------------
 
-
-const OSCILLA_VERSION = fs
-  .readFileSync(path.join(process.cwd(), "VERSION"), "utf8")
-  .trim();
-
-const upload = multer();
 
 // ------------------------------------------------------------
 // API
@@ -150,7 +134,7 @@ app.post("/api/project/import", upload.single("file"), async (req, res) => {
 
 
 app.get("/api/projects", (req, res) => {
-  const scoresDir = path.join(__dirname, "public", "scores");
+const scoresDir = path.join(WRITE_DIR, "public", "scores");
 
   fs.readdir(scoresDir, { withFileTypes: true }, (err, entries) => {
     if (err) {
@@ -200,19 +184,41 @@ app.get('/config', (req, res) => {
 
 // const IS_PKG = !!process.pkg;
 
+const IS_PKG = !!process.pkg;
+
+// READ: bundled, immutable
 const READ_DIR = __dirname;
+
+// WRITE: user workspace (outside snapshot when pkg)
 const WRITE_DIR = IS_PKG ? process.cwd() : __dirname;
 
 console.log("[CONFIG] READ_DIR  =", READ_DIR);
 console.log("[CONFIG] WRITE_DIR =", WRITE_DIR);
+
 
 // ---------------------------------------------
 // Static file serving (READ ONLY)
 // ---------------------------------------------
 
 app.use(express.static(path.join(READ_DIR, "public")));
-app.use("/scores", express.static(path.join(READ_DIR, "public/scores")));
+app.use("/scores", express.static(path.join(WRITE_DIR, "public/scores")));
 app.use("/shared", express.static(path.join(READ_DIR, "public/shared")));
+
+
+// ------------------------------------------------------------
+// VERSION (single source of truth)
+// ------------------------------------------------------------
+
+const OSCILLA_VERSION = fs
+  .readFileSync(path.join(READ_DIR, "VERSION"), "utf8")
+  .trim();
+
+
+
+
+
+
+
 
 // ---------------------------------------------
 // Simple HTML directory lister
@@ -573,7 +579,14 @@ wss.on('connection', (ws, req) => {
 
   ws.on('message', (message) => {
     console.log("[DEBUG] Received WebSocket message:", message);
-    const data = JSON.parse(message);
+    
+    let data;
+    try {
+      data = JSON.parse(message);
+    } catch (err) {
+      console.error("[ERROR] Failed to parse WebSocket message:", err.message);
+      return;
+    }
 
     switch (data.type) {
       case "cueStop":
@@ -1487,13 +1500,13 @@ wss.on('connection', (ws, req) => {
 
         if (isNaN(cueNumber)) {
           console.warn("[WARNING] Received invalid cue number:", data.data);
-          return;
+          break;
         }
 
         // ✅ Prevent duplicate messages
         if (triggeredCues.has(cueNumber)) {
           console.log(`[INFO] Cue ${cueNumber} has already been sent. Ignoring duplicate.`);
-          return;
+          break;
         }
 
         // ✅ Mark cue as triggered
@@ -1567,7 +1580,7 @@ wss.on('connection', (ws, req) => {
 
         if (isNaN(data.playheadX) || data.playheadX < 0) {
           console.error(`[ERROR] Ignoring invalid playheadX: ${data.playheadX}. Keeping last known value.`);
-          return;
+          break;
         }
 
         sharedState.playheadX = data.playheadX;
