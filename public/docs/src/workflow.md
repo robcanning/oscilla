@@ -124,9 +124,27 @@ Examples:
 * `o2p(path:p01)`
 * `scale([1,1.3,1])`
 
-For the full cue and animation reference, see:
+### Using the Oscilla Inkscape Extension (recommended)
 
-[https://robcanning.github.io/oscilla/docs/](https://robcanning.github.io/oscilla/docs/)
+Editing complex IDs manually can be error‑prone. Oscilla therefore provides an **Inkscape extension** that makes working with cue and animation IDs significantly easier.
+
+The extension:
+
+* provides structured input fields instead of raw text editing
+* helps avoid syntax errors
+* exposes common cue and animation parameters
+* speeds up authoring for larger or more complex scores
+
+The extension is **optional**, but strongly recommended for regular use.
+
+Documentation and installation instructions:
+
+[https://robcanning.github.io/oscilla/docs/inkscape_extension/](https://robcanning.github.io/oscilla/docs/inkscape_extension/)
+
+You can freely mix workflows:
+
+* use the extension for most edits
+* fine‑tune or experiment directly in the XML editor when needed
 
 ---
 
