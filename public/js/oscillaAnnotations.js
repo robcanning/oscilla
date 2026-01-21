@@ -421,7 +421,7 @@ function makePinEl(annotation, onClick) {
     pin.appendChild(label);
 
     // -----------------------------
-    // Drag logic (label only)
+    // Drag logic (label only) — Mouse + Touch unified
     // -----------------------------
     let dragging = false;
     let moved = false;
@@ -430,57 +430,83 @@ function makePinEl(annotation, onClick) {
     let baseX = 0;
     let baseY = 0;
 
-    label.addEventListener("mousedown", (e) => {
+    // Unified handler for both mouse and touch
+    function getPointerCoords(e) {
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+    }
+
+    function onPointerDown(e) {
         if (state.annotationMode) return;
 
+        // Prevent default to stop scrolling on touch
         e.preventDefault();
         e.stopPropagation();
 
         dragging = true;
         moved = false;
 
-        startX = e.clientX;
-        startY = e.clientY;
+        const coords = getPointerCoords(e);
+        startX = coords.x;
+        startY = coords.y;
         baseX = annotation.placement.x;
         baseY = annotation.placement.y;
 
         label.style.cursor = "grabbing";
 
-        const onMove = (e) => {
-            if (!dragging) return;
+        // Add move/up listeners to window
+        window.addEventListener("mousemove", onPointerMove);
+        window.addEventListener("mouseup", onPointerUp);
+        window.addEventListener("touchmove", onPointerMove, { passive: false });
+        window.addEventListener("touchend", onPointerUp);
+        window.addEventListener("touchcancel", onPointerUp);
+    }
 
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
+    function onPointerMove(e) {
+        if (!dragging) return;
 
-            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-                moved = true;
-            }
+        // Prevent scrolling while dragging
+        if (e.cancelable) e.preventDefault();
 
-            annotation.placement.x = baseX + dx;
-            annotation.placement.y = baseY + dy;
+        const coords = getPointerCoords(e);
+        const dx = coords.x - startX;
+        const dy = coords.y - startY;
 
-            positionAnnotation(pin, annotation);
-        };
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+            moved = true;
+        }
 
-        const onUp = () => {
-            if (!dragging) return;
+        annotation.placement.x = baseX + dx;
+        annotation.placement.y = baseY + dy;
 
-            dragging = false;
-            label.style.cursor = "grab";
+        positionAnnotation(pin, annotation);
+    }
 
-            window.removeEventListener("mousemove", onMove);
-            window.removeEventListener("mouseup", onUp);
+    function onPointerUp() {
+        if (!dragging) return;
 
-            if (moved) {
-                updateAnnotation(annotation.id, {
-                    placement: { ...annotation.placement }
-                });
-            }
-        };
+        dragging = false;
+        label.style.cursor = "grab";
 
-        window.addEventListener("mousemove", onMove);
-        window.addEventListener("mouseup", onUp);
-    });
+        // Remove all listeners
+        window.removeEventListener("mousemove", onPointerMove);
+        window.removeEventListener("mouseup", onPointerUp);
+        window.removeEventListener("touchmove", onPointerMove);
+        window.removeEventListener("touchend", onPointerUp);
+        window.removeEventListener("touchcancel", onPointerUp);
+
+        if (moved) {
+            updateAnnotation(annotation.id, {
+                placement: { ...annotation.placement }
+            });
+        }
+    }
+
+    // Attach both mouse and touch start handlers
+    label.addEventListener("mousedown", onPointerDown);
+    label.addEventListener("touchstart", onPointerDown, { passive: false });
 
     // -----------------------------
     // Click label → edit (only if not dragged)
