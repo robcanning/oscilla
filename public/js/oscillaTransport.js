@@ -1301,62 +1301,6 @@ export function initializeDarkModeToggle() {
   console.log("[DarkMode] 🌗 Toggle ready.");
 }
 
-// ======================================================
-// SPLASH SCREEN CONTROL
-// ======================================================
-
-function setSplashVisibility(show) {
-  const splash = document.getElementById('splash');
-  const scoreContainer = window.scoreContainer || document.getElementById('scoreContainer');
-  const controls = document.getElementById('controls');
-
-  if (!splash) {
-    console.error('[Splash] Missing #splash element');
-    return;
-  }
-
-  if (show) {
-    console.log('[Splash] Showing splash screen.');
-    splash.style.display = 'flex';
-    splash.classList.remove('hidden');
-    if (scoreContainer) scoreContainer.style.display = 'none';
-    if (controls) controls.style.display = 'none';
-  } else {
-    console.log('[Splash] Hiding splash screen.');
-    splash.style.display = 'none';
-    splash.classList.add('hidden');
-
-    if (scoreContainer) scoreContainer.style.display = 'block';
-    if (controls) controls.style.display = 'flex';
-
-    // ✅ Only reinitialize UI controls (not the SVG / score)
-    setTimeout(() => {
-      if (typeof initializeControlsPin === "function") initializeControlsPin();
-      if (typeof initializeTopbarPin === "function") initializeTopbarPin();
-    }, 300);
-
-  }
-
-}
-
-
-export function showSplashScreen() {
-  setSplashVisibility(true);
-}
-
-export function hideSplashScreen() {
-  setSplashVisibility(false);
-}
-
-export function toggleSplashScreen() {
-  const splash = document.getElementById('splash');
-  const isHidden = splash?.style.display === 'none' || splash?.classList.contains('hidden');
-  setSplashVisibility(isHidden);
-}
-
-window.showSplashScreen = showSplashScreen;
-window.hideSplashScreen = hideSplashScreen;
-window.toggleSplashScreen = toggleSplashScreen;
 
 
 //////////////////////////////////////////////////////////////////////////

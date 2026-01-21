@@ -271,7 +271,6 @@ reuse(audioSampBtns) • use(audioSampBtns)
       <!-- shapes --> </g></g></g>
 ```
 
-
 ## Inkscape Extension (Recommended)
 ```
 - Structured UI for editing cue & animation IDs
@@ -291,7 +290,6 @@ Bundle project for sharing or archiving)
 
 File → Import Project (.oscilla)  
 Unpack a shared project and load it under a new name
-
 ```
 
 ## Links

@@ -19,60 +19,53 @@
 
 <body>
 
-  <div id="rotula-splash-screen" class="rotula-splash hidden">
-    <h1>Welcome to Oscilla</h1>
-    <p>Select an existing score or upload a new one.</p>
-
-    <h2>Available Scores:</h2>
-    <ul id="score-list">
-      <li>
-        <button onclick="loadScore('svg/default.svg')">🎼 Load Default Score</button>
-      </li>
-    </ul>
-
-    <h2>Upload a New Score:</h2>
-    <input type="file" id="upload-score" accept=".svg" />
-  </div>
-
-  <!-- Splash -->
   <div id="splash">
-    <div class="splash-container">
+  <div class="splash-container">
 
-      <div class="title-section">
-        <img src="docs/src/img/logos/logo-stacked.svg" alt="Oscilla Logo" class="logo" />
+    <!-- Header -->
+    <div class="title-section">
+      <img src="docs/src/img/logos/logo-stacked.svg" alt="Oscilla Logo" class="logo" />
+      <p class="splash-message">Choose a project to begin</p>
+    </div>
 
-        <p id="splash-message" class="splash-message">
-          Loading available projects...
-        </p>
-      </div>
+    <!-- Projects -->
+    <div id="project-grid" class="project-grid">
+      <!-- populated dynamically -->
+    </div>
 
-      <div id="project-grid" class="project-grid"></div>
+    <!-- Actions -->
+    <div class="splash-actions">
+      <button class="primary" id="new-project-btn">
+        New Project
+      </button>
 
-      <div id="manual-entry" class="manual-entry" style="display: none;">
-        <p>Could not automatically list projects.</p>
-        <input id="manual-project-input" type="text" placeholder="Enter project name manually" />
-        <button id="manual-load-btn">Load Project</button>
-      </div>
+      <button id="import-project-btn">
+        Import…
+      </button>
+    </div>
 
-      <div class="help-section">
-        <p class="project-card">Load the helper-score for in-score documentation.</p><br>
-        <a class="project-card" href="https://robcanning.github.io/oscilla" target="_blank">
-          Online Documentation
+    <!-- Footer -->
+    <div class="meta-section">
+      <hr class="meta-divider" />
+      <div class="meta-row">
+        <span>v0.4.2</span>
+        <a href="https://robcanning.github.io/oscilla/docs" target="_blank">
+          Documentation
         </a>
       </div>
-
-      <div class="meta-section">
-        <hr class="meta-divider" />
-        <p class="meta-line">
-          <strong>Version:</strong> 0.4.2 &nbsp; | &nbsp;
-          <strong>Author:</strong> Rob Canning © 2024–2025
-        </p>
-      </div>
-
     </div>
+
   </div>
+</div>
 
 
+<div id="project-modal" class="project-modal hidden">
+  <div class="project-modal-content">
+    <h3>All Projects</h3>
+    <div id="project-modal-grid" class="project-grid"></div>
+    <button onclick="closeProjectModal()">Close</button>
+  </div>
+</div>
 
 
 
@@ -247,7 +240,7 @@
 
 
   <!-- Project Dialog -->
-   
+
   <sl-dialog
   id="inkscape-hint-dialog"
   label="Project created"
@@ -547,7 +540,7 @@
 
   <script src="js/anime.min.js"></script>
   <script src="js/svg-path-commander.js"></script>
-
+  <script type="module" src="./js/oscillaPreferences.js"></script>
   <script type="module" src="./js/scoreSetup.js"></script>
   <script type="module" src="js/app.js"></script>
 

@@ -8,17 +8,12 @@ import {
 import { hideAllButtonPlaceholders } from "./oscillaButton.js";
 import { setSpeedCueMap, extractSpeedCues } from './oscillaSpeed.js';
 
-
-
 import {
   initOscillaAnnotations,
   setAnnotationsProject,
   exportAnnotationsJSON,
   importAnnotationsJSON
 } from "./oscillaAnnotations.js";
-
-
-
 
 // ============================================================
 // 🔹 ANNOTATION MENU EXPORT / IMPORT (SAFE UI WIRING)
@@ -81,6 +76,69 @@ function wireMenuInteractionGuards() {
 wireMenuInteractionGuards();
 
 ////////////////////////////////////
+async function projectNew() {
+ const name = prompt("New project name:");
+            if (!name) return;
+
+            const res = await fetch("/api/project/new", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name })
+            });
+
+            const data = await res.json();
+            if (!data.ok) {
+              alert(data.error);
+              return;
+            }
+
+            sessionStorage.setItem("oscilla.showInkscapeHint", name);
+            window.location.href = `/?project=${encodeURIComponent(name)}`;
+            // show hint after navigation settles
+}
+
+async function projectImport() {
+   const input = document.createElement("input");
+            input.type = "file";
+            input.accept = ".oscilla";
+
+            input.onchange = async () => {
+              const file = input.files?.[0];
+              if (!file) return;
+
+              const suggested = file.name.replace(/\.oscilla$/i, "");
+              const name = prompt("Import project as:", suggested);
+              if (!name) return;
+
+              const form = new FormData();
+              form.append("file", file);
+              form.append("name", name);
+
+              const res = await fetch("/api/project/import", {
+                method: "POST",
+                body: form
+              });
+
+              const json = await res.json();
+              if (!json.ok) {
+                alert(json.error);
+                return;
+              }
+
+              sessionStorage.setItem("oscilla.showInkscapeHint", name);
+              window.location.href = `/?project=${encodeURIComponent(name)}`;
+              // show hint after navigation settles
+
+            };
+
+            input.click();
+          }
+
+window.projectNew = projectNew;
+window.projectImport = projectImport;
+
+
+
 function wireHamburgerMenu() {
 
   const menu = document.querySelector("#hamburger-container sl-menu");
@@ -117,24 +175,7 @@ function wireHamburgerMenu() {
           // -----------------------------
 
           case "project-new": {
-            const name = prompt("New project name:");
-            if (!name) return;
-
-            const res = await fetch("/api/project/new", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ name })
-            });
-
-            const data = await res.json();
-            if (!data.ok) {
-              alert(data.error);
-              return;
-            }
-
-            sessionStorage.setItem("oscilla.showInkscapeHint", name);
-            window.location.href = `/?project=${encodeURIComponent(name)}`;
-            // show hint after navigation settles
+             await projectNew();
 
             break;
           }
@@ -179,40 +220,8 @@ function wireHamburgerMenu() {
           }
 
           case "project-import": {
-            const input = document.createElement("input");
-            input.type = "file";
-            input.accept = ".oscilla";
+           await projectImport();
 
-            input.onchange = async () => {
-              const file = input.files?.[0];
-              if (!file) return;
-
-              const suggested = file.name.replace(/\.oscilla$/i, "");
-              const name = prompt("Import project as:", suggested);
-              if (!name) return;
-
-              const form = new FormData();
-              form.append("file", file);
-              form.append("name", name);
-
-              const res = await fetch("/api/project/import", {
-                method: "POST",
-                body: form
-              });
-
-              const json = await res.json();
-              if (!json.ok) {
-                alert(json.error);
-                return;
-              }
-
-              sessionStorage.setItem("oscilla.showInkscapeHint", name);
-              window.location.href = `/?project=${encodeURIComponent(name)}`;
-              // show hint after navigation settles
-
-            };
-
-            input.click();
             break;
           }
 
@@ -304,6 +313,32 @@ function showInkscapeHint(projectName) {
 
   dialog.show();
 }
+
+
+window.dispatchProjectCommand = function (value) {
+  const menu = document.querySelector("#hamburger-container sl-menu");
+  if (!menu) {
+    console.warn("[dispatchProjectCommand] Menu not found");
+    return;
+  }
+
+  const item = menu.querySelector(`sl-menu-item[value="${value}"]`);
+  if (!item) {
+    console.warn(`[dispatchProjectCommand] Menu item "${value}" not found`);
+    return;
+  }
+
+  menu.dispatchEvent(
+    new CustomEvent("sl-select", {
+      detail: { item },
+      bubbles: true
+    })
+  );
+};
+
+
+
+
 
 
 

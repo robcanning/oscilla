@@ -641,54 +641,6 @@ if (state.canonicalRenderedWidth) {
     window.playheadX = pt.matrixTransform(svg.getScreenCTM().inverse()).x;
   };
 
-  // ===========================
-  // Project Selector (Splash)
-  // ===========================
-  async function populateProjectSelector() {
-    const grid = document.getElementById("project-grid");
-    const message = document.getElementById("splash-message");
-    const manualEntry = document.getElementById("manual-entry");
-
-    try {
-      const html = await (await fetch("/scores/")).text();
-      const regex = /href=["'](?:\.\/|\/?scores\/)?([^"'/]+)\/["']/g;
-      let match;
-      const projects = [];
-      while ((match = regex.exec(html)) !== null) {
-        const name = match[1];
-        if (!["audio", "texts", "videos"].includes(name)) projects.push(name);
-      }
-
-      if (projects.length === 0) throw new Error("No projects found.");
-
-      message.textContent = "Choose a project to load:";
-      grid.innerHTML = "";
-
-      projects.forEach((proj) => {
-        const card = document.createElement("div");
-        card.className = "project-card";
-        card.textContent = proj;
-        card.addEventListener("click", () => { loadProject(proj); fadeOutSplash(); });
-        grid.appendChild(card);
-      });
-    } catch (err) {
-      console.warn("[SPLASH] Could not fetch project list:", err);
-      message.textContent = "Automatic listing failed.";
-      manualEntry.style.display = "block";
-      document.getElementById("manual-load-btn")?.addEventListener("click", () => {
-        const projName = document.getElementById("manual-project-input").value.trim();
-        if (projName) { loadProject(projName); fadeOutSplash(); }
-      });
-    }
-  }
-
-  function fadeOutSplash() {
-    const splash = document.getElementById("splash");
-    splash?.classList.add("fade-out");
-    setTimeout(() => { if (splash) splash.style.display = "none"; }, 800);
-  }
-
-  populateProjectSelector();
 
   // ===========================
   // Animation Loop

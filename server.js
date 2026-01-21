@@ -149,6 +149,25 @@ app.post("/api/project/import", upload.single("file"), async (req, res) => {
 });
 
 
+app.get("/api/projects", (req, res) => {
+  const scoresDir = path.join(__dirname, "public", "scores");
+
+  fs.readdir(scoresDir, { withFileTypes: true }, (err, entries) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json([]);
+    }
+
+    const projects = entries
+      .filter(e => e.isDirectory())
+      .map(e => e.name)
+      .filter(name => !name.startsWith("."));
+
+    res.json(projects);
+  });
+});
+
+
 // ---------------------------------------------
 // Log the Active Configuration (for debugging)
 // ---------------------------------------------

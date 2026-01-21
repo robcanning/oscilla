@@ -1622,186 +1622,220 @@ body.inverted #score {
   }
 }
 
-
+/* --------------------------------------------------
+   Splash backdrop (light, non-invasive)
+-------------------------------------------------- */
 #splash {
   position: fixed;
   inset: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #fff;
-  color: #000;
-  z-index: 999999 !important;
-  pointer-events: all;
 
+  background: rgba(255, 255, 255, 0.75); /* or rgba(0,0,0,0.35) for dark */
+  backdrop-filter: blur(6px);
+
+  z-index: 999999;
+  pointer-events: all;
 }
 
+/* --------------------------------------------------
+   Splash card
+-------------------------------------------------- */
 .splash-container {
   text-align: center;
   max-width: 700px;
+  padding: 2.8rem 3.2rem;
+
+  background: #fff;
+  color: #000;
+
+  border-radius: 14px;
+  box-shadow:
+    0 20px 40px rgba(0,0,0,0.12),
+    0 4px 12px rgba(0,0,0,0.08);
 }
+
+/* --------------------------------------------------
+   Logo
+-------------------------------------------------- */
 
 .logo {
-  width: 100px;
-  height: auto;
-  margin-bottom: 1em;
-  opacity: 0.9;
+  width: 400px;     /* ← increase this */
+  height: auto;     /* keep aspect ratio */
 }
 
+/* --------------------------------------------------
+   Text
+-------------------------------------------------- */
 .splash-title {
-  font-size: 6.6em;
+  font-size: 4.2em;
   margin: 0;
 }
 
 .splash-subtitle {
-  font-size: 2.5em;
-  color: #bbb;
+  font-size: 1.8em;
+  color: #777;
   margin-bottom: 0.8em;
 }
 
 .splash-message {
-  font-size: 1.3em;
-  color: #888;
+  font-size: 1.1em;
+  color: #666;
 }
 
+
+/* --- Project Grid --- */
 .project-grid {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1.2em 0;
+}
+
+/* --- Project Icon Card --- */
+.project-card {
+  width: 96px;
+  height: 96px;
+
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 1.5em 0;
-}
-
-.project-grid button {
-  background: none;
-  border: none;
-  color: #6e1f1f;
-  font-size: 1.3em;
-  margin: 0.3em 0;
-  cursor: pointer;
-  transition: color 0.2s, transform 0.2s;
-
-}
-
-.project-grid button:hover {
-  color: #7df9ff;
-  transform: scale(1.05);
-  background-color: gray;
-
-}
-
-.manual-entry {
-  margin-top: 1.5em;
-}
-
-.manual-entry input {
-  padding: 0.5em;
-  font-size: 1em;
-}
-
-.manual-entry button {
-  margin-left: 0.5em;
-  padding: 0.5em 1em;
-  font-size: 1em;
-}
-
-.meta-section {
-  margin-top: 1em;
-  font-size: 1em;
-  color: #aaa;
-  line-height: 1.2em;
-}
-
-.meta-line a {
-  color: #000000;
-  text-decoration: none;
-}
-
-.meta-line a:hover {
-  text-decoration: underline;
-}
-
-.meta-line.small {
-  font-size: 0.6em;
-  color: #777;
-  margin-top: 0.5em;
-}
-
-
-/* --- Project Card Styling --- */
-.project-card {
-  font-family: "Fira Code", "JetBrains Mono", monospace;
-  font-size: 0.75em;
-  letter-spacing: 0.03em;
-  background-color: gray;
+  justify-content: center;
+  gap: 0.4em;
 
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #140101;
+  border-radius: 12px;
 
-  display: inline-block;
-  border-radius: 8px;
-  min-width: 120px;
-  text-align: center;
   cursor: pointer;
-
   transition:
-    background-color 0.25s ease,
-    border-color 0.25s ease,
-    color 0.25s ease,
-    transform 0.12s ease,
-    box-shadow 0.25s ease;
+    transform 0.15s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .project-card:hover {
-  background-color: rgba(90, 140, 255, 0.25);
-  border-color: rgba(120, 170, 255, 0.5);
-  color: #fff;
+  transform: translateY(-3px);
+  background: rgba(90, 140, 255, 0.25);
+  box-shadow: 0 0 14px rgba(120, 170, 255, 0.35);
+}
+
+.project-card img {
+  width: 36px;
+  height: 36px;
+  opacity: 0.85;
+}
+
+.project-card span {
+  font-size: 0.65em;
+  text-align: center;
+  color: #ddd;
+  max-width: 90px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+.project-card.show-all {
+  background: rgba(0, 0, 0, 0.08);
+  border: 2px dashed rgba(120, 120, 120, 0.6);
+  color: #444;
+
+  box-shadow: none;
+}
+
+.project-card.show-all img {
+  opacity: 0.6;
+  filter: grayscale(1);
+}
+
+.project-card.show-all span {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #555;
+}
+
+.project-card.show-all:hover {
+  background: rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
-  box-shadow: 0 0 12px rgba(120, 170, 255, 0.3);
+  box-shadow: none;
 }
 
-.project-card:active {
-  transform: scale(0.98);
-  background-color: rgba(90, 140, 255, 0.35);
-}
+/* ======================================================
+   Project Modal (Show All)
+   ====================================================== */
 
-/* --- Project Grid Container --- */
-.project-grid {
+.project-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 0.6em;
+  align-items: center;
 
-  height: 100px;
-  /* fixed height */
+  z-index: 1000001; /* above splash */
+}
+
+.project-modal.hidden {
+  display: none;
+}
+
+.project-modal-content {
+  background: #111;
+  color: #fff;
+
+  padding: 2rem;
+  border-radius: 14px;
+
+  max-width: 640px;
+  width: 90%;
+  max-height: 80vh;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.project-modal-content h3 {
+  margin-top: 0;
+}
+
+.project-modal-content .project-grid {
+  margin-top: 1rem;
   overflow-y: auto;
-  /* vertical scroll if needed */
-  overflow-x: hidden;
-  /* avoid sideways scrollbars */
-  padding: 0.5em 0.3em;
-
-  scrollbar-width: thin;
-  /* Firefox */
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
-/* Optional: WebKit scrollbar styling for consistent dark theme */
-.project-grid::-webkit-scrollbar {
-  width: 6px;
+.project-modal-content button {
+  margin-top: 1.2rem;
+  align-self: flex-end;
 }
 
-.project-grid::-webkit-scrollbar-track {
-  background: transparent;
+.project-modal-content .project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 1rem;
+
+  justify-items: center;
+  align-items: start;
+
+  padding: 0.5rem;
 }
 
-.project-grid::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 3px;
-}
 
-.project-grid::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
-}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1908,8 +1942,3 @@ body.inverted #score {
   text-overflow: ellipsis;
 }
 
-
-.logo {
-  width: 500px;     /* ← increase this */
-  height: auto;     /* keep aspect ratio */
-}

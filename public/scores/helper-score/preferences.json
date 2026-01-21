@@ -1,25 +1,16 @@
 {
-  "_comment": "OscillaScore project preferences and metadata",
-  "oscillaVersion": "0.2.6_beta",
   "projectTitle": "Helper Score",
   "projectAuthor": "Rob Canning",
   "projectDescription": "Demonstration score showcasing all cue types and animations.",
-  "duration_minutes": 5,
-  "darkMode": false,
+  "darkMode": true,
   "defaultPlaybackSpeed": 0.3,
   "defaultViewMode": "scroll",
   "defaultPage": "home",
-  "playzoneColor": "rgba(0, 128, 0, 0.1)",
-  "playheadColor": "rgba(0, 255, 179, 0.9)",
-  "playheadBorder": "1px dashed rgba(0, 255, 0, 0.8)",
-  "playheadWidth": "1px",
+  "playzoneColor": "#008000",
+  "playheadColor": "#00ffb3",
+  "playheadWidth": 1,
   "audioSync": true,
   "oscOutput": true,
-  "loopPlayback": false,
-  "_notes": {
-    "playzoneColor": "Default color and opacity for the active playback zone overlay.",
-    "playheadColor": "Main color of the vertical playhead line.",
-    "playheadBorder": "Optional dashed outline for visibility.",
-    "playheadWidth": "Thickness of the playhead line."
-  }
+  "overlayMode": false,
+  "loopPlayback": false
 }
