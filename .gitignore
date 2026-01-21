@@ -3,3 +3,12 @@ node_modules/
 dist/
 public/docs/site
 
+# Ignore all score projects
+public/scores/*
+
+# But keep the helper project and template
+!public/scores/helper-score/
+!public/scores/helper-score/**/*
+
+!public/scores/template/
+!public/scores/template/**/*
