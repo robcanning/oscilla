@@ -1,40 +1,64 @@
-#!/bin/node
+#!/usr/bin/env node
 
-const { performance } = require('node:perf_hooks');
+// ------------------------------------------------------------
+// Project utilities (server-side)
+// ------------------------------------------------------------
 
-// ---------------------------------------------
-// Command-Line & Environment Configuration Layer
-// ---------------------------------------------
+import {
+  createNewProject,
+  saveProjectAs,
+  importProject,
+  exportProject
+} from "./serverUtils.js";
 
-// Load yargs to parse command-line arguments
-const yargs = require('yargs/yargs');
-const { hideBin } = require('yargs/helpers');
+// ------------------------------------------------------------
+// Node core (ESM-safe)
+// ------------------------------------------------------------
 
-// Parse CLI arguments (e.g. --port=8010 --osc-in=57123)
+import { performance } from "node:perf_hooks";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// ESM replacement for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ------------------------------------------------------------
+// CLI arguments (yargs, ESM-compatible)
+// ------------------------------------------------------------
+
+import yargs from "yargs/yargs";
+import { hideBin } from "yargs/helpers";
+
 const argv = yargs(hideBin(process.argv)).argv;
 
-// ---------------------------------------------
-// Module Imports
-// ---------------------------------------------
+// ------------------------------------------------------------
+// Third-party modules (ESM)
+// ------------------------------------------------------------
 
-const WebSocket = require('ws');
-const express = require('express');
-const osc = require('osc');
-const fs = require('fs');
-const path = require('path');
+import { WebSocketServer } from "ws";
+import express from "express";
+import osc from "osc";
+import multer from "multer";
 
+// ------------------------------------------------------------
+// Express app setup
+// ------------------------------------------------------------
 
-// ---------------------------------------------
+const app = express();
+
+// ✅ REQUIRED for your new project APIs
+app.use(express.json());
+
+// ------------------------------------------------------------
 // pkg-safe base directory
-// ---------------------------------------------
+// ------------------------------------------------------------
+
 const IS_PKG = !!process.pkg;
 const BASE_DIR = IS_PKG ? process.cwd() : __dirname;
 
-// ---------------------------------------------
-// Express App Setup
-// ---------------------------------------------
 
-const app = express();
 
 // ---------------------------------------------
 // Runtime Configuration: Port & OSC Settings
@@ -55,6 +79,75 @@ const oscConfig = {
 // Host and port for WebSocket clients to connect to
 const websocketHost = argv['ws-host'] || process.env.WS_HOST || 'localhost';
 const websocketPort = argv['ws-port'] || process.env.WS_PORT || port;     // Defaults to HTTP port if not specified
+
+
+// ------------------------------------------------------------
+// VERSION (single source of truth)
+// ------------------------------------------------------------
+
+
+const OSCILLA_VERSION = fs
+  .readFileSync(path.join(process.cwd(), "VERSION"), "utf8")
+  .trim();
+
+const upload = multer();
+
+// ------------------------------------------------------------
+// API
+// ------------------------------------------------------------
+
+app.get("/api/version", (req, res) => {
+  res.json({ version: OSCILLA_VERSION });
+});
+
+// ------------------------------------------------------------
+// Projects
+// ------------------------------------------------------------
+
+app.post("/api/project/new", (req, res) => {
+  try {
+    const { name } = req.body;
+    createNewProject(name);
+    res.json({ ok: true, project: name });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.post("/api/project/save-as", (req, res) => {
+  try {
+    const { source, name } = req.body;
+    saveProjectAs(source, name);
+    res.json({ ok: true, project: name });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.get("/api/project/export/:name", (req, res) => {
+  try {
+    exportProject(req.params.name, res, OSCILLA_VERSION);
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+});
+
+app.post("/api/project/import", upload.single("file"), async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    if (!req.file || !req.file.buffer) {
+      throw new Error("No .oscilla file uploaded");
+    }
+
+    await importProject(req.file.buffer, name);
+    res.json({ ok: true, project: name });
+
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
 
 // ---------------------------------------------
 // Log the Active Configuration (for debugging)
@@ -237,7 +330,7 @@ const server = app.listen(port, () => {
   );
 });
 
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocketServer({ server });
 
 let sharedState = {
   elapsedTime: 0,

@@ -204,11 +204,12 @@ body {
 
 .sidebar li {
   margin: 0;
+  padding: 0;
 }
 
 .sidebar a {
   display: block;
-  padding: 0.35rem 0.5rem;
+  padding: 0.1rem 1.95rem;
   margin: 0 -0.5rem;
   border-radius: 4px;
 
@@ -410,8 +411,8 @@ body {
 .docs-nav {
   display: flex;
   gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
+  /* margin-bottom: 1.5rem; */
+  padding-bottom: 0rem;
   border-bottom: 1px solid var(--border-subtle);
   font-size: 0.875rem;
 }

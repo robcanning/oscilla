@@ -415,26 +415,43 @@ window.adjustSpeed = adjustSpeed;
 // };
 
 
+
+// ---------------------------------------------------------
+// UI interaction state (menus / hover)
+// ---------------------------------------------------------
+window.__oscillaMenuActive = false;
+
+
+function shouldAutoHideTopbar() {
+  if (window.controlsPinned) return false;
+  if (window.topbarPinned) return false;
+  if (window.__oscillaMenuActive) return false;
+  return true;
+}
+
+
 let controlsTimeout; // Timer to hide controls after inactivity
 
 export const hideControls = () => {
+  console.warn("[UI] hideControls CALLED", {
+    menuActive: window.__oscillaMenuActive,
+    controlsPinned: window.controlsPinned,
+    topbarPinned: window.topbarPinned,
+    stack: new Error().stack
+  });
+
+  if (!shouldAutoHideTopbar()) {
+    console.warn("[UI] hideControls BLOCKED");
+    return;
+  }
+
   const controls = document.getElementById('controls');
   const topBar = document.getElementById('top-bar');
 
-  // Controls
-  if (!window.controlsPinned && controls) {
-    controls.classList.add('dismissed');
-  } else {
-    console.log("[UI] Controls pinned — not hiding.");
-  }
-
-  // Top bar
-  if (!window.topbarPinned && topBar) {
-    topBar.classList.add('dismissed');
-  } else {
-    console.log("[UI] Top-bar pinned — not hiding.");
-  }
+  controls?.classList.add('dismissed');
+  topBar?.classList.add('dismissed');
 };
+
 
 
 
@@ -490,29 +507,28 @@ export function initializeTopbarPin() {
   });
 }
 
-
-
 // ---------------------------------------------------------
 // Unified Hide Controls Timer (respects pin state, never resets on re-call)
 // ---------------------------------------------------------
+// ---------------------------------------------------------
+// Unified Hide Controls Timer (FIXED)
+// ---------------------------------------------------------
 window.hideControlsLater = function (delay = 4000) {
-  // Respect BOTH pin modes
-  if (window.controlsPinned || window.topbarPinned) {
-    clearTimeout(window._hideControlsTimer);
-    console.log("[UI] Pin active — auto-hide suppressed");
-    return;
-  }
-
   clearTimeout(window._hideControlsTimer);
+
   window._hideControlsTimer = setTimeout(() => {
-    if (!window.controlsPinned && !window.topbarPinned) {
-      hideControls();
-      console.log("[UI] Auto-hide executed");
-    } else {
-      console.log("[UI] Auto-hide skipped (pin active)");
+
+    if (!shouldAutoHideTopbar()) {
+      console.log("[UI] Auto-hide suppressed (pin or menu active)");
+      return;
     }
+
+    hideControls();
+    console.log("[UI] Auto-hide executed");
+
   }, delay);
 };
+
 
 
 // Function to synchronize playback time
@@ -1071,30 +1087,36 @@ function revealControlsTemporarily() {
     startY = t.clientY;
   });
 
-  document.addEventListener("touchend", (e) => {
-    const t = e.changedTouches[0];
-    const dx = Math.abs(t.clientX - startX);
-    const dy = Math.abs(t.clientY - startY);
-    if (dx > MOVE_TOLERANCE || dy > MOVE_TOLERANCE) return; // it’s a scroll
+document.addEventListener("touchend", (e) => {
 
-    const now = Date.now();
-    const delta = now - lastTapTime;
+  //  Block global gestures while menu is active
+  if (window.__oscillaMenuActive) {
+    console.log("[TAP] Ignored (menu active)");
+    return;
+  }
 
-    clearTimeout(tapTimeout);
+  const t = e.changedTouches[0];
+  const dx = Math.abs(t.clientX - startX);
+  const dy = Math.abs(t.clientY - startY);
+  if (dx > MOVE_TOLERANCE || dy > MOVE_TOLERANCE) return; // it’s a scroll
 
-    if (delta >= DOUBLE_TAP_MIN && delta <= DOUBLE_TAP_MAX) {
-      console.log("[TAP] ✅ Confirmed DOUBLE TAP");
-      showControls();
-      hideControlsLater();
-      lastTapTime = 0; // reset
-    } else {
-      lastTapTime = now;
-      // optional: single-tap fallback
-      tapTimeout = setTimeout(() => {
-        lastTapTime = 0;
-      }, DOUBLE_TAP_MAX + 50);
-    }
-  });
+  const now = Date.now();
+  const delta = now - lastTapTime;
+
+  clearTimeout(tapTimeout);
+
+  if (delta >= DOUBLE_TAP_MIN && delta <= DOUBLE_TAP_MAX) {
+    console.log("[TAP] Confirmed DOUBLE TAP");
+    showControls();
+    hideControlsLater();
+    lastTapTime = 0; // reset
+  } else {
+    lastTapTime = now;
+    tapTimeout = setTimeout(() => {
+      lastTapTime = 0;
+    }, DOUBLE_TAP_MAX + 50);
+  }
+});
 
 
   // -------------------------------------------------------------------------

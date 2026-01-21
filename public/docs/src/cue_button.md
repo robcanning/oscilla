@@ -1,5 +1,5 @@
 ---
-title: button()
+title: cue_button
 layout: docs_layout.njk
 ---
 

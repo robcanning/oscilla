@@ -51,60 +51,259 @@ function wireAnnotationMenuItems() {
 }
 
 
+////////////////////////////////////
 
+function wireMenuInteractionGuards() {
+  const menu = document.querySelector("#hamburger-container");
+  if (!menu) return;
 
+  // ⛔ As soon as user touches / clicks menu area, lock UI
+  menu.addEventListener("pointerdown", () => {
+    window.__oscillaMenuActive = true;
+    clearTimeout(window._hideControlsTimer);
+  }, true);
+
+  menu.addEventListener("touchstart", () => {
+    window.__oscillaMenuActive = true;
+    clearTimeout(window._hideControlsTimer);
+  }, { passive: true });
+
+  // Release only when Shoelace says menu closed
+  const slMenu = menu.querySelector("sl-menu");
+  if (slMenu) {
+    slMenu.addEventListener("sl-hide", () => {
+      window.__oscillaMenuActive = false;
+      window.hideControlsLater();
+    });
+  }
+}
+
+wireMenuInteractionGuards();
 
 ////////////////////////////////////
-let hamburgerMenuWired = false;
-
 function wireHamburgerMenu() {
 
-  if (hamburgerMenuWired) return;
-  hamburgerMenuWired = true;
-
   const menu = document.querySelector("#hamburger-container sl-menu");
+  if (!menu) return;
 
-
-  const dropdown = document.querySelector("#hamburger-container sl-menu");
-  if (!dropdown) return;
+  // persistent guard
+  if (menu.__oscillaWired) return;
+  menu.__oscillaWired = true;
 
   menu.addEventListener("sl-select", e => {
-    const value = e.detail.item.value;
 
-    switch (value) {
-      case "annotations-export":
-        exportAnnotationsJSON();
-        break;
+    const item = e.detail.item;
 
-      case "annotations-import": {
-        const input = document.createElement("input");
-        input.type = "file";
-        input.accept = "application/json";
-        input.onchange = e => {
-          const file = e.target.files?.[0];
-          if (file) importAnnotationsJSON(file);
-        };
-        input.click();
-        break;
+    // ignore container items
+    if (item.querySelector("sl-menu[slot='submenu']")) {
+      return;
+    }
+
+    // prevent re-entrancy for ANY action
+    if (menu.__actionInProgress) return;
+    menu.__actionInProgress = true;
+
+    const value = item.value;
+
+    // defer ALL actions to next tick
+    setTimeout(async () => {
+
+      try {
+
+        switch (value) {
+
+          // -----------------------------
+          // PROJECTS
+          // -----------------------------
+
+          case "project-new": {
+            const name = prompt("New project name:");
+            if (!name) return;
+
+            const res = await fetch("/api/project/new", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name })
+            });
+
+            const data = await res.json();
+            if (!data.ok) {
+              alert(data.error);
+              return;
+            }
+
+            sessionStorage.setItem("oscilla.showInkscapeHint", name);
+            window.location.href = `/?project=${encodeURIComponent(name)}`;
+            // show hint after navigation settles
+
+            break;
+          }
+
+          case "project-save-as": {
+            if (!window.currentProjectName) {
+              alert("No project loaded.");
+              return;
+            }
+
+            const name = prompt("Save project as:");
+            if (!name) return;
+
+            const res = await fetch("/api/project/save-as", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                source: window.currentProjectName,
+                name
+              })
+            });
+
+            const data = await res.json();
+            if (!data.ok) {
+              alert(data.error);
+              return;
+            }
+
+            window.location.href = `/?project=${encodeURIComponent(name)}`;
+            break;
+          }
+
+          case "project-export": {
+            if (!window.currentProjectName) {
+              alert("No project loaded.");
+              return;
+            }
+
+            window.location.href =
+              `/api/project/export/${window.currentProjectName}`;
+            break;
+          }
+
+          case "project-import": {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = ".oscilla";
+
+            input.onchange = async () => {
+              const file = input.files?.[0];
+              if (!file) return;
+
+              const suggested = file.name.replace(/\.oscilla$/i, "");
+              const name = prompt("Import project as:", suggested);
+              if (!name) return;
+
+              const form = new FormData();
+              form.append("file", file);
+              form.append("name", name);
+
+              const res = await fetch("/api/project/import", {
+                method: "POST",
+                body: form
+              });
+
+              const json = await res.json();
+              if (!json.ok) {
+                alert(json.error);
+                return;
+              }
+
+              sessionStorage.setItem("oscilla.showInkscapeHint", name);
+              window.location.href = `/?project=${encodeURIComponent(name)}`;
+              // show hint after navigation settles
+
+            };
+
+            input.click();
+            break;
+          }
+
+          // -----------------------------
+          // ANNOTATIONS
+          // -----------------------------
+
+          case "annotations-export":
+            exportAnnotationsJSON();
+            break;
+
+          case "annotations-import": {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = "application/json";
+            input.onchange = e => {
+              const file = e.target.files?.[0];
+              if (file) importAnnotationsJSON(file);
+            };
+            input.click();
+            break;
+          }
+
+          // -----------------------------
+          // MISC
+          // -----------------------------
+
+          case "help-local":
+            window.open(
+              "http://localhost:8001/oscilla/docs",
+              "_blank",
+              "noopener"
+            );
+            break;
+
+          case "preferences":
+            openPreferencesDialog();
+            break;
+        }
+
+      } finally {
+        // always clear guard
+        menu.__actionInProgress = false;
       }
 
-      case "help-local":
-        window.open(
-          "http://localhost:8001/oscilla/docs",
-          "_blank",
-          "noopener"
-        );
-        break;
-
-      case "preferences":
-        openPreferencesDialog();
-        break;
-    }
+    }, 0);
   });
-
 }
 
 
+function showInkscapeHint(projectName) {
+  // Respect user preference
+  const hide = localStorage.getItem("oscilla.hideInkscapeHint");
+  if (hide === "true") return;
+
+  const dialog = document.getElementById("inkscape-hint-dialog");
+  const content = document.getElementById("inkscape-hint-content");
+  const checkbox = document.getElementById("inkscape-hint-dismiss");
+  const okBtn = document.getElementById("inkscape-hint-ok");
+
+  if (!dialog || !content || !checkbox || !okBtn) return;
+
+  const projectPath = `public/scores/${projectName}/score.svg`;
+
+  content.innerHTML = `
+    <p>
+      Your new project has been created on disk.
+    </p>
+
+    <p>
+      <strong>Edit the score in Inkscape:</strong><br>
+      <code>${projectPath}</code>
+    </p>
+
+    <p>
+      Open this file in <strong>Inkscape</strong>, make changes, save —
+      Oscilla will automatically use the updated score.
+    </p>
+  `;
+
+  checkbox.checked = false;
+
+  okBtn.onclick = () => {
+    if (checkbox.checked) {
+      localStorage.setItem("oscilla.hideInkscapeHint", "true");
+    }
+    dialog.hide();
+  };
+
+  dialog.show();
+}
 
 
 
@@ -815,8 +1014,22 @@ export async function setupScore(svgElement) {
   requestAnimationFrame(wireHamburgerMenu);
 
 
+
+
   console.groupEnd();
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const projectName = sessionStorage.getItem("oscilla.showInkscapeHint");
+  if (!projectName) return;
+
+  sessionStorage.removeItem("oscilla.showInkscapeHint");
+
+  // small delay to ensure Shoelace is ready
+  setTimeout(() => {
+    showInkscapeHint(projectName);
+  }, 200);
+});
 
 window.setupScore = setupScore;
 

@@ -2,31 +2,31 @@
   "name": "oscilla",
   "version": "0.4.2",
   "description": "Oscilla — networked animated score system",
+  "type": "module",
   "main": "server.js",
   "bin": "server.js",
-
   "scripts": {
     "start": "node server.js",
     "build": "pkg ."
   },
-
   "dependencies": {
+    "archiver": "^7.0.1",
     "chevrotain": "^11.0.3",
     "express": "^4.21.2",
+    "multer": "^2.0.2",
     "osc": "^2.4.5",
     "pm2": "^6.0.10",
     "svg-path-commander": "^2.1.10",
     "svgo": "^3.3.2",
+    "unzipper": "^0.12.3",
     "ws": "^8.18.0",
     "xml-js": "^1.6.11",
     "yargs": "^17.7.2"
   },
-
   "devDependencies": {
-    "vite": "^6.3.5",
-    "pkg": "^5.8.1"
+    "pkg": "^5.8.1",
+    "vite": "^6.3.5"
   },
-
   "pkg": {
     "assets": [
       "public/**/*",

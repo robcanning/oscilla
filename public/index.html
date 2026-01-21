@@ -186,36 +186,49 @@
               </svg>
             </button>
 
-<sl-menu>
-  <sl-menu-item value="pages">Pages
-    <sl-menu slot="submenu" id="pages-submenu"></sl-menu>
-  </sl-menu-item>
+            <sl-menu>
+              <sl-menu-item value="file">
+                File
+                <sl-menu slot="submenu">
+                  <sl-menu-item value="project-new">New Project…</sl-menu-item>
+                  <sl-menu-item value="project-save-as">Save Project As…</sl-menu-item>
+                  <sl-menu-item value="project-export">Export Project (.oscilla)</sl-menu-item>
+                  <sl-menu-item value="project-import">Import Project (.oscilla)</sl-menu-item>
+                </sl-menu>
+                
+              </sl-menu-item>
 
-  <sl-menu-item value="projects">Projects
-    <sl-menu slot="submenu" id="projects-submenu"></sl-menu>
-  </sl-menu-item>
+              <sl-menu-item value="projects">
+                Projects
+                <sl-menu slot="submenu" id="projects-submenu"></sl-menu>
+              </sl-menu-item>
 
-  <sl-divider></sl-divider>
+              <sl-menu-item value="pages">
+                Pages
+                <sl-menu slot="submenu" id="pages-submenu"></sl-menu>
+              </sl-menu-item>
 
-  <sl-menu-item value="annotations-export">
-    Export annotations…
-  </sl-menu-item>
+              <sl-divider></sl-divider>
 
-  <sl-menu-item value="annotations-import">
-    Import annotations…
-  </sl-menu-item>
+              <sl-menu-item value="annotations-export">
+                Export annotations…
+              </sl-menu-item>
 
-  <sl-divider></sl-divider>
+              <sl-menu-item value="annotations-import">
+                Import annotations…
+              </sl-menu-item>
 
-  <sl-menu-item value="preferences">
-    Preferences
-  </sl-menu-item>
+              <sl-divider></sl-divider>
 
-    <sl-menu-item value="help-local">
-    Local help
-  </sl-menu-item>
-</sl-menu>
+              <sl-menu-item value="preferences">
+                Preferences
+              </sl-menu-item>
 
+              <sl-menu-item value="help-local">
+                Local help
+              </sl-menu-item>
+
+            </sl-menu>
 
 
           </sl-dropdown>
@@ -230,7 +243,32 @@
   </div>
 
 
+
+
+
   <!-- Project Dialog -->
+   
+  <sl-dialog
+  id="inkscape-hint-dialog"
+  label="Project created"
+  style="--width: 520px;"
+>
+  <div id="inkscape-hint-content" style="line-height: 1.5;">
+    <!-- content injected dynamically -->
+  </div>
+
+  <sl-checkbox id="inkscape-hint-dismiss" style="margin-top: 1em;">
+    Don’t show this again
+  </sl-checkbox>
+
+  <div slot="footer">
+    <sl-button variant="primary" id="inkscape-hint-ok">
+      Got it
+    </sl-button>
+  </div>
+</sl-dialog>
+  
+  
   <sl-dialog id="project-dialog" label="Load Score">
     <div id="project-list" class="project-list"></div>
   </sl-dialog>
