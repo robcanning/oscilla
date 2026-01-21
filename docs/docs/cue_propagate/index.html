@@ -30,6 +30,11 @@
           aria-hidden="true"
         >
       </a>
+
+            <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
   </header>
 
   <div class="docs-container">
@@ -95,10 +100,7 @@
 
     
     <main class="docs-content">
-      <nav class="docs-nav" aria-label="Page navigation">
-        <a id="docs-prev" href="#">← Previous</a>
-        <a id="docs-next" href="#">Next →</a>
-      </nav>
+
       
       <h1>propagate() — Group-Level Parameter Propagation</h1>
 <p><code>propagate(...)</code> is a pre-parser macro that expands a cue or animation template across all direct children of an SVG <code>&lt;g&gt;</code> element. Each child receives a unique instance of the template with independently evaluated parameters.</p>

@@ -3,7 +3,7 @@
    ============================================================ */
 
 body.cheatsheet {
-  background: #e1d8b0;
+  background: #d3d0f6;
   color: #000;
   margin: 0;
   padding: 0;
@@ -14,7 +14,7 @@ body.cheatsheet {
    ============================================================ */
 
 .cheatsheet-header {
-  background: #c39595;
+  background: #b996e4;
   border-bottom: 1px solid #874f4f;
   padding: 0.5rem 1rem;
 }
@@ -192,7 +192,7 @@ body.cheatsheet {
 
   .cheatsheet-page {
     width: 100%;
-    background-color: #f8e79b;
+    background-color: #d3d0f6;
   }
 
   .cheatsheet-columns {
