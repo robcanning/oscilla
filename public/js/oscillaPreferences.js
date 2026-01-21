@@ -59,6 +59,10 @@ async function openPreferencesDialog() {
       { key: "oscOutput", label: "OSC Output", type: "checkbox", default: true },
       { key: "overlayMode", label: "Overlay Mode", type: "checkbox", default: false },
       { key: "loopPlayback", label: "Loop Playback", type: "checkbox", default: false },
+      
+      // Touch/Momentum settings
+      { key: "touchSeekFriction", label: "Touch Seek Friction", type: "range", default: 0.95, min: 0.85, max: 0.99, step: 0.01, hint: "Higher = longer glide (0.95 smooth, 0.90 snappy)" },
+      { key: "touchSeekStopThreshold", label: "Touch Seek Stop Threshold", type: "number", default: 5, min: 1, max: 50, step: 1, hint: "Lower = glides longer" },
     ];
 
     // Build form HTML
@@ -84,10 +88,25 @@ async function openPreferencesDialog() {
         case "color":
           html += `<sl-color-picker id="pref-${field.key}" name="${field.key}" value="${value}" format="hex" no-format-toggle></sl-color-picker>`;
           break;
+        
+        case "range":
+          html += `<div style="display: flex; align-items: center; gap: 8px;">
+            <sl-range id="pref-${field.key}" name="${field.key}" value="${value}" 
+                      min="${field.min ?? 0}" max="${field.max ?? 1}" step="${field.step ?? 0.01}"
+                      style="flex: 1;"></sl-range>
+            <span id="pref-${field.key}-value" style="min-width: 3em; text-align: right; font-size: 12px; opacity: 0.8;">${value}</span>
+          </div>`;
+          if (field.hint) {
+            html += `<small style="grid-column: span 2; opacity: 0.6; font-size: 11px; margin-top: -4px;">${field.hint}</small>`;
+          }
+          break;
           
         case "number":
           html += `<sl-input id="pref-${field.key}" name="${field.key}" type="number" value="${value}" 
                     min="${field.min ?? ''}" max="${field.max ?? ''}" step="${field.step ?? 1}"></sl-input>`;
+          if (field.hint) {
+            html += `<small style="grid-column: span 2; opacity: 0.6; font-size: 11px; margin-top: -4px;">${field.hint}</small>`;
+          }
           break;
           
         default:
@@ -96,6 +115,16 @@ async function openPreferencesDialog() {
     }
     
     form.innerHTML = html;
+
+    // Wire up range sliders to show live values
+    form.querySelectorAll('sl-range').forEach(range => {
+      const valueSpan = form.querySelector(`#${range.id}-value`);
+      if (valueSpan) {
+        range.addEventListener('sl-input', () => {
+          valueSpan.textContent = range.value;
+        });
+      }
+    });
 
     // Wire save button using AbortController to manage listener lifecycle
     if (saveBtn) {
@@ -141,6 +170,7 @@ async function savePreferences(projectName, fields, form) {
         prefs[field.key] = el.checked;
         break;
       case "number":
+      case "range":
         prefs[field.key] = parseFloat(el.value) || field.default;
         break;
       case "color":
@@ -192,6 +222,14 @@ function applyPreferences(prefs) {
 
   if (prefs.defaultPlaybackSpeed && typeof window.setPlaybackSpeed === "function") {
     window.setPlaybackSpeed(prefs.defaultPlaybackSpeed);
+  }
+
+  // Touch seek momentum settings (read by oscillaTouchSeek.js)
+  if (typeof prefs.touchSeekFriction === "number") {
+    window.touchSeekFriction = prefs.touchSeekFriction;
+  }
+  if (typeof prefs.touchSeekStopThreshold === "number") {
+    window.touchSeekStopThreshold = prefs.touchSeekStopThreshold;
   }
 }
 

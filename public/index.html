@@ -20,52 +20,52 @@
 <body>
 
   <div id="splash">
-  <div class="splash-container">
+    <div class="splash-container">
 
-    <!-- Header -->
-    <div class="title-section">
-      <img src="docs/src/img/logos/logo-stacked.svg" alt="Oscilla Logo" class="logo" />
-      <p class="splash-message">Choose a project to begin</p>
-    </div>
-
-    <!-- Projects -->
-    <div id="project-grid" class="project-grid">
-      <!-- populated dynamically -->
-    </div>
-
-    <!-- Actions -->
-    <div class="splash-actions">
-      <button class="primary" id="new-project-btn">
-        New Project
-      </button>
-
-      <button id="import-project-btn">
-        Import…
-      </button>
-    </div>
-
-    <!-- Footer -->
-    <div class="meta-section">
-      <hr class="meta-divider" />
-      <div class="meta-row">
-        <span>v0.4.2</span>
-        <a href="https://robcanning.github.io/oscilla/docs" target="_blank">
-          Documentation
-        </a>
+      <!-- Header -->
+      <div class="title-section">
+        <img src="docs/src/img/logos/logo-stacked.svg" alt="Oscilla Logo" class="logo" />
+        <p class="splash-message">Choose a project to begin</p>
       </div>
+
+      <!-- Projects -->
+      <div id="project-grid" class="project-grid">
+        <!-- populated dynamically -->
+      </div>
+
+      <!-- Actions -->
+      <div class="splash-actions">
+        <button class="primary" id="new-project-btn">
+          New Project
+        </button>
+
+        <button id="import-project-btn">
+          Import…
+        </button>
+      </div>
+
+      <!-- Footer -->
+      <div class="meta-section">
+        <hr class="meta-divider" />
+        <div class="meta-row">
+          <span>v0.4.2</span>
+          <a href="https://robcanning.github.io/oscilla/docs" target="_blank">
+            Documentation
+          </a>
+        </div>
+      </div>
+
     </div>
-
   </div>
-</div>
 
 
-<div id="project-modal" class="project-modal hidden">
-  <div class="project-modal-content">
-    <h3>All Projects</h3>
-    <div id="project-modal-grid" class="project-grid"></div>
-    <button onclick="closeProjectModal()">Close</button>
+  <div id="project-modal" class="project-modal hidden">
+    <div class="project-modal-content">
+      <h3>All Projects</h3>
+      <div id="project-modal-grid" class="project-grid"></div>
+      <button onclick="closeProjectModal()">Close</button>
+    </div>
   </div>
-</div>
 
 
 
@@ -188,7 +188,7 @@
                   <sl-menu-item value="project-export">Export Project (.oscilla)</sl-menu-item>
                   <sl-menu-item value="project-import">Import Project (.oscilla)</sl-menu-item>
                 </sl-menu>
-                
+
               </sl-menu-item>
 
               <sl-menu-item value="projects">
@@ -241,27 +241,23 @@
 
   <!-- Project Dialog -->
 
-  <sl-dialog
-  id="inkscape-hint-dialog"
-  label="Project created"
-  style="--width: 520px;"
->
-  <div id="inkscape-hint-content" style="line-height: 1.5;">
-    <!-- content injected dynamically -->
-  </div>
+  <sl-dialog id="inkscape-hint-dialog" label="Project created" style="--width: 520px;">
+    <div id="inkscape-hint-content" style="line-height: 1.5;">
+      <!-- content injected dynamically -->
+    </div>
 
-  <sl-checkbox id="inkscape-hint-dismiss" style="margin-top: 1em;">
-    Don’t show this again
-  </sl-checkbox>
+    <sl-checkbox id="inkscape-hint-dismiss" style="margin-top: 1em;">
+      Don’t show this again
+    </sl-checkbox>
 
-  <div slot="footer">
-    <sl-button variant="primary" id="inkscape-hint-ok">
-      Got it
-    </sl-button>
-  </div>
-</sl-dialog>
-  
-  
+    <div slot="footer">
+      <sl-button variant="primary" id="inkscape-hint-ok">
+        Got it
+      </sl-button>
+    </div>
+  </sl-dialog>
+
+
   <sl-dialog id="project-dialog" label="Load Score">
     <div id="project-list" class="project-list"></div>
   </sl-dialog>

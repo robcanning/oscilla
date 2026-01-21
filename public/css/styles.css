@@ -1942,3 +1942,13 @@ body.inverted #score {
   text-overflow: ellipsis;
 }
 
+/* nuke safe area menu triangles */
+
+sl-menu-item {
+  --safe-triangle-cursor-x: 0px !important;
+  --safe-triangle-cursor-y: 0px !important;
+  --safe-triangle-submenu-start-x: 0px !important;
+  --safe-triangle-submenu-start-y: 0px !important;
+  --safe-triangle-submenu-end-x: 0px !important;
+  --safe-triangle-submenu-end-y: 0px !important;
+}

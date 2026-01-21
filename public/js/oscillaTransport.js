@@ -1179,8 +1179,6 @@ document.addEventListener("touchend", (e) => {
 
 
 
-// If adding to existing file, remove the imports above (they're already there)
-
 (() => {
   const scoreArea = document.getElementById("scoreContainer");
   if (!scoreArea) {
@@ -1192,11 +1190,16 @@ document.addEventListener("touchend", (e) => {
   const DRAG_THRESHOLD = 10;          // px before we consider it a drag
   const SEND_INTERVAL = 100;          // ms between WS updates
   const SEEK_END_DELAY = 300;         // ms after momentum ends before resuming playback
-  
-  // Momentum physics
-  const FRICTION = 0.95;              // velocity multiplier per frame (0.95 = smooth, 0.90 = snappier)
-  const VELOCITY_STOP = 5;            // stop when velocity drops below this (world units/sec)
   const MOMENTUM_INTERVAL = 16;       // ~60fps
+  
+  // Momentum physics — can be overridden by preferences
+  // window.touchSeekFriction and window.touchSeekStopThreshold are set by oscillaPreferences.js
+  function getFriction() {
+    return window.touchSeekFriction ?? 0.95;  // Higher = longer glide
+  }
+  function getStopThreshold() {
+    return window.touchSeekStopThreshold ?? 5; // Stop when velocity drops below this
+  }
 
   // --- State ---
   let isDragging = false;
@@ -1276,7 +1279,9 @@ document.addEventListener("touchend", (e) => {
   }
 
   function startMomentum() {
-    if (Math.abs(currentVelocity) < VELOCITY_STOP) {
+    const stopThreshold = getStopThreshold();
+    
+    if (Math.abs(currentVelocity) < stopThreshold) {
       finishSeeking();
       return;
     }
@@ -1293,11 +1298,11 @@ document.addEventListener("touchend", (e) => {
       const dt = (now - lastFrameTime) / 1000;
       lastFrameTime = now;
 
-      // Apply friction
-      currentVelocity *= FRICTION;
+      // Apply friction (read fresh each frame in case prefs change)
+      currentVelocity *= getFriction();
 
       // Stop if too slow
-      if (Math.abs(currentVelocity) < VELOCITY_STOP) {
+      if (Math.abs(currentVelocity) < getStopThreshold()) {
         console.log("[TouchSeek] 🛑 Momentum finished");
         stopMomentum();
         finishSeeking();

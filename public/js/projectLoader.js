@@ -4,6 +4,7 @@
  * Handles loading of self-contained score projects from /scores/
  */
 
+import { showLoader, updateLoader, hideLoader } from "./oscillaLoader.js";
 import { initializeSVG } from "./app.js";
 import { initializeObserver } from "./oscillaObserver.js";
 import { setSpeed, applyDarkMode } from "./oscillaTransport.js";
@@ -141,6 +142,9 @@ export async function loadProject(projectName, options = {}) {
 
   loadInProgress = true;
 
+  // Show loader (this also hides splash via z-index layering)
+  showLoader(projectName);
+
   try {
     console.log(`\n[loadProject] 🚀 Loading project: ${projectName}`);
     const { resetOnLoad = false } = options;
@@ -169,7 +173,10 @@ export async function loadProject(projectName, options = {}) {
 
     // HARD CLEANUP FIRST (this is what splash “gets for free” by being first load)
     console.log("[Project] 🔁 hard cleanup before mode switch");
+    updateLoader("Cleaning up previous project...", 5);
+
     cleanupProjectOverlays();
+    
     destroyAllHitLabels("project-load / mode-switch");
 
     // Reset cue state that tends to cause “misfire at load”
@@ -213,6 +220,8 @@ export async function loadProject(projectName, options = {}) {
     }
 
     // 2️⃣ Load and apply preferences
+    updateLoader("Loading preferences...", 15);
+
     const prefs = await loadPreferences(window.projectBase);
     applyPreferences(prefs);
 
@@ -249,6 +258,8 @@ export async function loadProject(projectName, options = {}) {
     }
 
     // 3️⃣ Determine and load view mode
+        updateLoader("Loading score...", 30);
+
     const viewMode = prefs.defaultViewMode || "scroll";
     const container = document.getElementById("scoreContainer") || document.querySelector("#scoreContainer");
     if (!container) throw new Error("Could not find #scoreContainer in the DOM.");
@@ -259,6 +270,9 @@ export async function loadProject(projectName, options = {}) {
     } else {
       await loadScrollMode(container);
     }
+
+    updateLoader("Initializing playback...", 85);
+
 
     // 4️⃣ Optional ?page override
     const params = new URLSearchParams(location.search);
@@ -294,12 +308,20 @@ export async function loadProject(projectName, options = {}) {
     recordRecentProject(projectName)
     console.log(`[loadProject] ✅ Project "${projectName}" fully loaded.`);
     hideSplashScreen();
+    updateLoader("Ready", 100);
+
+
 
   } catch (err) {
     console.error(`[loadProject] ❌ Failed to load project "${projectName}":`, err);
   } finally {
+
     window.suppressCueTriggers = false;
+
+    recordRecentProject(projectName);
     loadInProgress = false;
+    hideLoader();
+
   }
 }
 
