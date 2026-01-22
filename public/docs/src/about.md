@@ -1,8 +1,7 @@
 ---
-
-title: What Can You Do With Oscilla?
+title: about_oscilla
 layout: docs_layout.njk
------------------------
+---
 
 ## At a Glance
 
