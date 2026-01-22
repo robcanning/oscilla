@@ -1,340 +1,685 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>performer_annotations</title>
-  <link rel="stylesheet" href="/oscilla/docs/style.css">
-  <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.svg">
-
-</head>
-
-<body>
-
-  <!-- Mobile overlay (closes sidebar when tapped) -->
-  <div class="sidebar-overlay" aria-hidden="true"></div>
-
-  <header class="docs-header">
-    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <line x1="3" y1="12" x2="21" y2="12"></line>
-        <line x1="3" y1="18" x2="21" y2="18"></line>
-      </svg>
-    </button>
-      <a href="/oscilla/docs/" class="docs-brand">
-        <img
-          src="/oscilla/docs/img/logos/logo-header-docs.svg"
-          alt="Oscilla"
-          class="docs-logo"
-          aria-hidden="true"
-        >
-      </a>
-
-            <nav class="docs-nav" aria-label="Page navigation">
-        <a id="docs-prev" href="#">← Previous</a>
-        <a id="docs-next" href="#">Next →</a>
-      </nav>
-  </header>
-
-  <div class="docs-container">
-    <nav class="sidebar" aria-label="Documentation navigation">
-
-  <h3>Getting Started</h3>
-  <ul>
-    <li><a href="/oscilla/docs/">Docs Overview</a></li>
-    <li><a href="/oscilla/docs/about">What is Oscilla?</a></li>
-    <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
-    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
-    <li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
-    <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
-    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
-  </ul>
-
-  <h3>Cues</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
-    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
-    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
-    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
-    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
-    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
-    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
-    <li><a href="/oscilla/docs/cue_button">button()</a></li>
-    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
-    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
-    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
-    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
-    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
-    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
-    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
-    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
-  </ul>
-
-  <h3>Animation</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
-    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
-    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
-    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
-    <li><a href="/oscilla/docs/color/">color()</a></li>
-    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
-    <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
-  </ul>
-
-  <h3>Performer</h3>
-  <ul>
-    <li><a href="/oscilla/docs/user_annotations/">Annotations</a></li>
-  </ul>
-
-  <h3>Tools</h3>
-  <ul>
-    <li><a href="/oscilla/docs/inkscape_extension/">Inkscape Extension</a></li>
-  </ul>
-
-  <h3>Developer</h3>
-  <ul>
-    <li><a href="/oscilla/docs/dev-sync-architecture/">Sync Architecture</a></li>
-  </ul>
-
-</nav>
-
-    
-    <main class="docs-content">
-
-      
-      <h1>Performer Annotations</h1>
-<figure class="doc-image">
-  <img
-    src="/oscilla/docs/img/oscilla-performer-annotations.png"
-    alt="Oscilla Inkscape Extension"
-  >
-  <figcaption>Oscilla Performer Annotations </figcaption>
-</figure>
+<h1>Oscilla Annotations</h1>
 <h2>Overview</h2>
-<p>Performer Annotations allow performers to add <strong>personal notes directly onto the score view</strong> while working with Oscilla.</p>
-<p>Annotations are intended for:</p>
-<ul>
-<li>reminders</li>
-<li>listening cues</li>
-<li>coordination notes</li>
-<li>interpretive decisions</li>
-<li>rehearsal observations</li>
-</ul>
-<p>Annotations <strong>do not change the score</strong> and <strong>do not affect playback or cues</strong>.<br>
-They exist as a separate, optional layer that can be shown or hidden at any time.</p>
+<p>Annotations provide a <strong>text-first compositional layer</strong> that exists independently of SVG score notation. While Oscilla's primary workflow involves creating scores in Inkscape and embedding cues via the DSL, annotations offer an alternative—or complementary—approach that requires no external software.</p>
+<p>At their simplest, annotations are performer notes: reminders, instructions, or markings placed directly on the score during rehearsal or performance. At their most developed, annotations become <strong>executable triggers</strong>—buttons that play audio, fire samples from pools, or run continuous generative processes. This transforms the score view into a <strong>live performance interface</strong>.</p>
+<h3>Two Compositional Planes</h3>
+<table>
+<thead>
+<tr>
+<th>SVG Score Layer</th>
+<th>Annotation Layer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Created in Inkscape</td>
+<td>Created in browser</td>
+</tr>
+<tr>
+<td>Embedded DSL cues</td>
+<td>Click-to-execute triggers</td>
+</tr>
+<tr>
+<td>Requires XML/text editing</td>
+<td>Visual point-and-click</td>
+</tr>
+<tr>
+<td>Playhead-driven</td>
+<td>Performer-driven</td>
+</tr>
+<tr>
+<td>Fixed at authoring time</td>
+<td>Editable during performance</td>
+</tr>
+<tr>
+<td>Shared via project files</td>
+<td>Shared via WebSocket (optional)</td>
+</tr>
+</tbody>
+</table>
+<p>These layers coexist. A score might use SVG cues for precise, time-locked events while annotations provide flexible performer controls. Or a piece might use <strong>only annotations</strong>—no SVG at all—relying on positioned text cues and audio triggers coordinated via the stopwatch and network sync.</p>
+<hr>
+<h2>Basic Usage: Performer Notes</h2>
+<h3>Adding an Annotation</h3>
+<ol>
+<li><strong>Enable pen mode</strong>: Click the ✏️ pen icon in the toolbar (or double-tap the score area)</li>
+<li><strong>Click on the score</strong>: Position where you want the note</li>
+<li><strong>Type your text</strong>: Instructions, reminders, cue names, section markers</li>
+<li><strong>Adjust font size</strong>: Use the slider (8–32px)</li>
+<li><strong>Choose scope</strong>: Check &quot;Share&quot; to broadcast to other connected clients</li>
+<li><strong>Save</strong>: Click Save or press Enter</li>
+</ol>
+<h3>Editing an Annotation</h3>
+<ol>
+<li><strong>Enable pen mode</strong> (pen icon must be active)</li>
+<li><strong>Click on the annotation</strong> you want to edit</li>
+<li><strong>Modify text, size, or settings</strong></li>
+<li><strong>Save</strong> changes</li>
+</ol>
 <blockquote>
-<p><strong>Note:</strong> Because annotations can be placed freely in time and space, Oscilla can be used in a <strong>minimal, annotation-only mode</strong> (without an SVG score). In this case, annotations function as a very lightweight textual score. This mode is intentionally limited, but can be useful for sketches, instructions, or rehearsal frameworks.</p>
+<p><strong>Important</strong>: You can only edit annotations when pen mode is ON. When pen mode is OFF, clicking a trigger executes it; clicking a regular note does nothing.</p>
+</blockquote>
+<h3>Deleting an Annotation</h3>
+<ol>
+<li>Enable pen mode</li>
+<li>Click the annotation to open the editor</li>
+<li>Click <strong>Delete</strong></li>
+</ol>
+<h3>Moving an Annotation</h3>
+<p>Annotations can be dragged at any time (pen mode on or off):</p>
+<ul>
+<li><strong>Mouse</strong>: Click and drag</li>
+<li><strong>Touch</strong>: Touch and drag</li>
+</ul>
+<p>Position is saved automatically when you release.</p>
+<hr>
+<h2>Executable Triggers</h2>
+<p>Annotations can be converted into <strong>triggers</strong>—clickable buttons that execute audio playback when tapped in performance mode (pen mode OFF).</p>
+<h3>Creating a Trigger</h3>
+<ol>
+<li>Enable pen mode and click to create a new annotation (or edit existing)</li>
+<li>Check <strong>☑ Executable (trigger)</strong></li>
+<li>Configure the trigger type and parameters</li>
+<li>Save</li>
+</ol>
+<h3>Trigger Types</h3>
+<h4>🔊 Audio (Single File)</h4>
+<p>Plays one audio file each time clicked.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Range</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source</td>
+<td>file path</td>
+<td>Path to audio file (e.g., <code>drums/kick.wav</code>)</td>
+</tr>
+<tr>
+<td>Gain</td>
+<td>0.0–1.0</td>
+<td>Volume level</td>
+</tr>
+<tr>
+<td>Pan</td>
+<td>-1 to +1</td>
+<td>Stereo position (left/right)</td>
+</tr>
+<tr>
+<td>Pitch</td>
+<td>0.25x–2x</td>
+<td>Playback speed/pitch</td>
+</tr>
+<tr>
+<td>Loop</td>
+<td>1, 2, 3, 4, ∞</td>
+<td>Number of times to play</td>
+</tr>
+<tr>
+<td>Fade In</td>
+<td>0–2s</td>
+<td>Fade in duration</td>
+</tr>
+<tr>
+<td>Fade Out</td>
+<td>0–2s</td>
+<td>Fade out duration</td>
+</tr>
+<tr>
+<td>Toggle</td>
+<td>on/off</td>
+<td>If enabled, click starts playback, click again stops</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Use cases:</strong></p>
+<ul>
+<li>One-shot samples (hits, stings, effects)</li>
+<li>Looping drones or textures (with Toggle + Loop ∞)</li>
+<li>Pitch-shifted variations of a single sound</li>
+</ul>
+<hr>
+<h4>🎲 Audio Pool (Directory)</h4>
+<p>Plays files from a directory, selecting the next file based on the chosen order.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Range</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source</td>
+<td>directory path</td>
+<td>Path to folder (e.g., <code>textures/pads/</code>)</td>
+</tr>
+<tr>
+<td>Order</td>
+<td>shuffle/sequential/random</td>
+<td>How files are selected</td>
+</tr>
+<tr>
+<td>Gain</td>
+<td>0.0–1.0</td>
+<td>Volume level</td>
+</tr>
+<tr>
+<td>Pan</td>
+<td>-1 to +1</td>
+<td>Stereo position</td>
+</tr>
+<tr>
+<td>Pitch</td>
+<td>0.25x–2x</td>
+<td>Playback speed/pitch</td>
+</tr>
+<tr>
+<td>Loop</td>
+<td>1, 2, 3, 4, ∞</td>
+<td>Times to play each selected file</td>
+</tr>
+<tr>
+<td>Fade In</td>
+<td>0–2s</td>
+<td>Fade in duration</td>
+</tr>
+<tr>
+<td>Fade Out</td>
+<td>0–2s</td>
+<td>Fade out duration</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Order modes:</strong></p>
+<ul>
+<li><strong>Shuffle</strong>: Plays through all files in random order, then reshuffles (no immediate repeats)</li>
+<li><strong>Sequential</strong>: Plays files in alphabetical order, cycling back to start</li>
+<li><strong>Random</strong>: Pure random selection (may repeat)</li>
+</ul>
+<p><strong>Use cases:</strong></p>
+<ul>
+<li>Drum machines (folder of kick variations)</li>
+<li>Texture clouds (folder of similar ambient sounds)</li>
+<li>Aleatoric elements (folder of short phrases)</li>
+</ul>
+<hr>
+<h4>⚡ Audio Impulse (Continuous)</h4>
+<p>Starts a <strong>continuous generative process</strong> that plays samples at a specified rate. Click once to start, click again to stop.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Range</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source</td>
+<td>directory path</td>
+<td>Path to sample folder</td>
+</tr>
+<tr>
+<td>Order</td>
+<td>shuffle/sequential/random</td>
+<td>Selection mode</td>
+</tr>
+<tr>
+<td>Gain</td>
+<td>0.0–1.0</td>
+<td>Volume level</td>
+</tr>
+<tr>
+<td>Pan</td>
+<td>-1 to +1</td>
+<td>Stereo position</td>
+</tr>
+<tr>
+<td>Pitch</td>
+<td>0.25x–2x</td>
+<td>Playback speed</td>
+</tr>
+<tr>
+<td>Rate</td>
+<td>1–120/min</td>
+<td>Hits per minute</td>
+</tr>
+<tr>
+<td>Jitter</td>
+<td>0–100%</td>
+<td>Timing randomness</td>
+</tr>
+<tr>
+<td>Polyphony</td>
+<td>1–12</td>
+<td>Maximum simultaneous voices</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Visual feedback:</strong></p>
+<ul>
+<li>Running impulse shows <strong>green border</strong></li>
+<li>Stopped impulse shows <strong>cyan border</strong></li>
+</ul>
+<p><strong>Use cases:</strong></p>
+<ul>
+<li>Granular-style textures</li>
+<li>Irregular rhythmic patterns</li>
+<li>Ambient soundscapes</li>
+<li>Generative percussion</li>
+</ul>
+<hr>
+<h2>Audio File Management</h2>
+<h3>Browsing Files</h3>
+<p>Click the <strong>📁</strong> button next to the Source field to open the audio browser:</p>
+<ul>
+<li>Navigate directories by clicking folder names</li>
+<li>Click <strong>Select</strong> button on a directory row to choose it for a pool</li>
+<li>Click a file to select it for single-file playback</li>
+<li>Use <strong>⬆ ..</strong> to go up one level</li>
+<li>Inside a directory, click <strong>✓ Select this directory</strong> to use current location</li>
+</ul>
+<h3>Uploading Files</h3>
+<p>Click <strong>⬆ Upload Audio</strong> to add new files:</p>
+<ul>
+<li>Files upload to the directory shown in the Source field</li>
+<li>If Source is empty, files go to the project's <code>audio/</code> root</li>
+<li>If Source contains a directory path (e.g., <code>drums/kicks</code>), files upload there</li>
+</ul>
+<p><strong>Conflict handling:</strong></p>
+<p>When uploading a file that already exists, you'll see three options:</p>
+<ul>
+<li><strong>Cancel</strong>: Abort the upload</li>
+<li><strong>Rename</strong>: Enter a new filename</li>
+<li><strong>Overwrite</strong>: Replace the existing file</li>
+</ul>
+<h3>Directory Structure</h3>
+<p>Audio files live in your project's <code>audio/</code> directory:</p>
+<pre><code>scores/
+  my_project/
+    audio/
+      kick.wav
+      snare.wav
+      drums/
+        kick_01.wav
+        kick_02.wav
+        kick_03.wav
+      textures/
+        pad_a.wav
+        pad_b.wav
+        pad_c.wav
+</code></pre>
+<p>Reference files by path relative to <code>audio/</code>:</p>
+<ul>
+<li>Single file: <code>kick.wav</code> or <code>drums/kick_01.wav</code></li>
+<li>Directory pool: <code>drums/</code> or <code>textures/</code></li>
+</ul>
+<hr>
+<h2>Scope and Sharing</h2>
+<h3>Local vs Shared Annotations</h3>
+<table>
+<thead>
+<tr>
+<th>Scope</th>
+<th>Visibility</th>
+<th>Persistence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Local</strong></td>
+<td>Only you</td>
+<td>localStorage in your browser</td>
+</tr>
+<tr>
+<td><strong>Shared</strong></td>
+<td>All connected clients</td>
+<td>Broadcast via WebSocket</td>
+</tr>
+</tbody>
+</table>
+<p>Check <strong>☐ Share</strong> when creating/editing to broadcast the annotation.</p>
+<h3>Network Synchronization</h3>
+<p>When clients are connected via WebSocket:</p>
+<ul>
+<li>Shared annotations appear on all clients</li>
+<li>Position changes sync in real-time</li>
+<li>Edits and deletions propagate to all</li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: Currently, audio files themselves do not sync—all clients need the same files in their project's audio directory. File sharing is planned for a future update.</p>
 </blockquote>
 <hr>
-<h2>Entering Annotation Mode</h2>
-<ol>
-<li>Click the <strong>pen icon</strong> in the toolbar</li>
-<li>The cursor changes to indicate annotation mode</li>
-<li>Click anywhere on the score area to add a new annotation</li>
-</ol>
-<p>Annotation mode automatically exits after saving a note.</p>
+<h2>Visual Reference</h2>
+<h3>Annotation Appearance</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Border</th>
+<th>Icon</th>
+<th>Position</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Text note</td>
+<td>thin white</td>
+<td>none</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Audio trigger</td>
+<td>cyan</td>
+<td>🔊</td>
+<td>top-right</td>
+</tr>
+<tr>
+<td>Audio Pool trigger</td>
+<td>cyan</td>
+<td>🎲</td>
+<td>top-right</td>
+</tr>
+<tr>
+<td>Audio Impulse trigger</td>
+<td>cyan (green when running)</td>
+<td>⚡</td>
+<td>top-right</td>
+</tr>
+</tbody>
+</table>
+<h3>Interaction States</h3>
+<table>
+<thead>
+<tr>
+<th>Pen Mode</th>
+<th>Click on Trigger</th>
+<th>Click on Text Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ON (editing)</td>
+<td>Opens editor</td>
+<td>Opens editor</td>
+</tr>
+<tr>
+<td>OFF (performance)</td>
+<td><strong>Executes trigger</strong></td>
+<td>No action (drag only)</td>
+</tr>
+</tbody>
+</table>
 <hr>
-<h2>Creating an Annotation</h2>
-<p>When you click the score area in annotation mode:</p>
+<h2>Workflow Examples</h2>
+<h3>Example 1: Rehearsal Notes</h3>
+<p>A violinist marking difficult passages:</p>
 <ol>
-<li>A text editor appears</li>
-<li>Enter your note (multi-line text is supported)</li>
-<li>Choose whether the note is:
+<li>Enable pen mode</li>
+<li>Click at measure 47: &quot;watch intonation&quot;</li>
+<li>Click at measure 89: &quot;breathe here&quot;</li>
+<li>Click at measure 102: &quot;wait for cello&quot;</li>
+<li>Disable pen mode</li>
+</ol>
+<p>Notes remain visible during performance as reminders.</p>
+<h3>Example 2: Simple Text-Cue Score</h3>
+<p>A piece for ensemble with only textual instructions:</p>
+<ol>
+<li>Create annotations for each section:
 <ul>
-<li><strong>Local</strong> — visible only on your device</li>
-<li><strong>Shared</strong> — visible to other connected clients</li>
+<li>&quot;I. Sustained tones, ppp, gradual entry&quot;</li>
+<li>&quot;II. Rhythmic unison, accented&quot;</li>
+<li>&quot;III. Free improvisation on motif&quot;</li>
 </ul>
 </li>
-<li>Click <strong>Save</strong></li>
+<li>Position them left-to-right across the score area</li>
+<li>Share all annotations</li>
+<li>All performers see the same cues</li>
+<li>Use stopwatch for coordination</li>
 </ol>
-<p>The annotation appears as:</p>
+<p>No SVG required—the annotations ARE the score.</p>
+<h3>Example 3: Drum Pad Interface</h3>
+<p>Creating a sample-triggering performance interface:</p>
+<ol>
+<li>
+<p>Create a grid of trigger annotations:</p>
+<pre><code>[Kick]  [Snare]  [Hat]   [Crash]
+[Tom1]  [Tom2]   [Rim]   [Clap]
+</code></pre>
+</li>
+<li>
+<p>Configure each as Audio Pool:</p>
 <ul>
-<li>a small dot (anchor)</li>
-<li>a text label displaying the note</li>
-</ul>
-<hr>
-<h2>Editing an Annotation</h2>
-<ul>
-<li>Click <strong>either the dot or the text label</strong> to open the editor</li>
-<li>You can:
-<ul>
-<li>edit the text</li>
-<li>change Local / Shared status</li>
-<li>adjust font size</li>
-<li>delete the annotation</li>
+<li>Kick → <code>drums/kicks/</code> (shuffle)</li>
+<li>Snare → <code>drums/snares/</code> (shuffle)</li>
+<li>etc.</li>
 </ul>
 </li>
+<li>
+<p>Set parameters:</p>
+<ul>
+<li>Gain: 0.8</li>
+<li>Pitch: 1.0 (or vary for expression)</li>
 </ul>
-<p>Click <strong>Save</strong> to apply changes.</p>
+</li>
+<li>
+<p>Disable pen mode and play!</p>
+</li>
+</ol>
+<h3>Example 4: Texture Cloud</h3>
+<p>An ambient installation with generative layers:</p>
+<ol>
+<li>
+<p>Create impulse triggers:</p>
+<ul>
+<li>&quot;Pads&quot; → <code>textures/pads/</code>, rate: 8/min, jitter: 50%</li>
+<li>&quot;Tones&quot; → <code>textures/tones/</code>, rate: 4/min, jitter: 80%</li>
+<li>&quot;Noise&quot; → <code>textures/noise/</code>, rate: 20/min, jitter: 30%</li>
+</ul>
+</li>
+<li>
+<p>Click each to start/stop layers</p>
+</li>
+<li>
+<p>Mix by adjusting individual gain levels</p>
+</li>
+<li>
+<p>Pan triggers across stereo field</p>
+</li>
+</ol>
+<h3>Example 5: Networked Performance</h3>
+<p>Multiple performers with distributed interface:</p>
+<p><strong>Performer 1 (laptop):</strong></p>
+<ul>
+<li>Annotation triggers for bass samples</li>
+<li>Shared annotations visible to all</li>
+</ul>
+<p><strong>Performer 2 (tablet):</strong></p>
+<ul>
+<li>Annotation triggers for percussion</li>
+<li>Same shared annotations visible</li>
+</ul>
+<p><strong>Performer 3 (phone):</strong></p>
+<ul>
+<li>Text cue annotations only</li>
+<li>Follows along with stopwatch</li>
+</ul>
+<p>All synchronized via WebSocket, no SVG score needed.</p>
 <hr>
-<h2>Moving an Annotation</h2>
-<ul>
-<li>Click and <strong>drag the text label</strong> to reposition the annotation</li>
-<li>Release to confirm the new position</li>
-<li>The position is saved automatically</li>
-</ul>
-<p>The dot remains visually tied to the text.</p>
-<hr>
-<h2>Keyboard Behaviour While Editing</h2>
-<p>While typing in the annotation editor:</p>
-<ul>
-<li>All global keyboard shortcuts are temporarily disabled</li>
-<li>This prevents accidental playback or navigation</li>
-<li>Press <strong>Escape</strong> to close the editor</li>
-</ul>
-<p>Normal keyboard controls resume once the editor is closed.</p>
-<hr>
-<h2>Local vs Shared Annotations</h2>
-<h3>Local</h3>
-<ul>
-<li>Stored only in your browser</li>
-<li>Not visible to others</li>
-<li>Suitable for personal rehearsal notes</li>
-</ul>
-<h3>Shared</h3>
-<ul>
-<li>Broadcast to other connected clients</li>
-<li>Read-only for other performers</li>
-<li>Useful for ensemble coordination</li>
-</ul>
-<p>Shared annotations do not override local ones.</p>
-<hr>
-<h2>Visibility</h2>
-<p>Annotations:</p>
-<ul>
-<li>can be globally shown or hidden</li>
-<li>move with the score when scrolling or paging</li>
-<li>remain aligned to the score content</li>
-</ul>
-<p>They never affect timing, cues, or navigation.</p>
-<hr>
-<h2>What Annotations Do <em>Not</em> Do</h2>
-<p>Annotations:</p>
-<ul>
-<li>do not trigger playback</li>
-<li>do not alter the score</li>
-<li>do not affect synchronization</li>
-<li>do not replace cues or instructions</li>
-</ul>
-<p>They are purely informational.</p>
-<hr>
-<h2>Notes on Use</h2>
-<p>Annotations are best used for:</p>
-<ul>
-<li>marking sections to listen closely</li>
-<li>noting transitions or handovers</li>
-<li>tracking rehearsal decisions</li>
-<li>personal memory aids</li>
-</ul>
-<p>They are intentionally lightweight and non-authoritative.</p>
-<hr>
-<h2>Future Changes</h2>
-<p>This feature is evolving. Possible future additions include:</p>
-<ul>
-<li>filtering annotations by author</li>
-<li>export / import of annotation files</li>
-<li>visibility modes (rehearsal vs performance)</li>
-</ul>
+<h2>API Reference</h2>
+<h3>Window API</h3>
+<pre><code class="language-javascript">// Access annotation system
+window.oscillaAnnotations
 
-      
-      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
-    </main>
-  </div>
+// Methods
+.setEnabled(bool)      // Enable/disable annotation display
+.setMode(bool)         // Enable/disable pen mode
+.setShareDefault(bool) // Set default sharing behavior
+.setProject(name)      // Switch project context
+.delete(id)            // Delete annotation by ID
+.list()                // Get array of all annotations
+.render()              // Force re-render
 
-  <script>
-
-document.addEventListener('click', (e) => {
-  const link = e.target.closest('a.popup-link');
-  if (link) {
-    e.preventDefault();
-    window.open(
-      link.href,
-      'cheatsheet',
-      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
-    );
+// Trigger-specific
+.getTriggers()         // Get all trigger annotations
+.executeTriggerById(id) // Fire a trigger programmatically
+.clearTriggerPools()   // Clear cached directory pools
+</code></pre>
+<h3>Data Model</h3>
+<pre><code class="language-javascript">// Annotation structure
+{
+  id: &quot;ann_xxx&quot;,
+  project: &quot;my_project&quot;,
+  kind: &quot;text&quot; | &quot;trigger&quot;,
+  text: &quot;Display label&quot;,
+  scope: &quot;local&quot; | &quot;shared&quot;,
+  
+  style: {
+    fontSize: 14,
+    color: &quot;rgba(255,255,255,0.9)&quot;
+  },
+  
+  placement: {
+    x: 150,
+    y: 200,
+    space: &quot;score&quot; | &quot;pageOverlay&quot;
+  },
+  
+  // For triggers only:
+  trigger: {
+    type: &quot;audio&quot; | &quot;audioPool&quot; | &quot;audioImpulse&quot;,
+    source: {
+      mode: &quot;file&quot; | &quot;directory&quot;,
+      path: &quot;drums/kick.wav&quot;
+    },
+    playback: {
+      order: &quot;shuffle&quot;,
+      gain: 0.8,
+      pan: 0,
+      pitch: 1,
+      loop: 1,
+      fadeIn: 0,
+      fadeOut: 0,
+      toggle: false
+    },
+    // audioImpulse only:
+    impulse: {
+      rate: 30,
+      jitter: 0.2,
+      poly: 6
+    }
   }
-});
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.querySelector(".docs-menu-toggle");
-    const overlay = document.querySelector(".sidebar-overlay");
-    const sidebar = document.querySelector(".sidebar");
-    
-    function toggleSidebar() {
-      const isOpen = document.body.classList.toggle("sidebar-open");
-      btn?.setAttribute("aria-expanded", isOpen);
-    }
-    
-    function closeSidebar() {
-      document.body.classList.remove("sidebar-open");
-      btn?.setAttribute("aria-expanded", "false");
-    }
-    
-    btn?.addEventListener("click", toggleSidebar);
-    overlay?.addEventListener("click", closeSidebar);
-    
-    // Close sidebar on escape key
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
-        closeSidebar();
-      }
-    });
-    
-    // Close sidebar when clicking a link (mobile)
-    sidebar?.addEventListener("click", (e) => {
-      if (e.target.tagName === "A" && window.innerWidth <= 900) {
-        closeSidebar();
-      }
-    });
-  });
-
-  // Sidebar-ordered prev/next navigation
-  (function () {
-    const sidebar = document.querySelector(".sidebar");
-    if (!sidebar) return;
-
-    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
-    const current = window.location.href.replace(/#.*$/, "");
-    const index = links.findIndex(href => href === current);
-
-    const prev = index > 0 ? links[index - 1] : null;
-    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
-
-    const prevBtn = document.getElementById("docs-prev");
-    const nextBtn = document.getElementById("docs-next");
-
-    if (prevBtn) {
-      if (prev) prevBtn.href = prev;
-      else prevBtn.style.visibility = "hidden";
-    }
-
-    if (nextBtn) {
-      if (next) nextBtn.href = next;
-      else nextBtn.style.visibility = "hidden";
-    }
-
-    // Mark current page in sidebar
-    sidebar.querySelectorAll("a[href]").forEach(a => {
-      if (a.href === current) {
-        a.classList.add("active");
-        a.setAttribute("aria-current", "page");
-      }
-    });
-
-    // Keyboard navigation
-    document.addEventListener("keydown", e => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-
-      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
-        window.location.href = prev;
-      }
-      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
-        window.location.href = next;
-      }
-    });
-  })();
-  </script>
-
-</body>
-</html>
+}
+</code></pre>
+<hr>
+<h2>Roadmap / TODO</h2>
+<h3>Playhead Triggering</h3>
+<ul>
+<li>[ ] Option to trigger annotation cues automatically when playhead passes</li>
+<li>[ ] Define trigger region (x-range on score)</li>
+<li>[ ] One-shot vs retriggerable modes</li>
+</ul>
+<h3>Audio File Sync</h3>
+<ul>
+<li>[ ] Share uploaded audio files across network</li>
+<li>[ ] &quot;Offer file bundle&quot; protocol between clients</li>
+<li>[ ] Accept/reject incoming files</li>
+<li>[ ] Progress indicator for transfers</li>
+</ul>
+<h3>Collaborative Interface Building</h3>
+<ul>
+<li>[ ] Real-time collaborative trigger arrangement</li>
+<li>[ ] Lock/unlock annotations for editing</li>
+<li>[ ] Version history for shared annotations</li>
+</ul>
+<h3>Extended Cue Types</h3>
+<ul>
+<li>[ ] Synth triggers (oscillator, envelope, filter)</li>
+<li>[ ] DSL cue triggers (execute arbitrary cue string)</li>
+<li>[ ] OSC message triggers</li>
+<li>[ ] MIDI output triggers</li>
+<li>[ ] Visual cue triggers (screen flash, color change)</li>
+</ul>
+<h3>Recording</h3>
+<ul>
+<li>[ ] Record audio directly from browser microphone</li>
+<li>[ ] Save recordings to project audio directory</li>
+<li>[ ] Assign recordings to triggers immediately</li>
+</ul>
+<h3>Preset Management</h3>
+<ul>
+<li>[ ] Save/load trigger configurations</li>
+<li>[ ] Import/export annotation sets</li>
+<li>[ ] Template interfaces (drum pad, mixer, etc.)</li>
+</ul>
+<hr>
+<h2>Conceptual Notes</h2>
+<h3>Annotations as Compositional Material</h3>
+<p>The annotation layer reframes what a &quot;score&quot; can be. Traditional notation software produces fixed documents; Oscilla's SVG cues add temporal triggers but still require external authoring. Annotations collapse authoring and performance into a single interface.</p>
+<p>A composer might:</p>
+<ul>
+<li>Sketch ideas as text annotations during initial exploration</li>
+<li>Convert promising ideas to audio triggers</li>
+<li>Refine trigger parameters in rehearsal</li>
+<li>Share the result as a self-contained performance system</li>
+</ul>
+<p>The &quot;score&quot; becomes the interface; the interface becomes the instrument.</p>
+<h3>Minimal Viable Performance</h3>
+<p>For many situations, the full SVG workflow is unnecessary:</p>
+<ul>
+<li><strong>Workshop settings</strong>: Text instructions + stopwatch</li>
+<li><strong>Installation contexts</strong>: Audio triggers only</li>
+<li><strong>Remote collaboration</strong>: Shared annotations over network</li>
+<li><strong>Improvisation frameworks</strong>: Loose cues, flexible timing</li>
+</ul>
+<p>Annotations provide &quot;just enough&quot; structure without the overhead of notation software.</p>
+<h3>The Scratchpad That Grows</h3>
+<p>Annotations start as notes—marginal scribbles, rehearsal marks. They can stay that way forever. Or they can grow:</p>
+<pre><code>Note → Trigger → Pool → Impulse → Network Interface → Distributed Instrument
+</code></pre>
+<p>This gradient from simple to complex happens incrementally, in the browser, during use. There's no threshold where you must &quot;switch tools&quot; or &quot;export and reimport.&quot; The scratchpad is the performance system.</p>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Trigger doesn't play audio</h3>
+<ul>
+<li>Check the Source path is correct</li>
+<li>Ensure audio files exist in project's <code>audio/</code> directory</li>
+<li>Check browser console for errors</li>
+<li>Verify file format is supported (.wav, .mp3, .ogg, .aif)</li>
+</ul>
+<h3>Can't edit existing annotation</h3>
+<ul>
+<li>Make sure <strong>pen mode is ON</strong> (pen icon active)</li>
+<li>Click directly on the annotation text</li>
+</ul>
+<h3>Impulse shows &quot;Empty pool&quot;</h3>
+<ul>
+<li>The specified directory contains no audio files</li>
+<li>Check the path is a directory, not a file</li>
+<li>Verify files have supported extensions</li>
+</ul>
+<h3>Annotations not syncing</h3>
+<ul>
+<li>Check WebSocket connection status</li>
+<li>Ensure annotations are marked &quot;Shared&quot;</li>
+<li>Other clients must be on the same project</li>
+</ul>
+<h3>Upload fails</h3>
+<ul>
+<li>Check file size (max 50MB)</li>
+<li>Verify file type is audio</li>
+<li>Check server console for errors</li>
+</ul>
+<hr>
+<h2>Summary</h2>
+<p>Annotations bridge the gap between notation and interface, between preparation and performance. They require nothing but a browser, scale from marginal notes to generative instruments, and synchronize across any number of connected performers.</p>
+<p>Start simple: add a note. Let it grow from there.</p>
