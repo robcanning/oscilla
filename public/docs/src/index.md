@@ -9,8 +9,17 @@ This documentation describes the cue system, animation model, authoring workflow
 
 ---
 
+## New to Oscilla?
+
+If you’re looking for a high-level overview of what Oscilla is for, how it fits into contemporary score practice, and what you can actually accomplish with it, start here:
+
+→ **[What is Oscilla?](about/)**
+
+---
+
 ## Getting Started
 
+- [What is Oscilla?](about/) — conceptual overview and use cases
 - [Installation](INSTALL/) — setup and dependencies
 - [Quickstart](QUICKSTART/) — your first Oscilla score
 - [Workflow](workflow/) — SVG authoring and browser execution
