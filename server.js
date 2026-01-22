@@ -196,6 +196,152 @@ console.log("[CONFIG] READ_DIR  =", READ_DIR);
 console.log("[CONFIG] WRITE_DIR =", WRITE_DIR);
 
 
+
+
+
+// ------------------------------------------------------------
+// Audio filesystem API (EDITOR USE ONLY)
+// Maps to: WRITE_DIR/public/scores/<project>/audio/**
+// ------------------------------------------------------------
+
+function handleAudioTree(req, res, subPath = "") {
+  const project = req.params.project;
+
+  const audioRoot = path.join(
+    WRITE_DIR,
+    "public",
+    "scores",
+    project,
+    "audio"
+  );
+
+  const targetDir = path.join(audioRoot, subPath);
+
+  // Prevent path traversal
+  if (!targetDir.startsWith(audioRoot)) {
+    return res.status(400).json({ error: "Invalid path" });
+  }
+
+  try {
+    if (!fs.existsSync(targetDir)) {
+      return res.json({ path: subPath, directories: [], files: [] });
+    }
+
+console.log("[AUDIO TREE]", {
+  project,
+  audioRoot,
+  exists: fs.existsSync(audioRoot)
+});
+
+    const entries = fs.readdirSync(targetDir, { withFileTypes: true });
+
+    res.json({
+      path: subPath,
+      directories: entries.filter(e => e.isDirectory()).map(e => e.name),
+      files: entries
+        .filter(e => e.isFile())
+        .map(e => e.name)
+        .filter(n => /\.(wav|aif|aiff|mp3|ogg)$/i.test(n))
+    });
+  } catch (err) {
+    console.error("[api/audio-tree]", err);
+    res.status(500).json({ error: "Failed to read audio directory" });
+  }
+}
+
+// root: /api/audio-tree/:project
+app.get("/api/audio-tree/:project", (req, res) => {
+  handleAudioTree(req, res, "");
+});
+
+// subdirs: /api/audio-tree/:project/foo/bar
+app.get("/api/audio-tree/:project/*", (req, res) => {
+  handleAudioTree(req, res, req.params[0] || "");
+});
+
+// ALIAS: /api/audio-list (for compatibility with oscillaAudio.js)
+app.get("/api/audio-list/:project", (req, res) => {
+  handleAudioTree(req, res, "");
+});
+
+app.get("/api/audio-list/:project/*", (req, res) => {
+  handleAudioTree(req, res, req.params[0] || "");
+});
+
+
+// ------------------------------------------------------------
+// Audio Upload API
+// POST /api/upload-audio/:project
+// Optional query param: ?subdir=drums/kicks
+// ------------------------------------------------------------
+
+const audioUpload = multer({
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+  fileFilter: (req, file, cb) => {
+    const allowed = /\.(wav|aif|aiff|mp3|ogg|m4a)$/i;
+    if (allowed.test(file.originalname)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid audio file type"));
+    }
+  }
+});
+
+app.post("/api/upload-audio/:project", audioUpload.single("audio"), (req, res) => {
+  try {
+    const project = req.params.project;
+    const subdir = req.query.subdir || "";
+    const forceOverwrite = req.query.overwrite === "true";
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No audio file provided" });
+    }
+
+    const audioRoot = path.join(WRITE_DIR, "public", "scores", project, "audio");
+    const targetDir = subdir ? path.join(audioRoot, subdir) : audioRoot;
+
+    // Security: prevent path traversal
+    if (!targetDir.startsWith(audioRoot)) {
+      return res.status(400).json({ error: "Invalid path" });
+    }
+
+    // Ensure directory exists
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    const filename = req.file.originalname;
+    const targetPath = path.join(targetDir, filename);
+    const relativePath = subdir ? `${subdir}/${filename}` : filename;
+
+    // Check if file exists
+    if (fs.existsSync(targetPath) && !forceOverwrite) {
+      // Return conflict - let client decide
+      return res.status(409).json({
+        error: "File already exists",
+        conflict: true,
+        filename: filename,
+        path: relativePath
+      });
+    }
+
+    // Write file (overwrite if forceOverwrite is true)
+    fs.writeFileSync(targetPath, req.file.buffer);
+    console.log(`[UPLOAD] Audio saved: ${targetPath}${forceOverwrite ? " (overwritten)" : ""}`);
+
+    res.json({
+      ok: true,
+      path: relativePath,
+      overwritten: forceOverwrite && fs.existsSync(targetPath)
+    });
+
+  } catch (err) {
+    console.error("[UPLOAD] Error:", err);
+    res.status(500).json({ error: err.message || "Upload failed" });
+  }
+});
+
+
 // ---------------------------------------------
 // Static file serving (READ ONLY)
 // ---------------------------------------------
@@ -212,13 +358,6 @@ app.use("/shared", express.static(path.join(READ_DIR, "public/shared")));
 const OSCILLA_VERSION = fs
   .readFileSync(path.join(READ_DIR, "VERSION"), "utf8")
   .trim();
-
-
-
-
-
-
-
 
 // ---------------------------------------------
 // Simple HTML directory lister
@@ -279,42 +418,106 @@ app.use(
     extensions: ["html"]
   })
 );
-
 // ---------------------------------------------
 // API: audio list (READ)
 // ---------------------------------------------
 
-app.get("/api/audio-list/:project/:dir*", (req, res) => {
-  const project = req.params.project;
-  const dirPart = req.params.dir || "";
+// app.get("/api/audio-list/:project/*?", (req, res) => {
+//   const project = req.params.project;
+//   const dirPart = req.params[0] || "";
 
-  const dirPath = path.join(
-    READ_DIR,
-    "public",
-    "scores",
-    project,
-    "audio",
-    dirPart
-  );
+//   const dirPath = path.join(
+//     READ_DIR,
+//     "public",
+//     "scores",
+//     project,
+//     "audio",
+//     dirPart
+//   );
 
-  try {
-    if (!fs.existsSync(dirPath)) {
-      return res.status(404).json({ files: [] });
-    }
+//   try {
+//     if (!fs.existsSync(dirPath)) {
+//       return res.json({ files: [], directories: [] });
+//     }
 
-    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+//     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
 
-    const files = entries
-      .filter(e => e.isFile())
-      .map(e => e.name)
-      .filter(name => /\.(wav|aiff|aif|mp3|ogg)$/i.test(name));
+//     const files = entries
+//       .filter(e => e.isFile())
+//       .map(e => e.name)
+//       .filter(name => /\.(wav|aiff|aif|mp3|ogg)$/i.test(name));
 
-    res.json({ files });
-  } catch (err) {
-    console.error("[API] audio-list failed:", err);
-    res.status(500).json({ error: "Could not read directory" });
-  }
-});
+//     const directories = entries
+//       .filter(e => e.isDirectory())
+//       .map(e => e.name);
+
+//     res.json({ files, directories });
+//   } catch (err) {
+//     console.error("[API] audio-list failed:", err);
+//     res.status(500).json({ error: "Could not read directory" });
+//   }
+// });
+
+// app.get("/api/audio-tree/:project/*?", (req, res) => {
+//   const project = req.params.project;
+//   const subdir = req.params[0] || "";
+
+//   const base = path.join(
+//     READ_DIR,
+//     "public",
+//     "scores",
+//     project,
+//     "audio"
+//   );
+
+//   const dirPath = path.join(base, subdir);
+
+//   // prevent ../ traversal
+//   if (!dirPath.startsWith(base)) {
+//     return res.status(400).json({ error: "Invalid path" });
+//   }
+
+//   if (!fs.existsSync(dirPath)) {
+//     return res.json({ directories: [], files: [] });
+//   }
+
+//   const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+//   res.json({
+//     path: subdir,
+//     directories: entries.filter(e => e.isDirectory()).map(e => e.name),
+//     files: entries
+//       .filter(e => e.isFile())
+//       .map(e => e.name)
+//       .filter(n => /\.(wav|aiff|aif|mp3|ogg)$/i.test(n))
+//   });
+// });
+
+// app.post("/api/audio-mkdir/:project", express.json(), (req, res) => {
+//   const project = req.params.project;
+//   const rel = req.body.path || "";
+
+//   const base = path.join(
+//     READ_DIR,
+//     "public",
+//     "scores",
+//     project,
+//     "audio"
+//   );
+
+//   const dirPath = path.join(base, rel);
+
+//   if (!dirPath.startsWith(base)) {
+//     return res.status(400).json({ error: "Invalid path" });
+//   }
+
+//   fs.mkdirSync(dirPath, { recursive: true });
+//   res.json({ ok: true, path: rel });
+// });
+
+
+
+
 
 // ---------------------------------------------
 // API: save preferences (WRITE)
