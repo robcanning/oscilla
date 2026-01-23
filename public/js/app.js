@@ -26,7 +26,8 @@ import {
   forward, rewind, rewindToStart,
   initializeSpeedControls, adjustSpeed, setSpeed, updateSpeedDisplay,
   sendSpeedUpdateToServer, togglePlay, togglePlayButton, startPlayback,
-  pausePlayback, resumePlayback, jumpToCueId, hideControls, showControls
+  pausePlayback, resumePlayback, jumpToCueId, hideControls, showControls,
+  updateSeekBar, initSeekBarListeners
 } from './oscillaTransport.js';
 
 import {
@@ -239,6 +240,7 @@ async function settleDomForPropagate() {
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize controls and handlers
   initializeSpeedControls();
+  initSeekBarListeners();
   pauseDismissClickHandler();
   initializeDarkModeToggle();
   populateProjectMenu();
@@ -646,11 +648,16 @@ if (state.canonicalRenderedWidth) {
   // Animation Loop
   // ===========================
   window.animate = async (currentTime) => {
-    if (window.isSeeking) return;
-
+    // Always update the frame time to avoid huge dt jumps after pauses
     let dt = window.lastAnimationFrameTime !== null
       ? (currentTime - window.lastAnimationFrameTime) / 1000 : 0;
     window.lastAnimationFrameTime = currentTime;
+
+    // If seeking, skip processing but KEEP the loop running
+    if (window.isSeeking) {
+      window.animationFrameId = requestAnimationFrame(window.animate);
+      return;
+    }
 
     const refWidth = window.remoteScoreWidth || window.scoreWidth;
 
@@ -681,6 +688,9 @@ if (state.canonicalRenderedWidth) {
     if (window.duration && window.scoreWidth) {
       window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
     }
+
+    // Update the seek bar to reflect current position
+    updateSeekBar?.();
 
     if (window._skipTriggerFrame > 0) window._skipTriggerFrame--;
     else await checkCueTriggers?.(window.elapsedTime);
@@ -721,20 +731,33 @@ if (state.canonicalRenderedWidth) {
       animationFrameId: window.animationFrameId
     });
 
-    if (window.isSeeking) return;
-    if (window.animationFrameId === null) {
-      requestAnimationFrame((time) => {
-        window.lastAnimationFrameTime = time;
-        window.animationFrameId = requestAnimationFrame(window.animate);
-      });
+    // Don't start animation while actively seeking
+    if (window.isSeeking) {
+      console.log("[RAF] Skipping startAnimation - still seeking");
+      return;
     }
+    
+    // Reset the animation paused flag since we're starting
+    window.animationPaused = false;
+    
+    // Always ensure the animation loop is running
+    // Cancel any existing frame and start fresh to avoid stale state
+    if (window.animationFrameId) {
+      cancelAnimationFrame(window.animationFrameId);
+    }
+    
+    requestAnimationFrame((time) => {
+      window.lastAnimationFrameTime = time;
+      window.animationFrameId = requestAnimationFrame(window.animate);
+    });
   };
 
 
   window.stopAnimation = () => {
-    // ❌ DO NOT cancel RAF here
-    window.isPlaying = false;
-    window.isMusicalPause = true;
+    console.log("[RAF] stopAnimation called");
+    window.animationPaused = true;
+    // Note: We don't cancel the RAF or set isPlaying here - 
+    // that's handled by pausePlayback() for proper state management
   };
 
 

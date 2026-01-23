@@ -1873,10 +1873,6 @@ wss.on('connection', (ws, req) => {
         break;
       }
 
-
-
-
-
       default:
         console.log(`[DEBUG] Unknown message type: ${data.type}`);
         break;

@@ -51,13 +51,26 @@ window.seekDebounceTime = 300;
 window.seekingTimeout = null;
 
 document.addEventListener('keydown', (event) => {
-  if (window.oscillaTextInputActive && e.key !== "Escape") return;
+  if (window.oscillaTextInputActive && event.key !== "Escape") return;
 
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-    event.preventDefault(); //  Prevents page scrolling
+    event.preventDefault(); // Prevents page scrolling
 
-    //  Capture whether playback was active before seek
-    const wasPlayingBeforeSeek = window.isPlaying === true;
+    // Capture play state ONLY on first keypress of a seek sequence
+    // (don't overwrite on subsequent keypresses while still seeking)
+    if (!window.isSeeking) {
+      window._wasPlayingBeforeSeek = window.isPlaying === true;
+      console.log("[SEEK] Starting seek, wasPlaying:", window._wasPlayingBeforeSeek);
+      
+      // Pause playback during seeking (stop animation but preserve state intent)
+      if (window.isPlaying) {
+        window.stopAnimation?.();
+        window.stopStopwatch?.();
+        window.animationPaused = true;
+        window.isPlaying = false; // Mark as not playing during seek
+        console.log("[SEEK] Paused playback for seeking");
+      }
+    }
 
     window.isSeeking = true;
 
@@ -70,16 +83,23 @@ document.addEventListener('keydown', (event) => {
     if (seekingTimeout) clearTimeout(seekingTimeout);
 
     seekingTimeout = setTimeout(() => {
+      console.log("[SEEK] Seek ended, wasPlayingBeforeSeek:", window._wasPlayingBeforeSeek);
+      
       window.isSeeking = false;
       window.allowCues = true;
       window.cueDisabledUntil = 0;
 
       checkCueTriggers();
 
-      //  Always resume playback if it was running before seek
-      if (wasPlayingBeforeSeek) {
-        window.startPlayback(); // resume
+      // Resume if was playing before seek started
+      if (window._wasPlayingBeforeSeek) {
+        console.log("[SEEK] Resuming playback after seek");
+        window.startPlayback();
+      } else {
+        console.log("[SEEK] Was stopped before seek, staying stopped");
       }
+      
+      window._wasPlayingBeforeSeek = undefined; // Clean up
 
     }, seekDebounceTime);
   }
@@ -175,7 +195,8 @@ export const rewindToStart = () => {
 */
 
 export const rewind = () => {
-  const REWIND_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // Convert time step into X coordinate shift
+  // Smaller increment for smoother seeking (250ms worth of movement instead of 1000ms)
+  const REWIND_INCREMENT_X = (250 / window.duration) * window.scoreWidth;
   window.playheadX = Math.max(window.playheadX - REWIND_INCREMENT_X, 0);
 
   scrollToPlayheadVisual();
@@ -227,15 +248,8 @@ export const rewind = () => {
   window.recentlyRecalculatedPlayhead = true;
   setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
 
-  /*  Ensure local animation keeps running if playback is active */
-  if (window.isPlaying) {
-    console.log("[DEBUG] Freewheel continue after seek");
-    window.animationPaused = false;
-    window.isSeeking = true;
-
-    window.startAnimation?.();
-    window.startStopwatch?.();
-  }
+  // NOTE: Play state resume is now handled by the keydown handler's setTimeout
+  // to ensure proper state management when seeking ends
 
 };
 
@@ -247,8 +261,8 @@ export const rewind = () => {
 */
 
 export const forward = () => {
-
-  const FORWARD_INCREMENT_X = (1000 / window.duration) * window.scoreWidth; // Convert time step into X coordinate shift
+  // Smaller increment for smoother seeking (250ms worth of movement instead of 1000ms)
+  const FORWARD_INCREMENT_X = (250 / window.duration) * window.scoreWidth;
 
   window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
 
@@ -297,15 +311,8 @@ export const forward = () => {
   window.recentlyRecalculatedPlayhead = true;
   setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
 
-  /*  Ensure local animation keeps running if playback is active */
-  if (window.isPlaying) {
-    console.log("[DEBUG] Freewheel continue after seek");
-    window.animationPaused = false;
-    window.isSeeking = true;
-
-    window.startAnimation?.();
-    window.startStopwatch?.();
-  }
+  // NOTE: Play state resume is now handled by the keydown handler's setTimeout
+  // to ensure proper state management when seeking ends
 
 };
 
@@ -318,7 +325,7 @@ export const forward = () => {
 
 export function initializeSpeedControls() {
   document.addEventListener("keydown", (event) => {
-    if (window.oscillaTextInputActive && e.key !== "Escape") return;
+    if (window.oscillaTextInputActive && event.key !== "Escape") return;
 
     if (event.key === "+" || event.key === "=") {
       adjustSpeed(0.1);
@@ -409,10 +416,24 @@ window.adjustSpeed = adjustSpeed;
 
 ///////////////////////////////////////
 // SEEKBAR LOGIC
-// export  const updateSeekBar = () => {
-//   const progress =  (window.elapsedTime / window.duration) * 100;
-//   seekBar.value = progress;
-// };
+///////////////////////////////////////
+
+/**
+ * Updates the seek bar position to reflect current playhead position.
+ * Called from the animation loop and after manual navigation.
+ */
+export const updateSeekBar = () => {
+  const seekBar = window.seekBar || document.getElementById('seek-bar');
+  if (!seekBar) return;
+  
+  const duration = window.duration || 0;
+  if (duration <= 0) return;
+  
+  const progress = (window.elapsedTime / duration) * 100;
+  seekBar.value = Math.min(100, Math.max(0, progress));
+};
+
+window.updateSeekBar = updateSeekBar;
 
 
 
@@ -553,20 +574,47 @@ export function initSeekBarListeners() {
 
   console.log("[transport] Initializing seek bar listeners.");
 
+  // Set small step for smooth dragging (0.1% increments)
+  seekBar.step = "0.1";
+  seekBar.min = "0";
+  seekBar.max = "100";
+
   //// SEEKING LOGIC ///////////////////////////////////////////
 
   // Starts seeking mode when the user clicks the seek bar.
   seekBar.addEventListener("mousedown", () => {
+    // Capture play state ONLY on first interaction
+    if (!window.isSeeking) {
+      window._wasPlayingBeforeSeek = window.isPlaying === true;
+      
+      // Pause during seeking
+      if (window.isPlaying) {
+        window.stopAnimation?.();
+        window.stopStopwatch?.();
+        window.animationPaused = true;
+        window.isPlaying = false;
+      }
+    }
     window.isSeeking = true;
-    window.stopAnimation?.();
-    console.log("[CLIENT] Playback paused for seeking.");
+    console.log("[CLIENT] Playback paused for seeking (mouse).");
   });
 
 
 // Touch support for seek bar
 seekBar.addEventListener("touchstart", () => {
+  // Capture play state ONLY on first interaction
+  if (!window.isSeeking) {
+    window._wasPlayingBeforeSeek = window.isPlaying === true;
+    
+    // Pause during seeking
+    if (window.isPlaying) {
+      window.stopAnimation?.();
+      window.stopStopwatch?.();
+      window.animationPaused = true;
+      window.isPlaying = false;
+    }
+  }
   window.isSeeking = true;
-  window.stopAnimation?.();
   console.log("[CLIENT] Playback paused for seeking (touch).");
 }, { passive: true });
 
@@ -576,10 +624,6 @@ seekBar.addEventListener("touchend", (event) => {
 
   if (seekingTimeout) clearTimeout(seekingTimeout);
   seekingTimeout = setTimeout(() => {
-    window.isPlaying = true;
-    window.isMusicalPause = false;
-    window.startStopwatch?.();
-    window.startAnimation?.();
     window.ignoreNextSync = true;
 
     if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
@@ -589,6 +633,12 @@ seekBar.addEventListener("touchend", (event) => {
         elapsedTime: window.elapsedTime,
       }));
     }
+    
+    // Resume if was playing before seek
+    if (window._wasPlayingBeforeSeek) {
+      window.startPlayback();
+    }
+    window._wasPlayingBeforeSeek = undefined;
   }, seekDebounceTime);
 });
 
@@ -597,11 +647,18 @@ seekBar.addEventListener("touchend", (event) => {
   // Updates playback time as the user moves the seek bar.
   seekBar.addEventListener("input", (event) => {
     const duration = window.duration || 0;
-    const newTime = (parseInt(event.target.value, 10) / 100) * duration;
-    window.setElapsedTime?.(newTime);
-
-    // window.updatePosition?.(window.playheadX);
-    // window.updateSeekBar?.();
+    if (duration <= 0) return;
+    
+    // Use parseFloat for smoother positioning (not integer steps)
+    const percent = parseFloat(event.target.value) / 100;
+    const newTime = percent * duration;
+    window.elapsedTime = newTime;
+    
+    // Also update playheadX to stay in sync
+    if (window.scoreWidth) {
+      window.playheadX = percent * window.scoreWidth;
+      scrollToPlayheadVisual();
+    }
   });
 
   // Ends seeking mode and re-enables cues after debounce.
@@ -610,17 +667,12 @@ seekBar.addEventListener("touchend", (event) => {
 
   seekBar.addEventListener("mouseup", (event) => {
     window.isSeeking = false;
-    console.log("[CLIENT] Seeking ended. Applying debounce before re-enabling cues.");
+    console.log("[CLIENT] Seeking ended (mouse). Applying debounce before re-enabling cues.");
 
     if (seekingTimeout) clearTimeout(seekingTimeout);
     seekingTimeout = setTimeout(() => {
       console.log("[CLIENT] Cue triggering re-enabled after debounce.");
-      window.isPlaying = true;
-      window.isMusicalPause = false;
-
-      window.startStopwatch?.();
-      window.startAnimation?.();
-
+      
       window.ignoreNextSync = true;
 
       // Send WebSocket sync to ensure all clients align
@@ -634,6 +686,12 @@ seekBar.addEventListener("touchend", (event) => {
         );
         console.log(`[CLIENT] Sent jump message to server after seek. Elapsed Time: ${window.elapsedTime}`);
       }
+      
+      // Resume if was playing before seek
+      if (window._wasPlayingBeforeSeek) {
+        window.startPlayback();
+      }
+      window._wasPlayingBeforeSeek = undefined;
     }, seekDebounceTime);
   });
 
@@ -1604,14 +1662,53 @@ export function scrollToPlayheadVisual() {
   window.localRenderedWidth = localRenderedWidth;
 
   const worldPx = window.playheadX * localScale;
+  const viewportWidth = container.clientWidth;
+  const halfViewport = viewportWidth / 2;
 
-  // Create equal virtual space on both sides
-  const pad = container.clientWidth / 2;
+  // Calculate ideal position (playhead centered)
+  let translateX = halfViewport - worldPx;
+  
+  // Track if we're clamping and where the playhead should appear
+  let playheadScreenX = halfViewport; // Default: center of screen
+  let isClamped = false;
 
-  // Shift so playhead stays centered anywhere, including at start
-  const translateX = pad - worldPx;
+  // CLAMP LEFT: Don't let score shift right of left edge
+  // (when playhead is near start, keep score left edge at screen left edge)
+  if (translateX > 0) {
+    // Playhead is in the left "unclamped" zone
+    // Score stays at left edge, playhead moves from left toward center
+    playheadScreenX = worldPx; // playhead position relative to screen left
+    translateX = 0;
+    isClamped = true;
+  }
+
+  // CLAMP RIGHT: Don't let score shift left past the end
+  // (when playhead is near end, keep score right edge at screen right edge)
+  const maxShiftLeft = -(localRenderedWidth - viewportWidth);
+  if (translateX < maxShiftLeft && maxShiftLeft < 0) {
+    // Playhead is in the right "unclamped" zone
+    // Score stays at right edge, playhead moves from center toward right
+    const distanceFromEnd = localRenderedWidth - worldPx;
+    playheadScreenX = viewportWidth - distanceFromEnd;
+    translateX = maxShiftLeft;
+    isClamped = true;
+  }
 
   stage.style.transform = `translate3d(${translateX}px, 0, 0)`;
+  
+  // Position the playhead indicator
+  const playheadEl = document.getElementById("playhead");
+  if (playheadEl) {
+    if (isClamped) {
+      // Move playhead to its actual screen position
+      playheadEl.style.left = `${playheadScreenX}px`;
+      playheadEl.style.transform = 'translateX(-50%)'; // Center the line on that position
+    } else {
+      // Playhead stays centered
+      playheadEl.style.left = '50%';
+      playheadEl.style.transform = 'translateX(-50%)';
+    }
+  }
 }
 
 window.scrollToPlayheadVisual = scrollToPlayheadVisual;
