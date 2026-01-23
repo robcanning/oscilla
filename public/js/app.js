@@ -707,6 +707,11 @@ if (state.canonicalRenderedWidth) {
       checkSpeedForPosition();
     }
 
+    // Check annotation playhead triggers
+    if (typeof window.checkAnnotationPlayheadTriggers === "function") {
+      window.checkAnnotationPlayheadTriggers();
+    }
+
 
     // ----------------------------------
     // Tick non-anime custom animations

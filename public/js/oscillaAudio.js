@@ -712,12 +712,14 @@ function scheduleNextImpulse(state) {
   }, interval * 1000);
 }
 
-
 async function playImpulseHit(state) {
   const { uid, params, pool } = state;
 
   if (!pool?.files?.length) return;
 
+  // --------------------------------------------
+  // Select file (same logic as before)
+  // --------------------------------------------
   let file;
 
   if (pool.mode === "rand") {
@@ -732,9 +734,33 @@ async function playImpulseHit(state) {
     }
   }
 
-  const amp = evalMaybeRandom(params.amp) ?? 1;
-  
-  // Handle fade values - pass through raw for resolveFade
+  // --------------------------------------------
+  // Resolve base values (DSL-aware)
+  // --------------------------------------------
+  const baseAmp   = evalMaybeRandom(params.amp)   ?? 1;
+  const basePan   = evalMaybeRandom(params.pan)   ?? 0;
+  const basePitch = evalMaybeRandom(params.pitch) ?? 1;
+
+  const panRandom   = Number(params.panRandom   ?? 0);
+  const pitchRandom = Number(params.pitchRandom ?? 0);
+
+  // --------------------------------------------
+  // Centered per-hit randomisation
+  // --------------------------------------------
+  const randAround = (base, range, min = -Infinity, max = Infinity) => {
+    if (!range || range <= 0) return base;
+    const delta = (Math.random() * 2 - 1) * range;
+    const v = base + delta;
+    return Math.max(min, Math.min(max, v));
+  };
+
+  const amp   = Math.max(0, Math.min(1, baseAmp));
+  const pan   = randAround(basePan, panRandom, -1, 1);
+  const pitch = Math.max(0.01, randAround(basePitch, pitchRandom));
+
+  // --------------------------------------------
+  // Fade handling (unchanged semantics)
+  // --------------------------------------------
   let fadeIn, fadeOut;
 
   if (params.fade !== undefined) {
@@ -745,70 +771,39 @@ async function playImpulseHit(state) {
     fadeOut = params.fadeout ?? 0;
   }
 
-  // PATH + EXTENSION
-  const path = params.path || "";
-  const format = params.format || "wav";
+  // --------------------------------------------
+  // Build cue
+  // --------------------------------------------
+  const filename = params.path
+    ? `${params.path}/${file}`
+    : file;
 
-  let name = file.endsWith(`.${format}`) ? file : `${file}.${format}`;
-  const filename = path ? `${path}/${name}` : name;
+  const poly = Number(params.poly ?? 1);
 
-  // Evaluate pan and pitch for this hit
-  const panVal = evalMaybeRandom(params.pan) ?? 0;
-  const pitchVal = evalMaybeRandom(params.pitch) ?? 1;
-
-  //  Update overlay with filename AND params
-  if (state._overlay) {
-    // Format: "filename.wav | amp:0.7 pan:-0.3 pitch:1.2"
-    const details = [
-      `amp:${amp.toFixed(2)}`,
-      `pan:${panVal.toFixed(2)}`,
-      `pitch:${pitchVal.toFixed(2)}`
-    ].join(" ");
-    
-    state._overlay.update(`${file} | ${details}`);
-    state._overlay.position();
+  let playUid = uid;
+  if (poly > 1) {
+    playUid = `${uid}__${Date.now()}_${Math.floor(Math.random() * 9999)}`;
   }
-
-  // POLYPHONY
-  const basePoly = params.poly === 0 ? 0 : (params.poly ?? 6);
-
-  const playUid =
-    basePoly === 1
-      ? uid
-      : `${uid}__${Date.now()}_${Math.floor(Math.random() * 9999)}`;
 
   const cue = {
     type: "cueAudio",
     src: filename,
     uid: playUid,
-    amp: Math.max(0, Math.min(1, Number(amp))),
-    fadeIn: fadeIn,   // Pass raw - resolveFade handles in handleAudioCue
-    fadeOut: fadeOut, // Pass raw - resolveFade handles in handleAudioCue
+    amp,
+    pan,
+    pitch,
+    fadeIn,
+    fadeOut,
     loop: 1,
-    toggle: false,
-    pan: panVal,
-    pitch: pitchVal
+    toggle: false
   };
 
-  // optional OSC mirror
-  if (params.osc || params.oscaddr) {
-    try {
-      sendOSCMessage({
-        type: "osc_audio_impulse",
-        uid: playUid,
-        filename,
-        amp: cue.amp,
-        fadeIn: cue.fadeIn,
-        fadeOut: cue.fadeOut,
-        addr: params.oscaddr || "/audio/client/impulse"
-      });
-    } catch (err) {
-      console.warn("[audioImpulse OSC] failed:", err);
-    }
-  }
-
+  // --------------------------------------------
+  // Fire
+  // --------------------------------------------
   return handleAudioCue(cue);
 }
+
 
 
 

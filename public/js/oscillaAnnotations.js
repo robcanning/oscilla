@@ -86,7 +86,9 @@ async function executeTrigger(annotation, labelEl) {
 
     const { type, source, playback, impulse } = trigger;
 
-    // Extract all playback parameters with defaults
+    // --------------------------------------------
+    // Playback defaults
+    // --------------------------------------------
     const gain = playback?.gain ?? 1;
     const pan = playback?.pan ?? 0;
     const pitch = playback?.pitch ?? 1;
@@ -96,14 +98,13 @@ async function executeTrigger(annotation, labelEl) {
     const toggle = playback?.toggle ?? false;
     const order = playback?.order || "shuffle";
 
-    // Visual feedback: flash the label
     flashTriggerLabel(labelEl);
 
-    console.log(`[trigger] Executing ${type}:`, source.path, { gain, pan, pitch, loop, order });
-
     try {
+        // =========================================================
+        // AUDIO (single file)
+        // =========================================================
         if (type === "audio") {
-            // Single file playback
             const uid = `trigger-${annotation.id}`;
 
             await handleAudioCue({
@@ -117,9 +118,12 @@ async function executeTrigger(annotation, labelEl) {
                 fadeOut,
                 toggle
             });
+        }
 
-        } else if (type === "audioPool") {
-            // Directory pool playback
+        // =========================================================
+        // AUDIO POOL (directory)
+        // =========================================================
+        else if (type === "audioPool") {
             const poolKey = `trigger-pool-${annotation.id}`;
             const pool = await ensureTriggerPool(poolKey, source.path, order);
 
@@ -128,7 +132,6 @@ async function executeTrigger(annotation, labelEl) {
                 return;
             }
 
-            // Get next file based on order
             const file = getNextFromPool(pool, order);
             const uid = `trigger-${annotation.id}-${Date.now()}`;
 
@@ -141,59 +144,68 @@ async function executeTrigger(annotation, labelEl) {
                 loop,
                 fadeIn,
                 fadeOut,
-                toggle: false  // Pool doesn't use toggle
+                toggle: false
             });
+        }
 
-        } else if (type === "audioImpulse") {
-            // Continuous impulse playback - toggle behavior
+        // =========================================================
+        // AUDIO IMPULSE (directory, auto-normalised)
+        // =========================================================
+        else if (type === "audioImpulse") {
             const uid = `trigger-impulse-${annotation.id}`;
 
-            // Check if already running
+            // Toggle off if already running
             if (window.audioImpulses?.has(uid)) {
-                // Stop it
                 stopAudioImpulse(uid);
-                console.log(`[trigger] Stopped impulse: ${uid}`);
-
-                // Update label to show stopped state
-                if (labelEl) {
-                    labelEl.style.borderColor = TRIGGER_BORDER_COLOR;
-                }
+                if (labelEl) labelEl.style.borderColor = TRIGGER_BORDER_COLOR;
                 return;
             }
 
-            // Start impulse
+            // 🔑 FIX: impulse path must be a directory
+            let impulsePath = source.path;
+
+            // If user selected a file, strip filename → directory
+            if (impulsePath.match(/\.(wav|aif|aiff|mp3|ogg)$/i)) {
+                impulsePath = impulsePath.split("/").slice(0, -1).join("/");
+            }
+
             const rate = impulse?.rate ?? 30;
             const jitter = impulse?.jitter ?? 0;
             const poly = impulse?.poly ?? 6;
+            const panRandom = impulse?.panRandom ?? 0;
+            const pitchRandom = impulse?.pitchRandom ?? 0;
 
-            await handleAudioImpulseCue({
-                params: {
-                    path: source.path,
-                    mode: order,
-                    rate,
-                    jitter,
-                    poly,
-                    uid,
-                    // Pass audio params
-                    amp: gain,
-                    pan,
-                    pitch,
-                    fadeIn,
-                    fadeOut
-                }
-            }, null, {});
+            await handleAudioImpulseCue(
+                {
+                    params: {
+                        path: impulsePath,
+                        mode: order,
+                        rate,
+                        jitter,
+                        poly,
+                        uid,
+                        amp: gain,
+                        pan,
+                        pitch,
+                        fadeIn,
+                        fadeOut,
+                        panRandom,
+                        pitchRandom
+                    }
+                },
+                null,
+                {}
+            );
 
-            console.log(`[trigger] Started impulse: ${uid}`, { rate, jitter, poly });
-
-            // Update label to show running state
             if (labelEl) {
-                labelEl.style.borderColor = "rgba(0, 255, 100, 0.8)";
+                labelEl.style.borderColor = "rgba(0,255,100,0.8)";
             }
         }
     } catch (err) {
         console.error("[trigger] Execution failed:", err);
     }
 }
+
 
 /**
  * Flash effect when trigger fires
@@ -277,6 +289,85 @@ function shuffleArray(arr) {
     }
     return arr;
 }
+
+// =============================================================
+// PLAYHEAD TRIGGER SYSTEM
+// =============================================================
+// Track which annotations have been triggered by playhead
+// to prevent re-triggering on every frame
+const playheadTriggeredAnnotations = new Set();
+
+/**
+ * Check if any playhead-triggered annotations should fire.
+ * Called from the animation loop via window.checkAnnotationPlayheadTriggers()
+ */
+export function checkAnnotationPlayheadTriggers() {
+    if (!state.enabled || !state.items?.length) return;
+
+    const playheadX = window.playheadX;
+    const scoreWidth = window.scoreWidth;
+    if (playheadX == null || !scoreWidth) return;
+
+    // Get the score container for coordinate conversion
+    const container = getScoreContainer();
+    const inner = getScoreScrollInner();
+    if (!container || !inner) return;
+
+    const localScale = window.localScale || 1;
+
+    for (const annotation of state.items) {
+        // Only check trigger annotations with playheadTrigger enabled
+        if (annotation.kind !== "trigger") continue;
+        if (!annotation.trigger?.playheadTrigger) continue;
+
+        // Get annotation's x position in score coordinates
+        const annX = annotation.placement?.x ?? 0;
+
+        // Convert to world coordinates (same space as playheadX)
+        // The annotation x is stored in rendered pixels, convert to world units
+        const annWorldX = annX / localScale;
+
+        // Define a trigger zone (annotation position ± tolerance)
+        const tolerance = 20 / localScale; // 20 pixels tolerance in world units
+        const triggerLeft = annWorldX - tolerance;
+        const triggerRight = annWorldX + tolerance;
+
+        // Check if playhead is within trigger zone
+        const isInside = playheadX >= triggerLeft && playheadX <= triggerRight;
+
+        // Track previous state
+        const wasInside = playheadTriggeredAnnotations.has(annotation.id);
+
+        // Trigger on entry (forward direction)
+        if (isInside && !wasInside) {
+            console.log(`[annotation:playhead] Triggering: ${annotation.id} at x=${annWorldX}`);
+
+            // Find the label element for visual feedback
+            const labelEl = document.querySelector(`[data-annotation-id="${annotation.id}"]`);
+            executeTrigger(annotation, labelEl);
+
+            playheadTriggeredAnnotations.add(annotation.id);
+        }
+
+        // Clear triggered state when playhead exits (allows re-trigger on rewind)
+        if (!isInside && wasInside) {
+            playheadTriggeredAnnotations.delete(annotation.id);
+        }
+    }
+}
+
+/**
+ * Reset playhead trigger state (call on rewind, jump, etc.)
+ */
+export function resetAnnotationPlayheadTriggers() {
+    playheadTriggeredAnnotations.clear();
+    console.log("[annotation:playhead] Reset triggered state");
+}
+
+// Expose to window for integration with animation loop
+window.checkAnnotationPlayheadTriggers = checkAnnotationPlayheadTriggers;
+window.resetAnnotationPlayheadTriggers = resetAnnotationPlayheadTriggers;
+
 /**
  * Open audio browser dialog (supports subdirectories)
  */
@@ -913,6 +1004,59 @@ function getPageClickPlacement(evt, content) {
         y: evt.clientY - rect.top,
     };
 }
+
+
+
+
+function makeDraggable(el, handleEl = el) {
+    let startX = 0, startY = 0;
+    let originX = 0, originY = 0;
+    let dragging = false;
+
+    handleEl.style.cursor = "move";
+
+    handleEl.addEventListener("mousedown", e => {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        const rect = el.getBoundingClientRect();
+        originX = rect.left;
+        originY = rect.top;
+        e.preventDefault();
+    });
+
+    window.addEventListener("mousemove", e => {
+        if (!dragging) return;
+
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        const w = el.offsetWidth;
+        const h = el.offsetHeight;
+
+        // Clamp to viewport
+        const x = Math.min(
+            window.innerWidth - 20,
+            Math.max(20, originX + dx)
+        );
+        const y = Math.min(
+            window.innerHeight - 20,
+            Math.max(20, originY + dy)
+        );
+
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+    });
+
+    window.addEventListener("mouseup", () => {
+        dragging = false;
+    });
+}
+
+
+
+
 function makeEditor({
     x,
     y,
@@ -924,8 +1068,13 @@ function makeEditor({
     const wrap = document.createElement("div");
     wrap.className = "osc-anno-editor";
     wrap.style.position = "fixed";
-    wrap.style.left = `${Math.round(x)}px`;
-    wrap.style.top = `${Math.round(y)}px`;
+
+    const maxX = window.innerWidth - 380; // editor width + margin
+    const maxY = window.innerHeight - 240; // enough to show Save button
+
+    wrap.style.left = `${Math.max(20, Math.min(x, maxX))}px`;
+    wrap.style.top = `${Math.max(20, Math.min(y, maxY))}px`;
+
     wrap.style.zIndex = "999999";
     wrap.style.maxWidth = "360px";
     wrap.style.background = "rgba(20,20,20,0.92)";
@@ -936,6 +1085,24 @@ function makeEditor({
     wrap.style.boxShadow = "0 10px 30px rgba(0,0,0,0.35)";
     wrap.style.backdropFilter = "blur(6px)";
     wrap.style.pointerEvents = "auto";
+
+
+    // -----------------------------
+    // Header (drag handle)
+    // -----------------------------
+    const header = document.createElement("div");
+    header.textContent = "Annotation";
+    header.style.fontSize = "12px";
+    header.style.fontWeight = "600";
+    header.style.marginBottom = "6px";
+    header.style.padding = "4px 6px";
+    header.style.background = "rgba(255,255,255,0.06)";
+    header.style.borderRadius = "6px";
+    header.style.cursor = "move";
+    header.style.userSelect = "none";
+
+    wrap.appendChild(header);
+
 
     const ta = document.createElement("textarea");
     ta.value = initialText;
@@ -1014,6 +1181,32 @@ function makeEditor({
     execRow.appendChild(execChk);
     execRow.appendChild(execLabel);
     triggerSection.appendChild(execRow);
+
+    // Playhead trigger checkbox row (only visible when executable is checked)
+    const playheadTriggerRow = document.createElement("div");
+    playheadTriggerRow.style.display = "flex";
+    playheadTriggerRow.style.alignItems = "center";
+    playheadTriggerRow.style.gap = "8px";
+    playheadTriggerRow.style.marginTop = "6px";
+    playheadTriggerRow.style.marginLeft = "20px";
+    playheadTriggerRow.style.display = initialTrigger ? "flex" : "none";
+
+    const playheadTriggerChk = document.createElement("input");
+    playheadTriggerChk.type = "checkbox";
+    playheadTriggerChk.id = "anno-playhead-trigger-chk";
+    playheadTriggerChk.checked = initialTrigger?.playheadTrigger ?? false;
+
+    const playheadTriggerLabel = document.createElement("label");
+    playheadTriggerLabel.htmlFor = "anno-playhead-trigger-chk";
+    playheadTriggerLabel.textContent = "Playhead trigger";
+    playheadTriggerLabel.style.fontSize = "11px";
+    playheadTriggerLabel.style.color = "rgba(255,200,100,0.95)";
+    playheadTriggerLabel.style.cursor = "pointer";
+    playheadTriggerLabel.title = "Trigger automatically when playhead crosses this annotation";
+
+    playheadTriggerRow.appendChild(playheadTriggerChk);
+    playheadTriggerRow.appendChild(playheadTriggerLabel);
+    triggerSection.appendChild(playheadTriggerRow);
 
     // Trigger config container (shown when executable is checked)
     const triggerConfig = document.createElement("div");
@@ -1213,6 +1406,23 @@ function makeEditor({
     polySelect.value = String(initialTrigger?.impulse?.poly ?? 6);
     impulseSection.appendChild(makeRow("Polyphony", polySelect));
 
+    // Per-impulse randomization header
+    const randomHeader = document.createElement("div");
+    randomHeader.textContent = "Per-Impulse Randomization";
+    randomHeader.style.fontSize = "10px";
+    randomHeader.style.opacity = "0.7";
+    randomHeader.style.marginTop = "8px";
+    randomHeader.style.marginBottom = "4px";
+    impulseSection.appendChild(randomHeader);
+
+    // Pan randomization (± range around base pan)
+    const panRandomCtrl = makeSlider(0, 1, 0.05, initialTrigger?.impulse?.panRandom ?? 0);
+    impulseSection.appendChild(makeRow("Pan ±", panRandomCtrl.container));
+
+    // Pitch randomization (± range around base pitch, in semitones-ish)
+    const pitchRandomCtrl = makeSlider(0, 0.5, 0.05, initialTrigger?.impulse?.pitchRandom ?? 0, "x");
+    impulseSection.appendChild(makeRow("Pitch ±", pitchRandomCtrl.container));
+
     triggerConfig.appendChild(impulseSection);
 
     // ==================== UPLOAD ====================
@@ -1276,7 +1486,9 @@ function makeEditor({
 
     // Toggle trigger config visibility
     execChk.onchange = () => {
-        triggerConfig.style.display = execChk.checked ? "block" : "none";
+        const show = execChk.checked;
+        triggerConfig.style.display = show ? "block" : "none";
+        playheadTriggerRow.style.display = show ? "flex" : "none";
     };
 
     typeSelect.onchange = updateVisibility;
@@ -1336,6 +1548,9 @@ function makeEditor({
     btnCancel.style.cursor = "pointer";
     footer.appendChild(btnCancel);
 
+makeDraggable(wrap, header);
+
+
     return {
         wrap,
         ta,
@@ -1352,6 +1567,7 @@ function makeEditor({
         uploadInput,
         browseBtn,
         statusMsg,
+        playheadTriggerChk,
         // Helper to get trigger config
         getTriggerConfig: () => {
             if (!execChk.checked) return null;
@@ -1359,6 +1575,7 @@ function makeEditor({
             const type = typeSelect.value;
             const config = {
                 type,
+                playheadTrigger: playheadTriggerChk.checked,
                 source: {
                     mode: type === "audio" ? "file" : "directory",
                     path: sourceInput.value.trim()
@@ -1380,7 +1597,9 @@ function makeEditor({
                 config.impulse = {
                     rate: parseInt(rateCtrl.slider.value, 10),
                     jitter: parseFloat(jitterCtrl.slider.value) / 100,
-                    poly: parseInt(polySelect.value, 10)
+                    poly: parseInt(polySelect.value, 10),
+                    panRandom: parseFloat(panRandomCtrl.slider.value),
+                    pitchRandom: parseFloat(pitchRandomCtrl.slider.value)
                 };
             }
 
@@ -1459,198 +1678,198 @@ function makePinEl(annotation, onClick) {
 
     const isTrigger = annotation.kind === "trigger" && annotation.trigger;
 
-   // -----------------------------
-// Label (drag + click) — FIXED
-// -----------------------------
-const label = document.createElement("div");
-label.textContent =
-    annotation.text.length > 300
-        ? annotation.text.slice(0, 300) + "…"
-        : annotation.text;
+    // -----------------------------
+    // Label (drag + click) — FIXED
+    // -----------------------------
+    const label = document.createElement("div");
+    label.textContent =
+        annotation.text.length > 300
+            ? annotation.text.slice(0, 300) + "…"
+            : annotation.text;
 
 
 
-        
-// --- layout isolation ---
-label.style.position = "relative";
-label.style.display = "inline-block";
-label.style.minWidth = "max-content";
-label.style.maxWidth = "360px";
-label.style.boxSizing = "border-box";
-label.style.contain = "layout paint";
 
-// --- text behaviour ---
-label.style.whiteSpace = "pre-wrap";
-label.style.wordBreak = "break-word";
-label.style.overflowWrap = "anywhere";
-label.style.writingMode = "horizontal-tb";
-label.style.textOrientation = "mixed";
-label.style.direction = "ltr";
-label.style.hyphens = "none";
-label.style.lineBreak = "auto";
+    // --- layout isolation ---
+    label.style.position = "relative";
+    label.style.display = "inline-block";
+    label.style.minWidth = "max-content";
+    label.style.maxWidth = "360px";
+    label.style.boxSizing = "border-box";
+    label.style.contain = "layout paint";
 
-// --- visuals ---
-label.style.marginTop = "6px";
-label.style.lineHeight = "1.4";
-const fs = annotation.style?.fontSize ?? 12;
-label.style.fontSize = `${fs}px`;
-label.style.padding = "4px 8px";
-label.style.borderRadius = "8px";
-label.style.backdropFilter = "blur(4px)";
-label.style.pointerEvents = "auto";
+    // --- text behaviour ---
+    label.style.whiteSpace = "pre-wrap";
+    label.style.wordBreak = "break-word";
+    label.style.overflowWrap = "anywhere";
+    label.style.writingMode = "horizontal-tb";
+    label.style.textOrientation = "mixed";
+    label.style.direction = "ltr";
+    label.style.hyphens = "none";
+    label.style.lineBreak = "auto";
 
-// --- trigger styling (border only, icon top-right) ---
-if (isTrigger) {
-    label.style.background = "rgba(0,0,0,0.6)";  // same as regular
-    label.style.color = "white";
-    label.style.border = `2px solid ${TRIGGER_BORDER_COLOR}`;
-    label.style.cursor = state.annotationMode ? "grab" : "pointer";
-    label.style.position = "relative";  // for absolute icon positioning
-    label.style.paddingRight = "22px";  // make room for icon
+    // --- visuals ---
+    label.style.marginTop = "6px";
+    label.style.lineHeight = "1.4";
+    const fs = annotation.style?.fontSize ?? 12;
+    label.style.fontSize = `${fs}px`;
+    label.style.padding = "4px 8px";
+    label.style.borderRadius = "8px";
+    label.style.backdropFilter = "blur(4px)";
+    label.style.pointerEvents = "auto";
 
-    const icon = document.createElement("span");
-    // Different icon for each type
-    const triggerType = annotation.trigger.type;
-    if (triggerType === "audioImpulse") {
-        icon.textContent = "⚡";  // lightning for impulse
-    } else if (triggerType === "audioPool") {
-        icon.textContent = "🎲";  // dice for pool
+    // --- trigger styling (border only, icon top-right) ---
+    if (isTrigger) {
+        label.style.background = "rgba(0,0,0,0.6)";  // same as regular
+        label.style.color = "white";
+        label.style.border = `2px solid ${TRIGGER_BORDER_COLOR}`;
+        label.style.cursor = state.annotationMode ? "grab" : "pointer";
+        label.style.position = "relative";  // for absolute icon positioning
+        label.style.paddingRight = "22px";  // make room for icon
+
+        const icon = document.createElement("span");
+        // Different icon for each type
+        const triggerType = annotation.trigger.type;
+        if (triggerType === "audioImpulse") {
+            icon.textContent = "⚡";  // lightning for impulse
+        } else if (triggerType === "audioPool") {
+            icon.textContent = "🎲";  // dice for pool
+        } else {
+            icon.textContent = "🔊";  // speaker for single audio
+        }
+        icon.style.position = "absolute";
+        icon.style.top = "2px";
+        icon.style.right = "4px";
+        icon.style.fontSize = "10px";
+        icon.style.opacity = "0.85";
+        icon.style.pointerEvents = "none";
+        label.appendChild(icon);
     } else {
-        icon.textContent = "🔊";  // speaker for single audio
-    }
-    icon.style.position = "absolute";
-    icon.style.top = "2px";
-    icon.style.right = "4px";
-    icon.style.fontSize = "10px";
-    icon.style.opacity = "0.85";
-    icon.style.pointerEvents = "none";
-    label.appendChild(icon);
-} else {
-    label.style.background = "rgba(0,0,0,0.6)";
-    label.style.color = "white";
-    label.style.border = "1px solid rgba(255,255,255,0.12)";
-    label.style.cursor = "grab";
-}
-
-pin.appendChild(label);
-
-
-// -----------------------------
-// Drag logic — CLEAN SEPARATION
-// -----------------------------
-let dragging = false;
-let moved = false;
-let startX = 0;
-let startY = 0;
-let baseX = 0;
-let baseY = 0;
-
-function getPointerCoords(e) {
-    if (e.touches && e.touches.length > 0) {
-        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
-    return { x: e.clientX, y: e.clientY };
-}
-
-function onPointerDown(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    dragging = true;
-    moved = false; // 🔴 CRITICAL RESET (fixes editor bug)
-
-    const coords = getPointerCoords(e);
-    startX = coords.x;
-    startY = coords.y;
-    baseX = annotation.placement.x;
-    baseY = annotation.placement.y;
-
-    label.style.cursor = "grabbing";
-
-    window.addEventListener("mousemove", onPointerMove);
-    window.addEventListener("mouseup", onPointerUp);
-    window.addEventListener("touchmove", onPointerMove, { passive: false });
-    window.addEventListener("touchend", onPointerUp);
-    window.addEventListener("touchcancel", onPointerUp);
-}
-
-function onPointerMove(e) {
-    if (!dragging) return;
-    if (e.cancelable) e.preventDefault();
-
-    const coords = getPointerCoords(e);
-    const dx = coords.x - startX;
-    const dy = coords.y - startY;
-
-    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-        moved = true;
+        label.style.background = "rgba(0,0,0,0.6)";
+        label.style.color = "white";
+        label.style.border = "1px solid rgba(255,255,255,0.12)";
+        label.style.cursor = "grab";
     }
 
-    annotation.placement.x = baseX + dx;
-    annotation.placement.y = baseY + dy;
-    positionAnnotation(pin, annotation);
-}
+    pin.appendChild(label);
 
-function onPointerUp() {
-    if (!dragging) return;
 
-    dragging = false;
-    label.style.cursor = isTrigger && !state.annotationMode ? "pointer" : "grab";
+    // -----------------------------
+    // Drag logic — CLEAN SEPARATION
+    // -----------------------------
+    let dragging = false;
+    let moved = false;
+    let startX = 0;
+    let startY = 0;
+    let baseX = 0;
+    let baseY = 0;
 
-    window.removeEventListener("mousemove", onPointerMove);
-    window.removeEventListener("mouseup", onPointerUp);
-    window.removeEventListener("touchmove", onPointerMove);
-    window.removeEventListener("touchend", onPointerUp);
-    window.removeEventListener("touchcancel", onPointerUp);
-
-    if (moved) {
-        updateAnnotation(annotation.id, {
-            placement: { ...annotation.placement }
-        });
+    function getPointerCoords(e) {
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
     }
-}
 
-label.addEventListener("mousedown", onPointerDown);
-label.addEventListener("touchstart", onPointerDown, { passive: false });
-
-// -----------------------------
-// Click behaviour — FIXED
-// Pen mode ON = edit any annotation
-// Pen mode OFF = triggers execute, regular annotations do nothing
-// -----------------------------
-label.addEventListener("click", (e) => {
-    console.log("[annotation click]", {
-        moved,
-        annotationMode: state.annotationMode,
-        isTrigger,
-        annotationId: annotation.id
-    });
-
-    if (moved) {
+    function onPointerDown(e) {
         e.preventDefault();
         e.stopPropagation();
-        return;
+
+        dragging = true;
+        moved = false; // 🔴 CRITICAL RESET (fixes editor bug)
+
+        const coords = getPointerCoords(e);
+        startX = coords.x;
+        startY = coords.y;
+        baseX = annotation.placement.x;
+        baseY = annotation.placement.y;
+
+        label.style.cursor = "grabbing";
+
+        window.addEventListener("mousemove", onPointerMove);
+        window.addEventListener("mouseup", onPointerUp);
+        window.addEventListener("touchmove", onPointerMove, { passive: false });
+        window.addEventListener("touchend", onPointerUp);
+        window.addEventListener("touchcancel", onPointerUp);
     }
 
-    e.preventDefault();
-    e.stopPropagation();
+    function onPointerMove(e) {
+        if (!dragging) return;
+        if (e.cancelable) e.preventDefault();
 
-    // PEN MODE ON → always edit
-    if (state.annotationMode) {
-        console.log("[annotation] Opening editor for:", annotation.id);
-        onClick?.(annotation);
-        return;
+        const coords = getPointerCoords(e);
+        const dx = coords.x - startX;
+        const dy = coords.y - startY;
+
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+            moved = true;
+        }
+
+        annotation.placement.x = baseX + dx;
+        annotation.placement.y = baseY + dy;
+        positionAnnotation(pin, annotation);
     }
 
-    // PEN MODE OFF → only triggers execute, regular annotations do nothing
-    if (isTrigger) {
-        console.log("[annotation] Executing trigger:", annotation.id);
-        executeTrigger(annotation, label);
-    }
-    // Regular annotations: no action when pen is off (just drag)
-});
+    function onPointerUp() {
+        if (!dragging) return;
 
-return pin;
+        dragging = false;
+        label.style.cursor = isTrigger && !state.annotationMode ? "pointer" : "grab";
+
+        window.removeEventListener("mousemove", onPointerMove);
+        window.removeEventListener("mouseup", onPointerUp);
+        window.removeEventListener("touchmove", onPointerMove);
+        window.removeEventListener("touchend", onPointerUp);
+        window.removeEventListener("touchcancel", onPointerUp);
+
+        if (moved) {
+            updateAnnotation(annotation.id, {
+                placement: { ...annotation.placement }
+            });
+        }
+    }
+
+    label.addEventListener("mousedown", onPointerDown);
+    label.addEventListener("touchstart", onPointerDown, { passive: false });
+
+    // -----------------------------
+    // Click behaviour — FIXED
+    // Pen mode ON = edit any annotation
+    // Pen mode OFF = triggers execute, regular annotations do nothing
+    // -----------------------------
+    label.addEventListener("click", (e) => {
+        console.log("[annotation click]", {
+            moved,
+            annotationMode: state.annotationMode,
+            isTrigger,
+            annotationId: annotation.id
+        });
+
+        if (moved) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        // PEN MODE ON → always edit
+        if (state.annotationMode) {
+            console.log("[annotation] Opening editor for:", annotation.id);
+            onClick?.(annotation);
+            return;
+        }
+
+        // PEN MODE OFF → only triggers execute, regular annotations do nothing
+        if (isTrigger) {
+            console.log("[annotation] Executing trigger:", annotation.id);
+            executeTrigger(annotation, label);
+        }
+        // Regular annotations: no action when pen is off (just drag)
+    });
+
+    return pin;
 }
 
 

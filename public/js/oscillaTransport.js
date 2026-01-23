@@ -166,6 +166,8 @@ export const rewindToStart = () => {
     window._cueInsideState?.clear();
     window.navRepeatMap?.clear();
 
+    // Reset annotation playhead triggers
+    window.resetAnnotationPlayheadTriggers?.();
 
     // console.log("[DEBUG] Cleared triggered cues due to rewind.");
   }
@@ -215,6 +217,9 @@ export const rewind = () => {
 
     window._cueInsideState?.clear();
     window.navRepeatMap?.clear();
+
+    // Reset annotation playhead triggers
+    window.resetAnnotationPlayheadTriggers?.();
 
     // console.log("[DEBUG] Cleared triggered cues due to rewind.");
   }
