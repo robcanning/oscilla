@@ -1,3 +1,8 @@
+---
+title: annotations
+layout: docs_layout.njk
+---
+
 # Oscilla Annotations
 
 ## Overview
