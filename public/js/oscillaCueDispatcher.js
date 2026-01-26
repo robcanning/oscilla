@@ -457,7 +457,7 @@ function splitCueId(id) {
     .map(s => s.endsWith(")") ? s : s + ")");
 }
 
-const CUE_PREFIX_RE = /^(?:cue:)?(oscCtrl|osc|ui|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|audioPool|audioImpulse|synth|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;
+const CUE_PREFIX_RE = /^(?:cue:)?(oscCtrl|osc|ui|video|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|audioPool|audioImpulse|synth|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;
 
 /**
  * assignCues(svgRoot)

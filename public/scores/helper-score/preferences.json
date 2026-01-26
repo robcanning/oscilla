@@ -4,7 +4,7 @@
   "projectDescription": "Demonstration score showcasing all cue types and animations.",
   "darkMode": true,
   "defaultPlaybackSpeed": 0.3,
-  "defaultViewMode": "scroll",
+  "defaultViewMode": "page",
   "defaultPage": "home",
   "playzoneColor": "#008000",
   "playheadColor": "#00ffb3",
@@ -12,5 +12,7 @@
   "audioSync": true,
   "oscOutput": true,
   "overlayMode": false,
-  "loopPlayback": false
+  "loopPlayback": false,
+  "touchSeekFriction": 0.95,
+  "touchSeekStopThreshold": 5
 }

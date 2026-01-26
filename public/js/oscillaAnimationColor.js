@@ -9,7 +9,6 @@
 
 import { registerAnimation } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
-import { createHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
 import {
     applyPrestateBeforeStart,
     applyPrestateOnStart,
@@ -777,12 +776,6 @@ export function handleColorCue(el, astArgs, options = {}) {
         
         registerAnimation(el, "color-hue", cfg, start);
         
-        createHitLabel(el, "color", cfg.uid, {
-            anchorMode: "center",
-            color: "magenta",
-            sizeMode: "follow"
-        });
-        
         if (shouldStartNow) start();
         return;
     }
@@ -813,12 +806,6 @@ export function handleColorCue(el, astArgs, options = {}) {
         
         registerAnimation(el, "color-sequence", cfg, start);
         
-        createHitLabel(el, "color", cfg.uid, {
-            anchorMode: "center",
-            color: "magenta",
-            sizeMode: "follow"
-        });
-        
         if (shouldStartNow) start();
         return;
     }
@@ -848,12 +835,6 @@ export function handleColorCue(el, astArgs, options = {}) {
         const start = wrapStart(cfg, rawStart);
         
         registerAnimation(el, "color-sequence", cfg, start);
-        
-        createHitLabel(el, "color", cfg.uid, {
-            anchorMode: "center",
-            color: "magenta",
-            sizeMode: "follow"
-        });
         
         if (shouldStartNow) start();
         return;
