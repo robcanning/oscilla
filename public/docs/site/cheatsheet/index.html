@@ -20,8 +20,6 @@
     <div class="cheatsheet-columns">
       <h1>OSCILLA Cheatsheet</h1>
 <h3>Interactive Graphic Notation</h3>
-<h2>Version</h2>
-<p><em>v0.2.9_beta</em></p>
 <h2>Quick Install</h2>
 <pre><code>git clone https://github.com/robcanning/oscilla.git
 cd oscilla; npm install; npm start
@@ -104,7 +102,7 @@ o2p(path:ring, start:0.2, end:0.9, mode:alt)
 o2p(path:c1, rotate:spin,rotspeed:2,rotdir:-1)
 o2p(path:orbitA, dur:8, loop:3)
 </code></pre>
-<h2>Animation — Color | Fade | Text</h2>
+<h2>Animation — Color | Fade | Tex</h2>
 <pre><code>color(uid:shape1, vals:[#f00,#0f0], dur:2)
 color(uid:bars*, vals:[#f80,#08f], mode:alt, dur:1.2)
 color(uid:rect, vals:Pseq([#f00,#ff0,#0ff],3), dur:3)
@@ -117,9 +115,8 @@ fade(mode:pulse, dur:6, from:0.2, to:1)
 </code></pre>
 <p><strong>ui() show/hide HTML UI elements</strong></p>
 <pre><code>ui(&quot;#playhead&quot;, opacity:0, dur:0.3)
-ui(&quot;#playhead, #playzone&quot;, visible:false, dur:0.25)
-ui(&quot;#playhead, #playzone&quot;, visible:true, dur:0.25)
-
+ui(&quot;#playzone&quot;, visible:false, dur:0.25)
+ui(&quot;#playzone&quot;, visible:true, dur:0.25)
 </code></pre>
 <p><strong>text() Lines,Words,Chars (File||String)</strong></p>
 <pre><code>text(src:foo.txt, dur:3, autostart:1)

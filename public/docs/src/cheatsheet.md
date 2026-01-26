@@ -3,11 +3,8 @@ title: Cheatsheet
 layout: cheatsheet_layout.njk
 ---
 
-# OSCILLA Cheatsheet
+# OSCILLA Cheatsheet 
 ### Interactive Graphic Notation
-
-## Version
-*v0.2.9_beta*
 
 ## Quick Install
 
@@ -118,9 +115,7 @@ o2p(path:ring, start:0.2, end:0.9, mode:alt)
 o2p(path:c1, rotate:spin,rotspeed:2,rotdir:-1)
 o2p(path:orbitA, dur:8, loop:3)
 ```
-
-## Animation — Color | Fade | Text
-
+## Animation — Color | Fade | Tex
 ```
 color(uid:shape1, vals:[#f00,#0f0], dur:2)
 color(uid:bars*, vals:[#f80,#08f], mode:alt, dur:1.2)
@@ -133,16 +128,12 @@ fade(mode:out, dur:2, from:1, to:0)
 fade(mode:in, dur:1, target:title)
 fade(mode:pulse, dur:6, from:0.2, to:1)
 ```
-
 **ui() show/hide HTML UI elements**
-
 ```
 ui("#playhead", opacity:0, dur:0.3)
-ui("#playhead, #playzone", visible:false, dur:0.25)
-ui("#playhead, #playzone", visible:true, dur:0.25)
-
+ui("#playzone", visible:false, dur:0.25)
+ui("#playzone", visible:true, dur:0.25)
 ```
-
 **text() Lines,Words,Chars (File||String)**
 ```
 text(src:foo.txt, dur:3, autostart:1)
