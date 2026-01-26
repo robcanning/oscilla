@@ -278,10 +278,32 @@ app.get("/api/audio-list/:project/*", (req, res) => {
 const audioUpload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
   fileFilter: (req, file, cb) => {
-    const allowed = /\.(wav|aif|aiff|mp3|ogg|m4a)$/i;
-    if (allowed.test(file.originalname)) {
+    // Accept by file extension
+    const allowedExtensions = /\.(wav|aif|aiff|mp3|ogg|m4a|webm)$/i;
+    
+    // Accept by MIME type (for browser MediaRecorder)
+    const allowedMimes = [
+      'audio/wav',
+      'audio/wave',
+      'audio/x-wav',
+      'audio/aiff',
+      'audio/x-aiff',
+      'audio/mpeg',
+      'audio/mp3',
+      'audio/ogg',
+      'audio/webm',
+      'audio/mp4',
+      'audio/m4a',
+      'audio/x-m4a'
+    ];
+    
+    const extOk = allowedExtensions.test(file.originalname);
+    const mimeOk = allowedMimes.includes(file.mimetype);
+    
+    if (extOk || mimeOk) {
       cb(null, true);
     } else {
+      console.log(`[UPLOAD] Rejected file: ${file.originalname}, mime: ${file.mimetype}`);
       cb(new Error("Invalid audio file type"));
     }
   }
