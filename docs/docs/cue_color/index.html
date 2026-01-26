@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cue Color</title>
+  <link rel="stylesheet" href="/oscilla/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+      <a href="/oscilla/docs/" class="docs-brand">
+        <img
+          src="/oscilla/docs/img/logos/logo-header-docs.svg"
+          alt="Oscilla"
+          class="docs-logo"
+          aria-hidden="true"
+        >
+      </a>
+
+            <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/oscilla/docs/">Docs Overview</a></li>
+    <li><a href="/oscilla/docs/about">What is Oscilla?</a></li>
+    <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
+    <li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+    <li><a href="/oscilla/docs/cue_button">button()</a></li>
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
+    <li><a href="/oscilla/docs/cue_color/">color()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+    <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/oscilla/docs/contribution_surface/">Contribution Surface</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/oscilla/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+      <li><a href="/oscilla/docs/oscilla_architecture_overview/">Architecture Overview</a></li>
+    <li><a href="/oscilla/docs/dev-sync-architecture/">Sync Architecture</a></li>
+       <li><a href="/oscilla/docs/oscilla-developer-guide-new-cue/">DevHowto New Cue</a></li>
+
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+
+      
+      <h1>color() / colour() — Colour Animation Cue</h1>
+<p>Animates the visual colour of SVG elements over time using HSL interpolation.</p>
+<p>Both spellings are fully equivalent:</p>
+<pre><code>color(...)  ≡  colour(...)
+</code></pre>
+<hr>
+<h2>Quick Examples</h2>
+<pre><code>// Cycle through three colours
+color(vals:[#f00, #0f0, #00f], dur:3)
+
+// Continuous rainbow hue rotation
+color(vals:hue, dur:10, loop:0)
+
+// Alternating palette (ping-pong)
+color(vals:[#f80, #08f], mode:alt, dur:1.2)
+
+// Pattern-driven sequence
+color(vals:Pseq([red, yellow, cyan], 4), dur:0.5)
+</code></pre>
+<hr>
+<h2>Basic Syntax</h2>
+<pre><code>color(
+    vals:[...],      // colour values or hue keyword
+    dur:seconds,     // duration per transition
+    mode:mode,       // interpolation mode
+    loop:n           // repetitions (0 = infinite)
+)
+</code></pre>
+<hr>
+<h2>Parameters</h2>
+<h3>vals: (required)</h3>
+<p>Defines the colour values or behaviour.</p>
+<h4>Discrete Colour Values</h4>
+<p>Supported formats:</p>
+<ul>
+<li><strong>Hex</strong>: <code>#f00</code>, <code>#ff8800</code></li>
+<li><strong>RGB</strong>: <code>rgb(255, 0, 0)</code></li>
+<li><strong>HSL</strong>: <code>hsl(120, 80%, 50%)</code></li>
+<li><strong>Named</strong>: <code>red</code>, <code>cyan</code>, <code>magenta</code></li>
+</ul>
+<pre><code>color(vals:[#f00, #0f0, #00f], dur:2)
+color(vals:[red, yellow, green], dur:3)
+</code></pre>
+<h4>Hue Cycling (Continuous)</h4>
+<p>Full 360° hue rotation:</p>
+<pre><code>color(vals:hue, dur:6)
+</code></pre>
+<p>Range-limited cycle:</p>
+<pre><code>color(vals:hue(120, 240), dur:4)
+</code></pre>
+<p>This cycles only through the green-to-blue range.</p>
+<h4>Pattern Sequences</h4>
+<pre><code>color(vals:Pseq([#f00, #ff0, #0ff], 3), dur:1)
+color(vals:Prand([#f80, #08f, #8f0], inf), dur:0.8)
+</code></pre>
+<hr>
+<h3>dur:</h3>
+<p>Duration in seconds for one transition (or one full hue cycle).</p>
+<pre><code>color(vals:[#f00, #0f0], dur:2)      // 2 seconds per transition
+color(vals:hue, dur:10)               // 10 seconds per full rotation
+</code></pre>
+<p>Duration can also be a pattern:</p>
+<pre><code>color(vals:[#f00, #0f0, #00f], dur:Pseq([1, 0.5, 2], inf))
+</code></pre>
+<hr>
+<h3>mode:</h3>
+<p>Controls interpolation behaviour.</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>linear</code></td>
+<td>Smooth interpolation (default)</td>
+</tr>
+<tr>
+<td><code>alt</code></td>
+<td>Ping-pong (forward then reverse)</td>
+</tr>
+<tr>
+<td><code>step</code></td>
+<td>Hard switching, no interpolation</td>
+</tr>
+</tbody>
+</table>
+<pre><code>// Smooth transitions
+color(vals:[#f00, #0f0], dur:2, mode:linear)
+
+// Bounce back and forth
+color(vals:[#f00, #0f0], dur:2, mode:alt)
+
+// Instant colour changes
+color(vals:[#f00, #0f0, #00f], dur:0.5, mode:step)
+</code></pre>
+<hr>
+<h3>loop:</h3>
+<p>Number of repetitions.</p>
+<pre><code>loop:3    // repeat three times then stop
+loop:0    // infinite (default for hue cycling)
+loop:1    // play once
+</code></pre>
+<hr>
+<h3>uid:</h3>
+<p>Unique identifier for the animation instance.</p>
+<pre><code>color(uid:myColor, vals:hue, dur:5)
+</code></pre>
+<hr>
+<h3>trig:</h3>
+<p>Trigger mode.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto</code></td>
+<td>Start immediately on load (default)</td>
+</tr>
+<tr>
+<td><code>playhead</code></td>
+<td>Start when playhead reaches element</td>
+</tr>
+</tbody>
+</table>
+<pre><code>color(vals:[#f00, #00f], dur:2, trig:playhead)
+</code></pre>
+<hr>
+<h3>tdelay:</h3>
+<p>Delay before animation starts (seconds).</p>
+<pre><code>color(vals:hue, dur:6, tdelay:2)    // wait 2 seconds then start
+</code></pre>
+<hr>
+<h3>prestate:</h3>
+<p>Initial visibility state before animation starts.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>show</code></td>
+<td>Visible immediately (default)</td>
+</tr>
+<tr>
+<td><code>hide</code></td>
+<td>Hidden until triggered</td>
+</tr>
+<tr>
+<td><code>ghost</code></td>
+<td>Semi-transparent (30% opacity)</td>
+</tr>
+<tr>
+<td><code>fadein(ms)</code></td>
+<td>Fade in over specified milliseconds</td>
+</tr>
+<tr>
+<td><code>ghostClickable(ms)</code></td>
+<td>Ghost until clicked</td>
+</tr>
+</tbody>
+</table>
+<pre><code>color(vals:hue, dur:5, prestate:hide, trig:playhead)
+color(vals:[#f00, #0f0], dur:2, prestate:fadein(1000))
+</code></pre>
+<hr>
+<h3>target:</h3>
+<p>Specifies which SVG property to animate.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>both</code></td>
+<td>Animate fill and stroke (default)</td>
+</tr>
+<tr>
+<td><code>fill</code></td>
+<td>Animate fill only</td>
+</tr>
+<tr>
+<td><code>stroke</code></td>
+<td>Animate stroke only</td>
+</tr>
+</tbody>
+</table>
+<pre><code>// Animate fill only
+color(vals:[#f00, #00f], dur:2, target:fill)
+
+// Animate stroke only (useful for outlines)
+color(vals:hue, dur:10, target:stroke)
+
+// Animate both (default)
+color(vals:[#f00, #0f0], dur:2, target:both)
+</code></pre>
+<hr>
+<h3>osc:</h3>
+<p>Enable OSC output.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Disabled (default)</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>Continuous output</td>
+</tr>
+</tbody>
+</table>
+<pre><code>color(vals:hue, dur:10, osc:1)
+</code></pre>
+<p>OSC output includes:</p>
+<ul>
+<li><code>h</code> — Hue (0–360)</li>
+<li><code>s</code> — Saturation (0–100)</li>
+<li><code>l</code> — Lightness (0–100)</li>
+<li><code>hNorm</code> — Normalised hue (0–1)</li>
+<li><code>sNorm</code> — Normalised saturation (0–1)</li>
+<li><code>lNorm</code> — Normalised lightness (0–1)</li>
+</ul>
+<hr>
+<h3>oscaddr:</h3>
+<p>Custom OSC address.</p>
+<pre><code>color(vals:hue, dur:8, osc:1, oscaddr:/visuals/bg/hue)
+</code></pre>
+<hr>
+<h2>Colour Interpolation</h2>
+<p>All interpolation occurs in <strong>HSL colour space</strong>:</p>
+<ul>
+<li><strong>Hue</strong>: Circular interpolation (shortest angular path)</li>
+<li><strong>Saturation</strong>: Linear interpolation</li>
+<li><strong>Lightness</strong>: Linear interpolation</li>
+</ul>
+<p>This means transitions between colours feel natural and avoid muddy intermediate tones.</p>
+<h3>Shortest Path Hue</h3>
+<p>When transitioning between hues, Oscilla takes the shortest path around the colour wheel:</p>
+<pre><code>#f00 → #00f    // Red to Blue: goes via magenta (shorter)
+                // NOT via yellow/green (longer)
+</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pseq — Sequential</h3>
+<p>Plays values in order, repeating a specified number of times.</p>
+<pre><code>color(vals:Pseq([#f00, #ff0, #0f0], 3), dur:1)
+// Plays: red, yellow, green, red, yellow, green, red, yellow, green
+</code></pre>
+<h3>Prand — Random</h3>
+<p>Selects randomly, may repeat the same value consecutively.</p>
+<pre><code>color(vals:Prand([#f00, #0f0, #00f], inf), dur:0.5)
+</code></pre>
+<h3>Pxrand — Exclusive Random</h3>
+<p>Selects randomly but never repeats the same value twice in a row.</p>
+<pre><code>color(vals:Pxrand([#f00, #0f0, #00f], inf), dur:0.5)
+</code></pre>
+<h3>Pshuf — Shuffle</h3>
+<p>Shuffles the values, plays through, then reshuffles.</p>
+<pre><code>color(vals:Pshuf([#f00, #ff0, #0f0, #0ff], 2), dur:0.8)
+</code></pre>
+<hr>
+<h2>Examples</h2>
+<h3>Discrete Colour Melody</h3>
+<pre><code>color(vals:[#f00, #ff0, #0ff, #f0f], dur:1.5)
+</code></pre>
+<h3>Warm to Cool Transition</h3>
+<pre><code>color(vals:[#f80, #fa0, #ff0, #8f0, #0f8, #0ff], dur:6)
+</code></pre>
+<h3>Breathing Glow</h3>
+<pre><code>color(vals:[hsl(200,80%,30%), hsl(200,80%,60%)], mode:alt, dur:2, loop:0)
+</code></pre>
+<h3>Continuous Spectrum</h3>
+<pre><code>colour(vals:hue, dur:20, loop:0)
+</code></pre>
+<h3>Limited Hue Range</h3>
+<pre><code>color(vals:hue(0, 60), dur:4, loop:0)    // Red to yellow only
+color(vals:hue(180, 300), dur:5)          // Cyan to magenta
+</code></pre>
+<h3>Rhythmic Colour Pulses</h3>
+<pre><code>color(vals:[#fff, #000], mode:step, dur:0.25, loop:0)
+</code></pre>
+<h3>Pattern with Variable Timing</h3>
+<pre><code>color(
+    vals:Pseq([#f00, #0f0, #00f], inf),
+    dur:Pseq([1, 0.5, 2], inf)
+)
+</code></pre>
+<h3>Playhead-Triggered Fade</h3>
+<pre><code>color(
+    vals:[#333, #f80],
+    dur:3,
+    trig:playhead,
+    prestate:fadein(500)
+)
+</code></pre>
+<h3>With OSC Output</h3>
+<pre><code>colour(
+    vals:hue,
+    dur:15,
+    loop:0,
+    osc:1,
+    oscaddr:/stage/wash/hue
+)
+</code></pre>
+<hr>
+<h2>Named Colours Reference</h2>
+<p>Oscilla recognises these named colours:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Hue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>red</code></td>
+<td>0°</td>
+</tr>
+<tr>
+<td><code>orange</code></td>
+<td>30°</td>
+</tr>
+<tr>
+<td><code>yellow</code></td>
+<td>60°</td>
+</tr>
+<tr>
+<td><code>green</code></td>
+<td>120°</td>
+</tr>
+<tr>
+<td><code>cyan</code></td>
+<td>180°</td>
+</tr>
+<tr>
+<td><code>blue</code></td>
+<td>240°</td>
+</tr>
+<tr>
+<td><code>purple</code></td>
+<td>270°</td>
+</tr>
+<tr>
+<td><code>magenta</code></td>
+<td>300°</td>
+</tr>
+<tr>
+<td><code>pink</code></td>
+<td>330°</td>
+</tr>
+<tr>
+<td><code>white</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>black</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>gray</code> / <code>grey</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>For precise control, use hex, RGB, or HSL notation.</p>
+<hr>
+<h2>Tips</h2>
+<ol>
+<li>
+<p><strong>Use HSL for control</strong>: <code>hsl(h, s%, l%)</code> gives direct control over hue, saturation, and lightness.</p>
+</li>
+<li>
+<p><strong>Hue cycling for ambience</strong>: <code>vals:hue</code> creates slow, evolving colour fields without discrete steps.</p>
+</li>
+<li>
+<p><strong>Step mode for rhythm</strong>: <code>mode:step</code> creates hard cuts useful for rhythmic visual accents.</p>
+</li>
+<li>
+<p><strong>Alt mode for breathing</strong>: <code>mode:alt</code> with two colours creates organic pulsing effects.</p>
+</li>
+<li>
+<p><strong>Combine with other cues</strong>: Colour animations work alongside scale, rotate, and o2p animations on the same element.</p>
+</li>
+</ol>
+<hr>
+<h2>See Also</h2>
+<ul>
+<li><a href="/docs/cue-rotate">rotate()</a> — Rotation animation</li>
+<li><a href="/docs/cue-scale">scale()</a> — Scale animation</li>
+<li><a href="/docs/cue-o2p">o2p()</a> — Object-to-path animation</li>
+<li><a href="/docs/patterns">Patterns</a> — Pattern system reference</li>
+</ul>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

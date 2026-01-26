@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>audio_recorder</title>
+  <link rel="stylesheet" href="/oscilla/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+      <a href="/oscilla/docs/" class="docs-brand">
+        <img
+          src="/oscilla/docs/img/logos/logo-header-docs.svg"
+          alt="Oscilla"
+          class="docs-logo"
+          aria-hidden="true"
+        >
+      </a>
+
+            <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/oscilla/docs/">Docs Overview</a></li>
+    <li><a href="/oscilla/docs/about">What is Oscilla?</a></li>
+    <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
+    <li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+    <li><a href="/oscilla/docs/cue_button">button()</a></li>
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
+    <li><a href="/oscilla/docs/cue_color/">color()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+    <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/oscilla/docs/contribution_surface/">Contribution Surface</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/oscilla/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+      <li><a href="/oscilla/docs/oscilla_architecture_overview/">Architecture Overview</a></li>
+    <li><a href="/oscilla/docs/dev-sync-architecture/">Sync Architecture</a></li>
+       <li><a href="/oscilla/docs/oscilla-developer-guide-new-cue/">DevHowto New Cue</a></li>
+
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+
+      
+      <h1>Audio Recorder</h1>
+<p>The <strong>Oscilla Audio Recorder</strong> allows performers to record short audio contributions directly inside the score, as part of the Contribution Surface. Recording is a <em>score‑native</em> action: audio is authored, contextualised, and stored within the same environment used for notation, navigation, and interaction.</p>
+<p>Unlike a standalone recorder, the Audio Recorder is designed for <em>leaving material inside the score</em> — contributions become part of the score’s structure and can be activated using existing audio triggers.</p>
+<hr>
+<h2>Overview</h2>
+<p>The Audio Recorder:</p>
+<ul>
+<li>operates entirely inside Oscilla (no external app or booth)</li>
+<li>is only available in <strong>pen mode</strong> (annotation authoring)</li>
+<li>records short, bounded audio snippets</li>
+<li>stores audio in <strong>annotation‑scoped directories</strong></li>
+<li>integrates with existing audio cues (audio, pool, impulse)</li>
+<li>requires explicit <strong>consent</strong> before recording</li>
+<li>supports optional contributor metadata</li>
+<li>works on desktop and mobile browsers</li>
+</ul>
+<p>This design supports <strong>selective agency</strong>: performers may choose when to enter the sound world, leave material, and withdraw without maintaining continuous control.</p>
+<hr>
+<h2>Entering the Audio Recorder</h2>
+<h3>1. Enable Pen Mode</h3>
+<p>Recording is only available while <strong>pen mode</strong> is active. Pen mode indicates that the user is authoring or modifying the score rather than performing playback.</p>
+<h3>2. Select or Create an Annotation</h3>
+<ul>
+<li>Click an <strong>existing annotation</strong> to add audio to it, or</li>
+<li>Click <strong>empty score space</strong> to create a new annotation</li>
+</ul>
+<p>The annotation context determines where the recording will be stored.</p>
+<h3>3. Open the Recorder</h3>
+<p>In the annotation editor’s trigger configuration section:</p>
+<pre><code>[ Upload Audio ]   [ Record ]
+</code></pre>
+<p>Click <strong>Record</strong> to open the recording dialog.</p>
+<hr>
+<h2>Recording Dialog</h2>
+<p>The recording dialog is intentionally minimal but fully featured for safe, short‑form recording.</p>
+<h3>Recording Controls</h3>
+<ul>
+<li>Single <strong>Record / Stop</strong> toggle button</li>
+<li>Large visual timer</li>
+<li>Maximum duration indicator (default: 20 seconds)</li>
+<li>Keyboard support (Esc to cancel)</li>
+</ul>
+<h3>Input Monitoring</h3>
+<ul>
+<li>Live <strong>VU meter</strong> showing input level</li>
+<li>Peak dB readout</li>
+<li>Visual warning when input is too hot</li>
+</ul>
+<p>The VU meter is for orientation only and does not affect the recording.</p>
+<hr>
+<h2>Recording Workflow</h2>
+<h3>Start Recording</h3>
+<ul>
+<li>Recording is disabled until consent is given</li>
+<li>On start, microphone permission is requested if needed</li>
+<li>Input monitoring and timer begin immediately</li>
+</ul>
+<p>Recording automatically stops when the maximum duration is reached.</p>
+<h3>Stop Recording</h3>
+<ul>
+<li>Recording may be stopped manually or automatically</li>
+<li>The microphone stream is closed immediately</li>
+<li>Input monitoring stops</li>
+</ul>
+<hr>
+<h2>Preview and Re‑Record</h2>
+<p>After recording completes:</p>
+<ul>
+<li>A <strong>preview section</strong> becomes available</li>
+<li>You may:
+<ul>
+<li>Play / stop the recording</li>
+<li>Discard it and <strong>record again</strong></li>
+</ul>
+</li>
+</ul>
+<p>Only one recording is kept at a time; re‑recording replaces the previous take.</p>
+<hr>
+<h2>Metadata (Optional)</h2>
+<p>Before saving, contributors may optionally provide metadata:</p>
+<ul>
+<li><strong>Anonymous</strong> toggle</li>
+<li><strong>Name</strong> (hidden if anonymous)</li>
+<li><strong>Website / social link</strong> (hidden if anonymous)</li>
+</ul>
+<p>Metadata is stored alongside the contribution and may be used for attribution in documentation or performances, but is not required.</p>
+<hr>
+<h2>Directory Selection</h2>
+<p>Each recording is saved into a directory that represents a <em>contribution context</em>.</p>
+<h3>Default Behaviour</h3>
+<ul>
+<li>When editing an existing annotation, the recorder defaults to that annotation’s directory</li>
+<li>When creating a new annotation, a new directory is suggested automatically</li>
+</ul>
+<h3>Choosing a Directory</h3>
+<p>The dialog allows you to:</p>
+<ul>
+<li>Use the default annotation directory</li>
+<li>Select an <strong>existing contribution directory</strong></li>
+<li>Create a <strong>new custom directory</strong></li>
+</ul>
+<p>Custom directory names are restricted to letters, numbers, and hyphens.</p>
+<h3>Examples</h3>
+<pre><code>audio/
+  contributions/
+    ann_4F2QK/
+      voice_01.wav
+    ann_9M8L2/
+      anon_1712345678.webm
+</code></pre>
+<p>Directories represent <em>places in the score where material accumulates</em>.</p>
+<hr>
+<h2>Consent and Licensing</h2>
+<h3>Required Consent</h3>
+<p>Before recording or uploading audio, contributors must explicitly confirm:</p>
+<blockquote>
+<p><strong>I consent to my contribution being used by the artist in performances, installations, documentation, and future works related to this project.</strong></p>
+</blockquote>
+<ul>
+<li>Consent is mandatory</li>
+<li>Recording controls remain disabled until consent is given</li>
+<li>Consent state is stored with the contribution</li>
+</ul>
+<h3>Licensing Model</h3>
+<ul>
+<li>Contributions are <strong>not automatically public</strong></li>
+<li>No Creative Commons licence is applied by default</li>
+<li>This conservative model allows artist use while protecting contributors from unintended reuse</li>
+</ul>
+<p>Optional Creative Commons licensing may be offered in future versions as an opt‑in choice.</p>
+<hr>
+<h2>Saving and Uploading</h2>
+<p>When <strong>Use Recording</strong> is selected:</p>
+<ol>
+<li>The recorded audio is packaged as a file</li>
+<li>It is uploaded using Oscilla’s existing audio upload endpoint</li>
+<li>The destination directory is created if necessary</li>
+<li>The annotation’s audio source field is updated automatically</li>
+</ol>
+<p>Once saved, recorded audio behaves exactly like uploaded audio files.</p>
+<hr>
+<h2>Integration with Audio Cues</h2>
+<p>Recorded audio can be used with all existing audio mechanisms:</p>
+<ul>
+<li>playhead‑triggered audio</li>
+<li>audio pools and stochastic fields</li>
+<li>impulse and transient cues</li>
+<li>OSC‑controlled playback</li>
+</ul>
+<p>No special trigger types are introduced for recorded audio.</p>
+<hr>
+<h2>Mobile Support</h2>
+<p>The Audio Recorder is designed for phones and tablets:</p>
+<ul>
+<li>Large touch targets</li>
+<li>No file pickers required for recording</li>
+<li>Familiar microphone permission flow</li>
+<li>Short, bounded recordings</li>
+</ul>
+<p>This makes it suitable for workshops, installations, and ad‑hoc participation.</p>
+<hr>
+<h2>What the Audio Recorder Is Not</h2>
+<p>The Audio Recorder is <strong>not</strong>:</p>
+<ul>
+<li>a DAW or audio editor</li>
+<li>a multitrack recorder</li>
+<li>a background capture system</li>
+<li>a publishing or sample‑sharing platform</li>
+<li>a separate application</li>
+</ul>
+<p>It exists solely to support <em>leaving sonic material inside the score</em>.</p>
+<hr>
+<h2>Related Code</h2>
+<ul>
+<li><code>oscillaAudioRecorder.js</code> — recording UI, VU meter, metadata, upload</li>
+<li>Contribution Surface — annotation authoring and triggers</li>
+<li>Audio Upload API — shared audio storage pipeline</li>
+</ul>
+<hr>
+<h2>Summary</h2>
+<p>The Oscilla Audio Recorder extends the Contribution Surface with a safe, minimal, score‑native way to record and leave sound. By combining explicit consent, annotation‑scoped storage, live input feedback, and optional metadata, it supports collective music‑making practices grounded in care, agency, and shared musical space.</p>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

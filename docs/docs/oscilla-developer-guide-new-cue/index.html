@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dev_Guide_New_Cue</title>
+  <link rel="stylesheet" href="/oscilla/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+      <a href="/oscilla/docs/" class="docs-brand">
+        <img
+          src="/oscilla/docs/img/logos/logo-header-docs.svg"
+          alt="Oscilla"
+          class="docs-logo"
+          aria-hidden="true"
+        >
+      </a>
+
+            <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/oscilla/docs/">Docs Overview</a></li>
+    <li><a href="/oscilla/docs/about">What is Oscilla?</a></li>
+    <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
+    <li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+    <li><a href="/oscilla/docs/cue_button">button()</a></li>
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
+    <li><a href="/oscilla/docs/cue_color/">color()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+    <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/oscilla/docs/contribution_surface/">Contribution Surface</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/oscilla/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+      <li><a href="/oscilla/docs/oscilla_architecture_overview/">Architecture Overview</a></li>
+    <li><a href="/oscilla/docs/dev-sync-architecture/">Sync Architecture</a></li>
+       <li><a href="/oscilla/docs/oscilla-developer-guide-new-cue/">DevHowto New Cue</a></li>
+
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+
+      
+      <h1>Oscilla Developer Guide: Adding a New Cue Type</h1>
+<p>This guide walks through the complete process of adding a new cue type to Oscilla, using the <code>color()</code> / <code>colour()</code> animation cue as a case study.</p>
+<hr>
+<h2>Overview</h2>
+<p>Adding a new cue type requires modifications to four key files:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>oscillaParser.js</code></td>
+<td>Token definition, grammar rules, AST extraction</td>
+</tr>
+<tr>
+<td><code>oscilla&lt;CueName&gt;.js</code></td>
+<td>The cue handler implementation</td>
+</tr>
+<tr>
+<td><code>oscillaCueDispatcher.js</code></td>
+<td>Playhead-triggered cue dispatch</td>
+</tr>
+<tr>
+<td><code>oscillaAnimation.js</code></td>
+<td>Load-time cue assignment (for animation cues)</td>
+</tr>
+</tbody>
+</table>
+<p>The general flow is:</p>
+<pre><code>SVG element ID → Parser → AST → Dispatcher/Assignment → Handler
+</code></pre>
+<hr>
+<h2>Step 1: Define the Token (Parser)</h2>
+<p>Tokens are the lexical building blocks. Add your cue keyword to <code>oscillaParser.js</code>.</p>
+<h3>Location</h3>
+<p>Near the top of the file, after other keyword tokens (around line 80-90).</p>
+<h3>Pattern</h3>
+<pre><code class="language-javascript">const Color = createToken({ 
+    name: &quot;Color&quot;, 
+    pattern: /\b(color|colour)\b/,  // supports both spellings
+    longer_alt: Identifier 
+});
+</code></pre>
+<h3>Key Points</h3>
+<ul>
+<li>Use <code>\b</code> word boundaries to prevent partial matches</li>
+<li><code>longer_alt: Identifier</code> ensures the token doesn't consume longer identifiers</li>
+<li>For aliases (like <code>color</code>/<code>colour</code>), use regex alternation: <code>(color|colour)</code></li>
+</ul>
+<h3>Add to Token Array</h3>
+<p>Find the <code>allTokens</code> array and add your token:</p>
+<pre><code class="language-javascript">export const allTokens = [
+  Cue, Fade, Page, Stopwatch, Video, Text, Pause, Stop,
+  Audio, AudioPool, AudioImpulse, Synth, Button, Nav,
+  Rotate, Scale, ScaleXY, O2P, Color, Ui,  // ← Color added here
+  // ...
+];
+</code></pre>
+<p><strong>Important:</strong> Token order matters. More specific tokens should come before <code>Identifier</code>.</p>
+<hr>
+<h2>Step 2: Add Parser Rule (Parser)</h2>
+<p>Parser rules define the grammar structure for your cue.</p>
+<h3>Location</h3>
+<p>Inside the <code>CueParser</code> class constructor, after similar cue rules (around line 860-870).</p>
+<h3>Pattern for Animation Cues</h3>
+<p>Animation cues (like rotate, scale, color) use a shared parameter list:</p>
+<pre><code class="language-javascript">$.RULE(&quot;cueColorTop&quot;, () =&gt; {
+    $.CONSUME(Color);
+    $.SUBRULE($.animGenericParamList);
+});
+</code></pre>
+<p>The <code>animGenericParamList</code> rule handles:</p>
+<ul>
+<li>Parentheses <code>()</code></li>
+<li>Key-value pairs <code>dur:2, loop:0</code></li>
+<li>Arrays <code>vals:[1, 2, 3]</code></li>
+<li>Patterns <code>vals:Pseq([a, b], 3)</code></li>
+<li>Nested functions <code>prestate:fadein(500)</code></li>
+</ul>
+<h3>Add to cueTop Alternatives</h3>
+<p>Find the <code>cueTop</code> rule and add your new rule as an alternative:</p>
+<pre><code class="language-javascript">$.RULE(&quot;cueTop&quot;, () =&gt; {
+    // ...
+    $.OR([
+        // ... existing alternatives ...
+        { ALT: () =&gt; $.SUBRULE($.cueRotateTop) },
+        { ALT: () =&gt; $.SUBRULE($.cueScaleTop) },
+        { ALT: () =&gt; $.SUBRULE($.cueO2PTop) },
+        { ALT: () =&gt; $.SUBRULE($.cueColorTop) },  // ← Add here
+        { ALT: () =&gt; $.SUBRULE($.cueOscTop) },
+        // ...
+    ]);
+});
+</code></pre>
+<hr>
+<h2>Step 3: Add AST Extraction (Parser)</h2>
+<p>The CST (Concrete Syntax Tree) must be converted to an AST (Abstract Syntax Tree).</p>
+<h3>Location</h3>
+<p>In the <code>cstToAst()</code> function, near the end (around line 2480-2490).</p>
+<h3>Pattern</h3>
+<pre><code class="language-javascript">const colorNode = cst.children?.cueColorTop?.[0] || 
+                  (cst.name === &quot;cueColorTop&quot; ? cst : null);
+if (colorNode) {
+    return { type: &quot;cueColor&quot;, args: extractAnimKvArgs(colorNode) };
+}
+</code></pre>
+<h3>AST Structure</h3>
+<p>The resulting AST looks like:</p>
+<pre><code class="language-javascript">{
+    type: &quot;cueColor&quot;,
+    args: [
+        { key: &quot;vals&quot;, value: [&quot;#f00&quot;, &quot;#0f0&quot;, &quot;#00f&quot;] },
+        { key: &quot;dur&quot;, value: 2 },
+        { key: &quot;mode&quot;, value: &quot;alt&quot; }
+    ]
+}
+</code></pre>
+<hr>
+<h2>Step 4: Create the Handler Module</h2>
+<p>Create a new file <code>oscillaAnimationColor.js</code> (or <code>oscilla&lt;CueName&gt;.js</code>).</p>
+<h3>Module Structure</h3>
+<pre><code class="language-javascript">// oscillaAnimationColor.js
+
+// ============================================================
+// IMPORTS
+// ============================================================
+import { registerAnimation } from &quot;./oscillaAnimation.js&quot;;
+import { scheduleCueStart } from &quot;./oscillaCueDispatcher.js&quot;;
+import { createHitLabel } from &quot;./oscillaHitLabels.js&quot;;
+import {
+    applyPrestateBeforeStart,
+    applyPrestateOnStart,
+    installOscToggleHandler,
+    armGhostClickable,
+    needsArming,
+    needsFadeIn,
+    triggerFadeIn,
+    isOscEnabled
+} from &quot;./oscillaAnimationShared.js&quot;;
+import { sendOSCMessage, createOscOverlay } from &quot;./oscillaOSC.js&quot;;
+
+// ============================================================
+// INTERNAL UTILITIES
+// ============================================================
+
+// Pattern generator (reusable across animation types)
+function makePatternGenerator(pattern) {
+    // ... implementation
+}
+
+// Cue-specific utilities
+function parseColorToHSL(colorStr) {
+    // ... implementation
+}
+
+// ============================================================
+// ANIMATION ENGINES
+// ============================================================
+
+// Different modes may need different engines
+function handleColorHueCycle(el, cfg) {
+    // Continuous hue cycling implementation
+}
+
+function handleColorSequence(el, cfg) {
+    // Discrete color sequence implementation
+}
+
+// ============================================================
+// MAIN CUE HANDLER (exported)
+// ============================================================
+export function handleColorCue(el, astArgs, options = {}) {
+    // ... implementation
+}
+
+export default { handleColorCue };
+</code></pre>
+<h3>Handler Function Anatomy</h3>
+<pre><code class="language-javascript">export function handleColorCue(el, astArgs, options = {}) {
+    if (!el) return;
+    
+    const { fromCueTrigger = false } = options;
+    
+    // ─────────────────────────────────────────────────
+    // 1. CHECK FOR RE-TRIGGER (ghostClickable, fadein)
+    // ─────────────────────────────────────────────────
+    const existingCfg = el._oscillaCfg;
+    
+    if (fromCueTrigger &amp;&amp; existingCfg &amp;&amp; existingCfg._ghostClickable) {
+        if (needsArming(existingCfg)) {
+            armGhostClickable(el, existingCfg);
+        }
+        return;
+    }
+    
+    // ─────────────────────────────────────────────────
+    // 2. PARSE COMMON PARAMETERS
+    // ─────────────────────────────────────────────────
+    let trig = &quot;auto&quot;;
+    let uid = el.id || (&quot;color_&quot; + Math.random().toString(36).slice(2));
+    let cfgStartDelay = 0;
+    let prestate = &quot;show&quot;;
+    
+    for (const a of astArgs) {
+        const key = a.key || a.type;
+        const val = a.value;
+        
+        if (key === &quot;trig&quot;) trig = String(val).toLowerCase();
+        if (key === &quot;uid&quot;) uid = String(val).trim();
+        if (key === &quot;tdelay&quot;) cfgStartDelay = Number(val) || 0;
+        if (key === &quot;prestate&quot; &amp;&amp; val != null) prestate = val;
+    }
+    
+    const shouldStartNow = fromCueTrigger || trig === &quot;auto&quot; || trig === &quot;playhead&quot;;
+    
+    // ─────────────────────────────────────────────────
+    // 3. BUILD BASE CONFIG
+    // ─────────────────────────────────────────────────
+    const baseCfg = {
+        uid,
+        trig,
+        start: cfgStartDelay,
+        prestate,
+        astArgs,
+        fromCueTrigger,
+        kind: &quot;color&quot;,
+        _anim: null
+    };
+    
+    // ─────────────────────────────────────────────────
+    // 4. DETERMINE MODE &amp; DISPATCH
+    // ─────────────────────────────────────────────────
+    const valsArg = astArgs.find(a =&gt; a.key === &quot;vals&quot; || a.type === &quot;vals&quot;);
+    
+    // Check for hue cycling mode
+    if (valsArg?.value === &quot;hue&quot; || valsArg?.value?.name === &quot;hue&quot;) {
+        const cfg = { ...baseCfg, mode: &quot;hue-cycle&quot; };
+        setupAndStart(el, cfg, handleColorHueCycle, shouldStartNow);
+        return;
+    }
+    
+    // Check for pattern sequence
+    if (valsArg?.value?.type === &quot;pattern&quot;) {
+        const cfg = { ...baseCfg, pattern: valsArg.value, mode: &quot;sequence-pattern&quot; };
+        setupAndStart(el, cfg, handleColorSequence, shouldStartNow);
+        return;
+    }
+    
+    // Array sequence
+    if (Array.isArray(valsArg?.value)) {
+        const cfg = { ...baseCfg, values: valsArg.value, mode: &quot;sequence&quot; };
+        setupAndStart(el, cfg, handleColorSequence, shouldStartNow);
+        return;
+    }
+}
+
+// Helper to avoid repetition
+function setupAndStart(el, cfg, engineFn, shouldStartNow) {
+    el._oscillaCfg = cfg;
+    
+    installOscToggleHandler(el, cfg);
+    applyPrestateBeforeStart(el, cfg);
+    
+    const rawStart = () =&gt; engineFn(el, cfg);
+    const start = wrapStart(cfg, rawStart);
+    
+    registerAnimation(el, `color-${cfg.mode}`, cfg, start);
+    
+    createHitLabel(el, &quot;color&quot;, cfg.uid, {
+        anchorMode: &quot;center&quot;,
+        color: &quot;magenta&quot;,
+        sizeMode: &quot;follow&quot;
+    });
+    
+    if (shouldStartNow) start();
+}
+</code></pre>
+<h3>Start Function Wrapper</h3>
+<p>The <code>wrapStart</code> pattern handles delayed starts and prestate transitions:</p>
+<pre><code class="language-javascript">function wrapStart(cfg, rawStartFn) {
+    cfg._start = rawStartFn;
+    cfg._applyPrestateOnStart = () =&gt; applyPrestateOnStart(el, cfg);
+    
+    return () =&gt; {
+        if (cfg.start &gt; 0) {
+            scheduleCueStart(
+                cfg,
+                el,
+                () =&gt; {
+                    if (cfg._ghostClickable &amp;&amp; cfg._startBlocked) {
+                        applyPrestateOnStart(el, cfg);
+                        return;
+                    }
+                    applyPrestateOnStart(el, cfg);
+                    rawStartFn();
+                },
+                cfg.uid
+            );
+        } else {
+            if (cfg._ghostClickable &amp;&amp; cfg._startBlocked) {
+                applyPrestateOnStart(el, cfg);
+                return;
+            }
+            applyPrestateOnStart(el, cfg);
+            rawStartFn();
+        }
+    };
+}
+</code></pre>
+<hr>
+<h2>Step 5: Register in Dispatcher</h2>
+<p>Add your handler to <code>oscillaCueDispatcher.js</code> for playhead-triggered execution.</p>
+<h3>Add Import</h3>
+<pre><code class="language-javascript">import { handleRotateCue } from &quot;./oscillaAnimationRotate.js&quot;;
+import { handleScaleCue } from &quot;./oscillaAnimationScale.js&quot;;
+import { handleO2PCue } from &quot;./oscillaAnimationO2p.js&quot;;
+import { handleColorCue } from &quot;./oscillaAnimationColor.js&quot;;  // ← Add
+</code></pre>
+<h3>Add Case in Switch</h3>
+<p>Find the cue dispatch switch statement (around line 290-400):</p>
+<pre><code class="language-javascript">case &quot;cueO2P&quot;: {
+    handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
+    triggerNestedCues(ast, cueElement);
+    return;
+}
+
+case &quot;cueColor&quot;: {  // ← Add this case
+    handleColorCue(cueElement, ast.args, { fromCueTrigger: true });
+    triggerNestedCues(ast, cueElement);
+    return;
+}
+
+case &quot;cueOsc&quot;: {
+    // ...
+}
+</code></pre>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li>Pass <code>{ fromCueTrigger: true }</code> to indicate playhead activation</li>
+<li>Call <code>triggerNestedCues()</code> if your cue can contain nested cues</li>
+</ul>
+<hr>
+<h2>Step 6: Register in Animation Assignment</h2>
+<p>For animation cues that should activate on page load (auto-start), add to <code>oscillaAnimation.js</code>.</p>
+<h3>Add Import</h3>
+<pre><code class="language-javascript">import { handleScaleCue } from &quot;./oscillaAnimationScale.js&quot;;
+import { handleRotateCue } from &quot;./oscillaAnimationRotate.js&quot;;
+import { handleO2PCue } from &quot;./oscillaAnimationO2p.js&quot;;
+import { handleColorCue } from &quot;./oscillaAnimationColor.js&quot;;  // ← Add
+</code></pre>
+<h3>Add Case in animationAssign</h3>
+<pre><code class="language-javascript">switch (ast.type) {
+    case &quot;cueScale&quot;:
+        handleScaleCue(ast, el);
+        break;
+
+    case &quot;cueRotate&quot;:
+        handleRotateCue(el, ast.args);
+        break;
+
+    case &quot;cueO2P&quot;:
+        handleO2PCue(el, ast.args);
+        break;
+
+    case &quot;cueColor&quot;:  // ← Add this case
+        handleColorCue(el, ast.args);
+        break;
+
+    // ...
+}
+</code></pre>
+<hr>
+<h2>Common Parameters</h2>
+<p>Most animation cues support these shared parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uid</code></td>
+<td>string</td>
+<td>Unique identifier for the animation</td>
+</tr>
+<tr>
+<td><code>trig</code></td>
+<td><code>auto</code> | <code>playhead</code></td>
+<td>Trigger mode</td>
+</tr>
+<tr>
+<td><code>tdelay</code></td>
+<td>number</td>
+<td>Delay before start (seconds)</td>
+</tr>
+<tr>
+<td><code>prestate</code></td>
+<td><code>show</code> | <code>hide</code> | <code>ghost</code> | <code>fadein(ms)</code> | <code>ghostClickable(...)</code></td>
+<td>Initial visibility state</td>
+</tr>
+<tr>
+<td><code>dur</code></td>
+<td>number | pattern</td>
+<td>Duration per cycle</td>
+</tr>
+<tr>
+<td><code>loop</code></td>
+<td>number</td>
+<td>Repeat count (0 = infinite)</td>
+</tr>
+<tr>
+<td><code>osc</code></td>
+<td>0 | 1 | 2</td>
+<td>OSC output mode</td>
+</tr>
+<tr>
+<td><code>oscaddr</code></td>
+<td>string</td>
+<td>Custom OSC address</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Pattern Support</h2>
+<p>Oscilla patterns work across all animation cues:</p>
+<pre><code class="language-javascript">// Sequential
+vals:Pseq([a, b, c], 3)     // Play a,b,c three times
+
+// Random (with repeats)
+vals:Prand([a, b, c], inf)  // Random selection, may repeat
+
+// Random (no repeats)
+vals:Pxrand([a, b, c], inf) // Random, never same twice in a row
+
+// Shuffled
+vals:Pshuf([a, b, c], 2)    // Shuffle, play through twice
+</code></pre>
+<h3>Pattern Generator Template</h3>
+<pre><code class="language-javascript">function makePatternGenerator(pattern) {
+    if (!pattern?.values || !Array.isArray(pattern.values)) {
+        return { next: () =&gt; null };
+    }
+
+    const values = pattern.values.slice();
+    let repeats = pattern.repeats ?? Infinity;
+    let index = 0;
+    let cycleCount = 0;
+
+    switch (pattern.name) {
+        case &quot;Pseq&quot;:
+            return {
+                next() {
+                    const v = values[index++];
+                    if (index &gt;= values.length) {
+                        index = 0;
+                        if (++cycleCount &gt;= repeats) return null;
+                    }
+                    return v;
+                }
+            };
+        // ... other patterns
+    }
+}
+</code></pre>
+<hr>
+<h2>OSC Integration</h2>
+<p>To add OSC output to your cue:</p>
+<h3>1. Check if OSC is Enabled</h3>
+<pre><code class="language-javascript">import { isOscEnabled } from &quot;./oscillaAnimationShared.js&quot;;
+
+if (isOscEnabled(cfg, oscMode)) {
+    // Send OSC
+}
+</code></pre>
+<h3>2. Send OSC Message</h3>
+<pre><code class="language-javascript">import { sendOSCMessage } from &quot;./oscillaOSC.js&quot;;
+
+function sendOSCColor(cfg, hsl) {
+    const payload = {
+        type: &quot;osc_color&quot;,
+        uid: cfg.uid,
+        h: hsl.h,
+        s: hsl.s,
+        l: hsl.l,
+        timestamp: Date.now()
+    };
+    
+    if (cfg.oscAddr) payload.addr = cfg.oscAddr;
+    
+    sendOSCMessage(payload);
+}
+</code></pre>
+<h3>3. Add Visual Overlay (Optional)</h3>
+<pre><code class="language-javascript">import { createOscOverlay } from &quot;./oscillaOSC.js&quot;;
+
+if (isOscEnabled(cfg, oscMode)) {
+    cfg._overlay = createOscOverlay({
+        anchorEl: el,
+        label: cfg.oscAddr || cfg.uid,
+        anchorMode: &quot;center&quot;,
+        mode: &quot;auto&quot;
+    });
+    cfg._overlay.update(&quot;initial value&quot;);
+}
+</code></pre>
+<hr>
+<h2>Hit Labels</h2>
+<p>Hit labels provide visual indicators and click targets:</p>
+<pre><code class="language-javascript">import { createHitLabel } from &quot;./oscillaHitLabels.js&quot;;
+
+createHitLabel(el, &quot;color&quot;, cfg.uid, {
+    anchorMode: &quot;center&quot;,      // center | pathStart | pathEnd
+    color: &quot;magenta&quot;,          // CSS color
+    sizeMode: &quot;follow&quot;         // follow | fixed | rotate40
+});
+</code></pre>
+<hr>
+<h2>Testing Your Cue</h2>
+<h3>1. Parser Test</h3>
+<pre><code class="language-javascript">import { parseCueToAST } from &quot;./oscillaParser.js&quot;;
+
+const ast = parseCueToAST(&quot;color(vals:[#f00,#0f0],dur:2,mode:alt)&quot;);
+console.log(JSON.stringify(ast, null, 2));
+</code></pre>
+<p>Expected output:</p>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;cueColor&quot;,
+  &quot;args&quot;: [
+    { &quot;key&quot;: &quot;vals&quot;, &quot;value&quot;: [&quot;#f00&quot;, &quot;#0f0&quot;] },
+    { &quot;key&quot;: &quot;dur&quot;, &quot;value&quot;: 2 },
+    { &quot;key&quot;: &quot;mode&quot;, &quot;value&quot;: &quot;alt&quot; }
+  ]
+}
+</code></pre>
+<h3>2. SVG Test</h3>
+<p>Create an SVG element with your cue ID:</p>
+<pre><code class="language-xml">&lt;rect id=&quot;color(vals:[#f00,#0f0,#00f],dur:2)&quot; width=&quot;100&quot; height=&quot;100&quot; fill=&quot;#f00&quot;/&gt;
+</code></pre>
+<h3>3. Console Debug</h3>
+<pre><code class="language-javascript">// Check animation registry
+console.log(window.oscillaAnimRegistry);
+
+// Check running animations
+console.log([...window.runningAnimations.entries()]);
+</code></pre>
+<hr>
+<h2>Checklist</h2>
+<ul>
+<li>[ ] Token added to <code>oscillaParser.js</code></li>
+<li>[ ] Token added to <code>allTokens</code> array</li>
+<li>[ ] Parser rule created (<code>cue&lt;Name&gt;Top</code>)</li>
+<li>[ ] Rule added to <code>cueTop</code> alternatives</li>
+<li>[ ] AST extraction added to <code>cstToAst()</code></li>
+<li>[ ] Handler module created (<code>oscilla&lt;Name&gt;.js</code>)</li>
+<li>[ ] Handler imported in <code>oscillaCueDispatcher.js</code></li>
+<li>[ ] Case added to dispatcher switch</li>
+<li>[ ] Handler imported in <code>oscillaAnimation.js</code> (if animation cue)</li>
+<li>[ ] Case added to <code>animationAssign</code> switch (if animation cue)</li>
+<li>[ ] Hit labels configured</li>
+<li>[ ] OSC output implemented (if applicable)</li>
+<li>[ ] Documentation written</li>
+</ul>
+<hr>
+<h2>File Locations Summary</h2>
+<pre><code>public/js/
+├── oscillaParser.js           # Token + grammar + AST
+├── oscillaCueDispatcher.js    # Playhead dispatch
+├── oscillaAnimation.js        # Load-time assignment
+├── oscillaAnimationShared.js  # Shared utilities
+├── oscillaAnimationColor.js   # Your new handler
+├── oscillaHitLabels.js        # Hit label system
+└── oscillaOSC.js              # OSC messaging
+</code></pre>
+<hr>
+<h2>Example: Complete color() Implementation</h2>
+<h3>DSL Syntax</h3>
+<pre><code>color(vals:[#f00,#0f0,#00f], dur:2)
+color(vals:Pseq([red,yellow,green],3), dur:0.5)
+color(vals:hue, dur:10, loop:0)
+color(vals:hue(120,240), dur:4, osc:1)
+colour(vals:[#f80,#08f], mode:alt, dur:1.2)
+</code></pre>
+<h3>Files Modified</h3>
+<ol>
+<li><code>oscillaParser.js</code> - Token, rule, AST</li>
+<li><code>oscillaAnimationColor.js</code> - New file</li>
+<li><code>oscillaCueDispatcher.js</code> - Import + case</li>
+<li><code>oscillaAnimation.js</code> - Import + case</li>
+</ol>
+<h3>Total Lines Added</h3>
+<ul>
+<li>Parser: ~15 lines</li>
+<li>Handler: ~600 lines</li>
+<li>Dispatcher: ~6 lines</li>
+<li>Animation: ~5 lines</li>
+</ul>
+<hr>
+<p><em>Document version: 1.0</em>
+<em>Last updated: January 2026</em>
+<em>Case study: color() / colour() animation cue</em></p>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

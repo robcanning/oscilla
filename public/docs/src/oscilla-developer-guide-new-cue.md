@@ -1,3 +1,8 @@
+---
+title: Dev_Guide_New_Cue
+layout: docs_layout.njk
+---
+
 # Oscilla Developer Guide: Adding a New Cue Type
 
 This guide walks through the complete process of adding a new cue type to Oscilla, using the `color()` / `colour()` animation cue as a case study.
