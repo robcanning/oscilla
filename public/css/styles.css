@@ -1952,3 +1952,32 @@ sl-menu-item {
   --safe-triangle-submenu-end-x: 0px !important;
   --safe-triangle-submenu-end-y: 0px !important;
 }
+
+
+
+
+.osc-anno-pin {
+  overflow: visible;
+}
+
+.anno-extent-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.osc-anno-extent-line {
+  position: absolute;
+  height: 4px;
+  background: #000;
+  pointer-events: none;
+}
+
+.osc-anno-extent-handle {
+  position: absolute;
+  width: 2px;
+  height: 18px;
+  background: #000;
+  cursor: ew-resize;
+  pointer-events: auto;
+}

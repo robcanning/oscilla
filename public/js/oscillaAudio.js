@@ -426,9 +426,17 @@ export function sendAudioOscTrigger({ cueId, filename, volume = 1, loop = 1 }) {
 document.getElementById("stop-audio-button")?.addEventListener("click", () => {
   console.log("[AUDIO] 🔇 Global STOP triggered");
 
+  // ----------------------------------
+  // 1. Stop all impulse processes 🔥
+  // ----------------------------------
+  stopAllAudioImpulses();
+
+  // ----------------------------------
+  // 2. Stop all active audio voices 🔇
+  // ----------------------------------
   const active = window.activeAudioCues;
   if (!active || active.size === 0) {
-    console.warn("[AUDIO]  No active voices.");
+    console.warn("[AUDIO] No active voices.");
     return;
   }
 
@@ -628,7 +636,7 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
         `pan:${panVal.toFixed(2)}`,
         `pitch:${pitchVal.toFixed(2)}`
       ].join(" ");
-      
+
       overlay.update(`${file} | ${details}`);
       overlay.position();
 
@@ -737,11 +745,11 @@ async function playImpulseHit(state) {
   // --------------------------------------------
   // Resolve base values (DSL-aware)
   // --------------------------------------------
-  const baseAmp   = evalMaybeRandom(params.amp)   ?? 1;
-  const basePan   = evalMaybeRandom(params.pan)   ?? 0;
+  const baseAmp = evalMaybeRandom(params.amp) ?? 1;
+  const basePan = evalMaybeRandom(params.pan) ?? 0;
   const basePitch = evalMaybeRandom(params.pitch) ?? 1;
 
-  const panRandom   = Number(params.panRandom   ?? 0);
+  const panRandom = Number(params.panRandom ?? 0);
   const pitchRandom = Number(params.pitchRandom ?? 0);
 
   // --------------------------------------------
@@ -754,8 +762,8 @@ async function playImpulseHit(state) {
     return Math.max(min, Math.min(max, v));
   };
 
-  const amp   = Math.max(0, Math.min(1, baseAmp));
-  const pan   = randAround(basePan, panRandom, -1, 1);
+  const amp = Math.max(0, Math.min(1, baseAmp));
+  const pan = randAround(basePan, panRandom, -1, 1);
   const pitch = Math.max(0.01, randAround(basePitch, pitchRandom));
 
   // --------------------------------------------
@@ -893,7 +901,10 @@ export async function handleAudioImpulseCue(ast, el, opts = {}) {
 
     audioImpulses.set(uid, state);
 
-    // wait one interval before first hit
+    //  PLAY FIRST HIT IMMEDIATELY
+    playImpulseHit(state);
+
+    // then schedule the repeating process
     scheduleNextImpulse(state);
 
   } catch (err) {
@@ -997,6 +1008,17 @@ export function stopAudioImpulse(uid) {
 
   audioImpulses.delete(uid);
 }
+
+
+function stopAllAudioImpulses() {
+  if (!window.audioImpulses) return;
+
+  for (const uid of window.audioImpulses.keys()) {
+    stopAudioImpulse(uid);
+  }
+}
+
+window.stopAllAudioImpulses = stopAllAudioImpulses;
 
 
 

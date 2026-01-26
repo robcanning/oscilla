@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contribution Surface</title>
+  <link rel="stylesheet" href="/oscilla/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+      <a href="/oscilla/docs/" class="docs-brand">
+        <img
+          src="/oscilla/docs/img/logos/logo-header-docs.svg"
+          alt="Oscilla"
+          class="docs-logo"
+          aria-hidden="true"
+        >
+      </a>
+
+            <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/oscilla/docs/">Docs Overview</a></li>
+    <li><a href="/oscilla/docs/about">What is Oscilla?</a></li>
+    <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
+    <li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+    <li><a href="/oscilla/docs/cue_button">button()</a></li>
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
+    <li><a href="/oscilla/docs/color/">color()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+    <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/oscilla/docs/contribution-surface/">Contribution Surface</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/oscilla/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+    <li><a href="/oscilla/docs/dev-sync-architecture/">Sync Architecture</a></li>
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+
+      
+      <h1>Contribution Surface</h1>
+<h2>Overview</h2>
+<p>The <strong>Contribution Surface</strong> is a browser‑native layer that coexists with the SVG score in Oscilla. It allows participants to add, modify, and execute material directly within the running score during rehearsal, performance, or installation.</p>
+<p>Where the <strong>SVG Score Layer</strong> defines composed, declarative structures authored offline (e.g. in Inkscape), the Contribution Surface supports <strong>live, mutable, and spatially situated contributions</strong> authored in the browser. These contributions may be textual, sonic, silent, temporal, or spatial, and can be shared across the network.</p>
+<p>The Contribution Surface is not secondary or decorative. It is a fully executable plane that can function as:</p>
+<ul>
+<li>a rehearsal note system</li>
+<li>a performer or collaborator interface</li>
+<li>a portal for uploading and organising sound material</li>
+<li>a spatial trigger surface tied to the playhead</li>
+<li>a complete score in its own right</li>
+</ul>
+<p>No SVG score is required to use the Contribution Surface.</p>
+<hr>
+<h2>Two Coexisting Layers</h2>
+<table>
+<thead>
+<tr>
+<th>SVG Score Layer</th>
+<th>Contribution Surface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Authored offline</td>
+<td>Authored live in browser</td>
+</tr>
+<tr>
+<td>Fixed, declarative</td>
+<td>Mutable, negotiable</td>
+</tr>
+<tr>
+<td>Embedded in SVG</td>
+<td>HTML overlay</td>
+</tr>
+<tr>
+<td>Cue‑driven</td>
+<td>Click‑ and playhead‑driven</td>
+</tr>
+<tr>
+<td>No file management</td>
+<td>Direct audio upload</td>
+</tr>
+<tr>
+<td>Composer‑centred</td>
+<td>Role‑agnostic</td>
+</tr>
+</tbody>
+</table>
+<p>Both layers may be used together or independently.</p>
+<hr>
+<h2>Basic Usage</h2>
+<h3>Adding a Contribution</h3>
+<ol>
+<li>Enable <strong>pen mode</strong> (✏️ icon or double‑tap the score area)</li>
+<li>Click on the score or page overlay</li>
+<li>Configure the contribution (text and/or executable behaviour)</li>
+<li>Save</li>
+</ol>
+<h3>Editing</h3>
+<ul>
+<li>Pen mode <strong>must be enabled</strong> to edit</li>
+<li>Click an existing contribution to reopen the editor</li>
+</ul>
+<h3>Moving</h3>
+<p>Contributions are draggable <strong>in all modes</strong>:</p>
+<ul>
+<li>Mouse or touch drag</li>
+<li>Position is saved on release</li>
+</ul>
+<hr>
+<h2>Contribution Types</h2>
+<h3>Text Contributions</h3>
+<p>Text contributions act as visible instructions, reminders, section labels, or compositional cues.</p>
+<p>Typical uses:</p>
+<ul>
+<li>rehearsal notes</li>
+<li>textual scores</li>
+<li>structural markers</li>
+<li>performer coordination</li>
+</ul>
+<p>Font size and content are editable live.</p>
+<hr>
+<h3>Audio Contributions (Executable)</h3>
+<p>Any contribution can be made <strong>executable</strong>, turning it into a clickable or playhead‑triggered sound event.</p>
+<p>Supported audio types:</p>
+<h4>🔊 Audio (Single File)</h4>
+<p>Plays a single audio file.</p>
+<p>Parameters include:</p>
+<ul>
+<li>gain</li>
+<li>pan</li>
+<li>pitch</li>
+<li>loop count or infinite loop</li>
+<li>fade‑in / fade‑out</li>
+<li>optional toggle (start/stop)</li>
+</ul>
+<p>Use cases:</p>
+<ul>
+<li>one‑shot samples</li>
+<li>looping drones</li>
+<li>pitched variations</li>
+</ul>
+<hr>
+<h4>🎲 Audio Pool (Directory)</h4>
+<p>Plays files from a directory.</p>
+<p>Selection modes:</p>
+<ul>
+<li><strong>shuffle</strong> (no immediate repeats)</li>
+<li><strong>sequential</strong></li>
+<li><strong>random</strong></li>
+</ul>
+<p>Use cases:</p>
+<ul>
+<li>drum kits</li>
+<li>texture clouds</li>
+<li>aleatoric material</li>
+</ul>
+<hr>
+<h4>⚡ Audio Impulse (Continuous)</h4>
+<p>Starts a continuous, generative playback process using a directory of samples.</p>
+<p>Parameters:</p>
+<ul>
+<li>rate (events per minute)</li>
+<li>jitter (timing randomness)</li>
+<li>polyphony</li>
+<li>gain, pan, pitch</li>
+</ul>
+<p>Visual state:</p>
+<ul>
+<li>cyan border: inactive</li>
+<li>green border: running</li>
+</ul>
+<p>Use cases:</p>
+<ul>
+<li>granular textures</li>
+<li>stochastic rhythms</li>
+<li>ambient layers</li>
+</ul>
+<hr>
+<h2>Audio‑Only Contributions</h2>
+<p>A contribution may be configured as <strong>audio‑only</strong>, with no visible text.</p>
+<p>Characteristics:</p>
+<ul>
+<li>text field hidden</li>
+<li>compact visual identity (label + border)</li>
+<li>designed as control surfaces rather than instructions</li>
+</ul>
+<p>Typical uses:</p>
+<ul>
+<li>drum pads</li>
+<li>layer toggles</li>
+<li>installation interfaces</li>
+<li>spatial trigger grids</li>
+</ul>
+<p>Audio‑only contributions behave identically to text‑based ones in terms of execution, playhead triggering, and sharing.</p>
+<hr>
+<h2>Spatial Trigger Regions (Extent Lines)</h2>
+<p>Every executable contribution defines a <strong>horizontal trigger region</strong> using visible extent lines.</p>
+<p>Properties:</p>
+<ul>
+<li>extent lines are <strong>always visible in all modes</strong></li>
+<li>draggable start/end handles</li>
+<li>define the contribution’s active x‑range</li>
+</ul>
+<p>Extent regions are used by:</p>
+<ul>
+<li>playhead triggering</li>
+<li>impulse gate lifespans</li>
+<li>region‑based execution logic</li>
+</ul>
+<p>Conceptually, a contribution occupies <strong>space</strong>, not just a point.</p>
+<hr>
+<h2>Playhead Triggering</h2>
+<p>Executable contributions may be triggered automatically by the playhead.</p>
+<ul>
+<li>Supported by <strong>all audio types</strong></li>
+<li>Trigger fires when the playhead enters the extent region</li>
+</ul>
+<h3>Impulse Lifespan Modes</h3>
+<p>Audio Impulse contributions support three lifespan behaviours:</p>
+<ul>
+<li><strong>Toggle</strong> — manual start/stop</li>
+<li><strong>Fixed</strong> — stops after a specified duration</li>
+<li><strong>Gate</strong> — active only while the playhead overlaps the region</li>
+</ul>
+<p>Gate mode directly couples sound to spatial position in the score.</p>
+<hr>
+<h2>Audio File Management</h2>
+<h3>Browsing</h3>
+<p>The audio browser allows navigation of the project’s audio directory:</p>
+<ul>
+<li>enter subdirectories</li>
+<li>select files or directories</li>
+<li>select the current directory as a pool source</li>
+</ul>
+<p>Paths are always relative to the project’s <code>audio/</code> directory.</p>
+<hr>
+<h3>Uploading as Contribution</h3>
+<p>Audio upload is treated as a <strong>contribution mechanism</strong>, not a utility.</p>
+<ul>
+<li>Files upload to the directory specified in the Source field</li>
+<li>If the Source is empty, files upload to the audio root</li>
+<li>Subdirectories are created implicitly</li>
+</ul>
+<h4>Conflict Handling</h4>
+<p>If a file already exists:</p>
+<ul>
+<li>Cancel</li>
+<li>Rename</li>
+<li>Overwrite</li>
+</ul>
+<p>Uploading sound material is part of the compositional process and can occur during rehearsal or performance.</p>
+<hr>
+<h2>Sharing and Networking</h2>
+<p>Contributions may be local or shared.</p>
+<table>
+<thead>
+<tr>
+<th>Scope</th>
+<th>Visibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local</td>
+<td>Current client only</td>
+</tr>
+<tr>
+<td>Shared</td>
+<td>All connected clients</td>
+</tr>
+</tbody>
+</table>
+<p>When shared:</p>
+<ul>
+<li>creation, edits, movement, and deletion sync via WebSocket</li>
+<li>executable behaviour is consistent across clients</li>
+</ul>
+<blockquote>
+<p>Audio files themselves must currently exist on all clients. File sharing and bundling are planned.</p>
+</blockquote>
+<hr>
+<h2>Example Workflows</h2>
+<h3>Text‑Only Score</h3>
+<p>A score composed entirely of text contributions:</p>
+<ul>
+<li>sections laid out left‑to‑right</li>
+<li>shared across all clients</li>
+<li>coordinated via stopwatch</li>
+</ul>
+<p>No SVG notation required.</p>
+<hr>
+<h3>Live Sample Interface</h3>
+<p>A grid of audio‑only contributions:</p>
+<ul>
+<li>kick / snare / hat pools</li>
+<li>impulse textures</li>
+<li>shared control surface</li>
+</ul>
+<p>Acts as a distributed instrument.</p>
+<hr>
+<h3>Performer‑Contributed Material</h3>
+<p>During rehearsal:</p>
+<ul>
+<li>participants upload sounds</li>
+<li>assign them to contributions</li>
+<li>define spatial trigger regions</li>
+</ul>
+<p>The score grows through contribution.</p>
+<hr>
+<h2>Roadmap</h2>
+<p>Planned extensions to the Contribution Surface:</p>
+<ul>
+<li>networked audio file sharing and bundling</li>
+<li>permissions and locking</li>
+<li>contribution presets and templates</li>
+<li>contribution import/export</li>
+<li>OSC and MIDI trigger contributions</li>
+</ul>
+<hr>
+<h2>Summary</h2>
+<p>The Contribution Surface reframes the score as a <strong>live, executable surface</strong> rather than a fixed document.</p>
+<p>It supports contribution, negotiation, and execution in the same space, allowing Oscilla scores to function as:</p>
+<ul>
+<li>notations</li>
+<li>instruments</li>
+<li>interfaces</li>
+<li>collaborative environments</li>
+</ul>
+<p>The surface is where sound, structure, and participation meet.</p>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

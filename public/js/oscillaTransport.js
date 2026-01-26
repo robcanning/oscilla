@@ -298,6 +298,9 @@ export const forward = () => {
 
   window.updateSpeedDisplay();
 
+  window.resetAnnotationPlayheadTriggers?.();
+
+
   // updatePosition();
   // updateSeekBar();
   // updatestopwatch();
@@ -1045,7 +1048,7 @@ function resumeScrollScore() {
 }
 
 
-
+// TODO is this used anymore of left over from old repeat cue
 //////////////////////////////////////////////////
 export const jumpToCueId = (id) => {
   let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"))
@@ -1085,6 +1088,8 @@ export const jumpToCueId = (id) => {
       elapsedTime: window.elapsedTime,
     }));
   }
+
+  window.resetAnnotationPlayheadTriggers?.();
 
   // updatePosition();
 };

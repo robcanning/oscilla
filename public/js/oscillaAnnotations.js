@@ -25,7 +25,7 @@ const STORAGE_PREFIX = "oscilla_annotations_v1";
 // =============================================================
 // Trigger System Constants
 // =============================================================
-const TRIGGER_BORDER_COLOR = "rgba(0, 180, 220, 0.8)";  // cyan for audio triggers
+const TRIGGER_BORDER_COLOR = "rgba(0, 0, 0, 0.8)";  // cyan for audio triggers
 const TRIGGER_BG_COLOR = "rgba(0, 180, 220, 0.15)";
 const TRIGGER_FLASH_COLOR = "rgba(0, 220, 255, 0.4)";
 const DEFAULT_AUTHOR_LABEL = "Performer";
@@ -33,7 +33,6 @@ const POLL_SOCKET_MS = 500;
 
 
 window.oscillaTextInputActive = false;
-
 let lastAnnotationFontSize = 12;
 
 // Trigger state: track directory pools and sequential indices
@@ -41,6 +40,8 @@ const triggerPools = new Map();  // uid -> { files: [], cursor: 0 }
 
 let sharedAnnotationsRequested = false;
 let sharedAnnotationsHydrated = false;
+
+
 
 
 function ulidLike() {
@@ -154,41 +155,58 @@ async function executeTrigger(annotation, labelEl) {
         else if (type === "audioImpulse") {
             const uid = `trigger-impulse-${annotation.id}`;
 
-            // Toggle off if already running
-            if (window.audioImpulses?.has(uid)) {
+            // Toggle OFF (only for non-gate modes)
+            if (
+                window.audioImpulses?.has(uid) &&
+                trigger.impulse?.lifespanMode !== "gate"
+            ) {
                 stopAudioImpulse(uid);
+
+                if (impulseLifespanTimers.has(uid)) {
+                    clearTimeout(impulseLifespanTimers.get(uid));
+                    impulseLifespanTimers.delete(uid);
+                }
+
                 if (labelEl) labelEl.style.borderColor = TRIGGER_BORDER_COLOR;
                 return;
             }
 
-            // 🔑 FIX: impulse path must be a directory
-            let impulsePath = source.path;
 
-            // If user selected a file, strip filename → directory
+            // -----------------------------
+            // Normalize path (file → dir)
+            // -----------------------------
+            let impulsePath = trigger.source.path;
             if (impulsePath.match(/\.(wav|aif|aiff|mp3|ogg)$/i)) {
                 impulsePath = impulsePath.split("/").slice(0, -1).join("/");
             }
 
-            const rate = impulse?.rate ?? 30;
-            const jitter = impulse?.jitter ?? 0;
-            const poly = impulse?.poly ?? 6;
-            const panRandom = impulse?.panRandom ?? 0;
-            const pitchRandom = impulse?.pitchRandom ?? 0;
+            const rate = trigger.impulse?.rate ?? 30;
+            const jitter = trigger.impulse?.jitter ?? 0;
+            const poly = trigger.impulse?.poly ?? 6;
+
+            const panRandom = trigger.impulse?.panRandom ?? 0;
+            const pitchRandom = trigger.impulse?.pitchRandom ?? 0;
+
+            const lifespanMode = trigger.impulse?.lifespanMode ?? "toggle";
+            const lifespan = trigger.impulse?.lifespan ?? null;
 
             await handleAudioImpulseCue(
                 {
                     params: {
+                        uid,
                         path: impulsePath,
-                        mode: order,
+                        mode: trigger.playback?.order || "shuffle",
+
                         rate,
                         jitter,
                         poly,
-                        uid,
-                        amp: gain,
-                        pan,
-                        pitch,
-                        fadeIn,
-                        fadeOut,
+
+                        amp: trigger.playback?.gain ?? 1,
+                        pan: trigger.playback?.pan ?? 0,
+                        pitch: trigger.playback?.pitch ?? 1,
+                        fadeIn: trigger.playback?.fadeIn ?? 0,
+                        fadeOut: trigger.playback?.fadeOut ?? 0,
+
                         panRandom,
                         pitchRandom
                     }
@@ -197,14 +215,45 @@ async function executeTrigger(annotation, labelEl) {
                 {}
             );
 
+            // -----------------------------
+            // 🔥 FIXED LIFESPAN HANDLING
+            // -----------------------------
+            if (lifespanMode === "fixed" && typeof lifespan === "number") {
+                scheduleImpulseStop(uid, lifespan);
+            }
+
             if (labelEl) {
-                labelEl.style.borderColor = "rgba(0,255,100,0.8)";
+                labelEl.style.borderColor = "rgba(0,255,100,0.85)";
             }
         }
+
     } catch (err) {
         console.error("[trigger] Execution failed:", err);
     }
 }
+
+
+// Track scheduled lifespan timers per impulse uid
+const impulseLifespanTimers = new Map();
+
+function scheduleImpulseStop(uid, seconds) {
+    // Clear any previous timer
+    if (impulseLifespanTimers.has(uid)) {
+        clearTimeout(impulseLifespanTimers.get(uid));
+        impulseLifespanTimers.delete(uid);
+    }
+
+    const ms = Math.max(0, seconds * 1000);
+
+    const t = setTimeout(() => {
+        stopAudioImpulse(uid);
+        impulseLifespanTimers.delete(uid);
+    }, ms);
+
+    impulseLifespanTimers.set(uid, t);
+}
+
+
 
 
 /**
@@ -291,70 +340,137 @@ function shuffleArray(arr) {
 }
 
 // =============================================================
-// PLAYHEAD TRIGGER SYSTEM
+// PLAYHEAD TRIGGER SYSTEM (CRASH-PROOF + EXTENT-AWARE)
 // =============================================================
-// Track which annotations have been triggered by playhead
-// to prevent re-triggering on every frame
+const playheadGateState = new Map();
 const playheadTriggeredAnnotations = new Set();
 
-/**
- * Check if any playhead-triggered annotations should fire.
- * Called from the animation loop via window.checkAnnotationPlayheadTriggers()
- */
 export function checkAnnotationPlayheadTriggers() {
-    if (!state.enabled || !state.items?.length) return;
+    try {
+        if (!state?.enabled || !Array.isArray(state.items) || state.items.length === 0) return;
 
-    const playheadX = window.playheadX;
-    const scoreWidth = window.scoreWidth;
-    if (playheadX == null || !scoreWidth) return;
+        const playheadX = window.playheadX;
+        if (typeof playheadX !== "number" || !isFinite(playheadX)) return;
 
-    // Get the score container for coordinate conversion
-    const container = getScoreContainer();
-    const inner = getScoreScrollInner();
-    if (!container || !inner) return;
+        const scale =
+            (typeof window.localScale === "number" &&
+                isFinite(window.localScale) &&
+                window.localScale > 0)
+                ? window.localScale
+                : 1;
 
-    const localScale = window.localScale || 1;
+        for (const annotation of state.items) {
+            if (!annotation) continue;
 
-    for (const annotation of state.items) {
-        // Only check trigger annotations with playheadTrigger enabled
-        if (annotation.kind !== "trigger") continue;
-        if (!annotation.trigger?.playheadTrigger) continue;
+            const trig = annotation.trigger;
+            if (!trig || !trig.playheadTrigger) continue;
 
-        // Get annotation's x position in score coordinates
-        const annX = annotation.placement?.x ?? 0;
+            const placement = annotation.placement;
+            if (!placement) continue;
 
-        // Convert to world coordinates (same space as playheadX)
-        // The annotation x is stored in rendered pixels, convert to world units
-        const annWorldX = annX / localScale;
+            const px = placement.x;
+            if (typeof px !== "number" || !isFinite(px)) continue;
 
-        // Define a trigger zone (annotation position ± tolerance)
-        const tolerance = 20 / localScale; // 20 pixels tolerance in world units
-        const triggerLeft = annWorldX - tolerance;
-        const triggerRight = annWorldX + tolerance;
+            // -----------------------------
+            // Region geometry (UNCHANGED)
+            // -----------------------------
+            const startX = placement.x / scale;
 
-        // Check if playhead is within trigger zone
-        const isInside = playheadX >= triggerLeft && playheadX <= triggerRight;
+            const extentScore =
+                (typeof placement.extent === "number" && placement.extent > 0)
+                    ? placement.extent
+                    : placement.width ?? 0;
 
-        // Track previous state
-        const wasInside = playheadTriggeredAnnotations.has(annotation.id);
+            const endX = startX + (extentScore / scale);
 
-        // Trigger on entry (forward direction)
-        if (isInside && !wasInside) {
-            console.log(`[annotation:playhead] Triggering: ${annotation.id} at x=${annWorldX}`);
+            const isInside = playheadX >= startX && playheadX <= endX;
+            const wasInside = playheadGateState.get(annotation.id) ?? false;
 
-            // Find the label element for visual feedback
-            const labelEl = document.querySelector(`[data-annotation-id="${annotation.id}"]`);
-            executeTrigger(annotation, labelEl);
+            // --------------------------------------------------
+            // 🔎 LOG ONLY ON STATE CHANGE
+            // --------------------------------------------------
+            if (isInside !== wasInside) {
+                console.log("[PLAYHEAD GATE]", {
+                    annotationId: annotation.id,
+                    playheadX,
+                    startX,
+                    endX,
+                    extent: placement.extent,
+                    width: placement.width,
+                    scale,
+                    deltaFromStart: playheadX - startX,
+                    deltaToEnd: endX - playheadX,
+                    entering: !wasInside && isInside,
+                    exiting: wasInside && !isInside
+                });
+                console.log("[PLAYHEAD SPACE CHECK]", {
+                    playheadX_score: playheadX,
+                    playheadX_dom: document.getElementById("playhead")?.getBoundingClientRect().left,
+                    annotationX_score: placement.x,
+                    annotation_dom_left: document
+                        .querySelector(`[data-annotation-id="${annotation.id}"]`)
+                        ?.getBoundingClientRect().left
+                });
 
-            playheadTriggeredAnnotations.add(annotation.id);
+            }
+
+            // --------------------------------------------------
+            // 🎼 PLAYHEAD-GATED AUDIO IMPULSE
+            // --------------------------------------------------
+            if (
+                trig.type === "audioImpulse" &&
+                trig.impulse?.lifespanMode === "gate"
+            ) {
+                const uid = `trigger-impulse-${annotation.id}`;
+
+                // ENTER → start
+                if (!wasInside && isInside) {
+                    if (!window.audioImpulses?.has(uid)) {
+                        const labelEl = document.querySelector(
+                            `[data-annotation-id="${annotation.id}"]`
+                        );
+                        executeTrigger(annotation, labelEl);
+                    }
+                }
+
+                // EXIT → stop
+                if (wasInside && !isInside) {
+                    if (window.audioImpulses?.has(uid)) {
+                        stopAudioImpulse(uid);
+                    }
+                }
+
+                playheadGateState.set(annotation.id, isInside);
+                continue;
+            }
+
+            // --------------------------------------------------
+            // ▶ ONE-SHOT PLAYHEAD TRIGGERS
+            // --------------------------------------------------
+            const wasTriggered =
+                playheadTriggeredAnnotations.has(annotation.id);
+
+            if (isInside && !wasTriggered) {
+                const labelEl = document.querySelector(
+                    `[data-annotation-id="${annotation.id}"]`
+                );
+                executeTrigger(annotation, labelEl);
+                playheadTriggeredAnnotations.add(annotation.id);
+            }
+
+            if (!isInside && wasTriggered) {
+                playheadTriggeredAnnotations.delete(annotation.id);
+            }
+
+            playheadGateState.set(annotation.id, isInside);
         }
-
-        // Clear triggered state when playhead exits (allows re-trigger on rewind)
-        if (!isInside && wasInside) {
-            playheadTriggeredAnnotations.delete(annotation.id);
-        }
+    } catch (err) {
+        console.warn("[annotation:playhead] check failed (non-fatal):", err);
     }
 }
+
+
+
 
 /**
  * Reset playhead trigger state (call on rewind, jump, etc.)
@@ -1027,6 +1143,8 @@ function makeDraggable(el, handleEl = el) {
     });
 
     window.addEventListener("mousemove", e => {
+
+
         if (!dragging) return;
 
         const dx = e.clientX - startX;
@@ -1056,15 +1174,16 @@ function makeDraggable(el, handleEl = el) {
 
 
 
-
 function makeEditor({
     x,
     y,
     initialText = "",
     initialScope = null,
     initialFontSize = null,
-    initialTrigger = null  // { type, source, playback } or null
+    initialTrigger = null,
+    initialVisualMode = "text"
 }) {
+
     const wrap = document.createElement("div");
     wrap.className = "osc-anno-editor";
     wrap.style.position = "fixed";
@@ -1181,6 +1300,66 @@ function makeEditor({
     execRow.appendChild(execChk);
     execRow.appendChild(execLabel);
     triggerSection.appendChild(execRow);
+
+
+    const labelRow = document.createElement("div");
+    labelRow.style.marginTop = "8px";
+    labelRow.style.display = "flex";
+    labelRow.style.flexDirection = "column";
+    labelRow.style.gap = "4px";
+
+    const labelTitle = document.createElement("label");
+    labelTitle.textContent = "Custom Display Label (optional)";
+    labelTitle.style.fontSize = "11px";
+    labelTitle.style.opacity = "0.7";
+
+    const labelInput = document.createElement("input");
+    labelInput.type = "text";
+    labelInput.placeholder = "e.g. Thunder Effect";
+    labelInput.value = initialTrigger?.label || ""; // Load existing label if it exists
+    labelInput.style.cssText = `
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    padding: 4px;
+    border-radius: 4px;
+    font-size: 12px;
+`;
+
+    labelRow.appendChild(labelTitle);
+    labelRow.appendChild(labelInput);
+    triggerSection.appendChild(labelRow);
+
+    // ----------------------------------
+    // Audio-only visual mode checkbox
+    // ----------------------------------
+    const audioOnlyRow = document.createElement("div");
+
+    const audioOnlyChk = document.createElement("input");
+    audioOnlyChk.type = "checkbox";
+    audioOnlyChk.checked = initialVisualMode === "audio";
+
+
+    // ----------------------------------
+    // Audio-only visual mode behaviour
+    // ----------------------------------
+    const updateVisualMode = () => {
+        const isAudioOnly = audioOnlyChk.checked;
+        ta.style.display = isAudioOnly ? "none" : "block";
+    };
+
+    audioOnlyChk.onchange = updateVisualMode;
+    updateVisualMode();
+
+
+    const audioOnlyLbl = document.createElement("label");
+    audioOnlyLbl.textContent = "Audio-only annotation";
+
+    audioOnlyRow.appendChild(audioOnlyChk);
+    audioOnlyRow.appendChild(audioOnlyLbl);
+    triggerSection.appendChild(audioOnlyRow);
+
+
 
     // Playhead trigger checkbox row (only visible when executable is checked)
     const playheadTriggerRow = document.createElement("div");
@@ -1406,6 +1585,48 @@ function makeEditor({
     polySelect.value = String(initialTrigger?.impulse?.poly ?? 6);
     impulseSection.appendChild(makeRow("Polyphony", polySelect));
 
+    // ==================== LIFESPAN ====================
+    const lifespanLabel = document.createElement("div");
+    lifespanLabel.textContent = "Lifespan";
+    lifespanLabel.style.fontSize = "10px";
+    lifespanLabel.style.opacity = "0.7";
+    lifespanLabel.style.marginTop = "8px";
+    lifespanLabel.style.marginBottom = "4px";
+    impulseSection.appendChild(lifespanLabel);
+
+    // Lifespan mode selector
+    const lifespanModeSelect = styleSelect(document.createElement("select"));
+    lifespanModeSelect.innerHTML = `
+  <option value="toggle">Toggle (manual)</option>
+  <option value="fixed">Fixed duration</option>
+  <option value="gate">While playhead overlaps</option>
+`;
+    lifespanModeSelect.value =
+        initialTrigger?.impulse?.lifespanMode ?? "toggle";
+
+    impulseSection.appendChild(makeRow("Mode", lifespanModeSelect));
+
+    // Fixed duration control (seconds)
+    const lifespanCtrl = makeSlider(
+        0.1,
+        120,
+        0.1,
+        initialTrigger?.impulse?.lifespan ?? 5,
+        "s"
+    );
+    const lifespanRow = makeRow("Duration", lifespanCtrl.container);
+    impulseSection.appendChild(lifespanRow);
+
+    // Visibility logic
+    const updateLifespanVisibility = () => {
+        lifespanRow.style.display =
+            lifespanModeSelect.value === "fixed" ? "flex" : "none";
+    };
+    lifespanModeSelect.onchange = updateLifespanVisibility;
+    updateLifespanVisibility();
+
+
+
     // Per-impulse randomization header
     const randomHeader = document.createElement("div");
     randomHeader.textContent = "Per-Impulse Randomization";
@@ -1548,7 +1769,7 @@ function makeEditor({
     btnCancel.style.cursor = "pointer";
     footer.appendChild(btnCancel);
 
-makeDraggable(wrap, header);
+    makeDraggable(wrap, header);
 
 
     return {
@@ -1566,6 +1787,8 @@ makeDraggable(wrap, header);
         modeSelect,
         uploadInput,
         browseBtn,
+        getVisualMode: () => (audioOnlyChk.checked ? "audio" : "text"),
+
         statusMsg,
         playheadTriggerChk,
         // Helper to get trigger config
@@ -1592,16 +1815,28 @@ makeDraggable(wrap, header);
                 }
             };
 
+            config.visualMode = audioOnlyChk.checked ? "audio" : "text";
+            config.label = labelInput.value.trim();
+
+
             // Add impulse-specific settings
             if (type === "audioImpulse") {
                 config.impulse = {
                     rate: parseInt(rateCtrl.slider.value, 10),
                     jitter: parseFloat(jitterCtrl.slider.value) / 100,
                     poly: parseInt(polySelect.value, 10),
+
                     panRandom: parseFloat(panRandomCtrl.slider.value),
-                    pitchRandom: parseFloat(pitchRandomCtrl.slider.value)
+                    pitchRandom: parseFloat(pitchRandomCtrl.slider.value),
+
+                    lifespanMode: lifespanModeSelect.value,
+                    lifespan:
+                        lifespanModeSelect.value === "fixed"
+                            ? parseFloat(lifespanCtrl.slider.value)
+                            : null
                 };
             }
+
 
             return config;
         }
@@ -1657,13 +1892,146 @@ function getScoreScrollInner() {
 
 
 function positionAnnotation(el, annotation) {
-    // IMPORTANT:
-    // Since the score layer is inside .oscilla-score-inner, left/top must be set directly
-    // from stored placement (inner-space). No scroll/container math here.
     if (!el || !annotation?.placement) return;
+
     el.style.left = `${annotation.placement.x}px`;
     el.style.top = `${annotation.placement.y}px`;
+
+    // -------------------------------------------------------------
+    // FIX 1: Store width in PIXELS (Visual Space)
+    // Removed the "/ scale" division.
+    // -------------------------------------------------------------
+    annotation.placement.width = el.offsetWidth;
+
+    // Default extent to width (in pixels) if missing
+    if (
+        annotation.placement.extent == null ||
+        annotation.placement.extent < annotation.placement.width
+    ) {
+        annotation.placement.extent = annotation.placement.width;
+    }
+
+    // ---------------------------------
+    // Extent handle (trigger duration)
+    // ---------------------------------
+    if (annotation.trigger) {
+        attachExtentHandle(el, annotation);
+    }
 }
+
+
+function attachExtentHandle(pin, annotation) {
+    const placement = annotation.placement;
+    pin.style.position = "absolute";
+
+    // --------------------------------------------------
+    // Reuse or create elements (CRITICAL FIX)
+    // --------------------------------------------------
+    let startBar = pin.querySelector(".osc-extent-start");
+    let line = pin.querySelector(".osc-extent-line");
+    let endHandle = pin.querySelector(".osc-extent-handle");
+
+    if (!startBar) {
+        startBar = document.createElement("div");
+        startBar.className = "osc-extent-start";
+        pin.appendChild(startBar);
+    }
+
+    if (!line) {
+        line = document.createElement("div");
+        line.className = "osc-extent-line";
+        pin.appendChild(line);
+    }
+
+    if (!endHandle) {
+        endHandle = document.createElement("div");
+        endHandle.className = "osc-extent-handle";
+        pin.appendChild(endHandle);
+    }
+
+    // --------------------------------------------------
+    // Styling (safe to repeat)
+    // --------------------------------------------------
+    [startBar, line, endHandle].forEach(el => {
+        el.style.position = "absolute";
+        el.style.background = "#000";
+        el.style.pointerEvents = "auto";
+    });
+
+    // Vertical bars
+    startBar.style.width = "2px";
+    startBar.style.height = "16px";
+
+    endHandle.style.width = "2px";
+    endHandle.style.height = "16px";
+    endHandle.style.cursor = "ew-resize";
+
+    // Horizontal line
+    line.style.height = "1px";
+
+    // --------------------------------------------------
+    // Layout updater
+    // --------------------------------------------------
+    function updateUI() {
+        const extent = placement.extent ?? 0;
+
+        // Start bar at origin
+        startBar.style.left = "0px";
+        startBar.style.top = "0px";
+        startBar.style.transform = "translate(-50%, -50%)";
+
+        // Horizontal line
+        line.style.left = "0px";
+        line.style.top = "0px";
+        line.style.width = `${extent}px`;
+
+        // End handle
+        endHandle.style.left = `${extent}px`;
+        endHandle.style.top = "0px";
+        endHandle.style.transform = "translate(-50%, -50%)";
+    }
+
+    updateUI();
+
+    // --------------------------------------------------
+    // Drag logic (unchanged, but now works correctly)
+    // --------------------------------------------------
+    let dragging = false;
+    let startX = 0;
+    let startExtent = 0;
+
+    endHandle.onmousedown = e => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        dragging = true;
+        startX = e.clientX;
+        startExtent = placement.extent ?? 0;
+
+        document.body.style.cursor = "ew-resize";
+    };
+
+    window.addEventListener("mousemove", e => {
+        if (!dragging) return;
+
+        const dx = e.clientX - startX;
+        const nextExtent = Math.max(4, startExtent + dx);
+
+        placement.extent = nextExtent;
+        updateUI();
+    });
+
+    window.addEventListener("mouseup", () => {
+        if (!dragging) return;
+        dragging = false;
+        document.body.style.cursor = "";
+    });
+
+    // Expose redraw hook
+    pin._renderExtent = updateUI;
+}
+
+
 
 
 function makePinEl(annotation, onClick) {
@@ -1672,90 +2040,155 @@ function makePinEl(annotation, onClick) {
     pin.style.position = "absolute";
 
     positionAnnotation(pin, annotation);
+    pin._renderExtent?.();
 
     pin.style.pointerEvents = "auto";
     pin.style.userSelect = "none";
 
+    // ---------------------------------------------------------
+    // 1. Invisible HIT AREA (For Audio Icon Dragging)
+    // ---------------------------------------------------------
+    // We make this 30x30 so you can grab the small speaker icon easily.
+    pin.style.minWidth = "24px";
+    pin.style.minHeight = "24px";
+
+    const hit = document.createElement("div");
+    hit.style.position = "absolute";
+    hit.style.left = "-15px";
+    hit.style.top = "-15px";
+    hit.style.width = "30px";
+    hit.style.height = "30px";
+    hit.style.cursor = state.annotationMode ? "grab" : "pointer";
+    hit.style.pointerEvents = "auto";
+    hit.style.background = "transparent"; 
+    hit.style.zIndex = "5"; // Low z-index so it doesn't block the text label
+    pin.appendChild(hit);
+
+    
     const isTrigger = annotation.kind === "trigger" && annotation.trigger;
+    const isAudioOnly = isTrigger && annotation.trigger.visualMode === "audio";
+    
+    // We need a reference to the label for Text Mode dragging
+    let labelEl = null;
 
-    // -----------------------------
-    // Label (drag + click) — FIXED
-    // -----------------------------
-    const label = document.createElement("div");
-    label.textContent =
-        annotation.text.length > 300
-            ? annotation.text.slice(0, 300) + "…"
-            : annotation.text;
+    // =============================================================
+    // MODE A: AUDIO ONLY
+    // =============================================================
+    if (isAudioOnly) {
+        // // Speaker Icon
+        // const icon = document.createElement("div");
+        // icon.textContent = "🔊"; // speaker icon removed
+        // icon.style.fontSize = "14px";
+        // icon.style.position = "absolute";
+        // icon.style.left = "0";
+        // icon.style.top = "0";
+        // // icon.style.transform = "translate(10%, 30%)";
+        // icon.style.pointerEvents = "none"; // Clicks pass through to 'hit'
+        // pin.appendChild(icon);
 
+        // Floating Label (Custom > Filename)
+        const label = document.createElement("div");
+        const customLabel = annotation.trigger?.label;
+        const src = annotation.trigger?.source?.path ?? "";
+        const fileName = src.split("/").pop() || src;
 
+        label.textContent = (customLabel && customLabel.length > 0) ? customLabel : fileName;
 
+        label.style.position = "absolute";
+        label.style.bottom = "15px";
+        label.style.left = "0";
+        label.style.transform = "translateX(4%)";
+        label.style.fontSize = "12px";
+        label.style.whiteSpace = "nowrap";
+        label.style.color = "#000";
+        label.style.background = "rgba(255,255,255,0.7)";
+        label.style.padding = "1px 4px";
+        label.style.pointerEvents = "none";
+        pin.appendChild(label);
 
-    // --- layout isolation ---
-    label.style.position = "relative";
-    label.style.display = "inline-block";
-    label.style.minWidth = "max-content";
-    label.style.maxWidth = "360px";
-    label.style.boxSizing = "border-box";
-    label.style.contain = "layout paint";
-
-    // --- text behaviour ---
-    label.style.whiteSpace = "pre-wrap";
-    label.style.wordBreak = "break-word";
-    label.style.overflowWrap = "anywhere";
-    label.style.writingMode = "horizontal-tb";
-    label.style.textOrientation = "mixed";
-    label.style.direction = "ltr";
-    label.style.hyphens = "none";
-    label.style.lineBreak = "auto";
-
-    // --- visuals ---
-    label.style.marginTop = "6px";
-    label.style.lineHeight = "1.4";
-    const fs = annotation.style?.fontSize ?? 12;
-    label.style.fontSize = `${fs}px`;
-    label.style.padding = "4px 8px";
-    label.style.borderRadius = "8px";
-    label.style.backdropFilter = "blur(4px)";
-    label.style.pointerEvents = "auto";
-
-    // --- trigger styling (border only, icon top-right) ---
-    if (isTrigger) {
-        label.style.background = "rgba(0,0,0,0.6)";  // same as regular
-        label.style.color = "white";
-        label.style.border = `2px solid ${TRIGGER_BORDER_COLOR}`;
-        label.style.cursor = state.annotationMode ? "grab" : "pointer";
-        label.style.position = "relative";  // for absolute icon positioning
-        label.style.paddingRight = "22px";  // make room for icon
-
-        const icon = document.createElement("span");
-        // Different icon for each type
-        const triggerType = annotation.trigger.type;
-        if (triggerType === "audioImpulse") {
-            icon.textContent = "⚡";  // lightning for impulse
-        } else if (triggerType === "audioPool") {
-            icon.textContent = "🎲";  // dice for pool
-        } else {
-            icon.textContent = "🔊";  // speaker for single audio
+        // Attach lines
+        if (annotation.trigger) {
+            attachExtentHandle(pin, annotation);
         }
-        icon.style.position = "absolute";
-        icon.style.top = "2px";
-        icon.style.right = "4px";
-        icon.style.fontSize = "10px";
-        icon.style.opacity = "0.85";
-        icon.style.pointerEvents = "none";
-        label.appendChild(icon);
-    } else {
-        label.style.background = "rgba(0,0,0,0.6)";
-        label.style.color = "white";
-        label.style.border = "1px solid rgba(255,255,255,0.12)";
-        label.style.cursor = "grab";
+    } 
+    // =============================================================
+    // MODE B: STANDARD TEXT LABEL (Restored exactly as before)
+    // =============================================================
+    else {
+        labelEl = document.createElement("div");
+        labelEl.textContent =
+            annotation.text.length > 300
+                ? annotation.text.slice(0, 300) + "…"
+                : annotation.text;
+
+        // Layout isolation & visual styles
+        labelEl.style.position = "relative";
+        labelEl.style.display = "inline-block";
+        labelEl.style.minWidth = "max-content";
+        labelEl.style.maxWidth = "360px";
+        labelEl.style.boxSizing = "border-box";
+        labelEl.style.contain = "layout paint";
+        labelEl.style.whiteSpace = "pre-wrap";
+        labelEl.style.wordBreak = "break-word";
+        labelEl.style.overflowWrap = "anywhere";
+        labelEl.style.writingMode = "horizontal-tb";
+        labelEl.style.textOrientation = "mixed";
+        labelEl.style.direction = "ltr";
+        labelEl.style.hyphens = "none";
+        labelEl.style.lineBreak = "auto";
+
+        labelEl.style.marginTop = "6px";
+        labelEl.style.lineHeight = "1.4";
+        const fs = annotation.style?.fontSize ?? 12;
+        labelEl.style.fontSize = `${fs}px`;
+        labelEl.style.padding = "4px 8px";
+        labelEl.style.borderRadius = "8px";
+        labelEl.style.backdropFilter = "blur(4px)";
+        labelEl.style.pointerEvents = "auto";
+        labelEl.style.zIndex = "10"; // Higher than 'hit' so you can grab the text
+
+        // Trigger styling
+        if (isTrigger) {
+            // labelEl.style.background = "rgba(0,0,0,0.6)";
+            labelEl.style.color = "black";
+            labelEl.style.border = `1px solid ${TRIGGER_BORDER_COLOR}`;
+            labelEl.style.cursor = state.annotationMode ? "grab" : "pointer";
+            labelEl.style.position = "relative";
+            labelEl.style.paddingRight = "10px";
+
+            const icon = document.createElement("span");
+            const triggerType = annotation.trigger.type;
+            if (triggerType === "audioImpulse") icon.textContent = "⚡";
+            else if (triggerType === "audioPool") icon.textContent = "🎲";
+            else icon.textContent = "🔊";
+            
+            icon.style.position = "absolute";
+            icon.style.top = "2px";
+            icon.style.right = "4px";
+            icon.style.fontSize = "12px";
+            icon.style.opacity = "0.85";
+            icon.style.pointerEvents = "none";
+            labelEl.appendChild(icon);
+        } else {
+            // labelEl.style.background = "rgba(0,0,0,0.6)";
+            labelEl.style.color = "black";
+            labelEl.style.border = "1px solid rgba(255,255,255,0.12)";
+            labelEl.style.cursor = "grab";
+        }
+
+        pin.appendChild(labelEl);
+
+        const s = window.localScale || 1;
+        annotation.placement.width = labelEl.offsetWidth / s;
+
+        if (annotation.placement.extent == null || annotation.placement.extent < annotation.placement.width) {
+            annotation.placement.extent = annotation.placement.width;
+        }
     }
 
-    pin.appendChild(label);
-
 
     // -----------------------------
-    // Drag logic — CLEAN SEPARATION
+    // DRAG LOGIC (Shared)
     // -----------------------------
     let dragging = false;
     let moved = false;
@@ -1776,7 +2209,7 @@ function makePinEl(annotation, onClick) {
         e.stopPropagation();
 
         dragging = true;
-        moved = false; // 🔴 CRITICAL RESET (fixes editor bug)
+        moved = false; 
 
         const coords = getPointerCoords(e);
         startX = coords.x;
@@ -1784,7 +2217,9 @@ function makePinEl(annotation, onClick) {
         baseX = annotation.placement.x;
         baseY = annotation.placement.y;
 
-        label.style.cursor = "grabbing";
+        // Visual feedback
+        if (labelEl) labelEl.style.cursor = "grabbing";
+        hit.style.cursor = "grabbing";
 
         window.addEventListener("mousemove", onPointerMove);
         window.addEventListener("mouseup", onPointerUp);
@@ -1808,13 +2243,18 @@ function makePinEl(annotation, onClick) {
         annotation.placement.x = baseX + dx;
         annotation.placement.y = baseY + dy;
         positionAnnotation(pin, annotation);
+        pin._renderExtent?.();
     }
 
     function onPointerUp() {
         if (!dragging) return;
 
         dragging = false;
-        label.style.cursor = isTrigger && !state.annotationMode ? "pointer" : "grab";
+        
+        // Restore cursor
+        const cursor = isTrigger && !state.annotationMode ? "pointer" : "grab";
+        if (labelEl) labelEl.style.cursor = cursor;
+        hit.style.cursor = cursor;
 
         window.removeEventListener("mousemove", onPointerMove);
         window.removeEventListener("mouseup", onPointerUp);
@@ -1829,45 +2269,35 @@ function makePinEl(annotation, onClick) {
         }
     }
 
-    label.addEventListener("mousedown", onPointerDown);
-    label.addEventListener("touchstart", onPointerDown, { passive: false });
+    // -----------------------------------------------------------------
+    // CRITICAL FIX: ATTACH LISTENERS TO *BOTH* HIT AREA AND TEXT LABEL
+    // -----------------------------------------------------------------
+    
+    // 1. Audio Mode: Drags via the invisible 'hit' box
+    hit.addEventListener("mousedown", onPointerDown);
+    hit.addEventListener("touchstart", onPointerDown, { passive: false });
 
-    // -----------------------------
-    // Click behaviour — FIXED
-    // Pen mode ON = edit any annotation
-    // Pen mode OFF = triggers execute, regular annotations do nothing
-    // -----------------------------
-    label.addEventListener("click", (e) => {
-        console.log("[annotation click]", {
-            moved,
-            annotationMode: state.annotationMode,
-            isTrigger,
-            annotationId: annotation.id
-        });
+    // 2. Text Mode: Drags via the label itself (restores missing functionality)
+    if (labelEl) {
+        labelEl.addEventListener("mousedown", onPointerDown);
+        labelEl.addEventListener("touchstart", onPointerDown, { passive: false });
+    }
 
-        if (moved) {
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-        }
-
+    // 3. Click Handling (Unified)
+    const handlePinClick = (e) => {
+        if (moved) return;
         e.preventDefault();
         e.stopPropagation();
 
-        // PEN MODE ON → always edit
         if (state.annotationMode) {
-            console.log("[annotation] Opening editor for:", annotation.id);
             onClick?.(annotation);
-            return;
+        } else if (isTrigger) {
+            executeTrigger(annotation, labelEl || pin);
         }
+    };
 
-        // PEN MODE OFF → only triggers execute, regular annotations do nothing
-        if (isTrigger) {
-            console.log("[annotation] Executing trigger:", annotation.id);
-            executeTrigger(annotation, label);
-        }
-        // Regular annotations: no action when pen is off (just drag)
-    });
+    hit.addEventListener("click", handlePinClick);
+    if (labelEl) labelEl.addEventListener("click", handlePinClick);
 
     return pin;
 }
@@ -2035,6 +2465,8 @@ function renderAll() {
         const pin = makePinEl(item, (ann) => openEditForExisting(ann));
         layer.appendChild(pin);
         positionAnnotation(pin, item);
+        pin._renderExtent?.();
+
     }
 }
 function closeEditor() {
