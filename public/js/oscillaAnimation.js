@@ -22,6 +22,7 @@ function warn(...args) { console.warn(TAG, ...args); }
 import { handleScaleCue } from "./oscillaAnimationScale.js";
 import { handleRotateCue } from "./oscillaAnimationRotate.js";
 import { handleO2PCue } from "./oscillaAnimationO2p.js";
+import { handleColorCue } from "./oscillaAnimationColor.js";
 import { parseCueToAST } from "./oscillaParser.js";
 
 // Ensure global registries exist
@@ -100,6 +101,10 @@ export function animationAssign(svgRoot) {
 
             case "cueO2P":
                 handleO2PCue(el, ast.args);
+                break;
+
+            case "cueColor":
+                handleColorCue(el, ast.args);
                 break;
 
             case "cueText": {

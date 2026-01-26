@@ -51,6 +51,7 @@ import { handleMetronomeCue } from "./oscillaMetro.js";
 import { handleRotateCue } from "./oscillaAnimationRotate.js";
 import { handleScaleCue } from "./oscillaAnimationScale.js";
 import { handleO2PCue } from "./oscillaAnimationO2p.js";
+import { handleColorCue } from "./oscillaAnimationColor.js";
 import { handlePageCue } from "./oscillaPage.js";
 import {
   handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues,
@@ -309,6 +310,12 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
 
     case "cueO2P": {
       handleO2PCue(cueElement, ast.args, { fromCueTrigger: true });
+      triggerNestedCues(ast, cueElement);
+      return;
+    }
+
+    case "cueColor": {
+      handleColorCue(cueElement, ast.args, { fromCueTrigger: true });
       triggerNestedCues(ast, cueElement);
       return;
     }

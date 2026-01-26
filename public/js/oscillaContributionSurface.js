@@ -2500,21 +2500,29 @@ function openEditorAt({
         // Generate annotation ID if not exists (for new annotations)
         const annotationId = existingId || ulidLike();
         
-        const result = await showRecordingModal(annotationId);
+        // Get existing directory from source input if it looks like a directory
+        const currentSource = editor.sourceInput.value.trim();
+        const existingDirectory = currentSource && !currentSource.match(/\.(wav|aif|aiff|mp3|ogg|m4a|webm)$/i) 
+            ? currentSource.replace(/^contributions\//, '') 
+            : null;
+        
+        const result = await showRecordingModal(annotationId, { existingDirectory });
         
         if (result && result.blob) {
-            // Upload the recorded audio
+            // Upload the recorded audio with metadata
             const path = await uploadRecordedAudio(
                 result.blob,
                 result.mimeType,
-                annotationId,
+                result.targetDirectory,
+                result.metadata,
                 editor.sourceInput,
                 editor.statusMsg
             );
             
             if (path) {
-                // Store consent in annotation metadata (will be saved with annotation)
+                // Store metadata in annotation (will be saved with annotation)
                 editor._recordingConsent = result.consent;
+                editor._recordingMetadata = result.metadata;
             }
         }
     };

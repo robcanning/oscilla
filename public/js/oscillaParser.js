@@ -87,6 +87,13 @@ const OscCtrlNode = createToken({ name: "OscCtrlNode", pattern: /\boscCtrlNode\b
 
 const O2P = createToken({ name: "O2P", pattern: /\bo2p\b/, longer_alt: Identifier });
 
+// Color animation (both spellings) - only match when followed by ( to avoid matching colour:red parameter
+const Color = createToken({ 
+    name: "Color", 
+    pattern: /\b(color|colour)(?=\s*\()/, 
+    longer_alt: Identifier 
+});
+
 // ✅ NEW: Dedicated Ui keyword
 const Ui = createToken({ name: "Ui", pattern: /\bui\b/, longer_alt: Identifier });
 
@@ -121,7 +128,7 @@ const PatternName = createToken({
 export const allTokens = [
   Cue, Fade, Page, Stopwatch, Video, Text, Pause, Stop,
   Audio, AudioPool, AudioImpulse, Synth, Button, Nav,
-  Rotate, Scale, ScaleXY, O2P, Ui,
+  Rotate, Scale, ScaleXY, O2P, Color, Ui,
   Osc, OscCtrl, OscCtrlNode,
   After, PatternName, Choose,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
@@ -865,6 +872,11 @@ export class CueParser extends CstParser {
       $.SUBRULE($.animGenericParamList);
     });
 
+    $.RULE("cueColorTop", () => {
+      $.CONSUME(Color);
+      $.SUBRULE($.animGenericParamList);
+    });
+
     // ============================================================
     // ✅ NEW: cueUiTop — dedicated rule for ui() cues
     // Supports: ui("#selector", opacity:0, dur:0.3, visible:false)
@@ -934,6 +946,7 @@ export class CueParser extends CstParser {
         { ALT: () => $.SUBRULE($.cueRotateTop) },
         { ALT: () => $.SUBRULE($.cueScaleTop) },
         { ALT: () => $.SUBRULE($.cueO2PTop) },
+        { ALT: () => $.SUBRULE($.cueColorTop) },
         { ALT: () => $.SUBRULE($.cueOscTop) },
         { ALT: () => $.SUBRULE($.cueOscCtrlTop) },
         { ALT: () => $.SUBRULE($.cueOscCtrlNodeTop) },
@@ -2484,6 +2497,11 @@ export function cstToAst(cst) {
   const o2pNode = cst.children?.cueO2PTop?.[0] || (cst.name === "cueO2PTop" ? cst : null);
   if (o2pNode) {
     return { type: "cueO2P", args: extractAnimKvArgs(o2pNode) };
+  }
+
+  const colorNode = cst.children?.cueColorTop?.[0] || (cst.name === "cueColorTop" ? cst : null);
+  if (colorNode) {
+    return { type: "cueColor", args: extractAnimKvArgs(colorNode) };
   }
 
   // ============================================================================
