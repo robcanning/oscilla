@@ -9,6 +9,7 @@ import { initializeSVG } from "./app.js";
 import { initializeObserver } from "./oscillaObserver.js";
 import { setSpeed, applyDarkMode } from "./oscillaTransport.js";
 import { destroyAllHitLabels } from "./oscillaHitLabels.js";
+import { preloadReuseBlocksFromPages } from "./reuse.js";
 
 
 
@@ -257,8 +258,14 @@ export async function loadProject(projectName, options = {}) {
       console.log("[Prefs] 🎚️ Using default base speed: 1.0");
     }
 
-    // 3️⃣ Determine and load view mode
-        updateLoader("Loading score...", 30);
+    // 3️⃣ Preload reuse blocks BEFORE any mode loads (needed for both scroll and page mode)
+    updateLoader("Loading reusable blocks...", 25);
+    console.log("[loadProject] 📦 Preloading reuse blocks from pages directory...");
+    await preloadReuseBlocksFromPages();
+    console.log("[loadProject] ✅ Reuse blocks preloaded");
+
+    // 4️⃣ Determine and load view mode
+    updateLoader("Loading score...", 30);
 
     const viewMode = prefs.defaultViewMode || "scroll";
     const container = document.getElementById("scoreContainer") || document.querySelector("#scoreContainer");
@@ -266,7 +273,16 @@ export async function loadProject(projectName, options = {}) {
     window.scoreContainer = container;
 
     if (viewMode === "page") {
-      // await loadPageMode(container, prefs.startPage || "main");
+      const startPage = prefs.startPage || "home";
+      console.log(`[loadProject] 📄 Page mode requested, loading "${startPage}"...`);
+      // Defer page loading until after basic setup is complete
+      setTimeout(() => {
+        if (typeof window.handleCueTrigger === "function") {
+          window.handleCueTrigger(`page(${startPage})`, false, true);
+        } else {
+          console.error("[loadProject] ❌ handleCueTrigger not available for page mode");
+        }
+      }, 100);
     } else {
       await loadScrollMode(container);
     }
@@ -274,12 +290,16 @@ export async function loadProject(projectName, options = {}) {
     updateLoader("Initializing playback...", 85);
 
 
-    // 4️⃣ Optional ?page override
+    // 5️⃣ Optional ?page override
     const params = new URLSearchParams(location.search);
     const directPage = params.get("page");
     if (directPage) {
       console.log(`[loadProject] ➡️ Detected ?page=${directPage} — will switch to page mode.`);
-      // await loadPageMode(container, directPage);
+      setTimeout(() => {
+        if (typeof window.handleCueTrigger === "function") {
+          window.handleCueTrigger(`page(${directPage})`, false, true);
+        }
+      }, 200);
     }
 
     // Restore last saved playhead (only when NOT a switch)

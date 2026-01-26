@@ -430,7 +430,6 @@ export function registerCueUid(cueExpr, context = "unknown") {
 }
 
 
-
 //  Unified cue completion event emitter
 export function emitCueComplete(id, type = "generic") {
   // console.log(`[cueComplete] ${type} complete → ${id}`);
@@ -438,12 +437,6 @@ export function emitCueComplete(id, type = "generic") {
     detail: { id, type, timestamp: Date.now() }
   }));
 }
-
-
-
-
-
-
 
 /////////////////////////////////////////////////////////
 
