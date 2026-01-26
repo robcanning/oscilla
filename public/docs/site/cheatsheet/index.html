@@ -115,6 +115,12 @@ color(uid:bgStripe, vals:[#000,#444,#888,#ccc], dur:6)
 fade(mode:in, dur:1, target:title)
 fade(mode:pulse, dur:6, from:0.2, to:1)
 </code></pre>
+<p><strong>ui() show/hide HTML UI elements</strong></p>
+<pre><code>ui(&quot;#playhead&quot;, opacity:0, dur:0.3)
+ui(&quot;#playhead, #playzone&quot;, visible:false, dur:0.25)
+ui(&quot;#playhead, #playzone&quot;, visible:true, dur:0.25)
+
+</code></pre>
 <p><strong>text() Lines,Words,Chars (File||String)</strong></p>
 <pre><code>text(src:foo.txt, dur:3, autostart:1)
 text(src:foo.txt, order:rnd, dur:2, loop:0)

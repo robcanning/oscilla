@@ -133,6 +133,16 @@ fade(mode:out, dur:2, from:1, to:0)
 fade(mode:in, dur:1, target:title)
 fade(mode:pulse, dur:6, from:0.2, to:1)
 ```
+
+**ui() show/hide HTML UI elements**
+
+```
+ui("#playhead", opacity:0, dur:0.3)
+ui("#playhead, #playzone", visible:false, dur:0.25)
+ui("#playhead, #playzone", visible:true, dur:0.25)
+
+```
+
 **text() Lines,Words,Chars (File||String)**
 ```
 text(src:foo.txt, dur:3, autostart:1)
