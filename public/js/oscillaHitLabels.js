@@ -12,6 +12,12 @@
 window._oscillaHitLabels = window._oscillaHitLabels || [];
 window.oscillaShowHitLabels = true;
 
+// ============================================================
+// TOUCH/DRAG MODE SUPPORT
+// Track active drag sessions for o2p touch mode
+// ============================================================
+window._oscillaDragSessions = window._oscillaDragSessions || new Map();
+
 
 export function shouldCreateHitLabel(cfg) {
     // ghostClickable(...) explicitly requires interaction
@@ -21,6 +27,193 @@ export function shouldCreateHitLabel(cfg) {
     if (cfg.prestate === "ghost") return false; // visible but not clickable
 
     return false;
+}
+
+// ============================================================
+// TOUCH/DRAG MODE: Initialize drag handler for o2p elements
+// ============================================================
+export function initO2PDragHandler(hitRecord, pathEl, cfg, updatePositionCallback) {
+    if (!hitRecord || !hitRecord.hit || !pathEl) {
+        console.warn("[hitLabel] initO2PDragHandler: missing required elements");
+        return;
+    }
+
+    const hit = hitRecord.hit;
+    const uid = cfg.uid;
+    
+    // Store drag context
+    const dragContext = {
+        active: false,
+        pathEl,
+        cfg,
+        updatePosition: updatePositionCallback,
+        hitRecord
+    };
+
+    // Convert screen coordinates to SVG coordinates
+    function screenToSVG(screenX, screenY) {
+        const svg = pathEl.ownerSVGElement;
+        if (!svg) return { x: screenX, y: screenY };
+
+        const pt = svg.createSVGPoint();
+        pt.x = screenX;
+        pt.y = screenY;
+
+        const ctm = svg.getScreenCTM();
+        if (!ctm) return { x: screenX, y: screenY };
+
+        const inverse = ctm.inverse();
+        const svgPt = pt.matrixTransform(inverse);
+        return { x: svgPt.x, y: svgPt.y };
+    }
+
+    // Find the closest point on the path to a given SVG coordinate
+    // Returns normalized progress (0-1)
+    function findClosestPointOnPath(svgX, svgY) {
+        const totalLength = pathEl.getTotalLength();
+        if (totalLength === 0) return 0;
+
+        // Binary search with refinement for performance
+        const COARSE_STEPS = 50;
+        const FINE_STEPS = 20;
+        
+        let bestT = 0;
+        let bestDist = Infinity;
+
+        // Coarse search
+        for (let i = 0; i <= COARSE_STEPS; i++) {
+            const t = i / COARSE_STEPS;
+            const len = t * totalLength;
+            const pt = pathEl.getPointAtLength(len);
+            const dist = Math.hypot(pt.x - svgX, pt.y - svgY);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestT = t;
+            }
+        }
+
+        // Fine search around best coarse result
+        const searchRadius = 1 / COARSE_STEPS;
+        const startT = Math.max(0, bestT - searchRadius);
+        const endT = Math.min(1, bestT + searchRadius);
+        
+        for (let i = 0; i <= FINE_STEPS; i++) {
+            const t = startT + (i / FINE_STEPS) * (endT - startT);
+            const len = t * totalLength;
+            const pt = pathEl.getPointAtLength(len);
+            const dist = Math.hypot(pt.x - svgX, pt.y - svgY);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestT = t;
+            }
+        }
+
+        return bestT;
+    }
+
+    // Map raw t (0-1) to the configured start/end range
+    function mapToRange(rawT) {
+        const start = cfg.startPos ?? 0;
+        const end = cfg.endPos ?? 1;
+        // rawT represents position in range, map it to actual path position
+        return start + rawT * (end - start);
+    }
+
+    // Handle pointer move during drag
+    function onPointerMove(e) {
+        if (!dragContext.active) return;
+
+        e.preventDefault();
+        
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const svgCoords = screenToSVG(clientX, clientY);
+        const rawT = findClosestPointOnPath(svgCoords.x, svgCoords.y);
+        const mappedT = mapToRange(rawT);
+
+        // Call the update callback with the new position
+        if (dragContext.updatePosition) {
+            dragContext.updatePosition(mappedT, rawT);
+        }
+    }
+
+    // Handle pointer up - end drag
+    function onPointerUp(e) {
+        if (!dragContext.active) return;
+
+        dragContext.active = false;
+        hit.style.cursor = "grab";
+
+        // Remove global listeners
+        document.removeEventListener("mousemove", onPointerMove);
+        document.removeEventListener("mouseup", onPointerUp);
+        document.removeEventListener("touchmove", onPointerMove);
+        document.removeEventListener("touchend", onPointerUp);
+
+        // Dispatch drag end event
+        hitRecord.groupEl?.dispatchEvent(
+            new CustomEvent("oscilla-drag-end", {
+                bubbles: true,
+                detail: { uid, kind: "o2p" }
+            })
+        );
+
+        console.log("[hitLabel] drag ended", uid);
+    }
+
+    // Handle pointer down - start drag
+    function onPointerDown(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        dragContext.active = true;
+        hit.style.cursor = "grabbing";
+
+        // Add global listeners for move/up
+        document.addEventListener("mousemove", onPointerMove, { passive: false });
+        document.addEventListener("mouseup", onPointerUp);
+        document.addEventListener("touchmove", onPointerMove, { passive: false });
+        document.addEventListener("touchend", onPointerUp);
+
+        // Dispatch drag start event
+        hitRecord.groupEl?.dispatchEvent(
+            new CustomEvent("oscilla-drag-start", {
+                bubbles: true,
+                detail: { uid, kind: "o2p" }
+            })
+        );
+
+        // Immediately update position to where user clicked
+        onPointerMove(e);
+
+        console.log("[hitLabel] drag started", uid);
+    }
+
+    // Set up visual indication that this is draggable
+    hit.style.cursor = "grab";
+
+    // Attach listeners to the hit area
+    hit.addEventListener("mousedown", onPointerDown);
+    hit.addEventListener("touchstart", onPointerDown, { passive: false });
+
+    // Store the drag context for potential cleanup
+    window._oscillaDragSessions.set(uid, dragContext);
+
+    console.log("[hitLabel] drag handler initialized for", uid);
+    
+    return dragContext;
+}
+
+// ============================================================
+// Cleanup drag handler
+// ============================================================
+export function destroyO2PDragHandler(uid) {
+    const ctx = window._oscillaDragSessions.get(uid);
+    if (ctx) {
+        ctx.active = false;
+        window._oscillaDragSessions.delete(uid);
+    }
 }
 
 
@@ -183,6 +376,13 @@ function computePathAnchorScreen(groupEl, t = 0) {
 export function createHitLabel(groupEl, kind, uid, opts = {}) {
     if (!groupEl) return;
 
+    // Prevent duplicate hit labels for same uid
+    const existing = window._oscillaHitLabels?.find(r => r.uid === uid);
+    if (existing) {
+        console.log("[hitLabel] Already exists for uid:", uid);
+        return existing;
+    }
+
     const record = {
         groupEl,
         uid,
@@ -192,26 +392,33 @@ export function createHitLabel(groupEl, kind, uid, opts = {}) {
         sizeMode: opts.sizeMode || "fixed",
         oscMode: false,  // true when double-clicked for OSC
         div: null,  // visible dot
-        hit: null   // invisible hit area
+        hit: null,  // invisible hit area
+        valueLabel: null,  // value display for touch mode
+        isTouchMode: opts.isTouchMode || false
     };
 
     // -----------------------------
-    // INVISIBLE LARGE HIT AREA
+    // HIT AREA - size depends on mode
     // -----------------------------
     const hit = document.createElement("div");
     hit.dataset.uid = uid;
+
+    // For touch mode, start with smaller hit area that will be updated to match circle
+    const hitSize = opts.isTouchMode ? 40 : 140;
+    const hitOffset = hitSize / 2;
 
     Object.assign(hit.style, {
         position: "fixed",
         left: "0px",
         top: "0px",
-        width: "140px",
-        height: "140px",
-        marginLeft: "-70px",
-        marginTop: "-70px",
+        width: `${hitSize}px`,
+        height: `${hitSize}px`,
+        marginLeft: `-${hitOffset}px`,
+        marginTop: `-${hitOffset}px`,
         background: "transparent",
         pointerEvents: "auto",
-        zIndex: 2147483646
+        zIndex: 2147483646,
+        borderRadius: "50%"  // Make hit area circular
     });
 
     hit.classList.add("oscilla-hit");
@@ -294,6 +501,43 @@ export function createHitLabel(groupEl, kind, uid, opts = {}) {
         boxSizing: "border-box"
     });
 
+    // -----------------------------
+    // VALUE LABEL (for touch mode)
+    // -----------------------------
+    let valueLabel = null;
+    if (opts.isTouchMode) {
+        // Check if value label already exists in DOM
+        const existingLabel = document.querySelector(`div[data-value-label="1"][data-uid="${uid}"]`);
+        if (existingLabel) {
+            console.log("[hitLabel] Value label already exists for uid:", uid);
+            valueLabel = existingLabel;
+        } else {
+            valueLabel = document.createElement("div");
+            valueLabel.dataset.uid = uid;
+            valueLabel.dataset.valueLabel = "1";
+            
+            Object.assign(valueLabel.style, {
+                position: "fixed",
+                left: "0px",
+                top: "0px",
+                transform: "translate(-50%, -150%)",  // Position above the circle
+                color: "black",
+                backgroundColor: "white",
+                padding: "1px 3px",
+                fontSize: "9px",
+                fontFamily: "monospace",
+                fontWeight: "bold",
+                zIndex: 2147483647,
+                pointerEvents: "none",
+                whiteSpace: "nowrap"
+            });
+            valueLabel.textContent = "0.00";
+            
+            document.body.appendChild(valueLabel);
+        }
+        record.valueLabel = valueLabel;
+    }
+
     document.body.appendChild(hit);
     document.body.appendChild(div);
 
@@ -364,6 +608,14 @@ export function updateHitCircle(rec) {
 
         div.style.left = `${pos.x - size / 2}px`;
         div.style.top = `${pos.y - size / 2}px`;
+        
+        // For touch mode, match hit area to visible circle
+        if (rec.isTouchMode) {
+            hit.style.width = `${size}px`;
+            hit.style.height = `${size}px`;
+            hit.style.marginLeft = `-${size / 2}px`;
+            hit.style.marginTop = `-${size / 2}px`;
+        }
     }
     else if (
         sizeMode === "ring40" ||
@@ -410,6 +662,12 @@ export function updateHitCircle(rec) {
 
     hit.style.left = `${pos.x}px`;
     hit.style.top = `${pos.y}px`;
+    
+    // Update value label position if it exists
+    if (rec.valueLabel) {
+        rec.valueLabel.style.left = `${pos.x}px`;
+        rec.valueLabel.style.top = `${pos.y}px`;
+    }
 }
 
 // ------------------------------------------------------------
@@ -419,6 +677,17 @@ export function repositionAllHitLabels() {
     for (const rec of window._oscillaHitLabels) {
         updateHitCircle(rec);
     }
+}
+
+// ------------------------------------------------------------
+// UPDATE VALUE LABEL (for touch mode sliders)
+// ------------------------------------------------------------
+export function updateHitLabelValue(uid, value) {
+    const rec = window._oscillaHitLabels?.find(r => r.uid === uid);
+    if (!rec || !rec.valueLabel) return;
+    
+    // Format to 2 decimal places
+    rec.valueLabel.textContent = value.toFixed(2);
 }
 
 // ------------------------------------------------------------

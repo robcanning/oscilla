@@ -520,6 +520,43 @@ export function assignCues(svgRoot, cuesArray = []) {
           continue;
         }
 
+        // =========================================
+        // o2p with trig:touch is IMMEDIATELY active
+        // Register it now, don't wait for playhead
+        // =========================================
+        if (ast.type === "cueO2P") {
+          const trigArg = ast.args?.find(a => a.type === "trig");
+          const isTouchMode = trigArg && String(trigArg.value).toLowerCase() === "touch";
+          
+          if (isTouchMode) {
+            // Defer activation to next frame to ensure DOM is ready
+            const activateTouchMode = () => {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  try {
+                    console.log("[assignCues] o2p trig:touch → activating", cueExpr);
+                    handleO2PCue(child, ast.args || [], { fromAssign: true, fromCueTrigger: true });
+                    console.log("[assignCues] o2p trig:touch → activated successfully");
+                  } catch (err) {
+                    console.error("[o2p trig:touch] activation failed:", err);
+                  }
+                });
+              });
+            };
+            
+            // Activate after DOM is fully ready
+            if (document.readyState === "complete") {
+              activateTouchMode();
+            } else {
+              window.addEventListener("load", activateTouchMode, { once: true });
+            }
+            
+            // Skip adding to cues list - it's not playhead-triggered
+            walk(child);
+            continue;
+          }
+        }
+
 
         // -----------------------------------
         // Pre-prime fade targets
@@ -1065,10 +1102,3 @@ export function cancelPendingStartByUid(uid) {
   window.pendingCueStarts.delete(uid);
   // console.log(`[startScheduler] cancelled pending start for ${uid}`);
 }
-
-
-
-
-
-
-

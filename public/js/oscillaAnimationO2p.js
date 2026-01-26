@@ -22,7 +22,7 @@
 
 import { registerAnimation, resolveAnimationUid } from "./oscillaAnimation.js";
 import { scheduleCueStart } from "./oscillaCueDispatcher.js";
-import { createHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
+import { createHitLabel, repositionAllHitLabels, initO2PDragHandler, updateHitLabelValue } from "./oscillaHitLabels.js";
 
 import {
     applyPrestateBeforeStart,
@@ -941,10 +941,13 @@ export function handleO2PCue(el, args, options = {}) {
         // -----------------------------------------------------------
         el._oscillaCfg = cfg;
 
+        // Touch mode should NEVER auto-start - it's purely user-driven
         const shouldStartNow =
-            fromCueTrigger ||
-            cfg.trig === "auto" ||
-            cfg.trig === "playhead";
+            cfg.trig !== "touch" && (
+                fromCueTrigger ||
+                cfg.trig === "auto" ||
+                cfg.trig === "playhead"
+            );
 
         // -----------------------------------------------------------
         // PRESTATE BEFORE START (REGISTRATION)
@@ -972,7 +975,140 @@ export function handleO2PCue(el, args, options = {}) {
             applyPrestateOnStart(el, cfg);
 
         // -----------------------------------------------------------
-        // Register with visibility / pause / resume system
+        // TOUCH MODE: Interactive drag-to-control mode
+        // Handle this BEFORE registerAnimation to prevent any auto-start
+        // Touch mode is IMMEDIATELY active - no playhead required
+        // -----------------------------------------------------------
+        if (cfg.trig === "touch") {
+            // Prevent multiple initializations
+            if (el._touchModeInitialized) {
+                console.log("[o2pCue] Touch mode already initialized for:", cfg.uid);
+                return;
+            }
+            el._touchModeInitialized = true;
+            
+            console.log("[o2pCue] 🖐️ Touch mode enabled →", cfg.uid);
+
+            // Make element immediately visible (bypass prestate system)
+            el.style.opacity = "1";
+            el.style.visibility = "visible";
+            el.style.pointerEvents = "all";
+
+            // Create hit label first (needed for drag handling)
+            createHitLabel(el, "o2p", cfg.uid, {
+                anchorMode: "object",
+                color: "orange",  // Different color for touch mode
+                sizeMode: "follow",
+                isTouchMode: true  // Enable value label
+            });
+
+            // Get the hit label record we just created
+            const hitRecord = window._oscillaHitLabels?.find(r => r.uid === cfg.uid);
+            
+            // Get the path element
+            const svg = el.ownerSVGElement || document.querySelector("svg");
+            
+            const pathEl = svg?.querySelector(`#${cfg.path}`);
+            console.log("[o2pCue] Touch mode - pathEl found:", !!pathEl, cfg.path);
+
+            if (!pathEl) {
+                console.warn("[o2pCue] Touch mode: path not found:", cfg.path);
+                return;
+            }
+
+            // Get wrapper for transforms
+            const wrapper = ensureO2PWrapper(el);
+            cfg._wrapper = wrapper;
+            captureOriginalCenter(wrapper);
+
+            // Set up OSC configuration for touch mode
+            const osc = cfg.osc;
+            let oscCfg = { enabled: false, throttle: 30, lastSent: 0 };
+            const n = Number(osc);
+
+            if (osc === false || osc === "false" || n === 0) {
+                oscCfg.enabled = false;
+            } else if (osc === true || osc === "true") {
+                oscCfg.enabled = true;
+            } else if (!Number.isNaN(n)) {
+                oscCfg.enabled = true;
+                oscCfg.throttle = Math.max(5, n);
+            }
+
+            cfg.oscCfg = oscCfg;
+
+            // Create OSC overlay if enabled
+            if (pathEl && cfg.oscCfg?.enabled) {
+                cfg._overlay = createOscOverlay({
+                    anchorEl: pathEl,
+                    label: cfg.oscAddr || cfg.uid,
+                    mode: "auto"
+                });
+                cfg._overlay.update("drag to control");
+                cfg._overlay.position();
+            }
+
+            // Create the position update function that will be called during drag
+            const updatePosition = (mappedT, rawT) => {
+                const length = pathEl.getTotalLength();
+                const localL = mappedT * length;
+                const point = pathEl.getPointAtLength(localL);
+
+                // Compute tangent angle
+                const EPS = 0.1;
+                const aheadLen = Math.min(length - EPS, Math.max(0, localL + EPS));
+                const ahead = pathEl.getPointAtLength(aheadLen);
+                let angle = Math.atan2(ahead.y - point.y, ahead.x - point.x) * (180 / Math.PI);
+                if (!isFinite(angle)) angle = 0;
+
+                // Apply transform to move object
+                applyTransform(wrapper, point, angle, cfg);
+                repositionAllHitLabels();
+                
+                // Update the value label with current position
+                updateHitLabelValue(cfg.uid, rawT);
+
+                // Emit OSC if enabled
+                if (cfg.oscCfg?.enabled) {
+                    emitO2POsc({
+                        cfg,
+                        uid: cfg.uid,
+                        path: pathEl,
+                        point,
+                        pathT: mappedT
+                    });
+
+                    // Update overlay
+                    if (cfg._overlay) {
+                        cfg._overlay.update(
+                            `t:${rawT.toFixed(2)} x:${point.x.toFixed(1)} y:${point.y.toFixed(1)}`
+                        );
+                    }
+                }
+
+                // Store current position for external access
+                cfg._currentT = mappedT;
+                cfg._currentPoint = point;
+                cfg._currentAngle = angle;
+            };
+
+            // Initialize the drag handler
+            if (hitRecord) {
+                initO2PDragHandler(hitRecord, pathEl, cfg, updatePosition);
+            } else {
+                console.warn("[o2pCue] Touch mode: hit label not found for drag handler", cfg.uid);
+            }
+
+            // Mark as ready (no animation running, but interactive)
+            cfg._touchModeActive = true;
+
+            // Touch mode does NOT auto-start animation - it's purely user-driven
+            // Return here to skip ALL further processing including scheduleCueStart
+            return;
+        }
+
+        // -----------------------------------------------------------
+        // NON-TOUCH MODES: Register with visibility / pause / resume system
         // -----------------------------------------------------------
         registerAnimation(el, "o2p", cfg, () => {
             if (cfg.trig === "edge" && !cfg._edgeTriggered) {
@@ -989,6 +1125,7 @@ export function handleO2PCue(el, args, options = {}) {
             rawStart();
         });
 
+        // Create standard hit label for non-touch modes
         createHitLabel(el, "o2p", cfg.uid, {
             anchorMode: "object",
             color: "purple",

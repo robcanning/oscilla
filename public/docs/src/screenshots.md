@@ -36,6 +36,14 @@ layout: docs_layout.njk
   <figcaption>The Contribution Surface provides a shared, executable workspace layered over the score, enabling performers to contribute text, sounds, and triggers during rehearsal or performance. These contributions can be moved, edited, and synchronised across the network, supporting collaborative, negotiated, and evolving score practices.</figcaption>
 </figure>
 
+## Oscilla OSC controller design in Inkscape
+<figure class="doc-image">
+  <img
+    src="{{ '/docs/img/oscilla-osc-controller.png' | url }}"
+    alt="Oscilla OSC controller design in Inkscape"
+  >
+  <figcaption>An SVG-based OSC fader controller created in Inkscape. The orange ring indicates touch mode (<code>trig:touch</code>) is active, allowing the object to be dragged along the path. The value label displays the current position (0.00–1.00) in real-time.</figcaption>
+</figure>
 
 ## Oscilla "Smart Cue" Inkscape Extension
 <figure class="doc-image">

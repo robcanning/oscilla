@@ -107,7 +107,8 @@
       <h1>cue:o2p — Object-to-Path Animation</h1>
 <p><code>o2p(...)</code> animates an SVG object along a named <code>&lt;path&gt;</code>.<br>
 It supports path traversal, directional modes, rotation modes, looping, OSC output,
-partial-path motion, trigger-based activation, delayed start, and visual pre-start states.</p>
+partial-path motion, trigger-based activation, delayed start, visual pre-start states,
+and <strong>interactive touch/drag control</strong>.</p>
 <hr>
 <h1>BASIC FORM</h1>
 <pre><code>o2p(path:&lt;id&gt;, dur:&lt;seconds&gt;, mode:fwd)
@@ -247,16 +248,73 @@ o2p(path:orbit, loop:0)   // infinite
 <pre><code>o2p(path:orbit, osc:true)
 </code></pre>
 <p>Emits:</p>
-<pre><code>/obj2path &lt;uid&gt; &lt;normX&gt; &lt;normY&gt; &lt;angle&gt;
+<pre><code>/o2p/&lt;uid&gt; &lt;pathT&gt; &lt;normX&gt; &lt;normY&gt; &lt;angle&gt;
+</code></pre>
+<p>Custom OSC address:</p>
+<pre><code>o2p(path:orbit, osc:true, oscAddr:myController)
+</code></pre>
+<p>Emits:</p>
+<pre><code>/myController &lt;pathT&gt; &lt;normX&gt; &lt;normY&gt; &lt;angle&gt;
 </code></pre>
 <hr>
 <h1>TRIGGERING</h1>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>trig:auto</code></td>
+<td>starts automatically in page mode</td>
+</tr>
+<tr>
+<td><code>trig:edge</code></td>
+<td>starts when the playhead intersects in scroll mode</td>
+</tr>
+<tr>
+<td><code>trig:touch</code></td>
+<td><strong>NEW</strong> — no auto-animation; object is draggable along path</td>
+</tr>
+</tbody>
+</table>
+<p>Cues may also be activated programmatically.<br>
+<code>tdelay</code> applies after the trigger is detected.</p>
+<hr>
+<h1>TOUCH MODE (Interactive Control)</h1>
+<p>The <code>trig:touch</code> mode transforms the o2p animation into an <strong>interactive controller</strong>.
+Instead of automatically animating, the object waits for user interaction.</p>
+<pre><code>o2p(path:fader, trig:touch, osc:true)
+</code></pre>
+<p><strong>Behavior:</strong></p>
 <ul>
-<li><code>trig:auto</code> — starts automatically in page mode</li>
-<li><code>trig:edge</code> — starts when the playhead intersects in scroll mode</li>
-<li>cues may also be activated programmatically</li>
-<li><code>tdelay</code> applies after the trigger is detected</li>
+<li>Object is positioned at the start point (or <code>start:</code> position)</li>
+<li>No automatic animation occurs</li>
+<li>User can <strong>grab and drag</strong> the hit-label overlay</li>
+<li>Object follows the user's finger/mouse along the path</li>
+<li>If <code>osc:true</code>, every movement emits OSC values</li>
 </ul>
+<p><strong>Use Cases:</strong></p>
+<ul>
+<li>Browser-based OSC faders/sliders</li>
+<li>XY pads with constrained motion</li>
+<li>Rotary knobs (using circular paths)</li>
+<li>Custom UI controllers that follow any SVG path shape</li>
+</ul>
+<p><strong>Example — Linear Fader:</strong></p>
+<pre><code>o2p(path:verticalLine, trig:touch, osc:true, oscAddr:fader1)
+</code></pre>
+<p><strong>Example — Circular Knob:</strong></p>
+<pre><code>o2p(path:knobArc, trig:touch, start:0.1, end:0.9, osc:true, oscAddr:knob1)
+</code></pre>
+<p><strong>Example — XY Pad (rectangular path):</strong></p>
+<pre><code>o2p(path:xyBounds, trig:touch, osc:true, oscAddr:xyPad)
+</code></pre>
+<p><strong>Visual Indicator:</strong>
+Touch mode objects display an <strong>orange</strong> hit-label ring (instead of purple)
+to indicate they are draggable.</p>
 <hr>
 <h1>LIVE UPDATE (<code>uid:</code>)</h1>
 <pre><code>o2p(path:ring, uid:a1)
@@ -310,12 +368,16 @@ o2p(uid:a1, mode:alt)
 <td>OSC emission</td>
 </tr>
 <tr>
+<td><code>oscAddr</code></td>
+<td>custom OSC address (without leading <code>/</code>)</td>
+</tr>
+<tr>
 <td><code>uid</code></td>
 <td>animation identity tag</td>
 </tr>
 <tr>
 <td><code>trig</code></td>
-<td>trigger mode</td>
+<td>trigger mode (<code>auto</code>, <code>edge</code>, <code>touch</code>)</td>
 </tr>
 <tr>
 <td><code>tdelay</code></td>
@@ -333,6 +395,10 @@ o2p(uid:a1, mode:alt)
 o2p(path:spiral, rotate:aligned, rotoffset:-90)
 o2p(path:ring, start:0.2, end:0.9, mode:alt)
 o2p(path:circle, rotate:spin, rotspeed:2, rotdir:-1)
+
+// Touch mode controllers
+o2p(path:faderTrack, trig:touch, osc:true, oscAddr:volume)
+o2p(path:knobPath, trig:touch, start:0.15, end:0.85, osc:true)
 </code></pre>
 
       
