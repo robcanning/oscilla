@@ -39,7 +39,7 @@ import {
   setAnnotationMode,
   setAnnotationsEnabled,
   loadSharedAnnotations
-} from "./oscillaAnnotations.js";
+} from "./oscillaContributionSurface.js";
 
 
 import { handleCueTrigger, checkCueTriggers, parseCueParams, resetTriggeredCues, assignCues } from './oscillaCueDispatcher.js';
