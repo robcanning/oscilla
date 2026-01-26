@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Architecture_Overview</title>
+  <link rel="stylesheet" href="/oscilla/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+      <a href="/oscilla/docs/" class="docs-brand">
+        <img
+          src="/oscilla/docs/img/logos/logo-header-docs.svg"
+          alt="Oscilla"
+          class="docs-logo"
+          aria-hidden="true"
+        >
+      </a>
+
+            <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/oscilla/docs/">Docs Overview</a></li>
+    <li><a href="/oscilla/docs/about">What is Oscilla?</a></li>
+    <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
+    <li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+    <li><a href="/oscilla/docs/cue_button">button()</a></li>
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
+    <li><a href="/oscilla/docs/color/">color()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+    <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/oscilla/docs/contribution_surface/">Contribution Surface</a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/oscilla/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+      <li><a href="/oscilla/docs/oscilla_architecture_overview/">Architecture Overview</a></li>
+    <li><a href="/oscilla/docs/dev-sync-architecture/">Sync Architecture</a></li>
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+
+      
+      <h1>Oscilla — Architecture Overview</h1>
+<p>This document provides a concise, system-level overview of Oscilla’s architecture: major modules, entry points, and runtime data flows. It is intended as a developer-facing map to support onboarding, maintenance, and refactoring.</p>
+<hr>
+<h2>Purpose</h2>
+<p>Oscilla is a <strong>browser-based, cue-driven graphic notation platform</strong> built around SVG, WebSockets, and OSC.</p>
+<ul>
+<li>Scores are authored as SVG documents.</li>
+<li>Behaviour is encoded via ID-based cues and mini-DSL syntax.</li>
+<li>The client executes animations, triggers audio, and emits network and OSC events.</li>
+</ul>
+<p>The system is designed to support <strong>composed notation</strong>, <strong>live execution</strong>, and <strong>networked contribution</strong> within a single runtime.</p>
+<hr>
+<h2>High-Level Entry Points</h2>
+<h3>Server</h3>
+<p><strong><code>server.js</code> (repo root)</strong></p>
+<ul>
+<li>Express server for serving <code>/public</code></li>
+<li>WebSocket endpoint for client sync</li>
+<li>OSC bridge to external audio / media engines</li>
+<li>Project import/export (<code>.oscilla</code>)</li>
+<li>Development and standalone binary lifecycle</li>
+</ul>
+<hr>
+<h3>Client</h3>
+<p><strong><code>public/index.html</code></strong></p>
+<ul>
+<li>Main frontend entry point</li>
+<li>Loads UI shell and client JavaScript</li>
+<li>Boots the Oscilla runtime</li>
+</ul>
+<p><strong><code>public/scores/&lt;project&gt;/score.svg</code></strong></p>
+<ul>
+<li>Per-project authored score</li>
+<li>Contains SVG graphics, cue IDs, reusable blocks</li>
+<li>Primary data source for runtime behaviour</li>
+</ul>
+<hr>
+<h2>Frontend Architecture (<code>public/js/</code>)</h2>
+<h3><code>app.js</code> — Client Bootstrap / Orchestration</h3>
+<p><strong>Role</strong>: High-level runtime composition and startup sequence.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Imports and wires together all major subsystems</li>
+<li>Establishes global runtime bindings on <code>window</code></li>
+<li>Orchestrates project loading, score setup, and initialization order</li>
+<li>Detects platform (desktop/mobile) and applies conditional UI logic</li>
+</ul>
+<p>Key integrations:</p>
+<ul>
+<li>Transport and playhead (<code>oscillaTransport.js</code>)</li>
+<li>Cue dispatch (<code>oscillaCueDispatcher.js</code>)</li>
+<li>Animation registry (<code>oscillaAnimation.js</code>)</li>
+<li>Contribution Surface (<code>oscillaAnnotations.js</code>)</li>
+<li>Audio handling (<code>oscillaAudio.js</code>)</li>
+<li>Reuse/template system (<code>reuse.js</code>)</li>
+<li>UI wiring (menus, preferences, buttons)</li>
+</ul>
+<p><code>app.js</code> intentionally contains minimal feature logic; it composes modules rather than implementing behaviour.</p>
+<hr>
+<h3>Animation &amp; Cue Execution</h3>
+<h4><code>oscillaAnimation.js</code></h4>
+<p><strong>Role</strong>: Cue parsing, animation assignment, and lifecycle management.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Scan SVG DOM for cue-related IDs</li>
+<li>Parse mini-DSL expressions</li>
+<li>Register animations via <code>registerAnimation</code></li>
+<li>Track running animations</li>
+<li>Delegate to specific handlers (scale, rotate, path-follow, text)</li>
+</ul>
+<p>Key exports:</p>
+<ul>
+<li><code>registerAnimation</code></li>
+<li><code>registerRunningAnimation</code></li>
+<li><code>clearRunningAnimation</code></li>
+<li><code>animationAssign</code></li>
+<li><code>debugDump</code></li>
+</ul>
+<p>Touchpoints:</p>
+<ul>
+<li>Invoked during SVG initialization</li>
+<li>Called by cue dispatcher on playback events</li>
+</ul>
+<hr>
+<h4><code>oscillaCueDispatcher.js</code></h4>
+<p><strong>Role</strong>: Scheduling and dispatch of cue events.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Schedule cue start times</li>
+<li>Emit cue completion events</li>
+<li>Bridge between playhead timing and execution layers</li>
+</ul>
+<p>Key functions:</p>
+<ul>
+<li><code>scheduleCueStart</code></li>
+<li><code>emitCueComplete</code></li>
+</ul>
+<hr>
+<h3>Contribution Surface</h3>
+<h4><code>oscillaAnnotations.js</code></h4>
+<p><strong>Role</strong>: Browser-native contribution layer (HTML overlays over SVG).</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Create, edit, move, and delete contributions</li>
+<li>Manage Contribution Surface state</li>
+<li>Execute audio triggers (click or playhead)</li>
+<li>Manage spatial extent regions</li>
+<li>Handle audio-only contributions</li>
+<li>Persist contributions (localStorage)</li>
+<li>Optional WebSocket synchronization</li>
+</ul>
+<p>Key concepts:</p>
+<ul>
+<li>Contributions as executable, spatial entities</li>
+<li>Trigger pools for directory-based audio</li>
+<li>Integration with audio and timer subsystems</li>
+</ul>
+<p>Exposed API:</p>
+<ul>
+<li><code>window.oscillaAnnotations</code></li>
+</ul>
+<hr>
+<h3>Audio System</h3>
+<h4><code>oscillaAudio.js</code></h4>
+<p><strong>Role</strong>: Audio playback primitives.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Play single-file audio</li>
+<li>Manage directory-based pools</li>
+<li>Run continuous impulse processes</li>
+<li>Stop and manage impulse lifecycles</li>
+</ul>
+<p>Primary functions:</p>
+<ul>
+<li><code>handleAudioCue</code></li>
+<li><code>handleAudioPoolCue</code></li>
+<li><code>handleAudioImpulseCue</code></li>
+<li><code>stopAudioImpulse</code></li>
+</ul>
+<p>Used by:</p>
+<ul>
+<li>Contribution Surface</li>
+<li>Cue-triggered media execution</li>
+</ul>
+<hr>
+<h3>OSC Integration</h3>
+<h4><code>oscillaOSC.js</code></h4>
+<p><strong>Role</strong>: OSC message construction and transport.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Construct OSC messages from visual and cue data</li>
+<li>Sample visual geometry (<code>sampleVisual()</code>)</li>
+<li>Send OSC messages via server bridge</li>
+</ul>
+<hr>
+<h3>Timing &amp; Utilities</h3>
+<h4><code>oscillaTimers.js</code></h4>
+<ul>
+<li>Stopwatch and timing utilities</li>
+<li>Shared scheduling primitives</li>
+</ul>
+<h4><code>oscillaHitLabels.js</code></h4>
+<ul>
+<li>Visual hit-labels for OSC and interaction feedback</li>
+<li>UI indicators for triggered events</li>
+</ul>
+<hr>
+<h3>Reuse / Template System</h3>
+<h4><code>reuse.js</code></h4>
+<p><strong>Role</strong>: SVG reusable block system.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Register reusable <code>&lt;g id=&quot;reuse(...)&quot;&gt;</code> blocks</li>
+<li>Inject clones for <code>&lt;g id=&quot;use(...)&quot;&gt;</code> placeholders</li>
+<li>Support template-based score construction</li>
+</ul>
+<p>Key exports:</p>
+<ul>
+<li><code>registerReuseBlocks</code></li>
+<li><code>preloadReuseBlocksFromPages</code></li>
+<li><code>autoInjectUseBlocks</code></li>
+<li><code>handleUse</code></li>
+<li><code>buildPageRegistryFromDirIndex</code></li>
+</ul>
+<h4><code>utils.js</code></h4>
+<ul>
+<li>SVG geometry and transform helpers</li>
+<li>Bounding box and alignment utilities</li>
+<li>ID management for reuse blocks</li>
+</ul>
+<hr>
+<h2>Runtime Data Flows</h2>
+<h3>Application Startup</h3>
+<ol>
+<li><code>index.html</code> loads client bundle</li>
+<li><code>app.js</code> initializes runtime</li>
+<li>Project assets loaded (SVG, pages, audio)</li>
+<li>Reuse blocks registered and injected</li>
+<li>Contribution Surface initialized</li>
+<li>SVG scanned and animations assigned</li>
+</ol>
+<hr>
+<h3>Cue Execution Flow</h3>
+<ol>
+<li>Playhead or UI event triggers cue</li>
+<li><code>oscillaCueDispatcher</code> schedules execution</li>
+<li><code>oscillaAnimation</code> runs visual behaviour</li>
+<li>Contribution Surface may execute audio triggers</li>
+<li>OSC messages emitted if configured</li>
+</ol>
+<hr>
+<h3>Network &amp; OSC</h3>
+<ul>
+<li>WebSocket sync for shared contributions</li>
+<li>Server relays messages between clients</li>
+<li>OSC messages forwarded to external engines</li>
+</ul>
+<hr>
+<h2>Server &amp; Build System</h2>
+<ul>
+<li><code>server.js</code>: Express + WebSocket + OSC bridge</li>
+<li><code>build.sh</code> and scripts: standalone binary packaging</li>
+<li>Version file maintained at repo root</li>
+</ul>
+<hr>
+<h2>Documentation</h2>
+<ul>
+<li><code>public/docs/</code> and <code>docs/</code></li>
+<li>Cue references, cheatsheets, workflows</li>
+<li>Inkscape extension documentation</li>
+</ul>
+<hr>
+<h2>Immediate Technical Notes</h2>
+<p>Low-risk cleanup candidates:</p>
+<ul>
+<li>Consolidate duplicated helpers (e.g. <code>clamp01</code>) into shared utils</li>
+<li>Audit module-local debug helpers for removal or centralization</li>
+<li>Consider namespacing global APIs under <code>window.oscilla</code></li>
+<li>Ensure Contribution Surface import/export hooks are exposed in UI if retained</li>
+</ul>
+<hr>
+<h2>Summary</h2>
+<p>Oscilla’s architecture separates <strong>authored structure</strong> (SVG Score Layer) from <strong>live execution and contribution</strong> (Contribution Surface), coordinated through a cue dispatcher and unified runtime.</p>
+<p>This modular design supports composed scores, live interfaces, and distributed performance within a single browser-based system.</p>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>
