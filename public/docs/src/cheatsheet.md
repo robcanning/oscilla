@@ -275,22 +275,12 @@ reuse(audioSampBtns) • use(audioSampBtns)
 ## Inkscape Extension (Recommended)
 ```
 - Structured UI for editing cue & animation IDs
-- Avoids syntax errors, Faster for complex scores
 -  see docs docs/inkscape_extension/
 ```
 ## Project Actions (Quick)
 ```
-File → New Project…  
-Create a fresh project from the standard template
-
-File → Save Project As…  
-Duplicate the current project under a new name  
-
-File → Export Project (.oscilla)  
-Bundle project for sharing or archiving)
-
-File → Import Project (.oscilla)  
-Unpack a shared project and load it under a new name
+File → New Project, Save Project As…  
+File → Import/Export Project (.oscilla)  
 ```
 
 ## Links

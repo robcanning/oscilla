@@ -26,6 +26,17 @@ layout: docs_layout.njk
   <figcaption>Oscilla Interface and Preferences GUI</figcaption>
 </figure>
 
+
+## Oscilla "Contribution Surface"
+<figure class="doc-image">
+  <img
+    src="{{ '/docs/img/oscilla-contribution-surface.png' | url }}"
+    alt="Oscilla Preferences"
+  >
+  <figcaption>The Contribution Surface provides a shared, executable workspace layered over the score, enabling performers to contribute text, sounds, and triggers during rehearsal or performance. These contributions can be moved, edited, and synchronised across the network, supporting collaborative, negotiated, and evolving score practices.</figcaption>
+</figure>
+
+
 ## Oscilla "Smart Cue" Inkscape Extension
 <figure class="doc-image">
   <img

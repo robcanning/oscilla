@@ -264,12 +264,15 @@ function flashTriggerLabel(labelEl) {
 
     const originalBg = labelEl.style.background;
     labelEl.style.background = TRIGGER_FLASH_COLOR;
-    labelEl.style.transform = "scale(1.05)";
+    
+    // ✅ FIX: Include the vertical centering (translateY) in the flash scale
+    labelEl.style.transform = "translateY(-50%) scale(1.05)";
     labelEl.style.transition = "all 0.08s ease-out";
 
     setTimeout(() => {
         labelEl.style.background = originalBg;
-        labelEl.style.transform = "scale(1)";
+        // ✅ FIX: Return to the base centered state
+        labelEl.style.transform = "translateY(-50%) scale(1)";
     }, 100);
 }
 
@@ -2046,9 +2049,8 @@ function makePinEl(annotation, onClick) {
     pin.style.userSelect = "none";
 
     // ---------------------------------------------------------
-    // 1. Invisible HIT AREA (For Audio Icon Dragging)
+    // 1. Invisible HIT AREA
     // ---------------------------------------------------------
-    // We make this 30x30 so you can grab the small speaker icon easily.
     pin.style.minWidth = "24px";
     pin.style.minHeight = "24px";
 
@@ -2061,32 +2063,18 @@ function makePinEl(annotation, onClick) {
     hit.style.cursor = state.annotationMode ? "grab" : "pointer";
     hit.style.pointerEvents = "auto";
     hit.style.background = "transparent"; 
-    hit.style.zIndex = "5"; // Low z-index so it doesn't block the text label
+    hit.style.zIndex = "5"; 
     pin.appendChild(hit);
 
-    
     const isTrigger = annotation.kind === "trigger" && annotation.trigger;
     const isAudioOnly = isTrigger && annotation.trigger.visualMode === "audio";
     
-    // We need a reference to the label for Text Mode dragging
     let labelEl = null;
 
     // =============================================================
-    // MODE A: AUDIO ONLY
+    // MODE A: AUDIO ONLY (Using GUI Label)
     // =============================================================
     if (isAudioOnly) {
-        // // Speaker Icon
-        // const icon = document.createElement("div");
-        // icon.textContent = "🔊"; // speaker icon removed
-        // icon.style.fontSize = "14px";
-        // icon.style.position = "absolute";
-        // icon.style.left = "0";
-        // icon.style.top = "0";
-        // // icon.style.transform = "translate(10%, 30%)";
-        // icon.style.pointerEvents = "none"; // Clicks pass through to 'hit'
-        // pin.appendChild(icon);
-
-        // Floating Label (Custom > Filename)
         const label = document.createElement("div");
         const customLabel = annotation.trigger?.label;
         const src = annotation.trigger?.source?.path ?? "";
@@ -2094,10 +2082,13 @@ function makePinEl(annotation, onClick) {
 
         label.textContent = (customLabel && customLabel.length > 0) ? customLabel : fileName;
 
+        // ✅ VERTICAL CENTERING FIX
         label.style.position = "absolute";
-        label.style.bottom = "15px";
-        label.style.left = "0";
-        label.style.transform = "translateX(4%)";
+        label.style.left = "0"; 
+        label.style.top = "0";
+        // Center vertically on the anchor point
+        label.style.transform = "translateY(-50%)"; 
+        
         label.style.fontSize = "12px";
         label.style.whiteSpace = "nowrap";
         label.style.color = "#000";
@@ -2106,13 +2097,12 @@ function makePinEl(annotation, onClick) {
         label.style.pointerEvents = "none";
         pin.appendChild(label);
 
-        // Attach lines
         if (annotation.trigger) {
             attachExtentHandle(pin, annotation);
         }
     } 
     // =============================================================
-    // MODE B: STANDARD TEXT LABEL (Restored exactly as before)
+    // MODE B: STANDARD TEXT LABEL (Annotation body text)
     // =============================================================
     else {
         labelEl = document.createElement("div");
@@ -2121,8 +2111,14 @@ function makePinEl(annotation, onClick) {
                 ? annotation.text.slice(0, 300) + "…"
                 : annotation.text;
 
-        // Layout isolation & visual styles
-        labelEl.style.position = "relative";
+        // ✅ VERTICAL CENTERING FIX
+        // Changed from 'relative' to 'absolute' to lift it from below the line
+        labelEl.style.position = "absolute";
+        labelEl.style.left = "0";
+        labelEl.style.top = "0";
+        // Centers the box vertically on the line
+        labelEl.style.transform = "translateY(-50%)";
+
         labelEl.style.display = "inline-block";
         labelEl.style.minWidth = "max-content";
         labelEl.style.maxWidth = "360px";
@@ -2137,7 +2133,6 @@ function makePinEl(annotation, onClick) {
         labelEl.style.hyphens = "none";
         labelEl.style.lineBreak = "auto";
 
-        labelEl.style.marginTop = "6px";
         labelEl.style.lineHeight = "1.4";
         const fs = annotation.style?.fontSize ?? 12;
         labelEl.style.fontSize = `${fs}px`;
@@ -2145,15 +2140,12 @@ function makePinEl(annotation, onClick) {
         labelEl.style.borderRadius = "8px";
         labelEl.style.backdropFilter = "blur(4px)";
         labelEl.style.pointerEvents = "auto";
-        labelEl.style.zIndex = "10"; // Higher than 'hit' so you can grab the text
+        labelEl.style.zIndex = "10";
 
-        // Trigger styling
         if (isTrigger) {
-            // labelEl.style.background = "rgba(0,0,0,0.6)";
             labelEl.style.color = "black";
             labelEl.style.border = `1px solid ${TRIGGER_BORDER_COLOR}`;
             labelEl.style.cursor = state.annotationMode ? "grab" : "pointer";
-            labelEl.style.position = "relative";
             labelEl.style.paddingRight = "10px";
 
             const icon = document.createElement("span");
@@ -2170,7 +2162,6 @@ function makePinEl(annotation, onClick) {
             icon.style.pointerEvents = "none";
             labelEl.appendChild(icon);
         } else {
-            // labelEl.style.background = "rgba(0,0,0,0.6)";
             labelEl.style.color = "black";
             labelEl.style.border = "1px solid rgba(255,255,255,0.12)";
             labelEl.style.cursor = "grab";
@@ -2186,16 +2177,13 @@ function makePinEl(annotation, onClick) {
         }
     }
 
-
     // -----------------------------
     // DRAG LOGIC (Shared)
     // -----------------------------
     let dragging = false;
     let moved = false;
-    let startX = 0;
-    let startY = 0;
-    let baseX = 0;
-    let baseY = 0;
+    let startX = 0; let startY = 0;
+    let baseX = 0; let baseY = 0;
 
     function getPointerCoords(e) {
         if (e.touches && e.touches.length > 0) {
@@ -2207,39 +2195,25 @@ function makePinEl(annotation, onClick) {
     function onPointerDown(e) {
         e.preventDefault();
         e.stopPropagation();
-
         dragging = true;
         moved = false; 
-
         const coords = getPointerCoords(e);
-        startX = coords.x;
-        startY = coords.y;
-        baseX = annotation.placement.x;
-        baseY = annotation.placement.y;
-
-        // Visual feedback
+        startX = coords.x; startY = coords.y;
+        baseX = annotation.placement.x; baseY = annotation.placement.y;
         if (labelEl) labelEl.style.cursor = "grabbing";
         hit.style.cursor = "grabbing";
-
         window.addEventListener("mousemove", onPointerMove);
         window.addEventListener("mouseup", onPointerUp);
         window.addEventListener("touchmove", onPointerMove, { passive: false });
         window.addEventListener("touchend", onPointerUp);
-        window.addEventListener("touchcancel", onPointerUp);
     }
 
     function onPointerMove(e) {
         if (!dragging) return;
-        if (e.cancelable) e.preventDefault();
-
         const coords = getPointerCoords(e);
         const dx = coords.x - startX;
         const dy = coords.y - startY;
-
-        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-            moved = true;
-        }
-
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
         annotation.placement.x = baseX + dx;
         annotation.placement.y = baseY + dy;
         positionAnnotation(pin, annotation);
@@ -2248,52 +2222,29 @@ function makePinEl(annotation, onClick) {
 
     function onPointerUp() {
         if (!dragging) return;
-
         dragging = false;
-        
-        // Restore cursor
         const cursor = isTrigger && !state.annotationMode ? "pointer" : "grab";
         if (labelEl) labelEl.style.cursor = cursor;
         hit.style.cursor = cursor;
-
         window.removeEventListener("mousemove", onPointerMove);
         window.removeEventListener("mouseup", onPointerUp);
         window.removeEventListener("touchmove", onPointerMove);
         window.removeEventListener("touchend", onPointerUp);
-        window.removeEventListener("touchcancel", onPointerUp);
-
-        if (moved) {
-            updateAnnotation(annotation.id, {
-                placement: { ...annotation.placement }
-            });
-        }
+        if (moved) updateAnnotation(annotation.id, { placement: { ...annotation.placement } });
     }
 
-    // -----------------------------------------------------------------
-    // CRITICAL FIX: ATTACH LISTENERS TO *BOTH* HIT AREA AND TEXT LABEL
-    // -----------------------------------------------------------------
-    
-    // 1. Audio Mode: Drags via the invisible 'hit' box
     hit.addEventListener("mousedown", onPointerDown);
     hit.addEventListener("touchstart", onPointerDown, { passive: false });
-
-    // 2. Text Mode: Drags via the label itself (restores missing functionality)
     if (labelEl) {
         labelEl.addEventListener("mousedown", onPointerDown);
         labelEl.addEventListener("touchstart", onPointerDown, { passive: false });
     }
 
-    // 3. Click Handling (Unified)
     const handlePinClick = (e) => {
         if (moved) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (state.annotationMode) {
-            onClick?.(annotation);
-        } else if (isTrigger) {
-            executeTrigger(annotation, labelEl || pin);
-        }
+        e.preventDefault(); e.stopPropagation();
+        if (state.annotationMode) onClick?.(annotation);
+        else if (isTrigger) executeTrigger(annotation, labelEl || pin);
     };
 
     hit.addEventListener("click", handlePinClick);
