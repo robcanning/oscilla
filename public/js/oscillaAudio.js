@@ -1007,8 +1007,7 @@ export function checkImpulseRegions() {
         rectRight,
         inside,
         tickCount: state._tickCount
-      });
-    }
+    });
 
     // Only exit after we've been "inside" at least once
     if (!inside && !state.stopped && state._wasInsideOnce) {
@@ -1020,7 +1019,9 @@ export function checkImpulseRegions() {
       });
 
       state.stopped = true;
-      stopAudioImpulse(state.uid);
+      // USE RELEASE PARAM FOR SMOOTH FADEOUT
+      const relTime = state.params?.release ?? state.params?.rel ?? 0.3;
+      stopAudioImpulse(state.uid, relTime);
     }
 
     // Track if we've ever been inside
@@ -1029,26 +1030,55 @@ export function checkImpulseRegions() {
     }
   }
 }
+}
 
-
-export function stopAudioImpulse(uid) {
+// ============================================================
+// 🔇 stopAudioImpulse with release fadeout support
+// ============================================================
+export function stopAudioImpulse(uid, releaseSec = 0) {
   const st = audioImpulses.get(uid);
   if (!st) return;
 
   st.stopped = true;
 
+  // Stop scheduling new hits
   if (st.timer) {
     clearTimeout(st.timer);
     st.timer = null;
   }
 
-  // Destroy overlay when impulse stops
-  if (st._overlay) {
-    st._overlay.destroy();
-    st._overlay = null;
+  // Get release time from params if not provided
+  const fadeTime = releaseSec || st.params?.release || st.params?.rel || 0.3;
+
+  // Fade out any currently playing audio from this impulse
+  const reg = window.activeAudioCues;
+  if (reg && fadeTime > 0) {
+    for (const [key, voice] of reg.entries()) {
+      // Match voices spawned by this impulse (they have uid__ prefix)
+      if (key === uid || key.startsWith(`${uid}__`)) {
+        try {
+          voice.stop?.(fadeTime);
+        } catch (e) {
+          console.warn(`[audioImpulse] fadeout failed for ${key}:`, e);
+        }
+      }
+    }
   }
 
-  audioImpulses.delete(uid);
+  // Destroy overlay after fade completes
+  if (st._overlay) {
+    setTimeout(() => {
+      st._overlay?.destroy();
+      st._overlay = null;
+    }, fadeTime * 1000 + 50);
+  }
+
+  // Clean up after fade
+  setTimeout(() => {
+    audioImpulses.delete(uid);
+  }, fadeTime * 1000 + 100);
+
+  console.log(`[audioImpulse] 🔇 Stopping ${uid} with ${fadeTime}s release`);
 }
 
 
@@ -1063,8 +1093,125 @@ function stopAllAudioImpulses() {
 window.stopAllAudioImpulses = stopAllAudioImpulses;
 
 
+// ============================================================
+// 🎛 AUDIO OVERLAY SYSTEM
+// ============================================================
+
+/**
+ * Parse overlay flag: 0/off, 1/brief, 2/expanded (default)
+ */
+function parseOverlayLevel(value) {
+  if (value === undefined || value === null) return 2;
+  
+  const strVal = String(value).toLowerCase().trim();
+  if (strVal === "off" || strVal === "false" || strVal === "none" || strVal === "0") return 0;
+  if (strVal === "brief" || strVal === "short" || strVal === "min" || strVal === "1") return 1;
+  if (strVal === "expanded" || strVal === "full" || strVal === "true" || strVal === "2") return 2;
+  
+  const numVal = Number(value);
+  if (!isNaN(numVal)) {
+    if (numVal <= 0) return 0;
+    if (numVal === 1) return 1;
+    return 2;
+  }
+  return 2;
+}
+
+/**
+ * Format a value for overlay display - handles funcCall, rand, patterns
+ */
+function formatOverlayValue(v) {
+  if (v === null || v === undefined) return "?";
+  
+  if (typeof v === "object") {
+    if (v.type === "funcCall" && v.name) {
+      const args = Array.isArray(v.args) ? v.args.join(",") : "";
+      return `${v.name}(${args})`;
+    }
+    if (v.type === "rand" || v.type === "irand") {
+      return `${v.type}(${v.min},${v.max})`;
+    }
+    if (v.type === "pattern" && v.name) {
+      const vals = Array.isArray(v.values) ? v.values.slice(0, 4).join(",") : "";
+      return `${v.name}[${vals}${v.values?.length > 4 ? "..." : ""}]`;
+    }
+    return JSON.stringify(v);
+  }
+  
+  if (typeof v === "number") {
+    if (Number.isInteger(v)) return String(v);
+    return v.toFixed(2).replace(/\.?0+$/, "");
+  }
+  
+  return String(v);
+}
+
+/**
+ * Format overlay text for audioFile
+ */
+function formatAudioFileOverlay(params, level) {
+  const parts = ["audioFile"];
+  const src = params.src || params.file || "?";
+  parts.push(src);
+  
+  if (level >= 2) {
+    if (params.amp !== undefined && params.amp !== 1) parts.push(`amp:${formatOverlayValue(params.amp)}`);
+    if (params.loop !== undefined && params.loop !== 1) parts.push(`loop:${params.loop}`);
+    if (params.pitch !== undefined && params.pitch !== 1) parts.push(`pitch:${formatOverlayValue(params.pitch)}`);
+    if (params.pan !== undefined && params.pan !== 0) parts.push(`pan:${formatOverlayValue(params.pan)}`);
+    if (params.fadein || params.fadeIn) parts.push(`fadeIn:${formatOverlayValue(params.fadein || params.fadeIn)}`);
+    if (params.fadeout || params.fadeOut) parts.push(`fadeOut:${formatOverlayValue(params.fadeout || params.fadeOut)}`);
+    if (params.fade) parts.push(`fade:${formatOverlayValue(params.fade)}`);
+  }
+  
+  return parts.join(" | ");
+}
+
+/**
+ * Format overlay text for audioPool
+ */
+function formatAudioPoolOverlay(params, level) {
+  const parts = ["audioPool"];
+  parts.push(params.path || "?");
+  
+  if (level >= 2) {
+    if (params.uid) parts.push(`uid:${params.uid}`);
+    if (params.mode && params.mode !== "shuffle") parts.push(`mode:${params.mode}`);
+    if (params.amp !== undefined) parts.push(`amp:${formatOverlayValue(params.amp)}`);
+    if (params.pan !== undefined) parts.push(`pan:${formatOverlayValue(params.pan)}`);
+    if (params.pitch !== undefined) parts.push(`pitch:${formatOverlayValue(params.pitch)}`);
+    if (params.poly !== undefined && params.poly !== 1) parts.push(`poly:${params.poly}`);
+    if (params.fadeout || params.fadeOut) parts.push(`fadeOut:${formatOverlayValue(params.fadeout || params.fadeOut)}`);
+  }
+  
+  return parts.join(" | ");
+}
+
+/**
+ * Format overlay text for audioImpulse
+ */
+function formatAudioImpulseOverlay(params, level) {
+  const parts = ["audioImpulse"];
+  parts.push(params.path || "?");
+  
+  if (level >= 2) {
+    if (params.rate !== undefined) parts.push(`rate:${params.rate}`);
+    if (params.jitter !== undefined && params.jitter !== 0) parts.push(`jitter:${formatOverlayValue(params.jitter)}`);
+    if (params.amp !== undefined) parts.push(`amp:${formatOverlayValue(params.amp)}`);
+    if (params.pan !== undefined) parts.push(`pan:${formatOverlayValue(params.pan)}`);
+    if (params.pitch !== undefined) parts.push(`pitch:${formatOverlayValue(params.pitch)}`);
+    if (params.poly !== undefined && params.poly !== 6) parts.push(`poly:${params.poly}`);
+    if (params.lifetime && params.lifetime !== "process") parts.push(`life:${params.lifetime}`);
+    if (params.release !== undefined) parts.push(`rel:${formatOverlayValue(params.release)}`);
+  }
+  
+  return parts.join(" | ");
+}
 
 
+/**
+ * Create audio overlay - SELF-CONTAINED (does not use createOscOverlay)
+ */
 export function createAudioOverlay({
   anchorEl,
   label = "audio",
@@ -1072,180 +1219,78 @@ export function createAudioOverlay({
   track = true
 } = {}) {
 
-  // Use the existing OSC overlay system
-  const overlay = createOscOverlay({
-    anchorEl,
-    label,
-    mode,
-    track,
-    anchorMode: "bbox"
-  });
-
-  //  Apply audio-specific styling
-  if (overlay.el) {
-    overlay.el.classList.add("oscilla-audio-overlay");
+  if (!anchorEl) {
+    return {
+      el: null,
+      update() { },
+      position() { },
+      destroy() { }
+    };
   }
 
-  return overlay;
+  const box = document.createElement("div");
+  box.className = "oscilla-audio-overlay";
+  box.style.cssText = `
+    position: fixed;
+    pointer-events: none;
+    z-index: 99990;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.3;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    color: #000;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    opacity: 0.75;
+    transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  `;
+
+const r = anchorEl.getBoundingClientRect();
+box.style.maxWidth = `${Math.max(150, r.width - 8)}px`;
+box.style.whiteSpace = "normal";
+box.style.wordWrap = "break-word";
+
+
+  box.textContent = label;
+  document.body.appendChild(box);
+
+  function position() {
+    if (!anchorEl || !box.isConnected) return;
+    const r = anchorEl.getBoundingClientRect();
+    box.style.left = `${r.left + 4}px`;
+    box.style.top = `${r.top + 4}px`;
+  }
+
+  let tracking = false;
+  function loop() {
+    if (!tracking) return;
+    try { position(); } catch { }
+    requestAnimationFrame(loop);
+  }
+
+  if (track) {
+    tracking = true;
+    requestAnimationFrame(loop);
+  }
+
+  position();
+
+  return {
+    el: box,
+    update(text) {
+      if (text !== undefined) {
+        box.textContent = text;
+      }
+    },
+    position,
+    destroy() {
+      tracking = false;
+      try { box.remove(); } catch { }
+    }
+  };
 }
 
-// ============================================================
-// 🎛 AUDIO OVERLAY ADDITIONS FOR oscillaAudio.js
-// ============================================================
-// Add these functions to oscillaAudio.js and export them
-// Also add to the import in oscillaCueDispatcher.js:
-//   primeAudioOverlay, primeAudioPoolOverlay, primeAudioImpulseOverlay
-// ============================================================
-
-/**
- * Parse overlay flag from various input formats
- * @param {*} value - overlay parameter value
- * @returns {number} - 0 (off), 1 (brief), 2 (expanded)
- */
-export function parseOverlayLevel(value) {
-  if (value === undefined || value === null) return 2; // default to expanded
-  
-  const strVal = String(value).toLowerCase().trim();
-  
-  // Named values
-  if (strVal === "off" || strVal === "false" || strVal === "none") return 0;
-  if (strVal === "brief" || strVal === "short" || strVal === "min") return 1;
-  if (strVal === "expanded" || strVal === "full" || strVal === "true") return 2;
-  
-  // Numeric values
-  const numVal = Number(value);
-  if (!isNaN(numVal)) {
-    if (numVal <= 0) return 0;
-    if (numVal === 1) return 1;
-    return 2;
-  }
-  
-  return 2; // default
-}
-
-/**
- * Format overlay text based on level and audio type
- * @param {string} funcType - "audioFile", "audioPool", or "audioImpulse"
- * @param {object} params - parsed parameters
- * @param {number} level - overlay level (0, 1, 2)
- * @returns {string} - formatted overlay text
- */
-function formatAudioOverlay(funcType, params, level) {
-  if (level <= 0) return "";
-  
-  const parts = [];
-  
-  // ALWAYS show function type first
-  parts.push(funcType);
-  
-  // Brief mode: just type + primary identifier
-  if (level === 1) {
-    if (funcType === "audioFile") {
-      const src = params.src || params.file || "?";
-      parts.push(src);
-    } else if (funcType === "audioPool") {
-      parts.push(params.path || "?");
-    } else if (funcType === "audioImpulse") {
-      parts.push(params.path || "?");
-    }
-    return parts.join(" | ");
-  }
-  
-  // Expanded mode: show DSL details
-  if (funcType === "audioFile") {
-    const src = params.src || params.file || "?";
-    parts.push(src);
-    
-    if (params.amp !== undefined && params.amp !== 1) {
-      parts.push(`amp:${formatValue(params.amp)}`);
-    }
-    if (params.loop !== undefined && params.loop !== 1) {
-      parts.push(`loop:${params.loop}`);
-    }
-    if (params.pitch !== undefined && params.pitch !== 1) {
-      parts.push(`pitch:${formatValue(params.pitch)}`);
-    }
-    if (params.pan !== undefined && params.pan !== 0) {
-      parts.push(`pan:${formatValue(params.pan)}`);
-    }
-    if (params.fadeIn || params.fade) {
-      parts.push(`fadeIn:${formatFadeValue(params.fadeIn || params.fade)}`);
-    }
-    if (params.fadeOut || params.fade) {
-      parts.push(`fadeOut:${formatFadeValue(params.fadeOut || params.fade)}`);
-    }
-    
-  } else if (funcType === "audioPool") {
-    parts.push(params.path || "?");
-    
-    if (params.mode && params.mode !== "shuffle") {
-      parts.push(`mode:${params.mode}`);
-    }
-    if (params.amp !== undefined && params.amp !== 1) {
-      parts.push(`amp:${formatValue(params.amp)}`);
-    }
-    if (params.pan !== undefined) {
-      parts.push(`pan:${formatValue(params.pan)}`);
-    }
-    if (params.pitch !== undefined && params.pitch !== 1) {
-      parts.push(`pitch:${formatValue(params.pitch)}`);
-    }
-    if (params.poly !== undefined && params.poly !== 1) {
-      parts.push(`poly:${params.poly}`);
-    }
-    
-  } else if (funcType === "audioImpulse") {
-    parts.push(params.path || "?");
-    
-    if (params.rate !== undefined) {
-      parts.push(`rate:${params.rate}`);
-    }
-    if (params.jitter !== undefined && params.jitter !== 0) {
-      parts.push(`jitter:${formatValue(params.jitter)}`);
-    }
-    if (params.amp !== undefined && params.amp !== 1) {
-      parts.push(`amp:${formatValue(params.amp)}`);
-    }
-    if (params.pan !== undefined) {
-      parts.push(`pan:${formatValue(params.pan)}`);
-    }
-    if (params.poly !== undefined && params.poly !== 6) {
-      parts.push(`poly:${params.poly}`);
-    }
-    if (params.lifetime && params.lifetime !== "process") {
-      parts.push(`life:${params.lifetime}`);
-    }
-  }
-  
-  return parts.join(" | ");
-}
-
-function formatValue(v) {
-  if (v === null || v === undefined) return "?";
-  
-  if (typeof v === "object") {
-    if (v.type === "rand" || v.type === "irand") {
-      return `${v.type}(${v.min},${v.max})`;
-    }
-    if (v.type === "funcCall" && v.name) {
-      const args = v.args ? v.args.join(",") : "";
-      return `${v.name}(${args})`;
-    }
-    return JSON.stringify(v);
-  }
-  
-  if (typeof v === "number") {
-    const s = v.toFixed(2).replace(/\.?0+$/, "");
-    return s.startsWith("0.") ? s.slice(1) : s;
-  }
-  
-  return String(v);
-}
-
-function formatFadeValue(v) {
-  if (typeof v === "string" && v.includes("%")) return v;
-  return formatValue(v);
-}
 
 // ============================================================
 // 🎯 Prime audio overlay for audioFile (called during assignCues)
@@ -1253,48 +1298,31 @@ function formatFadeValue(v) {
 export function primeAudioOverlay(ast, cueElement) {
   if (!ast || !cueElement) return;
 
-  const params = ast.params || {};
-  
-  if (Array.isArray(ast.args)) {
-    for (const arg of ast.args) {
-      if (arg && typeof arg === "object" && arg.type && arg.value !== undefined) {
-        params[arg.type] = arg.value;
-      }
-    }
-  }
-  
-  if (ast.src) params.src = ast.src;
-  if (ast.uid) params.uid = ast.uid;
-  if (ast.amp !== undefined) params.amp = ast.amp;
-  if (ast.loop !== undefined) params.loop = ast.loop;
-  if (ast.pitch !== undefined) params.pitch = ast.pitch;
-  if (ast.pan !== undefined) params.pan = ast.pan;
-
-  const overlayLevel = parseOverlayLevel(ast.overlay ?? params.overlay);
+  const params = ast.params || ast;
+  const overlayLevel = parseOverlayLevel(params.overlay ?? ast.overlay);
   if (overlayLevel <= 0) return;
 
   if (cueElement._audioOverlayPrimed) return;
   cueElement._audioOverlayPrimed = true;
 
-  const uid = params.uid || cueElement.id || "audio";
-
   const overlay = createAudioOverlay({
     anchorEl: cueElement,
-    label: uid,
+    label: "audioFile",
     mode: "auto",
     track: true
   });
 
   if (overlay?.el) {
-    const text = formatAudioOverlay("audioFile", params, overlayLevel);
+    const text = formatAudioFileOverlay(params, overlayLevel);
     overlay.update(text);
     overlay.position();
     cueElement._audioOverlay = overlay;
     cueElement._audioOverlayLevel = overlayLevel;
   }
 
-  console.log(`[audio] Primed overlay for ${uid} (level ${overlayLevel})`);
+  console.log(`[audio] 📋 Primed audioFile overlay`);
 }
+
 
 // ============================================================
 // 🎯 Prime audioPool overlay (called during assignCues)
@@ -1302,41 +1330,31 @@ export function primeAudioOverlay(ast, cueElement) {
 export function primeAudioPoolOverlay(ast, cueElement) {
   if (!ast || !cueElement) return;
 
-  const params = ast.params || {};
-  
-  if (Array.isArray(ast.args)) {
-    for (const arg of ast.args) {
-      if (arg && typeof arg === "object" && arg.type && arg.value !== undefined) {
-        params[arg.type] = arg.value;
-      }
-    }
-  }
-
-  const overlayLevel = parseOverlayLevel(ast.overlay ?? params.overlay);
+  const params = ast.params || ast;
+  const overlayLevel = parseOverlayLevel(params.overlay ?? ast.overlay);
   if (overlayLevel <= 0) return;
 
   if (cueElement._audioPoolOverlayPrimed) return;
   cueElement._audioPoolOverlayPrimed = true;
 
-  const uid = params.uid || `${params.path || "pool"}`;
-
   const overlay = createAudioOverlay({
     anchorEl: cueElement,
-    label: uid,
+    label: "audioPool",
     mode: "auto",
     track: true
   });
 
   if (overlay?.el) {
-    const text = formatAudioOverlay("audioPool", params, overlayLevel);
+    const text = formatAudioPoolOverlay(params, overlayLevel);
     overlay.update(text);
     overlay.position();
     cueElement._audioPoolOverlay = overlay;
     cueElement._audioPoolOverlayLevel = overlayLevel;
   }
 
-  console.log(`[audioPool] Primed overlay for ${uid} (level ${overlayLevel})`);
+  console.log(`[audioPool] 📋 Primed overlay for ${params.path || ast.path}`);
 }
+
 
 // ============================================================
 // 🎯 Prime audioImpulse overlay (called during assignCues)
@@ -1344,45 +1362,27 @@ export function primeAudioPoolOverlay(ast, cueElement) {
 export function primeAudioImpulseOverlay(ast, cueElement) {
   if (!ast || !cueElement) return;
 
-  const params = ast.params || {};
-  
-  if (Array.isArray(ast.args)) {
-    for (const arg of ast.args) {
-      if (arg && typeof arg === "object" && arg.type && arg.value !== undefined) {
-        params[arg.type] = arg.value;
-      }
-    }
-  }
-
-  const overlayLevel = parseOverlayLevel(ast.overlay ?? params.overlay);
+  const params = ast.params || ast;
+  const overlayLevel = parseOverlayLevel(params.overlay ?? ast.overlay);
   if (overlayLevel <= 0) return;
 
   if (cueElement._audioImpulseOverlayPrimed) return;
   cueElement._audioImpulseOverlayPrimed = true;
 
-  const uid = params.uid || `impulse-${params.path || "pool"}`;
-
   const overlay = createAudioOverlay({
     anchorEl: cueElement,
-    label: uid,
+    label: "audioImpulse",
     mode: "auto",
     track: true
   });
 
   if (overlay?.el) {
-    const text = formatAudioOverlay("audioImpulse", params, overlayLevel);
+    const text = formatAudioImpulseOverlay(params, overlayLevel);
     overlay.update(text);
     overlay.position();
     cueElement._audioImpulseOverlay = overlay;
     cueElement._audioImpulseOverlayLevel = overlayLevel;
   }
 
-  console.log(`[audioImpulse] Primed overlay for ${uid} (level ${overlayLevel})`);
+  console.log(`[audioImpulse] 📋 Primed overlay for ${params.path || ast.path}`);
 }
-
-// ============================================================
-// CSS for audio overlays (add to your stylesheet)
-// ============================================================
-/*
-
-*/

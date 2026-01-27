@@ -4,7 +4,7 @@
 //
 // oscillaSynth.js — Minimal WebAudio Synth + Pattern Sequencing for Oscilla
 //
-// Key semantics (v1):
+// Key semantics (v1.2):
 // - A synth voice is created by synth(...) and identified by uid.
 // - By default, synth voices are SAFE: they auto-stop
 //     (a) when the playhead leaves the cue element's bbox (lifetime:region),
@@ -63,7 +63,8 @@ function extractParams(ast) {
   if (!ast) return {};
 
   if (ast.params && typeof ast.params === "object") {
-    return ast.params;
+    // Return a shallow copy to prevent shared mutable state issues
+    return { ...ast.params };
   }
 
   if (Array.isArray(ast.args)) {
@@ -239,7 +240,7 @@ function applyADSR(gainParam, ctx, t0, amp, env) {
   const peak = amp;
   const sus = amp * S;
 
-  console.log(`[ADSR] Applying envelope: A=${A}s, D=${D}s, S=${S}, R=${env.r}s | peak=${peak}, sustain=${sus} @ t0=${t0.toFixed(3)}`);
+  // console.log(`[ADSR] Applying envelope: A=${A}s, D=${D}s, S=${S}, R=${env.r}s | peak=${peak}, sustain=${sus} @ t0=${t0.toFixed(3)}`);
 
   try {
     gainParam.cancelScheduledValues(t0);
@@ -247,8 +248,6 @@ function applyADSR(gainParam, ctx, t0, amp, env) {
     gainParam.linearRampToValueAtTime(peak, t0 + A);
     if (D > 0) gainParam.linearRampToValueAtTime(sus, t0 + A + D);
     else gainParam.setValueAtTime(sus, t0 + A);
-
-    console.log(`[ADSR] Scheduled: 0 -> ${peak} over ${A}s, then -> ${sus}`);
   } catch (e) {
     console.error("[ADSR] Error scheduling envelope:", e);
   }
@@ -303,7 +302,7 @@ function pitchToHz(v) {
 }
 
 // ============================================================
-// 🎛 Patterns (small subset; consistent with previous synth module)
+// 🎛 Patterns (fixed for per-voice independence)
 // ============================================================
 function shuffle(arr) {
   const a = arr.slice();
@@ -315,11 +314,17 @@ function shuffle(arr) {
 }
 
 function makePatternGenerator(pattern) {
-  if (!pattern || !pattern.values || !Array.isArray(pattern.values)) {
+  // Support both .values (standard) and .args (AST variant)
+  const rawValues = pattern.values || pattern.args;
+
+  if (!pattern || !rawValues || !Array.isArray(rawValues)) {
     return { next: () => null };
   }
 
-  const values = pattern.values.slice();
+  // FORCE INDEPENDENCE: Deep copy of values to ensure this generator 
+  // is strictly isolated from others, even if they share the AST.
+  const values = rawValues.slice();
+
   let repeats = pattern.repeats;
   if (repeats === "inf" || repeats === Infinity || repeats == null) repeats = Infinity;
   else {
@@ -327,70 +332,76 @@ function makePatternGenerator(pattern) {
     if (!Number.isFinite(repeats)) repeats = 1;
   }
 
+  // Local state (closure) unique to this call
   let index = 0;
   let last = null;
   let cycleCount = 0;
 
-  switch (pattern.name) {
-    case "Pseq":
-      return {
-        next() {
-          if (cycleCount >= repeats) return null;
-          const v = values[index];
-          index++;
-          if (index >= values.length) {
-            index = 0;
-            cycleCount++;
-          }
-          return v;
-        }
-      };
+  // Normalize name
+  const name = String(pattern.name || "Pseq");
 
-    case "Prand":
-      return {
-        next() {
-          if (cycleCount >= repeats) return null;
-          const v = values[Math.floor(Math.random() * values.length)];
-          // approximate progress
-          cycleCount += 1 / Math.max(1, values.length);
-          return v;
-        }
-      };
-
-    case "Pxrand":
-      return {
-        next() {
-          if (cycleCount >= repeats) return null;
-          let v;
-          do {
-            v = values[Math.floor(Math.random() * values.length)];
-          } while (v === last && values.length > 1);
-          last = v;
-          cycleCount += 1 / Math.max(1, values.length);
-          return v;
-        }
-      };
-
-    case "Pshuf": {
-      let buf = shuffle(values);
-      return {
-        next() {
-          if (cycleCount >= repeats) return null;
-          const v = buf[index];
-          index++;
-          if (index >= buf.length) {
-            index = 0;
-            buf = shuffle(values);
-            cycleCount++;
-          }
-          return v;
-        }
-      };
-    }
+  // Prand / Pwhite: Random choice
+  if (name === "Prand" || name === "Pwhite") {
+    return {
+      next() {
+        if (cycleCount >= repeats) return null;
+        const v = values[Math.floor(Math.random() * values.length)];
+        cycleCount += 1 / Math.max(1, values.length);
+        return v;
+      }
+    };
   }
 
-  // default to seq
-  return makePatternGenerator({ name: "Pseq", values, repeats });
+  // Pxrand / Prandx: Random choice, no immediate repeats
+  if (name === "Pxrand" || name === "Prandx") {
+    return {
+      next() {
+        if (cycleCount >= repeats) return null;
+        let v;
+        // Safety: guard against single-item arrays causing infinite loops
+        let safety = 0;
+        do {
+          v = values[Math.floor(Math.random() * values.length)];
+          safety++;
+        } while (v === last && values.length > 1 && safety < 100);
+        last = v;
+        cycleCount += 1 / Math.max(1, values.length);
+        return v;
+      }
+    };
+  }
+
+  // Pshuf: Shuffle once (or per cycle), then play linearly
+  if (name === "Pshuf") {
+    let buf = shuffle(values);
+    return {
+      next() {
+        if (cycleCount >= repeats) return null;
+        const v = buf[index];
+        index++;
+        if (index >= buf.length) {
+          index = 0;
+          buf = shuffle(values); // Reshuffle for next cycle
+          cycleCount++;
+        }
+        return v;
+      }
+    };
+  }
+
+  // Default: Pseq
+  return {
+    next() {
+      if (cycleCount >= repeats) return null;
+      const v = values[index];
+      index++;
+      if (index >= values.length) {
+        index = 0;
+        cycleCount++;
+      }
+      return v;
+    }
+  };
 }
 
 function buildParamGen(raw) {
@@ -415,22 +426,6 @@ function buildParamGen(raw) {
 // ============================================================
 // 🔌 Voice graph construction
 // ============================================================
-
-// Create a single oscillator or noise source
-function createSingleSource(ctx, wave) {
-  const w = String(wave ?? "sine").toLowerCase();
-
-  if (w === "noise" || w === "white" || w === "pink" || w === "brown") {
-    const src = ctx.createBufferSource();
-    src.buffer = getNoiseBuffer(ctx, 2);
-    src.loop = true;
-    return { kind: "noise", node: src, wave: w };
-  }
-
-  const osc = ctx.createOscillator();
-  osc.type = w; // sine|square|sawtooth|triangle
-  return { kind: "osc", node: osc, wave: w };
-}
 
 // Create source(s) - handles both single freq and chord arrays
 function createSource(ctx, wave, freqParam) {
@@ -684,13 +679,9 @@ function startSynthVoice(uid, ast, cueElement, opts) {
 
   // Check if freq is a chord array
   const freqParam = params.freq ?? 440;
-  const isChordArray = Array.isArray(freqParam) && freqParam.length > 1;
-
-  console.log(`[synth] Starting voice uid="${uid}" wave=${wave} amp=${amp}`);
-  console.log(`[synth] Freq param:`, freqParam, isChordArray ? "(CHORD)" : "(single)");
-  console.log(`[synth] Raw env param:`, params.env);
-  console.log(`[synth] Normalized env:`, env);
-
+  
+  // console.log(`[synth] Starting voice uid="${uid}" wave=${wave} amp=${amp}`);
+  
   // lifetime default:
   // - if invoked from a cue with an element, default to region-safe
   // - otherwise default to process
@@ -726,7 +717,6 @@ function startSynthVoice(uid, ast, cueElement, opts) {
     if (source.isChord && source.oscillators) {
       // Start all oscillators in the chord
       source.oscillators.forEach(osc => osc.start(t0));
-      console.log(`[synth] Started chord with ${source.oscillators.length} oscillators:`, source.frequencies);
     } else {
       source.node.start(t0);
     }
@@ -742,7 +732,7 @@ function startSynthVoice(uid, ast, cueElement, opts) {
     // Check if overlay was already primed during assignCues
     if (cueElement._synthOverlay) {
       overlay = cueElement._synthOverlay;
-      console.log(`[synth] 🔄 Reusing primed overlay for ${uid}`);
+      // console.log(`[synth] 🔄 Reusing primed overlay for ${uid}`);
     } else {
       overlay = createSynthOverlay({
         anchorEl: cueElement,
@@ -799,10 +789,6 @@ function startSynthVoice(uid, ast, cueElement, opts) {
   }
   activeSynthVoices.set(uid, voice);
 
-
-
-
-
   // Prepare generators
   installGenerators(voice);
 
@@ -813,10 +799,7 @@ function startSynthVoice(uid, ast, cueElement, opts) {
     // If no pattern engine, but user wants a one-shot envelope retrigger
     applyADSR(graph.gain.gain, ctx, nowSec(ctx), voice.amp, voice.env);
   }
-  // NOTE: We do NOT override the ADSR envelope here.
-  // The envelope was already applied at line 652 via applyADSR().
-  // Previously there was a ramp here that would immediately override the attack phase.
-
+  
   // Duration-based auto stop:
   // - If voice has step engine, dur is treated as step duration.
   // - If no step engine, dur is treated as lifetime stop-after.
@@ -1007,19 +990,29 @@ function isDynamicParam(raw) {
 function installGenerators(voice) {
   const p = voice.params || {};
 
-  voice._freqGen = buildParamGen(p.freq);
-  voice._ampGen = buildParamGen(p.amp);
-  voice._cutoffGen = buildParamGen(p.filter?.freq ?? p.filter?.cutoff);
-  voice._qGen = buildParamGen(p.filter?.q);
-  voice._durGen = buildParamGen(p.dur);
+  function maybeRebuild(key, raw) {
+    const prev = voice[`_${key}Raw`];
+    // Only return existing generator if the AST object is exactly the same reference
+    if (prev === raw) return voice[`_${key}Gen`];
+    
+    voice[`_${key}Raw`] = raw;
+    return buildParamGen(raw);
+  }
+
+  voice._freqGen   = maybeRebuild("freq", p.freq);
+  voice._ampGen    = maybeRebuild("amp", p.amp);
+  voice._cutoffGen = maybeRebuild("cutoff", p.filter?.freq ?? p.filter?.cutoff);
+  voice._qGen      = maybeRebuild("q", p.filter?.q);
+  voice._durGen    = maybeRebuild("dur", p.dur);
 
   voice._hasStepEngine =
     Boolean(voice._freqGen?._dynamic) ||
     Boolean(voice._ampGen?._dynamic) ||
     Boolean(voice._cutoffGen?._dynamic) ||
     Boolean(voice._qGen?._dynamic) ||
-    Boolean(voice._durGen?._dynamic && (typeof p.dur === "object" || Array.isArray(p.dur)));
+    Boolean(voice._durGen?._dynamic);
 }
+
 
 function scheduleNextStep(voice, first = false) {
   if (voice._stopped) return;
@@ -1192,18 +1185,9 @@ function cleanupVoice(uid, voice) {
 }
 
 
-
-
-
-
-
-
-////////////////////////////////////////////
-
 // ============================================================
 // 🎛 Synth Overlay (Composer-facing preview)
 // ============================================================
-
 
 function createSynthOverlay({
   anchorEl,
@@ -1227,7 +1211,12 @@ function createSynthOverlay({
   box.style.position = "fixed";
   box.style.pointerEvents = "none";
   box.style.zIndex = 99990;
-  box.style.whiteSpace = "nowrap";
+
+  const r = anchorEl.getBoundingClientRect();
+  box.style.maxWidth = `${Math.max(150, r.width - 8)}px`;
+  box.style.whiteSpace = "normal";
+  box.style.wordWrap = "break-word";
+
 
   box.textContent = "synth..."; // Initial placeholder text
   document.body.appendChild(box);
@@ -1285,8 +1274,6 @@ function createSynthOverlay({
 }
 
 
-
-
 function formatSynthOverlay(voice, mode = "brief") {
   const p = voice.params || {};
   const parts = [];
@@ -1327,14 +1314,11 @@ function formatSynthOverlay(voice, mode = "brief") {
     parts.push(items.join(" "));
   }
 
-
-
   function stripLeadingZero(v) {
     if (typeof v !== "number") return String(v);
     const s = String(v);
     return s.startsWith("0.") ? s.slice(1) : s;
   }
-
 
   // envelope (compact, DSL-faithful)
   if (p.env && typeof p.env === "object") {
@@ -1361,7 +1345,6 @@ function formatSynthOverlay(voice, mode = "brief") {
       parts.push(`env ${labels.join(" ")}`);
     }
   }
-
 
   // duration / stepping (full mode)
   if (mode === "full" && p.dur != null) {
@@ -1428,5 +1411,5 @@ export function primeSynthOverlay(ast, cueElement) {
     cueElement._synthOverlay = overlay;
   }
 
-  console.log(`[synth] 📋 Primed overlay for ${pseudoVoice.uid}`);
+  // console.log(`[synth] 📋 Primed overlay for ${pseudoVoice.uid}`);
 }

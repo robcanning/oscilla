@@ -379,7 +379,7 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
         return;
       }
       console.log("[dispatch] cueAudio AST →", ast);
-      return handleAudioCue(ast, cueElement);
+      return handleAudioCue(ast);
 
     case "cueAudioStop":
       return stopAudioCue(ast.filename || ast.file);
@@ -575,22 +575,16 @@ export function assignCues(svgRoot, cuesArray = []) {
         }
 
         // -----------------------------------
-        // Pre-prime audio overlays (audioFile)
+        // Pre-prime audio overlays
         // -----------------------------------
         if (ast.type === "cueAudio") {
           primeAudioOverlay(ast, child);
         }
 
-        // -----------------------------------
-        // Pre-prime audioPool overlays
-        // -----------------------------------
         if (ast.type === "cueAudioPool") {
           primeAudioPoolOverlay(ast, child);
         }
 
-        // -----------------------------------
-        // Pre-prime audioImpulse overlays
-        // -----------------------------------
         if (ast.type === "cueAudioImpulse") {
           primeAudioImpulseOverlay(ast, child);
         }
@@ -720,40 +714,203 @@ export async function checkCueTriggers() {
     window._cueInsideState.set(cue.id, isInside);
 
     // ======================================================
-    // REST OF checkCueTriggers CONTINUES FROM ORIGINAL FILE
-    // (The remaining logic for edge detection, triggering, etc.)
+    // 🔊 OSC RE-ENTRANT PLAYHEAD TRIGGER
     // ======================================================
-    
-    // Check for left-edge crossing (entering from left)
-    const crossedLeftEdge = !prevInside && isInside;
-    
-    // Check for already triggered
-    if (window.triggeredCues.has(cue.id)) {
-      window._prevCueLefts.set(cue.id, cueLeft);
-      continue;
-    }
+    if (cue.ast?.type === "cueOsc") {
 
-    // Trigger if crossing left edge
-    if (crossedLeftEdge) {
-      try {
-        handleCueTrigger(cue.ast || cue.id, false, false, cue.element);
-      } catch (err) {
-        console.error("[checkCueTriggers] Error triggering cue:", cue.id, err);
+      if (cue._armed === undefined) cue._armed = true;
+      if (cue._lastOscFire === undefined) cue._lastOscFire = 0;
+
+      const now = performance.now();
+      const COOLDOWN = 80;
+
+      // ENTER
+      if (!prevInside && isInside && cue._armed) {
+        if (now - cue._lastOscFire >= COOLDOWN) {
+          handleCueTrigger(cue.ast, false, true, cue.element);
+          cue._armed = false;
+          cue._lastOscFire = now;
+          // console.log(`[osc] ENTER → ${cue.id}`);
+        }
+      }
+
+      // EXIT
+      if (prevInside && !isInside) {
+        cue._armed = true;
+        // console.log(`[osc] EXIT → rearmed ${cue.id}`);
       }
     }
 
+
+    // Initialise state on first encounter
+    if (prevLeft === undefined) {
+      window._prevCueLefts.set(cue.id, cueLeft);
+      window._cueInsideState.set(cue.id, isInside);
+      continue;
+    }
+
+    // Forward scroll → cues move LEFT
+    const movingForward = cueLeft < prevLeft;
+
+    const crossedLeftEdgeForward =
+      movingForward &&
+      prevLeft > (playheadX + tolerance) &&
+      cueLeft <= (playheadX + tolerance);
+
+    const isRepeatNavCue =
+      cue.ast?.type === "cueNav" &&
+      cue.ast?.params &&
+      cue.ast.params.repeats !== undefined;
+
+    // ======================================================
+    // 🎯 PRIMARY TRIGGER
+    // ======================================================
+    if (crossedLeftEdgeForward) {
+      if (!isRepeatNavCue && window.triggeredCues.has(cue.id)) {
+        // already fired → skip
+      } else {
+        // console.log(
+        //   `[cueTrigger] ✅ Left-edge crossing → ${cue.id}`
+        // );
+
+        handleCueTrigger(
+          cue.ast,
+          false,      // isRemote
+          true,       // force
+          cue.element // UI / DOM anchor
+        );
+
+        if (!isRepeatNavCue) {
+          window.triggeredCues.add(cue.id);
+        }
+
+      }
+    }
+
+    // Update state for next frame
     window._prevCueLefts.set(cue.id, cueLeft);
+    window._cueInsideState.set(cue.id, isInside);
+
+
+    // ======================================================
+    // 🔁 REPEAT LOGIC (unchanged)
+    // ======================================================
+    for (const [repeatCueId, repeat] of Object.entries(
+      window.repeatStateMap || {}
+    )) {
+      if (!repeat.active || !repeat.ready || !repeat.initialJumpDone) continue;
+
+      let isAtRepeatEnd = false;
+
+      if (repeat.endId === "self") {
+        const repeatCue = window.cues.find(
+          c => c.id === repeat.cueId || c.id.startsWith(`${repeat.cueId}-`)
+        );
+        if (repeatCue?.element) {
+          const repeatRect =
+            repeatCue.element.getBoundingClientRect();
+          const repeatX =
+            repeatRect.left - containerRect.left;
+          const repeatEnd =
+            repeatX + (repeatRect.width || 40);
+          isAtRepeatEnd =
+            playheadX >= repeatX && playheadX <= repeatEnd;
+        }
+      } else if (
+        cue.id === repeat.endId ||
+        cue.id.startsWith(`${repeat.endId}-`)
+      ) {
+        isAtRepeatEnd = true;
+      }
+
+      const now = Date.now();
+      if (repeat.jumpCooldownUntil && now < repeat.jumpCooldownUntil) {
+        continue;
+      }
+
+      if (isAtRepeatEnd) {
+        const cooldown = 500;
+        if (now - repeat.lastTriggerTime < cooldown) continue;
+
+        repeat.lastTriggerTime = now;
+        repeat.currentCount++;
+        window.updateRepeatCountDisplay?.(repeat.currentCount);
+
+        if (repeat.isInfinite || repeat.currentCount < repeat.count) {
+          if (repeat.directionMode === "p") {
+            repeat.currentlyReversing = !repeat.currentlyReversing;
+          }
+
+          try {
+            await window.executeRepeatJump?.(
+              repeat,
+              repeatCueId
+            );
+          } catch (err) {
+            console.error(
+              `[repeat] ❌ Error during repeat jump (${repeatCueId}):`,
+              err
+            );
+          }
+        } else {
+          repeat.active = false;
+          window.hideRepeatCountDisplay?.();
+
+          if (repeat.action === "stop") {
+            window.stopAnimation?.();
+            window.isPlaying = false;
+            window.isMusicalPause = true;
+            window.togglePlayButton?.();
+          } else if (
+            repeat.resumeId &&
+            repeat.resumeId !== "self"
+          ) {
+            window.jumpToCueId?.(repeat.resumeId);
+            window.isPlaying
+              ? window.pausePlayback()
+              : window.startPlayback();
+          }
+        }
+
+        break; // prevent multiple repeat triggers in one frame
+      }
+    }
   }
 }
 
 
-/**
- * ============================================================================
- *  scheduleCueStart()
+
+window.resetCueEdgeTracking = function () {
+  window._prevCueLefts = new Map();
+  window._cueInsideState = new Map();
+  window.triggeredCues = new Set();
+};
+
+
+
+
+
+
+if (window.triggeredCues)
+  window.triggeredCues.clear();
+window._cueInsideState?.clear();
+
+
+
+
+
+
+
+
+
+
+
+/* ============================================================================
+ *  Unified Delayed Start System  (start:N)
  *  -------------------------------------------------
  *  Purpose:
  *    Allows any cue-triggered animation (rotate, scale, o2p, text, video, audio)
- *    to specify start:N meaning "begin N seconds after the cue triggers."
+ *    to specify start:N meaning “begin N seconds after the cue triggers.”
  *
  *  Behavior:
  *    • start:N is optional (default = immediate).
@@ -784,9 +941,62 @@ export async function checkCueTriggers() {
 //////////////////////////////////////////////////////////////////////
 // Unified delayed animation scheduling
 window.pendingCueStarts ??= new Map();
+/**
+ * scheduleCueStart()
+ * ------------------
+ * Unified start:N delay mechanism for all animation cues.
+ *
+ * cfg.start   = delay in seconds (optional, 0 = immediate)
+ * cfg._ghostClickable = true when prestate:ghostClickable was parsed
+ * cfg._startBlocked   = true until user clicks
+ * cfg._startCallback  = the callback invoked when user activates ghostClickable
+ *
+ * el        = target element for this animation
+ * startFn   = callback that actually starts the animation
+ * uid       = unique key identifying this animation instance
+ */
+// ============================================================================
+// Unified delayed-start scheduler (start:N) + ghostClickable handling
+// ============================================================================
+// ============================================================================
+// Unified delayed-start scheduler (start:N / tdelay)
+// Supports:
+//   - ghostClickable(ms)
+//   - fadein(ms)
+//   - all other prestates
+//   - immediate and delayed starts
+//
+// RULES:
+//   • If ghostClickable && delay == 0 → FADE NOW, DO NOT AUTOSTART
+//   • If ghostClickable && delay > 0  → WAIT, THEN FADE, STILL DO NOT AUTOSTART
+//   • Only start animation when cfg._startBlocked === false
+// ============================================================================
+// ============================================================================
+// UPDATED scheduleCueStart — supports ghostClickable(playhead) mode
+// ============================================================================
+//
+// Replace your scheduleCueStart in oscillaCueDispatcher.js with this version.
+//
+// CHANGES:
+// - For ghostClickable(playhead), skip the timed fade entirely
+// - Element stays invisible until playhead intersection triggers armGhostClickable()
+//
+// ============================================================================
+
+window.pendingCueStarts ??= new Map();
 
 export function scheduleCueStart(cfg, el, startFn, uid) {
   const delay = Number(cfg.start ?? 0);
+
+  // console.log("[startScheduler] ENTER", {
+  //   uid,
+  //   delay,
+  //   ghostClickable: cfg._ghostClickable,
+  //   ghostPlayheadMode: cfg._ghostPlayheadMode,
+  //   ghostDelayMs: cfg._ghostDelayMs,
+  //   blocked: cfg._startBlocked,
+  //   el
+  // });
 
   // Cancel previous pending start for this uid
   if (window.pendingCueStarts.has(uid)) {
@@ -800,6 +1010,8 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
   // Element stays invisible until playhead intersection
   // ========================================================================
   if (cfg._ghostClickable && cfg._ghostPlayheadMode) {
+    // console.log("[startScheduler] ghostClickable(playhead) → staying invisible, waiting for playhead", { uid });
+    // Don't schedule anything - armGhostClickable() will be called by playhead intersection
     return;
   }
 
@@ -807,7 +1019,10 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
   // GHOSTCLICKABLE WITH DELAY - Use _ghostDelayMs for arm timing
   // ========================================================================
   if (cfg._ghostClickable && cfg._ghostDelayMs > 0) {
+    // console.log(`[startScheduler] ghostClickable timed → arming in ${cfg._ghostDelayMs}ms`, { uid });
+
     const timeoutId = setTimeout(() => {
+      // console.log("[startScheduler] 🔥 ghostClickable delay done → arming", { uid });
       window.pendingCueStarts.delete(uid);
 
       if (typeof cfg._applyPrestateOnStart === "function") {
@@ -832,13 +1047,17 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
 
     // ---------------- ghostClickable immediate fade ----------------
     if (cfg._ghostClickable && cfg._startBlocked) {
+      // console.log("[startScheduler] ghostClickable immediate → fade to ghost only", { uid });
+
       if (typeof cfg._applyPrestateOnStart === "function") {
-        cfg._applyPrestateOnStart();
+        cfg._applyPrestateOnStart();   // fade to ghostOpacity
       }
-      return;
+
+      return; // DO NOT START ANIMATION
     }
 
     // ---------------- normal immediate start ----------------
+    // console.log("[startScheduler] Immediate start → uid:", uid);
     startFn();
     return;
   }
@@ -846,22 +1065,29 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
   // ========================================================================
   // DELAYED START (delay > 0)
   // ========================================================================
+  // console.log(`[startScheduler] Scheduling start in ${delay}s → uid=${uid}`);
+
   const timeoutId = setTimeout(() => {
+
+    // console.log("[startScheduler] 🔥 FIRING delayed start → uid:", uid);
     window.pendingCueStarts.delete(uid);
 
     // ---------------- ghostClickable delayed fade ----------------
     if (cfg._ghostClickable && cfg._startBlocked) {
+      // console.log("[startScheduler] ghostClickable delay done → fade to ghost only", { uid });
+
       if (typeof cfg._applyPrestateOnStart === "function") {
-        cfg._applyPrestateOnStart();
+        cfg._applyPrestateOnStart();   // fade to ghostOpacity
       }
-      return;
+
+      return; // DO NOT START ANIMATION YET
     }
 
     // ---------------- normal delayed start ----------------
     try {
       startFn();
     } catch (err) {
-      console.error("[startScheduler] ERROR in startFn:", err);
+      // console.error("[startScheduler] ERROR in startFn:", err);
     }
 
   }, delay * 1000);
@@ -874,6 +1100,8 @@ export function scheduleCueStart(cfg, el, startFn, uid) {
     startFn,
     createdAt: performance.now(),
   });
+
+  // console.log("[startScheduler] stored pending", [...window.pendingCueStarts.keys()]);
 }
 
 // ============================================================================
@@ -884,6 +1112,7 @@ export function cancelAllPendingStarts() {
     clearTimeout(entry.timeoutId);
   }
   window.pendingCueStarts.clear();
+  // console.log("[startScheduler] All pending delayed-starts cancelled.");
 }
 
 // ============================================================================
@@ -894,4 +1123,5 @@ export function cancelPendingStartByUid(uid) {
   if (!e) return;
   clearTimeout(e.timeoutId);
   window.pendingCueStarts.delete(uid);
+  // console.log(`[startScheduler] cancelled pending start for ${uid}`);
 }

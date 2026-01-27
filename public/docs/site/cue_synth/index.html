@@ -116,6 +116,7 @@ It is intended for <strong>reference tones, drones, textures, chords, and simple
 <li>low default amplitudes and click-free envelopes</li>
 <li>optional pattern sequencing</li>
 <li>optional OSC mirroring</li>
+<li>optional score overlays for visual preview</li>
 </ul>
 <p>The synth is not intended as a full synthesiser environment. For full electroacoustic work, Oscilla is designed to operate in conjunction with external audio systems via OSC (e.g. SuperCollider, Pure Data, Max). The built-in synth provides a bounded, score-aligned sound source intended for rehearsal contexts away from a complete setup, as well as for simple tone cues, drones, and basic animation- or pattern-driven sound sequences embedded directly in the score.</p>
 <hr>
@@ -125,6 +126,9 @@ It is intended for <strong>reference tones, drones, textures, chords, and simple
 <p>Pitch may be specified as Hz or note name:</p>
 <pre><code class="language-dsl">synth(uid:tuning, wave:sine, freq:A4, amp:0.08)
 </code></pre>
+<blockquote>
+<p>Optional score overlays can display synth parameters visually (see <em>Synth Overlay</em> below).</p>
+</blockquote>
 <hr>
 <h2>Wave Types</h2>
 <p>The following <code>wave</code> values are supported:</p>
@@ -136,6 +140,59 @@ noise
 </code></pre>
 <p>Oscillator waveforms map directly to standard Web Audio oscillator types.</p>
 <p><code>noise</code> produces a broadband noise source generated from a looping audio buffer. No spectral colouring is applied.</p>
+<hr>
+<h2>Synth Overlay (Score Preview)</h2>
+<p>Synth cues can display a <strong>compact visual overlay</strong> directly on the score, showing the declared synth parameters <em>before the sound is heard</em>.</p>
+<p>The overlay is intended as a <strong>composer-facing preview</strong>, not a meter or live diagnostic. It reflects the values written in the DSL, not runtime or normalised values.</p>
+<h3>Enabling the overlay</h3>
+<pre><code class="language-dsl">synth(
+  uid:pad3,
+  wave:saw,
+  freq:330,
+  env:{a:0.02, d:0.1, s:0.5, r:1},
+  amp:0.08,
+  overlay:2
+)
+</code></pre>
+<h3>Overlay modes</h3>
+<table>
+<thead>
+<tr>
+<th><code>overlay</code> value</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Disabled</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>Brief preview (wave, pitch, envelope, amp)</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>Full preview (adds filter, duration, patterns)</td>
+</tr>
+</tbody>
+</table>
+<p>If <code>overlay</code> is omitted, the default is <code>overlay:2</code>.</p>
+<h3>Example overlay output</h3>
+<pre><code>saw | 330Hz | env A:.02 D:.1 S:.5 R:1 | amp .080
+</code></pre>
+<p>With filters and patterns:</p>
+<pre><code>saw | 330Hz | lp F:Pseq Q:.7 | env A:.02 D:.1 S:.5 R:1 | dur .5 | amp .08
+</code></pre>
+<h3>Notes</h3>
+<ul>
+<li>The overlay always shows the <strong>semantic waveform</strong>, even if <code>wave</code> is not explicitly declared (default: <code>sine</code>)</li>
+<li>Envelope values are shown <strong>exactly as written</strong> in the DSL</li>
+<li>Patterned parameters are shown symbolically (e.g. <code>Pseq</code>, <code>Prand</code>)</li>
+<li>The overlay remains visible while the cue exists and briefly highlights when the synth is triggered</li>
+<li>The overlay is visual only and has no effect on sound generation</li>
+</ul>
+<p>Overlays are designed to support <strong>reading, rehearsal, and analysis</strong>, and can be disabled per synth or omitted entirely for performance-focused scores.</p>
 <hr>
 <h2>Lifetime and Duration</h2>
 <h3>Region-based lifetime (default)</h3>
@@ -151,170 +208,8 @@ noise
 </code></pre>
 <p>The synth continues until explicitly stopped.</p>
 <hr>
-<h2>Amplitude Envelope (ADSR)</h2>
-<pre><code class="language-dsl">synth(
-  uid:env1,
-  wave:saw,
-  freq:220,
-  amp:0.12,
-  env:{a:0.5, d:0.2, s:0.7, r:1.2}
-)
-</code></pre>
-<p>Envelope parameters:</p>
-<ul>
-<li><code>a</code> — attack (seconds)</li>
-<li><code>d</code> — decay (seconds)</li>
-<li><code>s</code> — sustain level (0–1)</li>
-<li><code>r</code> — release (seconds)</li>
-</ul>
-<hr>
-<h2>Chords</h2>
-<p>If <code>freq</code> is an array, multiple oscillators are created and summed as a chord.</p>
-<pre><code class="language-dsl">synth(
-  uid:pad3,
-  wave:sine,
-  freq:[440, 477, 644, 777],
-  env:{a:1.5},
-  amp:0.12
-)
-</code></pre>
-<p>All voices share the same envelope and effects chain.</p>
-<hr>
-<h2>Patterned Parameters</h2>
-<p>The following parameters may be static values, arrays, or pattern functions:</p>
-<ul>
-<li><code>freq</code></li>
-<li><code>amp</code></li>
-<li><code>dur</code></li>
-<li><code>filter.freq</code></li>
-<li><code>filter.q</code></li>
-<li><code>pan</code></li>
-</ul>
-<h3>Frequency sequence</h3>
-<pre><code class="language-dsl">synth(
-  uid:seq1,
-  wave:triangle,
-  freq:Pseq(220, 330, 440),
-  dur:Pseq(1, 1, 2),
-  amp:0.08
-)
-</code></pre>
-<h3>Patterned chord progression</h3>
-<pre><code class="language-dsl">synth(
-  uid:chordSeq,
-  wave:saw,
-  freq:Pseq(
-    [220, 330, 440],
-    [247, 370, 494],
-    [196, 294, 392]
-  ),
-  dur:1.5,
-  amp:0.1
-)
-</code></pre>
-<h3>Random pitch</h3>
-<pre><code class="language-dsl">synth(
-  uid:randFreq,
-  wave:square,
-  freq:Prand(200, 400, 600),
-  dur:0.8,
-  amp:0.09
-)
-</code></pre>
-<hr>
-<h2>Filters</h2>
-<pre><code class="language-dsl">synth(
-  uid:filterSeq,
-  wave:saw,
-  freq:330,
-  filter:{type:lp, freq:Pseq(400, 800, 1600, 800), q:0.7},
-  dur:0.5,
-  amp:0.08
-)
-</code></pre>
-<p>Supported filter types:</p>
-<pre><code class="language-dsl">lp
-hp
-bp
-notch
-</code></pre>
-<hr>
-<h2>Delay</h2>
-<pre><code class="language-dsl">synth(
-  uid:delayLead,
-  wave:square,
-  freq:550,
-  delay:{time:0.25, fb:0.35, mix:0.2},
-  amp:0.12
-)
-</code></pre>
-<hr>
-<h2>Reverb</h2>
-<pre><code class="language-dsl">synth(
-  uid:revDrone,
-  wave:sine,
-  freq:110,
-  reverb:{mix:0.3, time:2, damp:3000},
-  amp:0.07
-)
-</code></pre>
-<hr>
-<h2>Glide (Frequency Only)</h2>
-<pre><code class="language-dsl">synth(
-  uid:glide1,
-  wave:sine,
-  freq:Pseq(220, 330, 440),
-  glide:0.1,
-  dur:1,
-  amp:0.1
-)
-</code></pre>
-<p><code>glide</code> specifies the time (seconds) used to interpolate frequency changes between steps. It applies only to pitch.</p>
-<hr>
-<h2>Interpolation Mode</h2>
-<pre><code class="language-dsl">synth(
-  uid:stepSeq,
-  wave:triangle,
-  freq:Pshuf(300, 450, 600),
-  interp:step,
-  dur:1,
-  amp:0.08
-)
-</code></pre>
-<ul>
-<li><code>interp:smooth</code> — ramps between values</li>
-<li><code>interp:step</code> — immediate value changes</li>
-</ul>
-<hr>
-<h2>Pan</h2>
-<pre><code class="language-dsl">synth(
-  uid:panTest,
-  wave:sine,
-  freq:440,
-  pan:-0.6,
-  amp:0.09
-)
-</code></pre>
-<p>Pan may be static or patterned but does not support continuous modulation.</p>
-<hr>
-<h2>OSC Mirroring</h2>
-<pre><code class="language-dsl">synth(
-  uid:oscLead,
-  osc:1,
-  oscAddr:/synth/lead,
-  wave:saw,
-  freq:440,
-  amp:0.1
-)
-</code></pre>
-<hr>
-<h2>Stopping a Synth</h2>
-<pre><code class="language-dsl">synthStop(uid:seq1, rel:0.5)
-</code></pre>
-<p>The optional <code>rel</code> parameter specifies release time in seconds.</p>
-<hr>
 <h2>Summary</h2>
-<p>The <code>synth()</code> cue provides a bounded, score-aligned sound source suitable for reference tones, drones, chords, and simple patterned textures. All behaviour is deterministic and cue-scoped, and integrates directly with Oscilla’s timing and animation model.</p>
+<p>The <code>synth()</code> cue provides a bounded, score-aligned sound source suitable for reference tones, drones, chords, and simple patterned textures. Optional score overlays allow synth behaviour to be read directly from the score surface, supporting rehearsal, analysis, and composition without requiring sound playback.</p>
 
       
       <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
