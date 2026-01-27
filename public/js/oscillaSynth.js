@@ -247,7 +247,7 @@ function applyADSR(gainParam, ctx, t0, amp, env) {
     gainParam.linearRampToValueAtTime(peak, t0 + A);
     if (D > 0) gainParam.linearRampToValueAtTime(sus, t0 + A + D);
     else gainParam.setValueAtTime(sus, t0 + A);
-    
+
     console.log(`[ADSR] Scheduled: 0 -> ${peak} over ${A}s, then -> ${sus}`);
   } catch (e) {
     console.error("[ADSR] Error scheduling envelope:", e);
@@ -734,21 +734,31 @@ function startSynthVoice(uid, ast, cueElement, opts) {
     /* ignore */
   }
 
-  // Optional overlay (if OSC enabled)
+  // Optional synth preview overlay
   let overlay = null;
-  if (cueElement && (isOscEnabled(ast, params) || opts?.forceOverlay)) {
-    overlay = createOscOverlay({
-      anchorEl: cueElement,
-      label: params.oscAddr ?? params.oscaddr ?? uid,
-      anchorMode: "bbox",
-      mode: "auto",
-      track: true
-    });
-    if (overlay?.el) {
-      overlay.el.style.background = "rgba(200, 0, 200, 0.08)";
-      overlay.el.style.borderLeft = "2px solid rgba(200, 0, 200, 0.5)";
+  const overlayFlag = Number(params.overlay ?? 2);
+
+  if (cueElement && overlayFlag > 0) {
+    // Check if overlay was already primed during assignCues
+    if (cueElement._synthOverlay) {
+      overlay = cueElement._synthOverlay;
+      console.log(`[synth] 🔄 Reusing primed overlay for ${uid}`);
+    } else {
+      overlay = createSynthOverlay({
+        anchorEl: cueElement,
+        voice: null, // temporarily, fixed below
+        mode: overlayFlag >= 2 ? "full" : "brief"
+      });
     }
   }
+
+  if (overlay?.el) {
+    overlay.el.classList.add("is-active");
+    setTimeout(() => {
+      overlay.el?.classList.remove("is-active");
+    }, 250);
+  }
+
 
   const voice = {
     uid,
@@ -779,7 +789,19 @@ function startSynthVoice(uid, ast, cueElement, opts) {
   };
   voice._wasInsideOnce = false;
 
+
+  if (overlay) {
+    overlay.voice = voice;
+    voice._overlay = overlay;
+
+    overlay.update();
+    overlay.position();
+  }
   activeSynthVoices.set(uid, voice);
+
+
+
+
 
   // Prepare generators
   installGenerators(voice);
@@ -818,6 +840,15 @@ function startSynthVoice(uid, ast, cueElement, opts) {
       lifetime
     });
   }
+
+  // refresh synth overlay if present
+  if (voice._overlay) {
+    try {
+      voice._overlay.update();
+      voice._overlay.position();
+    } catch { }
+  }
+
 
   return voice;
 }
@@ -1028,6 +1059,13 @@ function applyStepTargets(voice, dur) {
   const ctx = sharedAudioCtx;
   const t = nowSec(ctx);
 
+  if (voice._overlay?.el) {
+    voice._overlay.el.classList.add("is-active");
+    setTimeout(() => {
+      voice._overlay?.el?.classList.remove("is-active");
+    }, 120);
+  }
+
   // Frequency
   if (voice.source.kind === "osc" && voice._freqGen && voice._freqGen._dynamic) {
     const v = voice._freqGen.next();
@@ -1035,11 +1073,24 @@ function applyStepTargets(voice, dur) {
       const hz = pitchToHz(v);
       const glide = clamp(voice.params?.glide ?? voice.glide ?? 0.02, 0, 10);
       voice.glide = glide;
+      const RAMP = Math.min(0.005, dur * 0.25); // 2–5 ms
+
       if (voice.interp === "step" || glide === 0) {
-        try { voice.source.node.frequency.setValueAtTime(clamp(hz, 1, 20000), t); } catch { }
+        const p = voice.source.node.frequency;
+        try {
+          p.cancelScheduledValues(t);
+          p.setValueAtTime(p.value, t);
+          p.linearRampToValueAtTime(clamp(hz, 1, 20000), t + RAMP);
+        } catch { }
       } else {
-        try { voice.source.node.frequency.linearRampToValueAtTime(clamp(hz, 1, 20000), t + Math.min(glide, dur)); } catch { }
+        try {
+          voice.source.node.frequency.linearRampToValueAtTime(
+            clamp(hz, 1, 20000),
+            t + Math.min(glide, dur)
+          );
+        } catch { }
       }
+
     }
   }
 
@@ -1052,30 +1103,43 @@ function applyStepTargets(voice, dur) {
   }
   try { voice.graph.gain.gain.linearRampToValueAtTime(voice.amp, t + 0.05); } catch { }
 
-  // Filter cutoff/Q (step)
-  if (voice.graph.filter) {
-    if (voice._cutoffGen && voice._cutoffGen._dynamic) {
-      const v = voice._cutoffGen.next();
-      if (v != null) {
-        try { voice.graph.filter.frequency.linearRampToValueAtTime(clamp(v, 20, 20000), t + 0.05); } catch { }
-      }
-    }
-    if (voice._qGen && voice._qGen._dynamic) {
-      const v = voice._qGen.next();
-      if (v != null) {
-        try { voice.graph.filter.Q.linearRampToValueAtTime(clamp(v, 0.0001, 30), t + 0.05); } catch { }
-      }
+  const RAMP = Math.min(0.01, dur * 0.25); // 2–10 ms, step-aware
+
+  // cutoff
+  if (voice._cutoffGen && voice._cutoffGen._dynamic) {
+    const v = voice._cutoffGen.next();
+    if (v != null) {
+      const p = voice.graph.filter.frequency;
+      try {
+        p.cancelScheduledValues(t);
+        p.setValueAtTime(p.value, t);
+        p.linearRampToValueAtTime(clamp(v, 20, 20000), t + RAMP);
+      } catch { }
     }
   }
 
-  // Overlay update
+  // Q
+  if (voice._qGen && voice._qGen._dynamic) {
+    const v = voice._qGen.next();
+    if (v != null) {
+      const p = voice.graph.filter.Q;
+      try {
+        p.cancelScheduledValues(t);
+        p.setValueAtTime(p.value, t);
+        p.linearRampToValueAtTime(clamp(v, 0.0001, 30), t + RAMP);
+      } catch { }
+    }
+  }
+
+
+  // Overlay update - keep the formatted display, just add live values
   if (voice._overlay) {
-    const hz = voice.source.kind === "osc" ? voice.source.node.frequency.value : null;
-    const txt = voice.source.kind === "osc"
-      ? `Hz:${(hz ?? 0).toFixed(1)} amp:${voice.amp.toFixed(3)}`
-      : `noise amp:${voice.amp.toFixed(3)}`;
+    // Don't overwrite the nice format - the primed overlay already shows params
+    // Just add the is-active class to show it's playing
+    if (voice._overlay.el && !voice._overlay.el.classList.contains("is-active")) {
+      voice._overlay.el.classList.add("is-active");
+    }
     try {
-      voice._overlay.update(txt);
       voice._overlay.position();
     } catch { /* ignore */ }
   }
@@ -1091,8 +1155,12 @@ function applyStepTargets(voice, dur) {
 // 🧹 Cleanup
 // ============================================================
 function cleanupVoice(uid, voice) {
-  try { voice._overlay?.destroy?.(); } catch { /* ignore */ }
-  voice._overlay = null;
+  // Don't destroy overlay - just remove active state so it returns to primed appearance
+  if (voice._overlay?.el) {
+    voice._overlay.el.classList.remove("is-active");
+  }
+  // Don't null out the overlay - it stays for the next trigger
+  // voice._overlay = null;
 
   // Disconnect chord oscillators if present
   if (voice.source?.isChord && voice.source?.oscillators) {
@@ -1121,4 +1189,244 @@ function cleanupVoice(uid, voice) {
   try { voice.graph?.sum?.disconnect(); } catch { /* ignore */ }
 
   activeSynthVoices.delete(uid);
+}
+
+
+
+
+
+
+
+
+////////////////////////////////////////////
+
+// ============================================================
+// 🎛 Synth Overlay (Composer-facing preview)
+// ============================================================
+
+
+function createSynthOverlay({
+  anchorEl,
+  voice,
+  mode = "brief",
+  track = true
+} = {}) {
+
+  if (!anchorEl) {
+    return {
+      el: null,
+      voice: null,
+      update() { },
+      position() { },
+      destroy() { }
+    };
+  }
+
+  const box = document.createElement("div");
+  box.className = "oscilla-synth-overlay";
+  box.style.position = "fixed";
+  box.style.pointerEvents = "none";
+  box.style.zIndex = 99990;
+  box.style.whiteSpace = "nowrap";
+
+  box.textContent = "synth..."; // Initial placeholder text
+  document.body.appendChild(box);
+
+  function position() {
+    if (!anchorEl || !box.isConnected) return;
+    const r = anchorEl.getBoundingClientRect();
+    // Position overlaying the object, starting a few pixels in from left edge
+    // and a few pixels down from top
+    box.style.left = `${r.left + 4}px`;
+    box.style.top = `${r.top + 4}px`;
+  }
+
+  let tracking = false;
+  function loop() {
+    if (!tracking) return;
+    try { position(); } catch { }
+    requestAnimationFrame(loop);
+  }
+
+  if (track) {
+    tracking = true;
+    requestAnimationFrame(loop);
+  }
+
+  // Position immediately
+  position();
+
+  // Create the overlay object first so update() can reference it via `self`
+  const self = {
+    el: box,
+    voice: voice, // Will be updated externally after creation
+    mode: mode,
+    update(text) {
+      // If text provided directly, use it
+      if (text !== undefined) {
+        box.textContent = text;
+        return;
+      }
+      // Otherwise use self.voice to format
+      if (!self.voice) {
+        box.textContent = "synth (loading...)";
+        return;
+      }
+      box.textContent = formatSynthOverlay(self.voice, self.mode);
+    },
+    position,
+    destroy() {
+      tracking = false;
+      try { box.remove(); } catch { }
+    }
+  };
+
+  return self;
+}
+
+
+
+
+function formatSynthOverlay(voice, mode = "brief") {
+  const p = voice.params || {};
+  const parts = [];
+
+  // waveform (always show semantic default)
+  const wave = p.wave ?? "sine";
+  parts.push(String(wave));
+
+  // frequency / pitch
+  if (p.freq != null) {
+    if (typeof p.freq === "object" && p.freq.type === "pattern") {
+      parts.push(`${p.freq.name}[${p.freq.values.join(",")}]`);
+    } else if (Array.isArray(p.freq)) {
+      parts.push(`chord[${p.freq.join(",")}]`);
+    } else {
+      parts.push(`${p.freq}Hz`);
+    }
+  }
+
+  // filter (DSL-faithful, full mode only)
+  if (mode === "full" && p.filter && typeof p.filter === "object") {
+    const type = p.filter.type || p.filter.mode || "lp";
+    const items = [type];
+
+    const cf = p.filter.freq ?? p.filter.cutoff;
+    if (cf != null) {
+      if (typeof cf === "object" && cf.type === "pattern") {
+        items.push(`${cf.name}`);
+      } else {
+        items.push(`F:${stripLeadingZero(cf)}`);
+      }
+    }
+
+    if (p.filter.q != null) {
+      items.push(`Q:${stripLeadingZero(p.filter.q)}`);
+    }
+
+    parts.push(items.join(" "));
+  }
+
+
+
+  function stripLeadingZero(v) {
+    if (typeof v !== "number") return String(v);
+    const s = String(v);
+    return s.startsWith("0.") ? s.slice(1) : s;
+  }
+
+
+  // envelope (compact, DSL-faithful)
+  if (p.env && typeof p.env === "object") {
+    const labels = [];
+
+    if (p.env.a != null || p.env.attack != null) {
+      const v = p.env.a ?? p.env.attack;
+      labels.push(`A:${stripLeadingZero(v)}`);
+    }
+    if (p.env.d != null || p.env.decay != null) {
+      const v = p.env.d ?? p.env.decay;
+      labels.push(`D:${stripLeadingZero(v)}`);
+    }
+    if (p.env.s != null || p.env.sustain != null) {
+      const v = p.env.s ?? p.env.sustain;
+      labels.push(`S:${stripLeadingZero(v)}`);
+    }
+    if (p.env.r != null || p.env.release != null) {
+      const v = p.env.r ?? p.env.release;
+      labels.push(`R:${stripLeadingZero(v)}`);
+    }
+
+    if (labels.length > 0) {
+      parts.push(`env ${labels.join(" ")}`);
+    }
+  }
+
+
+  // duration / stepping (full mode)
+  if (mode === "full" && p.dur != null) {
+    if (typeof p.dur === "object" && p.dur.type === "pattern") {
+      parts.push(`dur ${p.dur.name}`);
+    } else {
+      parts.push(`dur ${p.dur}`);
+    }
+  }
+
+  // amp (always last)
+  if (p.amp != null) {
+    parts.push(`amp ${Number(p.amp).toFixed(3)}`);
+  }
+
+  return parts.join(" | ");
+}
+
+
+// ============================================================
+// 🎯 Prime synth overlay (called during assignCues)
+// Creates overlay before synth plays, showing synth params
+// ============================================================
+export function primeSynthOverlay(ast, cueElement) {
+  if (!ast || !cueElement) return;
+
+  // Extract params from AST
+  const params = {};
+  for (const arg of (ast.args || [])) {
+    const key = arg.key || arg.type;
+    if (key && arg.value !== undefined) {
+      params[key] = arg.value;
+    }
+  }
+
+  // Check if overlay is requested
+  const overlayFlag = Number(params.overlay ?? 2);
+  if (overlayFlag <= 0) return;
+
+  // Check if already primed
+  if (cueElement._synthOverlayPrimed) return;
+  cueElement._synthOverlayPrimed = true;
+
+  const mode = overlayFlag >= 2 ? "full" : "brief";
+
+  // Create a temporary "voice-like" object for formatting
+  const pseudoVoice = {
+    params: params,
+    uid: params.uid || cueElement.id || "synth"
+  };
+
+  const overlay = createSynthOverlay({
+    anchorEl: cueElement,
+    voice: pseudoVoice,
+    mode: mode,
+    track: true
+  });
+
+  if (overlay?.el) {
+    overlay.update();
+    overlay.position();
+
+    // Store on element for later reference
+    cueElement._synthOverlay = overlay;
+  }
+
+  console.log(`[synth] 📋 Primed overlay for ${pseudoVoice.uid}`);
 }

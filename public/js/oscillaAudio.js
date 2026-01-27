@@ -84,7 +84,7 @@ function normalizeAudioSource(src) {
 // =============================================================
 //  handleAudioCue with fadeout scheduling
 // =============================================================
-export async function handleAudioCue(ast) {
+export async function handleAudioCue(ast, cueElement = null) {
   const ctx =
     window.sharedAudioCtx ||
     (window.sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
@@ -104,6 +104,9 @@ export async function handleAudioCue(ast) {
       pan,          // may come directly
       params = {}   // or live here
     } = ast || {};
+
+    // OVERLAY — check for overlay flag
+    const overlayFlag = Number(ast.overlay ?? params.overlay ?? 0);
 
     // PITCH — prefer direct, fallback to params
     const pitch =
@@ -293,6 +296,12 @@ export async function handleAudioCue(ast) {
     reg.set(key, { uid: key, filename, stop });
 
     const cleanup = () => {
+      // Deactivate overlay instead of destroying (it stays for re-triggers)
+      const regEntry = reg.get(key);
+      if (regEntry?._overlay?.el) {
+        regEntry._overlay.el.classList.remove("is-active");
+      }
+      
       if (reg.get(key)?.stop === stop) reg.delete(key);
       try { gainNode.disconnect(); } catch { }
       try { panNode?.disconnect(); } catch { }
@@ -358,6 +367,39 @@ export async function handleAudioCue(ast) {
 
       srcNode.start();
     };
+
+    // -------------------------------------------------------
+    // OVERLAY SUPPORT
+    // -------------------------------------------------------
+    let overlay = null;
+    if (cueElement && overlayFlag > 0) {
+      // Check if overlay was primed during assignCues
+      if (cueElement._audioOverlay) {
+        overlay = cueElement._audioOverlay;
+        console.log(`[audio] 🔄 Reusing primed overlay for ${key}`);
+      } else {
+        overlay = createAudioOverlay({
+          anchorEl: cueElement,
+          label: key,
+          mode: "auto",
+          track: true
+        });
+      }
+      
+      if (overlay?.el) {
+        overlay.el.classList.add("oscilla-audio-overlay", "is-active");
+        const details = `amp:${amp} loop:${loop}${pitch !== 1 ? ` pitch:${pitch}` : ""}`;
+        overlay.update(`${filename} | ${details}`);
+        overlay.position();
+      }
+    }
+
+    // Store overlay reference in registry for cleanup
+    const regEntry = reg.get(key);
+    if (regEntry) {
+      regEntry._overlay = overlay;
+      regEntry._cueElement = cueElement;
+    }
 
     playOne(true);
 
@@ -1039,11 +1081,308 @@ export function createAudioOverlay({
     anchorMode: "bbox"
   });
 
-  //  Apply audio-specific styling (slightly different color)
+  //  Apply audio-specific styling
   if (overlay.el) {
-    overlay.el.style.background = "rgba(0, 100, 200, 0.1)";
-    overlay.el.style.borderLeft = "2px solid rgba(0, 100, 200, 0.5)";
+    overlay.el.classList.add("oscilla-audio-overlay");
   }
 
   return overlay;
 }
+
+// ============================================================
+// 🎛 AUDIO OVERLAY ADDITIONS FOR oscillaAudio.js
+// ============================================================
+// Add these functions to oscillaAudio.js and export them
+// Also add to the import in oscillaCueDispatcher.js:
+//   primeAudioOverlay, primeAudioPoolOverlay, primeAudioImpulseOverlay
+// ============================================================
+
+/**
+ * Parse overlay flag from various input formats
+ * @param {*} value - overlay parameter value
+ * @returns {number} - 0 (off), 1 (brief), 2 (expanded)
+ */
+export function parseOverlayLevel(value) {
+  if (value === undefined || value === null) return 2; // default to expanded
+  
+  const strVal = String(value).toLowerCase().trim();
+  
+  // Named values
+  if (strVal === "off" || strVal === "false" || strVal === "none") return 0;
+  if (strVal === "brief" || strVal === "short" || strVal === "min") return 1;
+  if (strVal === "expanded" || strVal === "full" || strVal === "true") return 2;
+  
+  // Numeric values
+  const numVal = Number(value);
+  if (!isNaN(numVal)) {
+    if (numVal <= 0) return 0;
+    if (numVal === 1) return 1;
+    return 2;
+  }
+  
+  return 2; // default
+}
+
+/**
+ * Format overlay text based on level and audio type
+ * @param {string} funcType - "audioFile", "audioPool", or "audioImpulse"
+ * @param {object} params - parsed parameters
+ * @param {number} level - overlay level (0, 1, 2)
+ * @returns {string} - formatted overlay text
+ */
+function formatAudioOverlay(funcType, params, level) {
+  if (level <= 0) return "";
+  
+  const parts = [];
+  
+  // ALWAYS show function type first
+  parts.push(funcType);
+  
+  // Brief mode: just type + primary identifier
+  if (level === 1) {
+    if (funcType === "audioFile") {
+      const src = params.src || params.file || "?";
+      parts.push(src);
+    } else if (funcType === "audioPool") {
+      parts.push(params.path || "?");
+    } else if (funcType === "audioImpulse") {
+      parts.push(params.path || "?");
+    }
+    return parts.join(" | ");
+  }
+  
+  // Expanded mode: show DSL details
+  if (funcType === "audioFile") {
+    const src = params.src || params.file || "?";
+    parts.push(src);
+    
+    if (params.amp !== undefined && params.amp !== 1) {
+      parts.push(`amp:${formatValue(params.amp)}`);
+    }
+    if (params.loop !== undefined && params.loop !== 1) {
+      parts.push(`loop:${params.loop}`);
+    }
+    if (params.pitch !== undefined && params.pitch !== 1) {
+      parts.push(`pitch:${formatValue(params.pitch)}`);
+    }
+    if (params.pan !== undefined && params.pan !== 0) {
+      parts.push(`pan:${formatValue(params.pan)}`);
+    }
+    if (params.fadeIn || params.fade) {
+      parts.push(`fadeIn:${formatFadeValue(params.fadeIn || params.fade)}`);
+    }
+    if (params.fadeOut || params.fade) {
+      parts.push(`fadeOut:${formatFadeValue(params.fadeOut || params.fade)}`);
+    }
+    
+  } else if (funcType === "audioPool") {
+    parts.push(params.path || "?");
+    
+    if (params.mode && params.mode !== "shuffle") {
+      parts.push(`mode:${params.mode}`);
+    }
+    if (params.amp !== undefined && params.amp !== 1) {
+      parts.push(`amp:${formatValue(params.amp)}`);
+    }
+    if (params.pan !== undefined) {
+      parts.push(`pan:${formatValue(params.pan)}`);
+    }
+    if (params.pitch !== undefined && params.pitch !== 1) {
+      parts.push(`pitch:${formatValue(params.pitch)}`);
+    }
+    if (params.poly !== undefined && params.poly !== 1) {
+      parts.push(`poly:${params.poly}`);
+    }
+    
+  } else if (funcType === "audioImpulse") {
+    parts.push(params.path || "?");
+    
+    if (params.rate !== undefined) {
+      parts.push(`rate:${params.rate}`);
+    }
+    if (params.jitter !== undefined && params.jitter !== 0) {
+      parts.push(`jitter:${formatValue(params.jitter)}`);
+    }
+    if (params.amp !== undefined && params.amp !== 1) {
+      parts.push(`amp:${formatValue(params.amp)}`);
+    }
+    if (params.pan !== undefined) {
+      parts.push(`pan:${formatValue(params.pan)}`);
+    }
+    if (params.poly !== undefined && params.poly !== 6) {
+      parts.push(`poly:${params.poly}`);
+    }
+    if (params.lifetime && params.lifetime !== "process") {
+      parts.push(`life:${params.lifetime}`);
+    }
+  }
+  
+  return parts.join(" | ");
+}
+
+function formatValue(v) {
+  if (v === null || v === undefined) return "?";
+  
+  if (typeof v === "object") {
+    if (v.type === "rand" || v.type === "irand") {
+      return `${v.type}(${v.min},${v.max})`;
+    }
+    if (v.type === "funcCall" && v.name) {
+      const args = v.args ? v.args.join(",") : "";
+      return `${v.name}(${args})`;
+    }
+    return JSON.stringify(v);
+  }
+  
+  if (typeof v === "number") {
+    const s = v.toFixed(2).replace(/\.?0+$/, "");
+    return s.startsWith("0.") ? s.slice(1) : s;
+  }
+  
+  return String(v);
+}
+
+function formatFadeValue(v) {
+  if (typeof v === "string" && v.includes("%")) return v;
+  return formatValue(v);
+}
+
+// ============================================================
+// 🎯 Prime audio overlay for audioFile (called during assignCues)
+// ============================================================
+export function primeAudioOverlay(ast, cueElement) {
+  if (!ast || !cueElement) return;
+
+  const params = ast.params || {};
+  
+  if (Array.isArray(ast.args)) {
+    for (const arg of ast.args) {
+      if (arg && typeof arg === "object" && arg.type && arg.value !== undefined) {
+        params[arg.type] = arg.value;
+      }
+    }
+  }
+  
+  if (ast.src) params.src = ast.src;
+  if (ast.uid) params.uid = ast.uid;
+  if (ast.amp !== undefined) params.amp = ast.amp;
+  if (ast.loop !== undefined) params.loop = ast.loop;
+  if (ast.pitch !== undefined) params.pitch = ast.pitch;
+  if (ast.pan !== undefined) params.pan = ast.pan;
+
+  const overlayLevel = parseOverlayLevel(ast.overlay ?? params.overlay);
+  if (overlayLevel <= 0) return;
+
+  if (cueElement._audioOverlayPrimed) return;
+  cueElement._audioOverlayPrimed = true;
+
+  const uid = params.uid || cueElement.id || "audio";
+
+  const overlay = createAudioOverlay({
+    anchorEl: cueElement,
+    label: uid,
+    mode: "auto",
+    track: true
+  });
+
+  if (overlay?.el) {
+    const text = formatAudioOverlay("audioFile", params, overlayLevel);
+    overlay.update(text);
+    overlay.position();
+    cueElement._audioOverlay = overlay;
+    cueElement._audioOverlayLevel = overlayLevel;
+  }
+
+  console.log(`[audio] Primed overlay for ${uid} (level ${overlayLevel})`);
+}
+
+// ============================================================
+// 🎯 Prime audioPool overlay (called during assignCues)
+// ============================================================
+export function primeAudioPoolOverlay(ast, cueElement) {
+  if (!ast || !cueElement) return;
+
+  const params = ast.params || {};
+  
+  if (Array.isArray(ast.args)) {
+    for (const arg of ast.args) {
+      if (arg && typeof arg === "object" && arg.type && arg.value !== undefined) {
+        params[arg.type] = arg.value;
+      }
+    }
+  }
+
+  const overlayLevel = parseOverlayLevel(ast.overlay ?? params.overlay);
+  if (overlayLevel <= 0) return;
+
+  if (cueElement._audioPoolOverlayPrimed) return;
+  cueElement._audioPoolOverlayPrimed = true;
+
+  const uid = params.uid || `${params.path || "pool"}`;
+
+  const overlay = createAudioOverlay({
+    anchorEl: cueElement,
+    label: uid,
+    mode: "auto",
+    track: true
+  });
+
+  if (overlay?.el) {
+    const text = formatAudioOverlay("audioPool", params, overlayLevel);
+    overlay.update(text);
+    overlay.position();
+    cueElement._audioPoolOverlay = overlay;
+    cueElement._audioPoolOverlayLevel = overlayLevel;
+  }
+
+  console.log(`[audioPool] Primed overlay for ${uid} (level ${overlayLevel})`);
+}
+
+// ============================================================
+// 🎯 Prime audioImpulse overlay (called during assignCues)
+// ============================================================
+export function primeAudioImpulseOverlay(ast, cueElement) {
+  if (!ast || !cueElement) return;
+
+  const params = ast.params || {};
+  
+  if (Array.isArray(ast.args)) {
+    for (const arg of ast.args) {
+      if (arg && typeof arg === "object" && arg.type && arg.value !== undefined) {
+        params[arg.type] = arg.value;
+      }
+    }
+  }
+
+  const overlayLevel = parseOverlayLevel(ast.overlay ?? params.overlay);
+  if (overlayLevel <= 0) return;
+
+  if (cueElement._audioImpulseOverlayPrimed) return;
+  cueElement._audioImpulseOverlayPrimed = true;
+
+  const uid = params.uid || `impulse-${params.path || "pool"}`;
+
+  const overlay = createAudioOverlay({
+    anchorEl: cueElement,
+    label: uid,
+    mode: "auto",
+    track: true
+  });
+
+  if (overlay?.el) {
+    const text = formatAudioOverlay("audioImpulse", params, overlayLevel);
+    overlay.update(text);
+    overlay.position();
+    cueElement._audioImpulseOverlay = overlay;
+    cueElement._audioImpulseOverlayLevel = overlayLevel;
+  }
+
+  console.log(`[audioImpulse] Primed overlay for ${uid} (level ${overlayLevel})`);
+}
+
+// ============================================================
+// CSS for audio overlays (add to your stylesheet)
+// ============================================================
+/*
+
+*/

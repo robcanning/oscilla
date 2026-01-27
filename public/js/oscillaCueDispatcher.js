@@ -58,7 +58,7 @@ import {
   handleAudioPoolCue, handleAudioImpulseCue
 } from "./oscillaAudio.js";
 
-import { handleSynthCue } from "./oscillaSynth.js";
+import { handleSynthCue, primeSynthOverlay } from "./oscillaSynth.js";
 
 import { propagate } from "./oscillaPropagate.js";
 import { handleSpeedCue, handleSpeedRamp } from "./oscillaSpeed.js";
@@ -564,6 +564,13 @@ export function assignCues(svgRoot, cuesArray = []) {
         if (ast.type === "cueFade") {
           window._fadeCues.set(child, ast);
           primeFadeTargetFromAST(ast, child);
+        }
+
+        // -----------------------------------
+        // Pre-prime synth overlays
+        // -----------------------------------
+        if (ast.type === "cueSynth") {
+          primeSynthOverlay(ast, child);
         }
 
         const box = child.getBBox();
