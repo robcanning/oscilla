@@ -2,6 +2,8 @@
  * oscillaSystemSocket.js — WebSocket Transport & Message Routing
  * Part of oscillaScore modular architecture
  * © 2025 Rob Canning — GPLv3
+ *
+ * Handles WebSocket connection, message routing, and OSC-in control dispatch.
  */
 
 import { scrollToPlayheadVisual, togglePlayButton } from './oscillaTransport.js';
@@ -11,6 +13,7 @@ import { handleCueTrigger } from './oscillaCueDispatcher.js';
 import { handleStopCue } from './oscillaStop.js';
 import { handleAudioCue } from './oscillaAudio.js';
 import { dismissPauseCountdown, handlePauseCue } from './oscillaPause.js';
+import { handleOSCIn } from './oscillaControlRouter.js';
 
 // ===========================
 // Module State
@@ -184,6 +187,19 @@ function handleSocketMessage(event) {
       case "jump":
         handleJumpMessage(data);
         break;
+
+      // ===========================
+      // OSC-IN CONTROL MESSAGES
+      // ===========================
+      case "osc_in":
+      case "osc_control":
+        handleOSCInMessage(data);
+        break;
+
+      case "control_set":
+        // Direct control message: { type: "control_set", uid, param, value }
+        handleControlSetMessage(data);
+        break;
     }
   } catch (error) {
     console.error("[WS] Message error:", error);
@@ -272,6 +288,55 @@ function handleJumpMessage(data) {
 }
 
 // ===========================
+// OSC-IN Control Handling
+// ===========================
+
+/**
+ * Handle OSC-in message from server
+ * Dispatches to the control router
+ * @param {Object} data - OSC message data
+ */
+function handleOSCInMessage(data) {
+  const { address, args } = data;
+  
+  if (!address) {
+    console.warn('[WS] OSC-in missing address:', data);
+    return;
+  }
+
+  // Dispatch to control router
+  try {
+    handleOSCIn(address, args || []);
+  } catch (err) {
+    console.error('[WS] OSC-in handler error:', err);
+  }
+
+  // Emit event for other listeners
+  window.dispatchEvent(new CustomEvent('oscilla:osc-in', {
+    detail: { address, args }
+  }));
+}
+
+/**
+ * Handle direct control_set message
+ * @param {Object} data - { uid, param, value }
+ */
+function handleControlSetMessage(data) {
+  const { uid, param, value } = data;
+  
+  if (!uid || !param) {
+    console.warn('[WS] control_set missing uid or param:', data);
+    return;
+  }
+
+  try {
+    handleOSCIn('/oscilla/set', [uid, param, value]);
+  } catch (err) {
+    console.error('[WS] control_set handler error:', err);
+  }
+}
+
+// ===========================
 // Outbound Message Helpers
 // ===========================
 
@@ -321,4 +386,27 @@ export function setSocketEnabled(enabled) {
  */
 export function getSocket() {
   return window.socket || null;
+}
+
+// ===========================
+// Control-Specific Outbound
+// ===========================
+
+/**
+ * Request current parameter value from a target
+ * @param {string} uid - Target uid
+ * @param {string} param - Parameter name
+ */
+export function requestParam(uid, param) {
+  sendSocketMessage("control_get", { uid, param });
+}
+
+/**
+ * Send control value to server (for broadcast to other clients)
+ * @param {string} uid - Target uid
+ * @param {string} param - Parameter name
+ * @param {any} value - Parameter value
+ */
+export function sendControl(uid, param, value) {
+  sendSocketMessage("control_set", { uid, param, value });
 }

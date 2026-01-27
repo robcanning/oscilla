@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>cue_synth</title>
+  <title>Control and Modulation</title>
   <link rel="stylesheet" href="/oscilla/docs/style.css">
   <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.svg">
 
@@ -106,222 +106,186 @@
     <main class="docs-content">
 
       
-      <h1><code>synth()</code> — Web Audio Synth Cue</h1>
-<h2>Oscilla &quot;Native WebAudio Utility Synth&quot;</h2>
-<figure class="doc-image">
-  <img
-    src="/oscilla/docs/img/oscilla-synth-basic.png"
-    alt="Oscilla Synth"
-  >
-</figure>
-<p>The <code>synth()</code> cue creates a lightweight Web Audio sound source inside Oscilla.
-It is intended for <strong>reference tones, drones, textures, chords, and simple patterned sound processes</strong>, integrated directly into the score timeline.</p>
-<p>The design prioritises:</p>
+      <h1>Control, Modulation, and Exposed Parameters in Oscilla</h1>
+<p>This document explains how cue parameters are exposed and controlled in Oscilla,
+using concrete DSL-style examples.</p>
+<p>It covers:</p>
 <ul>
-<li>deterministic, cue-scoped behaviour</li>
-<li>readable parameter syntax</li>
-<li>low default amplitudes and click-free envelopes</li>
-<li>optional pattern sequencing</li>
-<li>optional OSC mirroring</li>
-</ul>
-<p>The synth is not intended as a full synthesiser environment. For full electroacoustic work, Oscilla is designed to operate in conjunction with external audio systems via OSC (e.g. SuperCollider, Pure Data, Max). The built-in synth provides a bounded, score-aligned sound source intended for rehearsal contexts away from a complete setup, as well as for simple tone cues, drones, and basic animation- or pattern-driven sound sequences embedded directly in the score.</p>
-<hr>
-<h2>Basic Usage</h2>
-<pre><code class="language-dsl">synth(uid:refA, wave:sine, freq:440, amp:0.1)
-</code></pre>
-<p>Pitch may be specified as Hz or note name:</p>
-<pre><code class="language-dsl">synth(uid:tuning, wave:sine, freq:A4, amp:0.08)
-</code></pre>
-<hr>
-<h2>Wave Types</h2>
-<p>The following <code>wave</code> values are supported:</p>
-<pre><code class="language-dsl">sine
-square
-saw
-triangle
-noise
-</code></pre>
-<p>Oscillator waveforms map directly to standard Web Audio oscillator types.</p>
-<p><code>noise</code> produces a broadband noise source generated from a looping audio buffer. No spectral colouring is applied.</p>
-<hr>
-<h2>Lifetime and Duration</h2>
-<h3>Region-based lifetime (default)</h3>
-<p>When <code>synth()</code> is attached to a cue element, the synth starts when the playhead enters the cue’s bounding box and stops when the playhead exits it.</p>
-<pre><code class="language-dsl">synth(uid:regionTone, wave:sine, freq:220, amp:0.06)
-</code></pre>
-<h3>Explicit duration</h3>
-<pre><code class="language-dsl">synth(uid:fixedDur, wave:sine, freq:220, dur:5, amp:0.07)
-</code></pre>
-<p>The synth stops automatically after the specified number of seconds.</p>
-<h3>Persistent process lifetime</h3>
-<pre><code class="language-dsl">synth(uid:persist, wave:saw, freq:110, lifetime:process, amp:0.05)
-</code></pre>
-<p>The synth continues until explicitly stopped.</p>
-<hr>
-<h2>Amplitude Envelope (ADSR)</h2>
-<pre><code class="language-dsl">synth(
-  uid:env1,
-  wave:saw,
-  freq:220,
-  amp:0.12,
-  env:{a:0.5, d:0.2, s:0.7, r:1.2}
-)
-</code></pre>
-<p>Envelope parameters:</p>
-<ul>
-<li><code>a</code> — attack (seconds)</li>
-<li><code>d</code> — decay (seconds)</li>
-<li><code>s</code> — sustain level (0–1)</li>
-<li><code>r</code> — release (seconds)</li>
+<li>how cues expose parameters</li>
+<li>how to control cues via external OSC</li>
+<li>how to use animation output as control signals</li>
+<li>how to route signals between cues</li>
+<li>how to construct feedback systems</li>
 </ul>
 <hr>
-<h2>Chords</h2>
-<p>If <code>freq</code> is an array, multiple oscillators are created and summed as a chord.</p>
-<pre><code class="language-dsl">synth(
-  uid:pad3,
-  wave:sine,
-  freq:[440, 477, 644, 777],
-  env:{a:1.5},
-  amp:0.12
-)
-</code></pre>
-<p>All voices share the same envelope and effects chain.</p>
-<hr>
-<h2>Patterned Parameters</h2>
-<p>The following parameters may be static values, arrays, or pattern functions:</p>
+<h2>1. Exposed Parameters: Core Idea</h2>
+<p>A cue exposes parameters if its runtime implementation supports updating them
+while the cue is running.</p>
+<p>Key points:</p>
 <ul>
-<li><code>freq</code></li>
-<li><code>amp</code></li>
-<li><code>dur</code></li>
-<li><code>filter.freq</code></li>
-<li><code>filter.q</code></li>
-<li><code>pan</code></li>
-</ul>
-<h3>Frequency sequence</h3>
-<pre><code class="language-dsl">synth(
-  uid:seq1,
-  wave:triangle,
-  freq:Pseq(220, 330, 440),
-  dur:Pseq(1, 1, 2),
-  amp:0.08
-)
-</code></pre>
-<h3>Patterned chord progression</h3>
-<pre><code class="language-dsl">synth(
-  uid:chordSeq,
-  wave:saw,
-  freq:Pseq(
-    [220, 330, 440],
-    [247, 370, 494],
-    [196, 294, 392]
-  ),
-  dur:1.5,
-  amp:0.1
-)
-</code></pre>
-<h3>Random pitch</h3>
-<pre><code class="language-dsl">synth(
-  uid:randFreq,
-  wave:square,
-  freq:Prand(200, 400, 600),
-  dur:0.8,
-  amp:0.09
-)
-</code></pre>
-<hr>
-<h2>Filters</h2>
-<pre><code class="language-dsl">synth(
-  uid:filterSeq,
-  wave:saw,
-  freq:330,
-  filter:{type:lp, freq:Pseq(400, 800, 1600, 800), q:0.7},
-  dur:0.5,
-  amp:0.08
-)
-</code></pre>
-<p>Supported filter types:</p>
-<pre><code class="language-dsl">lp
-hp
-bp
-notch
-</code></pre>
-<hr>
-<h2>Delay</h2>
-<pre><code class="language-dsl">synth(
-  uid:delayLead,
-  wave:square,
-  freq:550,
-  delay:{time:0.25, fb:0.35, mix:0.2},
-  amp:0.12
-)
-</code></pre>
-<hr>
-<h2>Reverb</h2>
-<pre><code class="language-dsl">synth(
-  uid:revDrone,
-  wave:sine,
-  freq:110,
-  reverb:{mix:0.3, time:2, damp:3000},
-  amp:0.07
-)
-</code></pre>
-<hr>
-<h2>Glide (Frequency Only)</h2>
-<pre><code class="language-dsl">synth(
-  uid:glide1,
-  wave:sine,
-  freq:Pseq(220, 330, 440),
-  glide:0.1,
-  dur:1,
-  amp:0.1
-)
-</code></pre>
-<p><code>glide</code> specifies the time (seconds) used to interpolate frequency changes between steps. It applies only to pitch.</p>
-<hr>
-<h2>Interpolation Mode</h2>
-<pre><code class="language-dsl">synth(
-  uid:stepSeq,
-  wave:triangle,
-  freq:Pshuf(300, 450, 600),
-  interp:step,
-  dur:1,
-  amp:0.08
-)
-</code></pre>
-<ul>
-<li><code>interp:smooth</code> — ramps between values</li>
-<li><code>interp:step</code> — immediate value changes</li>
+<li>Parameters are exposed by the running cue instance, not by special DSL syntax</li>
+<li>Parameters are addressed by <code>uid</code> and parameter name</li>
+<li>Control never retriggers cues</li>
+<li>Control only affects active (running) cues</li>
 </ul>
 <hr>
-<h2>Pan</h2>
-<pre><code class="language-dsl">synth(
-  uid:panTest,
-  wave:sine,
-  freq:440,
-  pan:-0.6,
-  amp:0.09
-)
-</code></pre>
-<p>Pan may be static or patterned but does not support continuous modulation.</p>
+<h2>2. Synth Cue with Exposed Parameters</h2>
+<p>Example synth cue:</p>
+<p>synth(
+uid: synthA,
+wave: sine,
+freq: 220,
+amp: 0.2
+)</p>
+<p>What this does:</p>
+<ul>
+<li>Creates a synth instance with uid <code>synthA</code></li>
+<li>Starts with frequency 220 Hz and amplitude 0.2</li>
+<li>Exposes runtime parameters:
+<ul>
+<li>amp</li>
+<li>freq</li>
+</ul>
+</li>
+</ul>
+<p>These parameters can be updated at any time while the synth is running.</p>
 <hr>
-<h2>OSC Mirroring</h2>
-<pre><code class="language-dsl">synth(
-  uid:oscLead,
-  osc:1,
-  oscAddr:/synth/lead,
-  wave:saw,
-  freq:440,
-  amp:0.1
-)
-</code></pre>
+<h2>3. Controlling a Synth via External OSC</h2>
+<p>OSC control uses a single address format:</p>
+<p>/oscilla/set <uid> <param> <value></p>
+<h3>Example: change amplitude</h3>
+<p>/oscilla/set synthA amp 0.4</p>
+<p>Effect:</p>
+<ul>
+<li>The synth amplitude updates immediately</li>
+<li>The synth is not retriggered</li>
+</ul>
+<h3>Example: change frequency</h3>
+<p>/oscilla/set synthA freq 330</p>
 <hr>
-<h2>Stopping a Synth</h2>
-<pre><code class="language-dsl">synthStop(uid:seq1, rel:0.5)
-</code></pre>
-<p>The optional <code>rel</code> parameter specifies release time in seconds.</p>
+<h2>4. Using o2p as an Internal Control Source</h2>
+<p>Example o2p cue:</p>
+<p>o2p(
+uid: sliderA,
+path: p1,
+dur: 12,
+loop: true
+)</p>
+<p>This cue publishes internal control signals:</p>
+<ul>
+<li>o2p:sliderA.t   (normalised position along the path, 0–1)</li>
+</ul>
 <hr>
-<h2>Summary</h2>
-<p>The <code>synth()</code> cue provides a bounded, score-aligned sound source suitable for reference tones, drones, chords, and simple patterned textures. All behaviour is deterministic and cue-scoped, and integrates directly with Oscilla’s timing and animation model.</p>
+<h3>Example: o2p controls synth amplitude</h3>
+<p>Conceptual routing:</p>
+<p>o2p:sliderA.t → synthA.amp</p>
+<p>Effect:</p>
+<ul>
+<li>As the object moves along the path, the synth fades in and out</li>
+<li>No OSC is required</li>
+</ul>
+<hr>
+<h2>5. Using Rotation as a Control Signal</h2>
+<p>Example rotation cue:</p>
+<p>rotate(
+uid: rotor1,
+values: [0, 360],
+dur: 6,
+loop: true
+)</p>
+<p>This cue publishes:</p>
+<ul>
+<li>rotate:rotor1.angle   (degrees, 0–360)</li>
+</ul>
+<hr>
+<h3>Example: rotation controls scale</h3>
+<p>Assume a scale cue:</p>
+<p>scale(
+uid: shape2,
+values: [0.5, 2.0],
+dur: 4,
+loop: true
+)</p>
+<p>Conceptual routing:</p>
+<p>rotate:rotor1.angle → shape2.scale</p>
+<p>Effect:</p>
+<ul>
+<li>The shape grows and shrinks in response to rotation</li>
+</ul>
+<hr>
+<h2>6. Cross-Cue Modulation (Visual → Audio)</h2>
+<h3>Example: rotation controls synth frequency</h3>
+<p>Conceptual routing:</p>
+<p>rotate:rotor1.angle → synthA.freq</p>
+<p>Effect:</p>
+<ul>
+<li>Visual motion directly shapes pitch</li>
+<li>The score behaves as a coupled audio–visual system</li>
+</ul>
+<hr>
+<h2>7. Multiple Parameters on One Cue</h2>
+<p>Example synth:</p>
+<p>synth(
+uid: drone1,
+wave: saw,
+freq: 110,
+amp: 0.15
+)</p>
+<p>Exposed parameters:</p>
+<ul>
+<li>drone1.freq</li>
+<li>drone1.amp</li>
+</ul>
+<p>Possible control routes:</p>
+<p>o2p:sliderA.t → drone1.amp
+rotate:rotor1.angle → drone1.freq</p>
+<p>This allows multiple visual processes to control a single sound.</p>
+<hr>
+<h2>8. Feedback Structures</h2>
+<p>Because control signals are routable, feedback loops are possible.</p>
+<h3>Example: visual–audio–visual feedback</h3>
+<p>rotate:rotor1.angle → drone1.amp
+drone1.amp → rotor1.speed</p>
+<p>Effect:</p>
+<ul>
+<li>Rotation shapes sound</li>
+<li>Sound feeds back into rotation speed</li>
+<li>The system becomes dynamically coupled</li>
+</ul>
+<p>Oscilla does not prevent feedback.
+Feedback is an explicit compositional decision.</p>
+<hr>
+<h2>9. Combining OSC and Internal Control</h2>
+<p>External OSC and internal control signals use the same control path.</p>
+<h3>Example: performer + animation control</h3>
+<p>External OSC sets a baseline:</p>
+<p>/oscilla/set synthA amp 0.2</p>
+<p>Internal animation modulates it:</p>
+<p>o2p:sliderA.t → synthA.amp</p>
+<p>Effect:</p>
+<ul>
+<li>A performer establishes a base level</li>
+<li>Animation provides continuous variation</li>
+</ul>
+<hr>
+<h2>10. Mental Model</h2>
+<ul>
+<li>DSL cues define what exists and how it starts</li>
+<li>Animations produce continuous control signals</li>
+<li>Signals can control any exposed parameter</li>
+<li>Feedback is explicit and intentional</li>
+</ul>
+<p>Oscilla behaves as a signal-driven, executable score,
+not a one-way timeline.</p>
+<hr>
+<h2>11. Summary</h2>
+<ul>
+<li>Cue parameters are exposed by runtime implementation</li>
+<li>External OSC and internal signals share the same control path</li>
+<li>Any exposed parameter can be modulated</li>
+<li>Cross-cue modulation and feedback are core features</li>
+<li>No cue retriggering or special-case syntax is required</li>
+</ul>
 
       
       <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
