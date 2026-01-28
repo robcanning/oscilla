@@ -1,3 +1,8 @@
+---
+title: Control Plane
+layout: docs_layout.njk
+---
+
 # Oscilla Control Plane — Architecture & Usage Guide
 
 ## Overview
