@@ -2216,15 +2216,7 @@ export function cstToAst(cst) {
           return null;
         });
 
-      // ========== CONTROL PLANE: Check for signal reference ==========
-      // If val is a string that looks like "uid.channel" or "uid.channel[min,max]"
-      // convert it to a signalRef object
-      if (typeof val === 'string' && isBindableParam(key)) {
-        val = maybeConvertToSignalRef(val, key);
-      }
-      // ================================================================
 
-      args.push({ type: key, value: val });
           }
       // ✅ CASE 5: Direct token (number, string, identifier, bool)
       else if (v?.image != null) {
@@ -2247,6 +2239,18 @@ export function cstToAst(cst) {
           val = v.children.Identifier[0].image;
         }
       }
+
+
+      // ========== CONTROL PLANE: Check for signal reference ==========
+      // If val is a string that looks like "uid.channel" or "uid.channel[min,max]"
+      // convert it to a signalRef object
+      if (typeof val === 'string' && isBindableParam(key)) {
+        val = maybeConvertToSignalRef(val, key);
+      }
+      // ================================================================
+
+      args.push({ type: key, value: val });
+
 
       if (OSCILLA_DSL_DEBUG) {
         console.log(`[cueSynth] Final: ${key} =`, val);

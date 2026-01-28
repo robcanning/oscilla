@@ -57,6 +57,23 @@ layout: docs_layout.njk
 For more complex electroacoustic composition and improvisation setups, OSC remains the primary and recommended approach, allowing Oscilla to interface with dedicated audio environments such as SuperCollider, Max, or Pure Data. The native synth instead occupies a complementary role: enabling self-contained electronics, quick prototyping, and works where a restrained, browser-native electroacoustic aesthetic is desirable.</figcaption>
 </figure>
 
+
+## Oscilla Dynamic Signal Control and Modulation
+<figure class="doc-image">
+  <img
+    src="{{ '/docs/img/oscilla-dynamic-signal-flow.png' | url }}"
+    alt="Oscilla Dynamic Signal Control"
+  >
+  <figcaption>Published signals are shared across the system, so animations can control audio parameters, slider-like interfaces can control animations, and multiple cues can influence each other in any combination. Because values are updated continuously, this also allows feedback systems where motion, sound, and interaction form coupled, dynamic behaviours within the score.
+<code>
+synth(uid:pad, freq:"fadeSineFreq.t[90,2000]", env:{a:4})
+o2p(path:fadeSineFreq, trig:touch, osc:1, uid:fadeSineFreq, oscAddr:fadeSineFreq)
+</code>
+
+https://robcanning.github.io/oscilla/docs/control-and-modulation/
+</figcaption>
+</figure>
+
 ## Oscilla "Smart Cue" Inkscape Extension
 <figure class="doc-image">
   <img
