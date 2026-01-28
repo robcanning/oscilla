@@ -35,6 +35,7 @@ import {
 
 import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
 
+import { publish } from './oscillaParamBinding.js';
 
 
 /* ---------------------------------------------------------
@@ -491,6 +492,24 @@ function startContinuousO2P(el, cfg, virtual, uid) {
             // OSC emit
             emitO2POsc({ cfg, uid: cfg.uid, path, point, pathT });
 
+
+            // ========== CONTROL PLANE PUBLISH ==========
+            // Calculate normalized coordinates
+            const bbox = path.getBBox();
+            const normX = bbox.width > 0 ? (point.x - bbox.x) / bbox.width : 0;
+            const normY = bbox.height > 0 ? (point.y - bbox.y) / bbox.height : 0;
+            
+            // Publish signals for cross-cue modulation
+            publish("o2p", cfg.uid, {
+                t: globalT,      // position along path (0-1)
+                x: normX,        // normalized X in bounding box
+                y: normY,        // normalized Y in bounding box  
+                angle: angle     // tangent angle in degrees
+            });
+            // ============================================
+
+
+
             // overlay text (position handled globally)
             if (cfg._overlay) {
                 cfg._overlay.update(
@@ -604,6 +623,21 @@ function startAlternateO2P(el, cfg, virtual, uid) {
                     // OSC emit
                     emitO2POsc({ cfg, uid: cfg.uid, path, point, pathT });
 
+            // ========== CONTROL PLANE PUBLISH ==========
+            // Calculate normalized coordinates
+            const bbox = path.getBBox();
+            const normX = bbox.width > 0 ? (point.x - bbox.x) / bbox.width : 0;
+            const normY = bbox.height > 0 ? (point.y - bbox.y) / bbox.height : 0;
+            
+            publish("o2p", cfg.uid, {
+                t: globalT,
+                x: normX,
+                y: normY,
+                angle: angle
+            });
+
+
+                    
                     // overlay text
                     if (cfg._overlay) {
                         cfg._overlay.update(
@@ -1067,6 +1101,19 @@ export function handleO2PCue(el, args, options = {}) {
                 
                 // Update the value label with current position
                 updateHitLabelValue(cfg.uid, rawT);
+
+                // ========== CONTROL PLANE PUBLISH ==========
+                const bbox = pathEl.getBBox();
+                const normX = bbox.width > 0 ? (point.x - bbox.x) / bbox.width : 0;
+                const normY = bbox.height > 0 ? (point.y - bbox.y) / bbox.height : 0;
+                
+                publish("o2p", cfg.uid, {
+                    t: mappedT,
+                    x: normX,
+                    y: normY,
+                    angle: angle
+                });
+
 
                 // Emit OSC if enabled
                 if (cfg.oscCfg?.enabled) {

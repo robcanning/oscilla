@@ -1,390 +1,579 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Control and Modulation</title>
-  <link rel="stylesheet" href="/oscilla/docs/style.css">
-  <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.svg">
+<h1>Oscilla Control Plane — Architecture &amp; Usage Guide</h1>
+<h2>Overview</h2>
+<p>The Oscilla Control Plane enables <strong>bidirectional signal flow</strong> between cues. Any animation can publish its values as signals, and any synth or audio cue can subscribe to those signals to control its parameters in real-time.</p>
+<p>This transforms Oscilla from a trigger-based score system into a <strong>dynamic, signal-driven, executable score environment</strong>.</p>
+<h3>Core Concept</h3>
+<pre><code>┌─────────────────┐                    ┌─────────────────┐
+│   O2P Fader     │ ──publishes──────▶ │   ParamBus      │
+│   uid: slider1  │    t, x, y, angle  │  (signal store) │
+└─────────────────┘                    └────────┬────────┘
+                                                │
+                                                │ subscribes
+                                                ▼
+                                       ┌─────────────────┐
+                                       │   Synth         │
+                                       │   freq:slider1.t│
+                                       └─────────────────┘
+</code></pre>
+<hr>
+<h2>Quick Start</h2>
+<h3>1. Create a Controller (O2P Fader)</h3>
+<pre><code>o2p(path:faderTrack, trig:touch, uid:myFader)
+</code></pre>
+<p>This fader automatically publishes:</p>
+<ul>
+<li><code>o2p:myFader.t</code> — position along path (0-1)</li>
+<li><code>o2p:myFader.x</code> — normalized X position (0-1)</li>
+<li><code>o2p:myFader.y</code> — normalized Y position (0-1)</li>
+<li><code>o2p:myFader.angle</code> — tangent angle in degrees</li>
+</ul>
+<h3>2. Bind a Synth Parameter</h3>
+<pre><code>synth(uid:pad, freq:myFader.t[200,800], amp:0.2)
+</code></pre>
+<p>The <code>freq:myFader.t[200,800]</code> syntax means:</p>
+<ul>
+<li>Subscribe to signal <code>o2p:myFader.t</code></li>
+<li>Map the 0-1 value to 200-800 Hz</li>
+</ul>
+<h3>3. Result</h3>
+<p>Moving the fader changes the synth's frequency in real-time!</p>
+<hr>
+<h2>Signal Reference Syntax</h2>
+<h3>Basic Binding</h3>
+<pre><code>param:source.channel
+</code></pre>
+<ul>
+<li><strong>param</strong> — The parameter to control (freq, amp, pan, etc.)</li>
+<li><strong>source</strong> — The uid of the publishing cue</li>
+<li><strong>channel</strong> — Which signal to subscribe to (t, x, y, angle, etc.)</li>
+</ul>
+<h3>Binding with Range</h3>
+<pre><code>param:source.channel[min,max]
+</code></pre>
+<p>Maps the signal (assumed 0-1) to the specified output range.</p>
+<h3>Examples</h3>
+<table>
+<thead>
+<tr>
+<th>DSL</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>freq:slider.t</code></td>
+<td>Freq follows slider position (0-1)</td>
+</tr>
+<tr>
+<td><code>freq:slider.t[200,2000]</code></td>
+<td>Freq mapped to 200-2000 Hz</td>
+</tr>
+<tr>
+<td><code>amp:fader.y[0,0.5]</code></td>
+<td>Amplitude mapped to 0-0.5</td>
+</tr>
+<tr>
+<td><code>pan:knob.x[-1,1]</code></td>
+<td>Pan mapped to full left-right</td>
+</tr>
+<tr>
+<td><code>cutoff:wheel.t[200,8000]</code></td>
+<td>Filter cutoff mapped to range</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Published Signals by Cue Type</h2>
+<h3>O2P Animation</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Description</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>o2p:{uid}.t</code></td>
+<td>Position along path</td>
+<td>0-1</td>
+</tr>
+<tr>
+<td><code>o2p:{uid}.x</code></td>
+<td>Normalized X in frame</td>
+<td>0-1</td>
+</tr>
+<tr>
+<td><code>o2p:{uid}.y</code></td>
+<td>Normalized Y in frame</td>
+<td>0-1</td>
+</tr>
+<tr>
+<td><code>o2p:{uid}.angle</code></td>
+<td>Tangent angle</td>
+<td>degrees</td>
+</tr>
+</tbody>
+</table>
+<h3>Rotate Animation</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Description</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rotate:{uid}.angle</code></td>
+<td>Current angle</td>
+<td>0-360</td>
+</tr>
+<tr>
+<td><code>rotate:{uid}.rad</code></td>
+<td>Angle in radians</td>
+<td>0-2π</td>
+</tr>
+<tr>
+<td><code>rotate:{uid}.norm</code></td>
+<td>Normalized angle</td>
+<td>0-1</td>
+</tr>
+</tbody>
+</table>
+<h3>Scale Animation</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Description</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scale:{uid}.sx</code></td>
+<td>Scale X factor</td>
+<td>varies</td>
+</tr>
+<tr>
+<td><code>scale:{uid}.sy</code></td>
+<td>Scale Y factor</td>
+<td>varies</td>
+</tr>
+<tr>
+<td><code>scale:{uid}.uniform</code></td>
+<td>Average scale</td>
+<td>varies</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Bindable Parameters</h2>
+<h3>Synth</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default Range</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>freq</code> / <code>frequency</code></td>
+<td>20-20000</td>
+<td>Oscillator frequency (Hz)</td>
+</tr>
+<tr>
+<td><code>amp</code> / <code>amplitude</code></td>
+<td>0-1</td>
+<td>Output amplitude</td>
+</tr>
+<tr>
+<td><code>pan</code></td>
+<td>-1 to 1</td>
+<td>Stereo position</td>
+</tr>
+<tr>
+<td><code>cutoff</code> / <code>filterFreq</code></td>
+<td>20-20000</td>
+<td>Filter cutoff (Hz)</td>
+</tr>
+<tr>
+<td><code>q</code> / <code>resonance</code></td>
+<td>0.1-30</td>
+<td>Filter resonance</td>
+</tr>
+<tr>
+<td><code>detune</code></td>
+<td>-1200 to 1200</td>
+<td>Detune in cents</td>
+</tr>
+</tbody>
+</table>
+<h3>Audio / AudioPool / AudioImpulse</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default Range</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>amp</code></td>
+<td>0-1</td>
+<td>Playback amplitude</td>
+</tr>
+<tr>
+<td><code>pan</code></td>
+<td>-1 to 1</td>
+<td>Stereo position</td>
+</tr>
+<tr>
+<td><code>pitch</code> / <code>rate</code></td>
+<td>0.25-4</td>
+<td>Playback rate</td>
+</tr>
+</tbody>
+</table>
+<h3>Effects (within synth)</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default Range</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>delayTime</code></td>
+<td>0-2</td>
+<td>Delay time (seconds)</td>
+</tr>
+<tr>
+<td><code>feedback</code> / <code>fb</code></td>
+<td>0-0.99</td>
+<td>Delay feedback</td>
+</tr>
+<tr>
+<td><code>mix</code> / <code>wet</code></td>
+<td>0-1</td>
+<td>Effect mix level</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Architecture</h2>
+<h3>Module Overview</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                     oscillaParamBus.js                          │
+│  Central signal store with pub/sub                              │
+│  • set(path, value) — publish a signal                         │
+│  • get(path) — read current value                              │
+│  • subscribe(path, callback) — react to changes                │
+└─────────────────────────────────────────────────────────────────┘
+                              ▲
+                              │
+        ┌─────────────────────┴─────────────────────┐
+        │                                           │
+        ▼                                           ▼
+┌───────────────────┐                   ┌───────────────────┐
+│ oscillaParamBinding│                   │ Animation Modules │
+│                   │                   │                   │
+│ • bindParam()     │                   │ • publish() call  │
+│ • publish()       │ ◀──── used by ────│   in update loop  │
+│ • isSignalRef()   │                   │                   │
+└───────────────────┘                   └───────────────────┘
+        │
+        │ used by
+        ▼
+┌───────────────────┐
+│ Synth/Audio Cues  │
+│                   │
+│ • bindParam() for │
+│   each parameter  │
+└───────────────────┘
+</code></pre>
+<h3>File Descriptions</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>oscillaParamBus.js</code></td>
+<td>Central signal store with pub/sub</td>
+</tr>
+<tr>
+<td><code>oscillaParamBinding.js</code></td>
+<td><code>bindParam()</code> and <code>publish()</code> helpers</td>
+</tr>
+<tr>
+<td><code>oscillaParserSignalRef.js</code></td>
+<td>Parser extension for signal ref syntax</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Integration Guide</h2>
+<h3>Adding Signal Publishing to a Cue</h3>
+<p>To make any animation publish signals, add <strong>one line</strong> to its update callback:</p>
+<pre><code class="language-javascript">import { publish } from './oscillaParamBinding.js';
 
-</head>
-
-<body>
-
-  <!-- Mobile overlay (closes sidebar when tapped) -->
-  <div class="sidebar-overlay" aria-hidden="true"></div>
-
-  <header class="docs-header">
-    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <line x1="3" y1="12" x2="21" y2="12"></line>
-        <line x1="3" y1="18" x2="21" y2="18"></line>
-      </svg>
-    </button>
-      <a href="/oscilla/docs/" class="docs-brand">
-        <img
-          src="/oscilla/docs/img/logos/logo-header-docs.svg"
-          alt="Oscilla"
-          class="docs-logo"
-          aria-hidden="true"
-        >
-      </a>
-
-            <nav class="docs-nav" aria-label="Page navigation">
-        <a id="docs-prev" href="#">← Previous</a>
-        <a id="docs-next" href="#">Next →</a>
-      </nav>
-  </header>
-
-  <div class="docs-container">
-    <nav class="sidebar" aria-label="Documentation navigation">
-
-  <h3>Getting Started</h3>
-  <ul>
-    <li><a href="/oscilla/docs/">Docs Overview</a></li>
-    <li><a href="/oscilla/docs/about">What is Oscilla?</a></li>
-    <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
-    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
-    <li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
-    <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
-    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
-  </ul>
-
-  <h3>Cues</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
-    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
-    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
-    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
-    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
-    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
-    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
-    <li><a href="/oscilla/docs/cue_button">button()</a></li>
-    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
-    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
-    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
-    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
-    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
-    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
-    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
-    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
-  </ul>
-
-  <h3>Animation</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
-    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
-    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
-    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
-    <li><a href="/oscilla/docs/cue_color/">color()</a></li>
-    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
-    <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
-  </ul>
-
-  <h3>Performer</h3>
-  <ul>
-    <li><a href="/oscilla/docs/contribution_surface/">Contribution Surface</a></li>
-  </ul>
-
-  <h3>Tools</h3>
-  <ul>
-    <li><a href="/oscilla/docs/inkscape_extension/">Inkscape Extension</a></li>
-  </ul>
-
-  <h3>Developer</h3>
-  <ul>
-      <li><a href="/oscilla/docs/oscilla_architecture_overview/">Architecture Overview</a></li>
-    <li><a href="/oscilla/docs/dev-sync-architecture/">Sync Architecture</a></li>
-       <li><a href="/oscilla/docs/oscilla-developer-guide-new-cue/">DevHowto New Cue</a></li>
-
-  </ul>
-
-</nav>
-
+// In your animation's update callback:
+update: () =&gt; {
+    // ... existing animation logic ...
     
-    <main class="docs-content">
+    // ADD THIS LINE:
+    publish(&quot;o2p&quot;, cfg.uid, { t: pathT, x: normX, y: normY, angle });
+}
+</code></pre>
+<h3>Example: O2P Animation</h3>
+<p><strong>Location:</strong> <code>oscillaAnimationO2p.js</code>, in <code>startContinuousO2P()</code>, around line 492</p>
+<pre><code class="language-javascript">// BEFORE (existing code):
+emitO2POsc({ cfg, uid: cfg.uid, path, point, pathT });
 
-      
-      <h1>Control, Modulation, and Exposed Parameters in Oscilla</h1>
-<p>This document explains how cue parameters are exposed and controlled in Oscilla,
-using concrete DSL-style examples.</p>
-<p>It covers:</p>
-<ul>
-<li>how cues expose parameters</li>
-<li>how to control cues via external OSC</li>
-<li>how to use animation output as control signals</li>
-<li>how to route signals between cues</li>
-<li>how to construct feedback systems</li>
-</ul>
+// AFTER (add this line):
+import { publish } from './oscillaParamBinding.js';
+// ... then in update callback:
+emitO2POsc({ cfg, uid: cfg.uid, path, point, pathT });
+publish(&quot;o2p&quot;, cfg.uid, { t: globalT, x: normX, y: normY, angle });
+</code></pre>
+<p><strong>Note:</strong> You'll need to calculate <code>normX</code> and <code>normY</code> from the path bbox:</p>
+<pre><code class="language-javascript">const bbox = path.getBBox();
+const normX = (point.x - bbox.x) / bbox.width;
+const normY = (point.y - bbox.y) / bbox.height;
+</code></pre>
+<h3>Example: Rotate Animation</h3>
+<p><strong>Location:</strong> <code>oscillaAnimationRotate.js</code>, in <code>handleRotateContinuous()</code>, around line 548</p>
+<pre><code class="language-javascript">import { publish } from './oscillaParamBinding.js';
+
+update: () =&gt; {
+    // ... existing code ...
+    const angle = getCurrentAngle(animEl, 0);
+    
+    // ADD THIS:
+    publish(&quot;rotate&quot;, cfg.uid, { angle: angle });
+}
+</code></pre>
+<h3>Example: Scale Animation</h3>
+<p><strong>Location:</strong> <code>oscillaAnimationScale.js</code>, in <code>handleScaleContinuous()</code>, around line 586</p>
+<pre><code class="language-javascript">import { publish } from './oscillaParamBinding.js';
+
+update: () =&gt; {
+    // ... existing code ...
+    const sx = parseFloat(tr.match(/scale\(([^,]+),/)?.[1] || 1);
+    const sy = parseFloat(tr.match(/,\s*([^)]+)\)/)?.[1] || sx);
+    
+    // ADD THIS:
+    publish(&quot;scale&quot;, cfg.uid, { sx, sy, uniform: (sx + sy) / 2 });
+}
+</code></pre>
 <hr>
-<h2>1. Exposed Parameters: Core Idea</h2>
-<p>A cue exposes parameters if its runtime implementation supports updating them
-while the cue is running.</p>
-<p>Key points:</p>
-<ul>
-<li>Parameters are exposed by the running cue instance, not by special DSL syntax</li>
-<li>Parameters are addressed by <code>uid</code> and parameter name</li>
-<li>Control never retriggers cues</li>
-<li>Control only affects active (running) cues</li>
-</ul>
+<h3>Adding Signal Binding to a Cue</h3>
+<p>To make parameters bindable in a cue, use <code>bindParam()</code>:</p>
+<pre><code class="language-javascript">import { bindParam, isSignalRef } from './oscillaParamBinding.js';
+
+function startMyCue(params) {
+    const unbinders = [];
+    
+    // Bind frequency - works with both static and signal ref
+    const freqBinding = bindParam(
+        params.freq,
+        (hz) =&gt; oscillator.frequency.setTargetAtTime(hz, 0, 0.02),
+        { min: 20, max: 20000, default: 440 }
+    );
+    unbinders.push(freqBinding.unbind);
+    
+    // Use initial value
+    oscillator.frequency.value = freqBinding.value;
+    
+    // ... later, on cleanup:
+    unbinders.forEach(fn =&gt; fn());
+}
+</code></pre>
+<h3>Example: Synth Integration</h3>
+<p><strong>Location:</strong> <code>oscillaSynth.js</code>, in <code>startSynthVoice()</code>, around line 673</p>
+<pre><code class="language-javascript">import { bindParam } from './oscillaParamBinding.js';
+
+function startSynthVoice(uid, ast, cueElement, opts) {
+    const ctx = sharedAudioCtx;
+    const params = extractParams(ast);
+    const unbinders = [];
+    
+    // Frequency binding
+    const freqBinding = bindParam(
+        params.freq,
+        (hz) =&gt; {
+            if (voice.source?.kind === 'osc') {
+                voice.source.node.frequency.setTargetAtTime(hz, ctx.currentTime, 0.02);
+            }
+        },
+        { min: 20, max: 20000, default: 440 }
+    );
+    unbinders.push(freqBinding.unbind);
+    
+    // Amplitude binding
+    const ampBinding = bindParam(
+        params.amp,
+        (amp) =&gt; {
+            voice.graph.gain.gain.setTargetAtTime(amp, ctx.currentTime, 0.02);
+        },
+        { min: 0, max: 0.5, default: 0.1 }
+    );
+    unbinders.push(ampBinding.unbind);
+    
+    // ... create voice with initial values ...
+    const freqHz = freqBinding.value;
+    const amp = ampBinding.value;
+    
+    // Store unbinders on voice for cleanup
+    voice._unbinders = unbinders;
+}
+
+function cleanupVoice(uid, voice) {
+    // Unbind all signal subscriptions
+    voice._unbinders?.forEach(fn =&gt; fn());
+    // ... rest of cleanup ...
+}
+</code></pre>
 <hr>
-<h2>2. Synth Cue with Exposed Parameters</h2>
-<p>Example synth cue:</p>
-<p>synth(
-uid: synthA,
-wave: sine,
-freq: 220,
-amp: 0.2
-)</p>
-<p>What this does:</p>
+<h2>Parser Integration</h2>
+<h3>Modifying the Parser</h3>
+<p>The parser needs to recognize signal references in parameter values. Add this to the value extraction logic:</p>
+<p><strong>Location:</strong> <code>oscillaParser.js</code>, in <code>cstToAst()</code> synth/audio sections</p>
+<pre><code class="language-javascript">import { maybeConvertToSignalRef } from './oscillaParserSignalRef.js';
+
+// When extracting a parameter value:
+let val = extractRawValue(valueNode);
+val = maybeConvertToSignalRef(val, paramName);
+</code></pre>
+<h3>What the Parser Outputs</h3>
+<p><strong>Input DSL:</strong></p>
+<pre><code>synth(uid:pad, freq:fader1.t[200,800], amp:0.2)
+</code></pre>
+<p><strong>Output AST:</strong></p>
+<pre><code class="language-javascript">{
+    type: &quot;cueSynth&quot;,
+    args: [
+        { type: &quot;uid&quot;, value: &quot;pad&quot; },
+        { 
+            type: &quot;freq&quot;, 
+            value: { 
+                type: &quot;signalRef&quot;, 
+                source: &quot;fader1&quot;, 
+                channel: &quot;t&quot;, 
+                range: [200, 800] 
+            } 
+        },
+        { type: &quot;amp&quot;, value: 0.2 }
+    ]
+}
+</code></pre>
+<hr>
+<h2>Debugging</h2>
+<h3>Enable Debug Mode</h3>
+<pre><code class="language-javascript">// In browser console:
+oscillaParamBus.setDebugMode(true);
+</code></pre>
+<p>This logs all signal changes.</p>
+<h3>Inspect Current Signals</h3>
+<pre><code class="language-javascript">// List all signals:
+oscillaParamBus.list();
+
+// List signals from a specific source:
+oscillaParamBus.list(&quot;o2p:&quot;);
+
+// Get current value:
+oscillaParamBus.get(&quot;o2p:fader1.t&quot;);
+
+// Get snapshot of all values:
+oscillaParamBus.snapshot();
+</code></pre>
+<h3>Test Signal Publishing</h3>
+<pre><code class="language-javascript">// Manually publish a signal:
+oscillaParamBus.set(&quot;o2p:test.t&quot;, 0.5);
+
+// Watch a signal:
+const unsub = oscillaParamBus.subscribe(&quot;o2p:test.t&quot;, (value, path) =&gt; {
+    console.log(`${path} = ${value}`);
+});
+
+// Later: unsub() to stop watching
+</code></pre>
+<hr>
+<h2>Common Patterns</h2>
+<h3>XY Pad → Synth</h3>
+<pre><code>o2p(path:xyPad, trig:touch, uid:xy)
+synth(uid:pad, freq:xy.x[200,2000], amp:xy.y[0,0.5])
+</code></pre>
+<h3>Rotation → Filter</h3>
+<pre><code>rotate(dur:4, loop:0, uid:wheel)
+synth(uid:drone, freq:220, cutoff:wheel.norm[200,4000])
+</code></pre>
+<h3>Multiple Controllers → One Synth</h3>
+<pre><code>o2p(path:freqSlider, trig:touch, uid:fSlider)
+o2p(path:ampSlider, trig:touch, uid:aSlider)
+synth(uid:lead, freq:fSlider.t[100,1000], amp:aSlider.t[0,0.3])
+</code></pre>
+<h3>One Controller → Multiple Synths</h3>
+<pre><code>o2p(path:masterFader, trig:touch, uid:master)
+synth(uid:bass, freq:master.t[50,200], amp:0.2)
+synth(uid:mid, freq:master.t[200,800], amp:0.15)
+synth(uid:high, freq:master.t[800,4000], amp:0.1)
+</code></pre>
+<hr>
+<h2>Limitations &amp; Notes</h2>
+<ol>
+<li>
+<p><strong>Signal Publishing Rate:</strong> Signals are published at ~60fps to avoid overwhelming the system.</p>
+</li>
+<li>
+<p><strong>Binding Lifecycle:</strong> Bindings are automatically cleaned up when the cue stops (if you call the unbind functions).</p>
+</li>
+<li>
+<p><strong>No Circular Dependencies:</strong> The system doesn't prevent circular signal routing. Avoid creating feedback loops unless intentional.</p>
+</li>
+<li>
+<p><strong>Static Parameters:</strong> Some parameters can't be changed after cue start (e.g., <code>wave</code> type, audio <code>src</code>). These will use the initial value even if bound.</p>
+</li>
+<li>
+<p><strong>Signal Range:</strong> All signals are assumed to be in the 0-1 range. Use the <code>[min,max]</code> syntax to map to your desired output range.</p>
+</li>
+</ol>
+<hr>
+<h2>Summary Checklist</h2>
+<h3>To Make an Animation Publish Signals:</h3>
+<ol>
+<li>✅ Import <code>publish</code> from <code>oscillaParamBinding.js</code></li>
+<li>✅ Add <code>publish(&quot;type&quot;, uid, { channel: value })</code> to update callback</li>
+<li>✅ Done!</li>
+</ol>
+<h3>To Make a Cue Accept Signal Bindings:</h3>
+<ol>
+<li>✅ Import <code>bindParam</code> from <code>oscillaParamBinding.js</code></li>
+<li>✅ Wrap parameter initialization with <code>bindParam()</code></li>
+<li>✅ Store unbind functions for cleanup</li>
+<li>✅ Call unbind functions when cue stops</li>
+<li>✅ Update parser to recognize signal refs (one-time)</li>
+</ol>
+<hr>
+<h2>Version History</h2>
 <ul>
-<li>Creates a synth instance with uid <code>synthA</code></li>
-<li>Starts with frequency 220 Hz and amplitude 0.2</li>
-<li>Exposes runtime parameters:
+<li><strong>v1.0</strong> — Initial control plane implementation
 <ul>
-<li>amp</li>
-<li>freq</li>
+<li>ParamBus signal store</li>
+<li>bindParam/publish helpers</li>
+<li>Signal reference syntax support</li>
 </ul>
 </li>
 </ul>
-<p>These parameters can be updated at any time while the synth is running.</p>
-<hr>
-<h2>3. Controlling a Synth via External OSC</h2>
-<p>OSC control uses a single address format:</p>
-<p>/oscilla/set <uid> <param> <value></p>
-<h3>Example: change amplitude</h3>
-<p>/oscilla/set synthA amp 0.4</p>
-<p>Effect:</p>
-<ul>
-<li>The synth amplitude updates immediately</li>
-<li>The synth is not retriggered</li>
-</ul>
-<h3>Example: change frequency</h3>
-<p>/oscilla/set synthA freq 330</p>
-<hr>
-<h2>4. Using o2p as an Internal Control Source</h2>
-<p>Example o2p cue:</p>
-<p>o2p(
-uid: sliderA,
-path: p1,
-dur: 12,
-loop: true
-)</p>
-<p>This cue publishes internal control signals:</p>
-<ul>
-<li>o2p:sliderA.t   (normalised position along the path, 0–1)</li>
-</ul>
-<hr>
-<h3>Example: o2p controls synth amplitude</h3>
-<p>Conceptual routing:</p>
-<p>o2p:sliderA.t → synthA.amp</p>
-<p>Effect:</p>
-<ul>
-<li>As the object moves along the path, the synth fades in and out</li>
-<li>No OSC is required</li>
-</ul>
-<hr>
-<h2>5. Using Rotation as a Control Signal</h2>
-<p>Example rotation cue:</p>
-<p>rotate(
-uid: rotor1,
-values: [0, 360],
-dur: 6,
-loop: true
-)</p>
-<p>This cue publishes:</p>
-<ul>
-<li>rotate:rotor1.angle   (degrees, 0–360)</li>
-</ul>
-<hr>
-<h3>Example: rotation controls scale</h3>
-<p>Assume a scale cue:</p>
-<p>scale(
-uid: shape2,
-values: [0.5, 2.0],
-dur: 4,
-loop: true
-)</p>
-<p>Conceptual routing:</p>
-<p>rotate:rotor1.angle → shape2.scale</p>
-<p>Effect:</p>
-<ul>
-<li>The shape grows and shrinks in response to rotation</li>
-</ul>
-<hr>
-<h2>6. Cross-Cue Modulation (Visual → Audio)</h2>
-<h3>Example: rotation controls synth frequency</h3>
-<p>Conceptual routing:</p>
-<p>rotate:rotor1.angle → synthA.freq</p>
-<p>Effect:</p>
-<ul>
-<li>Visual motion directly shapes pitch</li>
-<li>The score behaves as a coupled audio–visual system</li>
-</ul>
-<hr>
-<h2>7. Multiple Parameters on One Cue</h2>
-<p>Example synth:</p>
-<p>synth(
-uid: drone1,
-wave: saw,
-freq: 110,
-amp: 0.15
-)</p>
-<p>Exposed parameters:</p>
-<ul>
-<li>drone1.freq</li>
-<li>drone1.amp</li>
-</ul>
-<p>Possible control routes:</p>
-<p>o2p:sliderA.t → drone1.amp
-rotate:rotor1.angle → drone1.freq</p>
-<p>This allows multiple visual processes to control a single sound.</p>
-<hr>
-<h2>8. Feedback Structures</h2>
-<p>Because control signals are routable, feedback loops are possible.</p>
-<h3>Example: visual–audio–visual feedback</h3>
-<p>rotate:rotor1.angle → drone1.amp
-drone1.amp → rotor1.speed</p>
-<p>Effect:</p>
-<ul>
-<li>Rotation shapes sound</li>
-<li>Sound feeds back into rotation speed</li>
-<li>The system becomes dynamically coupled</li>
-</ul>
-<p>Oscilla does not prevent feedback.
-Feedback is an explicit compositional decision.</p>
-<hr>
-<h2>9. Combining OSC and Internal Control</h2>
-<p>External OSC and internal control signals use the same control path.</p>
-<h3>Example: performer + animation control</h3>
-<p>External OSC sets a baseline:</p>
-<p>/oscilla/set synthA amp 0.2</p>
-<p>Internal animation modulates it:</p>
-<p>o2p:sliderA.t → synthA.amp</p>
-<p>Effect:</p>
-<ul>
-<li>A performer establishes a base level</li>
-<li>Animation provides continuous variation</li>
-</ul>
-<hr>
-<h2>10. Mental Model</h2>
-<ul>
-<li>DSL cues define what exists and how it starts</li>
-<li>Animations produce continuous control signals</li>
-<li>Signals can control any exposed parameter</li>
-<li>Feedback is explicit and intentional</li>
-</ul>
-<p>Oscilla behaves as a signal-driven, executable score,
-not a one-way timeline.</p>
-<hr>
-<h2>11. Summary</h2>
-<ul>
-<li>Cue parameters are exposed by runtime implementation</li>
-<li>External OSC and internal signals share the same control path</li>
-<li>Any exposed parameter can be modulated</li>
-<li>Cross-cue modulation and feedback are core features</li>
-<li>No cue retriggering or special-case syntax is required</li>
-</ul>
-
-      
-      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
-    </main>
-  </div>
-
-  <script>
-
-document.addEventListener('click', (e) => {
-  const link = e.target.closest('a.popup-link');
-  if (link) {
-    e.preventDefault();
-    window.open(
-      link.href,
-      'cheatsheet',
-      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
-    );
-  }
-});
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.querySelector(".docs-menu-toggle");
-    const overlay = document.querySelector(".sidebar-overlay");
-    const sidebar = document.querySelector(".sidebar");
-    
-    function toggleSidebar() {
-      const isOpen = document.body.classList.toggle("sidebar-open");
-      btn?.setAttribute("aria-expanded", isOpen);
-    }
-    
-    function closeSidebar() {
-      document.body.classList.remove("sidebar-open");
-      btn?.setAttribute("aria-expanded", "false");
-    }
-    
-    btn?.addEventListener("click", toggleSidebar);
-    overlay?.addEventListener("click", closeSidebar);
-    
-    // Close sidebar on escape key
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
-        closeSidebar();
-      }
-    });
-    
-    // Close sidebar when clicking a link (mobile)
-    sidebar?.addEventListener("click", (e) => {
-      if (e.target.tagName === "A" && window.innerWidth <= 900) {
-        closeSidebar();
-      }
-    });
-  });
-
-  // Sidebar-ordered prev/next navigation
-  (function () {
-    const sidebar = document.querySelector(".sidebar");
-    if (!sidebar) return;
-
-    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
-    const current = window.location.href.replace(/#.*$/, "");
-    const index = links.findIndex(href => href === current);
-
-    const prev = index > 0 ? links[index - 1] : null;
-    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
-
-    const prevBtn = document.getElementById("docs-prev");
-    const nextBtn = document.getElementById("docs-next");
-
-    if (prevBtn) {
-      if (prev) prevBtn.href = prev;
-      else prevBtn.style.visibility = "hidden";
-    }
-
-    if (nextBtn) {
-      if (next) nextBtn.href = next;
-      else nextBtn.style.visibility = "hidden";
-    }
-
-    // Mark current page in sidebar
-    sidebar.querySelectorAll("a[href]").forEach(a => {
-      if (a.href === current) {
-        a.classList.add("active");
-        a.setAttribute("aria-current", "page");
-      }
-    });
-
-    // Keyboard navigation
-    document.addEventListener("keydown", e => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-
-      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
-        window.location.href = prev;
-      }
-      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
-        window.location.href = next;
-      }
-    });
-  })();
-  </script>
-
-</body>
-</html>

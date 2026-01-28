@@ -16,6 +16,7 @@ import {
 } from "./oscillaAnimationShared.js";
 
 import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
+import { publish } from './oscillaParamBinding.js';
 
 
 // ============================================================
@@ -446,11 +447,27 @@ export function handleRotateSequence(el, cfg) {
                 repositionAllHitLabels();
 
                 let a = ((driver.a % 360) + 360) % 360;
+                            const angleDeg = Number(a) || 0;
+
                 el.style.transform = `rotate(${a}deg)`;
 
+
+                
                 if (cfg._overlay) {
                     cfg._overlay.update(`deg:${a.toFixed(1)}`);
                 }
+
+
+
+            // ========== CONTROL PLANE PUBLISH ==========
+            const wrapped = ((angleDeg % 360) + 360) % 360;
+            publish("rotate", cfg.uid, {
+                angle: wrapped,
+                rad: wrapped * (Math.PI / 180),
+                norm: wrapped / 360
+            });
+            // ============================================
+
 
                 if (isOscEnabled(cfg, oscMode)) {
                     sendOSCRotation(cfg, Number(a) || 0);
@@ -547,14 +564,27 @@ export function handleRotateContinuous(el, cfg) {
         update: () => {
             try { repositionAllHitLabels(); } catch (e) { }
 
+            // Always get current angle for publishing
+            const a = getCurrentAngle(animEl, 0);
+            const angleDeg = Number(a) || 0;
+
+            // OSC output (if enabled)
             if (isOscEnabled(cfg, oscMode)) {
-                const a = getCurrentAngle(animEl, 0);
-                sendOSCRotation(cfg, Number(a) || 0);
+                sendOSCRotation(cfg, angleDeg);
 
                 if (cfg._overlay) {
-                    cfg._overlay.update(`deg:${(((a % 360) + 360) % 360).toFixed(1)}`);
+                    cfg._overlay.update(`deg:${(((angleDeg % 360) + 360) % 360).toFixed(1)}`);
                 }
             }
+
+            // ========== CONTROL PLANE PUBLISH ==========
+            const wrapped = ((angleDeg % 360) + 360) % 360;
+            publish("rotate", cfg.uid, {
+                angle: wrapped,                    // degrees 0-360
+                rad: wrapped * (Math.PI / 180),   // radians 0-2π
+                norm: wrapped / 360               // normalized 0-1
+            });
+            // ============================================
         }
     });
 

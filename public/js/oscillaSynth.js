@@ -26,6 +26,7 @@
 // ------------------------------------------------------------
 
 import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
+import { bindParam, isSignalRef } from './oscillaParamBinding.js';
 
 // ============================================================
 // 🌐 Shared AudioContext + registry
@@ -666,56 +667,154 @@ export function stopSynth(uidOrAst, rel = null) {
 }
 
 // ============================================================
-// 🚀 Start / Update
+//  Start / Update
 // ============================================================
+
 function startSynthVoice(uid, ast, cueElement, opts) {
   const ctx = sharedAudioCtx;
   const params = extractParams(ast);
+  
+  // ========== CONTROL PLANE: Unbinder collection ==========
+  const unbinders = [];
+  // =========================================================
 
-  // Defaults
+  // Non-bindable parameters (static)
   const wave = params.wave ?? "sine";
-  const amp = clamp(params.amp ?? 0.08, 0, 0.25);
   const env = normaliseEnv(params.env);
-
-  // Check if freq is a chord array
-  const freqParam = params.freq ?? 440;
   
-  // console.log(`[synth] Starting voice uid="${uid}" wave=${wave} amp=${amp}`);
-  
-  // lifetime default:
-  // - if invoked from a cue with an element, default to region-safe
-  // - otherwise default to process
+  // lifetime handling (unchanged)
   let lifetime = params.lifetime ?? params.life ?? null;
   if (!lifetime) lifetime = cueElement ? "region" : "process";
   lifetime = String(lifetime).toLowerCase();
 
-  // Create source + graph (now chord-aware)
-  const source = createSource(ctx, wave, freqParam);
-
-  // Frequency init for single osc (chord frequencies are set in createSource)
-  if (source.kind === "osc" && !source.isChord) {
-    const freqHz = pitchToHz(freqParam);
-    try {
-      source.node.frequency.setValueAtTime(clamp(freqHz, 1, 20000), nowSec(ctx));
-    } catch {
-      /* ignore */
-    }
+  // Create source (wave type is static)
+  const freqParamRaw = params.freq ?? 440;
+  
+  // For chord arrays, don't bind (static)
+  const isChord = Array.isArray(freqParamRaw) && freqParamRaw.length > 1;
+  
+  // Get initial frequency for source creation
+  let initialFreq = 440;
+  if (!isSignalRef(freqParamRaw)) {
+    initialFreq = isChord ? freqParamRaw : pitchToHz(freqParamRaw);
   }
+  
+  const source = createSource(ctx, wave, isChord ? freqParamRaw : initialFreq);
 
-  // Graph
+  // Graph (amp will be bound after)
+  const initialAmp = isSignalRef(params.amp) ? 0.08 : clamp(params.amp ?? 0.08, 0, 0.25);
   const graph = connectGraph(ctx, source.node, {
     ...params,
-    amp
+    amp: initialAmp
   });
 
-  // Attack now
+  // Start time
   const t0 = nowSec(ctx);
+  
+  // ========== FREQUENCY BINDING ==========
+  if (!isChord && source.kind === "osc") {
+    const freqBinding = bindParam(
+      freqParamRaw,
+      (hz) => {
+        try {
+          source.node.frequency.setTargetAtTime(
+            clamp(hz, 20, 20000),
+            ctx.currentTime,
+            0.02  // glide time
+          );
+        } catch (e) { /* ignore */ }
+      },
+      { min: 20, max: 20000, default: 440 }
+    );
+    unbinders.push(freqBinding.unbind);
+    
+    // Set initial frequency
+    try {
+      source.node.frequency.setValueAtTime(
+        clamp(freqBinding.value, 20, 20000),
+        t0
+      );
+    } catch (e) { /* ignore */ }
+  }
+  // ========================================
+
+  // ========== AMPLITUDE BINDING ==========
+  const ampBinding = bindParam(
+    params.amp,
+    (amp) => {
+      try {
+        const safeAmp = clamp(amp, 0, 0.5);
+        graph.gain.gain.setTargetAtTime(safeAmp, ctx.currentTime, 0.02);
+      } catch (e) { /* ignore */ }
+    },
+    { min: 0, max: 0.5, default: 0.08 }
+  );
+  unbinders.push(ampBinding.unbind);
+  
+  const amp = clamp(ampBinding.value, 0, 0.25);
+  // ========================================
+
+  // ========== PAN BINDING ==========
+  if (graph.panner) {
+    const panBinding = bindParam(
+      params.pan,
+      (pan) => {
+        try {
+          graph.panner.pan.setTargetAtTime(
+            clamp(pan, -1, 1),
+            ctx.currentTime,
+            0.02
+          );
+        } catch (e) { /* ignore */ }
+      },
+      { min: -1, max: 1, default: 0 }
+    );
+    unbinders.push(panBinding.unbind);
+  }
+  // ==================================
+
+  // ========== FILTER BINDINGS ==========
+  if (graph.filter) {
+    // Cutoff frequency
+    const cutoffBinding = bindParam(
+      params.cutoff ?? params.filterFreq,
+      (freq) => {
+        try {
+          graph.filter.frequency.setTargetAtTime(
+            clamp(freq, 20, 20000),
+            ctx.currentTime,
+            0.02
+          );
+        } catch (e) { /* ignore */ }
+      },
+      { min: 20, max: 20000, default: 1000 }
+    );
+    unbinders.push(cutoffBinding.unbind);
+
+    // Q / Resonance
+    const qBinding = bindParam(
+      params.q ?? params.resonance,
+      (q) => {
+        try {
+          graph.filter.Q.setTargetAtTime(
+            clamp(q, 0.1, 30),
+            ctx.currentTime,
+            0.02
+          );
+        } catch (e) { /* ignore */ }
+      },
+      { min: 0.1, max: 30, default: 1 }
+    );
+    unbinders.push(qBinding.unbind);
+  }
+  // =====================================
+
+  // Apply envelope with bound amp value
   applyADSR(graph.gain.gain, ctx, t0, amp, env);
 
   // Start source(s)
   try {
     if (source.isChord && source.oscillators) {
-      // Start all oscillators in the chord
       source.oscillators.forEach(osc => osc.start(t0));
     } else {
       source.node.start(t0);
@@ -760,14 +859,18 @@ function startSynthVoice(uid, ast, cueElement, opts) {
     amp,
     lifetime,
     _regionEl: cueElement || null,
-    _wasInsideOnce: false,  // placeholder; fixed below
+    _wasInsideOnce: false,
     _timer: null,
     _stopTimeout: null,
     _stopped: false,
     relOverride: params.rel ?? params.release ?? null,
-    _overlay: overlay,
+    _overlay: null,  // set below if needed
+    
+    // ========== CONTROL PLANE: Store unbinders ==========
+    _unbinders: unbinders,
+    // =====================================================
 
-    // pattern generators
+    // pattern generators (unchanged)
     _freqGen: null,
     _ampGen: null,
     _cutoffGen: null,
@@ -777,6 +880,8 @@ function startSynthVoice(uid, ast, cueElement, opts) {
     glide: clamp(params.glide ?? 0.02, 0, 10),
     interp: String(params.interp ?? "smooth").toLowerCase()
   };
+
+
   voice._wasInsideOnce = false;
 
 
@@ -1148,10 +1253,20 @@ function applyStepTargets(voice, dur) {
 // 🧹 Cleanup
 // ============================================================
 function cleanupVoice(uid, voice) {
-  // Don't destroy overlay - just remove active state so it returns to primed appearance
+  // ========== CONTROL PLANE: Unbind all subscriptions ==========
+  if (voice._unbinders) {
+    voice._unbinders.forEach(unbind => {
+      try { unbind(); } catch (e) { /* ignore */ }
+    });
+    voice._unbinders = [];
+  }
+  // ==============================================================
+
+  // Don't destroy overlay - just remove active state
   if (voice._overlay?.el) {
     voice._overlay.el.classList.remove("is-active");
   }
+
   // Don't null out the overlay - it stays for the next trigger
   // voice._overlay = null;
 
@@ -1186,7 +1301,7 @@ function cleanupVoice(uid, voice) {
 
 
 // ============================================================
-// 🎛 Synth Overlay (Composer-facing preview)
+// 🎛 Synth Overlay 
 // ============================================================
 
 function createSynthOverlay({

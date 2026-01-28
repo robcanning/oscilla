@@ -1,238 +1,507 @@
----
-title: Control and Modulation
-layout: docs_layout.njk
----
-# Control, Modulation, and Exposed Parameters in Oscilla
+# Oscilla Control Plane — Architecture & Usage Guide
 
-This document explains how cue parameters are exposed and controlled in Oscilla,
-using concrete DSL-style examples.
+## Overview
 
-It covers:
-- how cues expose parameters
-- how to control cues via external OSC
-- how to use animation output as control signals
-- how to route signals between cues
-- how to construct feedback systems
+The Oscilla Control Plane enables **bidirectional signal flow** between cues. Any animation can publish its values as signals, and any synth or audio cue can subscribe to those signals to control its parameters in real-time.
 
----
+This transforms Oscilla from a trigger-based score system into a **dynamic, signal-driven, executable score environment**.
 
-## 1. Exposed Parameters: Core Idea
+### Core Concept
 
-A cue exposes parameters if its runtime implementation supports updating them
-while the cue is running.
-
-Key points:
-
-- Parameters are exposed by the running cue instance, not by special DSL syntax
-- Parameters are addressed by `uid` and parameter name
-- Control never retriggers cues
-- Control only affects active (running) cues
+```
+┌─────────────────┐                    ┌─────────────────┐
+│   O2P Fader     │ ──publishes──────▶ │   ParamBus      │
+│   uid: slider1  │    t, x, y, angle  │  (signal store) │
+└─────────────────┘                    └────────┬────────┘
+                                                │
+                                                │ subscribes
+                                                ▼
+                                       ┌─────────────────┐
+                                       │   Synth         │
+                                       │   freq:slider1.t│
+                                       └─────────────────┘
+```
 
 ---
 
-## 2. Synth Cue with Exposed Parameters
+## Quick Start
 
-Example synth cue:
+### 1. Create a Controller (O2P Fader)
 
-synth(
-  uid: synthA,
-  wave: sine,
-  freq: 220,
-  amp: 0.2
-)
+```
+o2p(path:faderTrack, trig:touch, uid:myFader)
+```
 
-What this does:
+This fader automatically publishes:
+- `o2p:myFader.t` — position along path (0-1)
+- `o2p:myFader.x` — normalized X position (0-1)
+- `o2p:myFader.y` — normalized Y position (0-1)
+- `o2p:myFader.angle` — tangent angle in degrees
 
-- Creates a synth instance with uid `synthA`
-- Starts with frequency 220 Hz and amplitude 0.2
-- Exposes runtime parameters:
-  - amp
-  - freq
+### 2. Bind a Synth Parameter
 
-These parameters can be updated at any time while the synth is running.
+```
+synth(uid:pad, freq:myFader.t[200,800], amp:0.2)
+```
 
----
+The `freq:myFader.t[200,800]` syntax means:
+- Subscribe to signal `o2p:myFader.t`
+- Map the 0-1 value to 200-800 Hz
 
-## 3. Controlling a Synth via External OSC
+### 3. Result
 
-OSC control uses a single address format:
-
-/oscilla/set <uid> <param> <value>
-
-### Example: change amplitude
-
-/oscilla/set synthA amp 0.4
-
-Effect:
-- The synth amplitude updates immediately
-- The synth is not retriggered
-
-### Example: change frequency
-
-/oscilla/set synthA freq 330
+Moving the fader changes the synth's frequency in real-time!
 
 ---
 
-## 4. Using o2p as an Internal Control Source
+## Signal Reference Syntax
 
-Example o2p cue:
+### Basic Binding
 
-o2p(
-  uid: sliderA,
-  path: p1,
-  dur: 12,
-  loop: true
-)
+```
+param:source.channel
+```
 
-This cue publishes internal control signals:
+- **param** — The parameter to control (freq, amp, pan, etc.)
+- **source** — The uid of the publishing cue
+- **channel** — Which signal to subscribe to (t, x, y, angle, etc.)
 
-- o2p:sliderA.t   (normalised position along the path, 0–1)
+### Binding with Range
 
----
+```
+param:source.channel[min,max]
+```
 
-### Example: o2p controls synth amplitude
+Maps the signal (assumed 0-1) to the specified output range.
 
-Conceptual routing:
+### Examples
 
-o2p:sliderA.t → synthA.amp
-
-Effect:
-- As the object moves along the path, the synth fades in and out
-- No OSC is required
-
----
-
-## 5. Using Rotation as a Control Signal
-
-Example rotation cue:
-
-rotate(
-  uid: rotor1,
-  values: [0, 360],
-  dur: 6,
-  loop: true
-)
-
-This cue publishes:
-
-- rotate:rotor1.angle   (degrees, 0–360)
+| DSL | Meaning |
+|-----|---------|
+| `freq:slider.t` | Freq follows slider position (0-1) |
+| `freq:slider.t[200,2000]` | Freq mapped to 200-2000 Hz |
+| `amp:fader.y[0,0.5]` | Amplitude mapped to 0-0.5 |
+| `pan:knob.x[-1,1]` | Pan mapped to full left-right |
+| `cutoff:wheel.t[200,8000]` | Filter cutoff mapped to range |
 
 ---
 
-### Example: rotation controls scale
+## Published Signals by Cue Type
 
-Assume a scale cue:
+### O2P Animation
 
-scale(
-  uid: shape2,
-  values: [0.5, 2.0],
-  dur: 4,
-  loop: true
-)
+| Signal | Description | Range |
+|--------|-------------|-------|
+| `o2p:{uid}.t` | Position along path | 0-1 |
+| `o2p:{uid}.x` | Normalized X in frame | 0-1 |
+| `o2p:{uid}.y` | Normalized Y in frame | 0-1 |
+| `o2p:{uid}.angle` | Tangent angle | degrees |
 
-Conceptual routing:
+### Rotate Animation
 
-rotate:rotor1.angle → shape2.scale
+| Signal | Description | Range |
+|--------|-------------|-------|
+| `rotate:{uid}.angle` | Current angle | 0-360 |
+| `rotate:{uid}.rad` | Angle in radians | 0-2π |
+| `rotate:{uid}.norm` | Normalized angle | 0-1 |
 
-Effect:
-- The shape grows and shrinks in response to rotation
+### Scale Animation
 
----
-
-## 6. Cross-Cue Modulation (Visual → Audio)
-
-### Example: rotation controls synth frequency
-
-Conceptual routing:
-
-rotate:rotor1.angle → synthA.freq
-
-Effect:
-- Visual motion directly shapes pitch
-- The score behaves as a coupled audio–visual system
+| Signal | Description | Range |
+|--------|-------------|-------|
+| `scale:{uid}.sx` | Scale X factor | varies |
+| `scale:{uid}.sy` | Scale Y factor | varies |
+| `scale:{uid}.uniform` | Average scale | varies |
 
 ---
 
-## 7. Multiple Parameters on One Cue
+## Bindable Parameters
 
-Example synth:
+### Synth
 
-synth(
-  uid: drone1,
-  wave: saw,
-  freq: 110,
-  amp: 0.15
-)
+| Parameter | Default Range | Description |
+|-----------|---------------|-------------|
+| `freq` / `frequency` | 20-20000 | Oscillator frequency (Hz) |
+| `amp` / `amplitude` | 0-1 | Output amplitude |
+| `pan` | -1 to 1 | Stereo position |
+| `cutoff` / `filterFreq` | 20-20000 | Filter cutoff (Hz) |
+| `q` / `resonance` | 0.1-30 | Filter resonance |
+| `detune` | -1200 to 1200 | Detune in cents |
 
-Exposed parameters:
+### Audio / AudioPool / AudioImpulse
 
-- drone1.freq
-- drone1.amp
+| Parameter | Default Range | Description |
+|-----------|---------------|-------------|
+| `amp` | 0-1 | Playback amplitude |
+| `pan` | -1 to 1 | Stereo position |
+| `pitch` / `rate` | 0.25-4 | Playback rate |
 
-Possible control routes:
+### Effects (within synth)
 
-o2p:sliderA.t → drone1.amp
-rotate:rotor1.angle → drone1.freq
-
-This allows multiple visual processes to control a single sound.
-
----
-
-## 8. Feedback Structures
-
-Because control signals are routable, feedback loops are possible.
-
-### Example: visual–audio–visual feedback
-
-rotate:rotor1.angle → drone1.amp
-drone1.amp → rotor1.speed
-
-Effect:
-- Rotation shapes sound
-- Sound feeds back into rotation speed
-- The system becomes dynamically coupled
-
-Oscilla does not prevent feedback.
-Feedback is an explicit compositional decision.
+| Parameter | Default Range | Description |
+|-----------|---------------|-------------|
+| `delayTime` | 0-2 | Delay time (seconds) |
+| `feedback` / `fb` | 0-0.99 | Delay feedback |
+| `mix` / `wet` | 0-1 | Effect mix level |
 
 ---
 
-## 9. Combining OSC and Internal Control
+## Architecture
 
-External OSC and internal control signals use the same control path.
+### Module Overview
 
-### Example: performer + animation control
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     oscillaParamBus.js                          │
+│  Central signal store with pub/sub                              │
+│  • set(path, value) — publish a signal                         │
+│  • get(path) — read current value                              │
+│  • subscribe(path, callback) — react to changes                │
+└─────────────────────────────────────────────────────────────────┘
+                              ▲
+                              │
+        ┌─────────────────────┴─────────────────────┐
+        │                                           │
+        ▼                                           ▼
+┌───────────────────┐                   ┌───────────────────┐
+│ oscillaParamBinding│                   │ Animation Modules │
+│                   │                   │                   │
+│ • bindParam()     │                   │ • publish() call  │
+│ • publish()       │ ◀──── used by ────│   in update loop  │
+│ • isSignalRef()   │                   │                   │
+└───────────────────┘                   └───────────────────┘
+        │
+        │ used by
+        ▼
+┌───────────────────┐
+│ Synth/Audio Cues  │
+│                   │
+│ • bindParam() for │
+│   each parameter  │
+└───────────────────┘
+```
 
-External OSC sets a baseline:
+### File Descriptions
 
-/oscilla/set synthA amp 0.2
-
-Internal animation modulates it:
-
-o2p:sliderA.t → synthA.amp
-
-Effect:
-- A performer establishes a base level
-- Animation provides continuous variation
+| File | Purpose |
+|------|---------|
+| `oscillaParamBus.js` | Central signal store with pub/sub |
+| `oscillaParamBinding.js` | `bindParam()` and `publish()` helpers |
+| `oscillaParserSignalRef.js` | Parser extension for signal ref syntax |
 
 ---
 
-## 10. Mental Model
+## Integration Guide
 
-- DSL cues define what exists and how it starts
-- Animations produce continuous control signals
-- Signals can control any exposed parameter
-- Feedback is explicit and intentional
+### Adding Signal Publishing to a Cue
 
-Oscilla behaves as a signal-driven, executable score,
-not a one-way timeline.
+To make any animation publish signals, add **one line** to its update callback:
+
+```javascript
+import { publish } from './oscillaParamBinding.js';
+
+// In your animation's update callback:
+update: () => {
+    // ... existing animation logic ...
+    
+    // ADD THIS LINE:
+    publish("o2p", cfg.uid, { t: pathT, x: normX, y: normY, angle });
+}
+```
+
+### Example: O2P Animation
+
+**Location:** `oscillaAnimationO2p.js`, in `startContinuousO2P()`, around line 492
+
+```javascript
+// BEFORE (existing code):
+emitO2POsc({ cfg, uid: cfg.uid, path, point, pathT });
+
+// AFTER (add this line):
+import { publish } from './oscillaParamBinding.js';
+// ... then in update callback:
+emitO2POsc({ cfg, uid: cfg.uid, path, point, pathT });
+publish("o2p", cfg.uid, { t: globalT, x: normX, y: normY, angle });
+```
+
+**Note:** You'll need to calculate `normX` and `normY` from the path bbox:
+
+```javascript
+const bbox = path.getBBox();
+const normX = (point.x - bbox.x) / bbox.width;
+const normY = (point.y - bbox.y) / bbox.height;
+```
+
+### Example: Rotate Animation
+
+**Location:** `oscillaAnimationRotate.js`, in `handleRotateContinuous()`, around line 548
+
+```javascript
+import { publish } from './oscillaParamBinding.js';
+
+update: () => {
+    // ... existing code ...
+    const angle = getCurrentAngle(animEl, 0);
+    
+    // ADD THIS:
+    publish("rotate", cfg.uid, { angle: angle });
+}
+```
+
+### Example: Scale Animation
+
+**Location:** `oscillaAnimationScale.js`, in `handleScaleContinuous()`, around line 586
+
+```javascript
+import { publish } from './oscillaParamBinding.js';
+
+update: () => {
+    // ... existing code ...
+    const sx = parseFloat(tr.match(/scale\(([^,]+),/)?.[1] || 1);
+    const sy = parseFloat(tr.match(/,\s*([^)]+)\)/)?.[1] || sx);
+    
+    // ADD THIS:
+    publish("scale", cfg.uid, { sx, sy, uniform: (sx + sy) / 2 });
+}
+```
 
 ---
 
-## 11. Summary
+### Adding Signal Binding to a Cue
 
-- Cue parameters are exposed by runtime implementation
-- External OSC and internal signals share the same control path
-- Any exposed parameter can be modulated
-- Cross-cue modulation and feedback are core features
-- No cue retriggering or special-case syntax is required
+To make parameters bindable in a cue, use `bindParam()`:
+
+```javascript
+import { bindParam, isSignalRef } from './oscillaParamBinding.js';
+
+function startMyCue(params) {
+    const unbinders = [];
+    
+    // Bind frequency - works with both static and signal ref
+    const freqBinding = bindParam(
+        params.freq,
+        (hz) => oscillator.frequency.setTargetAtTime(hz, 0, 0.02),
+        { min: 20, max: 20000, default: 440 }
+    );
+    unbinders.push(freqBinding.unbind);
+    
+    // Use initial value
+    oscillator.frequency.value = freqBinding.value;
+    
+    // ... later, on cleanup:
+    unbinders.forEach(fn => fn());
+}
+```
+
+### Example: Synth Integration
+
+**Location:** `oscillaSynth.js`, in `startSynthVoice()`, around line 673
+
+```javascript
+import { bindParam } from './oscillaParamBinding.js';
+
+function startSynthVoice(uid, ast, cueElement, opts) {
+    const ctx = sharedAudioCtx;
+    const params = extractParams(ast);
+    const unbinders = [];
+    
+    // Frequency binding
+    const freqBinding = bindParam(
+        params.freq,
+        (hz) => {
+            if (voice.source?.kind === 'osc') {
+                voice.source.node.frequency.setTargetAtTime(hz, ctx.currentTime, 0.02);
+            }
+        },
+        { min: 20, max: 20000, default: 440 }
+    );
+    unbinders.push(freqBinding.unbind);
+    
+    // Amplitude binding
+    const ampBinding = bindParam(
+        params.amp,
+        (amp) => {
+            voice.graph.gain.gain.setTargetAtTime(amp, ctx.currentTime, 0.02);
+        },
+        { min: 0, max: 0.5, default: 0.1 }
+    );
+    unbinders.push(ampBinding.unbind);
+    
+    // ... create voice with initial values ...
+    const freqHz = freqBinding.value;
+    const amp = ampBinding.value;
+    
+    // Store unbinders on voice for cleanup
+    voice._unbinders = unbinders;
+}
+
+function cleanupVoice(uid, voice) {
+    // Unbind all signal subscriptions
+    voice._unbinders?.forEach(fn => fn());
+    // ... rest of cleanup ...
+}
+```
+
+---
+
+## Parser Integration
+
+### Modifying the Parser
+
+The parser needs to recognize signal references in parameter values. Add this to the value extraction logic:
+
+**Location:** `oscillaParser.js`, in `cstToAst()` synth/audio sections
+
+```javascript
+import { maybeConvertToSignalRef } from './oscillaParserSignalRef.js';
+
+// When extracting a parameter value:
+let val = extractRawValue(valueNode);
+val = maybeConvertToSignalRef(val, paramName);
+```
+
+### What the Parser Outputs
+
+**Input DSL:**
+```
+synth(uid:pad, freq:fader1.t[200,800], amp:0.2)
+```
+
+**Output AST:**
+```javascript
+{
+    type: "cueSynth",
+    args: [
+        { type: "uid", value: "pad" },
+        { 
+            type: "freq", 
+            value: { 
+                type: "signalRef", 
+                source: "fader1", 
+                channel: "t", 
+                range: [200, 800] 
+            } 
+        },
+        { type: "amp", value: 0.2 }
+    ]
+}
+```
+
+---
+
+## Debugging
+
+### Enable Debug Mode
+
+```javascript
+// In browser console:
+oscillaParamBus.setDebugMode(true);
+```
+
+This logs all signal changes.
+
+### Inspect Current Signals
+
+```javascript
+// List all signals:
+oscillaParamBus.list();
+
+// List signals from a specific source:
+oscillaParamBus.list("o2p:");
+
+// Get current value:
+oscillaParamBus.get("o2p:fader1.t");
+
+// Get snapshot of all values:
+oscillaParamBus.snapshot();
+```
+
+### Test Signal Publishing
+
+```javascript
+// Manually publish a signal:
+oscillaParamBus.set("o2p:test.t", 0.5);
+
+// Watch a signal:
+const unsub = oscillaParamBus.subscribe("o2p:test.t", (value, path) => {
+    console.log(`${path} = ${value}`);
+});
+
+// Later: unsub() to stop watching
+```
+
+---
+
+## Common Patterns
+
+### XY Pad → Synth
+
+```
+o2p(path:xyPad, trig:touch, uid:xy)
+synth(uid:pad, freq:xy.x[200,2000], amp:xy.y[0,0.5])
+```
+
+### Rotation → Filter
+
+```
+rotate(dur:4, loop:0, uid:wheel)
+synth(uid:drone, freq:220, cutoff:wheel.norm[200,4000])
+```
+
+### Multiple Controllers → One Synth
+
+```
+o2p(path:freqSlider, trig:touch, uid:fSlider)
+o2p(path:ampSlider, trig:touch, uid:aSlider)
+synth(uid:lead, freq:fSlider.t[100,1000], amp:aSlider.t[0,0.3])
+```
+
+### One Controller → Multiple Synths
+
+```
+o2p(path:masterFader, trig:touch, uid:master)
+synth(uid:bass, freq:master.t[50,200], amp:0.2)
+synth(uid:mid, freq:master.t[200,800], amp:0.15)
+synth(uid:high, freq:master.t[800,4000], amp:0.1)
+```
+
+---
+
+## Limitations & Notes
+
+1. **Signal Publishing Rate:** Signals are published at ~60fps to avoid overwhelming the system.
+
+2. **Binding Lifecycle:** Bindings are automatically cleaned up when the cue stops (if you call the unbind functions).
+
+3. **No Circular Dependencies:** The system doesn't prevent circular signal routing. Avoid creating feedback loops unless intentional.
+
+4. **Static Parameters:** Some parameters can't be changed after cue start (e.g., `wave` type, audio `src`). These will use the initial value even if bound.
+
+5. **Signal Range:** All signals are assumed to be in the 0-1 range. Use the `[min,max]` syntax to map to your desired output range.
+
+---
+
+## Summary Checklist
+
+### To Make an Animation Publish Signals:
+
+1. ✅ Import `publish` from `oscillaParamBinding.js`
+2. ✅ Add `publish("type", uid, { channel: value })` to update callback
+3. ✅ Done!
+
+### To Make a Cue Accept Signal Bindings:
+
+1. ✅ Import `bindParam` from `oscillaParamBinding.js`
+2. ✅ Wrap parameter initialization with `bindParam()`
+3. ✅ Store unbind functions for cleanup
+4. ✅ Call unbind functions when cue stops
+5. ✅ Update parser to recognize signal refs (one-time)
+
+---
+
+## Version History
+
+- **v1.0** — Initial control plane implementation
+  - ParamBus signal store
+  - bindParam/publish helpers
+  - Signal reference syntax support

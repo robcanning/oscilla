@@ -17,6 +17,10 @@ import {
   CstParser,
 } from "https://esm.sh/chevrotain@11.0.3/es2022/chevrotain.mjs";
 
+
+import { maybeConvertToSignalRef, isBindableParam } from './oscillaParserSignalRef.js';
+
+
 // ─────────────────────────────────────────────────────────────
 //  Helper: debug printer
 // ─────────────────────────────────────────────────────────────
@@ -2212,8 +2216,16 @@ export function cstToAst(cst) {
           return null;
         });
 
-        val = { type: "func", name: fname, args: funcArgs };
+      // ========== CONTROL PLANE: Check for signal reference ==========
+      // If val is a string that looks like "uid.channel" or "uid.channel[min,max]"
+      // convert it to a signalRef object
+      if (typeof val === 'string' && isBindableParam(key)) {
+        val = maybeConvertToSignalRef(val, key);
       }
+      // ================================================================
+
+      args.push({ type: key, value: val });
+          }
       // ✅ CASE 5: Direct token (number, string, identifier, bool)
       else if (v?.image != null) {
         const raw = v.image.replace(/^["']|["']$/g, "");

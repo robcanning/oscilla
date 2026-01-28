@@ -15,7 +15,7 @@
  *   rotate:orb1.angle   - Rotation angle in degrees
  *   scale:box1.sx       - Scale X value
  *   osc:/fader1         - External OSC input
- *   cue:synthA.amp      - Target parameter (written by router)
+ *   synth:pad1.freq     - Synth parameter value
  */
 
 // ===========================
@@ -282,7 +282,7 @@ function formatValue(value) {
 
 /**
  * Build a signal path from components
- * @param {string} source - Source type (o2p, rotate, scale, osc, cue)
+ * @param {string} source - Source type (o2p, rotate, scale, osc, synth)
  * @param {string} id - Unique identifier
  * @param {string} channel - Parameter channel
  * @returns {string} Full signal path

@@ -8,6 +8,7 @@ import { applyPrestateBeforeStart, applyPrestateOnStart, ensureAnimWrapper,
 } from "./oscillaAnimationShared.js";
 
 import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
+import { publish } from './oscillaParamBinding.js';
 
 // ============================================================
 // OSC send helper for SCALE
@@ -582,20 +583,41 @@ export function handleScaleContinuous(el, cfg) {
 
         scale: dir === -1 ? [1, 0.5] : [1, 1.5],
 
-        update: () => {
+      update: () => {
             try { repositionAllHitLabels(); } catch {}
 
             const tr = animEl.style.transform;
-            const sx = tr.match(/scale\(([^,]+),/)?.[1];
-            const sy = tr.match(/,\s*([^)]+)\)/)?.[1];
+            
+            // Parse scale values - handle both scale(x,y) and scale(uniform)
+            let sx = 1, sy = 1;
+            
+            const matchXY = tr.match(/scale\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/);
+            const matchUniform = tr.match(/scale\(\s*([-\d.]+)\s*\)/);
+            
+            if (matchXY) {
+                sx = parseFloat(matchXY[1]) || 1;
+                sy = parseFloat(matchXY[2]) || 1;
+            } else if (matchUniform) {
+                sx = sy = parseFloat(matchUniform[1]) || 1;
+            }
 
-            if (sx && sy && cfg._overlay) {
+            // Overlay update
+            if (cfg._overlay) {
                 cfg._overlay.update(
-                    `sx:${Number(sx).toFixed(2)} sy:${Number(sy).toFixed(2)}`
+                    `sx:${sx.toFixed(2)} sy:${sy.toFixed(2)}`
                 );
             }
 
+            // OSC output (if enabled)
             if (sx && sy) sendOSC(sx, sy);
+
+            // ========== CONTROL PLANE PUBLISH ==========
+            publish("scale", cfg.uid, {
+                sx: sx,                    // scale X factor
+                sy: sy,                    // scale Y factor
+                uniform: (sx + sy) / 2     // average (for uniform scaling)
+            });
+            // ============================================
         }
     });
 
@@ -633,7 +655,7 @@ export function handleScaleCue(ast, el, options = {}) {
 
     let uid = null;
 
-    // 🔥 normalized OSC field
+    //  normalized OSC field
     let oscAddr = null;
 
     for (const a of astArgs) {
