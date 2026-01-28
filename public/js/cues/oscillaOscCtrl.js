@@ -3,7 +3,7 @@
  * ============================================================================
  */
 
-import { scheduleCueStart } from "./oscillaCueDispatcher.js";
+import { scheduleCueStart } from "../oscillaCueDispatcher.js";
 import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
 
 import {

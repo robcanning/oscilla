@@ -6,9 +6,9 @@
 
 import { scrollToPlayheadVisual, updateSeekBar } from './oscillaTransport.js';
 import { checkCueTriggers } from './oscillaCueDispatcher.js';
-import { checkImpulseRegions } from './oscillaAudio.js';
-import { checkSynthRegions } from './oscillaSynth.js';
-import { checkSpeedForPosition } from './oscillaSpeed.js';
+import { checkImpulseRegions } from './cues/oscillaAudio.js';
+import { checkSynthRegions } from './cues/oscillaSynth.js';
+import { checkSpeedForPosition } from './cues/oscillaSpeed.js';
 
 // ===========================
 // Animation Loop

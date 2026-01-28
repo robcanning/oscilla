@@ -17,8 +17,8 @@
 // This module is intentionally non-invasive: it does not touch SVG markup,
 // parser/DSL, or cue execution. It renders HTML overlay layers only.
 
-import { getStopwatchTime } from "./oscillaTimers.js";
-import { handleAudioCue, handleAudioPoolCue, handleAudioImpulseCue, stopAudioImpulse } from "./oscillaAudio.js";
+import { getStopwatchTime } from "./cues/oscillaTimers.js";
+import { handleAudioCue, handleAudioPoolCue, handleAudioImpulseCue, stopAudioImpulse } from "./cues/oscillaAudio.js";
 import { showRecordingModal, uploadRecordedAudio, isRecordingSupported } from "./oscillaContributionRecorder.js";
 
 const STORAGE_PREFIX = "oscilla_annotations_v1";

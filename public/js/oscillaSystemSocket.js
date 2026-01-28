@@ -7,12 +7,12 @@
  */
 
 import { scrollToPlayheadVisual, togglePlayButton } from './oscillaTransport.js';
-import { startStopwatch } from './oscillaTimers.js';
+import { startStopwatch } from './cues/oscillaTimers.js';
 import { loadSharedAnnotations } from './oscillaContributionSurface.js';
 import { handleCueTrigger } from './oscillaCueDispatcher.js';
-import { handleStopCue } from './oscillaStop.js';
-import { handleAudioCue } from './oscillaAudio.js';
-import { dismissPauseCountdown, handlePauseCue } from './oscillaPause.js';
+import { handleStopCue } from './cues/oscillaStop.js';
+import { handleAudioCue } from './cues/oscillaAudio.js';
+import { dismissPauseCountdown, handlePauseCue } from './cues/oscillaPause.js';
 import { handleOSCIn } from './oscillaControlRouter.js';
 
 // ===========================

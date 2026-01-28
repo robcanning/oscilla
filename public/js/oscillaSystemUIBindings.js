@@ -6,7 +6,7 @@
 
 import { forward, rewind, rewindToStart } from './oscillaTransport.js';
 import { resetTriggeredCues } from './oscillaCueDispatcher.js';
-import { resetStopwatch } from './oscillaTimers.js';
+import { resetStopwatch } from './cues/oscillaTimers.js';
 import { setAnnotationMode, setAnnotationsEnabled } from './oscillaContributionSurface.js';
 
 // ===========================

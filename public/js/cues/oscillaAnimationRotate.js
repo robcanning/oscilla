@@ -1,8 +1,8 @@
 // rotate.js — OscillaScore Rotate Cue (sequence + continuous)
 
 import { registerAnimation } from "./oscillaAnimation.js";
-import { scheduleCueStart } from "./oscillaCueDispatcher.js";
-import { createHitLabel, repositionAllHitLabels } from "./oscillaHitLabels.js";
+import { scheduleCueStart } from "../oscillaCueDispatcher.js";
+import { createHitLabel, repositionAllHitLabels } from "../oscillaHitLabels.js";
 import {
     applyPrestateBeforeStart,
     applyPrestateOnStart,
@@ -16,7 +16,7 @@ import {
 } from "./oscillaAnimationShared.js";
 
 import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
-import { publish } from './oscillaParamBinding.js';
+import { publish } from '../oscillaParamBinding.js';
 
 
 // ============================================================

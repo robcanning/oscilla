@@ -40,11 +40,11 @@
  */
 
 
-import { getSpeedForPosition, updateSpeedFromPosition } from "./oscillaSpeed.js";
-import { resetAllFadePriming } from "./oscillaFade.js";
-import { stopAllCueTexts } from "./oscillaText.js";
+import { getSpeedForPosition, updateSpeedFromPosition } from "./cues/oscillaSpeed.js";
+import { resetAllFadePriming } from "./cues/oscillaFade.js";
+import { stopAllCueTexts } from "./cues/oscillaText.js";
 import { destroyAllHitLabels } from "./oscillaHitLabels.js";
-import { dismissAllStopwatchOverlays } from "./oscillaTimers.js";
+import { dismissAllStopwatchOverlays } from "./cues/oscillaTimers.js";
 
 
 window.seekDebounceTime = 300;

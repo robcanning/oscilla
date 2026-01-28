@@ -1,4 +1,5 @@
-import { pausePlayback } from "./oscillaTransport.js";
+import { pausePlayback } from "../oscillaTransport.js";
+import { destroyAllHitLabels } from "../oscillaHitLabels.js";
 
 
 window.resetCueEdgeTracking = function () {
@@ -15,7 +16,6 @@ window.resetCueEdgeTracking = function () {
     //  window.navRepeatMap = new Map();
 };
 
-import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 
 export function handleNavCue(ast) {
     

@@ -41,32 +41,32 @@
 
 import { parseCueToAST } from "./oscillaParser.js";
 
-import { handleStopwatchCue } from "./oscillaTimers.js";
-import { handlePauseCue } from "./oscillaPause.js";
-import { handleNavCue } from "./oscillaNav.js";
-import { handleFadeCueFromAST, primeFadeTargetFromAST } from "./oscillaFade.js";
-import { handleVideoCueFromAST } from "./oscillaVideo.js";
-import { buildCueButtonsIn } from "./oscillaButton.js";
-import { handleMetronomeCue } from "./oscillaMetro.js";
-import { handleRotateCue } from "./oscillaAnimationRotate.js";
-import { handleScaleCue } from "./oscillaAnimationScale.js";
-import { handleO2PCue } from "./oscillaAnimationO2p.js";
-import { handleColorCue } from "./oscillaAnimationColor.js";
-import { handlePageCue } from "./oscillaPage.js";
+import { handleStopwatchCue } from "./cues/oscillaTimers.js";
+import { handlePauseCue } from "./cues/oscillaPause.js";
+import { handleNavCue } from "./cues/oscillaNav.js";
+import { handleFadeCueFromAST, primeFadeTargetFromAST } from "./cues/oscillaFade.js";
+import { handleVideoCueFromAST } from "./cues/oscillaVideo.js";
+import { buildCueButtonsIn } from "./cues/oscillaButton.js";
+import { handleMetronomeCue } from "./cues/oscillaMetro.js";
+import { handleRotateCue } from "./cues/oscillaAnimationRotate.js";
+import { handleScaleCue } from "./cues/oscillaAnimationScale.js";
+import { handleO2PCue } from "./cues/oscillaAnimationO2p.js";
+import { handleColorCue } from "./cues/oscillaAnimationColor.js";
+import { handlePageCue } from "./cues/oscillaPage.js";
 import {
   handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues,
   handleAudioPoolCue, handleAudioImpulseCue,
   primeAudioOverlay, primeAudioPoolOverlay, primeAudioImpulseOverlay
-} from "./oscillaAudio.js";
+} from "./cues/oscillaAudio.js";
 
-import { handleSynthCue, primeSynthOverlay } from "./oscillaSynth.js";
+import { handleSynthCue, primeSynthOverlay } from "./cues/oscillaSynth.js";
 
-import { propagate } from "./oscillaPropagate.js";
-import { handleSpeedCue, handleSpeedRamp } from "./oscillaSpeed.js";
-import { stopAllCueTexts } from "./oscillaText.js";
-import { handleOscCue } from "./oscillaOSC.js";
-import { handleOscCtrlCue } from "./oscillaOscCtrl.js";
-import { handleStopCue } from "./oscillaStop.js";
+import { propagate } from "./oscillaPreProcessPropagate.js";
+import { handleSpeedCue, handleSpeedRamp } from "./cues/oscillaSpeed.js";
+import { stopAllCueTexts } from "./cues/oscillaText.js";
+import { handleOscCue } from "./cues/oscillaOSC.js";
+import { handleOscCtrlCue } from "./cues/oscillaOscCtrl.js";
+import { handleStopCue } from "./cues/oscillaStop.js";
 import { handleUICue } from "./oscillaUI.js";
 
 // import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
@@ -342,7 +342,7 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
 
     case "cueText":
     case "text":
-      import("./oscillaText.js")
+      import("./cues/oscillaText.js")
         .then(mod => mod.handleCueTextFromAST(ast, cueElement))
         .catch(err => console.error("[CueDSL] Failed to load text.js module:", err));
       return;

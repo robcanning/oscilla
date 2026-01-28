@@ -21,8 +21,8 @@
 // -----------------------------------------------------------
 
 import { registerAnimation, resolveAnimationUid } from "./oscillaAnimation.js";
-import { scheduleCueStart } from "./oscillaCueDispatcher.js";
-import { createHitLabel, repositionAllHitLabels, initO2PDragHandler, updateHitLabelValue } from "./oscillaHitLabels.js";
+import { scheduleCueStart } from "../oscillaCueDispatcher.js";
+import { createHitLabel, repositionAllHitLabels, initO2PDragHandler, updateHitLabelValue } from "../oscillaHitLabels.js";
 
 import {
     applyPrestateBeforeStart,
@@ -35,7 +35,7 @@ import {
 
 import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
 
-import { publish } from './oscillaParamBinding.js';
+import { publish } from '../oscillaParamBinding.js';
 
 
 /* ---------------------------------------------------------

@@ -5,7 +5,7 @@
  * Supports both local (standalone) and server-synced modes.
  */
 
-import { sendMetronomeOsc } from "./oscUtils.js";
+import { sendMetronomeOsc } from "../oscUtils.js";
 
 export const QuantiseRegistry = {
   actions: [],
