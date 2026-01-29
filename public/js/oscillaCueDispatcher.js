@@ -294,10 +294,10 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
   switch (ast.type) {
 
 
-  case "cueUi":
-    console.log("[AST]", ast);
+    case "cueUi":
+      console.log("[AST]", ast);
 
-    return handleUICue(ast);
+      return handleUICue(ast);
 
     // Animation handlers
     case "cueScale": {
@@ -333,6 +333,20 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
       handleControlXYCue(cueElement, ast.args || [], { fromCueTrigger: true });
       return;
     }
+
+    case "controlXYRecall":
+      handleControlXYRecallCue(ast);
+      break;
+    case "controlXYSequence":
+      handleControlXYSequenceCue(ast);
+      break;
+    case "controlXYSequenceStop":
+      handleControlXYSequenceStopCue(ast);
+      break;
+    case "controlXYSave":
+      handleControlXYSaveCue(ast);
+      break;
+
 
     // case "cueOscCtrl": {
     //   handleOscCtrlCue(cueElement, ast.args, { fromCueTrigger: true });
@@ -560,7 +574,7 @@ export function assignCues(svgRoot, cuesArray = []) {
           continue;
         }
 
-        
+
         // =========================================
         // o2p with trig:touch is IMMEDIATELY active
         // Register it now, don't wait for playhead
@@ -568,7 +582,7 @@ export function assignCues(svgRoot, cuesArray = []) {
         if (ast.type === "cueO2P") {
           const trigArg = ast.args?.find(a => a.type === "trig");
           const isTouchMode = trigArg && String(trigArg.value).toLowerCase() === "touch";
-          
+
           if (isTouchMode) {
             // Defer activation to next frame to ensure DOM is ready
             const activateTouchMode = () => {
@@ -584,14 +598,14 @@ export function assignCues(svgRoot, cuesArray = []) {
                 });
               });
             };
-            
+
             // Activate after DOM is fully ready
             if (document.readyState === "complete") {
               activateTouchMode();
             } else {
               window.addEventListener("load", activateTouchMode, { once: true });
             }
-            
+
             // Skip adding to cues list - it's not playhead-triggered
             walk(child);
             continue;

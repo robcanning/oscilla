@@ -898,17 +898,21 @@ export class CueParser extends CstParser {
     // ============================================================
     // ✅ NEW: cueUiTop — dedicated rule for ui() cues
     // Supports: ui("#selector", opacity:0, dur:0.3, visible:false)
+    // Also supports: ui(action:"controlXYSave", preset:"stateA")
     // ============================================================
     $.RULE("cueUiTop", () => {
       $.CONSUME(Ui);
       $.CONSUME(LParen);
 
-      // First argument: selector (StringLiteral)
-      $.CONSUME(StringLiteral, { LABEL: "selector" });
+      // First argument: optional selector (StringLiteral)
+      // If action: is present, selector is not needed
+      $.OPTION(() => {
+        $.CONSUME(StringLiteral, { LABEL: "selector" });
+      });
 
       // Optional additional params (key:value)
-      $.OPTION(() => {
-        $.CONSUME(Comma);
+      $.OPTION2(() => {
+        $.OPTION3(() => $.CONSUME(Comma));
         $.AT_LEAST_ONE_SEP({
           SEP: Comma,
           DEF: () => $.SUBRULE($.genericParam)

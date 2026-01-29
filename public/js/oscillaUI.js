@@ -41,6 +41,19 @@ const UI_PROPS = new Set([
  * }
  */
 export function handleUICue(ast) {
+
+  // ----------------------------------
+  // Action mode (control-plane bridge)
+  // ----------------------------------
+  const actionArg = ast.args?.find(a => a.type === "action");
+  if (actionArg) {
+    handleUIAction(ast.args);
+    return;
+  }
+
+  // ----------------------------------
+  // Regular UI mode (requires selector)
+  // ----------------------------------
   if (!ast || !Array.isArray(ast.args)) {
     console.warn("[ui] Invalid AST:", ast);
     return;
@@ -72,7 +85,7 @@ export function handleUICue(ast) {
   }
 
   if (!selector) {
-    console.warn("[ui] Missing selector:", ast);
+    console.warn("[ui] Missing selector (required for UI manipulation):", ast);
     return;
   }
 
@@ -84,6 +97,89 @@ export function handleUICue(ast) {
 
   elements.forEach(el => applyUiToElement(el, params, dur));
 }
+
+
+function handleUIAction(args) {
+  const params = {};
+  for (const a of args) {
+    if (!a?.type) continue;
+    params[a.type] = a.value;
+  }
+
+  const action = params.action;
+  if (!action) {
+    console.warn("[ui] action missing");
+    return;
+  }
+
+  switch (action) {
+    case "controlXYSave":
+      window.controlXYPresets?.save(
+        params.preset,
+        params.uid
+      );
+      break;
+
+    case "controlXYRecall":
+      window.controlXYPresets?.recall(
+        params.preset,
+        {
+          dur: params.dur,
+          ease: params.ease
+        }
+      );
+      break;
+
+    case "controlXYDefineSequence":
+      {
+        const name = params.name || params.seq || params.sequence;
+        if (!name) {
+          console.warn("[ui] controlXYDefineSequence: name required");
+          return;
+        }
+        
+        // Parse steps from comma-separated string or array
+        let steps;
+        if (typeof params.steps === 'string') {
+          steps = params.steps.split(',').map(s => s.trim()).filter(Boolean);
+        } else if (Array.isArray(params.steps)) {
+          steps = params.steps;
+        } else {
+          console.warn("[ui] controlXYDefineSequence: steps required (comma-separated string or array)");
+          return;
+        }
+        
+        if (steps.length === 0) {
+          console.warn("[ui] controlXYDefineSequence: empty steps");
+          return;
+        }
+        
+        window.controlXYPresets?.defineSequence(name, steps);
+        console.log(`[ui] Defined sequence "${name}" with ${steps.length} steps:`, steps);
+      }
+      break;
+
+    case "controlXYSequence":
+      window.controlXYPresets?.playSequence(
+        params.seq || params.sequence,
+        {
+          dur: params.dur,
+          ease: params.ease,
+          loop: params.loop
+        }
+      );
+      break;
+
+    case "controlXYSequenceStop":
+      window.controlXYPresets?.stopSequence();
+      break;
+
+    default:
+      console.warn("[ui] Unknown action:", action);
+  }
+}
+
+
 
 /**
  * Apply UI params to a single element

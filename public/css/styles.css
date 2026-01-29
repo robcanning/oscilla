@@ -2247,3 +2247,939 @@ sl-menu-item {
     font-size: 16px;
   }
 }
+/* ============================================================================
+ * ControlXY Preset UI Styles
+ * ============================================================================ */
+
+#controlxy-preset-panel {
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  
+  width: 320px;
+  max-height: 80vh;
+  
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  
+  z-index: 10000;
+  
+  /* Hidden by default */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#controlxy-preset-panel.controlxy-panel-visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ============================================================================
+ * Header
+ * ============================================================================ */
+
+.controlxy-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: grab;
+  user-select: none;
+}
+
+.controlxy-panel-header:active {
+  cursor: grabbing;
+}
+
+.controlxy-panel-title {
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.controlxy-panel-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.controlxy-panel-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================================================
+ * Tabs
+ * ============================================================================ */
+
+.controlxy-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.controlxy-tab {
+  flex: 1;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.controlxy-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.controlxy-tab.active {
+  color: #fff;
+  border-bottom-color: #4488ff;
+  background: rgba(68, 136, 255, 0.1);
+}
+
+/* ============================================================================
+ * Tab Content
+ * ============================================================================ */
+
+.controlxy-tab-content {
+  display: none;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.controlxy-tab-content.active {
+  display: flex;
+}
+
+/* ============================================================================
+ * Button Grid (Quick Save)
+ * ============================================================================ */
+
+.controlxy-button-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.controlxy-quick-save {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.controlxy-quick-save:hover {
+  background: rgba(100, 150, 255, 0.2);
+  border-color: rgba(100, 150, 255, 0.5);
+  transform: scale(1.05);
+}
+
+.controlxy-quick-save:active {
+  transform: scale(0.95);
+}
+
+/* ============================================================================
+ * Full Width Elements
+ * ============================================================================ */
+
+.controlxy-full-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: rgba(100, 150, 255, 0.3);
+  border: 1px solid rgba(100, 150, 255, 0.5);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.controlxy-full-btn:hover {
+  background: rgba(100, 150, 255, 0.5);
+  border-color: rgba(100, 150, 255, 0.7);
+}
+
+.controlxy-full-select {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+
+.controlxy-full-select option {
+  background: #1e1e1e;
+  color: #fff;
+}
+
+/* ============================================================================
+ * Textarea
+ * ============================================================================ */
+
+.controlxy-input-row textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+
+.controlxy-input-row textarea:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.controlxy-input-row textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================================================
+ * Options Grid (Generators)
+ * ============================================================================ */
+
+.controlxy-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.controlxy-options-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.controlxy-options-grid label span:first-child {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.controlxy-options-grid input[type="number"],
+.controlxy-options-grid select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: #fff;
+  font-size: 12px;
+  outline: none;
+}
+
+.controlxy-options-grid .unit {
+  display: inline;
+  margin-left: 4px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ============================================================================
+ * Generator Button
+ * ============================================================================ */
+
+.controlxy-gen-button {
+  flex: 1;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(100, 200, 100, 0.3), rgba(100, 150, 255, 0.3));
+  border: 1px solid rgba(100, 200, 150, 0.5);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.controlxy-gen-button:hover {
+  background: linear-gradient(135deg, rgba(100, 200, 100, 0.5), rgba(100, 150, 255, 0.5));
+  border-color: rgba(100, 200, 150, 0.7);
+  transform: scale(1.02);
+}
+
+.controlxy-gen-info {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: center;
+  min-height: 20px;
+}
+
+/* ============================================================================
+ * Checkbox
+ * ============================================================================ */
+
+.controlxy-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+}
+
+.controlxy-checkbox input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+/* ============================================================================
+ * Always Show Section
+ * ============================================================================ */
+
+.controlxy-always-show {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 16px !important;
+  margin-top: 8px !important;
+}
+
+/* ============================================================================
+ * Preset Launcher
+ * ============================================================================ */
+
+.controlxy-launcher-container {
+  pointer-events: all;
+}
+
+.controlxy-launcher {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Bank Bar */
+.controlxy-launcher-bank-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 4px 8px;
+  height: 32px;
+  gap: 4px;
+}
+
+.controlxy-launcher-bank-btn,
+.controlxy-launcher-mode-btn,
+.controlxy-launcher-tween-btn,
+.controlxy-launcher-hide-btn,
+.controlxy-launcher-undock-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  color: #fff;
+  font-size: 12px;
+  width: 28px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  padding: 0;
+}
+
+.controlxy-launcher-bank-btn {
+  font-size: 14px;
+  width: 32px;
+}
+
+.controlxy-launcher-bank-btn:hover,
+.controlxy-launcher-mode-btn:hover,
+.controlxy-launcher-tween-btn:hover,
+.controlxy-launcher-hide-btn:hover,
+.controlxy-launcher-undock-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.controlxy-launcher-mode-btn,
+.controlxy-launcher-tween-btn,
+.controlxy-launcher-hide-btn,
+.controlxy-launcher-undock-btn {
+  width: 28px;
+}
+
+/* Mode button - sequence mode */
+.controlxy-launcher-mode-btn.sequence-mode {
+  background: rgba(100, 200, 100, 0.3);
+  border-color: rgba(100, 200, 100, 0.5);
+}
+
+.controlxy-launcher-mode-btn.sequence-mode:hover {
+  background: rgba(100, 200, 100, 0.5);
+}
+
+/* Tween button - active state */
+.controlxy-launcher-tween-btn.active {
+  background: rgba(255, 200, 100, 0.3);
+  border-color: rgba(255, 200, 100, 0.5);
+}
+
+.controlxy-launcher-tween-btn.active:hover {
+  background: rgba(255, 200, 100, 0.5);
+}
+
+.controlxy-launcher-bank-btn:active,
+.controlxy-launcher-mode-btn:active,
+.controlxy-launcher-tween-btn:active,
+.controlxy-launcher-hide-btn:active,
+.controlxy-launcher-undock-btn:active {
+  transform: scale(0.95);
+}
+
+.controlxy-launcher-bank-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #fff;
+  font-weight: 500;
+}
+
+.bank-name {
+  color: #fff;
+}
+
+.bank-count {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+}
+
+/* Button Row */
+.controlxy-launcher-buttons {
+  display: flex;
+  gap: 4px;
+  height: 36px;
+}
+
+.controlxy-launcher-slot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 30, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 2px 4px;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+}
+
+.controlxy-launcher-slot .slot-number {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.controlxy-launcher-slot .slot-label {
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.2;
+}
+
+/* Empty state */
+.controlxy-launcher-slot.empty {
+  background: rgba(20, 20, 20, 0.8);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.controlxy-launcher-slot.empty:hover {
+  background: rgba(40, 40, 40, 0.8);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Assigned state */
+.controlxy-launcher-slot.assigned {
+  background: rgba(60, 100, 160, 0.3);
+  border-color: rgba(100, 150, 255, 0.4);
+}
+
+.controlxy-launcher-slot.assigned:hover {
+  background: rgba(60, 100, 160, 0.5);
+  border-color: rgba(100, 150, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.controlxy-launcher-slot.assigned .slot-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Sequence type */
+.controlxy-launcher-slot.type-sequence {
+  background: rgba(100, 160, 100, 0.3);
+  border-color: rgba(100, 200, 100, 0.4);
+}
+
+.controlxy-launcher-slot.type-sequence:hover {
+  background: rgba(100, 160, 100, 0.5);
+  border-color: rgba(100, 200, 100, 0.6);
+}
+
+/* Active state (when clicked) */
+.controlxy-launcher-slot.active {
+  background: rgba(255, 200, 100, 0.6);
+  border-color: rgba(255, 200, 100, 0.9);
+  transform: scale(0.95);
+  box-shadow: 0 0 12px rgba(255, 200, 100, 0.5);
+}
+
+.controlxy-launcher-slot.active .slot-label {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Pressed state */
+.controlxy-launcher-slot:active {
+  transform: scale(0.92);
+}
+
+/* Responsive sizing for smaller pads */
+@media (max-width: 400px) {
+  .controlxy-launcher-slot .slot-label {
+    font-size: 8px;
+  }
+  
+  .controlxy-launcher-slot .slot-number {
+    font-size: 8px;
+  }
+}
+
+/* ============================================================================
+ * Body
+ * ============================================================================ */
+
+.controlxy-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.controlxy-panel-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.controlxy-panel-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.controlxy-panel-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.controlxy-panel-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================================================
+ * Sections
+ * ============================================================================ */
+
+.controlxy-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.controlxy-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* ============================================================================
+ * Input Row (Save Section)
+ * ============================================================================ */
+
+.controlxy-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.controlxy-input-row input[type="text"] {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.controlxy-input-row input[type="text"]:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.controlxy-input-row input[type="text"]::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.controlxy-input-row input.controlxy-input-error {
+  animation: shake 0.3s;
+  border-color: #ff4444;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.controlxy-input-row button {
+  background: rgba(100, 100, 255, 0.3);
+  border: 1px solid rgba(100, 100, 255, 0.5);
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 16px;
+  min-width: 40px;
+}
+
+.controlxy-input-row button:hover {
+  background: rgba(100, 100, 255, 0.5);
+  border-color: rgba(100, 100, 255, 0.7);
+}
+
+/* ============================================================================
+ * Preset List
+ * ============================================================================ */
+
+.controlxy-preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.controlxy-empty {
+  padding: 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  font-size: 12px;
+}
+
+.controlxy-preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.controlxy-preset-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.controlxy-preset-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.controlxy-preset-name small {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  font-weight: normal;
+}
+
+.controlxy-preset-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.controlxy-preset-actions button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+  min-width: 28px;
+}
+
+.controlxy-preset-actions button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.controlxy-recall-btn:hover {
+  background: rgba(100, 255, 100, 0.3) !important;
+  border-color: rgba(100, 255, 100, 0.5) !important;
+}
+
+.controlxy-play-seq-btn:hover {
+  background: rgba(100, 255, 100, 0.3) !important;
+  border-color: rgba(100, 255, 100, 0.5) !important;
+}
+
+.controlxy-delete-btn:hover {
+  background: rgba(255, 100, 100, 0.3) !important;
+  border-color: rgba(255, 100, 100, 0.5) !important;
+}
+
+/* ============================================================================
+ * Options Row
+ * ============================================================================ */
+
+.controlxy-options-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.controlxy-options-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.controlxy-options-row input[type="number"] {
+  width: 60px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: #fff;
+  font-size: 12px;
+  outline: none;
+}
+
+.controlxy-options-row select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: #fff;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.controlxy-options-row select option {
+  background: #1e1e1e;
+  color: #fff;
+}
+
+/* ============================================================================
+ * Sequence Controls
+ * ============================================================================ */
+
+.controlxy-sequence-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.controlxy-sequence-controls button {
+  background: rgba(255, 100, 100, 0.3);
+  border: 1px solid rgba(255, 100, 100, 0.5);
+  border-radius: 4px;
+  padding: 6px 12px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.controlxy-sequence-controls button:hover {
+  background: rgba(255, 100, 100, 0.5);
+  border-color: rgba(255, 100, 100, 0.7);
+}
+
+.controlxy-sequence-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+}
+
+.controlxy-sequence-controls input[type="checkbox"] {
+  cursor: pointer;
+}
+
+/* ============================================================================
+ * Button Row
+ * ============================================================================ */
+
+.controlxy-button-row {
+  display: flex;
+  gap: 8px;
+}
+
+.controlxy-button-row button {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.controlxy-button-row button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================================================
+ * ControlXY Handle Styles (for active state)
+ * ============================================================================ */
+
+.controlxy-handle {
+  cursor: grab;
+  transition: opacity 0.15s;
+}
+
+.controlxy-handle:hover {
+  opacity: 0.8;
+}
+
+.controlxy-handle--active {
+  cursor: grabbing;
+  opacity: 1 !important;
+}
+
+/* ============================================================================
+ * ControlXY Labels
+ * ============================================================================ */
+
+.controlxy-label {
+  pointer-events: none;
+  user-select: none;
+  font-family: monospace;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+/* ============================================================================
+ * Toggle Button (on the pad)
+ * ============================================================================ */
+
+.controlxy-toggle-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  
+  background: rgba(30, 30, 30, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  
+  width: 28px;
+  height: 28px;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  
+  transition: all 0.15s;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.controlxy-toggle-btn:hover {
+  background: rgba(30, 30, 30, 0.95);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.05);
+}
+
+.controlxy-toggle-btn:active {
+  transform: scale(0.95);
+}

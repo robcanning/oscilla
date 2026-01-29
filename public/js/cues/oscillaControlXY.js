@@ -117,6 +117,30 @@ export function handleControlXYCue(el, args = [], options = {}) {
   console.log("[controlXY] bounds bbox:", bbox);
 
   // ---------------------------------------------
+  // Add discrete hide/show circle at corner
+  // ---------------------------------------------
+  const hideShowCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  hideShowCircle.setAttribute("cx", bbox.x + bbox.width);
+  hideShowCircle.setAttribute("cy", bbox.y + bbox.height);
+  hideShowCircle.setAttribute("r", "7.5");
+  hideShowCircle.setAttribute("fill", "none");
+  hideShowCircle.setAttribute("stroke", "#ff0000");
+  hideShowCircle.setAttribute("stroke-width", "1");
+  hideShowCircle.classList.add("controlxy-hideshow-circle");
+  hideShowCircle.style.cursor = "pointer";
+  hideShowCircle.dataset.uid = uid;
+  
+  hideShowCircle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    window.controlXYLauncher?.toggle(uid);
+  });
+  
+  // Insert into SVG
+  const parent = boundsEl.parentNode || svg;
+  parent.appendChild(hideShowCircle);
+
+  // ---------------------------------------------
   // Config options
   // ---------------------------------------------
   const showLabels = cfg.label === true || cfg.label === "true";
@@ -125,6 +149,20 @@ export function handleControlXYCue(el, args = [], options = {}) {
   const oscAddr = cfg.oscAddr
     ? cfg.oscAddr.replace(/^\//, "")
     : `controlXY/${uid}`;
+  
+  // Launcher options
+  const launcherEnabled = cfg.launcher !== false && cfg.launcher !== "false";
+  const launcherSlots = typeof cfg.launcher === "number" ? cfg.launcher : 8;
+  const launcherBanks = typeof cfg.banks === "number" ? cfg.banks : 3;
+
+  // ---------------------------------------------
+  // Preset Launcher Buttons
+  // ---------------------------------------------
+  let launcherElement = null;
+  
+  if (launcherEnabled) {
+    launcherElement = createLauncher(uid, bbox, launcherSlots, launcherBanks, parent);
+  }
 
   // ---------------------------------------------
   // Helpers
@@ -148,10 +186,10 @@ export function handleControlXYCue(el, args = [], options = {}) {
     label.classList.add("controlxy-label");
     label.setAttribute("text-anchor", "middle");
     label.setAttribute("dominant-baseline", "auto");
-    label.setAttribute("font-size", "11");
-    label.setAttribute("fill", "#fff");
-    label.setAttribute("stroke", "#000");
-    label.setAttribute("stroke-width", "0.5");
+    label.setAttribute("font-size", "9");
+    label.setAttribute("font-family", "monospace");
+    label.setAttribute("fill", "currentColor");
+    label.setAttribute("opacity", "0.7");
     label.setAttribute("pointer-events", "none");
     label.textContent = "0.50, 0.50";
     
@@ -408,6 +446,31 @@ export function handleControlXYCue(el, args = [], options = {}) {
     handle.el.addEventListener("pointerdown", onPointerDown);
   }
 
+  // ---------------------------------------------
+  // IMPORTANT: Prevent score dragging when interacting with pad
+  // ---------------------------------------------
+  const preventScoreDrag = (e) => {
+    // Stop propagation to prevent transport/score from handling this event
+    e.stopPropagation();
+    
+    // Only preventDefault if we're actually interacting (not just hovering)
+    if (e.type === 'pointerdown' || e.type === 'mousedown' || e.type === 'touchstart') {
+      e.preventDefault();
+    }
+  };
+
+  // Add event capture to the bounds element (the pad background)
+  boundsEl.addEventListener("pointerdown", preventScoreDrag, true);
+  boundsEl.addEventListener("mousedown", preventScoreDrag, true);
+  boundsEl.addEventListener("touchstart", preventScoreDrag, { passive: false, capture: true });
+  
+  // Also prevent pointer events from bubbling up during drag
+  boundsEl.addEventListener("pointermove", (e) => {
+    if (handles.some(h => h.dragging)) {
+      e.stopPropagation();
+    }
+  }, true);
+
   // Global listeners for move/up (to handle drag outside element)
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerUp);
@@ -435,6 +498,22 @@ export function handleControlXYCue(el, args = [], options = {}) {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerCancel);
+      
+      // Remove bounds element listeners
+      boundsEl.removeEventListener("pointerdown", preventScoreDrag, true);
+      boundsEl.removeEventListener("mousedown", preventScoreDrag, true);
+      boundsEl.removeEventListener("touchstart", preventScoreDrag, true);
+      
+      // Remove hide/show circle
+      if (hideShowCircle && hideShowCircle.parentNode) {
+        hideShowCircle.parentNode.removeChild(hideShowCircle);
+      }
+      
+      // Remove launcher
+      if (launcherElement && launcherElement.parentNode) {
+        launcherElement.parentNode.removeChild(launcherElement);
+      }
+      
       for (const h of handles) {
         h.el.removeEventListener("pointerdown", onPointerDown);
         if (h.label) h.label.remove();
@@ -451,4 +530,438 @@ export function handleControlXYCue(el, args = [], options = {}) {
   window._controlXYRegistry.set(uid, instance);
 
   console.log(`[controlXY] registered ${uid} with ${handles.length} handle(s)`);
+}
+
+// thin wrappers
+
+export function handleControlXYRecallCue(ast) {
+  const api = window.controlXYPresets;
+  if (!api) return;
+
+  const args = {};
+  for (const a of ast.args || []) args[a.key || a.type] = a.value;
+
+  const preset = args.preset;
+  if (!preset) {
+    console.warn("[controlXYRecall] missing preset");
+    return;
+  }
+
+  const options = {};
+  if (args.dur !== undefined) options.dur = args.dur;
+  if (args.ease !== undefined) options.ease = args.ease;
+
+  api.recall(preset, options);
+}
+
+// ============================================================================
+// PRESET LAUNCHER UI
+// ============================================================================
+
+/**
+ * Create preset launcher button overlay
+ */
+function createLauncher(uid, bbox, slots, totalBanks, parent) {
+  const buttonHeight = 36;
+  const buttonSpacing = 4;
+  const bankBarHeight = 32;
+  const totalHeight = bankBarHeight + buttonSpacing + buttonHeight;
+  
+  // Position below the pad
+  const launcherY = bbox.y + bbox.height + 8;
+  
+  // Create foreignObject container
+  const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+  fo.setAttribute("x", bbox.x);
+  fo.setAttribute("y", launcherY);
+  fo.setAttribute("width", bbox.width);
+  fo.setAttribute("height", totalHeight);
+  fo.classList.add("controlxy-launcher-container");
+  
+  // Create HTML content
+  const container = document.createElement("div");
+  container.className = "controlxy-launcher";
+  container.dataset.uid = uid;
+  
+  // Bank selector bar
+  const bankBar = document.createElement("div");
+  bankBar.className = "controlxy-launcher-bank-bar";
+  bankBar.innerHTML = `
+    <button class="controlxy-launcher-bank-btn" data-action="prev" title="Previous Bank">←</button>
+    <span class="controlxy-launcher-bank-label">
+      <span class="bank-name">Bank 1</span>
+      <span class="bank-count">(1/${totalBanks})</span>
+    </span>
+    <button class="controlxy-launcher-bank-btn" data-action="next" title="Next Bank">→</button>
+    <button class="controlxy-launcher-mode-btn" data-mode="preset" title="Toggle Preset/Sequence Mode">P</button>
+    <button class="controlxy-launcher-tween-btn active" data-tween="true" title="Toggle Tween/Jump">~</button>
+    <button class="controlxy-launcher-settings-btn" title="Open Preset Manager">⚙</button>
+  `;
+  container.appendChild(bankBar);
+  
+  // Button row
+  const buttonRow = document.createElement("div");
+  buttonRow.className = "controlxy-launcher-buttons";
+  
+  for (let i = 0; i < slots; i++) {
+    const btn = document.createElement("button");
+    btn.className = "controlxy-launcher-slot";
+    btn.dataset.slot = i;
+    btn.innerHTML = `<span class="slot-number">${i + 1}</span><span class="slot-label">Empty</span>`;
+    btn.title = "Left-click: Recall | Right-click: Store current";
+    buttonRow.appendChild(btn);
+  }
+  
+  container.appendChild(buttonRow);
+  fo.appendChild(container);
+  parent.appendChild(fo);
+  
+  // Initialize launcher state
+  initializeLauncher(uid, container, slots, totalBanks);
+  
+  return fo;
+}
+
+/**
+ * Initialize launcher state and event handlers
+ */
+function initializeLauncher(uid, container, slots, totalBanks) {
+  // Get or create launcher state in store
+  const store = window.controlXYPresets?._store;
+  if (!store) {
+    console.warn("[controlXY] Presets not loaded, launcher will not persist");
+    return;
+  }
+  
+  store.launchers = store.launchers || {};
+  store.launchers[uid] = store.launchers[uid] || {
+    currentBank: 0,
+    mode: 'preset',
+    tween: true,
+    visible: true,
+    banks: Array(totalBanks).fill(null).map((_, i) => ({
+      name: `Bank ${i + 1}`,
+      slots: Array(slots).fill(null)
+    }))
+  };
+  
+  const state = store.launchers[uid];
+  
+  // Get sequence list for sequence mode
+  function getSequenceList() {
+    const sequences = Object.keys(store.sequences || {});
+    return sequences;
+  }
+  
+  // Render current bank
+  function renderBank() {
+    const bank = state.banks[state.currentBank];
+    const bankLabel = container.querySelector('.bank-name');
+    const bankCount = container.querySelector('.bank-count');
+    const buttons = container.querySelectorAll('.controlxy-launcher-slot');
+    const modeBtn = container.querySelector('.controlxy-launcher-mode-btn');
+    const tweenBtn = container.querySelector('.controlxy-launcher-tween-btn');
+    
+    // Update mode button
+    if (state.mode === 'sequence') {
+      modeBtn.textContent = 'S';
+      modeBtn.classList.add('sequence-mode');
+      modeBtn.title = 'Sequence Mode (click for Preset mode)';
+    } else {
+      modeBtn.textContent = 'P';
+      modeBtn.classList.remove('sequence-mode');
+      modeBtn.title = 'Preset Mode (click for Sequence mode)';
+    }
+    
+    // Update tween button
+    if (state.tween) {
+      tweenBtn.classList.add('active');
+      tweenBtn.title = 'Tween ON (click to Jump)';
+    } else {
+      tweenBtn.classList.remove('active');
+      tweenBtn.title = 'Jump (click for Tween)';
+    }
+    
+    bankLabel.textContent = bank.name;
+    bankCount.textContent = `(${state.currentBank + 1}/${totalBanks})`;
+    
+    // Render based on mode
+    if (state.mode === 'sequence') {
+      // Sequence mode: auto-fill from sequence list
+      const sequences = getSequenceList();
+      const startIndex = state.currentBank * slots;
+      
+      buttons.forEach((btn, i) => {
+        const slotLabel = btn.querySelector('.slot-label');
+        const seqIndex = startIndex + i;
+        
+        if (seqIndex < sequences.length) {
+          const seqName = sequences[seqIndex];
+          btn.classList.add('assigned', 'type-sequence');
+          btn.classList.remove('empty');
+          btn.dataset.type = 'sequence';
+          btn.dataset.name = seqName;
+          slotLabel.textContent = seqName;
+        } else {
+          btn.classList.remove('assigned', 'type-sequence');
+          btn.classList.add('empty');
+          slotLabel.textContent = 'Empty';
+          delete btn.dataset.type;
+          delete btn.dataset.name;
+        }
+      });
+    } else {
+      // Preset mode: use saved slots
+      buttons.forEach((btn, i) => {
+        const slot = bank.slots[i];
+        const slotLabel = btn.querySelector('.slot-label');
+        
+        if (slot) {
+          btn.classList.add('assigned');
+          btn.classList.remove('empty');
+          btn.dataset.type = slot.type;
+          btn.dataset.name = slot.name;
+          slotLabel.textContent = slot.name;
+          
+          // Set color based on type
+          if (slot.type === 'sequence') {
+            btn.classList.add('type-sequence');
+          } else {
+            btn.classList.remove('type-sequence');
+          }
+        } else {
+          btn.classList.remove('assigned', 'type-sequence');
+          btn.classList.add('empty');
+          slotLabel.textContent = 'Empty';
+          delete btn.dataset.type;
+          delete btn.dataset.name;
+        }
+      });
+    }
+  }
+  
+  // Bank navigation
+  container.querySelector('[data-action="prev"]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.currentBank = (state.currentBank - 1 + totalBanks) % totalBanks;
+    renderBank();
+    saveLauncherState();
+  });
+  
+  container.querySelector('[data-action="next"]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.currentBank = (state.currentBank + 1) % totalBanks;
+    renderBank();
+    saveLauncherState();
+  });
+  
+  // Mode toggle (Preset/Sequence)
+  container.querySelector('.controlxy-launcher-mode-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.mode = state.mode === 'preset' ? 'sequence' : 'preset';
+    renderBank();
+    saveLauncherState();
+  });
+  
+  // Tween toggle
+  container.querySelector('.controlxy-launcher-tween-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.tween = !state.tween;
+    renderBank();
+    saveLauncherState();
+  });
+  
+  // Settings/Preset Manager button
+  container.querySelector('.controlxy-launcher-settings-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.controlXYPresetUI?.toggle();
+  });
+  
+  // Slot button handlers
+  container.querySelectorAll('.controlxy-launcher-slot').forEach(btn => {
+    // Left click: Recall
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      
+      // Get name from dataset (works for both modes)
+      const name = btn.dataset.name;
+      const type = btn.dataset.type;
+      
+      if (!name) return;
+      
+      // Highlight active button
+      container.querySelectorAll('.controlxy-launcher-slot').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Determine duration based on tween state
+      const dur = state.tween ? 1 : 0;
+      
+      // Recall preset or play sequence
+      if (type === 'preset') {
+        window.controlXYPresets?.recall(name, { dur, ease: 'easeInOutSine' });
+      } else if (type === 'sequence') {
+        window.controlXYPresets?.playSequence(name, { dur, loop: false });
+      }
+      
+      // Remove active state after animation
+      setTimeout(() => btn.classList.remove('active'), 300);
+    });
+    
+    // Right click: Store current state
+    btn.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const slotIndex = parseInt(btn.dataset.slot);
+      const slotName = prompt('Save current state as:', `slot_${state.currentBank + 1}_${slotIndex + 1}`);
+      
+      if (!slotName) return;
+      
+      // Save current state
+      window.controlXYPresets?.save(slotName);
+      
+      // Assign to slot
+      state.banks[state.currentBank].slots[slotIndex] = {
+        type: 'preset',
+        name: slotName
+      };
+      
+      renderBank();
+      saveLauncherState();
+    });
+    
+    // Long press (touch): Store current state
+    let pressTimer;
+    btn.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return; // Only left button
+      
+      pressTimer = setTimeout(() => {
+        // Trigger right-click behavior
+        const contextEvent = new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          view: window
+        });
+        btn.dispatchEvent(contextEvent);
+      }, 500);
+    });
+    
+    btn.addEventListener('pointerup', () => {
+      clearTimeout(pressTimer);
+    });
+    
+    btn.addEventListener('pointercancel', () => {
+      clearTimeout(pressTimer);
+    });
+  });
+  
+  // Initial render
+  renderBank();
+  
+  // Apply saved visibility state - hide entire launcher if needed
+  if (!state.visible) {
+    const launcherFO = container.closest('.controlxy-launcher-container');
+    if (launcherFO) {
+      launcherFO.style.display = 'none';
+    }
+  }
+}
+
+/**
+ * Save launcher state to server
+ */
+function saveLauncherState() {
+  const store = window.controlXYPresets?._store;
+  if (!store?.projectId) return;
+  
+  // Trigger save via presets module
+  if (window.controlXYPresets?._savePresetsToServer) {
+    window.controlXYPresets._savePresetsToServer();
+  }
+}
+
+/**
+ * Global functions to show/hide launchers
+ */
+window.controlXYLauncher = {
+  show: (uid) => {
+    const launcher = document.querySelector(`.controlxy-launcher[data-uid="${uid}"]`);
+    if (launcher) {
+      const launcherFO = launcher.closest('.controlxy-launcher-container');
+      if (launcherFO) {
+        launcherFO.style.display = 'block';
+        const store = window.controlXYPresets?._store;
+        if (store?.launchers?.[uid]) {
+          store.launchers[uid].visible = true;
+        }
+      }
+    }
+  },
+  hide: (uid) => {
+    const launcher = document.querySelector(`.controlxy-launcher[data-uid="${uid}"]`);
+    if (launcher) {
+      const launcherFO = launcher.closest('.controlxy-launcher-container');
+      if (launcherFO) {
+        launcherFO.style.display = 'none';
+        const store = window.controlXYPresets?._store;
+        if (store?.launchers?.[uid]) {
+          store.launchers[uid].visible = false;
+        }
+      }
+    }
+  },
+  toggle: (uid) => {
+    const launcher = document.querySelector(`.controlxy-launcher[data-uid="${uid}"]`);
+    if (launcher) {
+      const launcherFO = launcher.closest('.controlxy-launcher-container');
+      if (launcherFO) {
+        const isVisible = launcherFO.style.display !== 'none';
+        if (isVisible) {
+          window.controlXYLauncher.hide(uid);
+        } else {
+          window.controlXYLauncher.show(uid);
+        }
+      }
+    }
+  }
+};
+
+export function handleControlXYSequenceCue(ast) {
+  const api = window.controlXYPresets;
+  if (!api) return;
+
+  const args = {};
+  for (const a of ast.args || []) args[a.key || a.type] = a.value;
+
+  const seq = args.seq || args.sequence;
+  if (!seq) return;
+
+  const options = {};
+  if (args.dur !== undefined) options.dur = args.dur;
+  if (args.ease !== undefined) options.ease = args.ease;
+  if (args.loop !== undefined) options.loop = args.loop;
+
+  api.playSequence(seq, options);
+}
+
+
+export function handleControlXYSequenceStopCue() {
+  window.controlXYPresets?.stopSequence();
+}
+
+
+export function handleControlXYSaveCue(ast) {
+  const api = window.controlXYPresets;
+  if (!api) return;
+
+  const args = {};
+  for (const a of ast.args || []) args[a.key || a.type] = a.value;
+
+  const preset = args.preset;
+  if (!preset) {
+    console.warn("[controlXYSave] missing preset");
+    return;
+  }
+
+  api.save(preset, args.uid);
 }

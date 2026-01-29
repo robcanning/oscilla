@@ -12,6 +12,7 @@ import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 import { preloadReuseBlocksFromPages } from "./oscillaPreProcessReuse.js";
 
 import "./oscillaControlXYPresets.js";  
+import "./oscillaControlXYPresetUI.js";  
 
 let loadInProgress = false;
 let projectMenuWired = false;
