@@ -1,8 +1,3 @@
----
-title:  controlXY
-layout: docs_layout.njk
----
-
 # controlXY — Multitouch XY Control Pad
 
 `controlXY` defines a **persistent, multitouch XY control surface** embedded directly in the score.
@@ -281,3 +276,187 @@ This removes all event listeners and labels if needed.
 ## Summary
 
 `controlXY` turns the score itself into a tactile controller surface, enabling direct spatial control of sound, animation, and interaction parameters without leaving the notation. With multitouch support, multiple performers or parameters can be controlled simultaneously.
+
+---
+
+## Preset System
+
+controlXY includes a full preset system for saving, recalling, and animating handle positions.
+
+### Saving Presets
+
+**Via UI:** Press `Ctrl+Shift+P` to open the preset panel, enter a name, click Save.
+
+**Via Console:**
+```javascript
+controlXYPresets.save('myPreset')           // Save all pads
+controlXYPresets.save('myPreset', 'pad1')   // Save specific pad only
+```
+
+**Via DSL:**
+```
+controlXYSave(preset:myPreset)
+controlXYSave(preset:myPreset, uid:pad1)
+```
+
+### Recalling Presets
+
+**Instant recall:**
+```javascript
+controlXYPresets.recall('myPreset')
+```
+
+**Tweened recall:**
+```javascript
+controlXYPresets.recall('myPreset', { dur: 2, ease: 'easeInOutSine' })
+```
+
+**Per-handle timing:**
+```javascript
+controlXYPresets.recall('myPreset', {
+  dur: 1,
+  handles: {
+    dot1: { dur: 2, delay: 0 },
+    dot2: { dur: 1.5, delay: 0.5 },
+    dot3: { dur: 1, delay: 1, ease: 'easeOutElastic' }
+  }
+})
+```
+
+**Via DSL:**
+```
+controlXYRecall(preset:myPreset)
+controlXYRecall(preset:myPreset, dur:2, ease:3)
+```
+
+### Sequences
+
+Define a sequence of presets to play in order:
+
+```javascript
+// Define sequence
+controlXYPresets.defineSequence('intro', ['preset1', 'preset2', 'preset3'])
+
+// Play sequence
+controlXYPresets.playSequence('intro', { dur: 1.5, loop: false })
+
+// With variable timing per step
+controlXYPresets.playSequence('intro', { dur: [1, 2, 0.5] })
+
+// Loop forever
+controlXYPresets.playSequence('intro', { dur: 1, loop: true })
+
+// Stop sequence
+controlXYPresets.stopSequence()
+```
+
+**Via DSL:**
+```
+controlXYSequence(seq:intro, dur:1.5)
+controlXYSequence(seq:intro, dur:1.5, loop:true)
+```
+
+### Easing Functions
+
+Available easing options (by name or number):
+
+| Number | Name |
+|--------|------|
+| 0 | linear |
+| 1 | easeInSine |
+| 2 | easeOutSine |
+| 3 | easeInOutSine |
+| 4 | easeInQuad |
+| 5 | easeOutQuad |
+| 6 | easeInOutQuad |
+| 7 | easeInCubic |
+| 8 | easeOutCubic |
+| 9 | easeInOutCubic |
+| 10 | easeInBack |
+| 11 | easeOutBack |
+| 12 | easeInOutBack |
+| 13 | easeInElastic |
+| 14 | easeOutElastic |
+
+### Import / Export
+
+**Export to file:**
+```javascript
+const json = controlXYPresets.export()
+// Download or copy json
+```
+
+**Import from file:**
+```javascript
+controlXYPresets.import(jsonString, true)  // true = merge, false = replace
+```
+
+**Import from another project:**
+```javascript
+controlXYPresets.importFromProject('otherProjectId', true)
+```
+
+### Preset Panel UI
+
+Toggle the preset management panel:
+- Keyboard: `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
+- Console: `controlXYPresetUI.toggle()`
+
+The panel provides:
+- Save/delete presets
+- Recall with adjustable duration and easing
+- Play/stop sequences
+- Import/export presets
+
+### Storage
+
+Presets are automatically saved to `controlxy-presets.json` in the project folder. The file structure:
+
+```json
+{
+  "presets": {
+    "preset1": {
+      "pad1": {
+        "dot1": { "x": 0.25, "y": 0.75 },
+        "dot2": { "x": 0.80, "y": 0.30 }
+      }
+    }
+  },
+  "sequences": {
+    "intro": ["preset1", "preset2", "preset3"]
+  }
+}
+```
+
+### API Reference
+
+```javascript
+// Presets
+controlXYPresets.save(name, uidFilter?)
+controlXYPresets.recall(name, options?)
+controlXYPresets.delete(name)
+controlXYPresets.list()
+controlXYPresets.get(name)
+
+// Tweening
+controlXYPresets.tweenTo(positions, dur, ease)
+controlXYPresets.stopAllTweens()
+
+// Sequences
+controlXYPresets.defineSequence(name, steps)
+controlXYPresets.playSequence(name, options)
+controlXYPresets.stopSequence()
+controlXYPresets.getActiveSequence()
+
+// Persistence
+controlXYPresets.init(projectId)
+controlXYPresets.export()
+controlXYPresets.import(json, merge?)
+controlXYPresets.importFromProject(projectId, merge?)
+
+// UI
+controlXYPresetUI.show()
+controlXYPresetUI.hide()
+controlXYPresetUI.toggle()
+controlXYPresetUI.refresh()
+```

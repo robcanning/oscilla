@@ -421,11 +421,16 @@ export function handleControlXYCue(el, args = [], options = {}) {
   }
 
   // ---------------------------------------------
-  // Store reference for cleanup if needed
+  // Store reference for cleanup and preset system
   // ---------------------------------------------
-  el._controlXY = {
+  const instance = {
     uid,
     handles,
+    boundsEl,
+    oscEnabled,
+    oscThrottle,
+    oscAddr,
+    updateLabel,
     cleanup: () => {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
@@ -434,8 +439,16 @@ export function handleControlXYCue(el, args = [], options = {}) {
         h.el.removeEventListener("pointerdown", onPointerDown);
         if (h.label) h.label.remove();
       }
+      // Remove from registry
+      window._controlXYRegistry?.delete(uid);
     }
   };
+  
+  el._controlXY = instance;
+  
+  // Register globally for preset system
+  window._controlXYRegistry = window._controlXYRegistry || new Map();
+  window._controlXYRegistry.set(uid, instance);
 
   console.log(`[controlXY] registered ${uid} with ${handles.length} handle(s)`);
 }
