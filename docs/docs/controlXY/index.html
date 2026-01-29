@@ -1,4 +1,130 @@
-<h1>controlXY — Multitouch XY Control Pad</h1>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ControlXY</title>
+  <link rel="stylesheet" href="/oscilla/docs/style.css">
+  <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.svg">
+
+</head>
+
+<body>
+
+  <!-- Mobile overlay (closes sidebar when tapped) -->
+  <div class="sidebar-overlay" aria-hidden="true"></div>
+
+  <header class="docs-header">
+    <button class="docs-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+      <a href="/oscilla/docs/" class="docs-brand">
+        <img
+          src="/oscilla/docs/img/logos/logo-header-docs.svg"
+          alt="Oscilla"
+          class="docs-logo"
+          aria-hidden="true"
+        >
+      </a>
+
+            <nav class="docs-nav" aria-label="Page navigation">
+        <a id="docs-prev" href="#">← Previous</a>
+        <a id="docs-next" href="#">Next →</a>
+      </nav>
+  </header>
+
+  <div class="docs-container">
+    <nav class="sidebar" aria-label="Documentation navigation">
+
+  <h3>Getting Started</h3>
+  <ul>
+    <li><a href="/oscilla/docs/">Docs Overview</a></li>
+    <li><a href="/oscilla/docs/about">What is Oscilla?</a></li>
+    <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
+    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
+    <li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
+    <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
+    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
+  </ul>
+
+  <h3>Cues</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
+    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
+    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
+    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
+    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
+    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
+    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
+    <li><a href="/oscilla/docs/cue_button">button()</a></li>
+    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
+    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
+    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
+    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
+    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
+    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
+    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
+    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
+  </ul>
+
+  <h3>Animation</h3>
+  <ul>
+    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
+    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
+    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
+    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
+    <li><a href="/oscilla/docs/cue_color/">color()</a></li>
+    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
+    <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
+  </ul>
+
+  <h3>Control & Interaction</h3>
+  <ul>
+    <li><a href="/oscilla/docs/control-and-modulation/">
+      Control, Modulation & Feedback
+    </a></li>
+    
+        <li><a href="/oscilla/docs/controlXY/">
+      ControlXY
+    </a></li>
+  </ul>
+
+  <h3>Performer</h3>
+  <ul>
+    <li><a href="/oscilla/docs/performer-interaction/">
+      Performer Interaction
+    </a></li>
+  </ul>
+
+  <h3>Tools</h3>
+  <ul>
+    <li><a href="/oscilla/docs/inkscape_extension/">Inkscape Extension</a></li>
+  </ul>
+
+  <h3>Developer</h3>
+  <ul>
+    <li><a href="/oscilla/docs/oscilla_architecture_overview/">
+      Architecture Overview
+    </a></li>
+    <li><a href="/oscilla/docs/dev-sync-architecture/">
+      Sync Architecture
+    </a></li>
+    <li><a href="/oscilla/docs/oscilla-developer-guide-new-cue/">
+      DevHowto New Cue
+    </a></li>
+  </ul>
+
+</nav>
+
+    
+    <main class="docs-content">
+
+      
+      <h1>controlXY — Multitouch XY Control Pad</h1>
 <p><code>controlXY</code> defines a <strong>persistent, multitouch XY control surface</strong> embedded directly in the score.
 It constrains one or more draggable handles to a bounding shape and continuously publishes normalized X/Y values for control and modulation.</p>
 <p>Unlike time-based cues, <code>controlXY</code> is <strong>always active</strong>, has <strong>no playhead semantics</strong>, and is evaluated at <strong>assign time</strong>.</p>
@@ -480,3 +606,105 @@ controlXYPresetUI.hide()
 controlXYPresetUI.toggle()
 controlXYPresetUI.refresh()
 </code></pre>
+
+      
+      <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>
+    </main>
+  </div>
+
+  <script>
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.popup-link');
+  if (link) {
+    e.preventDefault();
+    window.open(
+      link.href,
+      'cheatsheet',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+  }
+});
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.querySelector(".docs-menu-toggle");
+    const overlay = document.querySelector(".sidebar-overlay");
+    const sidebar = document.querySelector(".sidebar");
+    
+    function toggleSidebar() {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      btn?.setAttribute("aria-expanded", isOpen);
+    }
+    
+    function closeSidebar() {
+      document.body.classList.remove("sidebar-open");
+      btn?.setAttribute("aria-expanded", "false");
+    }
+    
+    btn?.addEventListener("click", toggleSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    
+    // Close sidebar on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking a link (mobile)
+    sidebar?.addEventListener("click", (e) => {
+      if (e.target.tagName === "A" && window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Sidebar-ordered prev/next navigation
+  (function () {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+
+    const links = Array.from(sidebar.querySelectorAll("a[href]")).map(a => a.href);
+    const current = window.location.href.replace(/#.*$/, "");
+    const index = links.findIndex(href => href === current);
+
+    const prev = index > 0 ? links[index - 1] : null;
+    const next = index >= 0 && index < links.length - 1 ? links[index + 1] : null;
+
+    const prevBtn = document.getElementById("docs-prev");
+    const nextBtn = document.getElementById("docs-next");
+
+    if (prevBtn) {
+      if (prev) prevBtn.href = prev;
+      else prevBtn.style.visibility = "hidden";
+    }
+
+    if (nextBtn) {
+      if (next) nextBtn.href = next;
+      else nextBtn.style.visibility = "hidden";
+    }
+
+    // Mark current page in sidebar
+    sidebar.querySelectorAll("a[href]").forEach(a => {
+      if (a.href === current) {
+        a.classList.add("active");
+        a.setAttribute("aria-current", "page");
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if ((e.key === "ArrowLeft" || e.key === "ArrowUp") && prev) {
+        window.location.href = prev;
+      }
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown") && next) {
+        window.location.href = next;
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

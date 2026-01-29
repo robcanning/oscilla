@@ -131,13 +131,12 @@
     alt="Oscilla Dynamic Signal Control"
   >
   <figcaption>Published signals are shared across the system, so animations can control audio parameters, slider-like interfaces can control animations, and multiple cues can influence each other in any combination. Because values are updated continuously, this also allows feedback systems where motion, sound, and interaction form coupled, dynamic behaviours within the score.
-<code>
-synth(uid:pad, freq:"fadeSineFreq.t[90,2000]", env:{a:4})
-o2p(path:fadeSineFreq, trig:touch, osc:1, uid:fadeSineFreq, oscAddr:fadeSineFreq)
-</code>
-<p>https://robcanning.github.io/oscilla/docs/control-and-modulation/</p>
 </figcaption>
 </figure>
+<code>
+synth(uid:pad, freq:"fadeSineFreq.t[90,2000]", env:{a:4})
+<p>o2p(path:fadeSineFreq, trig:touch, osc:1, uid:fadeSineFreq, oscAddr:fadeSineFreq)
+</code></p>
 <h2>Overview</h2>
 <p>The Oscilla Control Plane enables <strong>bidirectional signal flow</strong> between cues. Any animation can publish its values as signals, and any synth or audio cue can subscribe to those signals to control its parameters in real-time.</p>
 <p>This transforms Oscilla from a trigger-based score system into a <strong>dynamic, signal-driven, executable score environment</strong>.</p>

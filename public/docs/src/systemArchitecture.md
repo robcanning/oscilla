@@ -1,0 +1,134 @@
+Oscilla — short architecture map (modules, entry points, major flows)
+
+Purpose
+
+Browser-based, cue-driven graphic notation platform using SVG, WebSockets and OSC. Scores are SVG documents annotated with ID-based cues; the client executes animations and triggers media and network events.
+High-level entry points
+
+server.js (repo root): Node server for serving /public, WebSocket endpoint and OSC integration (server lifecycle, ports, build helpers).
+public/index.html (public/): main frontend launch page that loads the client JS and UI.
+public/scores/<project>/score.svg (per-project): authored score that contains cue IDs and reusable blocks; driving data for the runtime.
+Client / frontend modules (public/js/)
+
+oscillaAnimation.js
+Role: cue parsing/assignment and animation registry; animation lifecycle (registerAnimation, registerRunningAnimation, clearRunningAnimation), animationAssign that parses cue IDs and delegates to specific handlers (scale/rotate/o2p/text).
+Key exports: registerAnimation, registerRunningAnimation, clearRunningAnimation, animationAssign, debugDump.
+Touchpoint: invoked during SVG scanning/initialization and by playhead/cue dispatch.
+oscillaAnnotations.js
+Role: overlays for textual/trigger annotations (HTML layers over SVG). Handles annotation CRUD (add/update/delete), import/export JSON, socket sync, trigger execution integration with audio module.
+Key pieces: state/items, triggerPools, executeTrigger(), exportAnnotationsJSON(), importAnnotationsJSON(), init/destroy functions, window.oscillaAnnotations API.
+Touchpoint: UI for performers, optional WebSocket sync, audio triggering.
+oscillaAudio.js
+Role: audio playback primitives (handleAudioCue, pools, impulses, stopAudioImpulse). Integrates with executeTrigger in annotations.
+Touchpoint: media execution for triggers.
+oscillaOSC.js
+Role: constructs and sends OSC messages based on cue events (sampleVisual(), sampleVisual → message contents). Uses cue dispatcher functions.
+oscillaCueDispatcher.js
+Role: scheduling & dispatching cues (scheduleCueStart, emitCueComplete). Bridge between timing/playhead and animation/trigger execution.
+oscillaTimers.js
+Role: timing utilities, stopwatch and scheduling primitives used by annotations and dispatcher.
+oscillaHitLabels.js
+Role: in-UI hit-labels for OSC / interaction feedback. Functions for creating/updating/destroying hit labels, setHitLabelOscMode, updateHitCircleColor, destroyAllHitLabels.
+reuse.js + utils.js
+reuse.js: Reusable SVG block system. Scans <g id="reuse(...)" definitions and injects clones for <g id="use(...)" placeholders. Exposes registerReuseBlocks, preloadReuseBlocksFromPages, autoInjectUseBlocks, handleUse, buildPageRegistryFromDirIndex.
+utils.js: helpers for reuse alignment and SVG math: uniqueReuseId, stripAllTransforms, stripRootTransform, bboxInScreen, screenDeltaToParent, alignCloneAtPlaceholder_TopLeft, etc.
+Touchpoint: SVG preprocessing and template system used when loading pages/scores and in template-based project creation.
+Other front-end files
+Various UI wiring and small modules (scoreSetup, menu hooks, preferences handling). Docs show many helper files in public/js.
+Exposed dev/global APIs
+Several modules attach useful functions to window (window.registerReuseBlocks, window.oscillaAnnotations, window.preloadReuseBlocksFromPages) enabling runtime scripts or docs to call them.
+Major runtime data flows
+
+App start (public/index.html)
+Load UI, fetch project assets (score.svg, pages, audio).
+Register reusable blocks (registerReuseBlocks / preloadReuseBlocksFromPages).
+Initialize annotations (initOscillaAnnotations): load persisted annotations, attach DOM overlay layers, set socket poll interval.
+SVG scan & animation assignment
+animationAssign (oscillaAnimation) scans DOM for cue_* and other IDs, parses mini-DSL into ASTs, and registers per-element animations via registerAnimation.
+For cue:text autostart, dynamic import("./oscillaText.js") occurs and text handlers run.
+Playhead / scheduling
+playhead events or UI triggers call scheduleCueStart in oscillaCueDispatcher, which starts animation instances and may call executeTrigger for annotation triggers.
+Trigger execution & media
+executeTrigger (oscillaAnnotations) uses handleAudioCue / handleAudioPoolCue / handleAudioImpulseCue (oscillaAudio) to play sound; may use triggerPools to manage directories and ordering.
+Network sync
+WebSocket: annotations optionally share add/update/delete events (wsSend calls in annotations). server.js relays messages and optionally translates/forwards OSC.
+OSC output: oscillaOSC constructs OSC messages from sampleVisual() data (normalized object geometry) and sends via server/OSC bridge.
+Reuse & dynamic content
+reuse.js can inject cloned <g> elements into the page to instantiate templates or preloaded blocks. page discovery functions fetch /pages directory and build a registry.
+Server & build
+
+server.js: Express + WS server for dev and for production standalone server. Handles project import/export endpoints (.oscilla export), WebSocket message handling, and OSC bridging to local audio engines.
+build.sh and packaging scripts: produce binaries/standalone builds (notable commit enhancing binary builds).
+Version file: added to repo (commit added a version file in root).
+Workflows: GitHub workflow docs updated to mention Inkscape extension and template metadata.
+Documentation & examples
+
+public/docs/ and docs/ host extensive documentation, cheatsheets, cue references, and example pages (cheatsheet, cue_* docs).
+docs contain step-by-step authoring workflow (Inkscape → pages → export). Docs also contain screenshots and examples of the Inkscape extension.
+Where key features live (file pointers)
+
+Annotations (UI + trigger execution): public/js/oscillaAnnotations.js
+Audio handling: public/js/oscillaAudio.js
+Animation assignment & registry: public/js/oscillaAnimation.js
+Cue dispatch/scheduling: public/js/oscillaCueDispatcher.js
+OSC transport & sampling: public/js/oscillaOSC.js
+Reusable block system: public/js/reuse.js + public/js/utils.js
+Hit labels / interaction visuals: public/js/oscillaHitLabels.js
+Timers & utilities: public/js/oscillaTimers.js, public/js/utils.js
+Server, export/import, and binary build hooks: server.js, build.sh, scripts/
+Docs & cheat sheets: public/docs/src/, public/docs/site/, docs/
+Immediate technical observations & low-risk refactor ideas
+
+Some small helpers and debug functions (e.g., debugDump, safeJsonParse) are module-local and may be candidates for consolidation into utils or removal if unused.
+duplicated helpers (clamp01 in multiple modules) — consolidate to utils to reduce duplication and bugs.
+reuse/registration APIs are exposed on window for flexibility; you could centralize these under a single runtime namespace (window.oscilla) to reduce global pollution.
+Annotation import/export functions exist — ensure UI has explicit triggers (menu/button) or remove if unused.
+How I validated this map
+
+I scanned the public/docs and public/js files and cross-referenced commits and docs that describe the features. (If you want, I can produce a clickable file list or a visual diagram next.)
+Suggested next actions (pick one)
+
+Produce a one-page visual diagram (SVG/Markdown with file->module arrows).
+Produce a prioritized TODO list: 10 quick wins (remove dead helpers, consolidate clamp01, add tests for audio triggers, guard debug exports).
+Run a deeper code search for orphaned functions/exports and produce a safe-removal patch (I already started a candidate list earlier).
+Generate a PR that adds a top-level CONTRIBUTING.md or ARCHITECTURE.md summarizing this map.
+Which of the next actions above do you want me to do first? If you want the visual diagram or a PR, tell me preferred format (Markdown file, SVG image, or a branch/PR).
+
+You said: did i miss it or did you
+did i miss it or did you not mention app.js
+1 reference
+Copilot said: Good catch — I missed calling out
+Good catch — I missed calling out public/js/app.js in the first pass. Thanks for spotting that.
+
+Short answer: app.js is the client’s primary bootstrap / orchestration file — the high-level entry point that wires together transport, cues, animation, annotations, UI, timers, reuse/template system, and exposes runtime globals.
+
+Where it lives
+
+public/js/app.js — https://github.com/robcanning/oscilla/blob/main/public/js/app.js
+What app.js does (summary)
+
+Imports and composes most core modules:
+UI / live inspector: oscillaLive.js
+Transport / playhead / speed controls: oscillaTransport.js
+Project loader: projectLoader.js
+Score setup and DOM extraction: scoreSetup.js
+Cue dispatcher and related: oscillaCueDispatcher.js
+Animation registry & assignment: oscillaAnimation.js
+Button builder: oscillaButton.js
+Reuse/template system: reuse.js
+Timers: oscillaTimers.js
+Annotations wiring: oscillaAnnotations.js
+Audio, pause, synth, speed helpers, stop handlers, observers, etc.
+Sets up global window bindings used across the app (startPlayback, pausePlayback, handleCueTrigger, triggeredCues, scoreContainer, playhead helpers).
+Detects mobile user agents and conditionally loads mobile stylesheet.
+Orchestrates application startup sequence (calls that initialize project loading, score setup, animation assignment, UI building and observers).
+Acts as the central place that ties low-level modules into the runtime experience (it doesn’t implement core cue logic itself but wires the pieces together).
+Why it matters
+
+app.js is the single high-level entry point for the front-end: changes to globals, startup order, or side-effects here affect most runtime flows (playback, cue dispatch, annotation init, reuse injection).
+It’s a good place for cross-cutting initialization logic, but also a candidate to keep minimal — heavy logic should stay in dedicated modules so the bootstrap is easy to read and test.
+Quick suggestions (low-risk)
+
+Keep app.js focused on composition only — avoid moving feature logic into it.
+Consider converting global window bindings to a single namespaced runtime object (window.oscilla) to reduce global pollution.
+Add or update a small startup test or checklist (load order smoke-test) to catch regressions caused by reorderings here.
