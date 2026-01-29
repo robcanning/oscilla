@@ -85,17 +85,20 @@ const Button = createToken({ name: "Button", pattern: /button\b/ });
 const Rotate = createToken({ name: "Rotate", pattern: /\brotate\b/, longer_alt: Identifier });
 const Scale = createToken({ name: "Scale", pattern: /\bscale\b/, longer_alt: Identifier });
 const ScaleXY = createToken({ name: "ScaleXY", pattern: /\bscaleXY\b/, longer_alt: Identifier });
+
 const Osc = createToken({ name: "Osc", pattern: /\bosc\b/, longer_alt: Identifier });
 const OscCtrl = createToken({ name: "OscCtrl", pattern: /\boscCtrl\b/, longer_alt: Identifier });
 const OscCtrlNode = createToken({ name: "OscCtrlNode", pattern: /\boscCtrlNode\b/, longer_alt: Identifier });
 
+const ControlXY = createToken({ name: "ControlXY", pattern: /\bcontrolXY\b/, longer_alt: Identifier });
+
 const O2P = createToken({ name: "O2P", pattern: /\bo2p\b/, longer_alt: Identifier });
 
 // Color animation (both spellings) - only match when followed by ( to avoid matching colour:red parameter
-const Color = createToken({ 
-    name: "Color", 
-    pattern: /\b(color|colour)(?=\s*\()/, 
-    longer_alt: Identifier 
+const Color = createToken({
+  name: "Color",
+  pattern: /\b(color|colour)(?=\s*\()/,
+  longer_alt: Identifier
 });
 
 // ✅ NEW: Dedicated Ui keyword
@@ -133,7 +136,7 @@ export const allTokens = [
   Cue, Fade, Page, Stopwatch, Video, Text, Pause, Stop,
   Audio, AudioPool, AudioImpulse, Synth, Button, Nav,
   Rotate, Scale, ScaleXY, O2P, Color, Ui,
-  Osc, OscCtrl, OscCtrlNode,
+  Osc, OscCtrl, OscCtrlNode, ControlXY,
   After, PatternName, Choose,
   LParen, RParen, LBrace, RBrace, LBracket, RBracket, Colon, Comma, At, XParam,
   RangeLiteral, NumberLiteral, StringLiteral, True, False,
@@ -681,6 +684,17 @@ export class CueParser extends CstParser {
       $.SUBRULE($.genericParamList);
     });
 
+
+    // ------------------------------------------------------------
+    // cue:controlXY(...)
+    // ------------------------------------------------------------
+    $.RULE("cueControlXYTop", () => {
+      $.CONSUME(ControlXY);
+      $.SUBRULE($.genericParamList);
+    });
+
+
+
     // ------------------------------------------------------------
     // cueSpeedTop (grammar) — supports speed(3) and keyed params
     // ------------------------------------------------------------
@@ -954,6 +968,8 @@ export class CueParser extends CstParser {
         { ALT: () => $.SUBRULE($.cueOscTop) },
         { ALT: () => $.SUBRULE($.cueOscCtrlTop) },
         { ALT: () => $.SUBRULE($.cueOscCtrlNodeTop) },
+        { ALT: () => $.SUBRULE($.cueControlXYTop) },
+
       ]);
     });
 
@@ -1103,8 +1119,8 @@ function extractObjectLiteral(objNode) {
       // Direct token
       const raw = valueNode.image.replace(/^["']|["']$/g, "");
       val = raw === "true" ? true :
-            raw === "false" ? false :
-            (!isNaN(raw) && raw !== "") ? Number(raw) : raw;
+        raw === "false" ? false :
+          (!isNaN(raw) && raw !== "") ? Number(raw) : raw;
     }
 
     result[key] = val;
@@ -1533,6 +1549,98 @@ export function cstToAst(cst) {
     return { type: "oscCtrlNode", args };
   }
 
+
+// ============================================================
+// cue:controlXY(...) → AST
+// ============================================================
+const controlXYNode =
+  cst.children?.cueControlXYTop?.[0] ||
+  (cst.name === "cueControlXYTop" ? cst : null);
+
+if (controlXYNode) {
+  const args = [];
+  
+  // ✅ FIX: Access genericParam through genericParamList
+  const paramList = controlXYNode.children?.genericParamList?.[0];
+  const params = paramList?.children?.genericParam || [];
+
+  for (const p of params) {
+    const key = p.children.key?.[0]?.image;
+    const valNode = p.children.value?.[0];
+    if (!key || !valNode) continue;
+
+    let value;
+
+    // Check if valNode IS an arrayValue (name === "arrayValue")
+    // OR if it contains arrayValue children
+    const isArrayNode = valNode.name === "arrayValue" || valNode.children?.LBracket;
+    const arrayChildren = valNode.children?.animValue || [];
+    
+    if (isArrayNode && arrayChildren.length > 0) {
+      // Extract array elements
+      value = arrayChildren.map(item => {
+        // animValue can contain various token types
+        if (item.children?.Identifier?.[0]) {
+          return item.children.Identifier[0].image;
+        } else if (item.children?.StringLiteral?.[0]) {
+          return item.children.StringLiteral[0].image.replace(/^["']|["']$/g, "");
+        } else if (item.children?.NumberLiteral?.[0]) {
+          return Number(item.children.NumberLiteral[0].image);
+        } else if (item.children?.True?.[0]) {
+          return true;
+        } else if (item.children?.False?.[0]) {
+          return false;
+        }
+        // Fallback: check if item itself is a token
+        else if (item.image) {
+          const img = item.image;
+          if (img === "true") return true;
+          if (img === "false") return false;
+          if (!isNaN(img)) return Number(img);
+          return img;
+        }
+        return null;
+      }).filter(v => v !== null);
+      
+      console.log(`[controlXY AST] Parsed array for ${key}:`, value);
+    }
+    // Handle other value types (non-array)
+    else {
+      let raw = valNode.image;
+
+      if (raw === undefined && valNode.children) {
+        if (valNode.children.NumberLiteral?.[0])
+          raw = valNode.children.NumberLiteral[0].image;
+        else if (valNode.children.StringLiteral?.[0])
+          raw = valNode.children.StringLiteral[0].image;
+        else if (valNode.children.True?.[0])
+          raw = "true";
+        else if (valNode.children.False?.[0])
+          raw = "false";
+        else if (valNode.children.Identifier?.[0])
+          raw = valNode.children.Identifier[0].image;
+      }
+
+      if (raw === "true") value = true;
+      else if (raw === "false") value = false;
+      else if (!isNaN(raw) && raw !== undefined && raw !== null) value = Number(raw);
+      else if (raw) value = String(raw).replace(/^["']|["']$/g, "");
+    }
+
+    if (value !== undefined) {
+      args.push({ type: key, value });
+    }
+  }
+
+  console.log("[controlXY AST] Final args:", JSON.stringify(args, null, 2));
+
+  return {
+    type: "cueControlXY",
+    args
+  };
+}
+
+  
   // ============================================================================
   // 🔹 cue:metronome(...) / cue:metro(...)
   // ============================================================================
@@ -1976,7 +2084,7 @@ export function cstToAst(cst) {
     // Pattern call: Pseq(...), Prand(...)
     if (node.name === "patternCall") {
       const patternName = node.children?.PatternName?.[0]?.image ?? "Pseq";
-      
+
       const extractPatternValue = (expr) => {
         if (!expr) return null;
         if (expr.children?.NumberLiteral?.[0]) {
@@ -2043,7 +2151,7 @@ export function cstToAst(cst) {
       if (node.children?.patternCall?.[0]) return extractObjectValue(node.children.patternCall[0]);
       if (node.children?.simpleFuncCall?.[0]) return extractObjectValue(node.children.simpleFuncCall[0]);
       if (node.children?.arrayValue?.[0]) return extractObjectValue(node.children.arrayValue[0]);
-      
+
       // Atomic values
       if (node.children?.NumberLiteral?.[0]) return Number(node.children.NumberLiteral[0].image);
       if (node.children?.StringLiteral?.[0]) return node.children.StringLiteral[0].image.replace(/^["']|["']$/g, "");
@@ -2056,8 +2164,8 @@ export function cstToAst(cst) {
     if (node.image != null) {
       const raw = node.image.replace(/^["']|["']$/g, "");
       return raw === "true" ? true :
-             raw === "false" ? false :
-             (!isNaN(raw) && raw !== "") ? Number(raw) : raw;
+        raw === "false" ? false :
+          (!isNaN(raw) && raw !== "") ? Number(raw) : raw;
     }
 
     return null;
@@ -2122,7 +2230,7 @@ export function cstToAst(cst) {
       // ✅ CASE 2: patternCall like Pseq([220, 330, 440], inf) or Pseq(220, 330, 440)
       else if (v?.name === "patternCall") {
         const patternName = v.children?.PatternName?.[0]?.image ?? "Pseq";
-        
+
         // Helper to extract value from patternExpr
         const extractPatternValue = (expr) => {
           if (!expr) return null;
@@ -2148,14 +2256,14 @@ export function cstToAst(cst) {
 
         // Check for bracket syntax: patternExpr (from AT_LEAST_ONE_SEP)
         const bracketedExprs = v.children?.patternExpr || [];
-        
+
         // Check for flat syntax: flatValues
         const flatExprs = v.children?.flatValues || [];
 
         if (bracketedExprs.length > 0) {
           // Bracket syntax: Pseq([a, b, c], repeats)
           values = bracketedExprs.map(extractPatternValue);
-          
+
           // Check for repeats
           if (v.children?.repeats?.[0]) {
             repeats = extractPatternValue(v.children.repeats[0]) ?? Infinity;
@@ -2217,13 +2325,13 @@ export function cstToAst(cst) {
         });
 
 
-          }
+      }
       // ✅ CASE 5: Direct token (number, string, identifier, bool)
       else if (v?.image != null) {
         const raw = v.image.replace(/^["']|["']$/g, "");
         val = raw === "true" ? true :
-              raw === "false" ? false :
-              (!isNaN(raw) && raw !== "") ? Number(raw) : raw;
+          raw === "false" ? false :
+            (!isNaN(raw) && raw !== "") ? Number(raw) : raw;
       }
       // ✅ CASE 6: Wrapped token in children (from generic value handling)
       else if (v?.children) {

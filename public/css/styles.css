@@ -2033,3 +2033,217 @@ sl-menu-item {
   background: rgba(0, 150, 200, 0.12);
   border-left: 3px solid rgba(0, 150, 200, 0.7);
 }
+
+
+
+/* =============================================================================
+ * oscillaControlXY.css — Styles for XY Control Pads
+ * Add to your style.css or import separately
+ * ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+ * Handle Base Styles
+ * ----------------------------------------------------------------------------- */
+.controlxy-handle {
+  cursor: grab;
+  transition: 
+    filter 0.15s ease-out,
+    stroke-width 0.15s ease-out;
+}
+
+.controlxy-handle:hover {
+  filter: brightness(1.1);
+}
+
+/* -----------------------------------------------------------------------------
+ * Handle Active State (while dragging)
+ * ----------------------------------------------------------------------------- */
+.controlxy-handle--active {
+  cursor: grabbing;
+  
+  /* Glow effect */
+  filter: 
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.8))
+    drop-shadow(0 0 8px rgba(100, 200, 255, 0.6));
+  
+  /* If handle has a stroke, make it more prominent */
+  stroke-width: 3px;
+  stroke: #fff;
+}
+
+/* Alternative: Border/outline effect using SVG filter 
+ * Uncomment if you prefer this style */
+/*
+.controlxy-handle--active {
+  filter: url(#controlxy-glow);
+}
+*/
+
+/* -----------------------------------------------------------------------------
+ * Value Labels
+ * ----------------------------------------------------------------------------- */
+.controlxy-label {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 11px;
+  fill: #ffffff;
+  stroke: #000000;
+  stroke-width: 0.5px;
+  paint-order: stroke fill;
+  pointer-events: none;
+  user-select: none;
+  
+  /* Subtle text shadow for readability */
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.8),
+    0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Label hover state (when handle is active) */
+.controlxy-handle--active + .controlxy-label,
+.controlxy-handle--active ~ .controlxy-label {
+  fill: #00ffff;
+  font-weight: bold;
+}
+
+/* -----------------------------------------------------------------------------
+ * Bounds Area (optional styling for the control surface)
+ * ----------------------------------------------------------------------------- */
+.controlxy-bounds {
+  fill: rgba(255, 255, 255, 0.02);
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 1px;
+  stroke-dasharray: 4 2;
+}
+
+.controlxy-bounds:hover {
+  fill: rgba(255, 255, 255, 0.05);
+  stroke: rgba(255, 255, 255, 0.2);
+}
+
+/* -----------------------------------------------------------------------------
+ * Color Variants (add class to handle for different colors)
+ * ----------------------------------------------------------------------------- */
+
+/* Red handle */
+.controlxy-handle--red {
+  fill: #ff4444;
+}
+.controlxy-handle--red.controlxy-handle--active {
+  filter: 
+    drop-shadow(0 0 4px rgba(255, 100, 100, 0.9))
+    drop-shadow(0 0 8px rgba(255, 50, 50, 0.6));
+}
+
+/* Green handle */
+.controlxy-handle--green {
+  fill: #44ff44;
+}
+.controlxy-handle--green.controlxy-handle--active {
+  filter: 
+    drop-shadow(0 0 4px rgba(100, 255, 100, 0.9))
+    drop-shadow(0 0 8px rgba(50, 255, 50, 0.6));
+}
+
+/* Blue handle */
+.controlxy-handle--blue {
+  fill: #4488ff;
+}
+.controlxy-handle--blue.controlxy-handle--active {
+  filter: 
+    drop-shadow(0 0 4px rgba(100, 150, 255, 0.9))
+    drop-shadow(0 0 8px rgba(50, 100, 255, 0.6));
+}
+
+/* Yellow handle */
+.controlxy-handle--yellow {
+  fill: #ffff44;
+}
+.controlxy-handle--yellow.controlxy-handle--active {
+  filter: 
+    drop-shadow(0 0 4px rgba(255, 255, 100, 0.9))
+    drop-shadow(0 0 8px rgba(255, 200, 50, 0.6));
+}
+
+/* Cyan handle */
+.controlxy-handle--cyan {
+  fill: #44ffff;
+}
+.controlxy-handle--cyan.controlxy-handle--active {
+  filter: 
+    drop-shadow(0 0 4px rgba(100, 255, 255, 0.9))
+    drop-shadow(0 0 8px rgba(50, 255, 255, 0.6));
+}
+
+/* Magenta handle */
+.controlxy-handle--magenta {
+  fill: #ff44ff;
+}
+.controlxy-handle--magenta.controlxy-handle--active {
+  filter: 
+    drop-shadow(0 0 4px rgba(255, 100, 255, 0.9))
+    drop-shadow(0 0 8px rgba(255, 50, 255, 0.6));
+}
+
+/* -----------------------------------------------------------------------------
+ * SVG Filter Definition (optional - add to your SVG's <defs>)
+ * ----------------------------------------------------------------------------- */
+/*
+<defs>
+  <filter id="controlxy-glow" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+    <feFlood flood-color="#00ffff" flood-opacity="0.8"/>
+    <feComposite in2="blur" operator="in"/>
+    <feMerge>
+      <feMergeNode/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+</defs>
+*/
+
+/* -----------------------------------------------------------------------------
+ * Dark/Light Theme Support
+ * ----------------------------------------------------------------------------- */
+@media (prefers-color-scheme: light) {
+  .controlxy-label {
+    fill: #000000;
+    stroke: #ffffff;
+  }
+  
+  .controlxy-handle--active {
+    filter: 
+      drop-shadow(0 0 4px rgba(0, 0, 0, 0.5))
+      drop-shadow(0 0 8px rgba(0, 100, 200, 0.4));
+  }
+}
+
+/* -----------------------------------------------------------------------------
+ * Reduced Motion Support
+ * ----------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .controlxy-handle {
+    transition: none;
+  }
+  
+  .controlxy-handle--active {
+    filter: none;
+    outline: 3px solid #00ffff;
+    outline-offset: 2px;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+ * Touch Device Optimizations
+ * ----------------------------------------------------------------------------- */
+@media (pointer: coarse) {
+  /* Larger touch targets on touch devices */
+  .controlxy-handle {
+    /* Increase effective touch area via transparent stroke */
+    stroke: transparent;
+    stroke-width: 20px;
+  }
+  
+  .controlxy-label {
+    font-size: 14px;
+  }
+}

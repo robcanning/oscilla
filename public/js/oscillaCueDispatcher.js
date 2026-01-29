@@ -68,6 +68,8 @@ import { handleOscCue } from "./cues/oscillaOSC.js";
 import { handleOscCtrlCue } from "./cues/oscillaOscCtrl.js";
 import { handleStopCue } from "./cues/oscillaStop.js";
 import { handleUICue } from "./oscillaUI.js";
+import { handleControlXYCue } from "./cues/oscillaControlXY.js";
+
 
 // import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
 
@@ -291,6 +293,7 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
   // ---------------------------
   switch (ast.type) {
 
+
   case "cueUi":
     console.log("[AST]", ast);
 
@@ -324,6 +327,11 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
     case "cueOsc": {
       handleOscCue(ast, cueElement, { fromCueTrigger: true });
       return; // osc has no children
+    }
+
+    case "cueControlXY": {
+      handleControlXYCue(cueElement, ast.args || [], { fromCueTrigger: true });
+      return;
     }
 
     // case "cueOscCtrl": {
@@ -451,7 +459,7 @@ function splitCueId(id) {
     .map(s => s.endsWith(")") ? s : s + ")");
 }
 
-const CUE_PREFIX_RE = /^(?:cue:)?(oscCtrl|osc|ui|video|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|audioPool|audioImpulse|synth|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;
+const CUE_PREFIX_RE = /^(?:cue:)?(oscCtrl|osc|controlXY|ui|video|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|audioPool|audioImpulse|synth|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;
 
 /**
  * assignCues(svgRoot)
@@ -521,6 +529,38 @@ export function assignCues(svgRoot, cuesArray = []) {
           continue;
         }
 
+        // =========================================
+        // controlXY is a control-plane cue.
+        // Register it immediately (no playhead semantics).
+        // =========================================
+        if (ast.type === "cueControlXY") {
+          const activateControlXY = () => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                try {
+                  console.log("[assignCues] controlXY → activating", cueExpr);
+                  handleControlXYCue(child, ast.args || [], { fromAssign: true });
+                  console.log("[assignCues] controlXY → activated successfully");
+                } catch (err) {
+                  console.error("[controlXY] activation failed:", err);
+                }
+              });
+            });
+          };
+
+          // Activate after DOM is fully ready
+          if (document.readyState === "complete") {
+            activateControlXY();
+          } else {
+            window.addEventListener("load", activateControlXY, { once: true });
+          }
+
+          // Skip adding to cues list - it's not playhead-triggered
+          walk(child);
+          continue;
+        }
+
+        
         // =========================================
         // o2p with trig:touch is IMMEDIATELY active
         // Register it now, don't wait for playhead
