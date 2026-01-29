@@ -369,8 +369,8 @@ function makeDraggable(element, handle) {
 // ============================================================================
 
 document.addEventListener('keydown', (e) => {
-  // Ctrl/Cmd + Shift + P = Toggle preset panel
-  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') {
+  // Alt + Shift + P = Toggle preset panel
+  if (e.altKey && e.shiftKey && e.key === '1') {
     e.preventDefault();
     togglePresetUI();
   }
@@ -390,4 +390,4 @@ window.controlXYPresetUI = {
   }
 };
 
-console.log("[controlXYPresetUI] Module loaded. Toggle with Ctrl+Shift+P or window.controlXYPresetUI.toggle()");
+console.log("[controlXYPresetUI] Module loaded. Toggle with Alt+Shift+P or window.controlXYPresetUI.toggle()");

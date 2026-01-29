@@ -1,3 +1,8 @@
+---
+title: ControlXY
+layout: docs_layout.njk
+---
+
 # controlXY — Multitouch XY Control Pad
 
 `controlXY` defines a **persistent, multitouch XY control surface** embedded directly in the score.

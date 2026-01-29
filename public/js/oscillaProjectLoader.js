@@ -11,7 +11,7 @@ import { setSpeed, applyDarkMode } from "./oscillaTransport.js";
 import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 import { preloadReuseBlocksFromPages } from "./oscillaPreProcessReuse.js";
 
-
+import "./oscillaControlXYPresets.js";  
 
 let loadInProgress = false;
 let projectMenuWired = false;
@@ -290,6 +290,7 @@ export async function loadProject(projectName, options = {}) {
     updateLoader("Initializing playback...", 85);
 
 
+
     // 5️⃣ Optional ?page override
     const params = new URLSearchParams(location.search);
     const directPage = params.get("page");
@@ -341,6 +342,15 @@ export async function loadProject(projectName, options = {}) {
     recordRecentProject(projectName);
     loadInProgress = false;
     hideLoader();
+
+// initialize controlXY - after everything else is ready
+if (typeof controlXYPresets?.init === "function") {
+  setTimeout(() => {
+    console.log(`[loadProject] ✅ Project "${projectName}" controlXYPresets initialised.`);
+    controlXYPresets.init(projectName);
+  }, 100);
+}
+
 
   }
 }

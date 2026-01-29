@@ -11,6 +11,8 @@ import {
   exportProject
 } from "./serverUtils.js";
 
+import { setupControlXYRoutes } from "./public/js/controlXYPresetsRoutes.mjs";
+
 // ------------------------------------------------------------
 // Node core (ESM-safe)
 // ------------------------------------------------------------
@@ -362,6 +364,13 @@ app.post("/api/upload-audio/:project", audioUpload.single("audio"), (req, res) =
     res.status(500).json({ error: err.message || "Upload failed" });
   }
 });
+
+
+// ------------------------------------------------------------
+// ControlXY Presets API
+// ------------------------------------------------------------
+
+setupControlXYRoutes(app, path.join(WRITE_DIR, "public", "scores"));
 
 
 // ---------------------------------------------
