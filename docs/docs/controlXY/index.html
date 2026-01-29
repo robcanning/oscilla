@@ -1,0 +1,285 @@
+<h1>controlXY — Multitouch XY Control Pad</h1>
+<p><code>controlXY</code> defines a <strong>persistent, multitouch XY control surface</strong> embedded directly in the score.
+It constrains one or more draggable handles to a bounding shape and continuously publishes normalized X/Y values for control and modulation.</p>
+<p>Unlike time-based cues, <code>controlXY</code> is <strong>always active</strong>, has <strong>no playhead semantics</strong>, and is evaluated at <strong>assign time</strong>.</p>
+<hr>
+<h2>Syntax</h2>
+<pre><code>controlXY(
+  uid: &lt;string&gt;,
+  handle: &lt;element-id&gt; | [&lt;id1&gt;, &lt;id2&gt;, ...],
+  bounds: &lt;element-id&gt; | &quot;self&quot;,
+  label: &lt;bool&gt;,
+  osc: &lt;bool|number&gt;,
+  oscAddr: &lt;string&gt;
+)
+</code></pre>
+<p>The cue expression is attached to the <strong>bounding element</strong> (or any element if using explicit <code>bounds</code>).</p>
+<hr>
+<h2>Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uid</code></td>
+<td>string</td>
+<td>yes</td>
+<td>—</td>
+<td>Unique identifier for the control pad. Used for publishing and parameter binding.</td>
+</tr>
+<tr>
+<td><code>handle</code></td>
+<td>element id or array</td>
+<td>yes</td>
+<td>—</td>
+<td>ID(s) of SVG element(s) that are draggable inside the bounds. Use array syntax for multitouch: <code>[dot1, dot2, dot3]</code></td>
+</tr>
+<tr>
+<td><code>bounds</code></td>
+<td>element id or &quot;self&quot;</td>
+<td>no</td>
+<td><code>self</code></td>
+<td>ID of the SVG element that defines the XY constraint area. Defaults to the element the DSL is attached to.</td>
+</tr>
+<tr>
+<td><code>label</code></td>
+<td>boolean</td>
+<td>no</td>
+<td><code>false</code></td>
+<td>Show live value labels above each handle.</td>
+</tr>
+<tr>
+<td><code>osc</code></td>
+<td><code>true | false | number</code></td>
+<td>no</td>
+<td><code>false</code></td>
+<td>Enable OSC output. If a number is given, it specifies throttle interval in ms. Default throttle ≈ 30 ms.</td>
+</tr>
+<tr>
+<td><code>oscAddr</code></td>
+<td>string</td>
+<td>no</td>
+<td><code>controlXY/&lt;uid&gt;</code></td>
+<td>Custom OSC address (without leading <code>/</code>).</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Coordinate System</h2>
+<ul>
+<li>
+<p><strong>X axis</strong></p>
+<ul>
+<li>Left = <code>0.0</code></li>
+<li>Right = <code>1.0</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Y axis</strong> (musical convention)</p>
+<ul>
+<li>Bottom = <code>0.0</code></li>
+<li>Top = <code>1.0</code></li>
+</ul>
+</li>
+</ul>
+<p>All values are <strong>normalized</strong> to the bounding box.</p>
+<hr>
+<h2>Published Signals</h2>
+<h3>Single Handle</h3>
+<pre><code>controlXY:&lt;uid&gt;.x        // 0.0 — 1.0
+controlXY:&lt;uid&gt;.y        // 0.0 — 1.0
+controlXY:&lt;uid&gt;.handle   // handle element id
+</code></pre>
+<h3>Multiple Handles</h3>
+<pre><code>controlXY:&lt;uid&gt;.&lt;handleId&gt;.x   // 0.0 — 1.0
+controlXY:&lt;uid&gt;.&lt;handleId&gt;.y   // 0.0 — 1.0
+</code></pre>
+<p>These signals can be used anywhere parameter binding is supported.</p>
+<hr>
+<h2>OSC Output (optional)</h2>
+<p>If OSC is enabled, each update sends:</p>
+<h3>Single Handle</h3>
+<pre><code>/&lt;oscAddr&gt; &lt;x&gt; &lt;y&gt;
+</code></pre>
+<h3>Multiple Handles</h3>
+<pre><code>/&lt;oscAddr&gt;/&lt;handleId&gt; &lt;x&gt; &lt;y&gt;
+</code></pre>
+<p>Example addresses:</p>
+<pre><code>/controlXY/pad1 0.42 0.87           # single handle
+/controlXY/pad1/dot1 0.42 0.87      # multitouch handle 1
+/controlXY/pad1/dot2 0.15 0.63      # multitouch handle 2
+</code></pre>
+<p>OSC output is throttled to avoid flooding.</p>
+<hr>
+<h2>Examples</h2>
+<h3>Basic Single Handle (bounds = self)</h3>
+<pre><code>xyPad controlXY(uid:pad1, handle:dot1)
+</code></pre>
+<ul>
+<li><code>xyPad</code> is the bounding element (rect, circle, path, group)</li>
+<li><code>dot1</code> is the draggable handle</li>
+<li>Bounds default to <code>xyPad</code> itself</li>
+</ul>
+<h3>Multiple Handles (Multitouch)</h3>
+<pre><code>xyPad controlXY(uid:pad1, handle:[dot1, dot2, dot3])
+</code></pre>
+<ul>
+<li>Three independent handles, each tracked separately</li>
+<li>Each publishes its own x/y values</li>
+</ul>
+<h3>With Value Labels</h3>
+<pre><code>xyPad controlXY(uid:pad1, handle:[dot1, dot2], label:true)
+</code></pre>
+<ul>
+<li>Shows live <code>x, y</code> values above each handle</li>
+</ul>
+<h3>With OSC Output</h3>
+<pre><code>xyPad controlXY(uid:pad1, handle:dot1, osc:true)
+</code></pre>
+<ul>
+<li>Sends OSC messages at default 30ms throttle</li>
+</ul>
+<h3>With Custom OSC Throttle</h3>
+<pre><code>xyPad controlXY(uid:pad1, handle:dot1, osc:50)
+</code></pre>
+<ul>
+<li>Sends OSC messages at 50ms throttle (20 updates/sec max)</li>
+</ul>
+<h3>Explicit Bounds Element</h3>
+<pre><code>anyElement controlXY(uid:pad1, bounds:customRect, handle:dot1)
+</code></pre>
+<ul>
+<li>DSL attached to <code>anyElement</code></li>
+<li>But handles are constrained to <code>customRect</code></li>
+</ul>
+<h3>Full Example</h3>
+<pre><code>controlArea controlXY(
+  uid: mixer,
+  handle: [fader1, fader2, fader3, fader4],
+  label: true,
+  osc: 30,
+  oscAddr: mixer/xy
+)
+</code></pre>
+<hr>
+<h2>CSS Styling</h2>
+<p>Handles receive CSS classes for styling:</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>When Applied</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.controlxy-handle</code></td>
+<td>Always (on all handles)</td>
+</tr>
+<tr>
+<td><code>.controlxy-handle--active</code></td>
+<td>While being dragged</td>
+</tr>
+</tbody>
+</table>
+<h3>Example CSS</h3>
+<pre><code class="language-css">.controlxy-handle {
+  cursor: grab;
+  transition: filter 0.15s ease-out;
+}
+
+.controlxy-handle--active {
+  cursor: grabbing;
+  filter: drop-shadow(0 0 8px rgba(100, 200, 255, 0.8));
+}
+
+.controlxy-label {
+  font-family: monospace;
+  font-size: 11px;
+  fill: #fff;
+}
+</code></pre>
+<h3>Color Variants</h3>
+<p>Add these classes to handles in your SVG for preset colors:</p>
+<ul>
+<li><code>.controlxy-handle--red</code></li>
+<li><code>.controlxy-handle--green</code></li>
+<li><code>.controlxy-handle--blue</code></li>
+<li><code>.controlxy-handle--yellow</code></li>
+<li><code>.controlxy-handle--cyan</code></li>
+<li><code>.controlxy-handle--magenta</code></li>
+</ul>
+<hr>
+<h2>Binding Examples</h2>
+<h3>Live Scaling</h3>
+<pre><code>scale(uid:box1, sx:pad1.x, sy:pad1.y)
+</code></pre>
+<h3>Synth Control</h3>
+<pre><code>synth(uid:s1, freq:pad1.x[100,2000], amp:pad1.y)
+</code></pre>
+<h3>Spatial / Navigation Control</h3>
+<pre><code>o2p(path:loopA, start:pad1.dot1.x, end:pad1.dot2.x)
+</code></pre>
+<h3>Multi-parameter Modulation</h3>
+<pre><code>rotate(uid:r1, values:pad1.dot1.y[0,360])
+color(uid:c1, hue:pad1.dot2.x[0,360])
+</code></pre>
+<hr>
+<h2>Authoring Guidelines</h2>
+<h3>Bounding Element</h3>
+<ul>
+<li>Should be a <code>&lt;rect&gt;</code>, <code>&lt;circle&gt;</code>, <code>&lt;ellipse&gt;</code>, or <code>&lt;path&gt;</code> with a valid bounding box</li>
+<li>Can have <code>fill: none</code> if you want it invisible</li>
+<li>Receives the DSL expression</li>
+</ul>
+<h3>Handle Elements</h3>
+<ul>
+<li>Must have a visible fill (or stroke)</li>
+<li>Should be relatively small (circles, dots, squares work well)</li>
+<li>Must NOT contain DSL expressions</li>
+<li>Will be repositioned to center of bounds on initialization</li>
+<li>Will receive pointer events automatically</li>
+</ul>
+<h3>SVG Structure Example</h3>
+<pre><code class="language-xml">&lt;g id=&quot;xyPad controlXY(uid:pad1, handle:[dot1, dot2], label:true)&quot;&gt;
+  &lt;rect id=&quot;padBounds&quot; x=&quot;100&quot; y=&quot;100&quot; width=&quot;400&quot; height=&quot;300&quot; fill=&quot;#333&quot;/&gt;
+&lt;/g&gt;
+&lt;circle id=&quot;dot1&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;15&quot; fill=&quot;#ff4444&quot;/&gt;
+&lt;circle id=&quot;dot2&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;15&quot; fill=&quot;#44ff44&quot;/&gt;
+</code></pre>
+<p>Note: Handles can be defined anywhere in the SVG — they don't need to be children of the bounds element.</p>
+<hr>
+<h2>Behaviour</h2>
+<ul>
+<li>Handles can be freely dragged <strong>only inside</strong> the bounding element</li>
+<li>The cue is activated <strong>immediately on load</strong></li>
+<li>No playhead intersection required</li>
+<li>No animation, duration, easing, or timing parameters</li>
+<li>Multitouch: each finger controls the nearest available handle</li>
+<li>Handles are brought to front (z-order) on initialization</li>
+</ul>
+<hr>
+<h2>Cleanup</h2>
+<p>The control stores a cleanup function accessible via:</p>
+<pre><code class="language-javascript">element._controlXY.cleanup()
+</code></pre>
+<p>This removes all event listeners and labels if needed.</p>
+<hr>
+<h2>Notes</h2>
+<ul>
+<li><code>controlXY</code> is a <strong>control-plane cue</strong>, not a temporal cue</li>
+<li>It is registered during <code>assignCues()</code>, not via the playhead dispatcher</li>
+<li>Handle positions are persisted only during the session (not saved)</li>
+<li>Initial position is always center of bounds</li>
+<li>Works with touch screens, mice, and styluses (via Pointer Events API)</li>
+</ul>
+<hr>
+<h2>Summary</h2>
+<p><code>controlXY</code> turns the score itself into a tactile controller surface, enabling direct spatial control of sound, animation, and interaction parameters without leaving the notation. With multitouch support, multiple performers or parameters can be controlled simultaneously.</p>
