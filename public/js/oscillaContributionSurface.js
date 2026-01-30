@@ -2411,8 +2411,20 @@ function makeMarkerEl(marker, onEdit) {
     el.className = "osc-marker";
     el.dataset.id = marker.id;
     
+    // Add vertical class if enabled
+    if (marker.vertical) {
+        el.classList.add("osc-marker--vertical");
+    }
+    
     // Position at marker x coordinate
     el.style.left = `${marker.placement.x}px`;
+    
+    // Get the score height for the marker line
+    // Use the SVG height or fallback to viewport height
+    const scoreContainer = document.getElementById("scoreContainer");
+    const svg = scoreContainer?.querySelector("svg");
+    const scoreHeight = svg?.getBoundingClientRect().height || window.innerHeight;
+    el.style.height = `${scoreHeight}px`;
     
     // Create the vertical line
     const line = document.createElement("div");
@@ -2423,6 +2435,10 @@ function makeMarkerEl(marker, onEdit) {
     const label = document.createElement("div");
     label.className = "osc-marker-label";
     label.textContent = marker.text || "Marker";
+    
+    // Add tooltip with marker name
+    label.title = marker.text || "Marker";
+    
     el.appendChild(label);
     
     // -----------------------------------------------
@@ -2517,7 +2533,7 @@ function openMarkerEditor(marker) {
     
     // Position near click, but keep on screen
     const maxX = window.innerWidth - 250;
-    const maxY = window.innerHeight - 180;
+    const maxY = window.innerHeight - 200;
     editor.style.left = `${Math.max(20, Math.min(x + 10, maxX))}px`;
     editor.style.top = `${Math.max(20, Math.min(y + 10, maxY))}px`;
     
@@ -2538,6 +2554,23 @@ function openMarkerEditor(marker) {
     input.value = marker.text || "";
     input.placeholder = "Marker label…";
     editor.appendChild(input);
+    
+    // Vertical checkbox row
+    const verticalRow = document.createElement("div");
+    verticalRow.className = "osc-marker-editor-checkbox-row";
+    
+    const verticalChk = document.createElement("input");
+    verticalChk.type = "checkbox";
+    verticalChk.id = "marker-vertical-chk";
+    verticalChk.checked = !!marker.vertical;
+    
+    const verticalLabel = document.createElement("label");
+    verticalLabel.htmlFor = "marker-vertical-chk";
+    verticalLabel.textContent = "Drop Vertical (full height line)";
+    
+    verticalRow.appendChild(verticalChk);
+    verticalRow.appendChild(verticalLabel);
+    editor.appendChild(verticalRow);
     
     // Actions
     const actions = document.createElement("div");
@@ -2561,7 +2594,11 @@ function openMarkerEditor(marker) {
     saveBtn.textContent = "Save";
     saveBtn.onclick = () => {
         const newText = input.value.trim() || "Marker";
-        updateAnnotation(marker.id, { text: newText });
+        const isVertical = verticalChk.checked;
+        updateAnnotation(marker.id, { 
+            text: newText,
+            vertical: isVertical
+        });
         closeMarkerEditor();
     };
     
@@ -2604,12 +2641,23 @@ function closeMarkerEditor() {
  * This is the main entry point for creating markers
  */
 export function dropMarker() {
-    // Get playhead position
+    // Get playhead position (in score/playhead coordinate space)
     const playheadX = window.playheadX;
     if (typeof playheadX !== "number" || !isFinite(playheadX)) {
         console.warn("[marker] Cannot drop marker: invalid playhead position");
         return;
     }
+    
+    // Get scale factor - placement coordinates are in visual/DOM space
+    // playheadX is in score space, so we need to multiply by scale
+    const scale = (typeof window.localScale === "number" && 
+                   isFinite(window.localScale) && 
+                   window.localScale > 0) 
+                   ? window.localScale 
+                   : 1;
+    
+    // Convert playhead position to placement coordinate space
+    const placementX = playheadX * scale;
     
     // Get current mode context
     const { mode, pageId } = getModeContext();
@@ -2631,13 +2679,15 @@ export function dropMarker() {
         
         placement: {
             space: "score",
-            x: playheadX,
+            x: placementX,
             y: 0  // Fixed per spec
         }
     };
     
     // Add via standard annotation pipeline
     addAnnotation(marker);
+    
+    console.log("[marker] Dropped marker at playheadX:", playheadX, "placementX:", placementX, "scale:", scale);
     
     console.log("[marker] Dropped marker at x:", playheadX);
     

@@ -771,17 +771,17 @@ svg * {
 
 /* Score (SVG) styling */
 
-/* body.inverted #score {
+body.inverted #score {
   filter: invert(1);
-} */
+}
 
-/* #score {
-  position: block;
+#score {
+  position: absolute;
   top: 0;
   left: 0;
   transition: transform 0.3s ease-in-out;
-} 
-*/
+  /* ✅ Smooth movement */
+}
 
 
 /* Fullscreen mode for the score clock */
@@ -2120,16 +2120,16 @@ sl-menu-item {
  * 3. NIGHT MODE / INVERT
  * ============================================================================ */
 
-/* body.inverted #score {
+body.inverted #score {
   filter: invert(1);
-} */
+}
 
-/* #score {
+#score {
   position: absolute;
   top: 0;
   left: 0;
   transition: transform 0.3s ease-in-out;
-} */
+}
 
 /* ============================================================================
  * 4. PROJECT MODAL
@@ -2804,6 +2804,7 @@ body.inverted #controls {
 .osc-marker {
   position: absolute;
   top: 0;
+  bottom: 0;              /* Stretch to full height of score layer */
   pointer-events: none;
   z-index: 999997;
 }
@@ -2815,6 +2816,13 @@ body.inverted #controls {
   width: 2px;
   background: rgba(255, 100, 100, 0.85);
   box-shadow: 0 0 4px rgba(255, 100, 100, 0.4);
+}
+
+/* Vertical marker variant - full height, subtle line */
+.osc-marker--vertical .osc-marker-line {
+  width: 1px;
+  background: rgba(255, 100, 100, 0.5);
+  box-shadow: none;
 }
 
 .osc-marker-label {
@@ -2879,7 +2887,7 @@ body.inverted #controls {
   background: rgba(30, 30, 30, 0.95);
   border-radius: 10px;
   padding: 12px;
-  min-width: 200px;
+  min-width: 220px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -2914,6 +2922,31 @@ body.inverted #controls {
 .osc-marker-editor input[type="text"]:focus {
   outline: none;
   border-color: rgba(255, 100, 100, 0.6);
+}
+
+/* Checkbox row styling */
+.osc-marker-editor-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+
+.osc-marker-editor-checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: rgba(255, 100, 100, 0.9);
+}
+
+.osc-marker-editor-checkbox-row label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  user-select: none;
 }
 
 .osc-marker-editor-actions {
