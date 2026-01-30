@@ -1048,7 +1048,6 @@ function resumeScrollScore() {
 }
 
 
-// TODO is this used anymore of left over from old repeat cue
 //////////////////////////////////////////////////
 export const jumpToCueId = (id) => {
   let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"))
@@ -1059,15 +1058,15 @@ export const jumpToCueId = (id) => {
     return;
   }
 
-  // Extract world-X robustly
-  let targetX = 0;
-  if (target.x?.baseVal) {                         // <rect>, <use>, <text>
-    targetX = target.x.baseVal.value;
-  } else if (target.cx?.baseVal) {                 // <circle>, <ellipse>
-    targetX = target.cx.baseVal.value;
-  } else if (typeof target.getAttribute === "function") {
-    targetX = parseFloat(target.getAttribute("x")) || 0;
-  }
+  // Get the actual rendered position using getBoundingClientRect
+  const svg = document.querySelector("#scoreInner svg");
+  const svgRect = svg.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  
+  // Calculate world X from screen position
+  const screenX = targetRect.x - svgRect.x;
+  const localScale = svgRect.width / window.scoreWidth;
+  const targetX = screenX / localScale;
 
   // Set world playhead
   window.playheadX = targetX;
@@ -1084,14 +1083,12 @@ export const jumpToCueId = (id) => {
   if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
     window.socket.send(JSON.stringify({
       type: "jump",
-      playheadX: window.playheadX,   // send world coordinate
+      playheadX: window.playheadX,
       elapsedTime: window.elapsedTime,
     }));
   }
 
   window.resetAnnotationPlayheadTriggers?.();
-
-  // updatePosition();
 };
 
 window.jumpToCueId = jumpToCueId;

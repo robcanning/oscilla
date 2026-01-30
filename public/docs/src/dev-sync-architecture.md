@@ -1,5 +1,5 @@
 ---
-title: Synch Architecture
+title: Sync Architecture
 layout: docs_layout.njk
 ---
 
@@ -48,7 +48,9 @@ Both show the SAME score content under the playhead.
 <div id="scoreContainer">      <!-- overflow:hidden, no native scroll -->
   <div id="scrollStage">       <!-- translated via transform -->
     <div id="scoreInner">
-      <svg>...</svg>           <!-- height:100vh, width:auto -->
+      <div class="oscilla-score-inner">
+        <svg id="score">...</svg>  <!-- height:100vh, width:auto -->
+      </div>
     </div>
   </div>
 </div>
@@ -57,11 +59,137 @@ Both show the SAME score content under the playhead.
 
 ---
 
+## Critical CSS Requirements
+
+```css
+#scoreContainer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+#scrollStage {
+  display: block;
+  width: max-content;
+  transform-origin: left top;
+  will-change: transform;
+}
+
+#scoreInner {
+  display: inline-block;
+  width: max-content;
+}
+
+#scoreInner svg {
+  display: block;
+  width: auto;
+  height: 100vh !important;
+}
+```
+
+### ⚠️ CSS Pitfalls
+
+| Problem | Cause | Symptom |
+|---------|-------|---------|
+| **SVG `position: absolute`** | Removes SVG from document flow | Parent containers collapse to 0 width, scale calculations may still work but layout breaks |
+| **`transition` on transform** | Animates score movement | Visual lag, playhead appears offset during motion |
+| **Missing `display: block` on SVG** | Inline element whitespace | Unexpected gaps, measurement errors |
+| **`max-width` constraints** | Limits SVG sizing | Score doesn't scale correctly to viewport |
+
+**Debug check**: All parent containers should have non-zero width:
+```javascript
+const svg = document.querySelector("#scoreInner svg");
+const stage = document.getElementById("scrollStage");
+const scoreInner = document.getElementById("scoreInner");
+
+// ALL of these should equal the SVG width, NOT zero
+console.log("svg:", svg.getBoundingClientRect().width);
+console.log("scoreInner:", scoreInner.getBoundingClientRect().width);
+console.log("scrollStage:", stage.getBoundingClientRect().width);
+```
+
+---
+
+## Coordinate Extraction — CRITICAL
+
+### The Problem
+
+SVG elements can be positioned in many ways:
+- `x`, `y` attributes
+- `cx`, `cy` attributes (circles)
+- `transform="translate(x, y)"`
+- Nested inside transformed `<g>` groups
+- `shape-inside` text flowing into shapes (Inkscape)
+- Combinations of all the above
+
+**`getBBox()` and `getCTM()` do NOT reliably give world coordinates** for complex elements like Inkscape text with `shape-inside`.
+
+### ✅ Correct Method: Use `getBoundingClientRect()`
+
+Always extract world coordinates by measuring actual rendered position:
+
+```javascript
+function getWorldX(element, svgElement) {
+  const svgRect = svgElement.getBoundingClientRect();
+  const elRect = element.getBoundingClientRect();
+  
+  // Screen position relative to SVG left edge
+  const screenX = elRect.x - svgRect.x;
+  
+  // Convert to world coordinates
+  const localScale = svgRect.width / window.scoreWidth;
+  const worldX = screenX / localScale;
+  
+  return worldX;
+}
+
+function getWorldWidth(element, svgElement) {
+  const svgRect = svgElement.getBoundingClientRect();
+  const elRect = element.getBoundingClientRect();
+  const localScale = svgRect.width / window.scoreWidth;
+  return elRect.width / localScale;
+}
+```
+
+### ❌ Incorrect Methods (DO NOT USE)
+
+```javascript
+// WRONG: getBBox returns local coordinates, CTM doesn't account for all transforms
+const bbox = element.getBBox();
+const matrix = element.getCTM();
+let x = bbox.x + matrix.e;  // UNRELIABLE
+
+// WRONG: Parsing transform attribute misses shape-inside offsets
+const transform = element.getAttribute("transform");
+const match = transform.match(/translate\(([\d.]+)/);  // INCOMPLETE
+
+// WRONG: x attribute may not exist (text uses transform instead)
+const x = element.x?.baseVal?.value;  // MAY BE UNDEFINED
+```
+
+### Why This Matters
+
+Inkscape often creates text elements like:
+```xml
+<text id="rehearsal_A" 
+      transform="translate(1764.35, 557.56)"
+      style="shape-inside:url(#rect122346)">
+  A
+</text>
+```
+
+- The `transform` says X = 1764
+- But `shape-inside` references a rect that adds more offset
+- **Actual rendered X = 2032** (268 units different!)
+- This error compounds: elements further right have larger errors
+
+---
+
 ## Core Functions
 
 ### scrollToPlayheadVisual() — oscillaTransport.js
 
-The main sync function. Measures local SVG width and applies transform:
+Converts world `playheadX` to screen position and applies transform:
 
 ```javascript
 export function scrollToPlayheadVisual() {
@@ -80,79 +208,44 @@ export function scrollToPlayheadVisual() {
   window.localRenderedWidth = localRenderedWidth;
 
   const worldPx = window.playheadX * localScale;
-  const pad = container.clientWidth / 2;
-  const translateX = pad - worldPx;
-
+  const viewportWidth = container.clientWidth;
+  const halfViewport = viewportWidth / 2;
+  
+  let translateX = halfViewport - worldPx;
+  
+  // Clamp at edges...
   stage.style.transform = `translate3d(${translateX}px, 0, 0)`;
 }
 ```
 
-### Sync Message Handler — app.js
+### extractScoreElements() — oscillaScoreSetup.js
 
-Receives server state, stores world values, triggers visual update:
-
-```javascript
-case "sync": {
-  window.scoreWidth = state.scoreWidth;
-  window.duration = state.duration;
-  window.elapsedTime = state.elapsedTime;
-  window.isPlaying = state.isPlaying;
-  window.serverSyncPlayheadX = state.playheadX;
-  
-  scrollToPlayheadVisual();
-}
-```
-
-### Animation Loop — app.js
-
-Advances playhead locally, applies drift correction, updates visual:
+Extracts cue and rehearsal mark positions. **Must use `getBoundingClientRect()`**:
 
 ```javascript
-window.animate = (currentTime) => {
-  // Advance playhead in world units
-  window.playheadX += (dt * speedMultiplier / duration) * scoreWidth;
-  
-  // Drift correction against server
-  if (window.serverSyncPlayheadX != null) {
-    const drift = window.serverSyncPlayheadX - window.playheadX;
-    if (Math.abs(drift) > scoreWidth * 0.05) {
-      window.playheadX = window.serverSyncPlayheadX; // snap
-    } else {
-      window.playheadX += drift * 1.3 * dt; // smooth
+export const extractScoreElements = (svgElement) => {
+  const svgRect = svgElement.getBoundingClientRect();
+  const localScale = svgRect.width / window.scoreWidth;
+
+  const elements = svgElement.querySelectorAll(
+    "[id^='rehearsal_'], [id^='cue'], [id^='anchor-']"
+  );
+
+  elements.forEach((element) => {
+    // CORRECT: Use getBoundingClientRect for true position
+    const elRect = element.getBoundingClientRect();
+    const screenX = elRect.x - svgRect.x;
+    const absoluteX = screenX / localScale;
+    const worldWidth = elRect.width / localScale;
+
+    if (element.id.startsWith("rehearsal_")) {
+      const id = element.id.replace("rehearsal_", "");
+      newRehearsalMarks[id] = { x: absoluteX };
+    } else if (element.id.startsWith("cue")) {
+      newCues.push({ id: element.id, x: absoluteX, width: worldWidth });
     }
-  }
-  
-  scrollToPlayheadVisual();
-  requestAnimationFrame(window.animate);
+  });
 };
-```
-
----
-
-## Critical CSS
-
-```css
-#scoreContainer {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-}
-
-#scrollStage {
-  width: max-content;
-  transform-origin: left top;
-  will-change: transform;
-}
-
-#scoreInner {
-  display: inline-block;
-  width: max-content;
-}
-
-#scoreInner svg {
-  width: auto;
-  height: 100vh !important;
-}
 ```
 
 ---
@@ -179,25 +272,99 @@ Server broadcasts state at ~4Hz. Clients receive `playheadX` and convert to loca
 
 | File | Role |
 |------|------|
-| `oscillaTransport.js` | `scrollToPlayheadVisual()` — computes local scale, applies transform |
-| `app.js` | Sync handler, animation loop, drift correction |
+| `oscillaTransport.js` | `scrollToPlayheadVisual()` — world→screen conversion, applies transform |
+| `oscillaScoreSetup.js` | `extractScoreElements()` — extracts cue/rehearsal world positions |
+| `oscillaSystemRAF.js` | Animation loop, drift correction |
+| `app.js` | WebSocket sync handler |
 | `server.js` | Broadcasts `playheadX` and `scoreWidth` to all clients |
-| `styles.css` | SVG sizing (`height: 100vh`), transform properties |
+| `styles.css` | SVG sizing (`height: 100vh`), container layout |
 
 ---
 
 ## Debugging
 
+### Quick Health Check
+
 ```javascript
-// Run in console on each client:
-console.log("scoreWidth:", window.scoreWidth);           // should match
-console.log("playheadX:", window.playheadX);             // should be close
-console.log("localScale:", window.localScale);           // will differ (OK)
-console.log("localRenderedWidth:", window.localRenderedWidth); // will differ (OK)
+const svg = document.querySelector("#scoreInner svg");
+const viewBox = svg.getAttribute("viewBox").split(" ").map(Number);
+
+console.log("=== Sync Health Check ===");
+console.log("ViewBox width:", viewBox[2]);
+console.log("window.scoreWidth:", window.scoreWidth);
+console.log("Match:", viewBox[2] === window.scoreWidth ? "✅" : "❌");
+
+console.log("\nRendered width:", svg.getBoundingClientRect().width);
+console.log("localScale:", window.localScale);
+
+// Expected width from height
+const expectedWidth = window.innerHeight * (viewBox[2] / viewBox[3]);
+const actualWidth = svg.getBoundingClientRect().width;
+console.log("Expected width:", expectedWidth);
+console.log("Actual width:", actualWidth);
+console.log("Match:", Math.abs(expectedWidth - actualWidth) < 1 ? "✅" : "❌");
 ```
 
-| Symptom | Check |
-|---------|-------|
-| Playheads offset | `scoreWidth` same on all clients? |
-| Transform not applied | `localRenderedWidth > 0`? |
-| Playhead jumps | `serverSyncPlayheadX` valid? |
+### Test Rehearsal Mark Alignment
+
+```javascript
+function testRehearsalAlignment(markId) {
+  const cueEl = document.getElementById('rehearsal_' + markId);
+  const svg = document.querySelector("#scoreInner svg");
+  const svgRect = svg.getBoundingClientRect();
+  const cueRect = cueEl.getBoundingClientRect();
+  
+  // Get true world position
+  const screenX = cueRect.x - svgRect.x;
+  const actualWorldX = screenX / window.localScale;
+  
+  console.log(`=== Testing rehearsal_${markId} ===`);
+  console.log("Actual world X:", actualWorldX);
+  
+  // Jump to it
+  window.playheadX = actualWorldX;
+  window.scrollToPlayheadVisual();
+  
+  // Verify alignment
+  setTimeout(() => {
+    const newCueRect = cueEl.getBoundingClientRect();
+    const playheadEl = document.getElementById('playhead');
+    const playheadRect = playheadEl.getBoundingClientRect();
+    const diff = newCueRect.x - playheadRect.x;
+    console.log("Alignment error (px):", diff);
+    console.log("Aligned:", Math.abs(diff) < 5 ? "✅" : "❌");
+  }, 100);
+}
+
+// Usage: testRehearsalAlignment('A');
+```
+
+### Common Issues
+
+| Symptom | Likely Cause | Check |
+|---------|--------------|-------|
+| Playhead lands behind marks, error increases with position | Wrong coordinate extraction method | Using `getBBox()`/`getCTM()` instead of `getBoundingClientRect()` |
+| Works on one device, broken on others | CSS affecting SVG sizing | Check SVG `position` is not `absolute` |
+| Parent containers have 0 width | SVG removed from document flow | Check for `position: absolute/fixed` on SVG |
+| Score jumps/jitters during playback | Transform transition CSS | Remove any `transition` on `#scrollStage` or `#score` |
+| `scoreWidth` doesn't match viewBox | Server caching old value | Send `reset_project_state` when loading new score |
+
+---
+
+## Coordinate System Summary
+
+```
+WORLD SPACE (viewBox units)          SCREEN SPACE (pixels)
+─────────────────────────────        ─────────────────────────
+scoreWidth = 40000                   localRenderedWidth = 37539px
+playheadX = 20000                    screenX = 20000 × 0.938 = 18769px
+
+         localScale = localRenderedWidth / scoreWidth
+                    = 37539 / 40000
+                    = 0.938
+
+World → Screen:  screenX = worldX × localScale
+Screen → World:  worldX = screenX / localScale
+```
+
+**Golden Rule**: Always store and sync positions in **world coordinates**. Convert to screen coordinates only at render time.

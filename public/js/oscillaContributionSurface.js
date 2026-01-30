@@ -2398,6 +2398,260 @@ const state = {
     socketPollId: null,
 };
 
+// =============================================================
+// DROP MARKER SYSTEM
+// =============================================================
+
+/**
+ * Create a marker DOM element
+ * Markers are vertical lines with draggable labels
+ */
+function makeMarkerEl(marker, onEdit) {
+    const el = document.createElement("div");
+    el.className = "osc-marker";
+    el.dataset.id = marker.id;
+    
+    // Position at marker x coordinate
+    el.style.left = `${marker.placement.x}px`;
+    
+    // Create the vertical line
+    const line = document.createElement("div");
+    line.className = "osc-marker-line";
+    el.appendChild(line);
+    
+    // Create the label (drag handle)
+    const label = document.createElement("div");
+    label.className = "osc-marker-label";
+    label.textContent = marker.text || "Marker";
+    el.appendChild(label);
+    
+    // -----------------------------------------------
+    // Drag logic - label is the sole drag handle
+    // Only updates placement.x (horizontal position)
+    // -----------------------------------------------
+    let dragging = false;
+    let moved = false;
+    let startX = 0;
+    let baseX = 0;
+    
+    function onPointerDown(e) {
+        // Ignore if clicking on input elements
+        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        dragging = true;
+        moved = false;
+        startX = e.clientX;
+        baseX = marker.placement.x;
+        
+        label.classList.add("dragging");
+        
+        window.addEventListener("mousemove", onPointerMove);
+        window.addEventListener("mouseup", onPointerUp);
+    }
+    
+    function onPointerMove(e) {
+        if (!dragging) return;
+        
+        const dx = e.clientX - startX;
+        if (Math.abs(dx) > 3) moved = true;
+        
+        // Update only x position
+        marker.placement.x = Math.max(0, baseX + dx);
+        el.style.left = `${marker.placement.x}px`;
+    }
+    
+    function onPointerUp() {
+        if (!dragging) return;
+        
+        dragging = false;
+        label.classList.remove("dragging");
+        
+        window.removeEventListener("mousemove", onPointerMove);
+        window.removeEventListener("mouseup", onPointerUp);
+        
+        // Persist if moved
+        if (moved) {
+            updateAnnotation(marker.id, { 
+                placement: { ...marker.placement } 
+            });
+        }
+    }
+    
+    label.addEventListener("mousedown", onPointerDown);
+    
+    // Click to edit (if not dragged)
+    label.addEventListener("click", (e) => {
+        if (moved) return;
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Store screen position for editor placement
+        marker._lastScreenX = e.clientX;
+        marker._lastScreenY = e.clientY;
+        
+        onEdit?.(marker);
+    });
+    
+    return el;
+}
+
+/**
+ * Open the marker editor popup
+ */
+function openMarkerEditor(marker) {
+    // Close any existing editor
+    closeMarkerEditor();
+    
+    // Prevent keyboard shortcuts while editing
+    window.oscillaTextInputActive = true;
+    
+    const x = marker._lastScreenX ?? window.innerWidth / 2;
+    const y = marker._lastScreenY ?? window.innerHeight / 2;
+    
+    const editor = document.createElement("div");
+    editor.className = "osc-marker-editor";
+    editor.id = "osc-marker-editor-active";
+    
+    // Position near click, but keep on screen
+    const maxX = window.innerWidth - 250;
+    const maxY = window.innerHeight - 180;
+    editor.style.left = `${Math.max(20, Math.min(x + 10, maxX))}px`;
+    editor.style.top = `${Math.max(20, Math.min(y + 10, maxY))}px`;
+    
+    // Header
+    const header = document.createElement("div");
+    header.className = "osc-marker-editor-header";
+    
+    const title = document.createElement("div");
+    title.className = "osc-marker-editor-title";
+    title.textContent = "Edit Marker";
+    header.appendChild(title);
+    
+    editor.appendChild(header);
+    
+    // Label input
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = marker.text || "";
+    input.placeholder = "Marker label…";
+    editor.appendChild(input);
+    
+    // Actions
+    const actions = document.createElement("div");
+    actions.className = "osc-marker-editor-actions";
+    
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "cancel-btn";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.onclick = () => closeMarkerEditor();
+    
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.onclick = () => {
+        deleteAnnotation(marker.id);
+        closeMarkerEditor();
+    };
+    
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "save-btn";
+    saveBtn.textContent = "Save";
+    saveBtn.onclick = () => {
+        const newText = input.value.trim() || "Marker";
+        updateAnnotation(marker.id, { text: newText });
+        closeMarkerEditor();
+    };
+    
+    actions.appendChild(cancelBtn);
+    actions.appendChild(deleteBtn);
+    actions.appendChild(saveBtn);
+    editor.appendChild(actions);
+    
+    // Handle Enter key
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            saveBtn.click();
+        } else if (e.key === "Escape") {
+            e.preventDefault();
+            closeMarkerEditor();
+        }
+    });
+    
+    document.body.appendChild(editor);
+    
+    // Focus input and select text
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 10);
+}
+
+/**
+ * Close the marker editor
+ */
+function closeMarkerEditor() {
+    window.oscillaTextInputActive = false;
+    const existing = document.getElementById("osc-marker-editor-active");
+    if (existing) existing.remove();
+}
+
+/**
+ * Drop a marker at the current playhead position
+ * This is the main entry point for creating markers
+ */
+export function dropMarker() {
+    // Get playhead position
+    const playheadX = window.playheadX;
+    if (typeof playheadX !== "number" || !isFinite(playheadX)) {
+        console.warn("[marker] Cannot drop marker: invalid playhead position");
+        return;
+    }
+    
+    // Get current mode context
+    const { mode, pageId } = getModeContext();
+    
+    // Create marker item
+    const marker = {
+        id: ulidLike(),
+        kind: "marker",
+        text: "Marker",
+        scope: "shared",  // Markers are shared by default per spec
+        
+        createdAt: nowMs(),
+        updatedAt: nowMs(),
+        
+        anchor: {
+            mode: mode,
+            ...(mode === "page" && pageId ? { pageId } : {})
+        },
+        
+        placement: {
+            space: "score",
+            x: playheadX,
+            y: 0  // Fixed per spec
+        }
+    };
+    
+    // Add via standard annotation pipeline
+    addAnnotation(marker);
+    
+    console.log("[marker] Dropped marker at x:", playheadX);
+    
+    return marker;
+}
+
+/**
+ * Clear markers from a layer
+ */
+function clearMarkers(layer) {
+    if (!layer) return;
+    layer.querySelectorAll(".osc-marker").forEach((n) => n.remove());
+}
+
 function clearPins(layer) {
     if (!layer) return;
     layer.querySelectorAll(".osc-anno-pin").forEach((n) => n.remove());
@@ -2419,8 +2673,14 @@ function shouldRenderItem(item) {
 
 function renderAll() {
     // layers may not exist yet
-    if (state.scoreLayer) clearPins(state.scoreLayer);
-    if (state.pageLayer) clearPins(state.pageLayer);
+    if (state.scoreLayer) {
+        clearPins(state.scoreLayer);
+        clearMarkers(state.scoreLayer);
+    }
+    if (state.pageLayer) {
+        clearPins(state.pageLayer);
+        clearMarkers(state.pageLayer);
+    }
 
     for (const item of state.items) {
         if (!shouldRenderItem(item)) continue;
@@ -2431,11 +2691,16 @@ function renderAll() {
 
         if (!layer) continue;
 
-        const pin = makePinEl(item, (ann) => openEditForExisting(ann));
-        layer.appendChild(pin);
-        positionAnnotation(pin, item);
-        pin._renderExtent?.();
-
+        // Handle markers separately from regular annotations
+        if (item.kind === "marker") {
+            const markerEl = makeMarkerEl(item, (m) => openMarkerEditor(m));
+            layer.appendChild(markerEl);
+        } else {
+            const pin = makePinEl(item, (ann) => openEditForExisting(ann));
+            layer.appendChild(pin);
+            positionAnnotation(pin, item);
+            pin._renderExtent?.();
+        }
     }
 }
 function closeEditor() {
@@ -2836,6 +3101,16 @@ function attachEventListeners() {
 
     const page = getPageContentContainer();
     if (page) page.addEventListener("click", onPageClick, true);
+    
+    // Wire up Drop Marker button
+    const dropMarkerBtn = document.getElementById("drop-marker-button");
+    if (dropMarkerBtn) {
+        dropMarkerBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropMarker();
+        });
+    }
 }
 
 
@@ -3018,7 +3293,13 @@ export function initOscillaAnnotations(opts = {}) {
             if (item?.kind === "trigger") executeTrigger(item, null);
         },
         clearTriggerPools: () => triggerPools.clear(),
+        // Marker API
+        dropMarker: dropMarker,
+        getMarkers: () => state.items.filter(i => i.kind === "marker"),
     };
+    
+    // Also expose dropMarker directly on window for easy button binding
+    window.dropMarker = dropMarker;
 
     console.log("[annotations] Initialized:", {
         project: state.project,

@@ -771,17 +771,17 @@ svg * {
 
 /* Score (SVG) styling */
 
-body.inverted #score {
+/* body.inverted #score {
   filter: invert(1);
-}
+} */
 
-#score {
-  position: absolute;
+/* #score {
+  position: block;
   top: 0;
   left: 0;
   transition: transform 0.3s ease-in-out;
-  /* ✅ Smooth movement */
-}
+} 
+*/
 
 
 /* Fullscreen mode for the score clock */
@@ -2120,16 +2120,16 @@ sl-menu-item {
  * 3. NIGHT MODE / INVERT
  * ============================================================================ */
 
-body.inverted #score {
+/* body.inverted #score {
   filter: invert(1);
-}
+} */
 
-#score {
+/* #score {
   position: absolute;
   top: 0;
   left: 0;
   transition: transform 0.3s ease-in-out;
-}
+} */
 
 /* ============================================================================
  * 4. PROJECT MODAL
@@ -2794,4 +2794,170 @@ body.inverted #controls {
 #stop-audio-button svg rect {
   fill: #1a1a1a;
   stroke: #1a1a1a;
+}
+
+/* ============================================================================
+ * DROP MARKER SYSTEM
+ * Vertical score markers for rehearsal structure
+ * ============================================================================ */
+
+.osc-marker {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+  z-index: 999997;
+}
+
+.osc-marker-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 100, 100, 0.85);
+  box-shadow: 0 0 4px rgba(255, 100, 100, 0.4);
+}
+
+.osc-marker-label {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+  
+  /* Visual styling */
+  background: rgba(255, 100, 100, 0.95);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  
+  /* Subtle shadow for depth */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  
+  /* Smooth transitions */
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.osc-marker-label:hover {
+  background: rgba(255, 120, 120, 1);
+  transform: translateX(-50%) scale(1.05);
+}
+
+.osc-marker-label:active,
+.osc-marker-label.dragging {
+  cursor: grabbing;
+  background: rgba(255, 80, 80, 1);
+  transform: translateX(-50%) scale(1.02);
+}
+
+/* Marker label edit state */
+.osc-marker-label.editing {
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  border: 2px solid rgba(255, 100, 100, 0.8);
+}
+
+/* Drop Marker button styling */
+#drop-marker-button {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+#drop-marker-button.active {
+  background: linear-gradient(180deg, #ffe0e0 0%, #ffd0d0 100%) !important;
+  border-color: rgba(255, 100, 100, 0.5) !important;
+}
+
+/* Marker editor popup */
+.osc-marker-editor {
+  position: fixed;
+  z-index: 1000000;
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 10px;
+  padding: 12px;
+  min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.osc-marker-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.osc-marker-editor-title {
+  color: rgba(255, 100, 100, 0.95);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.osc-marker-editor input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.osc-marker-editor input[type="text"]:focus {
+  outline: none;
+  border-color: rgba(255, 100, 100, 0.6);
+}
+
+.osc-marker-editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+}
+
+.osc-marker-editor-actions button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.osc-marker-editor-actions .save-btn {
+  background: rgba(255, 100, 100, 0.9);
+  border: 1px solid rgba(255, 100, 100, 0.6);
+  color: white;
+}
+
+.osc-marker-editor-actions .save-btn:hover {
+  background: rgba(255, 120, 120, 1);
+}
+
+.osc-marker-editor-actions .delete-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 80, 80, 0.5);
+  color: rgba(255, 150, 150, 0.9);
+}
+
+.osc-marker-editor-actions .delete-btn:hover {
+  background: rgba(255, 80, 80, 0.2);
+  border-color: rgba(255, 80, 80, 0.8);
+}
+
+.osc-marker-editor-actions .cancel-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.osc-marker-editor-actions .cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }

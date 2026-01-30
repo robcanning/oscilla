@@ -661,13 +661,19 @@ export const extractScoreElements = (svgElement) => {
     return;
   }
 
+  // Get SVG bounding rect for coordinate conversion
+  const svgRect = svgElement.getBoundingClientRect();
+  const localScale = svgRect.width / window.scoreWidth;
+
   elements.forEach((element) => {
-    const bbox = element.getBBox();
-    const matrix = element.getCTM();
-    let absoluteX = bbox.x;
-    if (matrix) {
-      absoluteX += matrix.e;
-    }
+    // Use getBoundingClientRect for accurate world position
+    // This works correctly regardless of transforms, shape-inside, etc.
+    const elRect = element.getBoundingClientRect();
+    const screenX = elRect.x - svgRect.x;
+    const absoluteX = screenX / localScale;
+    
+    // Also get width in world coordinates
+    const worldWidth = elRect.width / localScale;
 
     if (element.id.startsWith("rehearsal_")) {
       const id = element.id.replace("rehearsal_", "");
@@ -675,10 +681,11 @@ export const extractScoreElements = (svgElement) => {
       // console.log(`[DEBUG] 🎯 Rehearsal Mark Stored: ${id}, Position: (${absoluteX})`);
     } else if (element.id.startsWith("cue") || element.id.startsWith("s_") || element.id.startsWith("anchor-")) {
       // console.log(`[DEBUG] Processing cue: ${element.id}`);
-      newCues.push({ id: element.id, x: absoluteX, width: bbox.width });
-      // console.log(`[DEBUG] 🎯 Cue Stored: ${element.id}, X: ${absoluteX}, Width: ${bbox.width}`);
+      newCues.push({ id: element.id, x: absoluteX, width: worldWidth });
+      // console.log(`[DEBUG] 🎯 Cue Stored: ${element.id}, X: ${absoluteX}, Width: ${worldWidth}`);
     }
   });
+
 
   // ✅ Update global variables only if new marks are found
   if (Object.keys(newRehearsalMarks).length > 0) {
