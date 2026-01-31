@@ -706,8 +706,19 @@ function updateCountdownDisplay(countdown) {
   const stopwatchEl = document.getElementById("stopwatch");
   const mainTimeEl = document.getElementById("fullscreen-main-time");
   const mainLabelEl = document.getElementById("fullscreen-main-label");
+  const miniTimeEl = document.getElementById("fullscreen-mini-time");
+  const miniLabelEl = document.getElementById("fullscreen-mini-label");
   
   const isRunning = countdown && countdown.running;
+  
+  // Determine which display is the "Timer" (not Performance)
+  // showingPerformanceTime means: main=Performance, mini=Timer
+  // !showingPerformanceTime means: main=Timer, mini=Performance
+  const showingPerfInMain = window._showingPerformanceTime || false;
+  
+  // Timer elements (where countdown should display)
+  const timerTimeEl = showingPerfInMain ? miniTimeEl : mainTimeEl;
+  const timerLabelEl = showingPerfInMain ? miniLabelEl : mainLabelEl;
   
   if (isRunning) {
     isCountdownMode = true;
@@ -717,15 +728,15 @@ function updateCountdownDisplay(countdown) {
     const sec = countdown.remainingSec % 60;
     const timeStr = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
     
-    // Update topbar stopwatch
+    // Update topbar stopwatch (always shows countdown when running)
     if (stopwatchEl) {
       stopwatchEl.textContent = timeStr;
       stopwatchEl.title = countdown.cueName || "Countdown";
     }
     
-    // Update fullscreen if open
-    if (mainTimeEl) mainTimeEl.textContent = timeStr;
-    if (mainLabelEl) mainLabelEl.textContent = countdown.cueName || "Countdown";
+    // Update Timer display in fullscreen (whichever position it's in)
+    if (timerTimeEl) timerTimeEl.textContent = timeStr;
+    if (timerLabelEl) timerLabelEl.textContent = countdown.cueName || "Countdown";
     
   } else if (isCountdownMode) {
     // Countdown stopped
@@ -736,9 +747,9 @@ function updateCountdownDisplay(countdown) {
       stopwatchEl.title = "Stopwatch";
     }
     
-    // Reset fullscreen label
-    if (mainLabelEl) {
-      mainLabelEl.textContent = "Timer";
+    // Reset Timer label in fullscreen
+    if (timerLabelEl) {
+      timerLabelEl.textContent = "Timer";
     }
   }
   
@@ -1562,6 +1573,8 @@ export function setupStopwatchFullscreenToggle() {
       // Swap timers - swap which time shows in main vs mini
       function swapTimers() {
         showingPerformanceTime = !showingPerformanceTime;
+        // Expose to global for updateCountdownDisplay to know which display is Timer
+        window._showingPerformanceTime = showingPerformanceTime;
         updateLabels();
         updateTimes();
       }
@@ -1624,19 +1637,20 @@ export function setupStopwatchFullscreenToggle() {
           clockTimeEl.textContent = `${hours}:${minutes}:${seconds}`;
         }
         
-        // Skip updating main/mini time if countdown is active (countdown handles its own display)
-        if (isCountdownMode) return;
-        
         const rehearsalTime = stopwatch.textContent || "00:00";
         const transportEl = document.getElementById("transport-time");
         const performanceTime = transportEl ? transportEl.textContent : "00:00";
         
-        if (showingPerformanceTime) {
-          if (mainTimeEl) mainTimeEl.textContent = performanceTime;
-          if (miniTimeEl) miniTimeEl.textContent = rehearsalTime;
-        } else {
-          if (mainTimeEl) mainTimeEl.textContent = rehearsalTime;
-          if (miniTimeEl) miniTimeEl.textContent = performanceTime;
+        // Determine which element is Performance and which is Timer
+        const perfTimeEl = showingPerformanceTime ? mainTimeEl : miniTimeEl;
+        const timerTimeEl = showingPerformanceTime ? miniTimeEl : mainTimeEl;
+        
+        // Always update Performance time (it's playhead-linked)
+        if (perfTimeEl) perfTimeEl.textContent = performanceTime;
+        
+        // Only update Timer if countdown is NOT active (countdown handles its own display)
+        if (!isCountdownMode) {
+          if (timerTimeEl) timerTimeEl.textContent = rehearsalTime;
         }
       }
       
@@ -1645,6 +1659,9 @@ export function setupStopwatchFullscreenToggle() {
         
         fullscreenOverlay = createFullscreenOverlay();
         document.body.appendChild(fullscreenOverlay);
+        
+        // Expose state for updateCountdownDisplay
+        window._showingPerformanceTime = showingPerformanceTime;
         
         // Apply initial view mode
         applyViewMode();

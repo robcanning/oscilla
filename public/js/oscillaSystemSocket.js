@@ -9,7 +9,7 @@
 import { scrollToPlayheadVisual, togglePlayButton } from './oscillaTransport.js';
 import { startStopwatch } from './cues/oscillaTimers.js';
 import { loadSharedAnnotations, annotationsHandleSocketMessage } from './oscillaContributionSurface.js';
-import { handleCueTrigger } from './oscillaCueDispatcher.js';
+import { handleCueTrigger, teleportPlayhead } from './oscillaCueDispatcher.js';
 import { handleStopCue } from './cues/oscillaStop.js';
 import { handleAudioCue } from './cues/oscillaAudio.js';
 import { dismissPauseCountdown, handlePauseCue } from './cues/oscillaPause.js';
@@ -242,6 +242,7 @@ function handleCuePauseMessage(data) {
 
 /**
  * Handle sync message
+ * Uses teleport mode when server position differs significantly from local
  */
 function handleSyncMessage(data) {
   const state = data.state;
@@ -266,7 +267,38 @@ function handleSyncMessage(data) {
   // Only accept server playhead position if we haven't just manually navigated
   if (state.playheadX !== undefined) {
     if (!window.ignoreNextSync && !window.recentlyRecalculatedPlayhead) {
-      window.serverSyncPlayheadX = state.playheadX;
+      // Check if this is a significant position change that needs teleport mode
+      const currentX = window.playheadX ?? 0;
+      const serverX = state.playheadX;
+      const drift = Math.abs(serverX - currentX);
+      const refWidth = window.remoteScoreWidth || window.scoreWidth || 1;
+      
+      // If drift is more than 2% of score width, use teleport mode
+      if (drift > refWidth * 0.02) {
+        window._isTeleporting = true;
+        window.suppressCueTriggers = true;
+        window.serverSyncPlayheadX = serverX;
+        
+        // For very large drifts (>5%), jump immediately instead of relying on RAF
+        if (drift > refWidth * 0.05) {
+          window.playheadX = serverX;
+          window.resetCueEdgeTracking?.();
+          console.log(`[WS] SYNC teleport: drift=${drift.toFixed(1)}px (${(drift/refWidth*100).toFixed(1)}%)`);
+        }
+        
+        window._skipTriggerFrame = Math.max(window._skipTriggerFrame || 0, 5);
+        
+        // Clear teleport flags after RAF has processed
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            window._isTeleporting = false;
+            window.suppressCueTriggers = false;
+          });
+        });
+      } else {
+        // Small drift - let RAF handle it normally
+        window.serverSyncPlayheadX = serverX;
+      }
     }
   }
   scrollToPlayheadVisual?.();
@@ -306,6 +338,7 @@ function handleRepeatUpdate(data) {
 
 /**
  * Handle jump message
+ * Uses teleportPlayhead to prevent cue cascade when catching up to server
  */
 function handleJumpMessage(data) {
   if (window.ignoreNextSync) {
@@ -314,9 +347,18 @@ function handleJumpMessage(data) {
   }
   if (window.recentlyRecalculatedPlayhead) return;
   
-  window.playheadX = data.playheadX;
-  window.elapsedTime = data.elapsedTime ?? 0;
-  scrollToPlayheadVisual?.();
+  // Calculate how far we need to jump
+  const jumpDistance = Math.abs((data.playheadX ?? 0) - (window.playheadX ?? 0));
+  
+  if (jumpDistance > 10) {
+    // Significant jump - use teleport mode to prevent cue cascade
+    teleportPlayhead(data.playheadX, data.elapsedTime ?? 0);
+  } else {
+    // Small adjustment - safe to set directly
+    window.playheadX = data.playheadX;
+    window.elapsedTime = data.elapsedTime ?? 0;
+    scrollToPlayheadVisual?.();
+  }
 }
 
 // ===========================

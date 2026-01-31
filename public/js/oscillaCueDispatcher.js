@@ -88,6 +88,74 @@ export function resetCueTrigger() {
   console.log(`[rewindReset] cleared: ${cleared.join(", ") || "nothing"}`);
 }
 
+/**
+ * teleportPlayhead - Instantly move playhead without triggering cues
+ * 
+ * Use this when you need to jump to a new position without firing any cues
+ * along the way. This is essential for:
+ * - Server sync catch-up (late joining clients)
+ * - Jump messages from server
+ * - Any instant position change that shouldn't trigger intermediate cues
+ * 
+ * @param {number} newPlayheadX - Target playhead position in world units
+ * @param {number} [newElapsedTime] - Optional elapsed time (calculated if not provided)
+ * @param {Object} [options] - Additional options
+ * @param {number} [options.skipFrames=5] - Number of frames to skip cue checks after teleport
+ * @param {boolean} [options.resetTracking=true] - Whether to reset cue edge tracking
+ */
+export function teleportPlayhead(newPlayheadX, newElapsedTime = null, options = {}) {
+  const { skipFrames = 5, resetTracking = true } = options;
+  
+  // Enable teleport mode - this suppresses all cue triggering
+  window._isTeleporting = true;
+  window.suppressCueTriggers = true;
+  
+  const oldX = window.playheadX ?? 0;
+  const distance = Math.abs(newPlayheadX - oldX);
+  
+  // Update position
+  window.playheadX = newPlayheadX;
+  
+  // Update elapsed time
+  if (newElapsedTime !== null) {
+    window.elapsedTime = newElapsedTime;
+  } else if (window.duration && window.scoreWidth) {
+    window.elapsedTime = (newPlayheadX / window.scoreWidth) * window.duration;
+  }
+  
+  // Also update serverSyncPlayheadX to prevent drift correction fighting us
+  window.serverSyncPlayheadX = newPlayheadX;
+  
+  // Reset cue edge tracking to prevent false triggers
+  if (resetTracking) {
+    window.resetCueEdgeTracking?.();
+  }
+  
+  // Skip cue checks for several frames
+  window._skipTriggerFrame = Math.max(window._skipTriggerFrame || 0, skipFrames);
+  
+  // Reset animation frame timing to prevent large dt calculations
+  window.lastAnimationFrameTime = null;
+  
+  // Update visual
+  window.scrollToPlayheadVisual?.();
+  
+  console.log(`[TELEPORT] Jumped ${distance.toFixed(1)}px: ${oldX.toFixed(1)} → ${newPlayheadX.toFixed(1)}`);
+  
+  // Clear teleport flags after RAF has processed (double RAF for safety)
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window._isTeleporting = false;
+      window.suppressCueTriggers = false;
+    });
+  });
+  
+  return { oldX, newX: newPlayheadX, distance };
+}
+
+// Make teleport available globally for other modules
+window.teleportPlayhead = teleportPlayhead;
+
 function waitForCueComplete(targetId, timeout = 60000) {
   return new Promise(resolve => {
     const onDone = (ev) => {
@@ -721,6 +789,10 @@ window.evaluateCueIntersections = true;
 export async function checkCueTriggers() {
   // Global cue suppression guard (jumping, scrubbing, loading, etc.)
   if (window.suppressCueTriggers) return;
+
+  // TELEPORT MODE: Skip cue checks entirely during server sync jumps
+  // This prevents cue cascade when clients catch up to server time
+  if (window._isTeleporting) return;
 
   // Ensure cues are ready
   if (!Array.isArray(window.cues)) return;

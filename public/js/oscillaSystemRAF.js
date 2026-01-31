@@ -49,11 +49,33 @@ async function animate(currentTime) {
       !window.recentlyRecalculatedPlayhead
     ) {
       const drift = window.serverSyncPlayheadX - window.playheadX;
-      if (Math.abs(drift) > refWidth * 0.05) {
+      const driftThreshold = refWidth * 0.02; // 2% threshold for "significant" drift
+      
+      // TELEPORT MODE: For ANY drift correction, suppress cues to prevent cascade
+      // This is crucial when clients catch up to server time
+      if (Math.abs(drift) > driftThreshold) {
+        // Enable teleport mode - suppresses cue triggering
+        window._isTeleporting = true;
+        
+        // Always jump directly - no smooth interpolation that triggers cues along the way
         window.playheadX = window.serverSyncPlayheadX;
-      } else {
-        window.playheadX += drift * 1.3 * dt;
+        
+        // Reset cue edge tracking to prevent false triggers from position discontinuity
+        window.resetCueEdgeTracking?.();
+        
+        // Skip cue checks for a couple frames after teleport
+        window._skipTriggerFrame = Math.max(window._skipTriggerFrame || 0, 3);
+        
+        console.log(`[RAF] TELEPORT: drift=${drift.toFixed(1)}px, jumped to ${window.playheadX.toFixed(1)}`);
+        
+        // Clear teleport flag after a short delay (next frame will see it)
+        requestAnimationFrame(() => { window._isTeleporting = false; });
+      } else if (Math.abs(drift) > 0.5) {
+        // Small drift: gentle correction without triggering cues
+        // Use smaller correction factor to be less aggressive
+        window.playheadX += drift * 0.5 * dt;
       }
+      // else: drift is negligible, no correction needed
     }
     scrollToPlayheadVisual();
   }
