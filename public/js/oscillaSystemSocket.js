@@ -8,7 +8,7 @@
 
 import { scrollToPlayheadVisual, togglePlayButton } from './oscillaTransport.js';
 import { startStopwatch } from './cues/oscillaTimers.js';
-import { loadSharedAnnotations } from './oscillaContributionSurface.js';
+import { loadSharedAnnotations, annotationsHandleSocketMessage } from './oscillaContributionSurface.js';
 import { handleCueTrigger } from './oscillaCueDispatcher.js';
 import { handleStopCue } from './cues/oscillaStop.js';
 import { handleAudioCue } from './cues/oscillaAudio.js';
@@ -78,6 +78,14 @@ export async function connectWebSocket() {
       reconnectAttempts = 0;
       window.wsEnabled = true;
       socket.send(JSON.stringify({ type: "get_repeat_state" }));
+      
+      // Sync countdown sequences to server on connect
+      // This ensures server has sequences even after reconnect
+      setTimeout(() => {
+        if (typeof window.syncCountdownSequences === 'function') {
+          window.syncCountdownSequences();
+        }
+      }, 300);
     });
 
     socket.addEventListener("message", handleSocketMessage);
@@ -116,6 +124,13 @@ function handleSocketMessage(event) {
 
       case "annotation_list_response":
         loadSharedAnnotations(data.project, data.items);
+        break;
+
+      // Route annotation changes to the annotation handler for real-time sync
+      case "annotation_add":
+      case "annotation_update":
+      case "annotation_delete":
+        annotationsHandleSocketMessage(data);
         break;
 
       case "set_speed_multiplier":
@@ -262,6 +277,23 @@ function handleSyncMessage(data) {
   }
   if (!window.isPlaying && wasPlaying) {
     cancelAnimationFrame(window.animationFrameId);
+  }
+  
+  // ===========================
+  // COUNTDOWN SYNC - SERVER OWNED
+  // Just display what server sends
+  // ===========================
+  if (!window.auxwatchNetworkDisabled && window.updateCountdownDisplay) {
+    window.updateCountdownDisplay(state.countdown);
+  }
+  
+  // Sync sequences if we don't have any
+  if (!window.auxwatchNetworkDisabled && state.countdownSequences && state.countdownSequences.length > 0) {
+    const localSeqs = JSON.parse(localStorage.getItem("oscilla.countdownSequences") || "[]");
+    if (localSeqs.length === 0) {
+      localStorage.setItem("oscilla.countdownSequences", JSON.stringify(state.countdownSequences));
+      console.log("[Countdown] Synced sequences from server:", state.countdownSequences.length);
+    }
   }
 }
 

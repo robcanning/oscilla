@@ -700,19 +700,51 @@ const broadcastState = () => {
     console.log(`[SYNC] t=${sharedState.elapsedTime} x=${sharedState.playheadX} speed=${sharedState.speedMultiplier}`);
   }
 
-
+  // =====================================================
+  // SERVER-OWNED COUNTDOWN TIMER
+  // Calculate remaining time on server, clients just display it
+  // =====================================================
+  let countdownSync = null;
+  
+  if (sharedState.countdown && sharedState.countdown.running) {
+    const cd = sharedState.countdown;
+    const elapsed = Date.now() - cd.startTime;
+    const remainingMs = Math.max(0, (cd.totalSeconds * 1000) - elapsed);
+    const remainingSec = Math.ceil(remainingMs / 1000);
+    
+    countdownSync = {
+      running: true,
+      cueName: cd.cueName,
+      sequenceName: cd.sequenceName,
+      remainingSec: remainingSec,
+      cueIndex: cd.cueIndex,
+      totalCues: cd.totalCues,
+      loop: cd.loop,
+      currentLoop: cd.currentLoop
+    };
+    
+    // Check if countdown finished
+    if (remainingMs <= 0) {
+      console.log(`[Countdown] Cue finished: ${cd.cueName}`);
+      
+      // Advance to next cue or handle loop/chain
+      advanceCountdown();
+    }
+  }
 
   const message = JSON.stringify({
     type: 'sync',
     state: {
-      elapsedTime: sharedState.elapsedTime, // legacy (clients should prefer startTimestamp)
+      elapsedTime: sharedState.elapsedTime,
       isPlaying: sharedState.isPlaying,
       scoreWidth: sharedState.scoreWidth,
-      playheadX: sharedState.playheadX,     // legacy
+      playheadX: sharedState.playheadX,
       speedMultiplier: sharedState.speedMultiplier,
-      startTimestamp: sharedState.startTimestamp, // 
+      startTimestamp: sharedState.startTimestamp,
       canonicalRenderedWidth: sharedState.canonicalRenderedWidth || null,
-      duration: sharedState.duration   // 
+      duration: sharedState.duration,
+      countdown: countdownSync,  // Server-calculated countdown state
+      countdownSequences: sharedState.countdownSequences || null
     },
     serverTime: Date.now()
   });
@@ -729,6 +761,132 @@ const broadcastState = () => {
   process.stdout.write(`\x1b[32m${frames[global._hb++ % frames.length]}\x1b[0m`);
   process.stdout.write(""); // flush
 };
+
+// =====================================================
+// SERVER COUNTDOWN MANAGEMENT
+// =====================================================
+
+/**
+ * Start a countdown on the server
+ */
+function startServerCountdown(cue, sequenceName, cueIndex, totalCues, loop, currentLoop) {
+  sharedState.countdown = {
+    running: true,
+    cueName: cue.name || "Countdown",
+    totalSeconds: cue.seconds || 0,
+    startTime: Date.now(),
+    sequenceName: sequenceName || null,
+    cueIndex: cueIndex || 0,
+    totalCues: totalCues || 1,
+    loop: loop || 1,
+    currentLoop: currentLoop || 1,
+    cues: null,  // Will be set if running a sequence
+    chainTo: null
+  };
+  console.log(`[Countdown] ▶ Started: ${cue.name} (${cue.seconds}s)`);
+  
+  // Immediately broadcast so clients update right away
+  broadcastState();
+}
+
+/**
+ * Start a sequence on the server
+ */
+function startServerSequence(sequence, loopCount) {
+  if (!sequence || !sequence.cues || sequence.cues.length === 0) {
+    console.warn(`[Countdown] ⚠️ Cannot start sequence - no cues found`);
+    return;
+  }
+  
+  const loops = loopCount !== undefined ? loopCount : (sequence.loop ?? 1);
+  
+  sharedState.countdown = {
+    running: true,
+    cueName: sequence.cues[0].name || "Countdown",
+    totalSeconds: sequence.cues[0].seconds || 0,
+    startTime: Date.now(),
+    sequenceName: sequence.name || null,
+    cueIndex: 0,
+    totalCues: sequence.cues.length,
+    loop: loops === 0 ? Infinity : loops,
+    currentLoop: 1,
+    cues: sequence.cues,
+    chainTo: sequence.chain
+  };
+  console.log(`[Countdown] ▶ Sequence started: ${sequence.name} (${sequence.cues.length} cues, loop: ${loops})`);
+  
+  // Immediately broadcast so clients update right away
+  broadcastState();
+}
+
+/**
+ * Advance to next cue in sequence, handle loops and chains
+ */
+function advanceCountdown() {
+  const cd = sharedState.countdown;
+  if (!cd || !cd.running) return;
+  
+  // Single cue (not a sequence)
+  if (!cd.cues) {
+    stopServerCountdown();
+    return;
+  }
+  
+  // Move to next cue
+  cd.cueIndex++;
+  
+  // Check if sequence complete
+  if (cd.cueIndex >= cd.cues.length) {
+    cd.currentLoop++;
+    
+    // Check if we should loop
+    if (cd.loop === Infinity || cd.currentLoop <= cd.loop) {
+      // Loop: restart from beginning
+      cd.cueIndex = 0;
+      const cue = cd.cues[0];
+      cd.cueName = cue.name || "Countdown";
+      cd.totalSeconds = cue.seconds || 0;
+      cd.startTime = Date.now();
+      console.log(`[Countdown] Loop ${cd.currentLoop}${cd.loop === Infinity ? ' (∞)' : ' of ' + cd.loop}`);
+      return;
+    }
+    
+    // Check if we should chain to another sequence
+    if (cd.chainTo !== null && cd.chainTo !== undefined) {
+      const sequences = sharedState.countdownSequences || [];
+      const nextSeq = sequences[cd.chainTo];
+      if (nextSeq) {
+        console.log(`[Countdown] Chaining to: ${nextSeq.name}`);
+        startServerSequence(nextSeq);
+        return;
+      }
+    }
+    
+    // Done
+    stopServerCountdown();
+    return;
+  }
+  
+  // Continue to next cue
+  const cue = cd.cues[cd.cueIndex];
+  cd.cueName = cue.name || "Countdown";
+  cd.totalSeconds = cue.seconds || 0;
+  cd.startTime = Date.now();
+  console.log(`[Countdown] Next cue: ${cue.name} (${cue.seconds}s)`);
+}
+
+/**
+ * Stop the countdown
+ */
+function stopServerCountdown() {
+  if (sharedState.countdown) {
+    console.log(`[Countdown] ⏹ Stopped`);
+  }
+  sharedState.countdown = null;
+  
+  // Immediately broadcast so clients clear their displays
+  broadcastState();
+}
 
 
 
@@ -812,8 +970,6 @@ wss.on('connection', (ws, req) => {
   ///////////////////////////////////////////////
 
   ws.on('message', (message) => {
-    console.log("[DEBUG] Received WebSocket message:", message);
-    
     let data;
     try {
       data = JSON.parse(message);
@@ -1434,9 +1590,10 @@ wss.on('connection', (ws, req) => {
             ? Object.values(annotationsByProject[project])
             : [];
 
-        console.log(
-          `[ANNOTATION] 📤 list request  project=${project}  count=${items.length}`
-        );
+        // Only log if there are items to report
+        if (items.length > 0) {
+          console.log(`[ANNOTATION] 📤 list request  project=${project}  count=${items.length}`);
+        }
 
         // reply ONLY to requesting client
         ws.send(JSON.stringify({
@@ -1557,6 +1714,64 @@ wss.on('connection', (ws, req) => {
         break;
       }
 
+      // =====================================================
+      // COUNTDOWN - SERVER OWNED
+      // =====================================================
+      
+      case "countdown_start_cue": {
+        // Start a single countdown cue
+        const { cue } = data;
+        if (cue) {
+          startServerCountdown(cue, null, 0, 1, 1, 1);
+        }
+        break;
+      }
+      
+      case "countdown_start_sequence": {
+        // Start a sequence - use sent sequence data if provided, or fall back to stored
+        const { sequenceIndex, sequence: sentSequence } = data;
+        const sequences = sharedState.countdownSequences || [];
+        
+        // Prefer the sequence data sent with the message (more reliable)
+        // Fall back to stored sequences if not provided
+        const seq = sentSequence || sequences[sequenceIndex];
+        
+        if (seq) {
+          console.log(`[Countdown] Starting sequence: ${seq.name || 'unnamed'} (index: ${sequenceIndex})`);
+          startServerSequence(seq);
+        } else {
+          console.warn(`[Countdown] ⚠️ No sequence found at index ${sequenceIndex} and no sequence data sent`);
+        }
+        break;
+      }
+      
+      case "countdown_stop": {
+        stopServerCountdown();
+        break;
+      }
+      
+      case "countdown_sequences_update": {
+        // Store sequences on server
+        sharedState.countdownSequences = data.sequences;
+        console.log(`[Countdown] ✅ Sequences updated from client: ${data.sequences?.length || 0} sequences`);
+        if (data.sequences?.length > 0) {
+          console.log(`[Countdown]    Names: ${data.sequences.map(s => s.name || 'unnamed').join(', ')}`);
+        }
+        // Broadcast to other clients
+        broadcastToOthers(ws, data);
+        break;
+      }
+      
+      case "countdown_sequences_request": {
+        // Send stored sequences directly to requesting client
+        if (sharedState.countdownSequences && sharedState.countdownSequences.length > 0) {
+          ws.send(JSON.stringify({
+            type: "countdown_sequences_update",
+            sequences: sharedState.countdownSequences
+          }));
+        }
+        break;
+      }
 
 
 
@@ -1941,11 +2156,17 @@ wss.on('connection', (ws, req) => {
 });
 
 const updateLoop = () => {
+  const countdownRunning = sharedState.countdown && sharedState.countdown.running;
+  
   if (sharedState.isPlaying) {
     updateElapsedTime();
     broadcastState();
+  } else if (countdownRunning) {
+    // Countdown can run independently of playback
+    // Still need to broadcast state so clients can update their displays
+    broadcastState();
   } else {
-    //  console.log("[DEBUG] Skipping updates; playback is paused.");
+    //  console.log("[DEBUG] Skipping updates; playback is paused and no countdown running.");
   }
   setTimeout(updateLoop, 250);
 };

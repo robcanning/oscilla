@@ -11,7 +11,21 @@ export function handleStopCue(ast) {
 
   // Toggle playback:
   if (window.isPlaying) {
-    window.pausePlayback();
+    // Use musical pause - transport/performance time continues
+    window.isPlaying = false;
+    window.isMusicalPause = true;
+    window.animationPaused = true;
+    window.stopAnimation?.();
+    window.togglePlayButton?.();
+    
+    // Sync to server
+    if (window.socket?.readyState === WebSocket.OPEN) {
+      window.socket.send(JSON.stringify({
+        type: "pause",
+        playheadX: window.playheadX,
+        elapsedTime: window.elapsedTime
+      }));
+    }
   } else {
     window.startPlayback();
   }

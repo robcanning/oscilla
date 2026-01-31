@@ -44,8 +44,23 @@ import { getSpeedForPosition, updateSpeedFromPosition } from "./cues/oscillaSpee
 import { resetAllFadePriming } from "./cues/oscillaFade.js";
 import { stopAllCueTexts } from "./cues/oscillaText.js";
 import { destroyAllHitLabels } from "./oscillaHitLabels.js";
-import { dismissAllStopwatchOverlays } from "./cues/oscillaTimers.js";
+import { 
+  dismissAllStopwatchOverlays, 
+  startTransportTime, 
+  pauseTransportTime, 
+  resumeTransportTime,
+  resetTransportTime 
+} from "./cues/oscillaTimers.js";
 
+// ============================================================================
+// REHEARSAL MARK NAVIGATION STATE
+// ============================================================================
+
+let currentRehearsalIndex = 0; // Track current position in sorted rehearsal marks
+
+// ============================================================================
+// SEEKING STATE
+// ============================================================================
 
 window.seekDebounceTime = 300;
 window.seekingTimeout = null;
@@ -147,12 +162,18 @@ export const rewindToStart = () => {
   window.playheadX = 0;
   window.elapsedTime = 0;
   // resetStopwatch(); // Reset stopwatch
+  
+  // Reset transport time (performance timer)
+  resetTransportTime();
 
   scrollToPlayheadVisual();
   // window.speedMultiplier = getSpeedForPosition(window.playheadX);
   updateSpeedFromPosition();
   
   window.updateSpeedDisplay();
+
+  // Reset rehearsal mark navigation index
+  resetRehearsalIndex?.();
 
   // updatePosition();
   // updateSeekBar();
@@ -450,9 +471,13 @@ window.updateSeekBar = updateSeekBar;
 // ---------------------------------------------------------
 window.__oscillaMenuActive = false;
 
+function shouldAutoHideControls() {
+  if (window.controlsPinned) return false;
+  if (window.__oscillaMenuActive) return false;
+  return true;
+}
 
 function shouldAutoHideTopbar() {
-  if (window.controlsPinned) return false;
   if (window.topbarPinned) return false;
   if (window.__oscillaMenuActive) return false;
   return true;
@@ -462,23 +487,18 @@ function shouldAutoHideTopbar() {
 let controlsTimeout; // Timer to hide controls after inactivity
 
 export const hideControls = () => {
-  console.warn("[UI] hideControls CALLED", {
-    menuActive: window.__oscillaMenuActive,
-    controlsPinned: window.controlsPinned,
-    topbarPinned: window.topbarPinned,
-    stack: new Error().stack
-  });
-
-  if (!shouldAutoHideTopbar()) {
-    console.warn("[UI] hideControls BLOCKED");
-    return;
-  }
-
   const controls = document.getElementById('controls');
   const topBar = document.getElementById('top-bar');
 
-  controls?.classList.add('dismissed');
-  topBar?.classList.add('dismissed');
+  // Hide controls if not pinned
+  if (shouldAutoHideControls()) {
+    controls?.classList.add('dismissed');
+  }
+  
+  // Hide topbar if not pinned (independent of controls)
+  if (shouldAutoHideTopbar()) {
+    topBar?.classList.add('dismissed');
+  }
 };
 
 
@@ -501,39 +521,65 @@ window.hideControls = hideControls;
 window.controlsPinned = false;
 window.topbarPinned = false;
 
+let _controlsPinInitialized = false;
+let _topbarPinInitialized = false;
+
 export function initializeControlsPin() {
+  if (_controlsPinInitialized) {
+    console.log("[UI] Controls pin already initialized, skipping.");
+    return;
+  }
+  
   const pinButton = document.getElementById("pin-controls");
   if (!pinButton) return console.warn("[UI] No #pin-controls button found.");
 
+  _controlsPinInitialized = true;
+  
   pinButton.addEventListener("click", () => {
     window.controlsPinned = !window.controlsPinned;
     pinButton.classList.toggle("active", window.controlsPinned);
 
+    const controls = document.getElementById('controls');
+    
     if (window.controlsPinned) {
       console.log("[UI] Controls pinned — will stay visible.");
-      showControls();
+      controls?.classList.remove('dismissed');
     } else {
       console.log("[UI] Controls unpinned — auto-hide re-enabled.");
-      window.hideControlsLater(); // call the global version
+      window.hideControlsLater();
     }
   });
+  
+  console.log("[UI] Controls pin initialized.");
 }
 
 export function initializeTopbarPin() {
+  if (_topbarPinInitialized) {
+    console.log("[UI] Topbar pin already initialized, skipping.");
+    return;
+  }
+  
   const btn = document.getElementById("pin-topbar");
   if (!btn) return console.warn("[UI] No #pin-topbar button found.");
 
+  _topbarPinInitialized = true;
+  
   btn.addEventListener("click", () => {
     window.topbarPinned = !window.topbarPinned;
     btn.classList.toggle("active", window.topbarPinned);
 
+    const topBar = document.getElementById('top-bar');
+    
     if (window.topbarPinned) {
       console.log("[UI] Top-bar pinned.");
-      showControls();
+      topBar?.classList.remove('dismissed');
     } else {
+      console.log("[UI] Top-bar unpinned.");
       window.hideControlsLater();
     }
   });
+  
+  console.log("[UI] Topbar pin initialized.");
 }
 
 // ---------------------------------------------------------
@@ -801,6 +847,9 @@ export function startPlayback() {
   // --- Initialize stopwatch + animation ---
   window.startStopwatch?.();
   window.startAnimation?.();
+  
+  // --- Start transport time (performance timer) ---
+  startTransportTime();
 
   // --- Animation loop kickstart ---
   if (typeof window.animate === "function") {
@@ -844,6 +893,10 @@ export function pausePlayback() {
 
     window.stopStopwatch?.();
     window.stopAnimation?.();
+    
+    // Pause transport time on manual pause (not on musical pauses)
+    pauseTransportTime();
+    
     togglePlayButton();
 
     // Send pause message to server
@@ -1048,9 +1101,56 @@ function resumeScrollScore() {
 }
 
 
-//////////////////////////////////////////////////
+// ============================================================================
+// COORDINATE EXTRACTION HELPER
+// ============================================================================
+
+/**
+ * Get the world X coordinate of an SVG element using getBoundingClientRect.
+ * This works correctly for ALL element types regardless of how they're positioned
+ * (transforms, shape-inside text, nested groups, etc.)
+ * 
+ * @param {Element} element - The SVG element to measure
+ * @param {Element} [svgElement] - Optional SVG root element (defaults to #scoreInner svg)
+ * @returns {number} World X coordinate
+ */
+export function getWorldX(element, svgElement = null) {
+  const svg = svgElement || document.querySelector("#scoreInner svg");
+  if (!svg || !element) return 0;
+  
+  const svgRect = svg.getBoundingClientRect();
+  const elRect = element.getBoundingClientRect();
+  
+  // Screen position relative to SVG left edge
+  const screenX = elRect.x - svgRect.x;
+  
+  // Convert to world coordinates
+  const localScale = svgRect.width / window.scoreWidth;
+  return screenX / localScale;
+}
+
+/**
+ * Get the world width of an SVG element
+ */
+export function getWorldWidth(element, svgElement = null) {
+  const svg = svgElement || document.querySelector("#scoreInner svg");
+  if (!svg || !element) return 0;
+  
+  const svgRect = svg.getBoundingClientRect();
+  const elRect = element.getBoundingClientRect();
+  const localScale = svgRect.width / window.scoreWidth;
+  return elRect.width / localScale;
+}
+
+window.getWorldX = getWorldX;
+window.getWorldWidth = getWorldWidth;
+
+// ============================================================================
+// JUMP TO CUE BY ID
+// ============================================================================
+
 export const jumpToCueId = (id) => {
-  let target = cues.find(c => c.id === id || c.id.startsWith(id + "-"))
+  const target = window.cues?.find(c => c.id === id || c.id.startsWith(id + "-"))
     || document.getElementById(id);
 
   if (!target) {
@@ -1058,15 +1158,8 @@ export const jumpToCueId = (id) => {
     return;
   }
 
-  // Get the actual rendered position using getBoundingClientRect
-  const svg = document.querySelector("#scoreInner svg");
-  const svgRect = svg.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
-  
-  // Calculate world X from screen position
-  const screenX = targetRect.x - svgRect.x;
-  const localScale = svgRect.width / window.scoreWidth;
-  const targetX = screenX / localScale;
+  // Get accurate world position using getBoundingClientRect
+  const targetX = getWorldX(target);
 
   // Set world playhead
   window.playheadX = targetX;
@@ -1093,6 +1186,208 @@ export const jumpToCueId = (id) => {
 
 window.jumpToCueId = jumpToCueId;
 
+// ============================================================================
+// REHEARSAL MARK NAVIGATION
+// ============================================================================
+
+/**
+ * Jump to a specific rehearsal mark by name
+ * @param {string} mark - The rehearsal mark name (e.g., "A", "B", "0")
+ */
+export function jumpToRehearsalMark(mark) {
+  console.log(`[JUMP] Requested jump to rehearsal mark: ${mark}`);
+
+  const rehearsalMarks = window.rehearsalMarks;
+  if (!rehearsalMarks) {
+    console.error("[JUMP] ❌ No rehearsal marks loaded.");
+    return;
+  }
+
+  const entry = rehearsalMarks[mark];
+  if (!entry) {
+    console.error(`[JUMP] ❌ Mark "${mark}" not found.`);
+    return;
+  }
+
+  // Disable cues during jump
+  window.suppressCueTriggers = true;
+
+  // Pause during teleport
+  window.isPlaying = false;
+  window.animationPaused = true;
+
+  // Teleport playhead to the stored world X position
+  window.playheadX = entry.x;
+  
+  // Sync musical timeline
+  window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+  
+  scrollToPlayheadVisual();
+
+  // Prevent drift glitch
+  window.lastAnimationFrameTime = null;
+
+  // Reset cue state
+  window._prevCueLefts = new Map();
+  window._cueInsideState = new Map();
+  window.triggeredCues = new Set();
+  
+  // Reset other state
+  resetAllFadePriming?.();
+  dismissAllStopwatchOverlays?.();
+  window.navRepeatMap?.clear();
+  window.resetAnnotationPlayheadTriggers?.();
+  window.resetCueEdgeTracking?.();
+
+  // Apply speed for new position
+  updateSpeedFromPosition?.();
+  window.updateSpeedDisplay?.();
+
+  // Notify server
+  if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+    window.socket.send(JSON.stringify({ 
+      type: "jump", 
+      playheadX: window.playheadX,
+      elapsedTime: window.elapsedTime
+    }));
+  }
+
+  window.suppressCueTriggers = false;
+  
+  // Update current index to match the mark we jumped to
+  const sortedMarks = window.sortedMarks || [];
+  const newIndex = sortedMarks.indexOf(mark);
+  if (newIndex !== -1) {
+    currentRehearsalIndex = newIndex;
+  }
+
+  console.log(`[JUMP] ✅ Jumped to "${mark}" at playheadX: ${window.playheadX}`);
+}
+
+window.jumpToRehearsalMark = jumpToRehearsalMark;
+
+/**
+ * Jump to the next rehearsal mark
+ */
+export function jumpToNextRehearsalMark() {
+  const sortedMarks = window.sortedMarks || [];
+  
+  if (sortedMarks.length === 0) {
+    console.warn("[NAV] No rehearsal marks available.");
+    return;
+  }
+
+  if (currentRehearsalIndex < sortedMarks.length - 1) {
+    currentRehearsalIndex++;
+    const nextMark = sortedMarks[currentRehearsalIndex];
+    console.log(`[NAV] Forward to: ${nextMark} (Index: ${currentRehearsalIndex})`);
+    jumpToRehearsalMark(nextMark);
+  } else {
+    console.log("[NAV] Already at the last rehearsal mark.");
+  }
+}
+
+window.jumpToNextRehearsalMark = jumpToNextRehearsalMark;
+
+/**
+ * Jump to the previous rehearsal mark
+ */
+export function jumpToPreviousRehearsalMark() {
+  const sortedMarks = window.sortedMarks || [];
+  
+  if (sortedMarks.length === 0) {
+    console.warn("[NAV] No rehearsal marks available.");
+    return;
+  }
+
+  if (currentRehearsalIndex > 0) {
+    currentRehearsalIndex--;
+    const prevMark = sortedMarks[currentRehearsalIndex];
+    console.log(`[NAV] Back to: ${prevMark} (Index: ${currentRehearsalIndex})`);
+    jumpToRehearsalMark(prevMark);
+  } else {
+    console.log("[NAV] Already at the first rehearsal mark.");
+  }
+}
+
+window.jumpToPreviousRehearsalMark = jumpToPreviousRehearsalMark;
+
+/**
+ * Reset rehearsal index (call when loading new score or rewinding to start)
+ */
+export function resetRehearsalIndex() {
+  currentRehearsalIndex = 0;
+}
+
+window.resetRehearsalIndex = resetRehearsalIndex;
+
+/**
+ * Sync rehearsal index to current playhead position
+ * Useful after seeking or manual position changes
+ */
+export function syncRehearsalIndexToPlayhead() {
+  const sortedMarks = window.sortedMarks || [];
+  const rehearsalMarks = window.rehearsalMarks || {};
+  
+  if (sortedMarks.length === 0) return;
+  
+  // Find the last mark that's at or before current playhead
+  let newIndex = 0;
+  for (let i = 0; i < sortedMarks.length; i++) {
+    const mark = sortedMarks[i];
+    const markX = rehearsalMarks[mark]?.x || 0;
+    if (markX <= window.playheadX) {
+      newIndex = i;
+    } else {
+      break;
+    }
+  }
+  
+  currentRehearsalIndex = newIndex;
+}
+
+window.syncRehearsalIndexToPlayhead = syncRehearsalIndexToPlayhead;
+
+// ============================================================================
+// REHEARSAL MARK KEYBOARD NAVIGATION (Arrow Up/Down)
+// ============================================================================
+
+document.addEventListener('keydown', (event) => {
+  if (window.oscillaTextInputActive && event.key !== "Escape") return;
+  
+  if (!["ArrowUp", "ArrowDown"].includes(event.key)) return;
+  
+  event.preventDefault();
+  
+  if (event.key === "ArrowUp") {
+    jumpToNextRehearsalMark();
+  } else if (event.key === "ArrowDown") {
+    jumpToPreviousRehearsalMark();
+  }
+});
+
+// ============================================================================
+// FAST FORWARD / REWIND BUTTON HANDLERS
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  const fastForwardBtn = document.getElementById('fast-forward-button');
+  const fastRewindBtn = document.getElementById('fast-rewind-button');
+  
+  if (fastForwardBtn) {
+    fastForwardBtn.addEventListener('click', () => {
+      console.log("[NAV] Fast Forward clicked");
+      jumpToNextRehearsalMark();
+    });
+  }
+  
+  if (fastRewindBtn) {
+    fastRewindBtn.addEventListener('click', () => {
+      console.log("[NAV] Fast Rewind clicked");
+      jumpToPreviousRehearsalMark();
+    });
+  }
+});
 
 
 document.addEventListener('fullscreenchange', () => {

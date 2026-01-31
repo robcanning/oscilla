@@ -784,31 +784,8 @@ body.inverted #score {
 }
 
 
-/* Fullscreen mode for the score clock */
-#stopwatch.fullscreen {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  height: 100vh;
-  width: 100vw;
-  color: green;
-  font-size: 300px;
-  /* ✅ Make it much larger */
-  background: rgba(0, 0, 0, 0.9);
-  /* ✅ Semi-transparent */
-  padding: 40px 60px;
-  z-index: 10001;
-  /* ✅ Ensure text is centered */
-  display: flex;
-  justify-content: center;
-  /* ✅ Centers text horizontally */
-  align-items: center;
-  /* ✅ Centers text vertically */
-  text-align: center;
-  /* ✅ Ensures multi-line text is centered */
-
-}
+/* Fullscreen mode for the score clock - DEPRECATED, see below for fixed version */
+/* This is overridden by the .fullscreen-clock styles below */
 
 /*  */
 
@@ -2715,22 +2692,695 @@ body.inverted #controls {
 }
 
 /* ============================================================================
- * FULLSCREEN STOPWATCH - FIX POSITIONING
+ * FULLSCREEN STOPWATCH OVERLAY
  * ============================================================================ */
 
-.fullscreen-clock {
-  position: fixed;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;  /* Proper centering */
-  font-size: 10vw;
-  font-weight: bold;
-  color: white;
-  text-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
-  z-index: 99998;
-  pointer-events: none;
+.stopwatch-fullscreen-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  
+  /* Above all cue overlays (cueAudio, cueSynth, OSC handles, etc) but below topbar/controls */
+  z-index: 9999999;
+  
   margin: 0 !important;
-  padding: 0 !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+  
+  transition: background 0.3s ease;
+}
+
+/* View Mode: Solid (white background, black text) */
+.stopwatch-fullscreen-overlay.mode-solid {
+  background: #ffffff;
+}
+
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-main-time {
+  color: #000000;
+  text-shadow: none;
+}
+
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-main-label,
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-mini-label {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-mini-time {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-mini-container {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-mini-container:hover {
+  background: rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-clock-container {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-close-btn,
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-mode-btn {
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-close-btn:hover {
+  background: rgba(255, 100, 100, 0.8);
+  color: white;
+}
+
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-mode-btn:hover {
+  background: rgba(0, 0, 0, 0.2);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.stopwatch-fullscreen-overlay.mode-solid .fullscreen-mode-label {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* View Mode: Blur (score visible but blurred) */
+.stopwatch-fullscreen-overlay.mode-blur {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.stopwatch-fullscreen-overlay.mode-blur .fullscreen-main-time {
+  color: rgba(0, 0, 0, 0.85) !important;
+  text-shadow: 0 0 80px rgba(255, 255, 255, 0.9), 0 0 40px rgba(255, 255, 255, 0.8);
+}
+
+.stopwatch-fullscreen-overlay.mode-blur .fullscreen-main-label,
+.stopwatch-fullscreen-overlay.mode-blur .fullscreen-mini-label {
+  color: rgba(0, 0, 0, 0.6);
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.8);
+}
+
+.stopwatch-fullscreen-overlay.mode-blur .fullscreen-mini-time {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.stopwatch-fullscreen-overlay.mode-blur .fullscreen-mini-container {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.stopwatch-fullscreen-overlay.mode-blur .fullscreen-clock-container {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.stopwatch-fullscreen-overlay.mode-blur .fullscreen-close-btn,
+.stopwatch-fullscreen-overlay.mode-blur .fullscreen-mode-btn {
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.stopwatch-fullscreen-overlay.mode-blur .fullscreen-close-btn:hover {
+  background: rgba(255, 100, 100, 0.8);
+  color: white;
+}
+
+.stopwatch-fullscreen-overlay.mode-blur .fullscreen-mode-btn:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.stopwatch-fullscreen-overlay.mode-blur .fullscreen-mode-label {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* View Mode: Transparent (no background, overlays score directly) */
+.stopwatch-fullscreen-overlay.mode-transparent {
+  background: transparent;
+  pointer-events: none; /* Allow clicking through to score */
+}
+
+.stopwatch-fullscreen-overlay.mode-transparent > * {
+  pointer-events: auto; /* But UI elements are still clickable */
+}
+
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-main-time {
+  color: rgba(0, 0, 0, 0.85) !important;
+  text-shadow: 
+    0 0 20px rgba(255, 255, 255, 0.9),
+    0 0 40px rgba(255, 255, 255, 0.7),
+    0 0 60px rgba(255, 255, 255, 0.5),
+    2px 2px 4px rgba(255, 255, 255, 0.8);
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
+}
+
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-main-label,
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-mini-label {
+  color: rgba(255, 255, 255, 0.6);
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.9);
+}
+
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-mini-time {
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.9);
+}
+
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-mini-container {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(5px);
+}
+
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-mini-container:hover {
+  background: rgba(0, 0, 0, 0.85);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-clock-container {
+  background: rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(5px);
+}
+
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-close-btn,
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-mode-btn {
+  background: rgba(0, 0, 0, 0.7);
+  color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(5px);
+}
+
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-close-btn:hover {
+  background: rgba(255, 100, 100, 0.8);
+  color: white;
+}
+
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-mode-btn:hover {
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+}
+
+.stopwatch-fullscreen-overlay.mode-transparent .fullscreen-mode-label {
+  color: rgba(255, 255, 255, 0.6);
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.9);
+}
+
+/* Top controls container */
+.fullscreen-top-controls {
+  position: absolute;
+  top: 35px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Mode button */
+.fullscreen-mode-btn {
+  width: 50px;
+  height: 50px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fullscreen-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  transform: scale(1.1);
+}
+
+/* Mode label */
+.fullscreen-mode-label {
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Close button - top right */
+.fullscreen-close-btn {
+  position: absolute;
+  top: 35px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fullscreen-close-btn:hover {
+  background: rgba(255, 100, 100, 0.4);
+  color: white;
+  transform: scale(1.1);
+}
+
+/* Main time label */
+.fullscreen-main-label {
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 2vw;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  margin-bottom: 10px;
+  transition: color 0.3s ease;
+}
+
+/* Main time display */
+.fullscreen-main-time {
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 22vw;
+  font-weight: bold;
+  line-height: 1;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+/* Bottom row for mini containers */
+.fullscreen-bottom-row {
+  display: flex;
+  gap: 20px;
+  margin-top: 40px;
+}
+
+/* Mini container - clickable to swap */
+.fullscreen-mini-container {
+  padding: 15px 30px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  border: 1px solid transparent;
+}
+
+.fullscreen-mini-container:hover {
+  transform: scale(1.05);
+}
+
+.fullscreen-mini-container:active {
+  transform: scale(0.98);
+}
+
+/* Clock container (not clickable) */
+.fullscreen-clock-container {
+  padding: 15px 30px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Mini label */
+.fullscreen-mini-label {
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 1.2vw;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-bottom: 5px;
+  transition: color 0.3s ease;
+}
+
+/* Mini time display */
+.fullscreen-mini-time {
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 4vw;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+/* Light blur for score (blur mode) */
+.blur-background-light {
+  filter: blur(8px);
+  transition: filter 0.3s ease;
+}
+
+/* Ensure top-bar and controls are above fullscreen stopwatch */
+#top-bar {
+  z-index: 99999999 !important;
+}
+
+#controls {
+  z-index: 99999999 !important;
+}
+
+/* ============================================================================
+ * COUNTDOWN SEQUENCES EDITOR
+ * ============================================================================ */
+
+/* Main container for the big timer display */
+.fullscreen-main-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Red circle button - positions on top-right corner of parent container */
+.fullscreen-countdown-btn {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 100, 100, 0.8);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  z-index: 10;
+}
+
+.fullscreen-countdown-btn:hover {
+  background: rgba(255, 100, 100, 0.3);
+  border-color: rgba(255, 100, 100, 1);
+  transform: scale(1.2);
+}
+
+/* When auxwatch is in mini container, position ring on its corner */
+.fullscreen-mini-container {
+  position: relative;
+}
+
+.fullscreen-mini-container .fullscreen-countdown-btn {
+  top: -5px;
+  right: -5px;
+  width: 12px;
+  height: 12px;
+}
+
+/* Countdown Editor Panel - neutral theme (works with day/night mode) */
+.countdown-editor {
+  position: absolute;
+  top: 70px;
+  right: 20px;
+  width: 320px;
+  max-height: 70vh;
+  background: rgba(200, 200, 200, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(10px);
+  z-index: 100;
+  color: #222;
+}
+
+.countdown-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  background: rgba(255, 100, 100, 0.25);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: 600;
+}
+
+.countdown-editor-close {
+  background: none;
+  border: none;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.countdown-editor-close:hover {
+  color: #000;
+}
+
+/* Network sync row */
+.countdown-sync-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  background: rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 13px;
+}
+
+.countdown-sync-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.countdown-editor-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  max-height: 50vh;
+}
+
+.countdown-sequence {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.countdown-sequence-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.countdown-sequence-name {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: #222;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.countdown-sequence-header button {
+  background: rgba(0, 0, 0, 0.08);
+  border: none;
+  border-radius: 4px;
+  color: #222;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.countdown-sequence-header button:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Loop and chain row */
+.countdown-loop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 12px;
+}
+
+.countdown-loop-input {
+  width: 45px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  padding: 3px 6px;
+  color: #222;
+  font-size: 12px;
+  text-align: center;
+}
+
+.countdown-loop-hint {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 11px;
+}
+
+.countdown-chain-select {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  padding: 3px 6px;
+  color: #222;
+  font-size: 12px;
+  max-width: 120px;
+}
+
+.countdown-cues-list {
+  padding: 8px;
+}
+
+.countdown-cue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.countdown-cue-name {
+  flex: 1;
+  min-width: 80px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #222;
+  font-size: 12px;
+}
+
+.countdown-cue-duration {
+  width: 50px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  padding: 4px 6px;
+  color: #222;
+  font-size: 12px;
+  text-align: right;
+}
+
+.countdown-cue button {
+  background: rgba(0, 0, 0, 0.08);
+  border: none;
+  border-radius: 3px;
+  color: #222;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.countdown-cue button:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.countdown-add-cue-btn {
+  width: calc(100% - 16px);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  color: rgba(0, 0, 0, 0.5);
+  padding: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  margin: 8px;
+  margin-top: 0;
+}
+
+.countdown-add-cue-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(0, 0, 0, 0.3);
+  color: #222;
+}
+
+.countdown-add-sequence-btn {
+  width: calc(100% - 20px);
+  margin: 10px;
+  background: rgba(255, 100, 100, 0.2);
+  border: 1px solid rgba(255, 100, 100, 0.4);
+  border-radius: 6px;
+  color: rgba(180, 60, 60, 0.9);
+  padding: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.countdown-add-sequence-btn:hover {
+  background: rgba(255, 100, 100, 0.3);
+  border-color: rgba(255, 100, 100, 0.6);
+}
+
+.countdown-io-row {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.countdown-io-row button {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  color: #222;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.countdown-io-row button:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+
+/* ============================================================================
+ * TRANSPORT TIME (Performance Timer)
+ * ============================================================================ */
+
+#transport-time-cluster {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#transport-time {
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #1a1a1a;
+  background: rgba(100, 200, 100, 0.15);
+  border: 1px solid rgba(100, 200, 100, 0.3);
+  border-radius: 6px;
+  padding: 4px 10px;
+  min-width: 70px;
+  text-align: center;
+}
+
+/* Transport time when playing */
+#transport-time.running {
+  background: rgba(100, 200, 100, 0.25);
+  border-color: rgba(100, 200, 100, 0.5);
+}
+
+/* Transport time when paused (cue pause, not stopped) */
+#transport-time.paused {
+  background: rgba(255, 200, 100, 0.2);
+  border-color: rgba(255, 200, 100, 0.4);
 }
 
 /* ============================================================================
@@ -2816,13 +3466,19 @@ body.inverted #controls {
   width: 2px;
   background: rgba(255, 100, 100, 0.85);
   box-shadow: 0 0 4px rgba(255, 100, 100, 0.4);
+  /* Default: hidden */
+  display: none;
 }
 
 /* Vertical marker variant - full height, subtle line */
 .osc-marker--vertical .osc-marker-line {
+  display: block;
   width: 1px;
   background: rgba(255, 100, 100, 0.5);
   box-shadow: none;
+  height: 100%;
+  top: 0;
+  bottom: 0;
 }
 
 .osc-marker-label {
@@ -2837,10 +3493,10 @@ body.inverted #controls {
   /* Visual styling */
   background: rgba(255, 100, 100, 0.95);
   color: white;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 4px;
+  border-radius: 6px;
   white-space: nowrap;
   
   /* Subtle shadow for depth */
@@ -2878,6 +3534,22 @@ body.inverted #controls {
 #drop-marker-button.active {
   background: linear-gradient(180deg, #ffe0e0 0%, #ffd0d0 100%) !important;
   border-color: rgba(255, 100, 100, 0.5) !important;
+}
+
+/* Toggle Markers button styling */
+#toggle-markers-button {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#toggle-markers-button.active {
+  background: linear-gradient(180deg, #ffe0e0 0%, #ffd0d0 100%) !important;
+  border-color: rgba(255, 100, 100, 0.5) !important;
+  color: rgba(200, 60, 60, 1) !important;
+}
+
+#toggle-markers-button:not(.active) {
+  opacity: 0.6;
 }
 
 /* Marker editor popup */
@@ -2993,4 +3665,146 @@ body.inverted #controls {
 
 .osc-marker-editor-actions .cancel-btn:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+/* ============================================================================
+ * FULLSCREEN COUNTDOWN CONTROLS - Minimal
+ * ============================================================================ */
+
+/* Container - no background, matches siblings */
+.fullscreen-countdown-controls-container {
+  padding: 15px 30px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid transparent;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Controls row */
+.fullscreen-countdown-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 4vw;
+  font-weight: 600;
+}
+
+/* Play/Stop button - just symbol */
+.fullscreen-countdown-play-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 4vw;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+
+.fullscreen-countdown-play-btn:hover {
+  opacity: 1;
+}
+
+/* Dropdown button - text only */
+.fullscreen-countdown-dropdown-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 4vw;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+
+.fullscreen-countdown-dropdown-btn:hover {
+  opacity: 1;
+}
+
+#fullscreen-countdown-selection {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Dropdown menu - white bg, black text, drops DOWN */
+.fullscreen-countdown-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 10px;
+  min-width: 180px;
+  max-height: 300px;
+  overflow-y: auto;
+  border-radius: 4px;
+  z-index: 999999;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #ccc;
+  color: #000;
+}
+
+.fullscreen-countdown-dropdown-menu.hidden {
+  display: none;
+}
+
+.countdown-dropdown-header {
+  padding: 8px 12px;
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666;
+  border-bottom: 1px solid #eee;
+}
+
+.countdown-dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 13px;
+  color: #000;
+}
+
+.countdown-dropdown-item:hover {
+  background: #f0f0f0;
+}
+
+.countdown-dropdown-item.selected {
+  background: #e8e8e8;
+}
+
+.countdown-dropdown-item .item-name {
+  color: #000;
+}
+
+.countdown-dropdown-item .item-meta {
+  font-size: 11px;
+  color: #888;
+}
+
+.countdown-dropdown-empty {
+  padding: 16px 12px;
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+}
+
+/* Position red ring in countdown controls container */
+.fullscreen-countdown-controls-container .fullscreen-countdown-btn {
+  position: absolute;
+  top: -5px;
+  right: -5px;
 }

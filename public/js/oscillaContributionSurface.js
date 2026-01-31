@@ -2402,6 +2402,44 @@ const state = {
 // DROP MARKER SYSTEM
 // =============================================================
 
+// Marker visibility state
+let markersVisible = true;
+
+/**
+ * Toggle marker visibility on/off
+ */
+export function toggleMarkersVisibility(forceState) {
+    if (typeof forceState === "boolean") {
+        markersVisible = forceState;
+    } else {
+        markersVisible = !markersVisible;
+    }
+    
+    // Update all marker elements
+    const markers = document.querySelectorAll(".osc-marker");
+    markers.forEach(m => {
+        m.style.display = markersVisible ? "" : "none";
+    });
+    
+    // Update button state
+    const btn = document.getElementById("toggle-markers-button");
+    if (btn) {
+        btn.classList.toggle("active", markersVisible);
+        btn.title = markersVisible ? "Hide Markers" : "Show Markers";
+    }
+    
+    console.log("[marker] Visibility:", markersVisible ? "visible" : "hidden");
+    
+    return markersVisible;
+}
+
+/**
+ * Get current marker visibility state
+ */
+export function getMarkersVisible() {
+    return markersVisible;
+}
+
 /**
  * Create a marker DOM element
  * Markers are vertical lines with draggable labels
@@ -2414,6 +2452,11 @@ function makeMarkerEl(marker, onEdit) {
     // Add vertical class if enabled
     if (marker.vertical) {
         el.classList.add("osc-marker--vertical");
+    }
+    
+    // Respect current visibility state
+    if (!markersVisible) {
+        el.style.display = "none";
     }
     
     // Position at marker x coordinate
@@ -2434,7 +2477,7 @@ function makeMarkerEl(marker, onEdit) {
     // Create the label (drag handle)
     const label = document.createElement("div");
     label.className = "osc-marker-label";
-    label.textContent = marker.text || "Marker";
+    label.textContent = marker.text || "m";
     
     // Add tooltip with marker name
     label.title = marker.text || "Marker";
@@ -2666,7 +2709,7 @@ export function dropMarker() {
     const marker = {
         id: ulidLike(),
         kind: "marker",
-        text: "Marker",
+        text: "m",
         scope: "shared",  // Markers are shared by default per spec
         
         createdAt: nowMs(),
@@ -3161,6 +3204,20 @@ function attachEventListeners() {
             dropMarker();
         });
     }
+    
+    // Wire up Toggle Markers button
+    const toggleMarkersBtn = document.getElementById("toggle-markers-button");
+    if (toggleMarkersBtn) {
+        // Set initial state (markers visible by default)
+        toggleMarkersBtn.classList.add("active");
+        toggleMarkersBtn.title = "Hide Markers";
+        
+        toggleMarkersBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleMarkersVisibility();
+        });
+    }
 }
 
 
@@ -3208,9 +3265,18 @@ function socketPoll() {
         ws._oscillaAnnotationsHooked = true;
     }
 
-    // On connect, ask for shared annotations (best effort)
-    if (wsCanSend(ws)) {
+    // Request shared annotations only once per project (not every poll!)
+    if (wsCanSend(ws) && !sharedAnnotationsRequested && state.project) {
+        sharedAnnotationsRequested = true;
         wsSend("annotation_list_request", { project: state.project });
+    }
+    
+    // Once socket is hooked and annotations requested, stop polling
+    if (ws._oscillaAnnotationsHooked && sharedAnnotationsRequested) {
+        if (state.socketPollId) {
+            clearInterval(state.socketPollId);
+            state.socketPollId = null;
+        }
     }
 }
 
@@ -3221,6 +3287,8 @@ export function annotationsHandleSocketMessage(data) {
     if (!project || project !== state.project) return;
 
     switch (data.type) {
+        // Server sends annotation_list_response, but also handle annotation_list for compatibility
+        case "annotation_list_response":
         case "annotation_list": {
             const items = Array.isArray(data.items) ? data.items : [];
             // merge: keep local items + any shared items not already present
@@ -3235,7 +3303,8 @@ export function annotationsHandleSocketMessage(data) {
             break;
         }
 
-        case "annotation_added": {
+        // Server broadcasts annotation_add (not annotation_added)
+        case "annotation_add": {
             const it = data.item;
             if (!it || !it.id) break;
             if (state.items.some((x) => x.id === it.id)) break;
@@ -3245,7 +3314,8 @@ export function annotationsHandleSocketMessage(data) {
             break;
         }
 
-        case "annotation_updated": {
+        // Server broadcasts annotation_update (not annotation_updated)
+        case "annotation_update": {
             const it = data.item;
             if (!it || !it.id) break;
             const idx = state.items.findIndex((x) => x.id === it.id);
@@ -3259,7 +3329,8 @@ export function annotationsHandleSocketMessage(data) {
             break;
         }
 
-        case "annotation_deleted": {
+        // Server broadcasts annotation_delete (not annotation_deleted)
+        case "annotation_delete": {
             const id = data.id;
             if (!id) break;
             state.items = state.items.filter((x) => x.id !== id);
@@ -3346,10 +3417,13 @@ export function initOscillaAnnotations(opts = {}) {
         // Marker API
         dropMarker: dropMarker,
         getMarkers: () => state.items.filter(i => i.kind === "marker"),
+        toggleMarkers: toggleMarkersVisibility,
+        markersVisible: () => markersVisible,
     };
     
     // Also expose dropMarker directly on window for easy button binding
     window.dropMarker = dropMarker;
+    window.toggleMarkersVisibility = toggleMarkersVisibility;
 
     console.log("[annotations] Initialized:", {
         project: state.project,

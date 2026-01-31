@@ -1,0 +1,63 @@
+{
+  "presets": {
+    "slot_1_1": {
+      "pad1": {
+        "padDot": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "padDot1": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "padDot2": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "padDot3": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "padDot4": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      "_meta": {
+        "savedAt": 1769760265745,
+        "filter": null
+      }
+    },
+    "slot_1_2": {
+      "pad1": {
+        "padDot": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "padDot1": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "padDot2": {
+          "x": 0.508,
+          "y": 0.778
+        },
+        "padDot3": {
+          "x": 0.497,
+          "y": 0.676
+        },
+        "padDot4": {
+          "x": 0.491,
+          "y": 0.218
+        }
+      },
+      "_meta": {
+        "savedAt": 1769760285432,
+        "filter": null
+      }
+    }
+  },
+  "sequences": {},
+  "updatedAt": 1769760285447,
+  "projectId": "helper-score"
+}

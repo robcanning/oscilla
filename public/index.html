@@ -77,8 +77,13 @@
       Clients: 0
     </div>
 
-    <!-- Stopwatch -->
-    <div id="stopwatch-cluster" class="gui-cluster">
+    <!-- Transport Time (Performance Time - tied to transport) -->
+    <div id="transport-time-cluster" class="gui-cluster" title="Performance Time (tied to transport)">
+      <div id="transport-time" class="transport-time">00:00</div>
+    </div>
+
+    <!-- Rehearsal Stopwatch (Independent) -->
+    <div id="stopwatch-cluster" class="gui-cluster" title="Rehearsal Timer (independent)">
 
       <div id="stopwatch">00:00</div>
 
@@ -151,6 +156,10 @@
 
         <button id="drop-marker-button" class="gui-button" title="Drop Marker at Playhead">
           ▼
+        </button>
+
+        <button id="toggle-markers-button" class="gui-button" title="Toggle Markers Visibility">
+          M
         </button>
 
       </div>

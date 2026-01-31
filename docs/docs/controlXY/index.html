@@ -98,6 +98,10 @@
     <li><a href="/oscilla/docs/performer-interaction/">
       Performer Interaction
     </a></li>
+
+        <li><a href="/oscilla/docs/timers/">
+      Sequence Timers
+    </a></li>
   </ul>
 
   <h3>Tools</h3>
@@ -124,10 +128,25 @@
     <main class="docs-content">
 
       
-      <h1>controlXY — Multitouch XY Control Pad</h1>
-<p><code>controlXY</code> defines a <strong>persistent, multitouch XY control surface</strong> embedded directly in the score.
-It constrains one or more draggable handles to a bounding shape and continuously publishes normalized X/Y values for control and modulation.</p>
-<p>Unlike time-based cues, <code>controlXY</code> is <strong>always active</strong>, has <strong>no playhead semantics</strong>, and is evaluated at <strong>assign time</strong>.</p>
+      <h1>controlXY — Multitouch XY Control &amp; Score Animation System</h1>
+<p><code>controlXY</code> transforms your score into an <strong>interactive animation canvas</strong>. It defines persistent, multitouch XY control surfaces that enable composers to create <strong>complex choreographed animations</strong> directly within the score — the <strong>score-as-instrument, instrument-as-score</strong>.</p>
+<p>Unlike traditional time-based cues, <code>controlXY</code> provides <strong>continuous spatial control</strong> that can be:</p>
+<ul>
+<li><strong>Pre-programmed</strong> as animated sequences (choreography)</li>
+<li><strong>Performed live</strong> as a tactile control surface</li>
+<li><strong>Hybrid</strong> — switching between automation and manual control</li>
+</ul>
+<p>As a bonus, all movements can simultaneously <strong>transmit OSC</strong> for external synthesis and media control.</p>
+<hr>
+<h2>Core Concept: Score Animation Through Spatial Control</h2>
+<p>Think of <code>controlXY</code> as a <strong>spatial modulation source</strong> embedded in your score:</p>
+<ol>
+<li><strong>Define control pads</strong> with draggable handles</li>
+<li><strong>Bind handle positions</strong> to visual/sonic parameters</li>
+<li><strong>Animate via presets &amp; sequences</strong> OR <strong>perform live</strong></li>
+<li><strong>Record/playback</strong> spatial gestures as part of the composition</li>
+</ol>
+<p>This inverts the traditional &quot;playhead reads static notation&quot; model — instead, <strong>notation becomes dynamic</strong>, responding to spatial control in real-time.</p>
 <hr>
 <h2>Syntax</h2>
 <pre><code>controlXY(
@@ -179,7 +198,7 @@ It constrains one or more draggable handles to a bounding shape and continuously
 <td>boolean</td>
 <td>no</td>
 <td><code>false</code></td>
-<td>Show live value labels above each handle.</td>
+<td>Show live value labels above each handle. Useful for debugging and performance.</td>
 </tr>
 <tr>
 <td><code>osc</code></td>
@@ -215,7 +234,7 @@ It constrains one or more draggable handles to a bounding shape and continuously
 </ul>
 </li>
 </ul>
-<p>All values are <strong>normalized</strong> to the bounding box.</p>
+<p>All values are <strong>normalized</strong> to the bounding box, making animations resolution-independent.</p>
 <hr>
 <h2>Published Signals</h2>
 <h3>Single Handle</h3>
@@ -227,344 +246,535 @@ controlXY:&lt;uid&gt;.handle   // handle element id
 <pre><code>controlXY:&lt;uid&gt;.&lt;handleId&gt;.x   // 0.0 — 1.0
 controlXY:&lt;uid&gt;.&lt;handleId&gt;.y   // 0.0 — 1.0
 </code></pre>
-<p>These signals can be used anywhere parameter binding is supported.</p>
+<p>These signals can be bound to <strong>any parameter</strong> in the system, creating direct connections between spatial control and visual/sonic outcomes.</p>
 <hr>
-<h2>OSC Output (optional)</h2>
-<p>If OSC is enabled, each update sends:</p>
-<h3>Single Handle</h3>
-<pre><code>/&lt;oscAddr&gt; &lt;x&gt; &lt;y&gt;
+<h2>Setup Examples</h2>
+<h3>Basic Single Handle</h3>
+<pre><code>&lt;rect id=&quot;pad1&quot; x=&quot;100&quot; y=&quot;100&quot; width=&quot;400&quot; height=&quot;300&quot; 
+      fill=&quot;#222&quot; stroke=&quot;#666&quot;
+      cue=&quot;controlXY(uid:pad1, handle:dot1)&quot;/&gt;
+
+&lt;circle id=&quot;dot1&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;12&quot; fill=&quot;#ff4444&quot;/&gt;
 </code></pre>
-<h3>Multiple Handles</h3>
-<pre><code>/&lt;oscAddr&gt;/&lt;handleId&gt; &lt;x&gt; &lt;y&gt;
+<h3>Multi-Handle (Multitouch)</h3>
+<pre><code>&lt;rect id=&quot;mixer&quot; x=&quot;100&quot; y=&quot;100&quot; width=&quot;600&quot; height=&quot;400&quot;
+      fill=&quot;#111&quot;
+      cue=&quot;controlXY(uid:mixer, handle:[fader1,fader2,fader3,fader4], label:true)&quot;/&gt;
+
+&lt;circle id=&quot;fader1&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;10&quot; fill=&quot;#ff4444&quot;/&gt;
+&lt;circle id=&quot;fader2&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;10&quot; fill=&quot;#44ff44&quot;/&gt;
+&lt;circle id=&quot;fader3&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;10&quot; fill=&quot;#4444ff&quot;/&gt;
+&lt;circle id=&quot;fader4&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;10&quot; fill=&quot;#ffff44&quot;/&gt;
 </code></pre>
-<p>Example addresses:</p>
-<pre><code>/controlXY/pad1 0.42 0.87           # single handle
-/controlXY/pad1/dot1 0.42 0.87      # multitouch handle 1
-/controlXY/pad1/dot2 0.15 0.63      # multitouch handle 2
-</code></pre>
-<p>OSC output is throttled to avoid flooding.</p>
-<hr>
-<h2>Examples</h2>
-<h3>Basic Single Handle (bounds = self)</h3>
-<pre><code>xyPad controlXY(uid:pad1, handle:dot1)
-</code></pre>
-<ul>
-<li><code>xyPad</code> is the bounding element (rect, circle, path, group)</li>
-<li><code>dot1</code> is the draggable handle</li>
-<li>Bounds default to <code>xyPad</code> itself</li>
-</ul>
-<h3>Multiple Handles (Multitouch)</h3>
-<pre><code>xyPad controlXY(uid:pad1, handle:[dot1, dot2, dot3])
-</code></pre>
-<ul>
-<li>Three independent handles, each tracked separately</li>
-<li>Each publishes its own x/y values</li>
-</ul>
-<h3>With Value Labels</h3>
-<pre><code>xyPad controlXY(uid:pad1, handle:[dot1, dot2], label:true)
-</code></pre>
-<ul>
-<li>Shows live <code>x, y</code> values above each handle</li>
-</ul>
 <h3>With OSC Output</h3>
-<pre><code>xyPad controlXY(uid:pad1, handle:dot1, osc:true)
-</code></pre>
-<ul>
-<li>Sends OSC messages at default 30ms throttle</li>
-</ul>
-<h3>With Custom OSC Throttle</h3>
-<pre><code>xyPad controlXY(uid:pad1, handle:dot1, osc:50)
-</code></pre>
-<ul>
-<li>Sends OSC messages at 50ms throttle (20 updates/sec max)</li>
-</ul>
-<h3>Explicit Bounds Element</h3>
-<pre><code>anyElement controlXY(uid:pad1, bounds:customRect, handle:dot1)
-</code></pre>
-<ul>
-<li>DSL attached to <code>anyElement</code></li>
-<li>But handles are constrained to <code>customRect</code></li>
-</ul>
-<h3>Full Example</h3>
-<pre><code>controlArea controlXY(
-  uid: mixer,
-  handle: [fader1, fader2, fader3, fader4],
-  label: true,
-  osc: 30,
-  oscAddr: mixer/xy
-)
+<pre><code>&lt;rect id=&quot;synthControl&quot; x=&quot;50&quot; y=&quot;50&quot; width=&quot;300&quot; height=&quot;300&quot;
+      cue=&quot;controlXY(uid:synth, handle:dot1, osc:true, oscAddr:synth/xy)&quot;/&gt;
 </code></pre>
 <hr>
-<h2>CSS Styling</h2>
-<p>Handles receive CSS classes for styling:</p>
-<table>
-<thead>
-<tr>
-<th>Class</th>
-<th>When Applied</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>.controlxy-handle</code></td>
-<td>Always (on all handles)</td>
-</tr>
-<tr>
-<td><code>.controlxy-handle--active</code></td>
-<td>While being dragged</td>
-</tr>
-</tbody>
-</table>
-<h3>Example CSS</h3>
-<pre><code class="language-css">.controlxy-handle {
-  cursor: grab;
-  transition: filter 0.15s ease-out;
-}
+<h2>Animation Workflow: Creating Score Choreography</h2>
+<p>The true power of <code>controlXY</code> emerges when you <strong>pre-program spatial animations</strong> as part of your composition.</p>
+<h3>Step 1: Save Spatial States as Presets</h3>
+<p><strong>Using the Preset UI:</strong></p>
+<ol>
+<li>Press <strong>Alt+Shift+P</strong> to open the preset manager (or click ⚙ on the pad)</li>
+<li>Move handles to desired positions</li>
+<li>Type a preset name (e.g., &quot;intro_position&quot;)</li>
+<li>Click 💾 Save</li>
+</ol>
+<p><strong>Via DSL (triggered by playhead or buttons):</strong></p>
+<pre><code class="language-xml">&lt;!-- Save current state when playhead passes --&gt;
+&lt;rect x=&quot;100&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot; 
+      cue=&quot;ui(action:'controlXYSave', preset:'stateA')&quot;
+      fill=&quot;red&quot; opacity=&quot;0.3&quot;/&gt;
 
-.controlxy-handle--active {
-  cursor: grabbing;
-  filter: drop-shadow(0 0 8px rgba(100, 200, 255, 0.8));
-}
+&lt;!-- Button to save state --&gt;
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYSave', preset:'verse1'),
+        style(label:'Save Verse', x:10, y:10)
+      )&quot;/&gt;
+</code></pre>
+<p><strong>Via Console (for experimentation):</strong></p>
+<pre><code class="language-javascript">// Save all controlXY instances
+window.controlXYPresets.save('stateA');
 
-.controlxy-label {
-  font-family: monospace;
-  font-size: 11px;
-  fill: #fff;
-}
+// Save specific pad only
+window.controlXYPresets.save('stateB', 'pad1');
 </code></pre>
-<h3>Color Variants</h3>
-<p>Add these classes to handles in your SVG for preset colors:</p>
-<ul>
-<li><code>.controlxy-handle--red</code></li>
-<li><code>.controlxy-handle--green</code></li>
-<li><code>.controlxy-handle--blue</code></li>
-<li><code>.controlxy-handle--yellow</code></li>
-<li><code>.controlxy-handle--cyan</code></li>
-<li><code>.controlxy-handle--magenta</code></li>
-</ul>
+<h3>Step 2: Recall States with Animation</h3>
+<p><strong>Instant recall (no tween):</strong></p>
+<pre><code class="language-xml">&lt;rect x=&quot;500&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYRecall', preset:'stateA')&quot;
+      fill=&quot;blue&quot; opacity=&quot;0.3&quot;/&gt;
+</code></pre>
+<p><strong>Smooth tween (2 seconds, easing):</strong></p>
+<pre><code class="language-xml">&lt;rect x=&quot;1000&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYRecall', preset:'stateB', dur:2, ease:'easeInOutSine')&quot;
+      fill=&quot;green&quot; opacity=&quot;0.3&quot;/&gt;
+</code></pre>
+<p><strong>Via button:</strong></p>
+<pre><code class="language-xml">&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYRecall', preset:'chorus', dur:3, ease:'easeOutElastic'),
+        style(label:'▶ Chorus', x:10, y:50)
+      )&quot;/&gt;
+</code></pre>
+<h3>Step 3: Define Sequences (Choreographed Animation)</h3>
+<p>Sequences are <strong>playlists of presets</strong> that play automatically.</p>
+<p><strong>Define sequence via DSL:</strong></p>
+<pre><code class="language-xml">&lt;!-- Define a 3-state sequence --&gt;
+&lt;rect x=&quot;100&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYDefineSequence', 
+              name:'intro_dance', 
+              steps:'stateA,stateB,stateC')&quot;
+      fill=&quot;yellow&quot; opacity=&quot;0.3&quot;/&gt;
+</code></pre>
+<p><strong>Play the sequence:</strong></p>
+<pre><code class="language-xml">&lt;!-- Auto-play when playhead reaches this point --&gt;
+&lt;rect x=&quot;200&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYSequence', 
+              seq:'intro_dance', 
+              dur:2, 
+              ease:'easeInOutSine', 
+              loop:false)&quot;
+      fill=&quot;cyan&quot; opacity=&quot;0.3&quot;/&gt;
+</code></pre>
+<p><strong>Stop sequence:</strong></p>
+<pre><code class="language-xml">&lt;rect x=&quot;1500&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYSequenceStop')&quot;
+      fill=&quot;red&quot; opacity=&quot;0.5&quot;/&gt;
+</code></pre>
+<p><strong>Via buttons (interactive control):</strong></p>
+<pre><code class="language-xml">&lt;!-- Define sequence button --&gt;
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYDefineSequence', 
+                    name:'verse_pattern', 
+                    steps:'v1,v2,v3,v1'),
+        style(label:'Define Pattern', x:10, y:10)
+      )&quot;/&gt;
+
+&lt;!-- Play button --&gt;
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYSequence', 
+                    seq:'verse_pattern', 
+                    dur:1.5, 
+                    loop:true),
+        style(label:'▶ Play', x:10, y:50)
+      )&quot;/&gt;
+
+&lt;!-- Stop button --&gt;
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYSequenceStop'),
+        style(label:'■ Stop', x:10, y:90)
+      )&quot;/&gt;
+</code></pre>
 <hr>
-<h2>Binding Examples</h2>
-<h3>Live Scaling</h3>
-<pre><code>scale(uid:box1, sx:pad1.x, sy:pad1.y)
-</code></pre>
-<h3>Synth Control</h3>
-<pre><code>synth(uid:s1, freq:pad1.x[100,2000], amp:pad1.y)
-</code></pre>
-<h3>Spatial / Navigation Control</h3>
-<pre><code>o2p(path:loopA, start:pad1.dot1.x, end:pad1.dot2.x)
-</code></pre>
-<h3>Multi-parameter Modulation</h3>
-<pre><code>rotate(uid:r1, values:pad1.dot1.y[0,360])
-color(uid:c1, hue:pad1.dot2.x[0,360])
+<h2>Complete Animation Example: Verse-Chorus-Bridge</h2>
+<p>Here's a <strong>full composition workflow</strong> showing how to choreograph spatial animation:</p>
+<pre><code class="language-xml">&lt;!-- ===== SETUP: Define the control pad ===== --&gt;
+&lt;rect id=&quot;controlPad&quot; x=&quot;100&quot; y=&quot;100&quot; width=&quot;600&quot; height=&quot;400&quot;
+      fill=&quot;#111&quot; stroke=&quot;#333&quot;
+      cue=&quot;controlXY(uid:mixer, handle:[dot1,dot2,dot3], label:true)&quot;/&gt;
+
+&lt;circle id=&quot;dot1&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;12&quot; fill=&quot;#ff4444&quot;/&gt;
+&lt;circle id=&quot;dot2&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;12&quot; fill=&quot;#44ff44&quot;/&gt;
+&lt;circle id=&quot;dot3&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;12&quot; fill=&quot;#4444ff&quot;/&gt;
+
+&lt;!-- ===== PLAYHEAD TRIGGERS: Auto-save states ===== --&gt;
+&lt;!-- Measure 1: Save intro position --&gt;
+&lt;rect x=&quot;100&quot; y=&quot;0&quot; width=&quot;1&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYSave', preset:'intro')&quot;
+      fill=&quot;transparent&quot;/&gt;
+
+&lt;!-- Measure 5: Save verse position --&gt;
+&lt;rect x=&quot;500&quot; y=&quot;0&quot; width=&quot;1&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYSave', preset:'verse')&quot;
+      fill=&quot;transparent&quot;/&gt;
+
+&lt;!-- Measure 13: Save chorus position --&gt;
+&lt;rect x=&quot;1300&quot; y=&quot;0&quot; width=&quot;1&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYSave', preset:'chorus')&quot;
+      fill=&quot;transparent&quot;/&gt;
+
+&lt;!-- Measure 21: Save bridge position --&gt;
+&lt;rect x=&quot;2100&quot; y=&quot;0&quot; width=&quot;1&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYSave', preset:'bridge')&quot;
+      fill=&quot;transparent&quot;/&gt;
+
+&lt;!-- ===== PLAYHEAD AUTOMATION: Recall with tweens ===== --&gt;
+&lt;!-- M9: Tween to verse over 2 seconds --&gt;
+&lt;rect x=&quot;900&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYRecall', preset:'verse', dur:2, ease:'easeInOutSine')&quot;
+      fill=&quot;blue&quot; opacity=&quot;0.4&quot;/&gt;
+
+&lt;!-- M17: Quick snap to chorus --&gt;
+&lt;rect x=&quot;1700&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYRecall', preset:'chorus', dur:0.5, ease:'easeOutQuad')&quot;
+      fill=&quot;green&quot; opacity=&quot;0.4&quot;/&gt;
+
+&lt;!-- M25: Elastic bounce to bridge --&gt;
+&lt;rect x=&quot;2500&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYRecall', preset:'bridge', dur:3, ease:'easeOutElastic')&quot;
+      fill=&quot;purple&quot; opacity=&quot;0.4&quot;/&gt;
+
+&lt;!-- ===== SEQUENCES: Complex multi-step animations ===== --&gt;
+&lt;!-- M29: Define and play verse pattern --&gt;
+&lt;rect x=&quot;2900&quot; y=&quot;0&quot; width=&quot;1&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYDefineSequence', 
+              name:'verse_pattern', 
+              steps:'verse,intro,verse')&quot;
+      fill=&quot;transparent&quot;/&gt;
+
+&lt;rect x=&quot;2950&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYSequence', 
+              seq:'verse_pattern', 
+              dur:1, 
+              loop:false)&quot;
+      fill=&quot;yellow&quot; opacity=&quot;0.4&quot;/&gt;
+
+&lt;!-- M40: Stop all automation, return to intro --&gt;
+&lt;rect x=&quot;4000&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYSequenceStop')&quot;
+      fill=&quot;red&quot; opacity=&quot;0.5&quot;/&gt;
+
+&lt;rect x=&quot;4020&quot; y=&quot;0&quot; width=&quot;2&quot; height=&quot;600&quot;
+      cue=&quot;ui(action:'controlXYRecall', preset:'intro', dur:4, ease:'easeInOutSine')&quot;
+      fill=&quot;cyan&quot; opacity=&quot;0.4&quot;/&gt;
+
+&lt;!-- ===== MANUAL OVERRIDE: Buttons for live performance ===== --&gt;
+&lt;!-- Performers can override automation at any time --&gt;
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYRecall', preset:'intro', dur:2),
+        style(label:'⏮ Intro', x:10, y:500, width:80)
+      )&quot;/&gt;
+
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYRecall', preset:'verse', dur:1.5),
+        style(label:'V Verse', x:100, y:500, width:80)
+      )&quot;/&gt;
+
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYRecall', preset:'chorus', dur:1),
+        style(label:'C Chorus', x:190, y:500, width:80)
+      )&quot;/&gt;
+
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYSequenceStop'),
+        style(label:'■ Stop Auto', x:280, y:500, width:100)
+      )&quot;/&gt;
 </code></pre>
 <hr>
-<h2>Authoring Guidelines</h2>
-<h3>Bounding Element</h3>
-<ul>
-<li>Should be a <code>&lt;rect&gt;</code>, <code>&lt;circle&gt;</code>, <code>&lt;ellipse&gt;</code>, or <code>&lt;path&gt;</code> with a valid bounding box</li>
-<li>Can have <code>fill: none</code> if you want it invisible</li>
-<li>Receives the DSL expression</li>
-</ul>
-<h3>Handle Elements</h3>
-<ul>
-<li>Must have a visible fill (or stroke)</li>
-<li>Should be relatively small (circles, dots, squares work well)</li>
-<li>Must NOT contain DSL expressions</li>
-<li>Will be repositioned to center of bounds on initialization</li>
-<li>Will receive pointer events automatically</li>
-</ul>
-<h3>SVG Structure Example</h3>
-<pre><code class="language-xml">&lt;g id=&quot;xyPad controlXY(uid:pad1, handle:[dot1, dot2], label:true)&quot;&gt;
-  &lt;rect id=&quot;padBounds&quot; x=&quot;100&quot; y=&quot;100&quot; width=&quot;400&quot; height=&quot;300&quot; fill=&quot;#333&quot;/&gt;
+<h2>Binding to Score Elements: Creating Visual Animations</h2>
+<p>This is where <strong>spatial control becomes visual transformation</strong>.</p>
+<h3>Position Control</h3>
+<pre><code class="language-xml">&lt;!-- Dot X position controls rectangle X position --&gt;
+&lt;rect id=&quot;box1&quot;
+      cue=&quot;scale(uid:box1, tx:mixer.dot1.x[-200,200])&quot;/&gt;
+</code></pre>
+<h3>Size/Scale Control</h3>
+<pre><code class="language-xml">&lt;!-- Dot Y controls vertical scale --&gt;
+&lt;rect id=&quot;box2&quot;
+      cue=&quot;scale(uid:box2, sy:mixer.dot1.y[0.5,2.0])&quot;/&gt;
+</code></pre>
+<h3>Rotation Control</h3>
+<pre><code class="language-xml">&lt;!-- Map X position to rotation angle --&gt;
+&lt;g id=&quot;spinner&quot;
+   cue=&quot;rotate(uid:spinner, values:mixer.dot1.x[0,360])&quot;/&gt;
+</code></pre>
+<h3>Color Control</h3>
+<pre><code class="language-xml">&lt;!-- Y position controls hue --&gt;
+&lt;circle id=&quot;colorDot&quot;
+        cue=&quot;color(uid:colorDot, hue:mixer.dot1.y[0,360])&quot;/&gt;
+</code></pre>
+<h3>Opacity Control</h3>
+<pre><code class="language-xml">&lt;!-- X position fades element --&gt;
+&lt;rect id=&quot;fader&quot;
+      cue=&quot;fade(uid:fader, opacity:mixer.dot1.x)&quot;/&gt;
+</code></pre>
+<h3>Multi-Parameter Complex Animation</h3>
+<pre><code class="language-xml">&lt;!-- Dot1 controls rotation, Dot2 controls scale, Dot3 controls opacity --&gt;
+&lt;g id=&quot;complexShape&quot;&gt;
+  &lt;rect cue=&quot;rotate(uid:r1, values:mixer.dot1.x[0,360])
+            scale(uid:s1, sx:mixer.dot2.x[0.5,2], sy:mixer.dot2.y[0.5,2])
+            fade(uid:f1, opacity:mixer.dot3.y)&quot;/&gt;
 &lt;/g&gt;
-&lt;circle id=&quot;dot1&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;15&quot; fill=&quot;#ff4444&quot;/&gt;
-&lt;circle id=&quot;dot2&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;15&quot; fill=&quot;#44ff44&quot;/&gt;
 </code></pre>
-<p>Note: Handles can be defined anywhere in the SVG — they don't need to be children of the bounds element.</p>
+<h3>Spatial Navigation</h3>
+<pre><code class="language-xml">&lt;!-- Two handles define start/end points of a loop region --&gt;
+&lt;g cue=&quot;o2p(path:loopA, start:mixer.dot1.x, end:mixer.dot2.x)&quot;/&gt;
+</code></pre>
 <hr>
-<h2>Behaviour</h2>
-<ul>
-<li>Handles can be freely dragged <strong>only inside</strong> the bounding element</li>
-<li>The cue is activated <strong>immediately on load</strong></li>
-<li>No playhead intersection required</li>
-<li>No animation, duration, easing, or timing parameters</li>
-<li>Multitouch: each finger controls the nearest available handle</li>
-<li>Handles are brought to front (z-order) on initialization</li>
-</ul>
-<hr>
-<h2>Cleanup</h2>
-<p>The control stores a cleanup function accessible via:</p>
-<pre><code class="language-javascript">element._controlXY.cleanup()
+<h2>Advanced: Programmatic Animation via Console</h2>
+<p>For complex choreography, you can script animations directly:</p>
+<h3>Tweening Without Presets</h3>
+<pre><code class="language-javascript">// Move ALL handles to center over 2 seconds
+window.controlXYPresets.tweenTo({ x: 0.5, y: 0.5 }, 2, 'easeInOutSine');
+
+// Move to bottom-left corner
+window.controlXYPresets.tweenTo(0, 0, 3, 'easeOutElastic');
+
+// Multi-handle choreography (by index)
+window.controlXYPresets.tweenTo([
+  { x: 0.2, y: 0.8 },  // Handle 0
+  { x: 0.5, y: 0.5 },  // Handle 1
+  { x: 0.8, y: 0.2 }   // Handle 2
+], 2, 'easeInOutBack');
 </code></pre>
-<p>This removes all event listeners and labels if needed.</p>
-<hr>
-<h2>Notes</h2>
-<ul>
-<li><code>controlXY</code> is a <strong>control-plane cue</strong>, not a temporal cue</li>
-<li>It is registered during <code>assignCues()</code>, not via the playhead dispatcher</li>
-<li>Handle positions are persisted only during the session (not saved)</li>
-<li>Initial position is always center of bounds</li>
-<li>Works with touch screens, mice, and styluses (via Pointer Events API)</li>
-</ul>
-<hr>
-<h2>Summary</h2>
-<p><code>controlXY</code> turns the score itself into a tactile controller surface, enabling direct spatial control of sound, animation, and interaction parameters without leaving the notation. With multitouch support, multiple performers or parameters can be controlled simultaneously.</p>
-<hr>
-<h2>Preset System</h2>
-<p>controlXY includes a full preset system for saving, recalling, and animating handle positions.</p>
-<h3>Saving Presets</h3>
-<p><strong>Via UI:</strong> Press <code>Ctrl+Shift+P</code> to open the preset panel, enter a name, click Save.</p>
-<p><strong>Via Console:</strong></p>
-<pre><code class="language-javascript">controlXYPresets.save('myPreset')           // Save all pads
-controlXYPresets.save('myPreset', 'pad1')   // Save specific pad only
+<h3>Complex Sequences with Per-Step Timing</h3>
+<pre><code class="language-javascript">// Define sequence with variable timing
+window.controlXYPresets.defineSequence('complex_dance', [
+  { preset: 'position1', dur: 2 },
+  { preset: 'position2', dur: 1 },
+  { preset: 'position3', dur: 3 },
+  { preset: 'position1', dur: 2 }
+]);
+
+// Play with custom options
+window.controlXYPresets.playSequence('complex_dance', {
+  loop: true,
+  onStep: (step, preset) =&gt; console.log(`Now: ${preset}`)
+});
 </code></pre>
-<p><strong>Via DSL:</strong></p>
-<pre><code>controlXYSave(preset:myPreset)
-controlXYSave(preset:myPreset, uid:pad1)
-</code></pre>
-<h3>Recalling Presets</h3>
-<p><strong>Instant recall:</strong></p>
-<pre><code class="language-javascript">controlXYPresets.recall('myPreset')
-</code></pre>
-<p><strong>Tweened recall:</strong></p>
-<pre><code class="language-javascript">controlXYPresets.recall('myPreset', { dur: 2, ease: 'easeInOutSine' })
-</code></pre>
-<p><strong>Per-handle timing:</strong></p>
-<pre><code class="language-javascript">controlXYPresets.recall('myPreset', {
-  dur: 1,
+<h3>Per-Handle Timing Control</h3>
+<pre><code class="language-javascript">// Staggered animation - each handle moves independently
+window.controlXYPresets.recall('myPreset', {
   handles: {
-    dot1: { dur: 2, delay: 0 },
-    dot2: { dur: 1.5, delay: 0.5 },
+    dot1: { dur: 2, delay: 0, ease: 'easeInOutSine' },
+    dot2: { dur: 1.5, delay: 0.5, ease: 'easeOutQuad' },
     dot3: { dur: 1, delay: 1, ease: 'easeOutElastic' }
   }
-})
+});
 </code></pre>
-<p><strong>Via DSL:</strong></p>
-<pre><code>controlXYRecall(preset:myPreset)
-controlXYRecall(preset:myPreset, dur:2, ease:3)
-</code></pre>
-<h3>Sequences</h3>
-<p>Define a sequence of presets to play in order:</p>
-<pre><code class="language-javascript">// Define sequence
-controlXYPresets.defineSequence('intro', ['preset1', 'preset2', 'preset3'])
-
-// Play sequence
-controlXYPresets.playSequence('intro', { dur: 1.5, loop: false })
-
-// With variable timing per step
-controlXYPresets.playSequence('intro', { dur: [1, 2, 0.5] })
-
-// Loop forever
-controlXYPresets.playSequence('intro', { dur: 1, loop: true })
-
-// Stop sequence
-controlXYPresets.stopSequence()
-</code></pre>
-<p><strong>Via DSL:</strong></p>
-<pre><code>controlXYSequence(seq:intro, dur:1.5)
-controlXYSequence(seq:intro, dur:1.5, loop:true)
-</code></pre>
-<h3>Easing Functions</h3>
-<p>Available easing options (by name or number):</p>
+<hr>
+<h2>Easing Functions</h2>
+<p>Choose from 15 easing functions to shape your animations:</p>
 <table>
 <thead>
 <tr>
 <th>Number</th>
 <th>Name</th>
+<th>Character</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>0</td>
-<td>linear</td>
+<td><code>linear</code></td>
+<td>Constant speed</td>
 </tr>
 <tr>
 <td>1</td>
-<td>easeInSine</td>
+<td><code>easeInSine</code></td>
+<td>Slow start</td>
 </tr>
 <tr>
 <td>2</td>
-<td>easeOutSine</td>
+<td><code>easeOutSine</code></td>
+<td>Slow end</td>
 </tr>
 <tr>
 <td>3</td>
-<td>easeInOutSine</td>
+<td><code>easeInOutSine</code></td>
+<td>Smooth both ends</td>
 </tr>
 <tr>
 <td>4</td>
-<td>easeInQuad</td>
+<td><code>easeInQuad</code></td>
+<td>Accelerate</td>
 </tr>
 <tr>
 <td>5</td>
-<td>easeOutQuad</td>
+<td><code>easeOutQuad</code></td>
+<td>Decelerate</td>
 </tr>
 <tr>
 <td>6</td>
-<td>easeInOutQuad</td>
+<td><code>easeInOutQuad</code></td>
+<td>Smooth acceleration</td>
 </tr>
 <tr>
 <td>7</td>
-<td>easeInCubic</td>
+<td><code>easeInCubic</code></td>
+<td>Strong acceleration</td>
 </tr>
 <tr>
 <td>8</td>
-<td>easeOutCubic</td>
+<td><code>easeOutCubic</code></td>
+<td>Strong deceleration</td>
 </tr>
 <tr>
 <td>9</td>
-<td>easeInOutCubic</td>
+<td><code>easeInOutCubic</code></td>
+<td>Powerful smooth</td>
 </tr>
 <tr>
 <td>10</td>
-<td>easeInBack</td>
+<td><code>easeInBack</code></td>
+<td>Anticipation (goes backward first)</td>
 </tr>
 <tr>
 <td>11</td>
-<td>easeOutBack</td>
+<td><code>easeOutBack</code></td>
+<td>Overshoot</td>
 </tr>
 <tr>
 <td>12</td>
-<td>easeInOutBack</td>
+<td><code>easeInOutBack</code></td>
+<td>Anticipation + overshoot</td>
 </tr>
 <tr>
 <td>13</td>
-<td>easeInElastic</td>
+<td><code>easeInElastic</code></td>
+<td>Elastic snap-in</td>
 </tr>
 <tr>
 <td>14</td>
-<td>easeOutElastic</td>
+<td><code>easeOutElastic</code></td>
+<td>Bouncy arrival</td>
 </tr>
 </tbody>
 </table>
-<h3>Import / Export</h3>
-<p><strong>Export to file:</strong></p>
-<pre><code class="language-javascript">const json = controlXYPresets.export()
-// Download or copy json
+<p>Use by name or number in DSL:</p>
+<pre><code class="language-xml">&lt;!-- By name --&gt;
+cue=&quot;ui(action:'controlXYRecall', preset:'state1', dur:2, ease:'easeOutElastic')&quot;
+
+&lt;!-- By number --&gt;
+cue=&quot;ui(action:'controlXYRecall', preset:'state1', dur:2, ease:14)&quot;
 </code></pre>
-<p><strong>Import from file:</strong></p>
-<pre><code class="language-javascript">controlXYPresets.import(jsonString, true)  // true = merge, false = replace
+<hr>
+<h2>Complete DSL Action Reference</h2>
+<p>All <code>controlXY</code> preset actions work through <code>ui(action:...)</code> syntax.</p>
+<h3>1. Save Preset</h3>
+<pre><code class="language-xml">&lt;!-- Save all pads --&gt;
+ui(action:&quot;controlXYSave&quot;, preset:&quot;stateName&quot;)
+
+&lt;!-- Save specific pad --&gt;
+ui(action:&quot;controlXYSave&quot;, preset:&quot;stateName&quot;, uid:&quot;pad1&quot;)
 </code></pre>
-<p><strong>Import from another project:</strong></p>
-<pre><code class="language-javascript">controlXYPresets.importFromProject('otherProjectId', true)
+<p><strong>Examples:</strong></p>
+<pre><code class="language-xml">&lt;!-- Playhead trigger --&gt;
+&lt;rect x=&quot;500&quot; cue=&quot;ui(action:'controlXYSave', preset:'verse1')&quot;/&gt;
+
+&lt;!-- Button --&gt;
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYSave', preset:'myState'),
+        style(label:'Save State', x:10, y:10)
+      )&quot;/&gt;
 </code></pre>
-<h3>Preset Panel UI</h3>
-<p>Toggle the preset management panel:</p>
+<h3>2. Recall Preset</h3>
+<pre><code class="language-xml">&lt;!-- Instant --&gt;
+ui(action:&quot;controlXYRecall&quot;, preset:&quot;stateName&quot;)
+
+&lt;!-- With tween --&gt;
+ui(action:&quot;controlXYRecall&quot;, preset:&quot;stateName&quot;, dur:2, ease:&quot;easeInOutSine&quot;)
+</code></pre>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-xml">&lt;!-- Playhead trigger with animation --&gt;
+&lt;rect x=&quot;1000&quot; 
+      cue=&quot;ui(action:'controlXYRecall', preset:'chorus', dur:3, ease:'easeOutElastic')&quot;/&gt;
+
+&lt;!-- Button with quick snap --&gt;
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYRecall', preset:'breakdown', dur:0.5),
+        style(label:'⚡ Breakdown', x:10, y:50)
+      )&quot;/&gt;
+</code></pre>
+<h3>3. Define Sequence</h3>
+<pre><code class="language-xml">ui(action:&quot;controlXYDefineSequence&quot;, name:&quot;seqName&quot;, steps:&quot;preset1,preset2,preset3&quot;)
+</code></pre>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-xml">&lt;!-- Define on load --&gt;
+&lt;rect x=&quot;100&quot; 
+      cue=&quot;ui(action:'controlXYDefineSequence', 
+              name:'intro_pattern', 
+              steps:'a,b,c,a')&quot;/&gt;
+
+&lt;!-- Button to create sequence --&gt;
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYDefineSequence', 
+                    name:'verse_loop', 
+                    steps:'verse1,verse2,verse1'),
+        style(label:'Create Loop', x:10, y:90)
+      )&quot;/&gt;
+</code></pre>
+<h3>4. Play Sequence</h3>
+<pre><code class="language-xml">ui(action:&quot;controlXYSequence&quot;, seq:&quot;seqName&quot;, dur:2, ease:&quot;easeInOutSine&quot;, loop:true)
+</code></pre>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-xml">&lt;!-- Auto-play when playhead hits --&gt;
+&lt;rect x=&quot;2000&quot; 
+      cue=&quot;ui(action:'controlXYSequence', 
+              seq:'intro_pattern', 
+              dur:1.5, 
+              loop:false)&quot;/&gt;
+
+&lt;!-- Button with looping --&gt;
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYSequence', 
+                    seq:'verse_loop', 
+                    dur:2, 
+                    loop:true),
+        style(label:'▶ Loop Verse', x:10, y:130)
+      )&quot;/&gt;
+</code></pre>
+<h3>5. Stop Sequence</h3>
+<pre><code class="language-xml">ui(action:&quot;controlXYSequenceStop&quot;)
+</code></pre>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-xml">&lt;!-- Playhead trigger --&gt;
+&lt;rect x=&quot;4000&quot; cue=&quot;ui(action:'controlXYSequenceStop')&quot;/&gt;
+
+&lt;!-- Button --&gt;
+&lt;g cue=&quot;button(
+        trigger:ui(action:'controlXYSequenceStop'),
+        style(label:'■ Stop', x:10, y:170)
+      )&quot;/&gt;
+</code></pre>
+<hr>
+<h2>OSC Output (Bonus Feature)</h2>
+<p>While spatial animation is the primary use case, all handle movements can <strong>simultaneously control external software</strong>.</p>
+<h3>Enable OSC</h3>
+<pre><code class="language-xml">&lt;rect id=&quot;pad1&quot; 
+      cue=&quot;controlXY(uid:synth, handle:dot1, osc:true)&quot;/&gt;
+</code></pre>
+<h3>Custom Address &amp; Throttle</h3>
+<pre><code class="language-xml">&lt;rect id=&quot;pad1&quot;
+      cue=&quot;controlXY(uid:synth, handle:dot1, osc:50, oscAddr:'max/xy')&quot;/&gt;
+</code></pre>
+<h3>OSC Messages Sent</h3>
+<p><strong>Single handle:</strong></p>
+<pre><code>/controlXY/synth 0.42 0.87
+</code></pre>
+<p><strong>Multiple handles:</strong></p>
+<pre><code>/controlXY/synth/dot1 0.42 0.87
+/controlXY/synth/dot2 0.15 0.63
+</code></pre>
+<p><strong>Custom address:</strong></p>
+<pre><code>/max/xy 0.42 0.87
+</code></pre>
+<p>Works with Max/MSP, Pure Data, SuperCollider, TouchOSC, and any OSC-compatible software.</p>
+<hr>
+<h2>Preset Panel UI</h2>
+<h3>Opening the Panel</h3>
+<ol>
+<li><strong>Click ⚙ button</strong> in top-right of any controlXY pad</li>
+<li><strong>Keyboard: Alt+Shift+P</strong></li>
+<li><strong>Console: <code>window.controlXYPresetUI.toggle()</code></strong></li>
+</ol>
+<h3>Panel Features</h3>
 <ul>
-<li>Keyboard: <code>Ctrl+Shift+P</code> (or <code>Cmd+Shift+P</code> on Mac)</li>
-<li>Console: <code>controlXYPresetUI.toggle()</code></li>
+<li><strong>Save Section:</strong> Type name, click 💾</li>
+<li><strong>Presets List:</strong> Click ▶ to recall, 🗑 to delete</li>
+<li><strong>Recall Options:</strong> Set duration (seconds) and easing</li>
+<li><strong>Sequences:</strong> Play/stop defined sequences</li>
+<li><strong>Import/Export:</strong> Save/load preset files</li>
 </ul>
-<p>The panel provides:</p>
-<ul>
-<li>Save/delete presets</li>
-<li>Recall with adjustable duration and easing</li>
-<li>Play/stop sequences</li>
-<li>Import/export presets</li>
-</ul>
-<h3>Storage</h3>
-<p>Presets are automatically saved to <code>controlxy-presets.json</code> in the project folder. The file structure:</p>
+<h3>Keyboard Shortcut</h3>
+<p><strong>Alt+Shift+P</strong> toggles the panel (changed from Ctrl+Shift+P to avoid Chrome conflict).</p>
+<hr>
+<h2>Storage &amp; Persistence</h2>
+<p>Presets auto-save to <code>scores/&lt;project&gt;/controlxy-presets.json</code>:</p>
 <pre><code class="language-json">{
   &quot;presets&quot;: {
-    &quot;preset1&quot;: {
+    &quot;intro&quot;: {
       &quot;pad1&quot;: {
         &quot;dot1&quot;: { &quot;x&quot;: 0.25, &quot;y&quot;: 0.75 },
         &quot;dot2&quot;: { &quot;x&quot;: 0.80, &quot;y&quot;: 0.30 }
@@ -572,40 +782,151 @@ controlXYSequence(seq:intro, dur:1.5, loop:true)
     }
   },
   &quot;sequences&quot;: {
-    &quot;intro&quot;: [&quot;preset1&quot;, &quot;preset2&quot;, &quot;preset3&quot;]
-  }
+    &quot;verse_pattern&quot;: [&quot;verse1&quot;, &quot;verse2&quot;, &quot;verse1&quot;]
+  },
+  &quot;updatedAt&quot;: 1704067200000,
+  &quot;projectId&quot;: &quot;myProject&quot;
 }
 </code></pre>
-<h3>API Reference</h3>
-<pre><code class="language-javascript">// Presets
+<p>Loaded automatically when project loads.</p>
+<hr>
+<h2>CSS Styling</h2>
+<h3>Handle Classes</h3>
+<pre><code class="language-css">.controlxy-handle {
+  cursor: grab;
+  transition: opacity 0.15s;
+}
+
+.controlxy-handle:hover {
+  opacity: 0.8;
+}
+
+.controlxy-handle--active {
+  cursor: grabbing;
+  filter: drop-shadow(0 0 10px rgba(100, 200, 255, 0.9));
+}
+</code></pre>
+<h3>Label Styling</h3>
+<pre><code class="language-css">.controlxy-label {
+  font-family: 'SF Mono', 'Monaco', monospace;
+  font-size: 11px;
+  fill: #fff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+</code></pre>
+<h3>Toggle Button</h3>
+<p>The ⚙ button is automatically added to each pad's top-right corner. Style via:</p>
+<pre><code class="language-css">.controlxy-toggle-btn {
+  background: rgba(30, 30, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.controlxy-toggle-btn:hover {
+  background: rgba(30, 30, 30, 1);
+  transform: scale(1.1);
+}
+</code></pre>
+<hr>
+<h2>Complete API Reference</h2>
+<h3>JavaScript Console API</h3>
+<pre><code class="language-javascript">// ===== PRESETS =====
 controlXYPresets.save(name, uidFilter?)
 controlXYPresets.recall(name, options?)
 controlXYPresets.delete(name)
-controlXYPresets.list()
-controlXYPresets.get(name)
+controlXYPresets.list()                    // Returns array of preset names
+controlXYPresets.get(name)                 // Returns preset data
 
-// Tweening
+// ===== TWEENING =====
 controlXYPresets.tweenTo(positions, dur, ease)
+controlXYPresets.tweenTo({ x: 0.5, y: 0.5 }, 2)        // All handles
+controlXYPresets.tweenTo(0.8, 0.3, 1.5, 'easeOutElastic')  // Shorthand
 controlXYPresets.stopAllTweens()
 
-// Sequences
+// ===== SEQUENCES =====
 controlXYPresets.defineSequence(name, steps)
 controlXYPresets.playSequence(name, options)
 controlXYPresets.stopSequence()
-controlXYPresets.getActiveSequence()
+controlXYPresets.getActiveSequence()       // Returns current sequence info
 
-// Persistence
-controlXYPresets.init(projectId)
-controlXYPresets.export()
+// ===== PERSISTENCE =====
+controlXYPresets.init(projectId)           // Called automatically
+controlXYPresets.export()                  // Returns JSON string
 controlXYPresets.import(json, merge?)
 controlXYPresets.importFromProject(projectId, merge?)
 
-// UI
+// ===== UI =====
 controlXYPresetUI.show()
 controlXYPresetUI.hide()
 controlXYPresetUI.toggle()
 controlXYPresetUI.refresh()
 </code></pre>
+<hr>
+<h2>Compositional Patterns</h2>
+<h3>Pattern 1: Verse-Chorus Automation</h3>
+<pre><code>1. Save state at verse start
+2. Save state at chorus start  
+3. Tween between them at transitions
+4. Add button overrides for live performance
+</code></pre>
+<h3>Pattern 2: Looping Textures</h3>
+<pre><code>1. Define 3-4 related states
+2. Create sequence with varied timing
+3. Loop sequence with `loop:true`
+4. Bind to visual parameters for evolving texture
+</code></pre>
+<h3>Pattern 3: Build-Tension-Release</h3>
+<pre><code>1. Start at calm state (center, low values)
+2. Sequence through increasingly tense positions
+3. Climax: rapid sequence or elastic bounce
+4. Release: slow tween back to calm
+</code></pre>
+<h3>Pattern 4: Call-Response</h3>
+<pre><code>1. Manual control for &quot;call&quot; phrase
+2. Automated sequence for &quot;response&quot;
+3. Alternate between live and programmed
+</code></pre>
+<h3>Pattern 5: Polytemporal Layers</h3>
+<pre><code>1. Multiple pads, each with own sequence
+2. Different loop lengths (3, 5, 7 steps)
+3. Creates phasing/evolving relationships
+4. Each pad controls different visual layer
+</code></pre>
+<hr>
+<h2>Technical Notes</h2>
+<ul>
+<li><code>controlXY</code> is a <strong>control-plane cue</strong>, not temporal</li>
+<li>Registered during <code>assignCues()</code>, not via playhead</li>
+<li>Handles initialized at center of bounds</li>
+<li>Uses Pointer Events API (works with touch, mouse, stylus)</li>
+<li>All tweening uses <code>requestAnimationFrame</code> for smooth 60fps</li>
+<li>Event propagation stopped to prevent score dragging</li>
+<li>Multi-touch: each pointer controls nearest available handle</li>
+</ul>
+<hr>
+<h2>Summary</h2>
+<p><code>controlXY</code> fundamentally transforms the score from <strong>static notation</strong> into <strong>dynamic canvas</strong>. By combining:</p>
+<ol>
+<li><strong>Spatial control surfaces</strong> (the pads)</li>
+<li><strong>Parameter binding</strong> (connecting space to parameters)</li>
+<li><strong>Preset/sequence system</strong> (programming choreography)</li>
+<li><strong>Live performance</strong> (manual override)</li>
+</ol>
+<p>...composers gain the ability to create <strong>complex, evolving visual/sonic animations</strong> directly within the score itself. The score becomes both <strong>instrument and notation</strong>, collapsing the traditional divide between composition and performance.</p>
+<p>As a bonus, OSC output allows the same spatial gestures to control external synthesis and media systems, making <code>controlXY</code> a <strong>unified interface</strong> for all aspects of a multimedia performance.</p>
+<p><strong>Score-as-instrument. Instrument-as-score.</strong></p>
+<hr>
+<h2>Quick Start Checklist</h2>
+<ol>
+<li>✅ Add CSS: <code>&lt;link rel=&quot;stylesheet&quot; href=&quot;controlxy-preset-ui.css&quot;&gt;</code></li>
+<li>✅ Define pad: <code>&lt;rect cue=&quot;controlXY(uid:pad1, handle:dot1)&quot;/&gt;</code></li>
+<li>✅ Open UI: Press <strong>Alt+Shift+P</strong> or click ⚙</li>
+<li>✅ Save states: Move handles, name them, click 💾</li>
+<li>✅ Animate: Use <code>ui(action:'controlXYRecall', ...)</code> on playhead triggers</li>
+<li>✅ Choreograph: Define sequences, play/loop them</li>
+<li>✅ Bind: Connect handle positions to visual parameters</li>
+<li>✅ Perform: Override automation with buttons or manual control</li>
+</ol>
+<p>Now go create some animated scores! 🎼✨</p>
 
       
       <p class="docs-hint">Tip: use ← → or ↑ ↓ to navigate the docs</p>

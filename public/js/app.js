@@ -26,7 +26,7 @@ import {
   initializeSpeedControls, adjustSpeed, setSpeed, updateSpeedDisplay,
   sendSpeedUpdateToServer, togglePlay, togglePlayButton, startPlayback,
   pausePlayback, resumePlayback, jumpToCueId, hideControls, showControls,
-  updateSeekBar, initSeekBarListeners
+  updateSeekBar, initSeekBarListeners, initializeControlsPin, initializeTopbarPin
 } from './oscillaTransport.js';
 
 import {
@@ -167,6 +167,10 @@ document.addEventListener('DOMContentLoaded', () => {
   pauseDismissClickHandler();
   initializeDarkModeToggle();
   setupStopwatchFullscreenToggle();
+  
+  // Initialize pin buttons for top bar and controls
+  initializeControlsPin();
+  initializeTopbarPin();
 
   // ===========================
   // Initialize System Modules

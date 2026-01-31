@@ -1,0 +1,424 @@
+<h1>Timer Network Sync — Developer Guide</h1>
+<p>This document explains how the countdown timer synchronization works between clients and server for developer onboarding.</p>
+<hr>
+<h2>Architecture Overview</h2>
+<p>The countdown timer uses a <strong>server-owned</strong> architecture:</p>
+<pre><code>┌─────────────┐     commands      ┌─────────────┐     broadcast     ┌─────────────┐
+│  Client A   │ ─────────────────▶│   Server    │◀─────────────────▶│  Client B   │
+│  (sender)   │                   │  (owner)    │                   │  (receiver) │
+└─────────────┘                   └─────────────┘                   └─────────────┘
+       │                                │                                  │
+       │  countdown_start_sequence      │                                  │
+       │ ──────────────────────────────▶│                                  │
+       │                                │  sync (with countdown state)     │
+       │                                │ ────────────────────────────────▶│
+       │                                │                                  │
+       │  sync (with countdown state)   │                                  │
+       │◀────────────────────────────── │                                  │
+</code></pre>
+<p><strong>Key principle</strong>: Clients send commands, server owns state, server broadcasts to all.</p>
+<hr>
+<h2>Files Involved</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>oscillaTimers.js</code></td>
+<td>Client-side UI, countdown controls, display updates</td>
+</tr>
+<tr>
+<td><code>oscillaSystemSocket.js</code></td>
+<td>WebSocket message routing on client</td>
+</tr>
+<tr>
+<td><code>server.js</code></td>
+<td>Server-side countdown logic, state management, broadcasting</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Data Structures</h2>
+<h3>Client-Side Sequences (localStorage)</h3>
+<pre><code class="language-javascript">// Key: &quot;oscilla.countdownSequences&quot;
+[
+  {
+    &quot;name&quot;: &quot;Sonata&quot;,
+    &quot;loop&quot;: 1,           // 0 = infinite, 1+ = repeat count
+    &quot;chain&quot;: null,       // index of next sequence, or null
+    &quot;cues&quot;: [
+      { &quot;name&quot;: &quot;Exposition&quot;, &quot;seconds&quot;: 120 },
+      { &quot;name&quot;: &quot;Development&quot;, &quot;seconds&quot;: 180 }
+    ]
+  }
+]
+</code></pre>
+<h3>Server-Side Countdown State (<code>sharedState.countdown</code>)</h3>
+<pre><code class="language-javascript">{
+  running: true,
+  cueName: &quot;Exposition&quot;,      // Current cue name (for display)
+  totalSeconds: 120,          // Total duration of current cue
+  startTime: 1706745600000,   // Date.now() when cue started
+  sequenceName: &quot;Sonata&quot;,     // Parent sequence name
+  cueIndex: 0,                // Current cue index within sequence
+  totalCues: 2,               // Total cues in sequence
+  loop: 1,                    // Loop setting
+  currentLoop: 1,             // Current loop iteration
+  cues: [...],                // Full cue array (for advancement)
+  chainTo: null               // Next sequence index when complete
+}
+</code></pre>
+<h3>Server-Side Sequences (<code>sharedState.countdownSequences</code>)</h3>
+<pre><code class="language-javascript">// Mirror of client sequences, stored on server for:
+// 1. Late-joining clients
+// 2. Sequence lookup when starting by index
+[
+  { name: &quot;Sonata&quot;, loop: 1, chain: null, cues: [...] }
+]
+</code></pre>
+<hr>
+<h2>Message Types</h2>
+<h3>Client → Server</h3>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>Purpose</th>
+<th>Payload</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>countdown_sequences_update</code></td>
+<td>Sync sequences to server</td>
+<td><code>{ sequences: [...] }</code></td>
+</tr>
+<tr>
+<td><code>countdown_start_sequence</code></td>
+<td>Start a sequence</td>
+<td><code>{ sequenceIndex: 0, sequence: {...} }</code></td>
+</tr>
+<tr>
+<td><code>countdown_start_cue</code></td>
+<td>Start single cue</td>
+<td><code>{ cue: { name, seconds } }</code></td>
+</tr>
+<tr>
+<td><code>countdown_stop</code></td>
+<td>Stop countdown</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Server → Clients (via sync broadcast)</h3>
+<p>The countdown state is included in the regular <code>sync</code> message:</p>
+<pre><code class="language-javascript">{
+  type: &quot;sync&quot;,
+  state: {
+    // ... other state ...
+    countdown: {
+      running: true,
+      cueName: &quot;Exposition&quot;,
+      remainingSec: 45,        // Calculated from startTime
+      sequenceName: &quot;Sonata&quot;,
+      cueIndex: 0,
+      totalCues: 2,
+      // ... etc
+    },
+    countdownSequences: [...]  // For late-joiners
+  }
+}
+</code></pre>
+<hr>
+<h2>Sync Flow</h2>
+<h3>1. Client Connects</h3>
+<pre><code>Client                              Server
+  │                                    │
+  │──── WebSocket connect ────────────▶│
+  │                                    │
+  │◀─── sync (includes countdown) ─────│  // If countdown running
+  │                                    │
+  │──── countdown_sequences_update ───▶│  // Client syncs its sequences
+  │                                    │
+</code></pre>
+<p><strong>Code path:</strong></p>
+<ul>
+<li><code>oscillaSystemSocket.js</code>: Socket <code>open</code> event calls <code>window.syncCountdownSequences()</code></li>
+<li><code>oscillaTimers.js</code>: <code>syncSequencesToServer()</code> sends <code>countdown_sequences_update</code></li>
+</ul>
+<h3>2. Client Starts Countdown</h3>
+<pre><code>Client A                            Server                           Client B
+  │                                    │                                 │
+  │── countdown_sequences_update ─────▶│                                 │
+  │── countdown_start_sequence ───────▶│                                 │
+  │                                    │── startServerSequence() ───────▶│
+  │                                    │                                 │
+  │◀────────── sync ───────────────────│─────────── sync ───────────────▶│
+  │                                    │                                 │
+</code></pre>
+<p><strong>Code path:</strong></p>
+<ol>
+<li><code>oscillaTimers.js</code>: <code>sendCountdownStartSequence(index)</code> sends:
+<ul>
+<li><code>countdown_sequences_update</code> (ensures server has sequences)</li>
+<li><code>countdown_start_sequence</code> with index AND full sequence data</li>
+</ul>
+</li>
+<li><code>server.js</code>: Receives message, calls <code>startServerSequence(seq)</code></li>
+<li><code>server.js</code>: Sets <code>sharedState.countdown</code>, immediately calls <code>broadcastState()</code></li>
+<li>All clients receive sync, call <code>window.updateCountdownDisplay(countdown)</code></li>
+</ol>
+<h3>3. Countdown Running (Update Loop)</h3>
+<pre><code>Server                              All Clients
+  │                                      │
+  │  updateLoop() every 250ms            │
+  │  ├── if countdown.running            │
+  │  │   └── broadcastState()            │
+  │  │       └── calculates remainingSec │
+  │                                      │
+  │────────── sync ─────────────────────▶│
+  │                                      │  updateCountdownDisplay()
+  │                                      │
+</code></pre>
+<p><strong>Code path:</strong></p>
+<ul>
+<li><code>server.js</code>: <code>updateLoop()</code> runs every 250ms</li>
+<li>If <code>sharedState.countdown.running</code> OR <code>sharedState.isPlaying</code>, calls <code>broadcastState()</code></li>
+<li><code>broadcastState()</code> calculates <code>remainingSec</code> from <code>startTime</code>:<pre><code class="language-javascript">const elapsed = Math.floor((Date.now() - countdown.startTime) / 1000);
+const remainingSec = Math.max(0, countdown.totalSeconds - elapsed);
+</code></pre>
+</li>
+</ul>
+<h3>4. Cue Advancement (Server-Side)</h3>
+<pre><code>Server (in broadcastState)
+  │
+  │  remainingSec === 0?
+  │  └── advanceCountdown()
+  │      ├── cueIndex &lt; totalCues - 1?
+  │      │   └── advance to next cue
+  │      ├── currentLoop &lt; loop?
+  │      │   └── restart sequence, increment loop
+  │      ├── chainTo !== null?
+  │      │   └── start chained sequence
+  │      └── else: stopServerCountdown()
+</code></pre>
+<p><strong>Code path:</strong></p>
+<ul>
+<li><code>server.js</code>: <code>broadcastState()</code> checks if <code>remainingSec &lt;= 0</code></li>
+<li>Calls <code>advanceCountdown()</code> which handles:
+<ul>
+<li>Next cue in sequence</li>
+<li>Loop repetition</li>
+<li>Chain to next sequence</li>
+<li>Stop when complete</li>
+</ul>
+</li>
+</ul>
+<h3>5. Client Stops Countdown</h3>
+<pre><code>Client                              Server                           All Clients
+  │                                    │                                 │
+  │──── countdown_stop ───────────────▶│                                 │
+  │                                    │── stopServerCountdown() ───────▶│
+  │                                    │                                 │
+  │◀────────── sync ───────────────────│─────────── sync ───────────────▶│
+  │  (countdown: null)                 │  (countdown: null)              │
+</code></pre>
+<hr>
+<h2>Time Synchronization</h2>
+<h3>How Remaining Time is Calculated</h3>
+<pre><code class="language-javascript">// Server stores START time, not remaining time
+sharedState.countdown = {
+  startTime: Date.now(),      // When cue started
+  totalSeconds: 120           // Total duration
+};
+
+// In broadcastState(), calculate remaining:
+const elapsed = Math.floor((Date.now() - countdown.startTime) / 1000);
+const remainingSec = Math.max(0, countdown.totalSeconds - elapsed);
+</code></pre>
+<h3>Why This Works</h3>
+<ul>
+<li>Server calculates <code>remainingSec</code> at broadcast time</li>
+<li>All clients receive the SAME remaining time value</li>
+<li>No clock sync required between server and clients</li>
+<li>Network latency causes ±50-200ms variance (acceptable)</li>
+</ul>
+<h3>Alternative Approach (Not Used)</h3>
+<pre><code class="language-javascript">// ❌ Don't do this - requires clock synchronization
+countdown.endTime = Date.now() + (seconds * 1000);
+// Client: remainingSec = (countdown.endTime - Date.now()) / 1000
+// Problem: client and server clocks may differ!
+</code></pre>
+<hr>
+<h2>Key Functions</h2>
+<h3>Client Side (<code>oscillaTimers.js</code>)</h3>
+<pre><code class="language-javascript">// Sync sequences to server on load/connect
+function syncSequencesToServer()
+
+// Send start command with sequence data
+function sendCountdownStartSequence(sequenceIndex)
+
+// Send single cue start
+function sendCountdownStartCue(cue)
+
+// Send stop command
+function sendCountdownStop()
+
+// Broadcast sequences to server
+function broadcastSequencesUpdate()
+
+// Update display from server sync (called by oscillaSystemSocket)
+function updateCountdownDisplay(countdown)
+</code></pre>
+<h3>Server Side (<code>server.js</code>)</h3>
+<pre><code class="language-javascript">// Start a single cue countdown
+function startServerCountdown(cue, sequenceName, cueIndex, totalCues, loop, currentLoop)
+
+// Start a full sequence
+function startServerSequence(sequence, loopCount)
+
+// Advance to next cue/loop/chain
+function advanceCountdown()
+
+// Stop and clear countdown
+function stopServerCountdown()
+
+// Broadcast state to all clients (includes countdown)
+function broadcastState()
+</code></pre>
+<hr>
+<h2>Message Handlers</h2>
+<h3>Server (<code>server.js</code> switch statement)</h3>
+<pre><code class="language-javascript">case &quot;countdown_sequences_update&quot;:
+  // Store sequences, broadcast to others
+  sharedState.countdownSequences = data.sequences;
+  broadcastToOthers(ws, data);
+  break;
+
+case &quot;countdown_start_sequence&quot;:
+  // Start sequence (prefer sent data, fallback to stored)
+  const seq = data.sequence || sharedState.countdownSequences[data.sequenceIndex];
+  if (seq) startServerSequence(seq);
+  break;
+
+case &quot;countdown_start_cue&quot;:
+  // Start single cue
+  startServerCountdown(data.cue);
+  break;
+
+case &quot;countdown_stop&quot;:
+  // Stop countdown
+  stopServerCountdown();
+  break;
+</code></pre>
+<h3>Client (<code>oscillaSystemSocket.js</code>)</h3>
+<pre><code class="language-javascript">case &quot;sync&quot;:
+  handleSyncMessage(data);  // Includes countdown display update
+  break;
+
+case &quot;countdown_sequences_update&quot;:
+  // Another client updated sequences
+  handleCountdownMessage(data);
+  break;
+</code></pre>
+<hr>
+<h2>Update Loop</h2>
+<p>The server runs an update loop every 250ms:</p>
+<pre><code class="language-javascript">const updateLoop = () =&gt; {
+  const countdownRunning = sharedState.countdown &amp;&amp; sharedState.countdown.running;
+  
+  if (sharedState.isPlaying) {
+    updateElapsedTime();
+    broadcastState();
+  } else if (countdownRunning) {
+    // Countdown runs independently of playback!
+    broadcastState();
+  }
+  
+  setTimeout(updateLoop, 250);
+};
+</code></pre>
+<p><strong>Important</strong>: Countdown broadcasts happen even when score playback is stopped. This was a bug that was fixed — the original code only broadcast when <code>isPlaying</code> was true.</p>
+<hr>
+<h2>Late-Joining Clients</h2>
+<p>When a client connects mid-countdown:</p>
+<ol>
+<li>Client receives first <code>sync</code> message</li>
+<li><code>sync.state.countdown</code> contains current countdown state with calculated <code>remainingSec</code></li>
+<li><code>sync.state.countdownSequences</code> contains all sequences</li>
+<li>Client immediately shows correct countdown time</li>
+<li>Client stores sequences to localStorage</li>
+</ol>
+<pre><code class="language-javascript">// In handleSyncMessage (oscillaSystemSocket.js)
+if (state.countdown) {
+  window.updateCountdownDisplay(state.countdown);
+}
+
+if (state.countdownSequences?.length &gt; 0) {
+  // Store to localStorage if we don't have any
+  const local = localStorage.getItem(&quot;oscilla.countdownSequences&quot;);
+  if (!local || JSON.parse(local).length === 0) {
+    localStorage.setItem(&quot;oscilla.countdownSequences&quot;, JSON.stringify(state.countdownSequences));
+  }
+}
+</code></pre>
+<hr>
+<h2>Debugging</h2>
+<h3>Server Logs</h3>
+<pre><code>[Countdown] ✅ Sequences updated from client: 2 sequences
+[Countdown]    Names: Warm-up, Sonata
+[Countdown] ▶ Sequence started: Sonata (2 cues, loop: 1)
+[Countdown] ▶ Started: Exposition (120s)
+[Countdown] → Advanced to cue 2/2: Development
+[Countdown] ⏹ Stopped
+</code></pre>
+<h3>Client Logs</h3>
+<pre><code>[Countdown] Broadcasting sequences to server: 2 sequences
+[Countdown] Sent countdown_start_sequence with sequence data: Sonata
+[Countdown] ✅ Synced sequences to server: 2
+</code></pre>
+<h3>Common Issues</h3>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Countdown doesn't start</td>
+<td>Sequences not synced to server</td>
+<td>Check <code>broadcastSequencesUpdate()</code> is called</td>
+</tr>
+<tr>
+<td>Display doesn't update</td>
+<td><code>updateLoop</code> not broadcasting</td>
+<td>Ensure countdown check in update loop</td>
+</tr>
+<tr>
+<td>Late joiner sees wrong time</td>
+<td><code>remainingSec</code> not in sync message</td>
+<td>Check <code>broadcastState()</code> calculates it</td>
+</tr>
+<tr>
+<td>Sequences lost on refresh</td>
+<td>Not saved to localStorage</td>
+<td>Check <code>saveCountdownSequences()</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Summary</h2>
+<ol>
+<li><strong>Server owns the timer</strong> — clients send commands, server manages state</li>
+<li><strong>Sequences sync bidirectionally</strong> — clients send updates, server stores and broadcasts</li>
+<li><strong>Time calculated server-side</strong> — <code>remainingSec</code> computed from <code>startTime</code> at broadcast</li>
+<li><strong>250ms update loop</strong> — continuous broadcast while countdown or playback active</li>
+<li><strong>Late joiners supported</strong> — full state included in sync messages</li>
+</ol>

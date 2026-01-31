@@ -4,7 +4,6 @@ import {
   preloadReuseBlocksFromPages
 } from "./oscillaPreProcessReuse.js";
 
-
 import { hideAllButtonPlaceholders } from "./cues/oscillaButton.js";
 import { setSpeedCueMap, extractSpeedCues } from './cues/oscillaSpeed.js';
 
@@ -417,7 +416,7 @@ export const createRehearsalMarkButtons = () => {
     const button = document.createElement("button");
     button.textContent = mark;
     button.classList.add("rehearsal-button");
-    button.addEventListener("click", () => jumpToRehearsalMark(mark));
+    button.addEventListener("click", () => window.jumpToRehearsalMark(mark));
 
     rowContainer.appendChild(button);
   });
@@ -462,160 +461,18 @@ window.closeRehearsalPopup = closeRehearsalPopup;
 //  Allow opening with "R" key
 document.addEventListener("keydown", (event) => {
 
-  if (window.oscillaTextInputActive && e.key !== "Escape") return;
+  if (window.oscillaTextInputActive && event.key !== "Escape") return;
 
   if (event.key.toUpperCase() === "R") {
     openRehearsalPopup();
   }
 });
 
+// Note: jumpToRehearsalMark and rehearsal navigation (Arrow Up/Down, fast-forward/rewind)
+// have been moved to oscillaTransport.js for better code organization.
+// All transport/navigation logic is now centralized there.
 
-
-window.jumpToRehearsalMark = function (mark) {
-  console.log(`[JUMP] Requested jump to: ${mark}`);
-
-  const entry = rehearsalMarks[mark];
-  if (!entry) {
-    console.error(`[JUMP] ❌ Mark "${mark}" not found.`);
-    return;
-  }
-
-  // Disable cues during jump
-  window.suppressCueTriggers = true;
-
-  // Pause during teleport
-  window.isPlaying = false;
-  window.animationPaused = true;
-
-  // Teleport playhead
-  window.playheadX = entry.x;
-  scrollToPlayheadVisual?.();
-
-  // Prevent drift glitch
-  window.lastAnimationFrameTime = null;
-
-  // Reset cue state
-  window._prevCueLefts = new Map();
-  window._cueInsideState = new Map();
-  window.triggeredCues = new Set();
-
-  // Notify server
-  if (window.socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ type: "jump", playheadX: entry.x }));
-  }
-
-  window.suppressCueTriggers = false;
-
-
-
-};
-
-window.jumpToRehearsalMark = jumpToRehearsalMark;
-
-
-let currentIndex = 0; // Track the current rehearsal mark index
-
-document.addEventListener('keydown', (event) => {
-  if (window.oscillaTextInputActive && e.key !== "Escape") return;
-
-  if (!["ArrowUp", "ArrowDown"].includes(event.key)) return; // Only handle up/down keys
-
-  if (sortedMarks.length === 0) {
-    console.warn("[WARNING] No rehearsal marks available for navigation.");
-    return;
-  }
-
-  // console.log(`\n[DEBUG] Key Pressed: ${event.key}`);
-  // console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
-  // console.log(`[DEBUG] Currentwindow.playheadX: ${window.playheadX}`);
-
-  // 🔹 Move Up or Down in the Index Directly
-  if (event.key === "ArrowUp" && currentIndex < sortedMarks.length - 1) {
-    currentIndex++;
-  } else if (event.key === "ArrowDown" && currentIndex > 0) {
-    currentIndex--;
-  } else {
-    console.log("[DEBUG] Already at the first or last rehearsal mark.");
-    return;
-  }
-
-  let nextMark = sortedMarks[currentIndex];
-
-  console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
-  // console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
-
-  // 🔹 Ensurewindow.playheadX Updates Properly
-  window.playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent snapping back
-  jumpToRehearsalMark(nextMark);
-
-  console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
-});
-
-
-
-/**
-* ✅ Fast-forward & Rewind Buttons (Now using the fixed index approach)
-*/
-
-document.getElementById('fast-forward-button').addEventListener('click', () => {
-  if (sortedMarks.length === 0) {
-    console.warn("[WARNING] No rehearsal marks available for navigation.");
-    return;
-  }
-
-  console.log(`\n[DEBUG] Fast Forward Clicked`);
-  console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
-
-  // Move up in the index directly
-  if (currentIndex < sortedMarks.length - 1) {
-    currentIndex++;
-  } else {
-    console.log("[DEBUG] Already at the last rehearsal mark.");
-    return;
-  }
-
-  let nextMark = sortedMarks[currentIndex];
-
-  console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
-  console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
-
-  // Updatewindow.playheadX properly to prevent snapping issues
-  window.playheadX = rehearsalMarks[nextMark].x + 1; // Small offset to prevent looping
-  jumpToRehearsalMark(nextMark);
-
-  console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
-});
-
-document.getElementById('fast-rewind-button').addEventListener('click', () => {
-  if (sortedMarks.length === 0) {
-    console.warn("[WARNING] No rehearsal marks available for navigation.");
-    return;
-  }
-
-  console.log(`\n[DEBUG] Fast Rewind Clicked`);
-  console.log(`[DEBUG] Current Index Before Move: ${currentIndex} (${sortedMarks[currentIndex]})`);
-
-  // Move down in the index directly
-  if (currentIndex > 0) {
-    currentIndex--;
-  } else {
-    console.log("[DEBUG] Already at the first rehearsal mark.");
-    return;
-  }
-
-  let nextMark = sortedMarks[currentIndex];
-
-  console.log(`[DEBUG] Jumping to: ${nextMark} (Index: ${currentIndex})`);
-  console.log(`[DEBUG] Next Mark X Position: ${rehearsalMarks[nextMark].x}`);
-
-  // Updatewindow.playheadX properly
-  window.playheadX = rehearsalMarks[nextMark].x + 1;
-  jumpToRehearsalMark(nextMark);
-
-  console.log(`[DEBUG] Updatedwindow.playheadX: ${window.playheadX}`);
-});
-
-//////// END OF REHEARSAL MARK LOGIC ///////////////////////////////////////////
+//////// END OF REHEARSAL MARK UI LOGIC ///////////////////////////////////////////
 
 // window.rehearsalMarks = rehearsalMarks;
 
@@ -661,18 +518,24 @@ export const extractScoreElements = (svgElement) => {
     return;
   }
 
-  // Get SVG bounding rect for coordinate conversion
+  // ============================================================================
+  // COORDINATE EXTRACTION using getBoundingClientRect
+  // This works correctly for ALL element types regardless of how they're positioned
+  // (transforms, shape-inside text, nested groups, etc.)
+  // ============================================================================
   const svgRect = svgElement.getBoundingClientRect();
   const localScale = svgRect.width / window.scoreWidth;
 
+  if (localScale <= 0 || !isFinite(localScale)) {
+    console.error("[ERROR] Invalid localScale - scoreWidth may not be set yet.");
+    return;
+  }
+
   elements.forEach((element) => {
     // Use getBoundingClientRect for accurate world position
-    // This works correctly regardless of transforms, shape-inside, etc.
     const elRect = element.getBoundingClientRect();
     const screenX = elRect.x - svgRect.x;
     const absoluteX = screenX / localScale;
-    
-    // Also get width in world coordinates
     const worldWidth = elRect.width / localScale;
 
     if (element.id.startsWith("rehearsal_")) {
@@ -685,7 +548,6 @@ export const extractScoreElements = (svgElement) => {
       // console.log(`[DEBUG] 🎯 Cue Stored: ${element.id}, X: ${absoluteX}, Width: ${worldWidth}`);
     }
   });
-
 
   // ✅ Update global variables only if new marks are found
   if (Object.keys(newRehearsalMarks).length > 0) {
@@ -701,11 +563,14 @@ export const extractScoreElements = (svgElement) => {
       // console.log("[DEBUG] ✅ Global `rehearsalMarks` sorted:", rehearsalMarks);
     }
 
+    // ✅ Expose to window for transport navigation
+    window.rehearsalMarks = rehearsalMarks;
+
     window.sortedMarks = Object.entries(rehearsalMarks)
       .sort((a, b) => a[1].x - b[1].x)
       .map(([mark]) => mark);
 
-    // console.log("[DEBUG] 🎭 Final sorted rehearsal marks:", sortedMarks);
+    console.log("[DEBUG] 🎭 Rehearsal marks loaded:", window.sortedMarks.length, "marks");
 
   }
 

@@ -7,7 +7,7 @@
 import { showLoader, updateLoader, hideLoader } from "./oscillaLoader.js";
 import { initializeSVG } from "./app.js";
 import { initializeObserver } from "./oscillaObserver.js";
-import { setSpeed, applyDarkMode } from "./oscillaTransport.js";
+import { setSpeed, applyDarkMode, initializeControlsPin, initializeTopbarPin } from "./oscillaTransport.js";
 import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 import { preloadReuseBlocksFromPages } from "./oscillaPreProcessReuse.js";
 

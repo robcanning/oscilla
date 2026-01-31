@@ -417,7 +417,7 @@ export function createHitLabel(groupEl, kind, uid, opts = {}) {
         marginTop: `-${hitOffset}px`,
         background: "transparent",
         pointerEvents: "auto",
-        zIndex: 2147483646,
+        zIndex: 999999,
         borderRadius: "50%"  // Make hit area circular
     });
 
@@ -496,7 +496,7 @@ export function createHitLabel(groupEl, kind, uid, opts = {}) {
         border: record.sizeMode === "follow"
             ? `0.75px solid ${record.color}`
             : "none",
-        zIndex: 2147483647,
+        zIndex: 999999,
         pointerEvents: "none",
         boxSizing: "border-box"
     });
@@ -527,7 +527,7 @@ export function createHitLabel(groupEl, kind, uid, opts = {}) {
                 fontSize: "9px",
                 fontFamily: "monospace",
                 fontWeight: "bold",
-                zIndex: 2147483647,
+                zIndex: 999999,
                 pointerEvents: "none",
                 whiteSpace: "nowrap"
             });
