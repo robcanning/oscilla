@@ -1,0 +1,237 @@
+/* ============================================================================
+ * OSCILLA MARKERS
+ * Drop marker system for rehearsal structure
+ * Uses CSS variables for dynamic coloring via applyMarkerColor()
+ * ============================================================================ */
+
+/* ============================================================================
+ * MARKER ELEMENTS
+ * ============================================================================ */
+
+.osc-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 999997;
+  
+  /* Color variables - set dynamically by JS via applyMarkerColor() */
+  --marker-color: #ff9999;
+  --marker-color-dark: #e68a8a;
+  --marker-text-color: #000000;
+  --marker-color-alpha: #ff9999cc;
+  --marker-color-line: #ff999980;
+}
+
+.osc-marker-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--marker-color-alpha);
+  box-shadow: 0 0 4px var(--marker-color-line);
+  /* Default: hidden until vertical mode enabled */
+  display: none;
+}
+
+/* Vertical marker variant - full height line */
+.osc-marker--vertical .osc-marker-line {
+  display: block;
+  width: 3px;
+  background: var(--marker-color-line);
+  box-shadow: none;
+  height: 100%;
+  top: 0;
+  bottom: 0;
+}
+
+.osc-marker-label {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+  
+  /* Visual styling - using CSS variables for color */
+  background: var(--marker-color);
+  color: var(--marker-text-color);
+  font-size: 14px;
+  padding: 12px;
+  padding-left: 4px;
+  padding-right: 4px;
+
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.osc-marker-label:hover {
+  background: var(--marker-color-dark);
+  transform: translateX(-50%) scale(1.05);
+}
+
+.osc-marker-label:active,
+.osc-marker-label.dragging {
+  cursor: grabbing;
+  background: var(--marker-color-dark);
+  transform: translateX(-50%) scale(1.02);
+}
+
+.osc-marker-label.editing {
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  border: 2px solid var(--marker-color);
+}
+
+/* ============================================================================
+ * MARKER BUTTONS
+ * ============================================================================ */
+
+#drop-marker-button {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+#drop-marker-button.active {
+  background: linear-gradient(180deg, #ffe0e0 0%, #ffd0d0 100%) !important;
+  border-color: rgba(255, 100, 100, 0.5) !important;
+}
+
+#toggle-markers-button {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#toggle-markers-button.active {
+  background: linear-gradient(180deg, #ffe0e0 0%, #ffd0d0 100%) !important;
+  border-color: rgba(255, 100, 100, 0.5) !important;
+  color: rgba(200, 60, 60, 1) !important;
+}
+
+#toggle-markers-button:not(.active) {
+  opacity: 0.6;
+}
+
+/* ============================================================================
+ * MARKER EDITOR POPUP
+ * ============================================================================ */
+
+.osc-marker-editor {
+  position: fixed;
+  z-index: 1000000;
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 10px;
+  padding: 12px;
+  min-width: 220px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  
+  /* Editor color variables - set by JS when opening editor */
+  --marker-editor-color: #ff9999;
+  --marker-editor-color-dark: #e68a8a;
+}
+
+.osc-marker-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.osc-marker-editor-title {
+  color: var(--marker-editor-color);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.osc-marker-editor input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.osc-marker-editor input[type="text"]:focus {
+  outline: none;
+  border-color: var(--marker-editor-color);
+}
+
+/* Checkbox row styling */
+.osc-marker-editor-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+
+.osc-marker-editor-checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--marker-editor-color);
+}
+
+.osc-marker-editor-checkbox-row label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Editor action buttons */
+.osc-marker-editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+}
+
+.osc-marker-editor-actions button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.osc-marker-editor-actions .save-btn {
+  background: var(--marker-editor-color);
+  border: 1px solid var(--marker-editor-color-dark);
+  color: white;
+}
+
+.osc-marker-editor-actions .save-btn:hover {
+  filter: brightness(1.1);
+}
+
+.osc-marker-editor-actions .delete-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 80, 80, 0.5);
+  color: rgba(255, 150, 150, 0.9);
+}
+
+.osc-marker-editor-actions .delete-btn:hover {
+  background: rgba(255, 80, 80, 0.2);
+  border-color: rgba(255, 80, 80, 0.8);
+}
+
+.osc-marker-editor-actions .cancel-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.osc-marker-editor-actions .cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

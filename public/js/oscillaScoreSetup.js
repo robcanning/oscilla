@@ -12,7 +12,7 @@ import {
   setAnnotationsProject,
   exportAnnotationsJSON,
   importAnnotationsJSON
-} from "./oscillaContributionSurface.js";
+} from "./interaction/interactionSurface.js";
 
 // ============================================================
 // 🔹 ANNOTATION MENU EXPORT / IMPORT (SAFE UI WIRING)

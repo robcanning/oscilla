@@ -1,0 +1,298 @@
+/* ============================================================================
+ * OSCILLA ANNOTATIONS
+ * Styles for annotation pins, editor, and extent handles
+ * ============================================================================ */
+
+/* ============================================================================
+ * ANNOTATION PINS
+ * ============================================================================ */
+
+.osc-anno-pin {
+    position: absolute;
+    overflow: visible;
+    pointer-events: auto;
+    user-select: none;
+    z-index: 1000;
+}
+
+.osc-anno-pin:hover {
+    z-index: 1001;
+}
+
+/* Pin label (text annotations) */
+.osc-anno-pin > div {
+    transition: box-shadow 0.15s ease;
+}
+
+.osc-anno-pin:hover > div {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================================================
+ * EXTENT HANDLES (Trigger Duration)
+ * ============================================================================ */
+
+.anno-extent-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.osc-extent-start,
+.osc-extent-line,
+.osc-extent-handle {
+    position: absolute;
+    background: #000;
+    pointer-events: auto;
+}
+
+.osc-extent-start {
+    width: 2px;
+    height: 16px;
+}
+
+.osc-extent-line {
+    height: 1px;
+}
+
+.osc-extent-handle {
+    width: 2px;
+    height: 16px;
+    cursor: ew-resize;
+}
+
+/* Legacy class names (for compatibility) */
+.osc-anno-extent-line {
+    position: absolute;
+    height: 4px;
+    background: #000;
+    pointer-events: none;
+}
+
+.osc-anno-extent-handle {
+    position: absolute;
+    width: 2px;
+    height: 18px;
+    background: #000;
+    cursor: ew-resize;
+    pointer-events: auto;
+}
+
+/* ============================================================================
+ * ANNOTATION EDITOR
+ * ============================================================================ */
+
+.osc-anno-editor {
+    position: fixed;
+    z-index: 999999;
+    max-width: 360px;
+    background: rgba(20, 20, 20, 0.92);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(6px);
+    pointer-events: auto;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+}
+
+/* Editor header (drag handle) */
+.osc-anno-editor-header {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    padding: 4px 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    cursor: move;
+    user-select: none;
+}
+
+/* Editor textarea */
+.osc-anno-editor textarea {
+    width: 100%;
+    resize: vertical;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.25);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+.osc-anno-editor textarea:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Editor inputs */
+.osc-anno-editor input[type="text"],
+.osc-anno-editor input[type="number"],
+.osc-anno-editor select {
+    background: #222;
+    color: #eee;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 4px;
+    font-family: inherit;
+}
+
+.osc-anno-editor input[type="text"]:focus,
+.osc-anno-editor input[type="number"]:focus,
+.osc-anno-editor select:focus {
+    outline: none;
+    border-color: #666;
+}
+
+/* Editor buttons */
+.osc-anno-editor button {
+    padding: 8px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: filter 0.1s ease;
+}
+
+.osc-anno-editor button:hover {
+    filter: brightness(1.1);
+}
+
+.osc-anno-editor button:active {
+    filter: brightness(0.95);
+}
+
+/* Trigger section */
+.osc-anno-editor .trigger-section {
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(0, 180, 220, 0.08);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 180, 220, 0.2);
+}
+
+/* Playback options section */
+.osc-anno-editor .playback-section {
+    margin-top: 8px;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+}
+
+/* Impulse section */
+.osc-anno-editor .impulse-section {
+    margin-top: 8px;
+    padding: 6px;
+    background: rgba(255, 200, 0, 0.06);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 200, 0, 0.15);
+}
+
+/* Slider rows */
+.osc-anno-editor input[type="range"] {
+    flex: 1;
+    height: 4px;
+    appearance: none;
+    background: #333;
+    border-radius: 2px;
+}
+
+.osc-anno-editor input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #888;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.osc-anno-editor input[type="range"]::-webkit-slider-thumb:hover {
+    background: #aaa;
+}
+
+/* ============================================================================
+ * ANNOTATION LAYER
+ * ============================================================================ */
+
+.osc-annotation-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: visible;
+    z-index: 1000;
+}
+
+#oscilla-annotations-layer-score {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    z-index: 20;
+}
+
+/* ============================================================================
+ * SCORE INNER WRAPPER
+ * ============================================================================ */
+
+.oscilla-score-inner {
+    position: relative;
+    width: max-content;
+    height: max-content;
+}
+
+/* ============================================================================
+ * TRIGGER VISUAL STYLES
+ * ============================================================================ */
+
+/* Trigger border color (matches TRIGGER_BORDER_COLOR in JS) */
+.osc-anno-pin--trigger {
+    --trigger-border-color: rgba(0, 180, 255, 0.6);
+}
+
+/* Trigger flash animation */
+@keyframes trigger-flash {
+    0% {
+        background-color: rgba(255, 220, 100, 0.9);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.osc-anno-pin--flashing {
+    animation: trigger-flash 0.2s ease-out;
+}
+
+/* ============================================================================
+ * EDIT MODE CURSOR
+ * ============================================================================ */
+
+/* When in annotation mode, show crosshair on score */
+body.annotation-mode #scoreContainer {
+    cursor: crosshair;
+}
+
+body.annotation-mode .osc-anno-pin {
+    cursor: grab;
+}
+
+body.annotation-mode .osc-anno-pin:active {
+    cursor: grabbing;
+}
+
+/* ============================================================================
+ * RESPONSIVE ADJUSTMENTS
+ * ============================================================================ */
+
+@media (max-width: 480px) {
+    .osc-anno-editor {
+        max-width: calc(100vw - 40px);
+        left: 20px !important;
+        right: 20px;
+    }
+}

@@ -1,0 +1,701 @@
+/* ============================================================================
+ * OSCILLA TRANSPORT & TOP BAR
+ * All UI chrome: buttons, top bar, controls bar, seek bar, speed panel, 
+ * stopwatch cluster, hamburger menu, side buttons
+ * ============================================================================ */
+
+/* ----------------------------------------------------
+   BUTTON SYSTEM
+---------------------------------------------------- */
+
+.gui-button {
+  background: #222;
+  color: #fff;
+  border-radius: 10px;
+  border: 1px solid #444;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .2s, box-shadow .15s, border .15s;
+}
+
+.gui-button:hover {
+  background: #333;
+}
+
+.gui-button:active {
+  background: #555;
+}
+
+/* Main transport buttons — fixed, centered, equal size */
+.gui-button--large {
+  width: 80px;
+  height: 80px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 48px;       /* icon size */
+  line-height: 1;
+
+  padding: 0;            /* stop glyph from expanding button */
+}
+
+.gui-button--round {
+  border-radius: 50%;
+}
+
+.gui-button--ghost {
+  background: black;
+  border-color: #333;
+}
+
+.gui-button--warning {
+  border-color: red;
+}
+
+/* Highlight active toggle buttons */
+.gui-button.active {
+  border-color: white;
+  /* color: lime;
+  box-shadow: 0 0 10px limegreen; */
+}
+
+.gui-button svg,
+.gui-button .icon,
+.gui-button span {
+  /* color: inherit; */
+  /* fill: currentColor;
+  stroke: currentColor; */
+}
+
+/* side cluster button style — minimal overrides */
+.side-button {
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  padding: 0;
+}
+
+/* spacing around left + right clusters */
+#left-controls {
+  margin-left: 10px;      /* tweak as needed */
+}
+
+#right-controls {
+  margin-right: 10px;     /* tweak as needed */
+}
+
+
+
+  .gui-grid-2x3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 4px;
+  }
+
+
+
+#playhead-toggle-button[data-state="none"] {
+  opacity: 0.5;
+}
+
+#playhead-toggle-button[data-state="playhead"] #playhead-icon-zone,
+#playhead-toggle-button[data-state="none"] #playhead-icon-zone {
+  opacity: 0;
+}
+
+#playhead-toggle-button[data-state="playzone"] #playhead-icon-line,
+#playhead-toggle-button[data-state="none"] #playhead-icon-line {
+  opacity: 0.2;
+}
+
+
+
+/* ----------------------------------------------------
+   SEEK BAR
+---------------------------------------------------- */
+
+#seek-bar {
+  width: 100%;
+  height: 8px;
+  background: #ccc;
+  border-radius: 5px;
+  cursor: pointer;
+  padding-top: 2px;
+  padding-bottom: 1px;
+}
+
+#seek-bar::-webkit-slider-thumb,
+#seek-bar::-moz-range-thumb {
+  appearance: none;
+  width: 30px;
+  height: 30px;
+  background: #333;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* ----------------------------------------------------
+   CONTROLS BAR
+---------------------------------------------------- */
+
+#controls {
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.6);
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  display: flex;
+  /* height: 12%; */
+  z-index: 10000;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  transform: translateY(0);
+  opacity: 1;
+}
+
+#controls.dismissed {
+  transform: translateY(50vh);
+  opacity: 0;
+}
+
+#button-container {
+  display: flex;
+    flex: 1;
+
+  justify-content: space-between;
+  align-items: stretch;
+  /* height: 80%; */
+  width: 100%;
+}
+
+#seek-controls {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: .2rem;
+  padding-left: 4vw;
+  padding-right: 4vw;
+}
+
+.seek-main {
+  gap: 0.2rem;
+  padding-left: 20px;
+
+}
+
+
+/* ----------------------------
+   SPEED PANEL
+----------------------------- */
+
+#speedControls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding-left: 20px;
+}
+
+#speedDisplay {
+  min-width: 40px;
+  color: white;
+  text-align: center;
+  font-size: 23px;
+}
+
+
+.speed-panel {
+  gap: 0.6rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 10px;
+
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Square utility for compact control buttons */
+.gui-button--square {
+  width: 33px;
+  height: 33px;
+  padding: 0;
+}
+
+/* Display in the middle */
+.speed-display {
+  font-family: monospace;
+  font-size: 0.6rem;
+  color: #fff;
+  min-width: 64px;
+  text-align: center;
+
+  background: rgba(0,0,0,0.55);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+
+  padding: 4px 10px;
+}
+/* ----------------------------------------------------
+   TOP BAR
+---------------------------------------------------- */
+
+#top-bar {
+  height: 35px;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  gap: 14px;
+  padding: 0 15px;
+  z-index: 99999;
+  pointer-events: auto;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  /* display:flex comes from .gui-bar */
+}
+
+#top-bar.dismissed {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+#topbar-actions {
+  display: flex;
+    flex: 1;          /* ⬅️ allow it to take remaining width */
+
+  gap: 8px;
+  align-items: center;
+}
+
+/* CLIENT LIST */
+
+#client-list {
+  font-size: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 240px;
+  white-space: normal;
+  line-height: 1.2;
+  user-select: none;
+  cursor: pointer;
+}
+
+.local-client { font-weight: bold; color: #facc15; }
+.remote-client { color: white; }
+
+/* stopwatch */
+
+#stopwatch-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  gap: 2px;
+}
+
+#stopwatch {
+  font-family: monospace;
+  font-size: 1.2em;
+}
+
+#stopwatch-controls button {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+/* clusters on the right */
+
+.osc-tools {
+  background: rgba(0, 0, 0, 0.5);
+  font-size: 0.5em;
+  display: flex;
+  align-items: center;
+  width: 60%;
+  gap: 2px;
+  padding: 4px;
+  border-right: 1px solid rgba(255,255,255,.2);
+}
+
+
+.view-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  margin-left: auto;   /* ⬅️ THIS pushes it to the far right */
+  padding-left: 10px;
+  padding-right: 20px;
+
+}
+
+
+/* pin */
+
+#pin-topbar {
+  height: 32px;
+  border-radius: 8px;
+}
+
+#pin-topbar:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+/* hamburger */
+
+#hamburger-menu {
+  background: none;
+  height: 32px;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  padding: 5px 15px;
+}
+
+#hamburger-menu:hover {
+  color: #f0a500;
+}
+
+/* override old shoelace-style sizing */
+#hamburger-menu.hamburger-btn {
+  background: none;
+  border: none;
+  color: white;
+
+  width: 40px;
+  height: 40px;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* make the three lines actually big */
+#hamburger-menu .hamburger-icon {
+  width: 26px;
+  height: 26px;
+  stroke: currentColor;
+}
+
+
+
+/* ============================================================================
+ * TRANSPORT REFINEMENTS (from patch sections)
+ * ============================================================================ */
+
+ * 1. OSC & VIEW TOOLS (for hamburger positioning)
+ * ============================================================================ */
+
+.osc-tools {
+  background: rgba(0, 0, 0, 0.5);
+  font-size: 0.5em;
+  display: flex;
+  align-items: center;
+  width: 60%;
+  gap: 2px;
+  padding: 4px;
+  border-right: 1px solid rgba(255,255,255,.2);
+}
+
+.view-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;   /* ⬅️ Pushes hamburger to far right */
+  padding-left: 10px;
+  padding-right: 20px;
+}
+
+/* ============================================================================
+ * 2. HAMBURGER MENU
+ * ============================================================================ */
+
+#pin-topbar {
+  height: 32px;
+  border-radius: 8px;
+}
+
+#pin-topbar:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+#hamburger-menu {
+  background: none;
+  height: 32px;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  padding: 5px 15px;
+}
+
+#hamburger-menu:hover {
+  color: #f0a500;
+}
+
+/* Override Shoelace styling */
+#hamburger-menu.hamburger-btn {
+  background: none;
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Make the hamburger lines big */
+#hamburger-menu .hamburger-icon {
+  width: 26px;
+  height: 26px;
+  stroke: currentColor;
+}
+
+/* ============================================================================
+ * VISUAL REFINEMENTS - Improved aesthetics only
+ * No functional/logic changes - just prettier fonts, colors, sizing
+ * ============================================================================ */
+
+/* ============================================================================
+ * IMPROVED TYPOGRAPHY
+ * ============================================================================ */
+
+body {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Better button text */
+.gui-button {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* Cleaner, more readable text */
+#client-list,
+#stopwatch,
+#mode-toggle {
+  font-weight: 500;
+}
+
+/* ============================================================================
+ * REFINED BUTTON STYLING
+ * ============================================================================ */
+
+/* Smoother button appearance */
+.gui-button {
+  background: linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gui-button:hover {
+  background: linear-gradient(180deg, #333 0%, #2a2a2a 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+.gui-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Active state more visible */
+.gui-button.active {
+  background: linear-gradient(180deg, #2d3748 0%, #1a202c 100%);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+/* Large transport buttons - cleaner look */
+.gui-button--large {
+  border-width: 2px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.gui-button--large:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================================
+ * TOP BAR REFINEMENTS
+ * ============================================================================ */
+
+#top-bar {
+  background: rgba(20, 20, 24, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Client badges prettier */
+.client-badge {
+  background: rgba(100, 255, 100, 0.12);
+  border-color: rgba(100, 255, 100, 0.35);
+  font-weight: 600;
+  padding: 3px 7px;
+}
+
+/* Stopwatch cleaner */
+#stopwatch {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* Mode toggle prettier */
+#mode-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+#mode-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ============================================================================
+ * CONTROLS BAR (TRANSPORT) - DARKER & CLEANER
+ * ============================================================================ */
+
+#controls {
+  background: rgba(10, 10, 12, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Speed panel nicer */
+.speed-panel {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(5px);
+}
+
+.speed-display {
+  background: rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.25);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================================
+ * SEEK BAR - PRETTIER
+ * ============================================================================ */
+
+#seek-bar {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#seek-bar::-webkit-slider-thumb,
+#seek-bar::-moz-range-thumb {
+  background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+#seek-bar::-webkit-slider-thumb:hover,
+#seek-bar::-moz-range-thumb:hover {
+  background: linear-gradient(180deg, #555 0%, #333 100%);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ============================================================================
+ * OSC & VIEW TOOLS - REFINED
+ * ============================================================================ */
+
+.osc-tools {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(5px);
+  border-right-color: rgba(255, 255, 255, 0.12);
+}
+
+.osc-monitor {
+  font-weight: 500;
+}
+
+.osc-line {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* ============================================================================
+ * HAMBURGER MENU - CLEANER
+ * ============================================================================ */
+
+#hamburger-menu.hamburger-btn {
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+#hamburger-menu.hamburger-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ============================================================================
+ * SIDE BUTTONS - REFINED
+ * ============================================================================ */
+
+.side-button {
+  border-width: 1.5px;
+}
+
+.side-button:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+
+/* ============================================================================
+ * SUBTLE ANIMATIONS
+ * ============================================================================ */
+
+.gui-button,
+.score-card,
+.project-card,
+#mode-toggle,
+#stopwatch {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================================
+ * IMPROVED CONTRAST & READABILITY
+ * ============================================================================ */
+
+/* Better text contrast */
+#top-bar,
+#controls {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Subtle text shadows for readability */
+.gui-button,
+#stopwatch,
+#mode-toggle,
+.speed-display {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================================================
+ * RESPONSIVE REFINEMENTS
+ * ============================================================================ */
+
+@media (max-width: 768px) {
+  /* Slightly larger touch targets on mobile */
+  .gui-button {
+    min-height: 36px;
+    min-width: 36px;
+  }
+  
+  .side-button {
+    width: 44px;
+    height: 44px;
+  }
+}

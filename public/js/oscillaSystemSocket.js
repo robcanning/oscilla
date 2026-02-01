@@ -8,7 +8,7 @@
 
 import { scrollToPlayheadVisual, togglePlayButton } from './oscillaTransport.js';
 import { startStopwatch } from './cues/oscillaTimers.js';
-import { loadSharedAnnotations, annotationsHandleSocketMessage } from './oscillaContributionSurface.js';
+import { loadSharedAnnotations, annotationsHandleSocketMessage } from './interaction/interactionSurface.js';
 import { handleCueTrigger, teleportPlayhead } from './oscillaCueDispatcher.js';
 import { handleStopCue } from './cues/oscillaStop.js';
 import { handleAudioCue } from './cues/oscillaAudio.js';

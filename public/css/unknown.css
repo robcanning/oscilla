@@ -1,0 +1,200 @@
+
+
+/* Active Popup */
+
+#animation-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70%;
+  height: 70%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid black;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  pointer-events: all;
+  overflow: hidden;
+  /* Ensures the SVG is contained within the popup */
+}
+
+#animation-content {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* Maintains aspect ratio while fitting within the container */
+  pointer-events: none;
+  /* Prevent interaction if not required */
+}
+
+#animation-popup svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* Ensure the SVG scales properly */
+  pointer-events: all;
+  /* Enable interaction with SVG elements */
+}
+
+
+#animation-popup.hidden {
+  display: none;
+}
+
+
+
+#media-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+#media-popup.hidden {
+  display: none;
+}
+
+
+
+
+
+
+#video-popup,
+#p5-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+#video-content {
+  width: 600px;
+  height: 400px;
+}
+
+#p5-container {
+  width: 600px;
+  height: 400px;
+}
+
+
+
+/* ✅ Main container for cue choices */
+#cue-choice-container {
+  position: fixed;
+  width: 100vw;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* width: auto; */
+  height: auto;
+  /* background: rgba(0, 0, 0, 0.9); */
+  padding: 2px;
+  border-radius: 10px;
+  display: flex;
+  /* ✅ Flexbox for horizontal layout */
+  flex-wrap: wrap;
+  /* ✅ Allows choices to wrap if too many */
+  justify-content: center;
+  /* ✅ Center items in the container */
+  align-items: flex-start;
+  /* ✅ Align items at the top */
+  gap: 5px;
+  /* ✅ Space between choices */
+  z-index: 10002;
+}
+
+#cue-choice-container.hidden {
+  display: none !important;
+  /* ✅ Ensures it's hidden properly */
+}
+
+#cue-choice-header {
+  width: 100%;
+  text-align: center;
+  /* ✅ Centers the text */
+  font-size: 16px;
+  /* ✅ Adjust size as needed */
+  font-weight: bold;
+  margin-bottom: 10px;
+  /* ✅ Adds spacing between header and choices */
+}
+
+
+/* ✅ Styling for each cue choice item */
+.cue-choice-item {
+  display: flex;
+  flex-direction: column;
+  /* ✅ Ensures SVG is stacked above text */
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: white;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: center;
+  width: 28vw;
+  /* ✅ Adjust thumbnail width */
+  height: 28vw;
+  /* ✅ Adjust thumbnail height */
+  overflow: hidden;
+  border: 2px solid #000;
+  position: relative;
+  /* ✅ Allows text to position properly */
+}
+
+/* ✅ Style for the SVG thumbnail */
+.cue-choice-thumbnail {
+  width: 100%;
+  height: 150px;
+  /* ✅ Adjusted for correct aspect ratio */
+  object-fit: contain;
+  /* ✅ Keep aspect ratio */
+  pointer-events: none;
+  /* ✅ Prevents interference with clicks */
+}
+
+/* ✅ Style for the text label below the SVG */
+.cue-choice-text {
+  font-size: 14px;
+  color: black;
+  margin-top: 5px;
+  /* ✅ Space between SVG and text */
+  text-align: center;
+}
+
+/* ✅ Hover effect */
+.cue-choice-item:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ✅ Ensures text overlay is properly positioned */
+.cue-choice-item div {
+  font-size: 14px;
+  color: black;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 5px 10px;
+  border: 1px solid black;
+  pointer-events: none;
+  /* ✅ Prevents blocking clicks */
+}
+
+/* ✅ Fix redundant pointer-events */
+.cue-choice-item>* {
+  pointer-events: none;
+  /* ✅ Ensures children do not interfere */
+}
