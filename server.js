@@ -11,7 +11,7 @@ import {
   exportProject
 } from "./serverUtils.js";
 
-import { setupControlXYRoutes } from "./public/js/controlXYPresetsRoutes.mjs";
+import { setupControlXYRoutes } from "./public/js/control/controlXYPresetsRoutes.mjs";
 
 // ------------------------------------------------------------
 // Node core (ESM-safe)
