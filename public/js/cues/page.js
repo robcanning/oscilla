@@ -19,13 +19,13 @@
 //
 // -------------------------------------------------------------
 
-import { propagate } from "../oscillaPreProcessPropagate.js";
-import { animationAssign } from "./oscillaAnimation.js";
+import { propagate } from "../parser/preProcessPropagate.js";
+import { animationAssign } from "./animation.js";
 import { initializeObserver } from "../oscillaObserver.js";
 // import { registerReuseBlocks, autoInjectUseBlocks } from "./reuse.js";
-import { buildCueButtonsIn } from "./oscillaButton.js";
+import { buildCueButtonsIn } from "./button.js";
 import { handleCueTrigger } from "../oscillaCueDispatcher.js";
-import { stopAllCueTexts } from "./oscillaText.js";
+import { stopAllCueTexts } from "./text.js";
 
 
 // =============================================================

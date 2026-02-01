@@ -4,15 +4,15 @@
  * Handles loading of self-contained score projects from /scores/
  */
 
-import { showLoader, updateLoader, hideLoader } from "./oscillaLoader.js";
+import { showLoader, updateLoader, hideLoader } from "./projectLoadProgressUI.js";
 import { initializeSVG } from "./app.js";
 import { initializeObserver } from "./oscillaObserver.js";
 import { setSpeed, applyDarkMode, initializeControlsPin, initializeTopbarPin } from "./oscillaTransport.js";
 import { destroyAllHitLabels } from "./oscillaHitLabels.js";
-import { preloadReuseBlocksFromPages } from "./oscillaPreProcessReuse.js";
+import { preloadReuseBlocksFromPages } from "./parser/preProcessReuse.js";
 
-import "./oscillaControlXYPresets.js";  
-import "./oscillaControlXYPresetUI.js";  
+import "./control/controlXYPresets.js";  
+import "./control/controlXYPresetUI.js";  
 
 let loadInProgress = false;
 let projectMenuWired = false;
@@ -27,7 +27,6 @@ function recordRecentProject(name) {
 
   localStorage.setItem(key, JSON.stringify(recents));
 }
-
 
 
 export function cleanupProjectOverlays() {

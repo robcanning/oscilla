@@ -19,11 +19,11 @@ function warn(...args) { console.warn(TAG, ...args); }
 // -----------------------------
 // Imports
 // -----------------------------
-import { handleScaleCue } from "./oscillaAnimationScale.js";
-import { handleRotateCue } from "./oscillaAnimationRotate.js";
-import { handleO2PCue } from "./oscillaAnimationO2p.js";
-import { handleColorCue } from "./oscillaAnimationColor.js";
-import { parseCueToAST } from "../oscillaParser.js";
+import { handleScaleCue } from "./scale.js";
+import { handleRotateCue } from "./rotate.js";
+import { handleO2PCue } from "./o2p.js";
+import { handleColorCue } from "./color.js";
+import { parseCueToAST } from "../parser/parser.js";
 
 // Ensure global registries exist
 window.oscillaAnimRegistry = window.oscillaAnimRegistry || {};
@@ -119,7 +119,7 @@ export function animationAssign(svgRoot) {
                 );
 
                 if (isPageMode || autostartFlag) {
-                    import("./oscillaText.js")
+                    import("./text.js")
                         .then(mod => mod.handleCueTextFromAST(ast, el))
                         .catch(err => console.error("[animationAssign] cue:text autostart failed", err));
                 }

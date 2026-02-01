@@ -2,10 +2,10 @@ import {
   registerReuseBlocks,
   autoInjectUseBlocks,
   preloadReuseBlocksFromPages
-} from "./oscillaPreProcessReuse.js";
+} from "./parser/preProcessReuse.js";
 
-import { hideAllButtonPlaceholders } from "./cues/oscillaButton.js";
-import { setSpeedCueMap, extractSpeedCues } from './cues/oscillaSpeed.js';
+import { hideAllButtonPlaceholders } from "./cues/button.js";
+import { setSpeedCueMap, extractSpeedCues } from './cues/speed.js';
 
 import {
   initOscillaAnnotations,

@@ -40,9 +40,9 @@
  */
 
 
-import { getSpeedForPosition, updateSpeedFromPosition } from "./cues/oscillaSpeed.js";
-import { resetAllFadePriming } from "./cues/oscillaFade.js";
-import { stopAllCueTexts } from "./cues/oscillaText.js";
+import { getSpeedForPosition, updateSpeedFromPosition } from "./cues/speed.js";
+import { resetAllFadePriming } from "./cues/fade.js";
+import { stopAllCueTexts } from "./cues/text.js";
 import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 import { 
   dismissAllStopwatchOverlays, 
@@ -50,7 +50,7 @@ import {
   pauseTransportTime, 
   resumeTransportTime,
   resetTransportTime 
-} from "./cues/oscillaTimers.js";
+} from "./cues/timers.js";
 
 // ============================================================================
 // REHEARSAL MARK NAVIGATION STATE

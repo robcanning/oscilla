@@ -16,7 +16,7 @@
  *   publish("o2p", uid, { t: 0.5, x: 0.3, y: 0.7 });
  */
 
-import * as ParamBus from './oscillaParamBus.js';
+import * as ParamBus from './paramBus.js';
 
 // ===========================
 // Signal Reference Detection

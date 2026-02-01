@@ -7,7 +7,7 @@
 // - Continuous hue cycling: vals:hue or vals:hue(120, 240)
 // - Modes: linear (smooth), alt (ping-pong), step (hard switch)
 
-import { registerAnimation } from "./oscillaAnimation.js";
+import { registerAnimation } from "./animation.js";
 import { scheduleCueStart } from "../oscillaCueDispatcher.js";
 import {
     applyPrestateBeforeStart,
@@ -18,9 +18,9 @@ import {
     needsFadeIn,
     triggerFadeIn,
     isOscEnabled
-} from "./oscillaAnimationShared.js";
+} from "./animShared.js";
 
-import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
+import { sendOSCMessage, createOscOverlay } from "./osc.js";
 
 // ============================================================
 // COLOR UTILITIES

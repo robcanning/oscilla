@@ -4,14 +4,14 @@
  */
 
 import { scheduleCueStart } from "../oscillaCueDispatcher.js";
-import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
+import { sendOSCMessage, createOscOverlay } from "./osc.js";
 
 import {
     registerAnimation,
     registerRunningAnimation,
     clearRunningAnimation,
     resolveAnimationUid
-} from "./oscillaAnimation.js";
+} from "./animation.js";
 
 
 const OSCCTRL_THROTTLE_MS = 30;

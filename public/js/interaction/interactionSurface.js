@@ -13,7 +13,7 @@
 // - oscillaContributionRecorder.js    (audio recording)
 // - oscillaColorPicker.js             (color picker component)
 
-import { getStopwatchTime } from "../cues/oscillaTimers.js";
+import { getStopwatchTime } from "../cues/timers.js";
 
 // Shared utilities and state
 import {

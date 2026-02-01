@@ -10,7 +10,7 @@
 // Usage:
 //   import { makePinEl, positionAnnotation, makeEditor, getScoreScrollInner } from "./oscillaAnnotationEditor.js";
 
-import { getStopwatchTime } from "../cues/oscillaTimers.js";
+import { getStopwatchTime } from "../cues/timers.js";
 import { showRecordingModal, isRecordingSupported } from "./audioRecorder.js";
 import { openAudioBrowser, handleAudioUpload } from "./audioBrowser.js";
 import { 

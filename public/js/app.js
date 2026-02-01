@@ -15,11 +15,11 @@
 // Existing modules
 import { enableLiveInspector } from "./oscillaLive.js";
 import { initializeDarkModeToggle, scrollToPlayheadVisual } from "./oscillaTransport.js";
-import { loadProject } from './oscillaProjectLoader.js';
-import { setupScore, extractScoreElements, autoInjectGroupsInScroll } from './oscillaScoreSetup.js';
-import { registerAnimation, animationAssign } from "./cues/oscillaAnimation.js";
-import { buildCueButtonsIn, hideAllButtonPlaceholders } from "./cues/oscillaButton.js";
-import { registerReuseBlocks, autoInjectUseBlocks, preloadReuseBlocksFromPages } from "./oscillaPreProcessReuse.js";
+import { loadProject } from './projectLoader.js';
+import { setupScore, extractScoreElements, autoInjectGroupsInScroll } from './projectScoreSetup.js';
+import { registerAnimation, animationAssign } from "./cues/animation.js";
+import { buildCueButtonsIn, hideAllButtonPlaceholders } from "./cues/button.js";
+import { registerReuseBlocks, autoInjectUseBlocks, preloadReuseBlocksFromPages } from "./parser/preProcessReuse.js";
 
 import {
   forward, rewind, rewindToStart,
@@ -32,47 +32,47 @@ import {
 import {
   startStopwatch, stopStopwatch, resetStopwatch,
   resumeStopwatch, setupStopwatchFullscreenToggle
-} from './cues/oscillaTimers.js';
+} from './cues/timers.js';
 
 import {
   handleCueTrigger, checkCueTriggers, parseCueParams,
   resetTriggeredCues, assignCues
 } from './oscillaCueDispatcher.js';
 
-import { handleStopCue } from './cues/oscillaStop.js';
-import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues, checkImpulseRegions } from "./cues/oscillaAudio.js";
-import { dismissPauseCountdown, pauseDismissClickHandler, handlePauseCue } from "./cues/oscillaPause.js";
-import { checkSynthRegions } from "./cues/oscillaSynth.js";
-import { checkSpeedForPosition, resetSpeedWatcher } from "./cues/oscillaSpeed.js";
+import { handleStopCue } from './cues/stop.js';
+import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues, checkImpulseRegions } from "./cues/audio.js";
+import { dismissPauseCountdown, pauseDismissClickHandler, handlePauseCue } from "./cues/pause.js";
+import { checkSynthRegions } from "./cues/synth.js";
+import { checkSpeedForPosition, resetSpeedWatcher } from "./cues/speed.js";
 
 // New system modules
 import {
   connectWebSocket, sendSocketMessage, setSocketEnabled, getSocket,
   initSocketCallbacks
-} from './oscillaSystemSocket.js';
+} from './system/socket.js';
 
 import {
   initClientUI, updateClientList, setAudioMaster,
   getAudioMaster, defineAudioMasterProperty
-} from './oscillaSystemClients.js';
+} from './system/clients.js';
 
-import { initUIBindings } from './oscillaSystemUIBindings.js';
+import { initUIBindings } from './system/UIBindings.js';
 
-import { initializeSVG, applyWideScrollLayout, settleDomForPropagate } from './oscillaSystemSVGInit.js';
+import { initializeSVG, applyWideScrollLayout, settleDomForPropagate } from './system/SVGInit.js';
 
 import {
   storePathVariants, getPathVariants, ensureWindowPlayheadX, getPlayheadX
-} from './oscillaSystemPaths.js';
+} from './system/paths.js';
 
 import {
   initAnimationLoop, startAnimation, stopAnimation, animate
-} from './oscillaSystemRAF.js';
+} from './system/RAF.js';
 
-import { populateProjectMenu, getAvailableProjects } from './oscillaSystemProjectMenu.js';
+import { populateProjectMenu, getAvailableProjects } from './system/projectMenuUI.js';
 
 import {
   openRehearsalPopup, closeRehearsalPopup, initRehearsalButton
-} from './oscillaSystemRehearsal.js';
+} from './system/rehearsalUI.js';
 
 // ===========================
 // Global Window Bindings

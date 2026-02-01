@@ -25,8 +25,8 @@
 //
 // ------------------------------------------------------------
 
-import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
-import { bindParam, isSignalRef } from '../oscillaParamBinding.js';
+import { sendOSCMessage, createOscOverlay } from "./osc.js";
+import { bindParam, isSignalRef } from '../control/paramBinding.js';
 
 // ============================================================
 // 🌐 Shared AudioContext + registry

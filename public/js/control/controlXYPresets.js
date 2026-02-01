@@ -11,8 +11,8 @@
  *   - Project-based storage with import/export
  */
 
-import { publish } from "./oscillaParamBinding.js";
-import { sendOSCMessage } from "./cues/oscillaOSC.js";
+import { publish } from "./paramBinding.js";
+import { sendOSCMessage } from "../cues/osc.js";
 
 // ============================================================================
 // PRESET STORAGE

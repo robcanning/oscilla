@@ -4,11 +4,11 @@
  * © 2025 Rob Canning — GPLv3
  */
 
-import { scrollToPlayheadVisual, updateSeekBar } from './oscillaTransport.js';
-import { checkCueTriggers } from './oscillaCueDispatcher.js';
-import { checkImpulseRegions } from './cues/oscillaAudio.js';
-import { checkSynthRegions } from './cues/oscillaSynth.js';
-import { checkSpeedForPosition } from './cues/oscillaSpeed.js';
+import { scrollToPlayheadVisual, updateSeekBar } from '../oscillaTransport.js';
+import { checkCueTriggers } from '../oscillaCueDispatcher.js';
+import { checkImpulseRegions } from '../cues/audio.js';
+import { checkSynthRegions } from '../cues/synth.js';
+import { checkSpeedForPosition } from '../cues/speed.js';
 
 // ===========================
 // Animation Loop

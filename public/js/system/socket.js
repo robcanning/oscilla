@@ -6,14 +6,14 @@
  * Handles WebSocket connection, message routing, and OSC-in control dispatch.
  */
 
-import { scrollToPlayheadVisual, togglePlayButton } from './oscillaTransport.js';
-import { startStopwatch } from './cues/oscillaTimers.js';
-import { loadSharedAnnotations, annotationsHandleSocketMessage } from './interaction/interactionSurface.js';
-import { handleCueTrigger, teleportPlayhead } from './oscillaCueDispatcher.js';
-import { handleStopCue } from './cues/oscillaStop.js';
-import { handleAudioCue } from './cues/oscillaAudio.js';
-import { dismissPauseCountdown, handlePauseCue } from './cues/oscillaPause.js';
-import { handleOSCIn } from './oscillaControlRouter.js';
+import { scrollToPlayheadVisual, togglePlayButton } from '../oscillaTransport.js';
+import { startStopwatch } from '../cues/timers.js';
+import { loadSharedAnnotations, annotationsHandleSocketMessage } from '../interaction/interactionSurface.js';
+import { handleCueTrigger, teleportPlayhead } from '../oscillaCueDispatcher.js';
+import { handleStopCue } from '../cues/stop.js';
+import { handleAudioCue } from '../cues/audio.js';
+import { dismissPauseCountdown, handlePauseCue } from '../cues/pause.js';
+import { handleOSCIn } from '../control/controlRouter.js';
 
 // ===========================
 // Module State

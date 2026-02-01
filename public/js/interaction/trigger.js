@@ -8,7 +8,7 @@
 // Usage:
 //   import { executeTrigger, checkAnnotationPlayheadTriggers } from "./oscillaContributionTrigger.js";
 
-import { handleAudioCue, handleAudioImpulseCue, stopAudioImpulse } from "../cues/oscillaAudio.js";
+import { handleAudioCue, handleAudioImpulseCue, stopAudioImpulse } from "../cues/audio.js";
 import { state, getProjectName } from "./shared.js";
 
 // =============================================================

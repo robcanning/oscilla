@@ -18,7 +18,7 @@ import {
     applyPrestateOnStart,
     armGhostClickable,
     needsArming
-} from "./oscillaAnimationShared.js";
+} from "./animShared.js";
 
 // ---------------------------------------------------------------------------
 // Utilities

@@ -18,7 +18,7 @@ import {
 } from "https://esm.sh/chevrotain@11.0.3/es2022/chevrotain.mjs";
 
 
-import { maybeConvertToSignalRef, isBindableParam } from './oscillaParserSignalRef.js';
+import { maybeConvertToSignalRef, isBindableParam } from './parserSignalRef.js';
 
 
 // ─────────────────────────────────────────────────────────────

@@ -1,14 +1,14 @@
 // scale.js â€” OscillaScore Scale Cue (uniform & non-uniform)
 
-import { registerAnimation } from "./oscillaAnimation.js";
+import { registerAnimation } from "./animation.js";
 import { scheduleCueStart } from "../oscillaCueDispatcher.js";
 import { createHitLabel, shouldCreateHitLabel, repositionAllHitLabels } from "../oscillaHitLabels.js";
 import { applyPrestateBeforeStart, applyPrestateOnStart, ensureAnimWrapper,
     armGhostClickable, needsArming, installOscToggleHandler, isOscEnabled
-} from "./oscillaAnimationShared.js";
+} from "./animShared.js";
 
-import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
-import { publish } from '../oscillaParamBinding.js';
+import { sendOSCMessage, createOscOverlay } from "./osc.js";
+import { publish } from '../control/paramBinding.js';
 
 // ============================================================
 // OSC send helper for SCALE

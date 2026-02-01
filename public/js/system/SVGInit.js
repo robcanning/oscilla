@@ -4,15 +4,15 @@
  * © 2025 Rob Canning — GPLv3
  */
 
-import { propagate } from "./oscillaPreProcessPropagate.js";
-import { destroyAllHitLabels } from "./oscillaHitLabels.js";
-import { registerReuseBlocks, autoInjectUseBlocks } from "./oscillaPreProcessReuse.js";
-import { hideAllButtonPlaceholders, buildCueButtonsIn } from "./cues/oscillaButton.js";
-import { animationAssign } from "./cues/oscillaAnimation.js";
-import { initializeObserver } from "./oscillaObserver.js";
-import { assignCues } from "./oscillaCueDispatcher.js";
-import { storePathVariants } from "./oscillaSystemPaths.js";
-import { sendScoreMeta } from "./oscillaSystemSocket.js";
+import { propagate } from "../parser/preProcessPropagate.js";
+import { destroyAllHitLabels } from "../oscillaHitLabels.js";
+import { registerReuseBlocks, autoInjectUseBlocks } from "../parser/preProcessReuse.js";
+import { hideAllButtonPlaceholders, buildCueButtonsIn } from "../cues/button.js";
+import { animationAssign } from "../cues/animation.js";
+import { initializeObserver } from "../oscillaObserver.js";
+import { assignCues } from "../oscillaCueDispatcher.js";
+import { storePathVariants } from "./paths.js";
+import { sendScoreMeta } from "./socket.js";
 
 // ===========================
 // SVG Initialization

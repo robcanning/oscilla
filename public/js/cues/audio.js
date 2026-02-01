@@ -9,7 +9,7 @@
  * @param {object} cueParams - e.g. { choice: "noise.wav", fadeOut: 200 }
  */
 
-import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
+import { sendOSCMessage, createOscOverlay } from "./osc.js";
 
 export async function handleAudioStopCue(cueId, cueParams = {}) {
   const fadeOutMs = cueParams.fadeOut ?? 120;

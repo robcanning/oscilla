@@ -20,7 +20,7 @@
 //          the object's position in SVG coordinate space.
 // -----------------------------------------------------------
 
-import { registerAnimation, resolveAnimationUid } from "./oscillaAnimation.js";
+import { registerAnimation, resolveAnimationUid } from "./animation.js";
 import { scheduleCueStart } from "../oscillaCueDispatcher.js";
 import { createHitLabel, repositionAllHitLabels, initO2PDragHandler, updateHitLabelValue } from "../oscillaHitLabels.js";
 
@@ -31,11 +31,11 @@ import {
     needsArming,
     isOscEnabled,
     ensureAnimWrapper
-} from "./oscillaAnimationShared.js";
+} from "./animShared.js";
 
-import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
+import { sendOSCMessage, createOscOverlay } from "./osc.js";
 
-import { publish } from '../oscillaParamBinding.js';
+import { publish } from '../control/paramBinding.js';
 
 
 /* ---------------------------------------------------------

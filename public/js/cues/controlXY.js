@@ -15,8 +15,8 @@
  *   controlXY(uid:pad1, handle:dot1, osc:true)          // enable OSC output
  */
 
-import { publish } from "../oscillaParamBinding.js";
-import { sendOSCMessage, createOscOverlay } from "./oscillaOSC.js";
+import { publish } from "../control/paramBinding.js";
+import { sendOSCMessage, createOscOverlay } from "./osc.js";
 
 /**
  * handleControlXYCue()

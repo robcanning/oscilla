@@ -4,7 +4,7 @@
  * © 2025 Rob Canning — GPLv3
  */
 
-import { sendClientNameUpdate } from './oscillaSystemSocket.js';
+import { sendClientNameUpdate } from './socket.js';
 
 // ===========================
 // Module State

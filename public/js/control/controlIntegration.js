@@ -7,9 +7,9 @@
  * into existing animation and audio modules.
  */
 
-import * as ParamBus from './oscillaParamBus.js';
-import * as Targets from './oscillaTargets.js';
-import { publishSignal, addModulation, clearModulations, clearRateLimits } from './oscillaControlRouter.js';
+import * as ParamBus from '../oscillaParamBus.js';
+import * as Targets from '../oscillaTargets.js';
+import { publishSignal, addModulation, clearModulations, clearRateLimits } from './controlRouter.js';
 
 // ===========================
 // O2P Animation Integration

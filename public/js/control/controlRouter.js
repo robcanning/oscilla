@@ -16,8 +16,8 @@
  * OSC output is handled separately by the source modules.
  */
 
-import * as ParamBus from './oscillaParamBus.js';
-import * as Targets from './oscillaTargets.js';
+import * as ParamBus from './paramBus.js';
+import * as Targets from '../oscillaTargets.js';
 
 // ===========================
 // Module State
