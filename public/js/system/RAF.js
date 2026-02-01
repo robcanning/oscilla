@@ -5,7 +5,7 @@
  */
 
 import { scrollToPlayheadVisual, updateSeekBar } from '../oscillaTransport.js';
-import { checkCueTriggers } from '../oscillaCueDispatcher.js';
+import { checkCueTriggers } from '../cues/cueDispatcher.js';
 import { checkImpulseRegions } from '../cues/audio.js';
 import { checkSynthRegions } from '../cues/synth.js';
 import { checkSpeedForPosition } from '../cues/speed.js';

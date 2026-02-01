@@ -9,7 +9,7 @@
 import { scrollToPlayheadVisual, togglePlayButton } from '../oscillaTransport.js';
 import { startStopwatch } from '../cues/timers.js';
 import { loadSharedAnnotations, annotationsHandleSocketMessage } from '../interaction/interactionSurface.js';
-import { handleCueTrigger, teleportPlayhead } from '../oscillaCueDispatcher.js';
+import { handleCueTrigger, teleportPlayhead } from '../cues/cueDispatcher.js';
 import { handleStopCue } from '../cues/stop.js';
 import { handleAudioCue } from '../cues/audio.js';
 import { dismissPauseCountdown, handlePauseCue } from '../cues/pause.js';

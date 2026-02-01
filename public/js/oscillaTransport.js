@@ -807,7 +807,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-import { checkCueTriggers } from "./oscillaCueDispatcher.js";
+import { checkCueTriggers } from "./cues/cueDispatcher.js";
 
 /**
  *  Starts playback

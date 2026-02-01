@@ -1,7 +1,7 @@
 // scale.js â€” OscillaScore Scale Cue (uniform & non-uniform)
 
 import { registerAnimation } from "./animation.js";
-import { scheduleCueStart } from "../oscillaCueDispatcher.js";
+import { scheduleCueStart } from "./cueDispatcher.js";
 import { createHitLabel, shouldCreateHitLabel, repositionAllHitLabels } from "../oscillaHitLabels.js";
 import { applyPrestateBeforeStart, applyPrestateOnStart, ensureAnimWrapper,
     armGhostClickable, needsArming, installOscToggleHandler, isOscEnabled

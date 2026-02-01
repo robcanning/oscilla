@@ -8,7 +8,7 @@
 // - Modes: linear (smooth), alt (ping-pong), step (hard switch)
 
 import { registerAnimation } from "./animation.js";
-import { scheduleCueStart } from "../oscillaCueDispatcher.js";
+import { scheduleCueStart } from "./cueDispatcher.js";
 import {
     applyPrestateBeforeStart,
     applyPrestateOnStart,

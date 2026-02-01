@@ -37,7 +37,7 @@ import {
 import {
   handleCueTrigger, checkCueTriggers, parseCueParams,
   resetTriggeredCues, assignCues
-} from './oscillaCueDispatcher.js';
+} from './cues/cueDispatcher.js';
 
 import { handleStopCue } from './cues/stop.js';
 import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues, checkImpulseRegions } from "./cues/audio.js";

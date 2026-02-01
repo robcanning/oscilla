@@ -10,7 +10,7 @@ import { registerReuseBlocks, autoInjectUseBlocks } from "../parser/preProcessRe
 import { hideAllButtonPlaceholders, buildCueButtonsIn } from "../cues/button.js";
 import { animationAssign } from "../cues/animation.js";
 import { initializeObserver } from "../oscillaObserver.js";
-import { assignCues } from "../oscillaCueDispatcher.js";
+import { assignCues } from "../cues/cueDispatcher.js";
 import { storePathVariants } from "./paths.js";
 import { sendScoreMeta } from "./socket.js";
 

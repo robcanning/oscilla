@@ -11,8 +11,8 @@
 // • Uses existing cue trigger lifecycle (click / playhead / ghostClickable)
 // ============================================================================
 
-import { scheduleCueStart } from "../oscillaCueDispatcher.js";
-import { emitCueComplete } from "../oscillaCueDispatcher.js";
+import { scheduleCueStart } from "./cueDispatcher.js";
+import { emitCueComplete } from "./cueDispatcher.js";
 import {
     applyPrestateBeforeStart,
     applyPrestateOnStart,

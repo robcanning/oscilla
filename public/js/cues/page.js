@@ -24,7 +24,7 @@ import { animationAssign } from "./animation.js";
 import { initializeObserver } from "../oscillaObserver.js";
 // import { registerReuseBlocks, autoInjectUseBlocks } from "./reuse.js";
 import { buildCueButtonsIn } from "./button.js";
-import { handleCueTrigger } from "../oscillaCueDispatcher.js";
+import { handleCueTrigger } from "./cueDispatcher.js";
 import { stopAllCueTexts } from "./text.js";
 
 

@@ -21,7 +21,7 @@
 // -----------------------------------------------------------
 
 import { registerAnimation, resolveAnimationUid } from "./animation.js";
-import { scheduleCueStart } from "../oscillaCueDispatcher.js";
+import { scheduleCueStart } from "./cueDispatcher.js";
 import { createHitLabel, repositionAllHitLabels, initO2PDragHandler, updateHitLabelValue } from "../oscillaHitLabels.js";
 
 import {
