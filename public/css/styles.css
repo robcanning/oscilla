@@ -616,23 +616,22 @@ body.inverted #score {
 
 
 #singlePage-content {
-  display: block;
-  /* Ensure it's visible */
-  width: 100vw;
-  /* Keep the original SVG width */
-  height: 100vh;
-  /* Keep the original SVG height */
-  max-width: 100%;
-  /* Prevent it from overflowing */
-  max-height: 100%;
-  /* Ensure it fits inside the container */
-  object-fit: contain;
-  /* Maintain aspect ratio */
+  /* Center the SVG within the flex container */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
   pointer-events: auto;
-  position: relative !important;
-  display: block !important;   /* prevent flex child collapse */
-    /* position: relative; */
+}
 
+/* SVG inside singlePage-content - scale to fit and stay centered */
+#singlePage-content svg {
+  max-width: 100vw;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }
 /* =========================================
    BASE BUTTON (uses CSS variables from JS)

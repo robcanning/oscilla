@@ -146,16 +146,20 @@ function expandPattern(astNode) {
 // =============================================================
 // Internal page renderer — FULL modern pipeline
 // =============================================================
-async function showPageOverlay(pageId, durSeconds = null) {
-    console.group(`[Page] ▶ showPageOverlay("${pageId}")`);
+async function showPageOverlay(pageId, durSeconds = null, independentView = false) {
+    console.group(`[Page] ▶ showPageOverlay("${pageId}") independentView=${independentView}`);
 
     // ---------------------------------------------------------
-    // Pause scrolling score (ALWAYS when showing a page)
+    // CONDITIONAL PAUSE: Only pause if NOT independent view
+    // Independent view = triggered from URL navigation
+    // Modal view = triggered from cue in score
     // ---------------------------------------------------------
-    if (window.isPlaying) {
-        console.log("[Page] ⏸ Pausing scrolling score.");
+    if (!independentView && window.isPlaying) {
+        console.log("[Page] ⏸ Pausing scrolling score (modal mode).");
         window.pausePlayback?.();
         window.isPlaying = false;
+    } else if (independentView) {
+        console.log("[Page] 🔄 Transport continues (independent view mode).");
     }
 
     // Track local page mode
@@ -275,6 +279,9 @@ export async function handlePageCue(ast, cueElement) {
     console.group("[cuePage] 🚀 handlePageCue (AST mode)");
     console.log("AST:", ast);
 
+    // Detect if this is an independent view (triggered from URL, not from cue)
+    // Independent views are triggered with window._independentPageView flag
+    const isIndependentView = window._independentPageView === true;
 
     // before rendering new page:
     stopAllCueTexts();
@@ -292,9 +299,9 @@ export async function handlePageCue(ast, cueElement) {
         const pageId = item.page;
         const dur = item.dur ?? null;
 
-        console.log(`[cuePage] ▶ Page "${pageId}" dur=${dur ?? "∞"}`);
+        console.log(`[cuePage] ▶ Page "${pageId}" dur=${dur ?? "∞"} independent=${isIndependentView}`);
 
-        await showPageOverlay(pageId, dur);
+        await showPageOverlay(pageId, dur, isIndependentView);
     }
 
     console.log("[cuePage] ✔ Pattern finished");
