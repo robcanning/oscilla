@@ -1,0 +1,338 @@
+<h1>🎛️ Enhanced Launcher - Complete Feature Set</h1>
+<h2>✨ All New Features</h2>
+<h3>1. <strong>Tween/Jump Toggle</strong> (~)</h3>
+<p>Switch between smooth tweening and instant jumps</p>
+<h3>2. <strong>Preset/Sequence Mode</strong> (P/S)</h3>
+<p>Toggle between two modes:</p>
+<ul>
+<li><strong>P mode</strong>: Manually assigned presets (original behavior)</li>
+<li><strong>S mode</strong>: Auto-filled from sequence list (8 per bank)</li>
+</ul>
+<h3>3. <strong>Hide Launcher</strong> (👁)</h3>
+<p>Temporarily hide the launcher overlay</p>
+<h3>4. <strong>Undock Launcher</strong> (⧉)</h3>
+<p>Open launcher in separate draggable window (multi-monitor support!)</p>
+<hr>
+<h2>🎮 Button Layout</h2>
+<pre><code>┌────────────────────────────────────────────┐
+│ [←] Bank 1 (1/3) [→] [P] [~] [👁] [⧉]    │
+├────────────────────────────────────────────┤
+│ [1]  [2]  [3]  [4]  [5]  [6]  [7]  [8]   │
+└────────────────────────────────────────────┘
+
+Legend:
+[←][→] = Bank navigation
+[P/S]  = Preset/Sequence mode toggle
+[~]    = Tween/Jump toggle
+[👁]    = Hide launcher
+[⧉]    = Undock to separate window
+</code></pre>
+<hr>
+<h2>🎯 Feature Details</h2>
+<h3>Tween/Jump Toggle (~)</h3>
+<p><strong>Active (orange)</strong> = Tween enabled</p>
+<ul>
+<li>Presets recall with 1-second smooth animation</li>
+<li>Sequences play with smooth transitions</li>
+</ul>
+<p><strong>Inactive (gray)</strong> = Jump mode</p>
+<ul>
+<li>Presets recall instantly (0 seconds)</li>
+<li>Sequences start immediately</li>
+</ul>
+<p><strong>Use cases:</strong></p>
+<ul>
+<li><strong>Tween ON</strong>: Smooth performance, gradual changes</li>
+<li><strong>Jump OFF</strong>: Instant cuts, rhythmic triggering</li>
+</ul>
+<h3>Preset/Sequence Mode (P/S)</h3>
+<h4><strong>P Mode (Preset)</strong></h4>
+<ul>
+<li>Shows manually assigned presets</li>
+<li>Right-click to store current state</li>
+<li>Each bank has independent slots</li>
+<li>Original behavior</li>
+</ul>
+<h4><strong>S Mode (Sequence)</strong></h4>
+<ul>
+<li>Auto-fills from your sequence list</li>
+<li>Bank 1 = sequences 1-8</li>
+<li>Bank 2 = sequences 9-16</li>
+<li>Bank 3 = sequences 17-24</li>
+<li><strong>No manual assignment needed!</strong></li>
+<li>Perfect for triggering many sequences</li>
+</ul>
+<p><strong>Workflow:</strong></p>
+<ol>
+<li>Create 20 sequences in UI</li>
+<li>Switch to S mode</li>
+<li>Navigate banks to access all 20</li>
+<li>One-click triggering!</li>
+</ol>
+<h3>Hide Launcher (👁)</h3>
+<p>Temporarily hide the overlay:</p>
+<ul>
+<li>Click 👁 to hide</li>
+<li>Launcher disappears</li>
+<li>To restore: <code>window.controlXYLauncher.show('pad1')</code></li>
+</ul>
+<p><strong>Use cases:</strong></p>
+<ul>
+<li>Clean view during composition</li>
+<li>Screenshots without UI</li>
+<li>Focus on score</li>
+</ul>
+<h3>Undock Launcher (⧉)</h3>
+<p>Open launcher in <strong>separate browser window</strong>:</p>
+<ul>
+<li>Draggable to second monitor</li>
+<li>Stays in sync with main window</li>
+<li>Independent controls</li>
+<li>Auto-updates every second</li>
+</ul>
+<p><strong>Use cases:</strong></p>
+<ul>
+<li>Multi-monitor performances</li>
+<li>Separate control surface</li>
+<li>Collaborative work (one person controls, another watches)</li>
+</ul>
+<p><strong>Perfect for live performance!</strong></p>
+<hr>
+<h2>🎪 Complete Usage Guide</h2>
+<h3>Example 1: Quick Preset Performance</h3>
+<pre><code class="language-xml">&lt;rect id=&quot;pad1&quot; cue=&quot;controlXY(uid:pad1, handle:dot1, launcher:8)&quot;/&gt;
+</code></pre>
+<ol>
+<li>Move handles to 8 different positions</li>
+<li>Right-click slots 1-8 to save each</li>
+<li><strong>Toggle tween OFF</strong> (~) for instant cuts</li>
+<li>Perform: Click slots for instant recall</li>
+</ol>
+<h3>Example 2: Sequence Launcher</h3>
+<pre><code class="language-xml">&lt;rect id=&quot;pad1&quot; cue=&quot;controlXY(uid:pad1, handle:dot1, launcher:8, banks:3)&quot;/&gt;
+</code></pre>
+<ol>
+<li>Create 20+ sequences in UI</li>
+<li>Click <strong>P</strong> to switch to <strong>S mode</strong></li>
+<li>Bank 1 shows sequences 1-8</li>
+<li>Bank 2 shows sequences 9-16</li>
+<li>Bank 3 shows sequences 17-24</li>
+<li><strong>Toggle tween ON</strong> (~) for smooth playback</li>
+<li>Perform: Navigate banks, trigger sequences</li>
+</ol>
+<h3>Example 3: Undocked Control</h3>
+<pre><code class="language-xml">&lt;rect id=&quot;pad1&quot; cue=&quot;controlXY(uid:pad1, handle:[dot1,dot2], launcher:8)&quot;/&gt;
+</code></pre>
+<ol>
+<li>Click <strong>⧉</strong> to undock</li>
+<li>Drag window to second monitor</li>
+<li>Main window shows score</li>
+<li>Control window shows launcher</li>
+<li>Click slots in control window</li>
+<li>Score updates in main window</li>
+<li><strong>Perfect for presentations!</strong></li>
+</ol>
+<h3>Example 4: Mixed Mode Performance</h3>
+<ol>
+<li><strong>Bank 1 (P mode)</strong>: Your 8 favorite presets</li>
+<li><strong>Bank 2-3 (S mode)</strong>: Switch to S, access sequences</li>
+<li>Switch between P and S mid-performance!</li>
+</ol>
+<hr>
+<h2>🔧 Console Commands</h2>
+<h3>Show/Hide Launcher</h3>
+<pre><code class="language-javascript">// Hide
+window.controlXYLauncher.hide('pad1');
+
+// Show
+window.controlXYLauncher.show('pad1');
+</code></pre>
+<h3>Undock Programmatically</h3>
+<pre><code class="language-javascript">window.controlXYLauncher.undock('pad1');
+</code></pre>
+<h3>Check State</h3>
+<pre><code class="language-javascript">const state = window.controlXYPresets._store.launchers.pad1;
+console.log('Mode:', state.mode);       // 'preset' or 'sequence'
+console.log('Tween:', state.tween);     // true or false
+console.log('Visible:', state.visible); // true or false
+</code></pre>
+<hr>
+<h2>💾 Storage Format</h2>
+<pre><code class="language-json">{
+  &quot;launchers&quot;: {
+    &quot;pad1&quot;: {
+      &quot;currentBank&quot;: 0,
+      &quot;mode&quot;: &quot;preset&quot;,
+      &quot;tween&quot;: true,
+      &quot;visible&quot;: true,
+      &quot;banks&quot;: [
+        {
+          &quot;name&quot;: &quot;Bank 1&quot;,
+          &quot;slots&quot;: [
+            { &quot;type&quot;: &quot;preset&quot;, &quot;name&quot;: &quot;intro&quot; },
+            { &quot;type&quot;: &quot;sequence&quot;, &quot;name&quot;: &quot;verse_loop&quot; },
+            null,
+            ...
+          ]
+        }
+      ]
+    }
+  }
+}
+</code></pre>
+<p>All settings persist across sessions!</p>
+<hr>
+<h2>🎨 Visual States</h2>
+<h3>Mode Button (P/S)</h3>
+<ul>
+<li><strong>P</strong> = Blue = Preset mode</li>
+<li><strong>S</strong> = Green = Sequence mode</li>
+</ul>
+<h3>Tween Button (~)</h3>
+<ul>
+<li><strong>Orange</strong> = Tween ON (smooth)</li>
+<li><strong>Gray</strong> = Jump (instant)</li>
+</ul>
+<h3>Slots</h3>
+<ul>
+<li><strong>Gray</strong> = Empty</li>
+<li><strong>Blue</strong> = Preset assigned</li>
+<li><strong>Green</strong> = Sequence assigned</li>
+<li><strong>Orange flash</strong> = Currently active</li>
+</ul>
+<hr>
+<h2>🚀 Advanced Tips</h2>
+<h3>Tip 1: Hybrid Banks</h3>
+<ul>
+<li>Bank 1: P mode with carefully chosen presets</li>
+<li>Banks 2-3: S mode for quick sequence access</li>
+<li>Toggle between as needed!</li>
+</ul>
+<h3>Tip 2: Tween for Transitions</h3>
+<ul>
+<li>Turn tween ON (~) for section changes</li>
+<li>Turn tween OFF for rhythmic triggering</li>
+<li>Change mid-performance!</li>
+</ul>
+<h3>Tip 3: Multi-Monitor Setup</h3>
+<ol>
+<li>Undock launcher to second screen</li>
+<li>Make undocked window fullscreen (F11)</li>
+<li>Use as dedicated control surface</li>
+<li>Main screen shows score to audience</li>
+</ol>
+<h3>Tip 4: Sequence Mode Organization</h3>
+<ul>
+<li>Name sequences with numbers: <code>01_intro</code>, <code>02_verse</code></li>
+<li>They'll sort alphabetically</li>
+<li>Banks align with sets of 8</li>
+</ul>
+<h3>Tip 5: Hide During Recording</h3>
+<ul>
+<li>Hide launcher (👁) for clean recordings</li>
+<li>Show when you need controls</li>
+<li>No need to reposition</li>
+</ul>
+<hr>
+<h2>🎹 Keyboard Shortcuts (Future)</h2>
+<p>Coming soon:</p>
+<ul>
+<li><code>1-8</code> = Trigger slots</li>
+<li><code>[</code> <code>]</code> = Change banks</li>
+<li><code>P</code> = Toggle mode</li>
+<li><code>T</code> = Toggle tween</li>
+<li><code>H</code> = Hide/show</li>
+<li><code>U</code> = Undock</li>
+</ul>
+<hr>
+<h2>🔍 Troubleshooting</h2>
+<h3>Undocked window shows empty?</h3>
+<ul>
+<li>Make sure parent window stays open</li>
+<li>Check browser console for errors</li>
+<li>Try allowing popups</li>
+</ul>
+<h3>Sequence mode shows empty slots?</h3>
+<ul>
+<li>Make sure you have sequences defined</li>
+<li>Check: <code>Object.keys(window.controlXYPresets._store.sequences)</code></li>
+<li>Create some sequences first!</li>
+</ul>
+<h3>Tween not working?</h3>
+<ul>
+<li>Check button is orange (active)</li>
+<li>Try toggling off and on</li>
+<li>Verify preset exists</li>
+</ul>
+<h3>Can't restore hidden launcher?</h3>
+<pre><code class="language-javascript">window.controlXYLauncher.show('pad1');
+</code></pre>
+<hr>
+<h2>📊 Feature Matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Preset Mode</th>
+<th>Sequence Mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Slots</strong></td>
+<td>8 per bank</td>
+<td>8 per bank</td>
+</tr>
+<tr>
+<td><strong>Assignment</strong></td>
+<td>Manual (right-click)</td>
+<td>Auto (from list)</td>
+</tr>
+<tr>
+<td><strong>Storage</strong></td>
+<td>Saved in banks</td>
+<td>Read from sequences</td>
+</tr>
+<tr>
+<td><strong>Use case</strong></td>
+<td>Curated favorites</td>
+<td>Full sequence library</td>
+</tr>
+<tr>
+<td><strong>Tween</strong></td>
+<td>✅ Works</td>
+<td>✅ Works</td>
+</tr>
+<tr>
+<td><strong>Undock</strong></td>
+<td>✅ Works</td>
+<td>✅ Works</td>
+</tr>
+<tr>
+<td><strong>Hide</strong></td>
+<td>✅ Works</td>
+<td>✅ Works</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>🎉 Summary</h2>
+<p>You now have:</p>
+<ol>
+<li>✅ <strong>Tween/Jump toggle</strong> - Smooth or instant</li>
+<li>✅ <strong>Preset/Sequence modes</strong> - Two ways to fill slots</li>
+<li>✅ <strong>Hide launcher</strong> - Clean view when needed</li>
+<li>✅ <strong>Undock launcher</strong> - Multi-monitor support</li>
+<li>✅ <strong>Auto-save all settings</strong> - Persists across sessions</li>
+<li>✅ <strong>Full state control</strong> - Console commands available</li>
+</ol>
+<p><strong>This is a complete performance control system!</strong></p>
+<h3>Quick Start:</h3>
+<ol>
+<li>Enable launcher: <code>launcher:8</code> in DSL</li>
+<li>Try <strong>S mode</strong> for sequence triggering</li>
+<li>Toggle <strong>tween</strong> for smooth/instant</li>
+<li><strong>Undock</strong> for multi-monitor setup</li>
+<li><strong>Perform!</strong></li>
+</ol>
+<p><strong>Score-as-instrument. Control-as-performance.</strong> 🎛️🎪✨</p>

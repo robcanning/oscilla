@@ -1,0 +1,214 @@
+<h1>Feature: Drop Marker (Implementation Specification)</h1>
+<h2>Overview</h2>
+<p>The <strong>Drop Marker</strong> feature allows performers to place shared, temporary structural markers directly onto the score during rehearsal or performance. Markers are rendered as <strong>vertical HTML overlay lines</strong>, clipped to the score height, and persisted via the existing Contribution Surface annotation system.</p>
+<p>Markers are:</p>
+<ul>
+<li>dropped at the <strong>current playhead position</strong></li>
+<li><strong>shared by default</strong></li>
+<li><strong>draggable via their label</strong></li>
+<li><strong>nameable</strong></li>
+<li><strong>saved and restored</strong> with annotation JSON</li>
+</ul>
+<p>Markers function as live rehearsal structure and may later act as navigation jump targets (Phase 2).</p>
+<hr>
+<h2>Scope</h2>
+<h3>Phase 1 (this specification)</h3>
+<ul>
+<li>Marker creation</li>
+<li>Rendering as score-clipped overlays</li>
+<li>Dragging via label</li>
+<li>Label editing and deletion</li>
+<li>Persistence and network sharing via annotation system</li>
+</ul>
+<h3>Phase 2 (out of scope, reserved)</h3>
+<ul>
+<li>Integration into rehearsal / navigation jump lists</li>
+<li>Marker-based jump / seek behaviour</li>
+</ul>
+<hr>
+<h2>Creation</h2>
+<h3>Trigger</h3>
+<ul>
+<li>UI button: <strong>“Drop Marker”</strong></li>
+<li>(Optional later) gesture input</li>
+</ul>
+<h3>Creation logic</h3>
+<p>On trigger:</p>
+<ol>
+<li>Read <strong><code>window.playheadX</code></strong> (authoritative playhead position).</li>
+<li>Create a new annotation item with:
+<ul>
+<li><code>kind: &quot;marker&quot;</code></li>
+<li><code>scope: &quot;shared&quot;</code></li>
+<li><code>placement.x = window.playheadX</code></li>
+</ul>
+</li>
+<li>Insert the item using the <strong>same annotation add pipeline</strong> used for standard annotations.</li>
+</ol>
+<p>No pointer or DOM position is consulted.</p>
+<hr>
+<h2>Data Model</h2>
+<p>Markers are stored as standard annotation items inside <code>state.items</code>.</p>
+<pre><code class="language-js">{
+  id: &quot;ann_&lt;uid&gt;&quot;,
+  kind: &quot;marker&quot;,
+  text: &quot;Marker&quot;,
+  scope: &quot;shared&quot;,
+
+  createdAt: &lt;timestamp&gt;,
+  updatedAt: &lt;timestamp&gt;,
+
+  anchor: {
+    mode: &quot;scroll&quot; | &quot;page&quot;,
+    pageId?: &quot;page_&lt;id&gt;&quot;   // required only when mode === &quot;page&quot;
+  },
+
+  placement: {
+    space: &quot;score&quot;,
+    x: &lt;number&gt;,
+    y: 0
+  }
+}
+</code></pre>
+<h3>Notes</h3>
+<ul>
+<li><code>placement.x</code> is the <strong>only mutable spatial parameter</strong>.</li>
+<li><code>placement.y</code> is fixed and not user-editable.</li>
+<li>Marker height is not stored; it is derived from CSS and container bounds.</li>
+<li><code>text</code> is used as the marker label.</li>
+</ul>
+<hr>
+<h2>Rendering</h2>
+<h3>DOM structure</h3>
+<p>Markers are rendered into the <strong>same score overlay container</strong> used by annotations.</p>
+<pre><code class="language-html">&lt;div class=&quot;osc-marker&quot; data-id=&quot;ann_123&quot;&gt;
+  &lt;div class=&quot;osc-marker-line&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;osc-marker-label&quot;&gt;A&lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<hr>
+<h2>Styling (CSS-only)</h2>
+<p>All visual styling <strong>must live in <code>style.css</code></strong>.<br>
+No inline styles are permitted.</p>
+<p>Required CSS contract:</p>
+<pre><code class="language-css">.osc-marker {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+}
+
+.osc-marker-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;          /* clipped to score container height */
+}
+
+.osc-marker-label {
+  position: absolute;
+  top: 30px;          /* default grab-handle position */
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+}
+</code></pre>
+<p>Visual appearance (color, opacity, font, hover states) is expected to be overridden later via <code>user.css</code>.</p>
+<hr>
+<h2>Clipping &amp; Layout Rules</h2>
+<ul>
+<li>Marker line height is <strong>always clipped to score height</strong>.</li>
+<li>Viewport-height or playhead-following markers are explicitly disallowed.</li>
+</ul>
+<h3>Scroll mode</h3>
+<ul>
+<li>Marker spans full SVG score height.</li>
+</ul>
+<h3>Page mode</h3>
+<ul>
+<li>Marker is rendered only when <code>anchor.pageId</code> matches the active page.</li>
+<li>Marker height equals the page height.</li>
+</ul>
+<p>No special height metadata is stored.</p>
+<hr>
+<h2>Interaction</h2>
+<h3>Dragging</h3>
+<ul>
+<li><strong>The label is the sole drag handle</strong>.</li>
+<li>Dragging updates:
+<ul>
+<li><code>placement.x</code></li>
+</ul>
+</li>
+<li>Dragging does <strong>not</strong> modify:
+<ul>
+<li>height</li>
+<li>y-position</li>
+<li>anchor or scope</li>
+</ul>
+</li>
+</ul>
+<p>On drag end:</p>
+<ul>
+<li>Persist changes via the existing annotation update pipeline.</li>
+</ul>
+<hr>
+<h3>Editing</h3>
+<ul>
+<li>Clicking the label opens a minimal editor:
+<ul>
+<li>Single text input for label</li>
+<li>Delete button</li>
+</ul>
+</li>
+<li>Saving updates <code>text</code>.</li>
+<li>Deleting removes the annotation item.</li>
+</ul>
+<p>No trigger, audio, or cue UI is exposed for markers.</p>
+<hr>
+<h2>Persistence</h2>
+<p>Markers are persisted exactly like other annotations:</p>
+<ul>
+<li>Stored in localStorage</li>
+<li>Included in annotation export JSON</li>
+<li>Restored on import</li>
+<li>Merged by <code>id</code></li>
+</ul>
+<p>No schema changes or version bumps are required.</p>
+<hr>
+<h2>Networking</h2>
+<p>Markers default to <code>scope: &quot;shared&quot;</code> and therefore:</p>
+<ul>
+<li>Are broadcast via existing annotation WebSocket sync</li>
+<li>Are hydrated automatically for late-joining clients</li>
+</ul>
+<p>No new message types are introduced.</p>
+<hr>
+<h2>Phase 2 (Reserved): Navigation Integration</h2>
+<p>Markers may later act as navigation / jump targets.</p>
+<p>Planned behaviour:</p>
+<ul>
+<li>Marker entries appended to rehearsal / jump list</li>
+<li>Sorted by <code>placement.x</code></li>
+<li>Jump action scrolls to <code>placement.x</code></li>
+<li>In page mode: switch page, then scroll</li>
+</ul>
+<p>Phase 2 must not modify the Phase 1 data model.</p>
+<hr>
+<h2>Acceptance Criteria (Phase 1)</h2>
+<ul>
+<li>“Drop Marker” places marker at <code>window.playheadX</code></li>
+<li>Marker line is clipped to score height</li>
+<li>Label appears 30px from top</li>
+<li>Label drag moves marker horizontally</li>
+<li>Label is editable</li>
+<li>Marker persists across reload</li>
+<li>Marker syncs across clients</li>
+<li>No inline styles are used</li>
+</ul>
+<hr>
+<h2>Non-Goals</h2>
+<ul>
+<li>Viewport-height markers</li>
+<li>Pointer-based drop positioning</li>
+<li>SVG-authored marker export</li>
+<li>Audio, cue, or trigger behaviour</li>
+</ul>

@@ -1,0 +1,1233 @@
+<h1>Oscilla — Complete System Documentation</h1>
+<p><strong>Version:</strong> 0.4.2<br>
+<strong>Purpose:</strong> Browser-based framework for animated, cue-driven graphic scores<br>
+<strong>Technologies:</strong> SVG, JavaScript (ES Modules), Node.js, WebSockets, OSC</p>
+<hr>
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="#system-overview">System Overview</a></li>
+<li><a href="#architecture">Architecture</a></li>
+<li><a href="#server-components">Server Components</a></li>
+<li><a href="#client-components">Client Components</a></li>
+<li><a href="#cue-system">Cue System</a></li>
+<li><a href="#transport--synchronization">Transport &amp; Synchronization</a></li>
+<li><a href="#osc-integration">OSC Integration</a></li>
+<li><a href="#project-structure">Project Structure</a></li>
+<li><a href="#file-reference">File Reference</a></li>
+</ol>
+<hr>
+<h2>System Overview</h2>
+<p>Oscilla is a browser-based platform for real-time animated graphic scores. It enables:</p>
+<ul>
+<li><strong>Animated and spatial graphic notation</strong> — SVG-based scores with cue-driven animations</li>
+<li><strong>Networked performances</strong> — Multiple clients synchronized via WebSocket</li>
+<li><strong>Cue-driven timing, navigation, and media</strong> — DSL for defining behaviors via SVG element IDs</li>
+<li><strong>OSC integration</strong> — Bidirectional communication with external audio/media engines</li>
+<li><strong>Hybrid fixed-form and open-form works</strong> — Support for linear playback and interactive navigation</li>
+</ul>
+<h3>What Oscilla Is NOT</h3>
+<ul>
+<li>A DAW (Digital Audio Workstation)</li>
+<li>A notation engraver (like Sibelius/MuseScore)</li>
+<li>A collaborative score editor</li>
+</ul>
+<hr>
+<h2>Architecture</h2>
+<h3>High-Level Data Flow</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                         INKSCAPE                                │
+│  (Score Authoring - SVG with cue IDs in element names)          │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ score.svg
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      NODE.JS SERVER                             │
+│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐     │
+│  │   Express   │  │  WebSocket   │  │    OSC Bridge       │     │
+│  │  (HTTP/API) │  │   Server     │  │  (UDP In/Out)       │     │
+│  └─────────────┘  └──────────────┘  └─────────────────────┘     │
+│         │                │                    │                 │
+│         │     Shared State (playhead, time, speed)              │
+│         │                │                    │                 │
+└─────────┼────────────────┼────────────────────┼─────────────────┘
+          │                │                    │
+          ▼                ▼                    ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────────┐
+│  Browser Client │ │  Browser Client │ │  External Audio Engine  │
+│  (Performer 1)  │ │  (Performer 2)  │ │  (SuperCollider, etc.)  │
+└─────────────────┘ └─────────────────┘ └─────────────────────────┘
+</code></pre>
+<h3>Key Concepts</h3>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scoreWidth</code></td>
+<td>Width of SVG in viewBox units (world space)</td>
+</tr>
+<tr>
+<td><code>canonicalRenderedWidth</code></td>
+<td>Pixel width reported by first client (visual authority)</td>
+</tr>
+<tr>
+<td><code>playheadX</code></td>
+<td>Playback position in world units</td>
+</tr>
+<tr>
+<td><code>elapsedTime</code></td>
+<td>Time elapsed in milliseconds</td>
+</tr>
+<tr>
+<td><code>speedMultiplier</code></td>
+<td>Playback speed factor (1.0 = normal)</td>
+</tr>
+<tr>
+<td><code>cue</code></td>
+<td>Behavior definition encoded in SVG element ID</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Server Components</h2>
+<h3>server.js (Main Server — ~2175 lines)</h3>
+<p>The central Node.js server providing:</p>
+<p><strong>HTTP/Express Endpoints:</strong></p>
+<ul>
+<li><code>GET /</code> — Serves static files from <code>/public</code></li>
+<li><code>GET /scores/:project</code> — Project score files</li>
+<li><code>GET /api/version</code> — Returns Oscilla version</li>
+<li><code>GET /api/projects</code> — Lists available projects</li>
+<li><code>GET /api/audio-tree/:project</code> — Audio file browser</li>
+<li><code>POST /api/upload-audio/:project</code> — Audio file upload</li>
+<li><code>POST /api/project/new</code> — Create new project</li>
+<li><code>POST /api/project/save-as</code> — Duplicate project</li>
+<li><code>GET /api/project/export/:name</code> — Export as .oscilla</li>
+<li><code>POST /api/project/import</code> — Import .oscilla file</li>
+<li><code>POST /save-preferences/:project</code> — Save project preferences</li>
+<li><code>GET /config</code> — WebSocket configuration for clients</li>
+</ul>
+<p><strong>WebSocket Message Types (Inbound from Clients):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>play</code></td>
+<td>Start playback</td>
+</tr>
+<tr>
+<td><code>pause</code></td>
+<td>Pause playback</td>
+</tr>
+<tr>
+<td><code>jump</code></td>
+<td>Jump to position</td>
+</tr>
+<tr>
+<td><code>cueStop</code></td>
+<td>Stop cue triggered</td>
+</tr>
+<tr>
+<td><code>cue_pause</code></td>
+<td>Pause cue with duration</td>
+</tr>
+<tr>
+<td><code>cue_triggered</code></td>
+<td>Cue was triggered (broadcast to others)</td>
+</tr>
+<tr>
+<td><code>set_speed_multiplier</code></td>
+<td>Change playback speed</td>
+</tr>
+<tr>
+<td><code>set_duration</code></td>
+<td>Set score duration</td>
+</tr>
+<tr>
+<td><code>score_meta</code></td>
+<td>Report score dimensions</td>
+</tr>
+<tr>
+<td><code>update_client_name</code></td>
+<td>Change client display name</td>
+</tr>
+<tr>
+<td><code>repeat_update</code></td>
+<td>Sync repeat cue state</td>
+</tr>
+<tr>
+<td><code>osc</code></td>
+<td>Send OSC message</td>
+</tr>
+<tr>
+<td><code>osc_rotate</code></td>
+<td>Rotation OSC message</td>
+</tr>
+<tr>
+<td><code>osc_scale</code></td>
+<td>Scale OSC message</td>
+</tr>
+<tr>
+<td><code>osc_fade</code></td>
+<td>Fade OSC message</td>
+</tr>
+<tr>
+<td><code>osc_value</code></td>
+<td>Generic OSC value</td>
+</tr>
+<tr>
+<td><code>osc_control</code></td>
+<td>Control parameter OSC</td>
+</tr>
+<tr>
+<td><code>osc_audio_*</code></td>
+<td>Audio trigger OSC messages</td>
+</tr>
+<tr>
+<td><code>annotation_*</code></td>
+<td>Shared annotation CRUD</td>
+</tr>
+<tr>
+<td><code>countdown_*</code></td>
+<td>Server-owned countdown timer</td>
+</tr>
+</tbody>
+</table>
+<p><strong>WebSocket Message Types (Outbound to Clients):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>welcome</code></td>
+<td>Client connection acknowledged with name</td>
+</tr>
+<tr>
+<td><code>sync</code></td>
+<td>Authoritative state broadcast (4Hz)</td>
+</tr>
+<tr>
+<td><code>client_list</code></td>
+<td>Connected clients update</td>
+</tr>
+<tr>
+<td><code>jump</code></td>
+<td>Position jump broadcast</td>
+</tr>
+<tr>
+<td><code>cueStop</code></td>
+<td>Stop cue broadcast</td>
+</tr>
+<tr>
+<td><code>cue_pause</code></td>
+<td>Pause cue broadcast</td>
+</tr>
+<tr>
+<td><code>repeat_update</code></td>
+<td>Repeat state sync</td>
+</tr>
+<tr>
+<td><code>repeat_state_map</code></td>
+<td>Full repeat state on connect</td>
+</tr>
+<tr>
+<td><code>annotation_*</code></td>
+<td>Annotation sync to other clients</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Shared State Object:</strong></p>
+<pre><code class="language-javascript">sharedState = {
+  elapsedTime: 0,           // ms
+  isPlaying: false,
+  playheadX: 0,             // world units
+  duration: null,           // ms (from project)
+  speedMultiplier: 1.0,
+  startTimestamp: null,     // performance.now() anchor
+  scoreWidth: null,
+  canonicalRenderedWidth: null,
+  countdown: null           // server-owned countdown state
+}
+</code></pre>
+<h3>serverUtils.js</h3>
+<p>Project management utilities:</p>
+<ul>
+<li><code>createNewProject(name)</code> — Copy template to new project</li>
+<li><code>saveProjectAs(source, name)</code> — Duplicate existing project</li>
+<li><code>exportProject(name, res, version)</code> — Create .oscilla ZIP archive</li>
+<li><code>importProject(buffer, name)</code> — Extract and validate .oscilla file</li>
+</ul>
+<h3>server-gui.js</h3>
+<p>Electron wrapper for standalone builds:</p>
+<ul>
+<li>Spawns <code>server.js</code> as child process</li>
+<li>Displays server status in GUI window</li>
+<li>Shows connected clients and log output</li>
+</ul>
+<hr>
+<h2>Client Components</h2>
+<h3>public/js/app.js (Entry Point)</h3>
+<p>Orchestrates client initialization:</p>
+<ul>
+<li>Imports and wires all major subsystems</li>
+<li>Establishes global <code>window</code> bindings for cross-module access</li>
+<li>Detects platform (desktop/mobile) and loads appropriate CSS</li>
+<li>Initializes WebSocket connection</li>
+<li>Sets up UI controls and event handlers</li>
+</ul>
+<p><strong>Key Global Bindings:</strong></p>
+<pre><code class="language-javascript">window.playheadX          // Current position
+window.elapsedTime        // Current time
+window.speedMultiplier    // Playback speed
+window.duration           // Score duration
+window.scoreWidth         // Score width in world units
+window.isPlaying          // Playback state
+window.triggeredCues      // Set of triggered cue IDs
+window.socket             // WebSocket connection
+</code></pre>
+<h3>public/js/system/ (System Modules)</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>socket.js</code></td>
+<td>WebSocket connection, message routing, sync handling</td>
+</tr>
+<tr>
+<td><code>RAF.js</code></td>
+<td>RequestAnimationFrame loop management</td>
+</tr>
+<tr>
+<td><code>SVGInit.js</code></td>
+<td>SVG score initialization and layout</td>
+</tr>
+<tr>
+<td><code>UIBindings.js</code></td>
+<td>UI element event bindings</td>
+</tr>
+<tr>
+<td><code>clients.js</code></td>
+<td>Client list UI and audio master designation</td>
+</tr>
+<tr>
+<td><code>paths.js</code></td>
+<td>Path variants and playhead position utilities</td>
+</tr>
+<tr>
+<td><code>projectMenuUI.js</code></td>
+<td>Project selection menu</td>
+</tr>
+<tr>
+<td><code>rehearsalUI.js</code></td>
+<td>Rehearsal marks navigation popup</td>
+</tr>
+</tbody>
+</table>
+<h3>public/js/oscillaTransport.js (~2225 lines)</h3>
+<p>Transport control and synchronization:</p>
+<ul>
+<li>Play/pause/stop controls</li>
+<li>Speed adjustment (0.1x - 4.0x)</li>
+<li>Seek bar and keyboard navigation (←/→ arrows)</li>
+<li>Rehearsal mark navigation</li>
+<li>Visual scroll synchronization</li>
+<li>Dark mode toggle</li>
+</ul>
+<p><strong>Synchronization Model:</strong></p>
+<pre><code>All clients use identical scale: canonicalScale = canonicalRenderedWidth / scoreWidth
+
+Visual positioning via CSS transform (GPU-accelerated):
+  screenX = playheadX * canonicalScale
+  translateX = (viewportWidth / 2) - screenX
+  scrollStage.style.transform = translateX(${translateX}px)
+</code></pre>
+<h3>public/js/projectLoader.js</h3>
+<p>Loads projects from <code>/scores/:project/</code>:</p>
+<ul>
+<li>Fetches and parses <code>score.svg</code></li>
+<li>Loads <code>preferences.json</code></li>
+<li>Initializes score dimensions</li>
+<li>Reports metadata to server</li>
+</ul>
+<h3>public/js/projectScoreSetup.js</h3>
+<p>Score DOM setup:</p>
+<ul>
+<li>Extracts score elements</li>
+<li>Auto-injects scroll groups</li>
+<li>Processes SVG layers</li>
+<li>Applies transformations</li>
+</ul>
+<hr>
+<h2>Cue System</h2>
+<h3>Overview</h3>
+<p>Cues are behaviors defined by SVG element ID attributes. When the playhead crosses an element, its ID is parsed and the corresponding handler executes.</p>
+<h3>Parser (public/js/parser/parser.js — ~2681 lines)</h3>
+<p>Chevrotain-based DSL parser supporting:</p>
+<p><strong>Cue Syntax Examples:</strong></p>
+<pre><code>pause(5)                    // Pause for 5 seconds
+speed(0.5)                  // Set speed to 0.5x
+speed(2 dur:4)              // Ramp to 2x over 4 seconds
+nav(A)                      // Jump to rehearsal mark A
+page(intro dur:3)           // Show page &quot;intro&quot; for 3 seconds
+audio(file.mp3 vol:0.8)     // Play audio at 80% volume
+rotate(360 dur:2 ease:inOut) // Rotate 360° over 2 seconds
+scale(2 dur:1)              // Scale to 2x over 1 second
+osc(/addr 0.5)              // Send OSC message
+synth(freq:440 amp:0.5)     // Trigger synthesizer
+text(&quot;Hello&quot; dur:3)         // Display text for 3 seconds
+</code></pre>
+<h3>Cue Dispatcher (public/js/cues/cueDispatcher.js)</h3>
+<p>Routes parsed AST to appropriate handlers:</p>
+<pre><code class="language-javascript">switch (ast.type) {
+  case &quot;cuePause&quot;:    return handlePauseCue(ast);
+  case &quot;cueSpeed&quot;:    return handleSpeedCue(ast);
+  case &quot;cuePage&quot;:     return handlePageCue(ast);
+  case &quot;cueNav&quot;:      return handleNavCue(ast);
+  case &quot;cueAudio&quot;:    return handleAudioCue(ast);
+  case &quot;cueRotate&quot;:   return handleRotateCue(ast);
+  case &quot;cueScale&quot;:    return handleScaleCue(ast);
+  case &quot;cueO2P&quot;:      return handleO2PCue(ast);
+  case &quot;cueColor&quot;:    return handleColorCue(ast);
+  case &quot;cueOsc&quot;:      return handleOscCue(ast);
+  case &quot;cueSynth&quot;:    return handleSynthCue(ast);
+  case &quot;cueText&quot;:     return handleTextCue(ast);
+  // ... etc
+}
+</code></pre>
+<h3>Cue Handlers (public/js/cues/)</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Cue Types</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pause.js</code></td>
+<td><code>pause(N)</code></td>
+<td>Timed pause with countdown overlay</td>
+</tr>
+<tr>
+<td><code>stop.js</code></td>
+<td><code>stop()</code></td>
+<td>Stop playback</td>
+</tr>
+<tr>
+<td><code>speed.js</code></td>
+<td><code>speed(N)</code></td>
+<td>Set/ramp playback speed</td>
+</tr>
+<tr>
+<td><code>nav.js</code></td>
+<td><code>nav(mark)</code></td>
+<td>Jump to rehearsal mark</td>
+</tr>
+<tr>
+<td><code>page.js</code></td>
+<td><code>page(id)</code></td>
+<td>Fullscreen SVG overlay</td>
+</tr>
+<tr>
+<td><code>audio.js</code></td>
+<td><code>audio()</code>, <code>audioPool()</code>, <code>audioImpulse()</code></td>
+<td>Audio playback</td>
+</tr>
+<tr>
+<td><code>video.js</code></td>
+<td><code>video()</code></td>
+<td>Video playback</td>
+</tr>
+<tr>
+<td><code>synth.js</code></td>
+<td><code>synth()</code></td>
+<td>Web Audio synthesizer</td>
+</tr>
+<tr>
+<td><code>rotate.js</code></td>
+<td><code>rotate()</code></td>
+<td>Element rotation animation</td>
+</tr>
+<tr>
+<td><code>scale.js</code></td>
+<td><code>scale()</code></td>
+<td>Element scale animation</td>
+</tr>
+<tr>
+<td><code>o2p.js</code></td>
+<td><code>o2p()</code></td>
+<td>Object-to-path animation</td>
+</tr>
+<tr>
+<td><code>color.js</code></td>
+<td><code>color()</code></td>
+<td>Color animation</td>
+</tr>
+<tr>
+<td><code>fade.js</code></td>
+<td><code>fade()</code></td>
+<td>Opacity animation</td>
+</tr>
+<tr>
+<td><code>text.js</code></td>
+<td><code>text()</code></td>
+<td>Text display overlay</td>
+</tr>
+<tr>
+<td><code>osc.js</code></td>
+<td><code>osc()</code></td>
+<td>Send OSC messages</td>
+</tr>
+<tr>
+<td><code>oscCtrl.js</code></td>
+<td><code>oscCtrl()</code></td>
+<td>OSC control messages</td>
+</tr>
+<tr>
+<td><code>controlXY.js</code></td>
+<td><code>controlXY()</code></td>
+<td>XY pad control</td>
+</tr>
+<tr>
+<td><code>button.js</code></td>
+<td><code>button()</code></td>
+<td>Interactive buttons</td>
+</tr>
+<tr>
+<td><code>metro.js</code></td>
+<td><code>metronome()</code></td>
+<td>Visual/audio metronome</td>
+</tr>
+<tr>
+<td><code>timers.js</code></td>
+<td><code>stopwatch()</code></td>
+<td>Stopwatch/countdown display</td>
+</tr>
+<tr>
+<td><code>ui.js</code></td>
+<td><code>ui()</code></td>
+<td>UI control (show/hide elements)</td>
+</tr>
+</tbody>
+</table>
+<h3>Animation Shared (public/js/cues/animShared.js)</h3>
+<p>Common animation utilities:</p>
+<ul>
+<li>Easing functions</li>
+<li>Duration parsing</li>
+<li>Loop handling</li>
+<li>Prestate management (ghostClickable, fadein)</li>
+</ul>
+<hr>
+<h2>Transport &amp; Synchronization</h2>
+<h3>Clock Model</h3>
+<p>The server maintains an authoritative transport clock:</p>
+<pre><code class="language-javascript">// Server calculates elapsed time from wall clock
+const wallSeconds = (performance.now() - startTimestamp) / 1000;
+const elapsedMs = wallSeconds * speedMultiplier * 1000;
+
+// Playhead position derived from elapsed time
+playheadX = (elapsedTime / duration) * scoreWidth;
+</code></pre>
+<h3>Sync Broadcast (4Hz)</h3>
+<p>Server broadcasts state every 250ms:</p>
+<pre><code class="language-javascript">{
+  type: 'sync',
+  state: {
+    elapsedTime,
+    isPlaying,
+    scoreWidth,
+    playheadX,
+    speedMultiplier,
+    startTimestamp,
+    canonicalRenderedWidth,
+    duration,
+    countdown
+  },
+  serverTime: Date.now()
+}
+</code></pre>
+<h3>Client Sync Handling</h3>
+<p>Clients apply server state with drift protection:</p>
+<ul>
+<li>Small drift (&lt;2% of score): Gradual correction</li>
+<li>Medium drift (2-5%): Immediate position update</li>
+<li>Large drift (&gt;5%): Teleport mode (suppress cue triggers)</li>
+</ul>
+<pre><code class="language-javascript">// Teleport mode prevents cue cascade during large jumps
+window._isTeleporting = true;
+window.suppressCueTriggers = true;
+window._skipTriggerFrame = 5;
+</code></pre>
+<hr>
+<h2>OSC Integration</h2>
+<h3>Configuration</h3>
+<pre><code class="language-javascript">oscConfig = {
+  localAddress: &quot;0.0.0.0&quot;,      // Listen address
+  localPort: 57121,             // OSC input port
+  remoteAddress: &quot;127.0.0.1&quot;,   // Destination address
+  remotePort: 57120             // OSC output port
+}
+</code></pre>
+<h3>Outbound OSC Messages</h3>
+<table>
+<thead>
+<tr>
+<th>Address</th>
+<th>Args</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/stopwatch</code></td>
+<td><code>[time_string]</code></td>
+<td>Elapsed time (MM:SS)</td>
+</tr>
+<tr>
+<td><code>/cue/trigger</code></td>
+<td><code>[cue_number:i]</code></td>
+<td>Cue triggered</td>
+</tr>
+<tr>
+<td><code>/oscilla/rotate/{uid}</code></td>
+<td><code>[deg:f, rad:f, norm:f]</code></td>
+<td>Rotation value</td>
+</tr>
+<tr>
+<td><code>/oscilla/scale/{uid}</code></td>
+<td><code>[sx:f, sy:f]</code></td>
+<td>Scale values</td>
+</tr>
+<tr>
+<td><code>/oscilla/fade/{uid}</code></td>
+<td><code>[value:f]</code></td>
+<td>Fade value</td>
+</tr>
+<tr>
+<td><code>/oscilla/audio/pool</code></td>
+<td><code>[file:s, amp:f, pan:f, pitch:f, fadeIn:f, fadeOut:f]</code></td>
+<td>Audio pool</td>
+</tr>
+<tr>
+<td><code>/oscilla/audio/impulse</code></td>
+<td><code>[file:s, amp:f, pan:f, pitch:f, fadeIn:f, fadeOut:f]</code></td>
+<td>Audio impulse</td>
+</tr>
+<tr>
+<td><code>/oscilla/audio/trigger</code></td>
+<td><code>[file:s, vol:f, loop:i]</code></td>
+<td>Audio trigger</td>
+</tr>
+<tr>
+<td><code>/oscilla/audio/stop</code></td>
+<td><code>[file:s, fadeOut:f]</code></td>
+<td>Stop audio</td>
+</tr>
+<tr>
+<td><code>/oscilla/control/{addr}</code></td>
+<td><code>[value:f, t:f]</code></td>
+<td>Control value</td>
+</tr>
+<tr>
+<td><code>/oscilla/o2p/{uid}</code></td>
+<td><code>[x:f, y:f, angle:f]</code></td>
+<td>Object-to-path position</td>
+</tr>
+</tbody>
+</table>
+<h3>OSC-In Support</h3>
+<p>Server can receive OSC and route to clients via WebSocket:</p>
+<pre><code class="language-javascript">case &quot;osc_in&quot;:
+case &quot;osc_control&quot;:
+  handleOSCIn(address, args);
+</code></pre>
+<hr>
+<h2>Project Structure</h2>
+<h3>Score Project Layout</h3>
+<pre><code>public/scores/{project}/
+├── score.svg           # Main score file (required)
+├── preferences.json    # Project settings
+├── audio/              # Audio files
+│   ├── samples/
+│   └── recordings/
+├── video/              # Video files
+├── pages/              # SVG page overlays
+└── oscilla.manifest.json  # Export manifest (in .oscilla archives)
+</code></pre>
+<h3>preferences.json</h3>
+<pre><code class="language-json">{
+  &quot;projectName&quot;: &quot;my-score&quot;,
+  &quot;duration&quot;: 300,
+  &quot;scoreWidth&quot;: 40960,
+  &quot;enableOSC&quot;: true,
+  &quot;oscAddress&quot;: &quot;/oscilla&quot;,
+  &quot;theme&quot;: &quot;dark&quot;
+}
+</code></pre>
+<h3>Score SVG Structure</h3>
+<pre><code class="language-xml">&lt;svg viewBox=&quot;0 0 40960 1080&quot;&gt;
+  &lt;!-- Main scrolling content --&gt;
+  &lt;g id=&quot;scroll-content&quot;&gt;
+    &lt;!-- Notation elements --&gt;
+    &lt;rect id=&quot;pause(5)&quot; .../&gt;
+    &lt;circle id=&quot;rotate(360 dur:2)&quot; .../&gt;
+    &lt;path id=&quot;audio(click.mp3)&quot; .../&gt;
+  &lt;/g&gt;
+  
+  &lt;!-- Rehearsal marks --&gt;
+  &lt;g id=&quot;rehearsal-marks&quot;&gt;
+    &lt;text id=&quot;mark-A&quot;&gt;A&lt;/text&gt;
+    &lt;text id=&quot;mark-B&quot;&gt;B&lt;/text&gt;
+  &lt;/g&gt;
+  
+  &lt;!-- Reusable blocks --&gt;
+  &lt;defs&gt;
+    &lt;g id=&quot;reuse-pattern1&quot;&gt;...&lt;/g&gt;
+  &lt;/defs&gt;
+&lt;/svg&gt;
+</code></pre>
+<hr>
+<h2>File Reference</h2>
+<h3>Server Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lines</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>server.js</code></td>
+<td>~2175</td>
+<td>Main server (Express, WebSocket, OSC)</td>
+</tr>
+<tr>
+<td><code>serverUtils.js</code></td>
+<td>~145</td>
+<td>Project management utilities</td>
+</tr>
+<tr>
+<td><code>server-gui.js</code></td>
+<td>~165</td>
+<td>Electron GUI wrapper</td>
+</tr>
+<tr>
+<td><code>gui.html</code></td>
+<td>~123</td>
+<td>Server monitor HTML</td>
+</tr>
+<tr>
+<td><code>package.json</code></td>
+<td>~48</td>
+<td>Dependencies and build config</td>
+</tr>
+</tbody>
+</table>
+<h3>Client Core Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lines</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>public/js/app.js</code></td>
+<td>~250</td>
+<td>Client entry point</td>
+</tr>
+<tr>
+<td><code>public/js/oscillaTransport.js</code></td>
+<td>~2225</td>
+<td>Transport and sync</td>
+</tr>
+<tr>
+<td><code>public/js/projectLoader.js</code></td>
+<td>~700</td>
+<td>Project loading</td>
+</tr>
+<tr>
+<td><code>public/js/projectScoreSetup.js</code></td>
+<td>~900</td>
+<td>Score DOM setup</td>
+</tr>
+<tr>
+<td><code>public/js/oscillaPreferences.js</code></td>
+<td>~280</td>
+<td>Preferences management</td>
+</tr>
+<tr>
+<td><code>public/js/oscillaTargets.js</code></td>
+<td>~450</td>
+<td>Target resolution</td>
+</tr>
+<tr>
+<td><code>public/js/oscillaObserver.js</code></td>
+<td>~250</td>
+<td>DOM observation</td>
+</tr>
+<tr>
+<td><code>public/js/oscillaLive.js</code></td>
+<td>~230</td>
+<td>Live inspector</td>
+</tr>
+<tr>
+<td><code>public/js/oscillaHitLabels.js</code></td>
+<td>~800</td>
+<td>Hit region labels</td>
+</tr>
+<tr>
+<td><code>public/js/oscillaOSCClient.js</code></td>
+<td>~270</td>
+<td>OSC client utilities</td>
+</tr>
+</tbody>
+</table>
+<h3>Parser Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lines</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>public/js/parser/parser.js</code></td>
+<td>~2681</td>
+<td>Chevrotain DSL parser</td>
+</tr>
+<tr>
+<td><code>public/js/parser/parserSignalRef.js</code></td>
+<td>~170</td>
+<td>Signal reference handling</td>
+</tr>
+<tr>
+<td><code>public/js/parser/preProcessPropagate.js</code></td>
+<td>~170</td>
+<td>Propagate preprocessing</td>
+</tr>
+<tr>
+<td><code>public/js/parser/preProcessReuse.js</code></td>
+<td>~350</td>
+<td>Reuse block preprocessing</td>
+</tr>
+<tr>
+<td><code>public/js/parser/utils.js</code></td>
+<td>~140</td>
+<td>Parser utilities</td>
+</tr>
+<tr>
+<td><code>public/js/parsers.js</code></td>
+<td>~350</td>
+<td>Legacy parser support</td>
+</tr>
+</tbody>
+</table>
+<h3>Cue Handler Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lines</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>public/js/cues/cueDispatcher.js</code></td>
+<td>~1250</td>
+<td>Cue routing and scheduling</td>
+</tr>
+<tr>
+<td><code>public/js/cues/audio.js</code></td>
+<td>~1300</td>
+<td>Audio playback</td>
+</tr>
+<tr>
+<td><code>public/js/cues/synth.js</code></td>
+<td>~1400</td>
+<td>Web Audio synthesis</td>
+</tr>
+<tr>
+<td><code>public/js/cues/timers.js</code></td>
+<td>~2100</td>
+<td>Stopwatch/countdown</td>
+</tr>
+<tr>
+<td><code>public/js/cues/rotate.js</code></td>
+<td>~750</td>
+<td>Rotation animation</td>
+</tr>
+<tr>
+<td><code>public/js/cues/scale.js</code></td>
+<td>~800</td>
+<td>Scale animation</td>
+</tr>
+<tr>
+<td><code>public/js/cues/o2p.js</code></td>
+<td>~1200</td>
+<td>Object-to-path</td>
+</tr>
+<tr>
+<td><code>public/js/cues/color.js</code></td>
+<td>~800</td>
+<td>Color animation</td>
+</tr>
+<tr>
+<td><code>public/js/cues/text.js</code></td>
+<td>~800</td>
+<td>Text display</td>
+</tr>
+<tr>
+<td><code>public/js/cues/osc.js</code></td>
+<td>~650</td>
+<td>OSC sending</td>
+</tr>
+<tr>
+<td><code>public/js/cues/page.js</code></td>
+<td>~350</td>
+<td>Page overlays</td>
+</tr>
+<tr>
+<td><code>public/js/cues/pause.js</code></td>
+<td>~350</td>
+<td>Pause handling</td>
+</tr>
+<tr>
+<td><code>public/js/cues/metro.js</code></td>
+<td>~650</td>
+<td>Metronome</td>
+</tr>
+<tr>
+<td><code>public/js/cues/controlXY.js</code></td>
+<td>~950</td>
+<td>XY control</td>
+</tr>
+<tr>
+<td><code>public/js/cues/fade.js</code></td>
+<td>~250</td>
+<td>Fade animation</td>
+</tr>
+<tr>
+<td><code>public/js/cues/nav.js</code></td>
+<td>~200</td>
+<td>Navigation</td>
+</tr>
+<tr>
+<td><code>public/js/cues/speed.js</code></td>
+<td>~320</td>
+<td>Speed control</td>
+</tr>
+<tr>
+<td><code>public/js/cues/button.js</code></td>
+<td>~270</td>
+<td>Buttons</td>
+</tr>
+<tr>
+<td><code>public/js/cues/video.js</code></td>
+<td>~300</td>
+<td>Video playback</td>
+</tr>
+<tr>
+<td><code>public/js/cues/stop.js</code></td>
+<td>~50</td>
+<td>Stop handling</td>
+</tr>
+<tr>
+<td><code>public/js/cues/ui.js</code></td>
+<td>~220</td>
+<td>UI control</td>
+</tr>
+<tr>
+<td><code>public/js/cues/oscCtrl.js</code></td>
+<td>~160</td>
+<td>OSC control</td>
+</tr>
+<tr>
+<td><code>public/js/cues/animShared.js</code></td>
+<td>~670</td>
+<td>Shared animation utils</td>
+</tr>
+<tr>
+<td><code>public/js/cues/animation.js</code></td>
+<td>~200</td>
+<td>Animation registry</td>
+</tr>
+</tbody>
+</table>
+<h3>System Module Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lines</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>public/js/system/socket.js</code></td>
+<td>~490</td>
+<td>WebSocket handling</td>
+</tr>
+<tr>
+<td><code>public/js/system/RAF.js</code></td>
+<td>~200</td>
+<td>Animation loop</td>
+</tr>
+<tr>
+<td><code>public/js/system/SVGInit.js</code></td>
+<td>~200</td>
+<td>SVG initialization</td>
+</tr>
+<tr>
+<td><code>public/js/system/UIBindings.js</code></td>
+<td>~280</td>
+<td>UI event bindings</td>
+</tr>
+<tr>
+<td><code>public/js/system/clients.js</code></td>
+<td>~100</td>
+<td>Client list</td>
+</tr>
+<tr>
+<td><code>public/js/system/paths.js</code></td>
+<td>~110</td>
+<td>Path utilities</td>
+</tr>
+<tr>
+<td><code>public/js/system/projectMenuUI.js</code></td>
+<td>~80</td>
+<td>Project menu</td>
+</tr>
+<tr>
+<td><code>public/js/system/rehearsalUI.js</code></td>
+<td>~50</td>
+<td>Rehearsal navigation</td>
+</tr>
+</tbody>
+</table>
+<h3>Interaction Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lines</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>public/js/interaction/annotationEditor.js</code></td>
+<td>~1500</td>
+<td>Annotation editing</td>
+</tr>
+<tr>
+<td><code>public/js/interaction/interactionSurface.js</code></td>
+<td>~700</td>
+<td>Contribution surface</td>
+</tr>
+<tr>
+<td><code>public/js/interaction/audioBrowser.js</code></td>
+<td>~550</td>
+<td>Audio file browser</td>
+</tr>
+<tr>
+<td><code>public/js/interaction/audioRecorder.js</code></td>
+<td>~1150</td>
+<td>Audio recording</td>
+</tr>
+<tr>
+<td><code>public/js/interaction/colorPicker.js</code></td>
+<td>~300</td>
+<td>Color picker UI</td>
+</tr>
+<tr>
+<td><code>public/js/interaction/markers.js</code></td>
+<td>~480</td>
+<td>Marker management</td>
+</tr>
+<tr>
+<td><code>public/js/interaction/trigger.js</code></td>
+<td>~480</td>
+<td>Trigger interactions</td>
+</tr>
+<tr>
+<td><code>public/js/interaction/shared.js</code></td>
+<td>~240</td>
+<td>Shared interaction utils</td>
+</tr>
+</tbody>
+</table>
+<h3>Control Module Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lines</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>public/js/control/controlXYPresets.js</code></td>
+<td>~1100</td>
+<td>XY preset management</td>
+</tr>
+<tr>
+<td><code>public/js/control/controlXYPresetUI.js</code></td>
+<td>~900</td>
+<td>XY preset UI</td>
+</tr>
+<tr>
+<td><code>public/js/control/controlXYPresetsRoutes.js</code></td>
+<td>~220</td>
+<td>XY preset HTTP routes</td>
+</tr>
+<tr>
+<td><code>public/js/control/controlXYPresetsRoutes.mjs</code></td>
+<td>~170</td>
+<td>XY routes (ESM)</td>
+</tr>
+<tr>
+<td><code>public/js/control/controlRouter.js</code></td>
+<td>~320</td>
+<td>Control message routing</td>
+</tr>
+<tr>
+<td><code>public/js/control/controlIntegration.js</code></td>
+<td>~280</td>
+<td>Control integration</td>
+</tr>
+<tr>
+<td><code>public/js/control/paramBinding.js</code></td>
+<td>~350</td>
+<td>Parameter binding</td>
+</tr>
+<tr>
+<td><code>public/js/control/paramBus.js</code></td>
+<td>~250</td>
+<td>Parameter bus</td>
+</tr>
+</tbody>
+</table>
+<h3>Inkscape Extension Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tools/oscilla-inkscape-extension/oscilla_smart_cues_gtk.py</code></td>
+<td>GTK cue editor</td>
+</tr>
+<tr>
+<td><code>tools/oscilla-inkscape-extension/oscilla_apply_cue.py</code></td>
+<td>Apply cue to selection</td>
+</tr>
+<tr>
+<td><code>tools/oscilla-inkscape-extension/oscilla_presets.json</code></td>
+<td>Preset definitions</td>
+</tr>
+<tr>
+<td><code>tools/oscilla-inkscape-extension/install.sh</code></td>
+<td>Installation script</td>
+</tr>
+</tbody>
+</table>
+<h3>Build/Deploy Scripts</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scripts/deploy.sh</code></td>
+<td>Production deployment</td>
+</tr>
+<tr>
+<td><code>scripts/deploy-local.sh</code></td>
+<td>Local deployment</td>
+</tr>
+<tr>
+<td><code>scripts/convert_score.sh</code></td>
+<td>Score conversion</td>
+</tr>
+<tr>
+<td><code>scripts/convert_to_plain_svg.sh</code></td>
+<td>SVG simplification</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Dependencies</h2>
+<h3>Server (package.json)</h3>
+<pre><code class="language-json">{
+  &quot;dependencies&quot;: {
+    &quot;archiver&quot;: &quot;^7.0.1&quot;,      // ZIP creation
+    &quot;chevrotain&quot;: &quot;^11.0.3&quot;,   // Parser generator
+    &quot;express&quot;: &quot;^4.21.2&quot;,      // HTTP server
+    &quot;multer&quot;: &quot;^2.0.2&quot;,        // File upload
+    &quot;osc&quot;: &quot;^2.4.5&quot;,           // OSC protocol
+    &quot;unzipper&quot;: &quot;^0.12.3&quot;,     // ZIP extraction
+    &quot;ws&quot;: &quot;^8.18.0&quot;,           // WebSocket
+    &quot;yargs&quot;: &quot;^17.7.2&quot;         // CLI arguments
+  },
+  &quot;devDependencies&quot;: {
+    &quot;@11ty/eleventy&quot;: &quot;^2.0.1&quot;, // Docs generator
+    &quot;@yao-pkg/pkg&quot;: &quot;^6.12.0&quot;,  // Binary packaging
+    &quot;esbuild&quot;: &quot;^0.25.0&quot;        // Bundler
+  }
+}
+</code></pre>
+<h3>Client (Vendor Libraries)</h3>
+<ul>
+<li><code>anime.min.js</code> — Animation library</li>
+<li><code>svg-path-commander.js</code> — SVG path manipulation</li>
+<li><code>wavesurfer.min.js</code> — Audio waveform display</li>
+</ul>
+<hr>
+<h2>Quick Reference: Adding a New Cue Type</h2>
+<ol>
+<li><strong>Add token</strong> to <code>parser.js</code> token definitions</li>
+<li><strong>Add grammar rule</strong> to parser class</li>
+<li><strong>Add CST-to-AST conversion</strong> in <code>cstToAst()</code></li>
+<li><strong>Create handler</strong> in <code>public/js/cues/newcue.js</code></li>
+<li><strong>Add case</strong> to <code>cueDispatcher.js</code> switch statement</li>
+<li><strong>Add OSC handler</strong> (if needed) in <code>server.js</code></li>
+<li><strong>Update Inkscape extension</strong> presets (optional)</li>
+</ol>
+<hr>
+<p><em>Document generated from Oscilla v0.4.2 source code</em></p>

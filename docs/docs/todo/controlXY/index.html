@@ -1,0 +1,146 @@
+<h1>controlXY — Touch-based XY Control Pad</h1>
+<p><code>controlXY</code> defines a <strong>persistent, touch-only XY control surface</strong> embedded directly in the score.
+It constrains a draggable handle to a bounding shape and continuously publishes normalized X/Y values for control and modulation.</p>
+<p>Unlike time-based cues, <code>controlXY</code> is <strong>always active</strong>, has <strong>no playhead semantics</strong>, and is evaluated at <strong>assign time</strong>.</p>
+<hr>
+<h2>Syntax</h2>
+<pre><code>controlXY(
+  uid: &lt;string&gt;,
+  bounds: &lt;element-id&gt;,
+  handle: &lt;element-id&gt;,
+  osc: &lt;bool|number&gt;,
+  oscAddr: &lt;string&gt;
+)
+</code></pre>
+<p>The cue expression is attached to the <strong>bounding element</strong>.</p>
+<hr>
+<h2>Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uid</code></td>
+<td>string</td>
+<td>yes</td>
+<td>Unique identifier for the control pad. Used for publishing and parameter binding.</td>
+</tr>
+<tr>
+<td><code>bounds</code></td>
+<td>element id</td>
+<td>yes</td>
+<td>ID of the SVG element that defines the XY constraint area.</td>
+</tr>
+<tr>
+<td><code>handle</code></td>
+<td>element id</td>
+<td>yes</td>
+<td>ID of the SVG element that is draggable inside the bounds.</td>
+</tr>
+<tr>
+<td><code>osc</code></td>
+<td>`true</td>
+<td>false</td>
+<td>number`</td>
+</tr>
+<tr>
+<td><code>oscAddr</code></td>
+<td>string</td>
+<td>no</td>
+<td>Custom OSC address (without leading <code>/</code>). Defaults to <code>controlXY/&lt;uid&gt;</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Coordinate System</h2>
+<ul>
+<li>
+<p><strong>X axis</strong></p>
+<ul>
+<li>Left = <code>0.0</code></li>
+<li>Right = <code>1.0</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Y axis</strong> (musical convention)</p>
+<ul>
+<li>Bottom = <code>0.0</code></li>
+<li>Top = <code>1.0</code></li>
+</ul>
+</li>
+</ul>
+<p>All values are <strong>normalized</strong> to the bounding box.</p>
+<hr>
+<h2>Published Signals</h2>
+<pre><code>controlXY:&lt;uid&gt;.x   // 0.0 – 1.0
+controlXY:&lt;uid&gt;.y   // 0.0 – 1.0
+</code></pre>
+<p>These signals can be used anywhere parameter binding is supported.</p>
+<hr>
+<h2>OSC Output (optional)</h2>
+<p>If OSC is enabled, each update sends:</p>
+<pre><code>/&lt;oscAddr&gt; &lt;x&gt; &lt;y&gt;
+</code></pre>
+<p>Example default address:</p>
+<pre><code>/controlXY/pad1 0.42 0.87
+</code></pre>
+<p>OSC output is throttled to avoid flooding.</p>
+<hr>
+<h2>Authoring Pattern (Canonical)</h2>
+<h3>Bounding element (carrier + constraint)</h3>
+<pre><code>padArea controlXY(
+  uid: pad1,
+  bounds: padArea,
+  handle: padDot
+)
+</code></pre>
+<ul>
+<li>Carries the cue</li>
+<li>Defines the XY space</li>
+<li>Is not draggable</li>
+</ul>
+<h3>Handle element (draggable)</h3>
+<pre><code>padDot
+</code></pre>
+<ul>
+<li>Must have a visible fill</li>
+<li>Must not contain DSL</li>
+<li>Receives pointer events</li>
+</ul>
+<hr>
+<h2>Behaviour</h2>
+<ul>
+<li>The handle can be freely dragged <strong>only inside</strong> the bounding element.</li>
+<li>The cue is activated <strong>immediately on load</strong>.</li>
+<li>No playhead intersection.</li>
+<li>No animation.</li>
+<li>No duration, easing, looping, or timing parameters.</li>
+</ul>
+<hr>
+<h2>Example Uses</h2>
+<h3>Live scaling</h3>
+<pre><code>scale(uid:box1, sx: pad1.x, sy: pad1.y)
+</code></pre>
+<h3>Synth control</h3>
+<pre><code>synth(uid:s1, freq: pad1.x[100,2000], amp: pad1.y)
+</code></pre>
+<h3>Spatial / navigation control</h3>
+<pre><code>o2p(path:loopA, start: pad1.x, end: pad1.y)
+</code></pre>
+<hr>
+<h2>Notes</h2>
+<ul>
+<li><code>controlXY</code> is a <strong>control-plane cue</strong>, not a temporal cue.</li>
+<li>It is registered during <code>assignCues()</code>, not via the playhead dispatcher.</li>
+<li>The bounding element should typically have <code>fill: none</code> to avoid intercepting pointer events.</li>
+<li>The handle element must have <code>pointer-events</code> enabled and a visible fill.</li>
+</ul>
+<hr>
+<h2>Summary</h2>
+<p><code>controlXY</code> turns the score itself into a tactile controller surface, enabling direct spatial control of sound, animation, and interaction parameters without leaving the notation.</p>

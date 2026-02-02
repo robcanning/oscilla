@@ -1,0 +1,298 @@
+<h1>Oscilla Contribution Recorder</h1>
+<p><strong>Complete Feature Specification (Client, Server, Licensing)</strong></p>
+<hr>
+<h2>1. Purpose</h2>
+<p>The Contribution Recorder enables performers to <strong>record short audio contributions directly within Oscilla</strong>, as part of the existing Contribution Surface. Recording is treated as a method of <em>material acquisition</em> that occurs entirely within the score environment.</p>
+<p>There is no separate recording application, booth, or mode. The score itself is the site of listening, contribution, recording, and activation.</p>
+<hr>
+<h2>2. Design Principles</h2>
+<ul>
+<li>
+<p><strong>Score-native</strong><br>
+All contribution actions occur inside Oscilla and are spatially anchored to the score.</p>
+</li>
+<li>
+<p><strong>Pen-mode bound</strong><br>
+Recording is only available when pen mode (annotation authoring) is active.</p>
+</li>
+<li>
+<p><strong>Ephemeral action</strong><br>
+Recording is a momentary act, not a persistent state or mode.</p>
+</li>
+<li>
+<p><strong>Minimal UI</strong><br>
+No waveform editing, trimming, or multitrack features.</p>
+</li>
+<li>
+<p><strong>Directory-scoped ownership</strong><br>
+Audio contributions belong to annotation-defined directories.</p>
+</li>
+<li>
+<p><strong>Conservative consent model</strong><br>
+Contributions are licensed explicitly for artist use by default.</p>
+</li>
+<li>
+<p><strong>Phone-first</strong><br>
+Interaction must work cleanly on mobile browsers.</p>
+</li>
+</ul>
+<hr>
+<h2>3. Scope</h2>
+<h3>In scope</h3>
+<ul>
+<li>Recording audio via browser microphone</li>
+<li>Uploading recorded audio to the project</li>
+<li>Attaching recordings to annotations</li>
+<li>Directory-based organisation of contributions</li>
+<li>Optional sharing of contributions via existing trigger logic</li>
+<li>Explicit consent collection</li>
+</ul>
+<h3>Out of scope</h3>
+<ul>
+<li>Audio editing or post-processing</li>
+<li>Continuous or background recording</li>
+<li>Separate “recording mode”</li>
+<li>Server-side audio streaming</li>
+<li>Automatic public licensing</li>
+<li>User accounts or attribution enforcement</li>
+</ul>
+<hr>
+<h2>4. Interaction Context &amp; Directory Semantics</h2>
+<h3>Core rule</h3>
+<blockquote>
+<p><strong>The destination directory for a recording is determined by the annotation context at the moment of recording.</strong></p>
+</blockquote>
+<hr>
+<h3>4.1 Case A — Recording inside an existing annotation</h3>
+<p><strong>User action</strong></p>
+<ul>
+<li>Clicks an existing annotation in pen mode</li>
+<li>Opens annotation editor</li>
+<li>Clicks <strong>Record</strong></li>
+</ul>
+<p><strong>Behaviour</strong></p>
+<ul>
+<li>Recording is stored in the annotation’s existing audio directory</li>
+<li>No new directory is created</li>
+</ul>
+<p><strong>Example</strong></p>
+<pre><code>audio/
+  ann_4F2QK/
+    impulse.wav
+    voice_01.wav
+</code></pre>
+<p><strong>Meaning</strong></p>
+<ul>
+<li>Performer is adding material to an existing contribution node</li>
+</ul>
+<hr>
+<h3>4.2 Case B — Recording outside any existing annotation</h3>
+<p><strong>User action</strong></p>
+<ul>
+<li>Clicks empty score space in pen mode</li>
+<li>New annotation is created</li>
+<li>Clicks <strong>Record</strong></li>
+</ul>
+<p><strong>Behaviour</strong></p>
+<ul>
+<li>Client generates a new annotation ID</li>
+<li>Server creates a new directory lazily on upload</li>
+<li>Recording is stored inside that directory</li>
+</ul>
+<p><strong>Example</strong></p>
+<pre><code>audio/
+  ann_9M8L2/
+    recording_01.wav
+</code></pre>
+<p><strong>Meaning</strong></p>
+<ul>
+<li>Performer is leaving a new contribution</li>
+</ul>
+<hr>
+<h3>4.3 Case C — Recording into an explicitly chosen directory (optional)</h3>
+<p><strong>User action</strong></p>
+<ul>
+<li>Creates a new annotation</li>
+<li>Selects an existing contribution directory</li>
+<li>Clicks <strong>Record</strong></li>
+</ul>
+<p><strong>Behaviour</strong></p>
+<ul>
+<li>Recording is stored in the chosen directory</li>
+<li>No new directory is created</li>
+</ul>
+<p><strong>Meaning</strong></p>
+<ul>
+<li>Performer is joining a shared sonic space</li>
+</ul>
+<p>(This case is optional for initial implementation.)</p>
+<hr>
+<h2>5. Client-Side Behaviour</h2>
+<h3>5.1 Entry Conditions</h3>
+<ul>
+<li>Pen mode is active</li>
+<li>Annotation editor is open (existing or new)</li>
+</ul>
+<hr>
+<h3>5.2 UI Placement</h3>
+<p>Within the annotation editor’s trigger configuration:</p>
+<pre><code>[ ⬆ Upload Audio ]   [ ⏺ Record ]
+</code></pre>
+<p>No new tabs or configuration panels are introduced.</p>
+<hr>
+<h3>5.3 Recording Modal</h3>
+<p>Clicking <strong>Record</strong> opens a minimal modal dialog.</p>
+<p><strong>Modal contents</strong></p>
+<ul>
+<li>Title: <em>Record audio</em></li>
+<li>Single primary control:
+<ul>
+<li>⏺ Record → ⏹ Stop</li>
+</ul>
+</li>
+<li>Visual timer with max duration</li>
+<li>Optional playback preview</li>
+<li>Actions:
+<ul>
+<li><strong>Use recording</strong></li>
+<li>Cancel</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h3>5.4 Recording Constraints</h3>
+<ul>
+<li>Maximum duration: configurable (default 10–20 seconds)</li>
+<li>One recording per invocation</li>
+<li>Microphone permission requested on first use only</li>
+<li>Cancelled recordings are discarded</li>
+</ul>
+<hr>
+<h3>5.5 Save Behaviour</h3>
+<p>On <strong>Use recording</strong>:</p>
+<ol>
+<li>Audio Blob is produced via <code>MediaRecorder</code></li>
+<li>Blob is uploaded to the server using the existing upload endpoint</li>
+<li>Target directory is provided explicitly by the client</li>
+<li>Server returns a relative file path</li>
+<li>Annotation editor updates its source field with that path</li>
+</ol>
+<p>From this point on, recorded audio is indistinguishable from uploaded audio.</p>
+<hr>
+<h2>6. Server-Side Behaviour</h2>
+<h3>6.1 Core principle</h3>
+<blockquote>
+<p><strong>The server treats recorded audio as standard audio uploads.</strong></p>
+</blockquote>
+<p>The server does not:</p>
+<ul>
+<li>infer annotation context</li>
+<li>distinguish recording vs upload</li>
+<li>manage UI state</li>
+</ul>
+<hr>
+<h3>6.2 Upload Endpoint</h3>
+<p>Existing endpoint is reused:</p>
+<pre><code>POST /api/upload-audio/:project?subdir=&lt;relative_dir&gt;
+</code></pre>
+<p>No new endpoints are introduced.</p>
+<hr>
+<h3>6.3 File Acceptance</h3>
+<p>The server must accept:</p>
+<ul>
+<li>standard audio extensions (<code>.wav</code>, <code>.ogg</code>, <code>.mp3</code>, etc.)</li>
+<li>common MediaRecorder MIME types (<code>audio/webm</code>, <code>audio/ogg</code>, <code>audio/wav</code>)</li>
+</ul>
+<p>Validation should allow MIME <strong>or</strong> extension.</p>
+<hr>
+<h3>6.4 Directory Creation</h3>
+<ul>
+<li>Directories are created lazily on successful upload</li>
+<li>Only paths under:<pre><code>public/scores/&lt;project&gt;/audio/
+</code></pre>
+are permitted</li>
+<li>Path traversal and absolute paths are rejected</li>
+</ul>
+<hr>
+<h3>6.5 Filename Handling</h3>
+<ul>
+<li>Filenames should be collision-safe and opaque</li>
+<li>Server-side override is permitted and recommended:<pre><code>ann_&lt;id&gt;_&lt;timestamp&gt;.wav
+</code></pre>
+</li>
+</ul>
+<hr>
+<h3>6.6 Network Behaviour</h3>
+<ul>
+<li>Annotation metadata is synchronised as usual</li>
+<li>Audio files are not streamed or replicated</li>
+<li>All clients must have access to the project directory</li>
+</ul>
+<hr>
+<h2>7. Licensing &amp; Consent</h2>
+<h3>7.1 Core licensing principle</h3>
+<blockquote>
+<p><strong>Contributions are licensed explicitly for artist use by default.</strong><br>
+They are not automatically made public or open for derivative works.</p>
+</blockquote>
+<hr>
+<h3>7.2 Mandatory Consent (Required)</h3>
+<p>Before recording or uploading audio, the user must check:</p>
+<blockquote>
+<p>☐ I consent to my contribution being used by the artist in performances, installations, documentation, and future works related to this project.</p>
+</blockquote>
+<ul>
+<li>This checkbox is mandatory</li>
+<li>Recording/upload is disabled until consent is given</li>
+<li>Consent state is stored with the annotation metadata</li>
+</ul>
+<hr>
+<h3>7.3 Optional Openness (Future Extension)</h3>
+<p>Optionally, contributors may choose to apply a Creative Commons licence.</p>
+<p>This is <strong>opt-in</strong>, never default.</p>
+<p>Example options:</p>
+<ul>
+<li>Artist use only (default)</li>
+<li>CC BY-SA 4.0</li>
+<li>CC BY 4.0</li>
+</ul>
+<p>Licence choice, if any, is stored with the annotation.</p>
+<hr>
+<h3>7.4 Rationale</h3>
+<ul>
+<li>Avoids accidental public licensing</li>
+<li>Supports conservative, trust-based participation</li>
+<li>Aligns with <em>What You Leave</em> as an act of offering, not publishing</li>
+<li>Allows future openness without forcing it</li>
+</ul>
+<hr>
+<h2>8. Conceptual Framing</h2>
+<p>The Contribution Recorder is described as:</p>
+<blockquote>
+<p>A score-native mechanism for leaving sonic material within the score, rather than a recording or performance tool.</p>
+</blockquote>
+<p>Recording is framed as <strong>leaving a trace</strong>, not producing a finished work.</p>
+<hr>
+<h2>9. Selective Agency</h2>
+<ul>
+<li>Pen mode = entering agency</li>
+<li>Recording = leaving material</li>
+<li>Exiting pen mode = withdrawing agency</li>
+</ul>
+<p>Contributions persist without requiring continued control, supporting negotiated, collective authorship.</p>
+<hr>
+<h2>10. Explicit Non-Goals</h2>
+<p>The following must not be added as part of this feature:</p>
+<ul>
+<li>Global record buttons</li>
+<li>Always-on microphone access</li>
+<li>Audio editing or waveform tools</li>
+<li>Separate recording modes</li>
+<li>User identity enforcement</li>
+<li>Automatic public sharing</li>
+</ul>
+<hr>
+<h2>11. One-Sentence Summary</h2>
+<blockquote>
+<p>The Oscilla Contribution Recorder allows performers to record and leave audio material directly within the score environment, storing contributions in annotation-scoped directories under explicit consent, without introducing new server endpoints or recording-specific infrastructure.</p>
+</blockquote>

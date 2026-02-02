@@ -1,0 +1,180 @@
+<h1>Oscilla app.js Modularisation – Implementation Plan</h1>
+<p>This document outlines a <strong>practical, low‑risk plan</strong> for cleaning and modularising <code>app.js</code> in Oscilla. The goal is to reduce cognitive load, isolate responsibilities, and make future debugging (especially sync / speed / playhead issues) easier, <strong>without breaking runtime behaviour</strong>.</p>
+<hr>
+<h2>Guiding Principles</h2>
+<ul>
+<li><strong>One responsibility per module</strong> (transport ≠ network ≠ UI ≠ SVG init)</li>
+<li>Avoid circular imports by keeping <code>app.js</code> as the <strong>orchestrator</strong></li>
+<li>Prefer <em>thin glue</em> in <code>app.js</code>, <em>thick logic</em> in modules</li>
+<li>Preserve existing globals initially; refactor state later</li>
+</ul>
+<hr>
+<h2>Target Folder Structure</h2>
+<pre><code class="language-text">public/js/
+├── app.js                     # orchestration only
+├── oscillaSocket.js            # WebSocket + protocol
+├── oscillaClients.js           # client list + audio master
+├── oscillaUIBindings.js        # DOM + keyboard wiring
+├── oscillaSVGInit.js           # SVG settle + layout + inject
+├── oscillaPaths.js             # path variants + helpers
+├── oscillaRAF.js               # RAF loop + tick pipelines
+├── oscillaProjectMenu.js       # project list + menu
+└── (existing modules)
+</code></pre>
+<hr>
+<h2>Module Breakdown</h2>
+<h3>1. oscillaSocket.js</h3>
+<p><strong>Responsibility:</strong> network transport and message routing</p>
+<p><strong>Move from app.js:</strong></p>
+<ul>
+<li><code>getWebSocketURL()</code></li>
+<li><code>connectWebSocket()</code> and reconnect logic</li>
+<li><code>socket.addEventListener(&quot;message&quot;, …)</code> switch / routing</li>
+<li>outbound message helpers (<code>score_meta</code>, <code>cuePause_ack</code>, etc.)</li>
+</ul>
+<p><strong>Exports:</strong></p>
+<pre><code class="language-js">connectSocket()
+sendSocketMessage(type, payload)
+setSocketEnabled(bool)
+getSocket()
+</code></pre>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>Do <strong>not</strong> import UI or transport here</li>
+<li>Use callbacks or events to notify app.js</li>
+</ul>
+<hr>
+<h3>2. oscillaClients.js</h3>
+<p><strong>Responsibility:</strong> multiplayer presence + audio‑master state</p>
+<p><strong>Move from app.js:</strong></p>
+<ul>
+<li><code>updateClientList()</code></li>
+<li>client list click → rename logic</li>
+<li>audio master toggle + UI update</li>
+<li><code>window.isAudioMaster</code> getter/setter</li>
+</ul>
+<p><strong>Exports:</strong></p>
+<pre><code class="language-js">initClientUI()
+updateClientList(clients)
+setAudioMaster(state)
+</code></pre>
+<hr>
+<h3>3. oscillaUIBindings.js</h3>
+<p><strong>Responsibility:</strong> DOM event wiring only</p>
+<p><strong>Move from app.js:</strong></p>
+<ul>
+<li>DOMContentLoaded UI listeners</li>
+<li>fullscreen toggle</li>
+<li>keybindings popup</li>
+<li>hamburger / menu select handling</li>
+<li>keyboard shortcuts</li>
+<li>score notes toggle</li>
+</ul>
+<p><strong>Exports:</strong></p>
+<pre><code class="language-js">initUIBindings()
+</code></pre>
+<p><strong>Rule:</strong> no business logic here — call into app.js or other modules</p>
+<hr>
+<h3>4. oscillaSVGInit.js</h3>
+<p><strong>Responsibility:</strong> SVG setup lifecycle</p>
+<p><strong>Move from app.js:</strong></p>
+<ul>
+<li><code>initializeSVG(svgElement)</code></li>
+<li>page vs scroll mode branching</li>
+<li>wide scroll layout logic</li>
+<li><code>settleDomForPropagate()</code></li>
+<li>scroll disabling / layout measurement</li>
+</ul>
+<p><strong>Exports:</strong></p>
+<pre><code class="language-js">initializeSVG(svgElement)
+</code></pre>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>Keep <code>window.initializeSVG = initializeSVG</code> if globals are needed</li>
+<li>This module should <em>not</em> know about WebSockets</li>
+</ul>
+<hr>
+<h3>5. oscillaPaths.js</h3>
+<p><strong>Responsibility:</strong> path variants and helpers</p>
+<p><strong>Move from app.js:</strong></p>
+<ul>
+<li><code>window.pathVariantsMap</code></li>
+<li><code>storePathVariants(svgElement)</code></li>
+<li><code>ensureWindowPlayheadX()</code> (optional)</li>
+</ul>
+<p><strong>Exports:</strong></p>
+<pre><code class="language-js">storePathVariants(svgElement)
+getPathVariants(id)
+</code></pre>
+<hr>
+<h3>6. oscillaRAF.js</h3>
+<p><strong>Responsibility:</strong> runtime animation heartbeat</p>
+<p><strong>Move from app.js:</strong></p>
+<ul>
+<li><code>window.animate</code></li>
+<li><code>window.startAnimation()</code> / <code>stopAnimation()</code></li>
+<li>RAF loop iterating <code>window.runningAnimations</code></li>
+<li>frame‑based checks:
+<ul>
+<li>impulse regions</li>
+<li>synth regions</li>
+<li>speed triggers</li>
+</ul>
+</li>
+</ul>
+<p><strong>Design improvement:</strong>
+Use a <strong>pipeline list</strong> instead of hard‑coded calls.</p>
+<p><strong>Exports:</strong></p>
+<pre><code class="language-js">initAnimationLoop({ pipelines })
+startLoop()
+stopLoop()
+</code></pre>
+<hr>
+<h3>7. oscillaProjectMenu.js</h3>
+<p><strong>Responsibility:</strong> project discovery UI</p>
+<p><strong>Move from app.js:</strong></p>
+<ul>
+<li><code>populateProjectMenu()</code></li>
+</ul>
+<p><strong>Exports:</strong></p>
+<pre><code class="language-js">populateProjectMenu()
+</code></pre>
+<hr>
+<h2>What Stays in app.js (for now)</h2>
+<ul>
+<li>Global playback state (<code>isPlaying</code>, <code>playheadX</code>, <code>speedMultiplier</code>)</li>
+<li>Cross‑module wiring (socket → transport → UI)</li>
+<li><code>window.*</code> bindings used by legacy code</li>
+<li>Startup order:
+<ol>
+<li>load project</li>
+<li>initialise SVG</li>
+<li>assign cues</li>
+<li>start observer</li>
+<li>connect socket</li>
+</ol>
+</li>
+</ul>
+<p>Later refactor: collapse globals into a shared <code>state</code> object.</p>
+<hr>
+<h2>Recommended Extraction Order (Low Risk → High Value)</h2>
+<ol>
+<li>oscillaProjectMenu.js</li>
+<li>oscillaPaths.js</li>
+<li>oscillaUIBindings.js</li>
+<li>oscillaClients.js</li>
+<li>oscillaSocket.js</li>
+<li>oscillaSVGInit.js</li>
+<li>oscillaRAF.js</li>
+</ol>
+<p>This keeps behaviour stable while steadily shrinking <code>app.js</code>.</p>
+<hr>
+<h2>Expected Outcome</h2>
+<ul>
+<li><code>app.js</code> reduced to an orchestration layer</li>
+<li>Clear boundaries between <strong>network</strong>, <strong>UI</strong>, <strong>SVG</strong>, and <strong>runtime</strong></li>
+<li>Easier debugging of sync / speed / playhead issues</li>
+<li>Safer future refactors (OSC inputs, feedback routing, param coupling)</li>
+</ul>
+<hr>
+<p><em>This plan intentionally prioritises clarity and stability over architectural purity. Further refactors (state container, event bus, dependency inversion) can happen once the modules are in place.</em></p>

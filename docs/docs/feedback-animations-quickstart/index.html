@@ -1,0 +1,365 @@
+<h1>ControlXY Feedback Animations - Quick Start Guide</h1>
+<h2>✨ New Features Implemented</h2>
+<h3>1. Programmatic Preset Creation: <code>saveFromData()</code></h3>
+<p>Create presets without manually moving handles!</p>
+<pre><code class="language-javascript">// Simple single-handle preset
+window.controlXYPresets.saveFromData('center', {
+  pad1: { dot1: { x: 0.5, y: 0.5 } }
+});
+
+// Multi-handle preset
+window.controlXYPresets.saveFromData('corners', {
+  pad1: { 
+    dot1: { x: 0.1, y: 0.9 },
+    dot2: { x: 0.9, y: 0.9 },
+    dot3: { x: 0.9, y: 0.1 },
+    dot4: { x: 0.1, y: 0.1 }
+  }
+});
+
+// Multi-pad preset
+window.controlXYPresets.saveFromData('formation', {
+  pad1: { dot1: { x: 0.2, y: 0.8 } },
+  pad2: { dot1: { x: 0.8, y: 0.2 } }
+});
+</code></pre>
+<h3>2. Pattern Generators</h3>
+<p>Five built-in generators for common feedback patterns:</p>
+<h4>A. Lissajous Curves</h4>
+<pre><code class="language-javascript">const lissa = window.controlXYPresets.generateLissajous('lissa', {
+  uid: 'pad1',
+  handleId: 'dot1',
+  xCycles: 3,    // X oscillates 3 times
+  yCycles: 2,    // Y oscillates 2 times
+  steps: 60,     // 60 steps = smooth curve
+  amplitude: 0.4 // Stay within 0.1-0.9 range
+});
+
+// Create and play sequence
+window.controlXYPresets.defineSequence('lissajous_3_2', lissa);
+window.controlXYPresets.playSequence('lissajous_3_2', {
+  dur: 0.1,
+  ease: 'linear',
+  loop: true
+});
+</code></pre>
+<h4>B. Circular Motion</h4>
+<pre><code class="language-javascript">const orbit = window.controlXYPresets.generateCircle('orbit', {
+  uid: 'pad1',
+  handleId: 'dot1',
+  radius: 0.4,
+  steps: 32,
+  centerX: 0.5,
+  centerY: 0.5
+});
+
+window.controlXYPresets.defineSequence('orbit', orbit);
+window.controlXYPresets.playSequence('orbit', { dur: 0.1, loop: true });
+</code></pre>
+<h4>C. Spiral Motion</h4>
+<pre><code class="language-javascript">const spiral = window.controlXYPresets.generateSpiral('spiral', {
+  uid: 'pad1',
+  handleId: 'dot1',
+  innerRadius: 0.1,
+  outerRadius: 0.45,
+  turns: 3,
+  steps: 100
+});
+
+window.controlXYPresets.defineSequence('spiral', spiral);
+window.controlXYPresets.playSequence('spiral', { dur: 0.05, loop: false });
+</code></pre>
+<h4>D. Random Walk</h4>
+<pre><code class="language-javascript">const wander = window.controlXYPresets.generateRandomWalk('wander', {
+  uid: 'pad1',
+  handleId: 'dot1',
+  steps: 50,
+  stepSize: 0.1,
+  startX: 0.5,
+  startY: 0.5,
+  seed: 12345  // Optional: reproducible randomness
+});
+
+window.controlXYPresets.defineSequence('wander', wander);
+window.controlXYPresets.playSequence('wander', { dur: 0.2, loop: true });
+</code></pre>
+<h4>E. Grid Pattern</h4>
+<pre><code class="language-javascript">const grid = window.controlXYPresets.generateGrid('grid', {
+  uid: 'pad1',
+  handleId: 'dot1',
+  rows: 4,
+  cols: 4,
+  margin: 0.1
+});
+
+window.controlXYPresets.defineSequence('grid_scan', grid);
+window.controlXYPresets.playSequence('grid_scan', { dur: 0.15, loop: true });
+</code></pre>
+<hr>
+<h2>🚀 Complete Example: Lissajous Feedback Animation</h2>
+<h3>1. Setup Your Score</h3>
+<pre><code class="language-xml">&lt;!-- Define control pad --&gt;
+&lt;rect id=&quot;feedbackPad&quot; x=&quot;100&quot; y=&quot;100&quot; width=&quot;600&quot; height=&quot;600&quot;
+      fill=&quot;#111&quot; stroke=&quot;#333&quot;
+      cue=&quot;controlXY(uid:lissa, handle:dot1, label:true)&quot;/&gt;
+
+&lt;circle id=&quot;dot1&quot; cx=&quot;0&quot; cy=&quot;0&quot; r=&quot;12&quot; fill=&quot;#ff4444&quot;/&gt;
+
+&lt;!-- Visual element that responds to pad --&gt;
+&lt;rect id=&quot;spinner&quot; x=&quot;800&quot; y=&quot;300&quot; width=&quot;100&quot; height=&quot;100&quot;
+      fill=&quot;#44ff44&quot;
+      cue=&quot;rotate(uid:spin, values:lissa.x[0,1440], loop:0, dur:0)
+           scale(uid:scl, sx:lissa.y[0.5,2], sy:lissa.y[0.5,2], loop:0, dur:0)&quot;/&gt;
+
+&lt;!-- Optional: Audio feedback --&gt;
+&lt;g cue=&quot;synth(uid:tone, 
+              freq:lissa.x[200,800], 
+              amp:lissa.y[0,0.2], 
+              wave:sine)&quot;/&gt;
+</code></pre>
+<h3>2. Generate Pattern in Console</h3>
+<pre><code class="language-javascript">// Generate 3:2 Lissajous curve (60 steps)
+const presets = window.controlXYPresets.generateLissajous('lissa_3_2', {
+  uid: 'lissa',
+  handleId: 'dot1',
+  xCycles: 3,
+  yCycles: 2,
+  steps: 60,
+  amplitude: 0.4
+});
+
+// Define sequence
+window.controlXYPresets.defineSequence('lissajous', presets);
+
+// Play it
+window.controlXYPresets.playSequence('lissajous', {
+  dur: 0.1,
+  ease: 'linear',
+  loop: true
+});
+</code></pre>
+<h3>3. Watch the Magic! ✨</h3>
+<ul>
+<li>Handle traces a perfect Lissajous curve</li>
+<li>Spinner rotates at varying speeds (0-1440° = 4 full rotations)</li>
+<li>Spinner scales with Y position</li>
+<li>Audio pitch follows X, amplitude follows Y</li>
+<li>Everything loops continuously</li>
+</ul>
+<hr>
+<h2>🌀 Quick Feedback Patterns to Try</h2>
+<h3>Pattern 1: Simple Oscillator (30 seconds)</h3>
+<pre><code class="language-javascript">// Left-right oscillation
+window.controlXYPresets.saveFromData('left', {
+  pad1: { dot1: { x: 0.2, y: 0.5 } }
+});
+
+window.controlXYPresets.saveFromData('right', {
+  pad1: { dot1: { x: 0.8, y: 0.5 } }
+});
+
+window.controlXYPresets.defineSequence('wave', ['left', 'right', 'left']);
+window.controlXYPresets.playSequence('wave', { dur: 2, loop: true });
+</code></pre>
+<h3>Pattern 2: Circular Orbit (1 minute)</h3>
+<pre><code class="language-javascript">const orbit = window.controlXYPresets.generateCircle('orbit', {
+  uid: 'pad1',
+  handleId: 'dot1',
+  radius: 0.4,
+  steps: 32
+});
+
+window.controlXYPresets.defineSequence('orbit', orbit);
+window.controlXYPresets.playSequence('orbit', { dur: 0.1, loop: true });
+</code></pre>
+<h3>Pattern 3: Figure-8 (Lissajous 1:2)</h3>
+<pre><code class="language-javascript">const fig8 = window.controlXYPresets.generateLissajous('fig8', {
+  uid: 'pad1',
+  handleId: 'dot1',
+  xCycles: 1,
+  yCycles: 2,
+  steps: 40,
+  amplitude: 0.4
+});
+
+window.controlXYPresets.defineSequence('figure8', fig8);
+window.controlXYPresets.playSequence('figure8', { dur: 0.15, loop: true });
+</code></pre>
+<h3>Pattern 4: Expanding Spiral</h3>
+<pre><code class="language-javascript">const spiral = window.controlXYPresets.generateSpiral('spiral_out', {
+  uid: 'pad1',
+  handleId: 'dot1',
+  innerRadius: 0.05,
+  outerRadius: 0.45,
+  turns: 4,
+  steps: 120
+});
+
+window.controlXYPresets.defineSequence('expand', spiral);
+window.controlXYPresets.playSequence('expand', { dur: 0.05, loop: false });
+</code></pre>
+<h3>Pattern 5: Grid Scan</h3>
+<pre><code class="language-javascript">const grid = window.controlXYPresets.generateGrid('scan', {
+  uid: 'pad1',
+  handleId: 'dot1',
+  rows: 5,
+  cols: 5,
+  margin: 0.1
+});
+
+window.controlXYPresets.defineSequence('scan', grid);
+window.controlXYPresets.playSequence('scan', { dur: 0.2, loop: true });
+</code></pre>
+<hr>
+<h2>🎼 Compositional Applications</h2>
+<h3>1. Harmonic Series Animation</h3>
+<pre><code class="language-javascript">// Generate presets at harmonic ratios
+const harmonics = [
+  { x: 0.2, y: 0.5, name: 'fundamental' },
+  { x: 0.4, y: 0.5, name: 'octave' },
+  { x: 0.6, y: 0.5, name: 'fifth' },
+  { x: 0.5, y: 0.7, name: 'fourth' },
+  { x: 0.7, y: 0.4, name: 'major_third' }
+];
+
+harmonics.forEach(h =&gt; {
+  window.controlXYPresets.saveFromData(h.name, {
+    pad1: { dot1: { x: h.x, y: h.y } }
+  });
+});
+
+window.controlXYPresets.defineSequence('harmonics', [
+  'fundamental', 'octave', 'fifth', 'fourth', 'major_third', 'fundamental'
+]);
+
+window.controlXYPresets.playSequence('harmonics', { 
+  dur: 1.5, 
+  ease: 'easeInOutSine',
+  loop: true 
+});
+</code></pre>
+<h3>2. Polytemporal Layers</h3>
+<pre><code class="language-javascript">// Fast Lissajous on one pad
+const fast = window.controlXYPresets.generateLissajous('fast', {
+  uid: 'pad1',
+  handleId: 'dot1',
+  xCycles: 5,
+  yCycles: 3,
+  steps: 40
+});
+
+// Slow circle on another pad
+const slow = window.controlXYPresets.generateCircle('slow', {
+  uid: 'pad2',
+  handleId: 'dot1',
+  radius: 0.4,
+  steps: 16
+});
+
+// Play both simultaneously
+window.controlXYPresets.defineSequence('fast_layer', fast);
+window.controlXYPresets.defineSequence('slow_layer', slow);
+
+window.controlXYPresets.playSequence('fast_layer', { dur: 0.08, loop: true });
+window.controlXYPresets.playSequence('slow_layer', { dur: 0.5, loop: true });
+</code></pre>
+<h3>3. Chaotic Attractor</h3>
+<pre><code class="language-javascript">// Generate semi-random but reproducible pattern
+const chaos = window.controlXYPresets.generateRandomWalk('chaos', {
+  uid: 'pad1',
+  handleId: 'dot1',
+  steps: 100,
+  stepSize: 0.15,
+  startX: 0.5,
+  startY: 0.5,
+  seed: 42  // Same seed = same pattern
+});
+
+window.controlXYPresets.defineSequence('chaos', chaos);
+window.controlXYPresets.playSequence('chaos', { 
+  dur: 0.1, 
+  ease: 'easeInOutSine',
+  loop: true 
+});
+</code></pre>
+<hr>
+<h2>🎛️ Advanced: Custom Pattern Generation</h2>
+<p>Create your own patterns with <code>saveFromData()</code>:</p>
+<pre><code class="language-javascript">// Example: Heart shape
+const heart = [];
+for (let t = 0; t &lt; Math.PI * 2; t += 0.1) {
+  const x = 0.5 + 0.3 * (16 * Math.pow(Math.sin(t), 3)) / 16;
+  const y = 0.5 + 0.3 * (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)) / 16;
+  
+  window.controlXYPresets.saveFromData(`heart_${heart.length}`, {
+    pad1: { dot1: { x, y } }
+  });
+  
+  heart.push(`heart_${heart.length}`);
+}
+
+window.controlXYPresets.defineSequence('heart', heart);
+window.controlXYPresets.playSequence('heart', { dur: 0.08, loop: true });
+</code></pre>
+<hr>
+<h2>📊 API Reference</h2>
+<h3>saveFromData(name, data, options)</h3>
+<pre><code class="language-javascript">window.controlXYPresets.saveFromData(name, data, options);
+</code></pre>
+<ul>
+<li><strong>name</strong>: Preset name (string)</li>
+<li><strong>data</strong>: Position data object<pre><code class="language-javascript">{
+  uid: {
+    handleId: { x: 0-1, y: 0-1 }
+  }
+}
+</code></pre>
+</li>
+<li><strong>options</strong>: Optional metadata (object)</li>
+</ul>
+<h3>Pattern Generators</h3>
+<p>All return array of preset names for use with <code>defineSequence()</code>.</p>
+<h4>generateLissajous(baseName, options)</h4>
+<p>Options: <code>uid, handleId, xCycles, yCycles, steps, phase, amplitude, centerX, centerY</code></p>
+<h4>generateCircle(baseName, options)</h4>
+<p>Options: <code>uid, handleId, radius, steps, centerX, centerY, startAngle</code></p>
+<h4>generateSpiral(baseName, options)</h4>
+<p>Options: <code>uid, handleId, innerRadius, outerRadius, turns, steps, centerX, centerY</code></p>
+<h4>generateRandomWalk(baseName, options)</h4>
+<p>Options: <code>uid, handleId, steps, stepSize, startX, startY, seed</code></p>
+<h4>generateGrid(baseName, options)</h4>
+<p>Options: <code>uid, handleId, rows, cols, margin</code></p>
+<hr>
+<h2>🐛 Troubleshooting</h2>
+<h3>Pattern not visible?</h3>
+<ul>
+<li>Check that <code>uid</code> and <code>handleId</code> match your actual elements</li>
+<li>Use <code>label:true</code> in controlXY to see current values</li>
+<li>Console: <code>window.controlXYPresets.list()</code> to see saved presets</li>
+</ul>
+<h3>Sequence playing but no motion?</h3>
+<ul>
+<li>Verify presets exist: <code>window.controlXYPresets.get('presetName')</code></li>
+<li>Check duration isn't too fast/slow</li>
+<li>Try with <code>ease:'linear'</code> first for debugging</li>
+</ul>
+<h3>Handle moves but visual doesn't respond?</h3>
+<ul>
+<li>Check binding syntax: <code>cue=&quot;rotate(uid:r1, values:pad1.x[0,360])&quot;</code></li>
+<li>Verify signal publishing: Open console, move handle, check for errors</li>
+<li>Test binding: <code>window.oscillaParamBus.get('controlXY:pad1.x')</code></li>
+</ul>
+<hr>
+<h2>🎯 Next Steps</h2>
+<ol>
+<li>✅ Try Pattern 1 (Simple Oscillator) - 30 seconds</li>
+<li>✅ Try Pattern 2 (Circular Orbit) - 1 minute</li>
+<li>✅ Generate a Lissajous curve - 2 minutes</li>
+<li>🎨 Bind to multiple visual parameters</li>
+<li>🎵 Add audio feedback</li>
+<li>🌀 Combine multiple patterns</li>
+<li>🎭 Create your own custom pattern</li>
+</ol>
+<p><strong>You now have a complete generative animation system!</strong> 🎉</p>
+<p>Start simple, experiment, and build complexity gradually. The feedback patterns will surprise you with emergent behaviors you didn't explicitly program.</p>
+<p><strong>Score-as-organism. Notation-as-ecosystem.</strong> 🌿✨</p>

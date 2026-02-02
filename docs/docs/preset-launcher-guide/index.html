@@ -1,0 +1,383 @@
+<h1>🎛️ ControlXY Preset Launcher - Complete Guide</h1>
+<h2>✨ What It Is</h2>
+<p>A <strong>hardware-style preset launcher</strong> overlaid directly on your controlXY pads:</p>
+<ul>
+<li><strong>8 buttons per bank</strong> for instant preset recall</li>
+<li><strong>Multiple banks</strong> (default: 3, configurable)</li>
+<li><strong>Touch-friendly</strong> with long-press support</li>
+<li><strong>Auto-saves</strong> to JSON with your project</li>
+<li><strong>Visual feedback</strong> - buttons light up when active</li>
+</ul>
+<p>Think of it as <strong>memory buttons on a hardware synth</strong>, but for spatial control!</p>
+<hr>
+<h2>🚀 Quick Start</h2>
+<h3>1. Enable Launcher in DSL</h3>
+<pre><code class="language-xml">&lt;rect id=&quot;pad1&quot; x=&quot;100&quot; y=&quot;100&quot; width=&quot;600&quot; height=&quot;400&quot;
+      fill=&quot;#222&quot;
+      cue=&quot;controlXY(uid:pad1, 
+                    handle:[dot1,dot2], 
+                    label:true, 
+                    launcher:8,    
+                    banks:3)&quot;/&gt;
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>launcher:8</code> - Enable with 8 buttons (can be 4, 6, 8, 10, etc.)</li>
+<li><code>banks:3</code> - Number of banks (default: 3)</li>
+</ul>
+<h3>2. Use the Launcher</h3>
+<p><strong>Left-click button</strong> → Recall preset/sequence (instant)
+<strong>Right-click button</strong> → Save current state to this slot
+<strong>Long-press (touch)</strong> → Save current state to this slot</p>
+<p><strong>Bank navigation:</strong></p>
+<ul>
+<li><strong>← Button</strong> → Previous bank</li>
+<li><strong>→ Button</strong> → Next bank</li>
+</ul>
+<hr>
+<h2>📐 Visual Layout</h2>
+<pre><code>┌─────────────────────────────────────────┐
+│                                         │
+│         ControlXY Pad Area              │
+│                                         │
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ [←]   Bank: Verse (1/3)   [→]          │ ← Bank Bar
+├─────────────────────────────────────────┤
+│ [1]  [2]  [3]  [4]  [5]  [6]  [7]  [8] │ ← Slot Buttons
+│ Intro Mid  End  ─   ─   ─   ─   ─      │
+└─────────────────────────────────────────┘
+</code></pre>
+<h3>Button States</h3>
+<p><strong>Empty (gray)</strong> - No assignment</p>
+<pre><code>[1]
+Empty
+</code></pre>
+<p><strong>Assigned Preset (blue)</strong> - Preset stored</p>
+<pre><code>[1]
+intro
+</code></pre>
+<p><strong>Assigned Sequence (green)</strong> - Sequence stored</p>
+<pre><code>[2]
+verse_loop
+</code></pre>
+<p><strong>Active (orange)</strong> - Currently recalling (brief flash)</p>
+<pre><code>[1]
+intro ✨
+</code></pre>
+<hr>
+<h2>🎯 Usage Workflows</h2>
+<h3>Workflow 1: Quick Performance Setup (5 minutes)</h3>
+<ol>
+<li><strong>Position handles</strong> for your intro</li>
+<li><strong>Right-click slot 1</strong> → Name it &quot;intro&quot;</li>
+<li><strong>Move handles</strong> to verse position</li>
+<li><strong>Right-click slot 2</strong> → Name it &quot;verse&quot;</li>
+<li><strong>Continue</strong> for chorus, bridge, etc.</li>
+<li><strong>Perform:</strong> Left-click buttons 1-2-3-4 to trigger states</li>
+</ol>
+<h3>Workflow 2: Sequence Launcher</h3>
+<ol>
+<li><strong>Create sequences</strong> in UI (Tab 2)
+<ul>
+<li>&quot;verse_pattern&quot; = loop of presets</li>
+<li>&quot;chorus_pattern&quot; = another loop</li>
+</ul>
+</li>
+<li><strong>Go to Sequences tab</strong></li>
+<li><strong>Right-click sequence names</strong> in list</li>
+<li><strong>Select &quot;Assign to Launcher&quot;</strong></li>
+<li><strong>Choose pad + bank + slot</strong></li>
+</ol>
+<h3>Workflow 3: Multiple Banks for Song Structure</h3>
+<p><strong>Bank 1: Intro</strong></p>
+<ul>
+<li>Slot 1: intro_a</li>
+<li>Slot 2: intro_b</li>
+<li>Slot 3: intro_build</li>
+<li>Slot 4-8: variations</li>
+</ul>
+<p><strong>Bank 2: Verse</strong></p>
+<ul>
+<li>Slot 1: verse_start</li>
+<li>Slot 2: verse_pattern (sequence)</li>
+<li>Slot 3: verse_end</li>
+<li>Slot 4-8: variations</li>
+</ul>
+<p><strong>Bank 3: Chorus</strong></p>
+<ul>
+<li>Slot 1: chorus_a</li>
+<li>Slot 2: chorus_big</li>
+<li>Slot 3: chorus_pattern (sequence)</li>
+<li>Slot 4-8: variations</li>
+</ul>
+<p><strong>Performance:</strong> Switch banks with ←→, trigger with 1-8</p>
+<hr>
+<h2>💾 Storage Format</h2>
+<p>Launchers are saved in <code>controlxy-presets.json</code>:</p>
+<pre><code class="language-json">{
+  &quot;presets&quot;: { ... },
+  &quot;sequences&quot;: { ... },
+  &quot;launchers&quot;: {
+    &quot;pad1&quot;: {
+      &quot;currentBank&quot;: 0,
+      &quot;banks&quot;: [
+        {
+          &quot;name&quot;: &quot;Bank 1&quot;,
+          &quot;slots&quot;: [
+            { &quot;type&quot;: &quot;preset&quot;, &quot;name&quot;: &quot;intro&quot; },
+            { &quot;type&quot;: &quot;preset&quot;, &quot;name&quot;: &quot;verse&quot; },
+            { &quot;type&quot;: &quot;sequence&quot;, &quot;name&quot;: &quot;verse_loop&quot; },
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          &quot;name&quot;: &quot;Bank 2&quot;,
+          &quot;slots&quot;: [ ... ]
+        },
+        {
+          &quot;name&quot;: &quot;Bank 3&quot;,
+          &quot;slots&quot;: [ ... ]
+        }
+      ]
+    }
+  }
+}
+</code></pre>
+<hr>
+<h2>🎨 Customization</h2>
+<h3>Different Slot Counts</h3>
+<pre><code class="language-javascript">// 4 buttons (smaller pads)
+controlXY(uid:pad1, handle:dot1, launcher:4, banks:5)
+
+// 10 buttons (larger pads)
+controlXY(uid:pad1, handle:dot1, launcher:10, banks:3)
+
+// 12 buttons (wide pads)
+controlXY(uid:pad1, handle:dot1, launcher:12, banks:4)
+</code></pre>
+<h3>Custom Bank Names (Future Enhancement)</h3>
+<p>Currently banks are named &quot;Bank 1&quot;, &quot;Bank 2&quot;, etc.
+Coming soon: Custom names via UI or DSL:</p>
+<pre><code class="language-javascript">// Future syntax
+controlXY(uid:pad1, 
+          handle:dot1, 
+          launcher:8,
+          bankNames:[&quot;Intro&quot;,&quot;Verse&quot;,&quot;Chorus&quot;])
+</code></pre>
+<hr>
+<h2>🔧 Advanced Features</h2>
+<h3>Multiple Pads, Multiple Launchers</h3>
+<p>Each pad gets its own launcher:</p>
+<pre><code class="language-xml">&lt;rect id=&quot;pad1&quot; cue=&quot;controlXY(uid:pad1, handle:dot1, launcher:8, banks:3)&quot;/&gt;
+&lt;rect id=&quot;pad2&quot; cue=&quot;controlXY(uid:pad2, handle:dot2, launcher:6, banks:2)&quot;/&gt;
+</code></pre>
+<p>Both launchers are <strong>independent</strong> and saved separately.</p>
+<h3>Keyboard Shortcuts (Coming Soon)</h3>
+<p>Map keyboard keys to slots:</p>
+<ul>
+<li><code>1-8</code> → Trigger slots 1-8</li>
+<li><code>[</code> <code>]</code> → Change banks</li>
+<li><code>Shift+1-8</code> → Store to slots</li>
+</ul>
+<h3>MIDI Control (Coming Soon)</h3>
+<p>Map MIDI notes to slots for hardware control.</p>
+<hr>
+<h2>🎛️ UI Integration</h2>
+<h3>Assigning from Preset List</h3>
+<ol>
+<li>Open preset UI (Alt+Shift+P)</li>
+<li>Go to <strong>Presets</strong> tab</li>
+<li>Click a preset name to select it</li>
+<li>UI shows &quot;Assign to Launcher&quot; options</li>
+<li>Choose: <strong>Pad → Bank → Slot</strong></li>
+<li>Done!</li>
+</ol>
+<h3>Assigning from Sequence List</h3>
+<p>Same process in <strong>Sequences</strong> tab.</p>
+<h3>Launcher Manager View</h3>
+<p>See all launchers, all banks at once:</p>
+<ul>
+<li>Visual grid of all slots</li>
+<li>Drag-and-drop assignment (future)</li>
+<li>Bulk operations (clear bank, copy bank, etc.)</li>
+</ul>
+<hr>
+<h2>🎭 Performance Tips</h2>
+<h3>Tip 1: Organize by Song Section</h3>
+<p>One bank per section makes navigation intuitive.</p>
+<h3>Tip 2: Leave Empty Slots</h3>
+<p>Don't fill all 8 slots - leave room for improvisation.</p>
+<h3>Tip 3: Mix Presets &amp; Sequences</h3>
+<ul>
+<li>Presets = instant states</li>
+<li>Sequences = evolving patterns</li>
+<li>Combine both in one bank!</li>
+</ul>
+<h3>Tip 4: Visual Memory</h3>
+<p>Empty slots show slot numbers (1-8).
+Learn the positions for blind performance.</p>
+<h3>Tip 5: Touch Performance</h3>
+<p>Long-press works great on tablets/touchscreens.
+Practice the 500ms timing.</p>
+<hr>
+<h2>🐛 Troubleshooting</h2>
+<h3>Launcher not appearing?</h3>
+<ul>
+<li>Check <code>launcher:8</code> is in DSL</li>
+<li>Verify CSS is loaded</li>
+<li>Check console for errors</li>
+</ul>
+<h3>Buttons not responding?</h3>
+<ul>
+<li>Make sure preset/sequence exists</li>
+<li>Check browser console for errors</li>
+<li>Try clearing and re-assigning</li>
+</ul>
+<h3>Right-click doesn't work on touch?</h3>
+<ul>
+<li>Use <strong>long-press</strong> (500ms hold)</li>
+<li>Or assign from UI instead</li>
+</ul>
+<h3>Banks not saving?</h3>
+<ul>
+<li>Make sure project has ID</li>
+<li>Check if presets module is loaded</li>
+<li>Verify server routes are working</li>
+</ul>
+<h3>Slots showing wrong names?</h3>
+<ul>
+<li>Refresh preset list</li>
+<li>Check JSON file for corruption</li>
+<li>Re-assign slots if needed</li>
+</ul>
+<hr>
+<h2>📊 Comparison: Launcher vs UI vs DSL</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Speed</th>
+<th>Flexibility</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Launcher</strong></td>
+<td>⚡⚡⚡ Instant</td>
+<td>🎛️ 8 slots</td>
+<td>Live performance</td>
+</tr>
+<tr>
+<td><strong>UI</strong></td>
+<td>⚡⚡ Fast</td>
+<td>🎛️🎛️🎛️ Unlimited</td>
+<td>Composition work</td>
+</tr>
+<tr>
+<td><strong>DSL</strong></td>
+<td>⚡ Timed</td>
+<td>🎛️🎛️ Scripted</td>
+<td>Score automation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Best practice:</strong> Use all three!</p>
+<ul>
+<li><strong>Launcher</strong> for live triggering</li>
+<li><strong>UI</strong> for managing presets/sequences</li>
+<li><strong>DSL</strong> for playhead-based automation</li>
+</ul>
+<hr>
+<h2>🎼 Musical Applications</h2>
+<h3>Application 1: Live Improvisation</h3>
+<p>Pre-save 8 interesting states, perform freely between them.</p>
+<h3>Application 2: Song Structure Navigation</h3>
+<p>Bank = section, slot = variation. Navigate song structure live.</p>
+<h3>Application 3: Parameter Exploration</h3>
+<p>Save 8 extreme positions, explore in-between states manually.</p>
+<h3>Application 4: Call-Response Patterns</h3>
+<p>Odd slots = calls, even slots = responses. Alternate rapidly.</p>
+<h3>Application 5: Gradual Evolution</h3>
+<p>Slots 1-8 = progressive changes. Step through slowly.</p>
+<hr>
+<h2>🚧 Roadmap (Future Enhancements)</h2>
+<h3>Phase 1: Core ✅ DONE</h3>
+<ul>
+<li>8-button launcher</li>
+<li>Bank switching</li>
+<li>Right-click/long-press store</li>
+<li>JSON persistence</li>
+</ul>
+<h3>Phase 2: UI Polish (Next)</h3>
+<ul>
+<li>Launcher manager view</li>
+<li>Drag-and-drop assignment</li>
+<li>Custom bank names</li>
+<li>Bulk operations (clear, copy banks)</li>
+</ul>
+<h3>Phase 3: Performance (Soon)</h3>
+<ul>
+<li>Keyboard shortcuts</li>
+<li>MIDI mapping</li>
+<li>Transition timing per slot</li>
+<li>Auto-advance mode</li>
+</ul>
+<h3>Phase 4: Advanced (Later)</h3>
+<ul>
+<li>Multiple launchers per pad</li>
+<li>Vertical/horizontal layouts</li>
+<li>Nested sequence support in slots</li>
+<li>Conditional triggering (if/then)</li>
+</ul>
+<hr>
+<h2>🎉 Summary</h2>
+<p>You now have:</p>
+<ol>
+<li>✅ <strong>8-button preset launcher</strong> on each pad</li>
+<li>✅ <strong>Multiple banks</strong> (3 default, configurable)</li>
+<li>✅ <strong>Instant recall</strong> (left-click)</li>
+<li>✅ <strong>Quick store</strong> (right-click/long-press)</li>
+<li>✅ <strong>Auto-save</strong> to JSON</li>
+<li>✅ <strong>Visual feedback</strong> (colors, states)</li>
+<li>✅ <strong>Touch-friendly</strong> (500ms long-press)</li>
+</ol>
+<p><strong>This is a complete performance system!</strong></p>
+<p>Start simple:</p>
+<ul>
+<li>Enable launcher on one pad</li>
+<li>Store 3-4 presets</li>
+<li>Practice triggering</li>
+</ul>
+<p>Then expand:</p>
+<ul>
+<li>Use multiple banks</li>
+<li>Mix presets &amp; sequences</li>
+<li>Perform live!</li>
+</ul>
+<p><strong>Score-as-instrument. Touch-as-memory.</strong> 🎛️✨</p>
+<hr>
+<h2>📝 DSL Reference</h2>
+<pre><code class="language-javascript">// Basic
+controlXY(uid:pad1, handle:dot1, launcher:8)
+
+// Custom slots
+controlXY(uid:pad1, handle:dot1, launcher:6)
+
+// Custom banks
+controlXY(uid:pad1, handle:dot1, launcher:8, banks:5)
+
+// Full config
+controlXY(uid:pad1, 
+          handle:[dot1,dot2,dot3], 
+          label:true,
+          launcher:8, 
+          banks:3,
+          osc:true)
+</code></pre>
+<p><strong>Ready to perform!</strong> 🎵🎹</p>

@@ -1,0 +1,125 @@
+<h1>color() / colour() — Colour Animation Cue</h1>
+<p><code>color()</code> (alias: <code>colour()</code>) animates the visual colour of SVG elements over time.
+It supports discrete sequences, smooth tweening, and continuous traversal of HSL colour space,
+using the same structural conventions as other Oscilla animation cues (<code>scale</code>, <code>rotate</code>, <code>o2p</code>).</p>
+<p>Both spellings are fully equivalent:</p>
+<pre><code>color(...)  ≡  colour(...)
+</code></pre>
+<hr>
+<h2>Scope</h2>
+<ul>
+<li>Affects SVG <code>fill</code> and <code>stroke</code> properties</li>
+<li>Colours may be authored in common CSS formats</li>
+<li>Internally, all colours are normalised to <strong>HSL</strong> for interpolation</li>
+</ul>
+<hr>
+<h2>Basic Syntax</h2>
+<pre><code>color(
+  uid:target,
+  vals:[...],
+  dur:seconds,
+  mode:mode,
+  loop:n
+)
+</code></pre>
+<p>All parameters are optional unless stated otherwise.</p>
+<hr>
+<h2>Parameters</h2>
+<h3>uid:</h3>
+<p>Target SVG element(s). If omitted, applies to the element on which the cue is defined.
+Supports wildcards (e.g. <code>bars*</code>).</p>
+<hr>
+<h3>vals: (required)</h3>
+<p>Defines the colour values or colour behaviour.</p>
+<h4>1. Discrete Colour Values</h4>
+<p>Supported formats:</p>
+<ul>
+<li>Hex (<code>#f00</code>, <code>#ff8800</code>)</li>
+<li>RGB (<code>rgb(255,0,0)</code>)</li>
+<li>HSL (<code>hsl(120,80%,50%)</code>)</li>
+<li>Named CSS colours (<code>red</code>, <code>cyan</code>)</li>
+</ul>
+<p>Examples:</p>
+<pre><code>color(vals:[#f00,#0f0], dur:2)
+color(vals:[#f00,#ff0,#0ff], dur:6)
+color(vals:Pseq([#f00,#ff0,#0ff],3), dur:3)
+color(vals:Prand([#f80,#08f],inf), dur:1.2)
+</code></pre>
+<p>Behaviour:</p>
+<ul>
+<li>Each value is treated as a target colour</li>
+<li>Interpolation is performed in HSL space</li>
+</ul>
+<hr>
+<h4>2. Hue Cycling (Continuous)</h4>
+<pre><code>color(vals:hue, dur:6)
+</code></pre>
+<ul>
+<li>Performs a full 360° hue rotation</li>
+<li><code>dur</code> defines time per full cycle</li>
+<li>Saturation and lightness remain unchanged</li>
+</ul>
+<p>Range-limited cycle:</p>
+<pre><code>color(vals:hue(120,240), dur:4)
+</code></pre>
+<p>Infinite cycle:</p>
+<pre><code>color(vals:hue, dur:8, loop:0)
+</code></pre>
+<hr>
+<h4>3. Other HSL Channels (Optional Extension)</h4>
+<pre><code>color(vals:sat(40,90), dur:5)
+color(vals:light(30,70), dur:8)
+</code></pre>
+<hr>
+<h3>dur:</h3>
+<p>Duration in seconds for one full pass through <code>vals</code>.</p>
+<hr>
+<h3>mode:</h3>
+<p>Controls interpolation behaviour.</p>
+<ul>
+<li><code>linear</code> (default): smooth interpolation</li>
+<li><code>alt</code>: ping-pong (forward then reverse)</li>
+<li><code>step</code>: hard switching, no interpolation</li>
+</ul>
+<p>Examples:</p>
+<pre><code>color(vals:[#f00,#0f0], dur:2, mode:alt)
+color(vals:[#f00,#0f0,#00f], dur:3, mode:step)
+</code></pre>
+<hr>
+<h3>loop:</h3>
+<p>Number of repetitions.</p>
+<pre><code>loop:3   // repeat three times
+loop:0   // infinite
+</code></pre>
+<hr>
+<h2>Behavioural Rules</h2>
+<ol>
+<li>All interpolation occurs in HSL space</li>
+<li>Hue interpolation is circular (shortest angular path)</li>
+<li>New cues start from the current colour state</li>
+<li>Continuous cycling overrides discrete sequencing</li>
+<li>Animations pause/resume with visibility</li>
+</ol>
+<hr>
+<h2>Examples</h2>
+<p>Discrete colour melody:</p>
+<pre><code>color(vals:[#f00,#ff0,#0ff], dur:6)
+</code></pre>
+<p>Alternating palette:</p>
+<pre><code>color(vals:[#f80,#08f], mode:alt, dur:1.2)
+</code></pre>
+<p>Continuous hue field:</p>
+<pre><code>colour(vals:hue, dur:10, loop:0)
+</code></pre>
+<p>Cycle then land:</p>
+<pre><code>color(vals:hue, dur:8, loop:1)
+color(vals:#f00, dur:1)
+</code></pre>
+<hr>
+<h2>Musical Interpretation (Informative)</h2>
+<ul>
+<li>Hue ≈ pitch-class / harmonic field</li>
+<li>Discrete sequences ≈ colour melodies</li>
+<li>Continuous cycling ≈ spectral or energetic fields</li>
+<li>Step mode ≈ rhythmic articulation</li>
+</ul>
