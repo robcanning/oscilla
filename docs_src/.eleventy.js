@@ -28,12 +28,14 @@ module.exports = function (eleventyConfig) {
     }
   });
 
-  return {
-    dir: {
-      input: ".",
-      output: "../docs",
-      includes: "_includes",
-    },
-    markdownTemplateEngine: "njk"
-  };
+return {
+  dir: {
+    input: ".",
+    output: "../docs",
+    includes: "_includes",
+  },
+  pathPrefix: "/docs/",
+  markdownTemplateEngine: "njk"
+};
+
 };
