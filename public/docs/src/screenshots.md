@@ -26,6 +26,16 @@ layout: docs_layout.njk
   <figcaption>Oscilla Interface and Preferences GUI</figcaption>
 </figure>
 
+oscilla-timers-fullscreen.png
+
+## Oscilla Networked Stopwatch and Performance Timers
+<figure class="doc-image">
+  <img
+    src="{{ '/img/oscilla-timers-fullscreen.png' | url }}"
+    alt="Oscilla Performance Timers in Fullscreen Mode"
+  >
+  <figcaption>Oscilla's fullscreen timer interface with synchronized countdown sequences that function as a compositional framework for time-based structures. The sequencer enables composers to define named sections with specific durations, looping, and chaining—creating everything from structured improvisations to durational scores. Multiple display modes (solid, blur, transparent) allow the timer to overlay directly onto minimal cue scores or stand alone as the primary temporal reference for networked ensemble performances.</figcaption>
+</figure>
 
 ## Oscilla "Contribution Surface"
 <figure class="doc-image">
