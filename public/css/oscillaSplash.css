@@ -1,10 +1,10 @@
 /* ============================================================================
- * OSCILLA SPLASH SCREEN & PROJECT SELECTION
- * Splash backdrop, logo, project grid, project cards, project modal
+ * OSCILLA SPLASH SCREEN - MINIMAL COMPACT VERSION
+ * Super minimal aesthetic, half the size, SVG icons only
  * ============================================================================ */
 
 /* --------------------------------------------------
-   Splash backdrop (light, non-invasive)
+   Splash backdrop - BLOCKS ALL INTERACTION WHEN VISIBLE
 -------------------------------------------------- */
 #splash {
   position: fixed;
@@ -13,276 +13,301 @@
   justify-content: center;
   align-items: center;
 
-  background: rgba(255, 255, 255, 0.75); /* or rgba(0,0,0,0.35) for dark */
+  background: rgba(40, 40, 40, 0.95);
   backdrop-filter: blur(6px);
 
   z-index: 999999;
-  pointer-events: all;
+  pointer-events: all; /* Block all clicks to background */
+}
+
+/* When splash is hidden, don't block anything */
+#splash.hidden {
+  display: none;
+  pointer-events: none;
+}
+
+#splash[style*="display: none"] {
+  pointer-events: none;
 }
 
 /* --------------------------------------------------
-   Splash card
+   Splash container - COMPACT WITH SHADOW
 -------------------------------------------------- */
 .splash-container {
   text-align: center;
-  max-width: 700px;
-  padding: 2.8rem 3.2rem;
+  max-width: 420px;
+  padding: 1.5rem 2rem;
 
   background: #fff;
   color: #000;
 
-  border-radius: 14px;
-  box-shadow:
-    0 20px 40px rgba(0,0,0,0.12),
-    0 4px 12px rgba(0,0,0,0.08);
+  border-radius: 8px;
+  box-shadow: 
+    0 8px 32px rgba(0,0,0,0.4),
+    0 4px 16px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0,0,0,0.08);
 }
 
 /* --------------------------------------------------
-   Logo
+   Logo - COMPACT
 -------------------------------------------------- */
+.title-section {
+  margin-bottom: 1.5rem;
+}
 
 .logo {
-  width: 400px;     /* ← increase this */
-  height: auto;     /* keep aspect ratio */
+  width: 200px;
+  height: auto;
 }
 
 /* --------------------------------------------------
-   Text
+   Main action cards - MINIMAL
 -------------------------------------------------- */
-.splash-title {
-  font-size: 4.2em;
-  margin: 0;
-}
-
-.splash-subtitle {
-  font-size: 1.8em;
-  color: #777;
-  margin-bottom: 0.8em;
-}
-
-.splash-message {
-  font-size: 1.1em;
-  color: #666;
-}
-
-
-/* --- Project Grid --- */
-.project-grid {
+.splash-actions-main {
   display: flex;
-  justify-content: center;
   gap: 1rem;
-  margin: 1.2em 0;
+  margin: 0 0 1rem;
+  justify-content: center;
 }
 
-/* --- Project Icon Card --- */
-.project-card {
-  width: 96px;
-  height: 96px;
-
+.splash-action-card {
+  flex: 1;
+  max-width: 100px;
+  
+  padding: 1rem 0.75rem;
+  
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  
+  cursor: pointer;
+  transition: all 0.15s ease;
+  
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0.5rem;
+}
+
+.splash-action-card:hover {
+  background: #fff;
+  border-color: #999;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.splash-action-card:active {
+  transform: scale(0.98);
+}
+
+.action-icon {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+
+.splash-action-card:hover .action-icon {
+  opacity: 1;
+}
+
+.action-title {
+  font-size: 0.85em;
+  font-weight: 500;
+  color: #333;
+}
+
+/* --------------------------------------------------
+   Secondary actions - MINIMAL
+-------------------------------------------------- */
+.splash-actions-secondary {
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 0.4em;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e8e8e8;
+}
 
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-
+.secondary-btn {
+  padding: 0.4rem 1rem;
+  font-size: 0.8em;
+  
+  background: transparent;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #666;
+  
   cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    background-color 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: all 0.15s ease;
 }
 
-.project-card:hover {
-  transform: translateY(-3px);
-  background: rgba(90, 140, 255, 0.25);
-  box-shadow: 0 0 14px rgba(120, 170, 255, 0.35);
+.secondary-btn:hover {
+  background: #f5f5f5;
+  border-color: #999;
+  color: #333;
 }
 
-.project-card img {
-  width: 36px;
-  height: 36px;
-  opacity: 0.85;
+.version {
+  font-size: 0.75em;
+  color: #999;
+  font-family: monospace;
 }
 
-.project-card span {
-  font-size: 0.65em;
-  text-align: center;
-  color: #ddd;
-  max-width: 90px;
-  white-space: nowrap;
+/* ============================================================================
+ * PROJECT MODAL - ULTRA MINIMAL TEXT LIST
+ * ============================================================================ */
+
+.project-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  z-index: 1000001;
+  pointer-events: all; /* Block interaction with everything behind */
+}
+
+.project-modal.hidden {
+  display: none;
+}
+
+.project-modal-content {
+  background: #fff;
+  color: #333;
+  
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  
+  max-width: 350px;
+  width: 90%;
+  max-height: 50vh;
+  
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  
+  box-shadow: 
+    0 8px 32px rgba(0,0,0,0.5),
+    0 4px 16px rgba(0,0,0,0.3);
+}
+
+.project-modal-content h3 {
+  margin: 0;
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #222;
+  border-bottom: 1px solid #e8e8e8;
+  padding-bottom: 0.5rem;
+}
+
+/* --------------------------------------------------
+   Project list - text only
+-------------------------------------------------- */
+.project-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.project-item {
+  padding: 0.5rem 0.35rem;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.project-item:last-child {
+  border-bottom: none;
+}
+
+.project-item:hover {
+  background: #f8f8f8;
+}
+
+.project-name {
+  font-size: 0.8em;
+  color: #222;
+  font-weight: 500;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-
-.project-card.show-all {
-  background: rgba(0, 0, 0, 0.08);
-  border: 2px dashed rgba(120, 120, 120, 0.6);
-  color: #444;
-
-  box-shadow: none;
+.project-meta {
+  font-size: 0.7em;
+  color: #999;
+  font-family: monospace;
+  white-space: nowrap;
 }
 
-.project-card.show-all img {
-  opacity: 0.6;
-  filter: grayscale(1);
-}
-
-.project-card.show-all span {
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: #555;
-}
-
-.project-card.show-all:hover {
-  background: rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
-  box-shadow: none;
-}
-
-/* ======================================================
-   Project Modal (Show All)
-   ====================================================== */
-
-.project-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  z-index: 1000001; /* above splash */
-}
-
-.project-modal.hidden {
-  display: none;
-}
-
-.project-modal-content {
-  background: #111;
-  color: #fff;
-
-  padding: 2rem;
-  border-radius: 14px;
-
-  max-width: 640px;
-  width: 90%;
-  max-height: 80vh;
-
-  display: flex;
-  flex-direction: column;
-}
-
-.project-modal-content h3 {
-  margin-top: 0;
-}
-
-.project-modal-content .project-grid {
-  margin-top: 1rem;
-  overflow-y: auto;
+.project-list:empty::before {
+  content: "No projects found";
+  color: #999;
+  font-size: 0.8em;
+  padding: 0.75rem;
+  text-align: center;
+  display: block;
 }
 
 .project-modal-content button {
-  margin-top: 1.2rem;
   align-self: flex-end;
+  padding: 0.4rem 1rem;
+  
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  color: #333;
+  font-size: 0.8em;
+  
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.project-modal-content .project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 1rem;
-
-  justify-items: center;
-  align-items: start;
-
-  padding: 0.5rem;
+.project-modal-content button:hover {
+  background: #e8e8e8;
+  border-color: #ccc;
 }
 
-/* ============================================================================
- * PROJECT MODAL - PATCH SECTION
- * ============================================================================ */
-
-.project-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000001; /* above splash */
-}
-
-.project-modal.hidden {
-  display: none;
-}
-
-.project-modal-content {
-  background: #111;
-  color: #fff;
-  padding: 2rem;
-  border-radius: 14px;
-  max-width: 640px;
-  width: 90%;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.project-modal-content h3 {
-  margin-top: 0;
-}
-
-.project-modal-content .project-grid {
-  margin-top: 1rem;
-  overflow-y: auto;
-}
-
-.project-modal-content button {
-  margin-top: 1.2rem;
-  align-self: flex-end;
-}
-
-.project-modal-content .project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 1rem;
-  justify-items: center;
-}
-
-/* ============================================================================
- * PROJECT MODAL & CARDS - REFINEMENTS
- * ============================================================================ */
-
-.project-modal {
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
-}
-
-.project-modal-content {
-  background: #1a1a1e;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-}
-
-.project-card {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.project-card:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.project-icon {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+/* --------------------------------------------------
+   Responsive - COMPACT
+-------------------------------------------------- */
+@media (max-width: 600px) {
+  .splash-container {
+    max-width: 90%;
+    padding: 1.25rem 1.5rem;
+  }
+  
+  .logo {
+    width: 160px;
+  }
+  
+  .splash-actions-main {
+    gap: 0.75rem;
+  }
+  
+  .splash-action-card {
+    padding: 0.75rem 0.5rem;
+    max-width: 90px;
+  }
+  
+  .action-icon {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .action-title {
+    font-size: 0.75em;
+  }
 }

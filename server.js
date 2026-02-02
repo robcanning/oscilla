@@ -146,8 +146,23 @@ const scoresDir = path.join(WRITE_DIR, "public", "scores");
 
     const projects = entries
       .filter(e => e.isDirectory())
-      .map(e => e.name)
-      .filter(name => !name.startsWith("."));
+      .filter(e => !e.name.startsWith("."))
+      .map(e => {
+        const projectPath = path.join(scoresDir, e.name);
+        try {
+          const stats = fs.statSync(projectPath);
+          return {
+            name: e.name,
+            modified: stats.mtime.toISOString()
+          };
+        } catch (err) {
+          console.warn(`Could not get stats for ${e.name}:`, err);
+          return {
+            name: e.name,
+            modified: null
+          };
+        }
+      });
 
     res.json(projects);
   });

@@ -52,6 +52,8 @@ async function openPreferencesDialog() {
       { key: "defaultPlaybackSpeed", label: "Default Speed", type: "number", default: 1, min: 0.1, max: 10, step: 0.1 },
       { key: "defaultViewMode", label: "Default View", type: "select", default: "scroll", options: ["scroll", "page"] },
       { key: "defaultPage", label: "Default Page", type: "text", default: "" },
+      { key: "pinControls", label: "Pin Transport Controls", type: "checkbox", default: true },
+      { key: "pinTopbar", label: "Pin Top Bar", type: "checkbox", default: true },
       { key: "playzoneColor", label: "Playzone Color", type: "color", default: "#00ff0033" },
       { key: "playheadColor", label: "Playhead Color", type: "color", default: "#ff0000" },
       { key: "playheadWidth", label: "Playhead Width (px)", type: "number", default: 4, min: 1, max: 20 },
@@ -222,6 +224,19 @@ function applyPreferences(prefs) {
 
   if (prefs.defaultPlaybackSpeed && typeof window.setPlaybackSpeed === "function") {
     window.setPlaybackSpeed(prefs.defaultPlaybackSpeed);
+  }
+
+  // Pin state preferences
+  if (typeof prefs.pinControls === "boolean") {
+    window.controlsPinned = prefs.pinControls;
+    const pinBtn = document.getElementById("pin-controls");
+    if (pinBtn) pinBtn.classList.toggle("active", prefs.pinControls);
+  }
+  
+  if (typeof prefs.pinTopbar === "boolean") {
+    window.topbarPinned = prefs.pinTopbar;
+    const pinBtn = document.getElementById("pin-topbar");
+    if (pinBtn) pinBtn.classList.toggle("active", prefs.pinTopbar);
   }
 
   // Touch seek momentum settings (read by oscillaTouchSeek.js)

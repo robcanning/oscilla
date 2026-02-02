@@ -113,7 +113,20 @@ window.applyPreferences = function applyPreferences(prefs) {
   // 4. Loop playback
   window.loopPlayback = !!prefs.loopPlayback;
 
-  // 5. Playhead + playzone styling
+  // 5. Pin preferences (default to true)
+  if (prefs.pinControls !== undefined) {
+    window.oscillaControlsPinned = prefs.pinControls;
+  } else {
+    window.oscillaControlsPinned = true; // Default pinned
+  }
+  
+  if (prefs.pinTopbar !== undefined) {
+    window.oscillaTopbarPinned = prefs.pinTopbar;
+  } else {
+    window.oscillaTopbarPinned = true; // Default pinned
+  }
+
+  // 6. Playhead + playzone styling
   try {
     const playhead = document.getElementById("playhead");
     if (playhead) {
@@ -374,6 +387,8 @@ async function loadPreferences(basePath) {
       darkMode: false,
       defaultPlaybackSpeed: 1.0,
       defaultViewMode: "scroll",
+      pinControls: true,
+      pinTopbar: true,
     };
     window.oscillaPrefs = defaults;
     return defaults;
@@ -502,7 +517,7 @@ function showSplashScreen() {
   if (!splash) return;
 
   splash.classList.remove("hidden");
-  populateSplashProjects();
+  splash.style.display = "flex";
   wireSplashActions();
 }
 
@@ -594,6 +609,10 @@ document.addEventListener("DOMContentLoaded", () => {
 window.populateProjectMenu = populateProjectMenu;
 
 
+// REMOVED: populateSplashProjects() - No longer needed with button-based design
+// The new splash screen uses three action buttons instead of populating a project grid
+// Projects are now shown in a modal via the "Browse Projects" button
+/*
 async function populateSplashProjects() {
   const grid = document.getElementById("project-grid");
   if (!grid) {
@@ -627,20 +646,13 @@ async function populateSplashProjects() {
     console.error("[SPLASH] Failed to populate projects", err);
   }
 }
+*/
 
-function makeProjectCard(name) {
-  const card = document.createElement("div");
-  card.className = "project-card";
-  card.title = name; // 👈 tooltip
+// REMOVED: makeProjectCard() - Replaced with makeProjectListItem()
+// The new ultra-minimal design uses a simple text list instead of cards
 
-  card.innerHTML = `
-    <img src="/favicon.svg" alt="">
-    <span>${name}</span>
-  `;
-  card.onclick = () => loadProject(name);
-  return card;
-}
-
+// REMOVED: makeShowAllCard() - No longer needed with button-based design
+/*
 function makeShowAllCard(projects) {
   const card = document.createElement("div");
   card.className = "project-card show-all";
@@ -651,20 +663,106 @@ function makeShowAllCard(projects) {
   card.onclick = () => openProjectModal(projects);
   return card;
 }
+*/
 
 
-function openProjectModal(projects) {
+async function openProjectModal(projects) {
   const modal = document.getElementById("project-modal");
-  const grid = document.getElementById("project-modal-grid");
+  const list = document.getElementById("project-list");
 
-  if (!modal || !grid) return;
+  if (!modal || !list) {
+    console.error("[Splash] Modal elements not found");
+    return;
+  }
 
-  grid.innerHTML = "";
-  projects.forEach(name => {
-    grid.appendChild(makeProjectCard(name));
-  });
+  list.innerHTML = "";
+  
+  if (!projects || projects.length === 0) {
+    // Empty state handled by CSS ::before
+  } else {
+    // Fetch project metadata from server
+    let projectsWithMeta = [];
+    try {
+      const res = await fetch("/api/projects");
+      if (res.ok) {
+        projectsWithMeta = await res.json();
+      }
+    } catch (err) {
+      console.warn("[Splash] Could not fetch project metadata:", err);
+      projectsWithMeta = projects.map(name => ({ name }));
+    }
+
+    // Normalize to ensure all items have a name property
+    projectsWithMeta = projectsWithMeta.map(p => {
+      if (typeof p === 'string') {
+        return { name: p };
+      }
+      return p;
+    });
+
+    // Sort by modified time if available, otherwise alphabetically
+    projectsWithMeta.sort((a, b) => {
+      if (a.modified && b.modified) {
+        return new Date(b.modified) - new Date(a.modified);
+      }
+      const nameA = a.name || '';
+      const nameB = b.name || '';
+      return nameA.localeCompare(nameB);
+    });
+
+    projectsWithMeta.forEach(project => {
+      list.appendChild(makeProjectListItem(project));
+    });
+  }
 
   modal.classList.remove("hidden");
+}
+
+function makeProjectListItem(project) {
+  const item = document.createElement("div");
+  item.className = "project-item";
+  
+  const name = document.createElement("span");
+  name.className = "project-name";
+  name.textContent = project.name || project;
+  
+  const meta = document.createElement("span");
+  meta.className = "project-meta";
+  
+  // Format timestamp if available
+  if (project.modified) {
+    const date = new Date(project.modified);
+    const now = new Date();
+    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      meta.textContent = "today";
+    } else if (diffDays === 1) {
+      meta.textContent = "yesterday";
+    } else if (diffDays < 7) {
+      meta.textContent = `${diffDays}d ago`;
+    } else {
+      meta.textContent = date.toLocaleDateString(undefined, { 
+        month: 'short', 
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    }
+  }
+  
+  item.appendChild(name);
+  if (meta.textContent) {
+    item.appendChild(meta);
+  }
+  
+  item.onclick = () => {
+    const projectName = typeof project === 'string' ? project : project.name;
+    console.log(`[Splash] Loading project: ${projectName}`);
+    window.loadProject?.(projectName, { resetOnLoad: true });
+    closeProjectModal();
+  };
+  
+  return item;
 }
 
 function closeProjectModal() {
@@ -702,25 +800,75 @@ if (projectFromURL) {
 }
 
 function wireSplashActions() {
-  const newBtn = document.getElementById("new-project-btn");
+  const newProjectBtn = document.getElementById("new-project-btn");
+  const browseBtn = document.getElementById("browse-projects-btn");
+  const tutorialBtn = document.getElementById("open-tutorial-btn");
   const importBtn = document.getElementById("import-project-btn");
 
   // If buttons aren't in the DOM yet, try again shortly
-  if (!newBtn || !importBtn) {
+  if (!newProjectBtn || !browseBtn || !tutorialBtn || !importBtn) {
     console.warn("[Splash] Buttons not found yet, retrying…");
     setTimeout(wireSplashActions, 100);
     return;
   }
 
   // Prevent double wiring
-  if (newBtn.dataset.wired) return;
-  newBtn.dataset.wired = "true";
+  if (newProjectBtn.dataset.wired) return;
+  newProjectBtn.dataset.wired = "true";
 
-  newBtn.onclick = () => {
-    console.log("[Splash] New Project");
-    window.projectNew?.();
+  // 1. New Project - Load template then prompt for name
+  newProjectBtn.onclick = async () => {
+    console.log("[Splash] Creating new project");
+    
+    // First, prompt for the project name
+    const name = prompt("New project name:");
+    if (!name) return;
+
+    try {
+      // Create the project from template on server
+      const res = await fetch("/api/project/new", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
+
+      const data = await res.json();
+      if (!data.ok) {
+        alert(data.error);
+        return;
+      }
+
+      // Set hint for Inkscape guidance after load
+      sessionStorage.setItem("oscilla.showInkscapeHint", name);
+      
+      // Navigate to the new project
+      window.location.href = `/?project=${encodeURIComponent(name)}`;
+      
+    } catch (err) {
+      console.error("[Splash] Failed to create project:", err);
+      alert("Failed to create project. Please try again.");
+    }
   };
 
+  // 2. Browse Projects (opens modal)
+  browseBtn.onclick = async () => {
+    console.log("[Splash] Opening project browser");
+    try {
+      const projects = await fetchProjects();
+      openProjectModal(projects);
+    } catch (err) {
+      console.error("[Splash] Failed to fetch projects:", err);
+      alert("Failed to load projects. Please try again.");
+    }
+  };
+
+  // 3. Open Tutorial (loads helper-score)
+  tutorialBtn.onclick = () => {
+    console.log("[Splash] Opening tutorial (helper-score)");
+    window.loadProject?.("helper-score", { resetOnLoad: true });
+  };
+
+  // 4. Import Project
   importBtn.onclick = () => {
     console.log("[Splash] Import Project");
     window.projectImport?.();

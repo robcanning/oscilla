@@ -25,44 +25,54 @@
       <!-- Header -->
       <div class="title-section">
         <img src="docs/src/img/logos/logo-stacked.svg" alt="Oscilla Logo" class="logo" />
-        <p class="splash-message">Choose a project to begin</p>
       </div>
 
-      <!-- Projects -->
-      <div id="project-grid" class="project-grid">
-        <!-- populated dynamically -->
-      </div>
-
-      <!-- Actions -->
-      <div class="splash-actions">
-        <button class="primary" id="new-project-btn">
-          New Project
+      <!-- Main Actions - Three Minimal Buttons -->
+      <div class="splash-actions-main">
+        
+        <button class="splash-action-card" id="new-project-btn">
+          <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span class="action-title">New</span>
         </button>
 
-        <button id="import-project-btn">
-          Import…
+        <button class="splash-action-card" id="browse-projects-btn">
+          <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span class="action-title">Browse</span>
         </button>
+
+        <button class="splash-action-card" id="open-tutorial-btn">
+          <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span class="action-title">Help</span>
+        </button>
+
       </div>
 
-      <!-- Footer -->
-      <div class="meta-section">
-        <hr class="meta-divider" />
-        <div class="meta-row">
-          <span>v0.4.2</span>
-          <a href="https://robcanning.github.io/oscilla/docs" target="_blank">
-            Documentation
-          </a>
-        </div>
+      <!-- Secondary Action -->
+      <div class="splash-actions-secondary">
+        <button class="secondary-btn" id="import-project-btn">Import…</button>
+        <span class="version">v0.4.2</span>
       </div>
 
     </div>
   </div>
 
 
+  <!-- Ultra-minimal project browser modal -->
   <div id="project-modal" class="project-modal hidden">
     <div class="project-modal-content">
-      <h3>All Projects</h3>
-      <div id="project-modal-grid" class="project-grid"></div>
+      <h3>Projects</h3>
+      <div id="project-list" class="project-list">
+        <!-- populated with text list -->
+      </div>
       <button onclick="closeProjectModal()">Close</button>
     </div>
   </div>

@@ -518,8 +518,9 @@ window.hideControls = hideControls;
 // -------------------------------------------------------------------
 // 🧷 Controls Pin Toggle
 // -------------------------------------------------------------------
-window.controlsPinned = false;
-window.topbarPinned = false;
+// Default to pinned, but can be overridden by preferences
+window.controlsPinned = window.oscillaControlsPinned ?? true;
+window.topbarPinned = window.oscillaTopbarPinned ?? true;
 
 let _controlsPinInitialized = false;
 let _topbarPinInitialized = false;
@@ -534,6 +535,9 @@ export function initializeControlsPin() {
   if (!pinButton) return console.warn("[UI] No #pin-controls button found.");
 
   _controlsPinInitialized = true;
+  
+  // Set initial visual state
+  pinButton.classList.toggle("active", window.controlsPinned);
   
   pinButton.addEventListener("click", () => {
     window.controlsPinned = !window.controlsPinned;
@@ -563,6 +567,9 @@ export function initializeTopbarPin() {
   if (!btn) return console.warn("[UI] No #pin-topbar button found.");
 
   _topbarPinInitialized = true;
+  
+  // Set initial visual state
+  btn.classList.toggle("active", window.topbarPinned);
   
   btn.addEventListener("click", () => {
     window.topbarPinned = !window.topbarPinned;
