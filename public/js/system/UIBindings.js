@@ -276,10 +276,32 @@ function initMiscUIHandlers() {
   }
 
   // Popup outside-click dismiss
+  // NOTE: Only hide singlePage-content for actual popup dismissals,
+  // NOT when in page mode or clicking transport bars
   const popup = document.getElementById("singlePage-content");
   if (popup) {
     document.addEventListener("click", (e) => {
-      if (!popup.contains(e.target)) popup.style.display = "none";
+      // Don't hide if we're in page mode (independent view)
+      if (window.pageState?.mode === "page" || window._independentPageView) {
+        return;
+      }
+      
+      // Don't hide if clicking on transport bars or their children
+      const topBar = document.getElementById("top-bar");
+      const controls = document.getElementById("controls");
+      if (topBar?.contains(e.target) || controls?.contains(e.target)) {
+        return;
+      }
+      
+      // Don't hide if clicking on any UI controls
+      if (e.target.closest('.gui-button, .gui-bar, .gui-cluster, sl-menu, sl-dropdown')) {
+        return;
+      }
+      
+      // Only hide if clicking truly outside
+      if (!popup.contains(e.target)) {
+        popup.style.display = "none";
+      }
     });
     popup.addEventListener("click", (e) => e.stopPropagation());
   }

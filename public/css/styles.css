@@ -1494,3 +1494,65 @@ body.inverted #score {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* ============================================================================
+ * PAGE MODE Z-INDEX FIX
+ * ============================================================================ */
+
+/* 
+ * Z-INDEX HIERARCHY (lowest to highest):
+ * 
+ * 25000 - Page content (singlePage-container)
+ * 30000 - Controls bar (bottom transport)
+ * 35000 - Top bar  
+ * 40000 - ControlXY panels
+ * 50000 - Modals/dialogs
+ */
+
+/* Page content - base layer when in page mode */
+#singlePage-container {
+  z-index: 25000;
+  touch-action: none;
+}
+
+#singlePage-container.active {
+  z-index: 25000 !important;
+}
+
+/* Transport bars - above page content so always accessible */
+#controls {
+  z-index: 30000 !important;
+}
+
+#top-bar {
+  z-index: 35000 !important;
+}
+
+/* Ensure content inside is interactive */
+#singlePage-content {
+  z-index: 1;
+  position: relative;
+  touch-action: none;
+}
+
+/* SVG inside page content needs touch-action: none for controlXY dragging */
+#singlePage-content svg {
+  touch-action: none;
+}
+
+/* ControlXY panels need to be above transport */
+#controlxy-preset-panel,
+.controlxy-panel,
+.controlxy-container,
+[class*="controlxy-panel"] {
+  z-index: 40000 !important;
+}
+
+/* Modals and popups should be highest */
+.sl-dialog,
+sl-dialog::part(panel),
+#rehearsal-popup,
+#preferences-dialog,
+#project-modal {
+  z-index: 50000 !important;
+}
+
