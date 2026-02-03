@@ -53,10 +53,10 @@ function setup(app, scoresBasePath = './public/scores') {
   /**
    * POST /api/controlxy-presets
    * Save presets for a project
-   * Body: { projectId, presets, sequences }
+   * Body: { projectId, presets, sequences, launchers }
    */
   app.post('/api/controlxy-presets', (req, res) => {
-    const { projectId, presets, sequences } = req.body;
+    const { projectId, presets, sequences, launchers } = req.body;
     
     if (!projectId) {
       return res.status(400).json({ error: 'projectId required' });
@@ -76,6 +76,7 @@ function setup(app, scoresBasePath = './public/scores') {
       const data = {
         presets: presets || {},
         sequences: sequences || {},
+        launchers: launchers || {},
         updatedAt: Date.now(),
         projectId: safeProjectId
       };

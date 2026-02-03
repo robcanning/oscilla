@@ -101,23 +101,41 @@ export function createPresetUI() {
       <!-- ========== TAB 2: SEQUENCES ========== -->
       <div class="controlxy-tab-content" data-tab="sequences">
         
-        <!-- Create Sequence -->
+        <!-- Sequence Editor -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">🎬 Create Sequence</div>
+          <div class="controlxy-section-title">🎬 Sequence Editor</div>
           <div class="controlxy-input-row">
             <input type="text" id="controlxy-seq-name" placeholder="Sequence name..." />
+            <label class="controlxy-checkbox controlxy-loop-editor">
+              <input type="checkbox" id="controlxy-seq-loop-editor" />
+              <span>Loop</span>
+            </label>
+            <button id="controlxy-seq-create-btn" title="Create/Update">💾</button>
           </div>
-          <div class="controlxy-input-row" style="margin-top: 8px;">
-            <textarea id="controlxy-seq-steps" 
-                      placeholder="Steps (comma-separated):&#10;preset1, preset2, preset3&#10;&#10;Or reference sequences:&#10;seq:pattern1, preset4, seq:pattern2" 
-                      rows="4"></textarea>
+          
+          <!-- Step Editor -->
+          <div id="controlxy-step-editor" class="controlxy-step-editor">
+            <div class="controlxy-step-header">
+              <span class="step-col-preset">Preset</span>
+              <span class="step-col-dur">Duration</span>
+              <span class="step-col-ease">Ease</span>
+              <span class="step-col-actions"></span>
+            </div>
+            <div id="controlxy-step-list" class="controlxy-step-list">
+              <!-- Steps added dynamically -->
+            </div>
+            <div class="controlxy-step-actions">
+              <button id="controlxy-add-step-btn" title="Add step">+ Add Step</button>
+              <select id="controlxy-add-preset-select">
+                <option value="">Select preset...</option>
+              </select>
+            </div>
           </div>
-          <button id="controlxy-seq-create-btn" class="controlxy-full-btn">Create Sequence</button>
         </div>
         
         <!-- Sequences List -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">📜 Sequences</div>
+          <div class="controlxy-section-title">📜 Saved Sequences</div>
           <div id="controlxy-sequence-list" class="controlxy-preset-list">
             <div class="controlxy-empty">No sequences defined</div>
           </div>
@@ -128,7 +146,12 @@ export function createPresetUI() {
           <div class="controlxy-section-title">▶️ Playback</div>
           <div class="controlxy-options-grid">
             <label>
-              <span>Duration</span>
+              <span>Speed</span>
+              <input type="number" id="controlxy-seq-speed" value="1" min="0.1" max="10" step="0.1" />
+              <span class="unit">×</span>
+            </label>
+            <label>
+              <span>Default Dur</span>
               <input type="number" id="controlxy-seq-dur" value="1" min="0.01" max="30" step="0.1" />
               <span class="unit">s</span>
             </label>
@@ -145,12 +168,9 @@ export function createPresetUI() {
             </label>
           </div>
           <div class="controlxy-seq-controls">
-            <label class="controlxy-checkbox">
-              <input type="checkbox" id="controlxy-seq-loop" />
-              <span>Loop</span>
-            </label>
             <button id="controlxy-seq-stop" title="Stop sequence">⏹ Stop</button>
           </div>
+          <div id="controlxy-seq-status" class="controlxy-seq-status"></div>
         </div>
         
       </div>
@@ -523,36 +543,72 @@ function bindUIEvents() {
     });
   });
   
-  // Sequence creation
+  // Sequence creation from step editor
   panelElement.querySelector('#controlxy-seq-create-btn').addEventListener('click', () => {
     const nameInput = panelElement.querySelector('#controlxy-seq-name');
-    const stepsInput = panelElement.querySelector('#controlxy-seq-steps');
+    const loopCheckbox = panelElement.querySelector('#controlxy-seq-loop-editor');
     const name = nameInput.value.trim();
-    const stepsText = stepsInput.value.trim();
     
-    if (!name || !stepsText) {
-      if (!name) nameInput.classList.add('controlxy-input-error');
-      if (!stepsText) stepsInput.classList.add('controlxy-input-error');
-      setTimeout(() => {
-        nameInput.classList.remove('controlxy-input-error');
-        stepsInput.classList.remove('controlxy-input-error');
-      }, 500);
+    if (!name) {
+      nameInput.classList.add('controlxy-input-error');
+      setTimeout(() => nameInput.classList.remove('controlxy-input-error'), 500);
       return;
     }
     
-    // Parse steps (comma-separated, support seq: prefix)
-    const steps = stepsText.split(',').map(s => s.trim()).filter(Boolean);
+    // Get steps from the step editor
+    const steps = getStepsFromEditor();
     
-    window.controlXYPresets?.defineSequence(name, steps);
+    if (steps.length === 0) {
+      alert('Add at least one step to the sequence');
+      return;
+    }
+    
+    // Include loop state from editor checkbox
+    const loop = loopCheckbox?.checked ?? false;
+    
+    window.controlXYPresets?.defineSequence(name, steps, { loop });
     
     nameInput.value = '';
-    stepsInput.value = '';
+    loopCheckbox.checked = false;
+    clearStepEditor();
     refreshSequenceList();
+    refreshPresetDropdown();
+  });
+  
+  // Add step button
+  panelElement.querySelector('#controlxy-add-step-btn').addEventListener('click', () => {
+    const presetSelect = panelElement.querySelector('#controlxy-add-preset-select');
+    const presetName = presetSelect.value;
+    
+    if (!presetName) {
+      presetSelect.classList.add('controlxy-input-error');
+      setTimeout(() => presetSelect.classList.remove('controlxy-input-error'), 500);
+      return;
+    }
+    
+    addStepToEditor(presetName);
+    presetSelect.value = '';
   });
   
   // Stop sequence
   panelElement.querySelector('#controlxy-seq-stop').addEventListener('click', () => {
     window.controlXYPresets?.stopSequence();
+    updateSequenceStatus('Stopped');
+  });
+  
+  // Listen for sequence events
+  window.addEventListener('controlxy:sequenceStarted', (e) => {
+    updateSequenceStatus(`Playing: ${e.detail.name}`);
+  });
+  
+  window.addEventListener('controlxy:saved', () => {
+    showSaveIndicator();
+  });
+  
+  window.addEventListener('controlxy:loaded', () => {
+    refreshPresetList();
+    refreshSequenceList();
+    refreshPresetDropdown();
   });
   
   // Export
@@ -567,6 +623,196 @@ function bindUIEvents() {
   
   // Make panel draggable
   makeDraggable(panelElement, panelElement.querySelector('.controlxy-panel-header'));
+}
+
+// ============================================================================
+// STEP EDITOR
+// ============================================================================
+
+let editorSteps = [];
+
+function addStepToEditor(presetName, dur = 1, ease = 'easeInOutSine') {
+  const step = { preset: presetName, dur, ease };
+  editorSteps.push(step);
+  renderStepEditor();
+}
+
+function removeStepFromEditor(index) {
+  editorSteps.splice(index, 1);
+  renderStepEditor();
+}
+
+function moveStep(index, direction) {
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= editorSteps.length) return;
+  
+  const temp = editorSteps[index];
+  editorSteps[index] = editorSteps[newIndex];
+  editorSteps[newIndex] = temp;
+  renderStepEditor();
+}
+
+function updateStepDuration(index, dur) {
+  if (editorSteps[index]) {
+    editorSteps[index].dur = parseFloat(dur) || 1;
+  }
+}
+
+function updateStepEase(index, ease) {
+  if (editorSteps[index]) {
+    editorSteps[index].ease = ease;
+  }
+}
+
+function getStepsFromEditor() {
+  return editorSteps.map(step => {
+    // If duration is default (1) and ease is default, just return preset name
+    if (step.dur === 1 && step.ease === 'easeInOutSine') {
+      return step.preset;
+    }
+    // Otherwise return full object
+    return { preset: step.preset, dur: step.dur, ease: step.ease };
+  });
+}
+
+function clearStepEditor() {
+  editorSteps = [];
+  renderStepEditor();
+}
+
+function loadSequenceToEditor(name) {
+  const store = window.controlXYPresets?._store;
+  const seqData = store?.sequences?.[name];
+  
+  if (!seqData) return;
+  
+  // Handle legacy format (plain array) vs new format (object with steps)
+  const isLegacy = Array.isArray(seqData);
+  const seq = isLegacy ? seqData : seqData.steps;
+  const seqLoop = isLegacy ? false : (seqData.loop ?? false);
+  
+  if (!seq || !Array.isArray(seq)) return;
+  
+  editorSteps = seq.map(step => {
+    if (typeof step === 'string') {
+      return { preset: step, dur: 1, ease: 'easeInOutSine' };
+    }
+    return { 
+      preset: step.preset, 
+      dur: step.dur ?? 1, 
+      ease: step.ease ?? 'easeInOutSine' 
+    };
+  });
+  
+  // Set the name in the input
+  const nameInput = panelElement.querySelector('#controlxy-seq-name');
+  if (nameInput) nameInput.value = name;
+  
+  // Set the loop checkbox
+  const loopCheckbox = panelElement.querySelector('#controlxy-seq-loop-editor');
+  if (loopCheckbox) loopCheckbox.checked = seqLoop;
+  
+  renderStepEditor();
+}
+
+function renderStepEditor() {
+  const list = panelElement?.querySelector('#controlxy-step-list');
+  if (!list) return;
+  
+  if (editorSteps.length === 0) {
+    list.innerHTML = '<div class="controlxy-empty-steps">No steps added</div>';
+    return;
+  }
+  
+  list.innerHTML = editorSteps.map((step, i) => `
+    <div class="controlxy-step-row" data-index="${i}">
+      <span class="step-num">${i + 1}</span>
+      <span class="step-preset" title="${step.preset}">${step.preset}</span>
+      <input type="number" class="step-dur-input" value="${step.dur}" min="0.01" max="30" step="0.1" />
+      <select class="step-ease-select">
+        <option value="linear" ${step.ease === 'linear' ? 'selected' : ''}>Lin</option>
+        <option value="easeInOutSine" ${step.ease === 'easeInOutSine' ? 'selected' : ''}>Sin</option>
+        <option value="easeInOutQuad" ${step.ease === 'easeInOutQuad' ? 'selected' : ''}>Quad</option>
+        <option value="easeInOutCubic" ${step.ease === 'easeInOutCubic' ? 'selected' : ''}>Cub</option>
+        <option value="easeInOutBack" ${step.ease === 'easeInOutBack' ? 'selected' : ''}>Back</option>
+      </select>
+      <div class="step-actions">
+        <button class="step-up" title="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button class="step-down" title="Move down" ${i === editorSteps.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="step-delete" title="Remove">×</button>
+      </div>
+    </div>
+  `).join('');
+  
+  // Bind events
+  list.querySelectorAll('.step-dur-input').forEach((input, i) => {
+    input.addEventListener('change', (e) => updateStepDuration(i, e.target.value));
+  });
+  
+  list.querySelectorAll('.step-ease-select').forEach((select, i) => {
+    select.addEventListener('change', (e) => updateStepEase(i, e.target.value));
+  });
+  
+  list.querySelectorAll('.step-up').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const index = parseInt(e.target.closest('.controlxy-step-row').dataset.index);
+      moveStep(index, -1);
+    });
+  });
+  
+  list.querySelectorAll('.step-down').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const index = parseInt(e.target.closest('.controlxy-step-row').dataset.index);
+      moveStep(index, 1);
+    });
+  });
+  
+  list.querySelectorAll('.step-delete').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const index = parseInt(e.target.closest('.controlxy-step-row').dataset.index);
+      removeStepFromEditor(index);
+    });
+  });
+}
+
+function refreshPresetDropdown() {
+  const select = panelElement?.querySelector('#controlxy-add-preset-select');
+  if (!select) return;
+  
+  const presets = window.controlXYPresets?.list() || [];
+  const sequences = Object.keys(window.controlXYPresets?._store?.sequences || {});
+  
+  select.innerHTML = '<option value="">Select preset...</option>';
+  
+  if (presets.length > 0) {
+    select.innerHTML += '<optgroup label="Presets">' + 
+      presets.map(p => `<option value="${p}">${p}</option>`).join('') +
+      '</optgroup>';
+  }
+  
+  if (sequences.length > 0) {
+    select.innerHTML += '<optgroup label="Sequences (nested)">' + 
+      sequences.map(s => `<option value="seq:${s}">seq:${s}</option>`).join('') +
+      '</optgroup>';
+  }
+}
+
+function updateSequenceStatus(text) {
+  const status = panelElement?.querySelector('#controlxy-seq-status');
+  if (status) {
+    status.textContent = text;
+    status.classList.add('active');
+    setTimeout(() => status.classList.remove('active'), 2000);
+  }
+}
+
+function showSaveIndicator() {
+  const title = panelElement?.querySelector('.controlxy-panel-title');
+  if (title) {
+    const original = title.textContent;
+    title.textContent = '💾 Saved!';
+    setTimeout(() => { title.textContent = original; }, 1000);
+  }
 }
 
 // ============================================================================
@@ -628,26 +874,43 @@ function refreshSequenceList() {
   const store = window.controlXYPresets?._store;
   const sequences = Object.keys(store?.sequences || {});
   
+  // Also refresh the preset dropdown
+  refreshPresetDropdown();
+  
   if (sequences.length === 0) {
     list.innerHTML = '<div class="controlxy-empty">No sequences defined</div>';
     return;
   }
   
   list.innerHTML = sequences.map(name => {
-    const seq = store.sequences[name];
+    const seqData = store.sequences[name];
+    
+    // Handle legacy format (plain array) vs new format (object with steps)
+    const isLegacy = Array.isArray(seqData);
+    const seq = isLegacy ? seqData : seqData.steps;
+    const seqLoop = isLegacy ? false : (seqData.loop ?? false);
     const stepCount = Array.isArray(seq) ? seq.length : 0;
     
     // Check if sequence contains nested sequences
-    const hasNested = Array.isArray(seq) && seq.some(step => 
-      typeof step === 'string' && step.startsWith('seq:')
+    const hasNested = Array.isArray(seq) && seq.some(step => {
+      const preset = typeof step === 'string' ? step : step?.preset;
+      return typeof preset === 'string' && preset.startsWith('seq:');
+    });
+    
+    // Check if sequence has per-step durations
+    const hasPerStepDur = Array.isArray(seq) && seq.some(step => 
+      typeof step === 'object' && step.dur !== undefined
     );
     
     const nestedIcon = hasNested ? ' 🔗' : '';
+    const durIcon = hasPerStepDur ? ' ⏱' : '';
+    const loopIcon = seqLoop ? ' 🔄' : '';
     
     return `
       <div class="controlxy-preset-item" data-sequence="${name}">
-        <span class="controlxy-preset-name">${name}${nestedIcon} <small>(${stepCount} steps)</small></span>
+        <span class="controlxy-preset-name">${name}${loopIcon}${nestedIcon}${durIcon} <small>(${stepCount})</small></span>
         <div class="controlxy-preset-actions">
+          <button class="controlxy-edit-seq-btn" title="Edit sequence">✏️</button>
           <button class="controlxy-play-seq-btn" title="Play sequence">▶</button>
           <button class="controlxy-delete-seq-btn" title="Delete sequence">🗑</button>
         </div>
@@ -655,15 +918,25 @@ function refreshSequenceList() {
     `;
   }).join('');
   
-  // Bind play buttons
+  // Bind edit buttons
+  list.querySelectorAll('.controlxy-edit-seq-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const name = e.target.closest('.controlxy-preset-item').dataset.sequence;
+      loadSequenceToEditor(name);
+    });
+  });
+  
+  // Bind play buttons - uses stored loop state automatically
   list.querySelectorAll('.controlxy-play-seq-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const name = e.target.closest('.controlxy-preset-item').dataset.sequence;
+      const speed = parseFloat(panelElement.querySelector('#controlxy-seq-speed').value) || 1;
       const dur = parseFloat(panelElement.querySelector('#controlxy-seq-dur').value) || 1;
       const ease = panelElement.querySelector('#controlxy-seq-ease').value;
-      const loop = panelElement.querySelector('#controlxy-seq-loop').checked;
       
-      window.controlXYPresets?.playSequence(name, { dur, ease, loop });
+      // Don't pass loop option - let it use the stored sequence loop state
+      window.controlXYPresets?.playSequence(name, { speed, dur, ease });
+      updateSequenceStatus(`Playing: ${name}`);
     });
   });
   
@@ -675,6 +948,8 @@ function refreshSequenceList() {
         const store = window.controlXYPresets?._store;
         if (store?.sequences) {
           delete store.sequences[name];
+          // Trigger auto-save
+          window.controlXYPresets?._savePresetsToServer?.();
           refreshSequenceList();
         }
       }

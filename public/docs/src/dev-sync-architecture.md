@@ -351,6 +351,77 @@ function testRehearsalAlignment(markId) {
 
 ---
 
+## Interaction Layer Elements
+
+Any element that can be **shared across clients** or **positioned on the score** must use world coordinates. This includes:
+
+### Elements That Need World Coordinates
+
+| Element | Properties | Notes |
+|---------|------------|-------|
+| **Markers** | `placement.x`, `labelY`, `fontSize` | Drop markers, structural waypoints |
+| **Annotations** | `placement.x`, `placement.y`, `style.fontSize`, `extent` | Text pins, triggers |
+| **Cues** | `x`, `width` | Extracted from SVG |
+| **Rehearsal marks** | `x` | Extracted from SVG |
+
+### Conversion Pattern
+
+When creating/editing interaction elements:
+
+```javascript
+// CREATE: Convert click position to world coordinates
+function getClickPlacement(evt, innerRect) {
+    const localScale = window.localScale || 1;
+    const screenX = evt.clientX - innerRect.left;
+    const screenY = evt.clientY - innerRect.top;
+    return {
+        x: screenX / localScale,  // Store world coords
+        y: screenY / localScale
+    };
+}
+
+// RENDER: Convert world coordinates to screen pixels
+function positionElement(el, placement) {
+    const localScale = window.localScale || 1;
+    el.style.left = `${placement.x * localScale}px`;
+    el.style.top = `${placement.y * localScale}px`;
+}
+
+// DRAG: Convert screen delta to world delta
+function onDrag(dx, dy, baseWorldX, baseWorldY) {
+    const localScale = window.localScale || 1;
+    return {
+        x: baseWorldX + (dx / localScale),
+        y: baseWorldY + (dy / localScale)
+    };
+}
+
+// FONT SIZE: Scale for consistent visual size across clients
+function getScaledFontSize(baseFontSize) {
+    const localScale = window.localScale || 1;
+    return baseFontSize * localScale;
+}
+```
+
+### Why Font Size Needs Scaling
+
+If a marker label is set to 24px on a large screen and synced to a small screen:
+- Without scaling: Label is 24px on both → takes up more of the score on smaller screen
+- With scaling: Label is 24px × localScale → same proportion of score on all screens
+
+The label's **edges** must align with the same score content on all clients.
+
+### Common Mistakes
+
+| Mistake | Symptom | Fix |
+|---------|---------|-----|
+| Storing screen pixels directly | Elements appear in wrong position on other clients | Divide by `localScale` before storing |
+| Not scaling font size | Text edges don't align across clients | Multiply by `localScale` at render |
+| Forgetting to scale extent/width | Trigger duration bars wrong length | Apply same world↔screen conversion |
+| Using `offsetWidth` directly | Width calculation wrong | Divide by `localScale` to get world width |
+
+---
+
 ## Coordinate System Summary
 
 ```

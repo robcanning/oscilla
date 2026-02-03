@@ -61,19 +61,32 @@ export function getScoreScrollInner() {
 
 /**
  * Position an annotation element on the score
+ * Converts world coordinates to screen pixels using localScale
  * @param {HTMLElement} el - The annotation element
  * @param {Object} annotation - The annotation data
  */
 export function positionAnnotation(el, annotation) {
     if (!el || !annotation?.placement) return;
 
-    el.style.left = `${annotation.placement.x}px`;
-    el.style.top = `${annotation.placement.y}px`;
+    // Get localScale for world→screen conversion
+    const localScale = (typeof window.localScale === "number" && 
+                        isFinite(window.localScale) && 
+                        window.localScale > 0) 
+                        ? window.localScale 
+                        : 1;
 
-    // Store width in pixels (visual space)
-    annotation.placement.width = el.offsetWidth;
+    // Convert world coordinates to screen pixels
+    // placement.x and placement.y are stored in WORLD coordinates
+    const screenX = annotation.placement.x * localScale;
+    const screenY = annotation.placement.y * localScale;
+    
+    el.style.left = `${screenX}px`;
+    el.style.top = `${screenY}px`;
 
-    // Default extent to width if missing
+    // Store width in world units (not screen pixels)
+    annotation.placement.width = el.offsetWidth / localScale;
+
+    // Default extent to width if missing (in world units)
     if (
         annotation.placement.extent == null ||
         annotation.placement.extent < annotation.placement.width
@@ -93,6 +106,7 @@ export function positionAnnotation(el, annotation) {
 
 /**
  * Attach extent (duration) drag handle to a pin
+ * Extent is stored in world coordinates and converted to screen pixels for display
  * @param {HTMLElement} pin - The pin element
  * @param {Object} annotation - The annotation data
  */
@@ -141,9 +155,16 @@ export function attachExtentHandle(pin, annotation) {
     // Horizontal line
     line.style.height = "1px";
 
-    // Layout updater
+    // Layout updater - converts world extent to screen pixels
     function updateUI() {
-        const extent = placement.extent ?? 0;
+        const localScale = (typeof window.localScale === "number" && 
+                            isFinite(window.localScale) && 
+                            window.localScale > 0) 
+                            ? window.localScale 
+                            : 1;
+        
+        const worldExtent = placement.extent ?? 0;
+        const screenExtent = worldExtent * localScale;
 
         // Start bar at origin
         startBar.style.left = "0px";
@@ -153,20 +174,20 @@ export function attachExtentHandle(pin, annotation) {
         // Horizontal line
         line.style.left = "0px";
         line.style.top = "0px";
-        line.style.width = `${extent}px`;
+        line.style.width = `${screenExtent}px`;
 
         // End handle
-        endHandle.style.left = `${extent}px`;
+        endHandle.style.left = `${screenExtent}px`;
         endHandle.style.top = "0px";
         endHandle.style.transform = "translate(-50%, -50%)";
     }
 
     updateUI();
 
-    // Drag logic
+    // Drag logic - converts screen delta to world coordinates
     let dragging = false;
     let startX = 0;
-    let startExtent = 0;
+    let startWorldExtent = 0;
 
     endHandle.onmousedown = e => {
         e.preventDefault();
@@ -174,7 +195,7 @@ export function attachExtentHandle(pin, annotation) {
 
         dragging = true;
         startX = e.clientX;
-        startExtent = placement.extent ?? 0;
+        startWorldExtent = placement.extent ?? 0;
 
         document.body.style.cursor = "ew-resize";
     };
@@ -182,8 +203,15 @@ export function attachExtentHandle(pin, annotation) {
     window.addEventListener("mousemove", e => {
         if (!dragging) return;
 
+        const localScale = (typeof window.localScale === "number" && 
+                            isFinite(window.localScale) && 
+                            window.localScale > 0) 
+                            ? window.localScale 
+                            : 1;
+
         const dx = e.clientX - startX;
-        const nextExtent = Math.max(4, startExtent + dx);
+        const worldDx = dx / localScale;  // Convert screen delta to world
+        const nextExtent = Math.max(4, startWorldExtent + worldDx);
 
         placement.extent = nextExtent;
         updateUI();
@@ -258,7 +286,16 @@ export function makePinEl(annotation, onClick) {
         label.style.top = "0";
         label.style.transform = "translateY(-50%)";
 
-        label.style.fontSize = "12px";
+        // Scale font size by localScale for consistent appearance across clients
+        const localScale = (typeof window.localScale === "number" && 
+                            isFinite(window.localScale) && 
+                            window.localScale > 0) 
+                            ? window.localScale 
+                            : 1;
+        const baseFontSize = 12;
+        const scaledFontSize = baseFontSize * localScale;
+        
+        label.style.fontSize = `${scaledFontSize}px`;
         label.style.whiteSpace = "nowrap";
         label.style.color = "#000";
         label.style.background = "rgba(255,255,255,0.7)";
@@ -301,8 +338,17 @@ export function makePinEl(annotation, onClick) {
         labelEl.style.lineBreak = "auto";
 
         labelEl.style.lineHeight = "1.4";
-        const fs = annotation.style?.fontSize ?? 12;
-        labelEl.style.fontSize = `${fs}px`;
+        
+        // Scale font size by localScale for consistent appearance across clients
+        const localScale = (typeof window.localScale === "number" && 
+                            isFinite(window.localScale) && 
+                            window.localScale > 0) 
+                            ? window.localScale 
+                            : 1;
+        const baseFontSize = annotation.style?.fontSize ?? 12;
+        const scaledFontSize = baseFontSize * localScale;
+        labelEl.style.fontSize = `${scaledFontSize}px`;
+        
         labelEl.style.padding = "4px 8px";
         labelEl.style.borderRadius = "8px";
         labelEl.style.backdropFilter = "blur(4px)";
@@ -324,7 +370,7 @@ export function makePinEl(annotation, onClick) {
             icon.style.position = "absolute";
             icon.style.top = "2px";
             icon.style.right = "4px";
-            icon.style.fontSize = "12px";
+            icon.style.fontSize = `${12 * localScale}px`;  // Scale icon too
             icon.style.opacity = "0.85";
             icon.style.pointerEvents = "none";
             labelEl.appendChild(icon);
@@ -336,8 +382,8 @@ export function makePinEl(annotation, onClick) {
 
         pin.appendChild(labelEl);
 
-        const s = window.localScale || 1;
-        annotation.placement.width = labelEl.offsetWidth / s;
+        // Store width in world units
+        annotation.placement.width = labelEl.offsetWidth / localScale;
 
         if (annotation.placement.extent == null || annotation.placement.extent < annotation.placement.width) {
             annotation.placement.extent = annotation.placement.width;
@@ -345,12 +391,12 @@ export function makePinEl(annotation, onClick) {
     }
 
     // =============================================================
-    // DRAG LOGIC
+    // DRAG LOGIC - converts screen deltas to world coordinates
     // =============================================================
     let dragging = false;
     let moved = false;
     let startX = 0; let startY = 0;
-    let baseX = 0; let baseY = 0;
+    let baseWorldX = 0; let baseWorldY = 0;
 
     function getPointerCoords(e) {
         if (e.touches && e.touches.length > 0) {
@@ -366,7 +412,8 @@ export function makePinEl(annotation, onClick) {
         moved = false;
         const coords = getPointerCoords(e);
         startX = coords.x; startY = coords.y;
-        baseX = annotation.placement.x; baseY = annotation.placement.y;
+        baseWorldX = annotation.placement.x;  // World coordinates
+        baseWorldY = annotation.placement.y;  // World coordinates
         if (labelEl) labelEl.style.cursor = "grabbing";
         hit.style.cursor = "grabbing";
         window.addEventListener("mousemove", onPointerMove);
@@ -377,12 +424,25 @@ export function makePinEl(annotation, onClick) {
 
     function onPointerMove(e) {
         if (!dragging) return;
+        
+        // Get current localScale for screen→world conversion
+        const localScale = (typeof window.localScale === "number" && 
+                            isFinite(window.localScale) && 
+                            window.localScale > 0) 
+                            ? window.localScale 
+                            : 1;
+        
         const coords = getPointerCoords(e);
         const dx = coords.x - startX;
         const dy = coords.y - startY;
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
-        annotation.placement.x = baseX + dx;
-        annotation.placement.y = baseY + dy;
+        
+        // Convert screen delta to world delta
+        const worldDx = dx / localScale;
+        const worldDy = dy / localScale;
+        
+        annotation.placement.x = baseWorldX + worldDx;
+        annotation.placement.y = baseWorldY + worldDy;
         positionAnnotation(pin, annotation);
         pin._renderExtent?.();
     }

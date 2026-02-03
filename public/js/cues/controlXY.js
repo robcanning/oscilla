@@ -186,10 +186,10 @@ export function handleControlXYCue(el, args = [], options = {}) {
     label.classList.add("controlxy-label");
     label.setAttribute("text-anchor", "middle");
     label.setAttribute("dominant-baseline", "auto");
-    label.setAttribute("font-size", "9");
+    label.setAttribute("font-size", "12");
     label.setAttribute("font-family", "monospace");
-    label.setAttribute("fill", "currentColor");
-    label.setAttribute("opacity", "0.7");
+    label.setAttribute("fill", "#000000");
+    label.setAttribute("font-weight", "600");
     label.setAttribute("pointer-events", "none");
     label.textContent = "0.50, 0.50";
     
@@ -215,6 +215,11 @@ export function handleControlXYCue(el, args = [], options = {}) {
     label.setAttribute("y", labelY);
     label.textContent = `${normX.toFixed(2)}, ${normY.toFixed(2)}`;
   }
+
+  // ---------------------------------------------
+  // Track last touched handle for label visibility
+  // ---------------------------------------------
+  let lastTouchedHandle = null;
 
   // ---------------------------------------------
   // Per-handle state and setup
@@ -405,6 +410,17 @@ export function handleControlXYCue(el, args = [], options = {}) {
     // Add active class for CSS styling
     targetHandle.el.classList.add("controlxy-handle--active");
     
+    // Update label visibility - show dragging label
+    if (targetHandle.label) {
+      targetHandle.label.classList.add("dragging");
+    }
+    
+    // Update last touched - remove from previous, set to current
+    if (lastTouchedHandle && lastTouchedHandle !== targetHandle && lastTouchedHandle.label) {
+      lastTouchedHandle.label.classList.remove("last-touched");
+    }
+    lastTouchedHandle = targetHandle;
+    
     // Move to touch position
     applyPosition(targetHandle, svgPt.x, svgPt.y);
     emit(targetHandle);
@@ -431,6 +447,12 @@ export function handleControlXYCue(el, args = [], options = {}) {
     
     // Remove active class
     handle.el.classList.remove("controlxy-handle--active");
+    
+    // Update label visibility - switch from dragging to last-touched
+    if (handle.label) {
+      handle.label.classList.remove("dragging");
+      handle.label.classList.add("last-touched");
+    }
 
     console.log(`[controlXY] pointer up on ${handle.id}`);
   }
@@ -444,6 +466,19 @@ export function handleControlXYCue(el, args = [], options = {}) {
   // ---------------------------------------------
   for (const handle of handles) {
     handle.el.addEventListener("pointerdown", onPointerDown);
+    
+    // Hover events for label visibility
+    handle.el.addEventListener("pointerenter", () => {
+      if (handle.label && !handle.dragging) {
+        handle.label.classList.add("hovered");
+      }
+    });
+    
+    handle.el.addEventListener("pointerleave", () => {
+      if (handle.label) {
+        handle.label.classList.remove("hovered");
+      }
+    });
   }
 
   // ---------------------------------------------
@@ -562,10 +597,11 @@ export function handleControlXYRecallCue(ast) {
  * Create preset launcher button overlay
  */
 function createLauncher(uid, bbox, slots, totalBanks, parent) {
-  const buttonHeight = 36;
-  const buttonSpacing = 4;
-  const bankBarHeight = 32;
-  const totalHeight = bankBarHeight + buttonSpacing + buttonHeight;
+  const buttonHeight = 44;      // Increased for better touch targets
+  const buttonSpacing = 5;      // Gap between rows
+  const bankBarHeight = 34;     // Taller bank bar
+  const padding = 8;            // Account for padding/borders
+  const totalHeight = buttonHeight + buttonSpacing + bankBarHeight + padding;
   
   // Position below the pad
   const launcherY = bbox.y + bbox.height + 8;
@@ -578,28 +614,21 @@ function createLauncher(uid, bbox, slots, totalBanks, parent) {
   fo.setAttribute("height", totalHeight);
   fo.classList.add("controlxy-launcher-container");
   
+  // IMPORTANT: Allow overflow so content isn't clipped
+  fo.style.overflow = "visible";
+  
   // Create HTML content
   const container = document.createElement("div");
   container.className = "controlxy-launcher";
   container.dataset.uid = uid;
   
-  // Bank selector bar
-  const bankBar = document.createElement("div");
-  bankBar.className = "controlxy-launcher-bank-bar";
-  bankBar.innerHTML = `
-    <button class="controlxy-launcher-bank-btn" data-action="prev" title="Previous Bank">←</button>
-    <span class="controlxy-launcher-bank-label">
-      <span class="bank-name">Bank 1</span>
-      <span class="bank-count">(1/${totalBanks})</span>
-    </span>
-    <button class="controlxy-launcher-bank-btn" data-action="next" title="Next Bank">→</button>
-    <button class="controlxy-launcher-mode-btn" data-mode="preset" title="Toggle Preset/Sequence Mode">P</button>
-    <button class="controlxy-launcher-tween-btn active" data-tween="true" title="Toggle Tween/Jump">~</button>
-    <button class="controlxy-launcher-settings-btn" title="Open Preset Manager">⚙</button>
-  `;
-  container.appendChild(bankBar);
+  // Explicitly set dimensions on the HTML container
+  container.style.width = "100%";
+  container.style.height = "100%";
+  container.style.overflow = "visible";
+  container.style.boxSizing = "border-box";
   
-  // Button row
+  // Button row - NOW FIRST (slots for presets/sequences)
   const buttonRow = document.createElement("div");
   buttonRow.className = "controlxy-launcher-buttons";
   
@@ -613,6 +642,24 @@ function createLauncher(uid, bbox, slots, totalBanks, parent) {
   }
   
   container.appendChild(buttonRow);
+  
+  // Bank selector bar - NOW SECOND (full width with placeholder)
+  const bankBar = document.createElement("div");
+  bankBar.className = "controlxy-launcher-bank-bar";
+  bankBar.innerHTML = `
+    <button class="controlxy-launcher-bank-btn" data-action="prev" title="Previous Bank">←</button>
+    <span class="controlxy-launcher-bank-label">
+      <span class="bank-name">Bank 1</span>
+      <span class="bank-count">(1/${totalBanks})</span>
+    </span>
+    <button class="controlxy-launcher-bank-btn" data-action="next" title="Next Bank">→</button>
+    <button class="controlxy-launcher-mode-btn" data-mode="preset" title="Toggle Preset/Sequence Mode">P</button>
+    <button class="controlxy-launcher-tween-btn active" data-tween="true" title="Toggle Tween/Jump">~</button>
+    <button class="controlxy-launcher-settings-btn" title="Open Preset Manager">⚙</button>
+    <div class="controlxy-launcher-placeholder" data-placeholder="future-features"></div>
+  `;
+  container.appendChild(bankBar);
+  
   fo.appendChild(container);
   parent.appendChild(fo);
   
@@ -800,7 +847,8 @@ function initializeLauncher(uid, container, slots, totalBanks) {
       if (type === 'preset') {
         window.controlXYPresets?.recall(name, { dur, ease: 'easeInOutSine' });
       } else if (type === 'sequence') {
-        window.controlXYPresets?.playSequence(name, { dur, loop: false });
+        // Don't pass loop - let it use the stored sequence loop state
+        window.controlXYPresets?.playSequence(name, { dur });
       }
       
       // Remove active state after animation

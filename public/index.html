@@ -164,16 +164,41 @@
           ✎
         </button>
 
+      </div>
+
+      <!-- 🔹 MARKER TOOLS GROUP (separate from OSC tools) -->
+      <div class="gui-cluster marker-tools">
+        
+        <span class="marker-tools-label">Markers</span>
+        
+        <!-- Drop Marker -->
         <button id="drop-marker-button" class="gui-button" title="Drop Marker at Playhead">
-          ▼
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14"/>
+            <path d="M5 12l7 7 7-7"/>
+          </svg>
         </button>
 
+        <!-- Toggle Markers Visibility -->
         <button id="toggle-markers-button" class="gui-button" title="Toggle Markers Visibility">
-          M
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="2" x2="12" y2="22"/>
+            <circle cx="12" cy="8" r="3" fill="currentColor"/>
+          </svg>
+        </button>
+
+        <!-- Share Markers Toggle (Network Sync) -->
+        <button id="share-markers-button" class="gui-button" title="Share markers with all clients">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Network/broadcast icon -->
+            <path d="M2 8a10 10 0 0 1 20 0"/>
+            <path d="M5 11a7 7 0 0 1 14 0"/>
+            <path d="M8 14a4 4 0 0 1 8 0"/>
+            <circle cx="12" cy="17" r="1.5" fill="currentColor"/>
+          </svg>
         </button>
 
       </div>
-
 
 
       <!-- 🔹 VIEW / NAV CONTROLS GROUP -->
@@ -261,7 +286,6 @@
 
 
 
-
   <!-- Project Dialog -->
 
   <sl-dialog id="inkscape-hint-dialog" label="Project created" style="--width: 520px;">
@@ -270,7 +294,7 @@
     </div>
 
     <sl-checkbox id="inkscape-hint-dismiss" style="margin-top: 1em;">
-      Don’t show this again
+      Don't show this again
     </sl-checkbox>
 
     <div slot="footer">

@@ -158,8 +158,9 @@ function getPageContentContainer() {
 
 function getScoreClickPlacement(evt) {
     // IMPORTANT:
-    // placement.x/y are stored in oscilla-score-inner coordinates (scroll-content space),
-    // because the score annotation layer is appended to .oscilla-score-inner.
+    // placement.x/y are stored in WORLD coordinates (like playheadX),
+    // so they sync correctly across clients with different screen sizes.
+    // Convert screen click position to world coordinates using localScale.
     const score = getScoreContainer();
     if (!score) return null;
 
@@ -168,10 +169,23 @@ function getScoreClickPlacement(evt) {
 
     const r = inner.getBoundingClientRect();
 
+    // Get localScale for screen→world conversion
+    const localScale = (typeof window.localScale === "number" && 
+                        isFinite(window.localScale) && 
+                        window.localScale > 0) 
+                        ? window.localScale 
+                        : 1;
+
+    // Convert screen coordinates to world coordinates
+    const screenX = evt.clientX - r.left;
+    const screenY = evt.clientY - r.top;
+    const worldX = screenX / localScale;
+    const worldY = screenY / localScale;
+
     return {
         space: "score",
-        x: evt.clientX - r.left,
-        y: evt.clientY - r.top,
+        x: worldX,
+        y: worldY,
     };
 }
 

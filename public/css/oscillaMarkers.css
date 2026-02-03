@@ -47,7 +47,7 @@
 
 .osc-marker-label {
   position: absolute;
-  top: 30px;
+  top: 30px;  /* Default, overridden by JS for custom labelY */
   left: 0;
   transform: translateX(-50%);
   pointer-events: auto;
@@ -57,13 +57,38 @@
   /* Visual styling - using CSS variables for color */
   background: var(--marker-color);
   color: var(--marker-text-color);
-  font-size: 14px;
-  padding: 12px;
-  padding-left: 4px;
-  padding-right: 4px;
+  font-size: 14px;  /* Default, overridden by JS for custom fontSize */
+  padding: 6px 8px;
 
   border-radius: 6px;
   white-space: nowrap;
+  
+  /* Smooth transitions for dragging */
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+/* Shared marker visual indicator - subtle border/glow */
+.osc-marker--shared .osc-marker-label {
+  box-shadow: 0 0 0 2px rgba(100, 200, 255, 0.5),
+              0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Optional: shared icon indicator on label */
+.osc-marker--shared .osc-marker-label::after {
+  content: "⬡";
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 10px;
+  background: rgba(100, 200, 255, 0.9);
+  color: #000;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .osc-marker-label:hover {
@@ -75,13 +100,36 @@
 .osc-marker-label.dragging {
   cursor: grabbing;
   background: var(--marker-color-dark);
-  transform: translateX(-50%) scale(1.02);
+  transform: translateX(-50%) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .osc-marker-label.editing {
   background: rgba(255, 255, 255, 0.95);
   color: #333;
   border: 2px solid var(--marker-color);
+}
+
+/* ============================================================================
+ * MARKER TOOLS CLUSTER (in top bar)
+ * ============================================================================ */
+
+.marker-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.marker-tools-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 2px;
 }
 
 /* ============================================================================
@@ -111,6 +159,34 @@
 
 #toggle-markers-button:not(.active) {
   opacity: 0.6;
+}
+
+/* Share markers button - network sync toggle */
+#share-markers-button {
+  font-size: 11px;
+  font-weight: 600;
+  position: relative;
+}
+
+#share-markers-button.active {
+  background: linear-gradient(180deg, #d0e8ff 0%, #b0d8ff 100%) !important;
+  border-color: rgba(100, 180, 255, 0.6) !important;
+  color: rgba(30, 100, 180, 1) !important;
+}
+
+#share-markers-button:not(.active) {
+  opacity: 0.6;
+  background: linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 100%);
+}
+
+/* Network icon styling inside share button */
+#share-markers-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+#share-markers-button.active svg {
+  stroke: rgba(30, 100, 180, 1);
 }
 
 /* ============================================================================
@@ -187,6 +263,72 @@
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   user-select: none;
+  flex: 1;
+}
+
+/* Shared checkbox row - special styling */
+.osc-marker-editor-checkbox-row--shared {
+  background: rgba(100, 200, 255, 0.1);
+  border: 1px solid rgba(100, 200, 255, 0.2);
+}
+
+.osc-marker-editor-checkbox-row--shared input[type="checkbox"] {
+  accent-color: rgba(100, 200, 255, 1);
+}
+
+.osc-marker-editor-checkbox-row--shared label {
+  color: rgba(180, 220, 255, 0.95);
+}
+
+/* Info icon for shared checkbox */
+.osc-marker-editor-info {
+  font-size: 12px;
+  color: rgba(100, 200, 255, 0.7);
+  cursor: help;
+  padding: 2px 6px;
+  border-radius: 50%;
+  background: rgba(100, 200, 255, 0.15);
+  transition: all 0.15s ease;
+}
+
+.osc-marker-editor-info:hover {
+  color: rgba(100, 200, 255, 1);
+  background: rgba(100, 200, 255, 0.25);
+}
+
+/* Font size control row */
+.osc-marker-editor-fontsize-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+
+.osc-marker-editor-fontsize-row label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  min-width: 32px;
+}
+
+.osc-marker-editor-fontsize-row input[type="range"] {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  accent-color: var(--marker-editor-color);
+}
+
+.osc-marker-editor-fontsize-value {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 36px;
+  text-align: right;
+  font-family: monospace;
 }
 
 /* Editor action buttons */

@@ -410,13 +410,10 @@ body.inverted #score {
   filter: invert(1);
 }
 
-#score {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transition: transform 0.3s ease-in-out;
-  /* ✅ Smooth movement */
-}
+/* #score positioning removed - breaks multi-client sync!
+   See dev-sync-architecture.md: position:absolute removes SVG from 
+   document flow (parent containers collapse to 0 width) and 
+   transition causes visual lag during playback */
 
 
 /* Fullscreen mode for the score clock - DEPRECATED, see below for fixed version */
@@ -1441,12 +1438,7 @@ body.inverted #score {
   filter: invert(1);
 }
 
-#score {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transition: transform 0.3s ease-in-out;
-}
+/* #score positioning removed - see note above */
 
 /* ============================================================================
  * 5. ANNOTATION BUTTON - Float to right near mode toggle

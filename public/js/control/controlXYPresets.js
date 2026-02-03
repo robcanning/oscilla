@@ -646,10 +646,14 @@ export function tweenTo(positions, dur = 1, ease = 'easeInOutSine', _ease2) {
  * Supports nested sequences - a sequence can reference other sequences!
  * Use prefix 'seq:' to reference another sequence
  * 
+ * @param {string} name - Sequence name
+ * @param {Array} steps - Array of preset names or step objects
+ * @param {Object} options - Sequence options (loop, defaultDur, defaultEase)
+ * 
  * @example
  * // Define base sequences
  * defineSequence('pattern_a', ['state1', 'state2', 'state3']);
- * defineSequence('pattern_b', ['state4', 'state5', 'state6']);
+ * defineSequence('pattern_b', ['state4', 'state5', 'state6'], { loop: true });
  * 
  * // Define meta-sequence that combines them
  * defineSequence('meta', ['seq:pattern_a', 'seq:pattern_b', 'seq:pattern_a']);
@@ -657,15 +661,35 @@ export function tweenTo(positions, dur = 1, ease = 'easeInOutSine', _ease2) {
  * // When played, 'meta' will expand to:
  * // ['state1', 'state2', 'state3', 'state4', 'state5', 'state6', 'state1', 'state2', 'state3']
  */
-export function defineSequence(name, steps) {
-  presetStore.sequences[name] = steps;
-  console.log(`[controlXY] Defined sequence "${name}":`, steps);
+export function defineSequence(name, steps, options = {}) {
+  presetStore.sequences[name] = {
+    steps: steps,
+    loop: options.loop ?? false,
+    defaultDur: options.defaultDur ?? 1,
+    defaultEase: options.defaultEase ?? 'easeInOutSine'
+  };
+  console.log(`[controlXY] Defined sequence "${name}":`, { steps, options });
   
   if (presetStore.projectId) {
     savePresetsToServer();
   }
   
   return true;
+}
+
+/**
+ * Get sequence definition
+ */
+export function getSequence(name) {
+  const seq = presetStore.sequences[name];
+  if (!seq) return null;
+  
+  // Handle legacy format (plain array)
+  if (Array.isArray(seq)) {
+    return { steps: seq, loop: false, defaultDur: 1, defaultEase: 'easeInOutSine' };
+  }
+  
+  return seq;
 }
 
 /**
@@ -678,10 +702,15 @@ export function defineSequence(name, steps) {
 function expandSequence(steps, visited = new Set()) {
   const expanded = [];
   
-  for (const step of steps) {
+  // Handle new format (object with steps property) or legacy (plain array)
+  const stepsArray = Array.isArray(steps) ? steps : (steps?.steps || []);
+  
+  for (const step of stepsArray) {
     // Check if this is a sequence reference
-    if (typeof step === 'string' && step.startsWith('seq:')) {
-      const seqName = step.slice(4); // Remove 'seq:' prefix
+    const stepPreset = typeof step === 'string' ? step : step?.preset;
+    
+    if (typeof stepPreset === 'string' && stepPreset.startsWith('seq:')) {
+      const seqName = stepPreset.slice(4); // Remove 'seq:' prefix
       
       // Prevent infinite loops
       if (visited.has(seqName)) {
@@ -714,18 +743,35 @@ function expandSequence(steps, visited = new Set()) {
 /**
  * Play a sequence of presets
  * 
+ * Sequence steps can be:
+ *   - String: preset name (uses global duration)
+ *   - Object: { preset: 'name', dur: 1.5, ease: 'linear' }
+ * 
  * Options:
- *   dur: number | number[] - duration per step
- *   ease: string | string[] - easing per step
- *   loop: boolean | number - loop count (true = infinite)
- *   onStep: function(stepIndex, presetName) - callback per step
+ *   speed: number - speed multiplier (1 = normal, 2 = double speed, 0.5 = half speed)
+ *   ease: string - default easing (overrides sequence default)
+ *   loop: boolean | number - override loop setting (if not provided, uses sequence's stored loop state)
+ *   dur: number - default duration for steps without explicit duration
+ *   onStep: function(stepIndex, presetName, stepDur) - callback per step
  *   onComplete: function() - callback when done
  */
 export function playSequence(name, options = {}) {
-  const sequence = presetStore.sequences[name];
+  const seqData = presetStore.sequences[name];
+  
+  if (!seqData) {
+    console.warn(`[controlXY] Sequence "${name}" not found`);
+    return false;
+  }
+  
+  // Handle legacy format (plain array) vs new format (object with steps)
+  const isLegacy = Array.isArray(seqData);
+  const sequence = isLegacy ? seqData : seqData.steps;
+  const seqLoop = isLegacy ? false : (seqData.loop ?? false);
+  const seqDefaultDur = isLegacy ? 1 : (seqData.defaultDur ?? 1);
+  const seqDefaultEase = isLegacy ? 'easeInOutSine' : (seqData.defaultEase ?? 'easeInOutSine');
   
   if (!sequence || !Array.isArray(sequence)) {
-    console.warn(`[controlXY] Sequence "${name}" not found`);
+    console.warn(`[controlXY] Sequence "${name}" has no valid steps`);
     return false;
   }
   
@@ -736,9 +782,13 @@ export function playSequence(name, options = {}) {
   const expandedSequence = expandSequence(sequence);
   console.log(`[controlXY] Playing sequence "${name}" (${sequence.length} steps → ${expandedSequence.length} expanded)`);
   
-  const defaultDur = options.dur ?? 1;
-  const defaultEase = options.ease ?? 'easeInOutSine';
-  const loop = options.loop ?? false;
+  // Speed multiplier (default 1.0 = normal speed)
+  const speed = options.speed ?? 1;
+  // Use provided options, fall back to sequence defaults
+  const defaultDur = options.dur ?? seqDefaultDur;
+  const defaultEase = options.ease ?? seqDefaultEase;
+  // Loop: use provided option if explicitly set, otherwise use sequence's stored loop state
+  const loop = options.loop !== undefined ? options.loop : seqLoop;
   const onStep = options.onStep || (() => {});
   const onComplete = options.onComplete || (() => {});
   
@@ -748,10 +798,11 @@ export function playSequence(name, options = {}) {
   
   activeSequence = {
     name,
-    sequence: expandedSequence,  // Store expanded sequence
+    sequence: expandedSequence,
     currentStep,
     loopCount,
     maxLoops,
+    speed,
     timeoutId: null,
     stopped: false
   };
@@ -774,26 +825,31 @@ export function playSequence(name, options = {}) {
     let presetName, stepDur, stepEase;
     
     if (typeof step === 'string') {
+      // Simple string preset - use default duration
       presetName = step;
-      stepDur = Array.isArray(defaultDur) ? defaultDur[currentStep % defaultDur.length] : defaultDur;
-      stepEase = Array.isArray(defaultEase) ? defaultEase[currentStep % defaultEase.length] : defaultEase;
+      stepDur = defaultDur;
+      stepEase = defaultEase;
     } else if (typeof step === 'object') {
+      // Object with per-step settings
       presetName = step.preset;
       stepDur = step.dur ?? defaultDur;
       stepEase = step.ease ?? defaultEase;
     }
     
-    console.log(`[controlXY] Sequence "${name}" step ${currentStep}: "${presetName}" (${stepDur}s)`);
+    // Apply speed multiplier (speed > 1 = faster = shorter duration)
+    const actualDur = stepDur / speed;
     
-    onStep(currentStep, presetName);
+    console.log(`[controlXY] Sequence "${name}" step ${currentStep}: "${presetName}" (${stepDur}s × ${speed}x = ${actualDur.toFixed(2)}s)`);
     
-    recallPreset(presetName, { dur: stepDur, ease: stepEase });
+    onStep(currentStep, presetName, actualDur);
+    
+    recallPreset(presetName, { dur: actualDur, ease: stepEase });
     
     currentStep++;
     activeSequence.currentStep = currentStep;
     
     // Schedule next step after tween completes
-    const waitTime = (stepDur + 0.05) * 1000; // Small buffer
+    const waitTime = (actualDur + 0.05) * 1000; // Small buffer
     activeSequence.timeoutId = setTimeout(playStep, waitTime);
   }
   
@@ -836,6 +892,10 @@ export function getActiveSequence() {
 // PERSISTENCE - SERVER
 // ============================================================================
 
+// Debounce timer for auto-save
+let saveDebounceTimer = null;
+const SAVE_DEBOUNCE_MS = 500;  // Wait 500ms after last change before saving
+
 /**
  * Initialize preset system for a project
  */
@@ -847,14 +907,72 @@ export async function initPresets(projectId) {
   // Load from server
   await loadPresetsFromServer();
   
+  // Also load launcher state if present
+  if (presetStore.launchers) {
+    console.log(`[controlXY] Loaded launcher states for ${Object.keys(presetStore.launchers).length} pads`);
+  }
+  
   console.log(`[controlXY] Presets initialized for project "${projectId}"`);
 }
 
 /**
- * Save presets to server
+ * Save presets to server (debounced)
+ * Called automatically on any preset/sequence change
  */
-async function savePresetsToServer() {
+function savePresetsToServer() {
   if (!presetStore.projectId) return;
+  
+  // Clear any pending save
+  if (saveDebounceTimer) {
+    clearTimeout(saveDebounceTimer);
+  }
+  
+  // Debounce: wait for changes to settle before saving
+  saveDebounceTimer = setTimeout(async () => {
+    try {
+      const response = await fetch('/api/controlxy-presets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: presetStore.projectId,
+          presets: presetStore.presets,
+          sequences: presetStore.sequences,
+          launchers: presetStore.launchers || {}
+        })
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      console.log(`[controlXY] Auto-saved to server`);
+      
+      // Dispatch event for UI feedback
+      window.dispatchEvent(new CustomEvent('controlxy:saved', {
+        detail: { 
+          presetCount: Object.keys(presetStore.presets).length,
+          sequenceCount: Object.keys(presetStore.sequences).length
+        }
+      }));
+    } catch (err) {
+      console.error("[controlXY] Failed to save presets:", err);
+      
+      window.dispatchEvent(new CustomEvent('controlxy:saveError', {
+        detail: { error: err.message }
+      }));
+    }
+  }, SAVE_DEBOUNCE_MS);
+}
+
+/**
+ * Force immediate save (bypasses debounce)
+ */
+export async function forceSave() {
+  if (!presetStore.projectId) return false;
+  
+  // Clear any pending debounced save
+  if (saveDebounceTimer) {
+    clearTimeout(saveDebounceTimer);
+    saveDebounceTimer = null;
+  }
   
   try {
     const response = await fetch('/api/controlxy-presets', {
@@ -863,15 +981,18 @@ async function savePresetsToServer() {
       body: JSON.stringify({
         projectId: presetStore.projectId,
         presets: presetStore.presets,
-        sequences: presetStore.sequences
+        sequences: presetStore.sequences,
+        launchers: presetStore.launchers || {}
       })
     });
     
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
-    console.log(`[controlXY] Presets saved to server`);
+    console.log(`[controlXY] Force-saved to server`);
+    return true;
   } catch (err) {
-    console.error("[controlXY] Failed to save presets:", err);
+    console.error("[controlXY] Failed to force-save:", err);
+    return false;
   }
 }
 
@@ -894,8 +1015,17 @@ async function loadPresetsFromServer() {
     const data = await response.json();
     presetStore.presets = data.presets || {};
     presetStore.sequences = data.sequences || {};
+    presetStore.launchers = data.launchers || {};
     
-    console.log(`[controlXY] Loaded ${Object.keys(presetStore.presets).length} presets from server`);
+    console.log(`[controlXY] Loaded ${Object.keys(presetStore.presets).length} presets, ${Object.keys(presetStore.sequences).length} sequences from server`);
+    
+    // Dispatch event for UI updates
+    window.dispatchEvent(new CustomEvent('controlxy:loaded', {
+      detail: { 
+        presetCount: Object.keys(presetStore.presets).length,
+        sequenceCount: Object.keys(presetStore.sequences).length
+      }
+    }));
   } catch (err) {
     console.error("[controlXY] Failed to load presets:", err);
   }
@@ -1297,6 +1427,7 @@ export function handleControlXYSequenceCue(el, args = [], options = {}) {
   
   playSequence(seqName, {
     dur: cfg.dur ?? 1,
+    speed: cfg.speed ?? 1,
     ease: cfg.ease ?? 'easeInOutSine',
     loop: cfg.loop ?? false
   });
@@ -1325,6 +1456,7 @@ window.controlXYPresets = {
   
   // Sequences
   defineSequence,
+  getSequence,
   playSequence,
   stopSequence,
   getActiveSequence,
@@ -1338,13 +1470,15 @@ window.controlXYPresets = {
   
   // Persistence
   init: initPresets,
+  forceSave,
   export: exportPresets,
   import: importPresets,
   importFromProject,
   
-  // Internal access
+  // Internal access (for launcher and other modules)
   _store: presetStore,
-  _activeTweens: activeTweens
+  _activeTweens: activeTweens,
+  _savePresetsToServer: savePresetsToServer
 };
 
 console.log("[controlXYPresets] Module loaded. API available at window.controlXYPresets");

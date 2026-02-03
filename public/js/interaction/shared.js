@@ -149,16 +149,29 @@ export function saveLocal(project, items) {
 // WEBSOCKET HELPERS
 // =============================================================
 
+/**
+ * Get the active WebSocket connection
+ * Supports both window.socket (oscillaSystemSocket) and window.ws (legacy)
+ */
+function getWs() {
+    return window.socket || window.ws || null;
+}
+
 export function wsCanSend(ws) {
-    return ws && ws.readyState === WebSocket.OPEN;
+    const socket = ws || getWs();
+    return socket && socket.readyState === WebSocket.OPEN;
 }
 
 export function wsSend(type, payload) {
-    const ws = window.ws;
-    if (!wsCanSend(ws)) return;
+    const ws = getWs();
+    if (!wsCanSend(ws)) {
+        console.warn("[annotations] wsSend failed: WebSocket not connected");
+        return;
+    }
 
     try {
         ws.send(JSON.stringify({ type, ...payload }));
+        console.log("[annotations] wsSend:", type, payload);
     } catch (e) {
         console.warn("[annotations] wsSend failed:", e);
     }
