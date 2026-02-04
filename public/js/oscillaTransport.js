@@ -1023,6 +1023,10 @@ window.returnToScrollingScore = function returnToScrollingScore() {
       mainScore.style.pointerEvents = "auto";
     }
 
+    // Show transport controls when returning to scroll mode
+    console.log("[cuePage] 🎛️ Showing transport for scroll mode.");
+    showControls?.();
+
     resumeScrollScore?.();
   }, 500);
 };

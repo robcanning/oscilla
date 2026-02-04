@@ -14,6 +14,9 @@ import { preloadReuseBlocksFromPages } from "./parser/preProcessReuse.js";
 import "./control/controlXYPresets.js";  
 import "./control/controlXYPresetUI.js";  
 
+import {jumpToCueId, hideControls, showControls} from './oscillaTransport.js';
+
+
 let loadInProgress = false;
 let projectMenuWired = false;
 
@@ -886,6 +889,7 @@ function wireSplashActions() {
       }
     };
   }
+  hideControls();
 
   console.log("[Splash] Action buttons wired");
 }

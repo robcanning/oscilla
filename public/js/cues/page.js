@@ -162,6 +162,13 @@ async function showPageOverlay(pageId, durSeconds = null, independentView = fals
         console.log("[Page] 🔄 Transport continues (independent view mode).");
     }
 
+    // ---------------------------------------------------------
+    // Hide transport controls in page mode
+    // hideControls() handles both controls and topbar
+    // ---------------------------------------------------------
+    console.log("[Page] 🎛️ Hiding transport for page mode.");
+    window.hideControls?.();
+
     // Track local page mode
     window.pageState.mode = "page";
     window.pageState.current = pageId;

@@ -124,6 +124,85 @@ These signals can be bound to **any parameter** in the system, creating direct c
 
 ---
 
+## DSL Quick Reference: Score-Based Automation
+
+ControlXY can be controlled entirely via the standard **Oscilla DSL** using `ui()` actions. These work exactly like other cues — embedded in SVG element IDs via Inkscape's XML editor.
+
+### Available Actions
+
+| Action | Parameters | Description |
+|--------|------------|-------------|
+| `controlXYSave` | `preset`, `uid` (optional) | Save current handle positions as a named preset |
+| `controlXYRecall` | `preset`, `dur`, `ease` | Recall a preset (optionally with tween) |
+| `controlXYDefineSequence` | `name`/`seq`, `steps` | Define a sequence from comma-separated preset names |
+| `controlXYSequence` | `seq`/`sequence`, `dur`, `ease`, `loop` | Play a defined sequence |
+| `controlXYSequenceStop` | (none) | Stop any running sequence |
+
+### Syntax Pattern
+
+**Playhead-triggered (invisible cue marker):**
+```
+ui(action:controlXYRecall, preset:stateA, dur:2, ease:easeInOutSine)
+```
+
+**Button-triggered (visible interactive button):**
+```
+button(trigger:ui(action:controlXYRecall, preset:stateA, dur:2), style(label:"Recall A"))
+```
+
+### Complete DSL Examples
+
+**Save preset when playhead passes:**
+```xml
+<rect id="ui(action:controlXYSave, preset:verse1)" 
+      x="500" y="0" width="2" height="600" fill="red" opacity="0.3"/>
+```
+
+**Recall preset with 2-second tween:**
+```xml
+<rect id="ui(action:controlXYRecall, preset:chorus, dur:2, ease:easeInOutSine)" 
+      x="1000" y="0" width="2" height="600" fill="blue" opacity="0.3"/>
+```
+
+**Define and play a sequence:**
+```xml
+<!-- Define sequence (invisible) -->
+<rect id="ui(action:controlXYDefineSequence, name:intro_dance, steps:stateA,stateB,stateC)" 
+      x="100" y="0" width="1" height="1" opacity="0"/>
+
+<!-- Play sequence with loop -->
+<rect id="ui(action:controlXYSequence, seq:intro_dance, dur:1.5, loop:true)" 
+      x="200" y="0" width="2" height="600" fill="yellow" opacity="0.3"/>
+```
+
+**Stop sequence:**
+```xml
+<rect id="ui(action:controlXYSequenceStop)" 
+      x="1500" y="0" width="2" height="600" fill="red" opacity="0.5"/>
+```
+
+**Interactive buttons for live performance:**
+```xml
+<rect id="button(trigger:ui(action:controlXYRecall, preset:intro, dur:2), style(label:Intro))" 
+      x="10" y="500" width="80" height="40"/>
+
+<rect id="button(trigger:ui(action:controlXYSequenceStop), style(label:Stop))" 
+      x="100" y="500" width="80" height="40"/>
+```
+
+### Easing Options
+
+All standard Oscilla easing functions work:
+- `linear`, `easeIn`, `easeOut`, `easeInOut`
+- `easeInSine`, `easeOutSine`, `easeInOutSine`
+- `easeInQuad`, `easeOutQuad`, `easeInOutQuad`
+- `easeInCubic`, `easeOutCubic`, `easeInOutCubic`
+- `easeInElastic`, `easeOutElastic`, `easeInOutElastic`
+- `easeInBack`, `easeOutBack`, `easeInOutBack`
+- `easeInBounce`, `easeOutBounce`, `easeInOutBounce`
+
+---
+
 ## Mute / Manual Override Mode
 
 During performance, you may want to take manual control of specific handles while letting sequences continue to control others. The **mute** feature lets you exclude individual handles from automation.
@@ -935,14 +1014,24 @@ As a bonus, OSC output allows the same spatial gestures to control external synt
 ## Quick Start Checklist
 
 1. ✅ Add CSS: `<link rel="stylesheet" href="controlxy-minimal-light.css">`
-2. ✅ Define pad: `<rect cue="controlXY(uid:pad1, handle:dot1)"/>`
+2. ✅ Define pad: `<rect id="controlXY(uid:pad1, handle:dot1)"/>`
 3. ✅ Open UI: Press **Alt+Shift+P** or click ⚙
 4. ✅ Save states: Move handles, name them, click 💾
 5. ✅ Assign to launcher: Use dropdown in preset list
-6. ✅ Animate: Use `ui(action:'controlXYRecall', ...)` on playhead triggers
-7. ✅ Choreograph: Define sequences, play/loop them
-8. ✅ Save scene: Capture complete state for later recall
-9. ✅ Bind: Connect handle positions to visual parameters
-10. ✅ Perform: Use launcher buttons or manual control
+6. ✅ **DSL automation**: Use `ui(action:controlXYRecall, preset:name, dur:2)` on playhead triggers
+7. ✅ **DSL buttons**: Use `button(trigger:ui(action:...), style(label:...))` for live control
+8. ✅ Choreograph: Define sequences, play/loop them
+9. ✅ Save scene: Capture complete state for later recall
+10. ✅ Bind: Connect handle positions to visual parameters
+11. ✅ Perform: Use launcher buttons, DSL buttons, or manual control
+
+### Two Ways to Control
+
+| Method | Best For |
+|--------|----------|
+| **GUI (Launcher/Panel)** | Live performance, experimentation, quick edits |
+| **DSL (ui() actions)** | Authored scores, precise timing, reproducible automation |
+
+Both methods share the same preset/sequence data — GUI-saved presets work with DSL, and vice versa.
 
 Now go create some animated scores! 🎼✨
