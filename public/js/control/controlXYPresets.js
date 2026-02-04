@@ -528,7 +528,8 @@ export function playSequence(name, options = {}) {
     currentStep,
     loop: maxLoops,
     loopCount,
-    stopped: false
+    stopped: false,
+    running: true
   };
   
   function playStep() {
@@ -560,6 +561,17 @@ export function playSequence(name, options = {}) {
       ease: stepEase
     });
     
+    // Dispatch step event for UI updates
+    window.dispatchEvent(new CustomEvent('controlxy:sequenceStep', {
+      detail: { 
+        name, 
+        preset: presetName, 
+        step: currentStep + 1, 
+        total: steps.length,
+        loopCount 
+      }
+    }));
+    
     currentStep++;
     if (activeSequence) activeSequence.currentStep = currentStep;
     
@@ -571,6 +583,11 @@ export function playSequence(name, options = {}) {
   
   console.log(`[controlXY] Playing sequence "${name}" (${steps.length} steps, loop: ${maxLoops})`);
   
+  // Dispatch event for UI updates (launcher transport controls)
+  window.dispatchEvent(new CustomEvent('controlxy:sequenceStarted', {
+    detail: { name, steps: steps.length, loop: maxLoops }
+  }));
+  
   return true;
 }
 
@@ -578,12 +595,18 @@ export function playSequence(name, options = {}) {
  * Stop current sequence
  */
 export function stopSequence() {
+  const wasPlaying = activeSequence?.name;
   if (activeSequence) {
     activeSequence.stopped = true;
     console.log(`[controlXY] Stopped sequence "${activeSequence.name}"`);
   }
   activeSequence = null;
   stopAllTweens();
+  
+  // Dispatch event for UI updates
+  window.dispatchEvent(new CustomEvent('controlxy:sequenceStopped', {
+    detail: { name: wasPlaying }
+  }));
 }
 
 /**

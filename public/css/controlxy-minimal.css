@@ -1202,3 +1202,320 @@
   background: rgba(255, 100, 100, 0.3) !important;
   border-color: rgba(255, 100, 100, 0.5) !important;
 }
+/* ============================================================================
+ * controlXY CSS Additions v2
+ * - Glow/pulsate effects on touch
+ * - Mute overlay styling
+ * - Sequence transport buttons
+ * 
+ * ADD THIS to the end of controlxy-minimal-light.css
+ * ============================================================================ */
+
+/* ============================================================================
+ * Handle Glow & Pulsate Effects
+ * ============================================================================ */
+
+.controlxy-handle {
+  cursor: grab;
+  transition: filter 0.15s ease, transform 0.1s ease;
+  transform-origin: center center;
+}
+
+.controlxy-handle:hover {
+  filter: drop-shadow(0 0 4px rgba(68, 136, 255, 0.5));
+}
+
+/* Active state - glow and pulsate while touched */
+.controlxy-handle--active {
+  cursor: grabbing !important;
+  filter: drop-shadow(0 0 12px rgba(68, 136, 255, 0.9)) 
+          drop-shadow(0 0 20px rgba(68, 136, 255, 0.5));
+  animation: controlxy-pulsate 0.6s ease-in-out infinite;
+}
+
+@keyframes controlxy-pulsate {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px rgba(68, 136, 255, 0.9)) 
+            drop-shadow(0 0 20px rgba(68, 136, 255, 0.5));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 18px rgba(68, 136, 255, 1)) 
+            drop-shadow(0 0 30px rgba(68, 136, 255, 0.7));
+    transform: scale(1.05);
+  }
+}
+
+/* Muted handle - visual indication */
+.controlxy-handle--muted {
+  opacity: 0.5;
+  filter: grayscale(50%) drop-shadow(0 0 4px rgba(255, 107, 107, 0.6));
+}
+
+.controlxy-handle--muted.controlxy-handle--active {
+  animation: controlxy-pulsate-muted 0.6s ease-in-out infinite;
+}
+
+@keyframes controlxy-pulsate-muted {
+  0%, 100% {
+    filter: grayscale(50%) drop-shadow(0 0 8px rgba(255, 107, 107, 0.7));
+    transform: scale(1);
+  }
+  50% {
+    filter: grayscale(50%) drop-shadow(0 0 14px rgba(255, 107, 107, 0.9));
+    transform: scale(1.05);
+  }
+}
+
+/* ============================================================================
+ * Mute Overlay Toggle
+ * ============================================================================ */
+
+.controlxy-mute-overlay {
+  pointer-events: all;
+  cursor: pointer;
+  transition: opacity 0.15s ease-out, transform 0.1s ease;
+}
+
+.controlxy-mute-overlay:hover {
+  transform: scale(1.15);
+}
+
+.controlxy-mute-overlay:active {
+  transform: scale(0.95);
+}
+
+.controlxy-mute-overlay-bg {
+  transition: fill 0.15s ease;
+}
+
+/* ============================================================================
+ * Sequence Transport Buttons in Launcher Bar
+ * ============================================================================ */
+
+.controlxy-launcher-seq-play,
+.controlxy-launcher-seq-stop {
+  background: #ffffff;
+  border: 1px solid #b0b0b0;
+  border-radius: 3px;
+  color: #222222;
+  font-size: 12px;
+  min-width: 28px;
+  height: 26px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  padding: 0 6px !important;
+  margin: 0;
+  font-weight: 600;
+  line-height: 1 !important;
+}
+
+.controlxy-launcher-seq-play:hover,
+.controlxy-launcher-seq-stop:hover {
+  background: #f0f0f0;
+  border-color: #909090;
+}
+
+.controlxy-launcher-seq-play:active,
+.controlxy-launcher-seq-stop:active {
+  transform: scale(0.95);
+}
+
+/* Play button when sequence is running */
+.controlxy-launcher-seq-play.playing {
+  background: #d4edda;
+  border-color: #28a745;
+  color: #155724;
+}
+
+/* Stop button when sequence is running */
+.controlxy-launcher-seq-stop.active {
+  background: #f8d7da;
+  border-color: #dc3545;
+  color: #721c24;
+}
+
+/* Sequence status text */
+.controlxy-launcher-seq-status {
+  font-size: 10px;
+  color: #666666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.controlxy-launcher-seq-status.active {
+  opacity: 1;
+  color: #28a745;
+  font-weight: 600;
+}
+
+/* Spacer to push bank controls right */
+.controlxy-launcher-spacer {
+  flex: 1;
+  min-width: 10px;
+}
+
+/* ============================================================================
+ * Scene List Styling (in Preset Panel)
+ * ============================================================================ */
+
+.controlxy-scene-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.controlxy-scene-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #e8f4fc;  /* Light blue tint for scenes */
+  border: 1px solid #b8d4e8;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.controlxy-scene-item:hover {
+  background: #d8ecf8;
+  border-color: #98c4d8;
+}
+
+.controlxy-scene-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #1565c0;
+}
+
+.controlxy-scene-name small {
+  color: #5a9fd4;
+  font-size: 11px;
+  font-weight: normal;
+}
+
+.controlxy-scene-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.controlxy-scene-actions button {
+  background: #ffffff;
+  border: 1px solid #b8d4e8;
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #1565c0;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+  min-width: 28px;
+}
+
+.controlxy-scene-actions button:hover {
+  background: #e8f4fc;
+  border-color: #5a9fd4;
+}
+
+.controlxy-scene-recall-btn:hover {
+  background: #d4edda !important;
+  border-color: #28a745 !important;
+  color: #155724 !important;
+}
+
+.controlxy-scene-delete-btn:hover {
+  background: #f8d7da !important;
+  border-color: #dc3545 !important;
+  color: #721c24 !important;
+}
+
+/* ============================================================================
+ * Clear All Mutes Button
+ * ============================================================================ */
+
+.controlxy-clear-mutes-btn {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  padding: 6px 12px;
+  color: #856404;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.15s;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.controlxy-clear-mutes-btn:hover {
+  background: #ffe69c;
+  border-color: #e0a800;
+}
+
+.controlxy-clear-mutes-btn:active {
+  transform: scale(0.98);
+}
+
+/* ============================================================================
+ * Multitouch Visual Feedback
+ * Different colors for multiple simultaneous touches
+ * ============================================================================ */
+
+.controlxy-handle--active[data-touch-index="0"] {
+  --glow-color: rgba(68, 136, 255, 0.9);
+}
+
+.controlxy-handle--active[data-touch-index="1"] {
+  --glow-color: rgba(255, 68, 136, 0.9);
+}
+
+.controlxy-handle--active[data-touch-index="2"] {
+  --glow-color: rgba(68, 255, 136, 0.9);
+}
+
+.controlxy-handle--active[data-touch-index="3"] {
+  --glow-color: rgba(255, 200, 68, 0.9);
+}
+
+/* ============================================================================
+ * Page Mode Fixes - Ensure effects work inside foreignObject
+ * ============================================================================ */
+
+#singlePage-content .controlxy-handle--active {
+  filter: drop-shadow(0 0 12px rgba(68, 136, 255, 0.9)) 
+          drop-shadow(0 0 20px rgba(68, 136, 255, 0.5));
+  animation: controlxy-pulsate 0.6s ease-in-out infinite;
+}
+
+#singlePage-content .controlxy-mute-overlay {
+  pointer-events: all;
+}
+
+/* ============================================================================
+ * Responsive Adjustments
+ * ============================================================================ */
+
+@media (max-width: 600px) {
+  .controlxy-launcher-seq-status {
+    display: none;
+  }
+  
+  .controlxy-launcher-seq-play,
+  .controlxy-launcher-seq-stop {
+    min-width: 24px;
+    padding: 0 4px !important;
+  }
+}

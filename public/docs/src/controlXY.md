@@ -124,6 +124,62 @@ These signals can be bound to **any parameter** in the system, creating direct c
 
 ---
 
+## Mute / Manual Override Mode
+
+During performance, you may want to take manual control of specific handles while letting sequences continue to control others. The **mute** feature lets you exclude individual handles from automation.
+
+### How It Works
+
+1. **Click on any handle** — a small toggle overlay appears briefly (2 seconds)
+2. **Click the overlay** to toggle between:
+   - **A** (green) = Auto mode — handle responds to presets/sequences
+   - **M** (red) = Muted — handle ignores automation, only responds to manual touch
+
+### Visual Feedback
+
+- **Muted handles** appear faded with a red glow
+- The mute state persists until you toggle it off or reload
+- Muted handles can still be dragged manually
+
+### Clearing All Mutes
+
+Via console:
+```javascript
+window.controlXYMute.clearAllMutes();
+```
+
+### API
+
+```javascript
+// Check if a handle is muted
+window.controlXYMute.isHandleMuted('pad1', 'dot1');
+
+// Set mute state
+window.controlXYMute.setHandleMuted('pad1', 'dot1', true);
+
+// Toggle mute
+window.controlXYMute.toggleHandleMuted('pad1', 'dot1');
+
+// Get all muted handles
+window.controlXYMute.getMutedHandles();
+
+// Clear all mutes
+window.controlXYMute.clearAllMutes();
+```
+
+---
+
+## Touch Visual Feedback
+
+When you touch a handle, it displays:
+- **Glowing halo** — bright blue drop-shadow
+- **Pulsating animation** — gentle scale pulse while held
+- **Muted handles** pulse with a red glow instead
+
+This provides clear visual feedback during multitouch performance, helping you track which handles you're currently controlling.
+
+---
+
 ## The Launcher: Quick Access During Performance
 
 Each controlXY pad includes an integrated **launcher** — a row of assignable buttons that provide instant access to presets and sequences during performance.
@@ -131,22 +187,35 @@ Each controlXY pad includes an integrated **launcher** — a row of assignable b
 ### Launcher Features
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  [1 center] [2 corner] [3 sweep▶] [4 —]    [P] [T] [⚙] │
-│  └── Slot buttons ──────────────┘   Mode  Tween Settings│
-└─────────────────────────────────────────────────────────┘
-                          │
-                    Bank bar below
-┌─────────────────────────────────────────────────────────┐
-│                              [◀] Bank 1 (4) [▶]         │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│  [1 center] [2 corner] [3 sweep▶] [4 —]                                 │
+│                                                                         │
+│  [▶][■] ▶ intro    ← → Bank 1 (1/3) [P] [~] [⚙]                        │
+│   │  │     │                         │   │   │                          │
+│   │  │     └─ Sequence status        │   │   └─ Settings                │
+│   │  └─ Stop sequence                │   └─ Tween toggle                │
+│   └─ Play sequence                   └─ Mode (P/S)                      │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
+**Transport Controls:**
+- **▶ Play** — Start the most recent sequence (or first available)
+- **■ Stop** — Stop any running sequence immediately
+
+**Other Controls:**
 - **Slot Buttons (1-4)**: Tap to recall assigned preset or play sequence
 - **Mode Toggle (P/S)**: Switch between Preset mode and Sequence mode
-- **Tween Toggle (T)**: Enable/disable smooth transitions
+- **Tween Toggle (~)**: Enable/disable smooth transitions
 - **Settings (⚙)**: Open the full Preset Manager panel
-- **Bank Navigation**: Switch between multiple banks of 4 slots
+- **Bank Navigation (← →)**: Switch between multiple banks of 4 slots
+
+### Sequence Transport
+
+The launcher shows **sequence playback status** in the bank bar:
+- When a sequence is playing, you'll see `▶ sequence_name`
+- The ▶ button turns green when active
+- The ■ button turns red when a sequence is running
+- **You can stop sequences even when the preset panel is closed**
 
 ### Assigning Slots
 
@@ -776,6 +845,13 @@ controlXYPresets.import(json, options?)
 controlXYPresetUI.show()
 controlXYPresetUI.hide()
 controlXYPresetUI.toggle()
+
+// ===== MUTE / MANUAL OVERRIDE =====
+controlXYMute.isHandleMuted(uid, handleId)    // Returns boolean
+controlXYMute.setHandleMuted(uid, handleId, muted)
+controlXYMute.toggleHandleMuted(uid, handleId) // Returns new state
+controlXYMute.getMutedHandles()                // Returns array of "uid:handleId"
+controlXYMute.clearAllMutes()
 ```
 
 ---
