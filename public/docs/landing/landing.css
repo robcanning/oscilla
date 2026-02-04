@@ -1,0 +1,202 @@
+/* Minimal Oscilla Landing Page */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #0a0a0a;
+    --text: #e0e0e0;
+    --text-dim: #888;
+    --accent: #5b8fef;
+    --border: #222;
+}
+
+body {
+    font-family: 'Iosevka Term Web', 'Iosevka Term', 'Iosevka', monospace;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+    font-size: 15px;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+/* Header */
+header {
+    margin-bottom: 3rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 1.1rem;
+    font-weight: normal;
+}
+
+.logo-img {
+    width: 24px;
+    height: 24px;
+}
+
+nav {
+    margin-top: 0.75rem;
+    display: flex;
+    gap: 1.5rem;
+}
+
+nav a {
+    color: var(--text-dim);
+    text-decoration: none;
+}
+
+nav a:hover {
+    color: var(--accent);
+}
+
+/* Typography */
+h1 {
+    font-size: 1.8rem;
+    font-weight: normal;
+    margin-bottom: 0.5rem;
+    color: var(--accent);
+}
+
+h2 {
+    font-size: 1.2rem;
+    font-weight: normal;
+    margin: 2.5rem 0 1rem;
+    color: var(--text);
+}
+
+p {
+    margin-bottom: 1rem;
+    color: var(--text-dim);
+}
+
+strong {
+    color: var(--text);
+    font-weight: normal;
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Horizontal rules */
+hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0;
+}
+
+/* Lists */
+ul {
+    list-style: none;
+    margin: 1rem 0;
+}
+
+ul li {
+    margin-bottom: 0.5rem;
+    padding-left: 1.5rem;
+    position: relative;
+    color: var(--text-dim);
+}
+
+ul li:before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+}
+
+ul li a {
+    color: var(--text);
+}
+
+/* Downloads section - simple text links */
+.downloads {
+    margin: 1.5rem 0;
+}
+
+.downloads a {
+    display: block;
+    margin: 0.5rem 0;
+    color: var(--text);
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.downloads a:hover {
+    color: var(--accent);
+}
+
+.downloads a:before {
+    content: "↓ ";
+    color: var(--accent);
+}
+
+.downloads .platform {
+    display: inline;
+}
+
+.downloads .arch {
+    color: var(--text-dim);
+    margin-left: 0.5rem;
+}
+
+.downloads .arch:before {
+    content: "(";
+}
+
+.downloads .arch:after {
+    content: ")";
+}
+
+/* Footer */
+footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.9rem;
+}
+
+footer p {
+    margin: 0.25rem 0;
+    color: var(--text-dim);
+}
+
+footer a {
+    color: var(--accent);
+}
+
+/* Minimal responsive */
+@media (max-width: 600px) {
+    body {
+        padding: 1.5rem 1rem;
+        font-size: 14px;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    nav {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+}

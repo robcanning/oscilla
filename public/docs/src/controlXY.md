@@ -23,7 +23,8 @@ Think of `controlXY` as a **spatial modulation source** embedded in your score:
 1. **Define control pads** with draggable handles
 2. **Bind handle positions** to visual/sonic parameters
 3. **Animate via presets & sequences** OR **perform live**
-4. **Record/playback** spatial gestures as part of the composition
+4. **Save/recall scenes** for complete state snapshots
+5. **Use the launcher** for quick access during performance
 
 This inverts the traditional "playhead reads static notation" model — instead, **notation becomes dynamic**, responding to spatial control in real-time.
 
@@ -123,6 +124,91 @@ These signals can be bound to **any parameter** in the system, creating direct c
 
 ---
 
+## The Launcher: Quick Access During Performance
+
+Each controlXY pad includes an integrated **launcher** — a row of assignable buttons that provide instant access to presets and sequences during performance.
+
+### Launcher Features
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  [1 center] [2 corner] [3 sweep▶] [4 —]    [P] [T] [⚙] │
+│  └── Slot buttons ──────────────┘   Mode  Tween Settings│
+└─────────────────────────────────────────────────────────┘
+                          │
+                    Bank bar below
+┌─────────────────────────────────────────────────────────┐
+│                              [◀] Bank 1 (4) [▶]         │
+└─────────────────────────────────────────────────────────┘
+```
+
+- **Slot Buttons (1-4)**: Tap to recall assigned preset or play sequence
+- **Mode Toggle (P/S)**: Switch between Preset mode and Sequence mode
+- **Tween Toggle (T)**: Enable/disable smooth transitions
+- **Settings (⚙)**: Open the full Preset Manager panel
+- **Bank Navigation**: Switch between multiple banks of 4 slots
+
+### Assigning Slots
+
+1. Open the Preset Manager (**Alt+Shift+P** or click ⚙)
+2. In the Presets list, use the dropdown next to each preset
+3. Select a slot (e.g., "B1-1" for Bank 1, Slot 1)
+4. The launcher updates immediately
+
+### Long-Press to Save
+
+**Long-press (hold) any empty slot** to save the current handle positions as a new preset and assign it to that slot in one action.
+
+---
+
+## Scenes: Complete State Snapshots
+
+**Scenes** save everything — handle positions AND launcher configurations — allowing you to recall a complete performance setup with one action.
+
+### What a Scene Saves
+
+- All handle positions across all pads
+- All launcher slot assignments
+- Current bank selection per pad
+- Mode (P/S) per pad
+- Tween on/off per pad
+
+### Saving a Scene
+
+**Via Preset Manager:**
+1. Open Preset Manager (**Alt+Shift+P**)
+2. Scroll to the **🎭 Scenes** section
+3. Enter a name (e.g., "Live Set 1")
+4. Click **Save**
+
+**Via Console:**
+```javascript
+window.controlXYPresets.saveScene('Live Set 1');
+```
+
+### Recalling a Scene
+
+**Via Preset Manager:**
+- Click ▶ next to the scene name
+
+**Via Console:**
+```javascript
+// Instant recall
+window.controlXYPresets.recallScene('Live Set 1');
+
+// With tween (handles animate, launchers switch instantly)
+window.controlXYPresets.recallScene('Live Set 1', { dur: 2, ease: 'easeInOutSine' });
+```
+
+### Scene Use Cases
+
+- **Live Performance**: Switch between "Intro", "Verse", "Chorus" setups
+- **Rehearsal**: Save different performer configurations
+- **Composition**: A/B test different automation setups
+- **Teaching**: Prepare demonstration states
+
+---
+
 ## Animation Workflow: Creating Score Choreography
 
 The true power of `controlXY` emerges when you **pre-program spatial animations** as part of your composition.
@@ -134,6 +220,12 @@ The true power of `controlXY` emerges when you **pre-program spatial animations*
 2. Move handles to desired positions
 3. Type a preset name (e.g., "intro_position")
 4. Click 💾 Save
+
+**Via Long-Press on Launcher:**
+1. Move handles to desired position
+2. Long-press an empty launcher slot
+3. Enter preset name in the popup
+4. Preset is saved AND assigned to that slot
 
 **Via DSL (triggered by playhead or buttons):**
 ```xml
@@ -215,32 +307,6 @@ Sequences are **playlists of presets** that play automatically.
       fill="red" opacity="0.5"/>
 ```
 
-**Via buttons (interactive control):**
-```xml
-<!-- Define sequence button -->
-<g cue="button(
-        trigger:ui(action:'controlXYDefineSequence', 
-                    name:'verse_pattern', 
-                    steps:'v1,v2,v3,v1'),
-        style(label:'Define Pattern', x:10, y:10)
-      )"/>
-
-<!-- Play button -->
-<g cue="button(
-        trigger:ui(action:'controlXYSequence', 
-                    seq:'verse_pattern', 
-                    dur:1.5, 
-                    loop:true),
-        style(label:'▶ Play', x:10, y:50)
-      )"/>
-
-<!-- Stop button -->
-<g cue="button(
-        trigger:ui(action:'controlXYSequenceStop'),
-        style(label:'■ Stop', x:10, y:90)
-      )"/>
-```
-
 ---
 
 ## Complete Animation Example: Verse-Chorus-Bridge
@@ -256,27 +322,6 @@ Here's a **full composition workflow** showing how to choreograph spatial animat
 <circle id="dot1" cx="0" cy="0" r="12" fill="#ff4444"/>
 <circle id="dot2" cx="0" cy="0" r="12" fill="#44ff44"/>
 <circle id="dot3" cx="0" cy="0" r="12" fill="#4444ff"/>
-
-<!-- ===== PLAYHEAD TRIGGERS: Auto-save states ===== -->
-<!-- Measure 1: Save intro position -->
-<rect x="100" y="0" width="1" height="600"
-      cue="ui(action:'controlXYSave', preset:'intro')"
-      fill="transparent"/>
-
-<!-- Measure 5: Save verse position -->
-<rect x="500" y="0" width="1" height="600"
-      cue="ui(action:'controlXYSave', preset:'verse')"
-      fill="transparent"/>
-
-<!-- Measure 13: Save chorus position -->
-<rect x="1300" y="0" width="1" height="600"
-      cue="ui(action:'controlXYSave', preset:'chorus')"
-      fill="transparent"/>
-
-<!-- Measure 21: Save bridge position -->
-<rect x="2100" y="0" width="1" height="600"
-      cue="ui(action:'controlXYSave', preset:'bridge')"
-      fill="transparent"/>
 
 <!-- ===== PLAYHEAD AUTOMATION: Recall with tweens ===== -->
 <!-- M9: Tween to verse over 2 seconds -->
@@ -319,7 +364,6 @@ Here's a **full composition workflow** showing how to choreograph spatial animat
       fill="cyan" opacity="0.4"/>
 
 <!-- ===== MANUAL OVERRIDE: Buttons for live performance ===== -->
-<!-- Performers can override automation at any time -->
 <g cue="button(
         trigger:ui(action:'controlXYRecall', preset:'intro', dur:2),
         style(label:'⏮ Intro', x:10, y:500, width:80)
@@ -390,12 +434,6 @@ This is where **spatial control becomes visual transformation**.
             scale(uid:s1, sx:mixer.dot2.x[0.5,2], sy:mixer.dot2.y[0.5,2])
             fade(uid:f1, opacity:mixer.dot3.y)"/>
 </g>
-```
-
-### Spatial Navigation
-```xml
-<!-- Two handles define start/end points of a loop region -->
-<g cue="o2p(path:loopA, start:mixer.dot1.x, end:mixer.dot2.x)"/>
 ```
 
 ---
@@ -497,18 +535,6 @@ ui(action:"controlXYSave", preset:"stateName")
 ui(action:"controlXYSave", preset:"stateName", uid:"pad1")
 ```
 
-**Examples:**
-```xml
-<!-- Playhead trigger -->
-<rect x="500" cue="ui(action:'controlXYSave', preset:'verse1')"/>
-
-<!-- Button -->
-<g cue="button(
-        trigger:ui(action:'controlXYSave', preset:'myState'),
-        style(label:'Save State', x:10, y:10)
-      )"/>
-```
-
 ### 2. Recall Preset
 ```xml
 <!-- Instant -->
@@ -518,39 +544,9 @@ ui(action:"controlXYRecall", preset:"stateName")
 ui(action:"controlXYRecall", preset:"stateName", dur:2, ease:"easeInOutSine")
 ```
 
-**Examples:**
-```xml
-<!-- Playhead trigger with animation -->
-<rect x="1000" 
-      cue="ui(action:'controlXYRecall', preset:'chorus', dur:3, ease:'easeOutElastic')"/>
-
-<!-- Button with quick snap -->
-<g cue="button(
-        trigger:ui(action:'controlXYRecall', preset:'breakdown', dur:0.5),
-        style(label:'⚡ Breakdown', x:10, y:50)
-      )"/>
-```
-
 ### 3. Define Sequence
 ```xml
 ui(action:"controlXYDefineSequence", name:"seqName", steps:"preset1,preset2,preset3")
-```
-
-**Examples:**
-```xml
-<!-- Define on load -->
-<rect x="100" 
-      cue="ui(action:'controlXYDefineSequence', 
-              name:'intro_pattern', 
-              steps:'a,b,c,a')"/>
-
-<!-- Button to create sequence -->
-<g cue="button(
-        trigger:ui(action:'controlXYDefineSequence', 
-                    name:'verse_loop', 
-                    steps:'verse1,verse2,verse1'),
-        style(label:'Create Loop', x:10, y:90)
-      )"/>
 ```
 
 ### 4. Play Sequence
@@ -558,45 +554,14 @@ ui(action:"controlXYDefineSequence", name:"seqName", steps:"preset1,preset2,pres
 ui(action:"controlXYSequence", seq:"seqName", dur:2, ease:"easeInOutSine", loop:true)
 ```
 
-**Examples:**
-```xml
-<!-- Auto-play when playhead hits -->
-<rect x="2000" 
-      cue="ui(action:'controlXYSequence', 
-              seq:'intro_pattern', 
-              dur:1.5, 
-              loop:false)"/>
-
-<!-- Button with looping -->
-<g cue="button(
-        trigger:ui(action:'controlXYSequence', 
-                    seq:'verse_loop', 
-                    dur:2, 
-                    loop:true),
-        style(label:'▶ Loop Verse', x:10, y:130)
-      )"/>
-```
-
 ### 5. Stop Sequence
 ```xml
 ui(action:"controlXYSequenceStop")
 ```
 
-**Examples:**
-```xml
-<!-- Playhead trigger -->
-<rect x="4000" cue="ui(action:'controlXYSequenceStop')"/>
-
-<!-- Button -->
-<g cue="button(
-        trigger:ui(action:'controlXYSequenceStop'),
-        style(label:'■ Stop', x:10, y:170)
-      )"/>
-```
-
 ---
 
-## OSC Output (Bonus Feature)
+## OSC Output
 
 While spatial animation is the primary use case, all handle movements can **simultaneously control external software**.
 
@@ -625,11 +590,6 @@ While spatial animation is the primary use case, all handle movements can **simu
 /controlXY/synth/dot2 0.15 0.63
 ```
 
-**Custom address:**
-```
-/max/xy 0.42 0.87
-```
-
 Works with Max/MSP, Pure Data, SuperCollider, TouchOSC, and any OSC-compatible software.
 
 ---
@@ -638,17 +598,28 @@ Works with Max/MSP, Pure Data, SuperCollider, TouchOSC, and any OSC-compatible s
 
 ### Opening the Panel
 
-1. **Click ⚙ button** in top-right of any controlXY pad
+1. **Click ⚙ button** on any controlXY pad's launcher
 2. **Keyboard: Alt+Shift+P**
 3. **Console: `window.controlXYPresetUI.toggle()`**
 
-### Panel Features
+### Panel Tabs
 
-- **Save Section:** Type name, click 💾
-- **Presets List:** Click ▶ to recall, 🗑 to delete
-- **Recall Options:** Set duration (seconds) and easing
-- **Sequences:** Play/stop defined sequences
-- **Import/Export:** Save/load preset files
+**Presets Tab:**
+- Save new presets
+- View/recall/delete existing presets
+- Assign presets to launcher slots
+- **Scenes section** — save/recall complete state snapshots
+
+**Sequences Tab:**
+- Build sequences from presets
+- Set per-step duration and easing
+- Play/stop sequences
+- Edit existing sequences
+
+**Generators Tab:**
+- Create algorithmic preset patterns
+- Lissajous curves, spirals, grids, random walks
+- Automatically generates presets + sequence
 
 ### Keyboard Shortcut
 
@@ -658,27 +629,65 @@ Works with Max/MSP, Pure Data, SuperCollider, TouchOSC, and any OSC-compatible s
 
 ## Storage & Persistence
 
-Presets auto-save to `scores/<project>/controlxy-presets.json`:
+All controlXY data persists automatically to **localStorage** in your browser.
 
+### Storage Key
+```
+oscilla_controlxy_v1:{projectName}
+```
+
+### What's Saved
+- **Presets** — Handle positions
+- **Sequences** — Step lists with timing
+- **Launchers** — Slot assignments, bank state, mode, tween toggle
+- **Scenes** — Complete state snapshots
+
+### Data Structure
 ```json
 {
-  "presets": {
-    "intro": {
-      "pad1": {
-        "dot1": { "x": 0.25, "y": 0.75 },
-        "dot2": { "x": 0.80, "y": 0.30 }
+  "version": 1,
+  "savedAt": 1706789012345,
+  "items": [
+    {
+      "id": "cxy_abc123",
+      "kind": "preset",
+      "name": "center",
+      "data": {
+        "pad1": {
+          "dot1": { "x": 0.5, "y": 0.5 }
+        }
+      }
+    },
+    {
+      "id": "cxy_def456",
+      "kind": "scene",
+      "name": "Live Set 1",
+      "data": {
+        "handlePositions": { ... },
+        "launchers": { ... }
       }
     }
-  },
-  "sequences": {
-    "verse_pattern": ["verse1", "verse2", "verse1"]
-  },
-  "updatedAt": 1704067200000,
-  "projectId": "myProject"
+  ]
 }
 ```
 
-Loaded automatically when project loads.
+### Import/Export
+
+**Export:**
+```javascript
+// Download as JSON file
+const json = window.controlXYPresets.export();
+
+// Or via Preset Manager → Export button
+```
+
+**Import:**
+```javascript
+// Import from JSON string
+window.controlXYPresets.import(jsonString, { merge: true });
+
+// merge: true = add to existing, merge: false = replace all
+```
 
 ---
 
@@ -711,17 +720,16 @@ Loaded automatically when project loads.
 }
 ```
 
-### Toggle Button
-The ⚙ button is automatically added to each pad's top-right corner. Style via:
+### Launcher Styling
 ```css
-.controlxy-toggle-btn {
-  background: rgba(30, 30, 30, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+.controlxy-launcher-slot {
+  background: #ffffff;
+  border: 2px solid #707070;
 }
 
-.controlxy-toggle-btn:hover {
-  background: rgba(30, 30, 30, 1);
-  transform: scale(1.1);
+.controlxy-launcher-slot.assigned {
+  background: #e8f4fc;
+  border-color: #5a9fd4;
 }
 ```
 
@@ -740,28 +748,34 @@ controlXYPresets.list()                    // Returns array of preset names
 controlXYPresets.get(name)                 // Returns preset data
 
 // ===== TWEENING =====
-controlXYPresets.tweenTo(positions, dur, ease)
-controlXYPresets.tweenTo({ x: 0.5, y: 0.5 }, 2)        // All handles
-controlXYPresets.tweenTo(0.8, 0.3, 1.5, 'easeOutElastic')  // Shorthand
+controlXYPresets.tweenTo(positions, options)
 controlXYPresets.stopAllTweens()
 
 // ===== SEQUENCES =====
-controlXYPresets.defineSequence(name, steps)
+controlXYPresets.defineSequence(name, steps, options)
 controlXYPresets.playSequence(name, options)
 controlXYPresets.stopSequence()
+controlXYPresets.listSequences()
+controlXYPresets.getSequence(name)
 controlXYPresets.getActiveSequence()       // Returns current sequence info
+
+// ===== SCENES (NEW) =====
+controlXYPresets.saveScene(name)
+controlXYPresets.recallScene(name, options?)
+controlXYPresets.deleteScene(name)
+controlXYPresets.listScenes()
+controlXYPresets.getScene(name)
 
 // ===== PERSISTENCE =====
 controlXYPresets.init(projectId)           // Called automatically
+controlXYPresets.forceSave()               // Bypass debounce
 controlXYPresets.export()                  // Returns JSON string
-controlXYPresets.import(json, merge?)
-controlXYPresets.importFromProject(projectId, merge?)
+controlXYPresets.import(json, options?)
 
 // ===== UI =====
 controlXYPresetUI.show()
 controlXYPresetUI.hide()
 controlXYPresetUI.toggle()
-controlXYPresetUI.refresh()
 ```
 
 ---
@@ -780,7 +794,7 @@ controlXYPresetUI.refresh()
 ```
 1. Define 3-4 related states
 2. Create sequence with varied timing
-3. Loop sequence with `loop:true`
+3. Loop sequence with loop:true
 4. Bind to visual parameters for evolving texture
 ```
 
@@ -792,11 +806,12 @@ controlXYPresetUI.refresh()
 4. Release: slow tween back to calm
 ```
 
-### Pattern 4: Call-Response
+### Pattern 4: Scene-Based Performance
 ```
-1. Manual control for "call" phrase
-2. Automated sequence for "response"
-3. Alternate between live and programmed
+1. Create "Intro Scene" with positions + launcher setup
+2. Create "Verse Scene" with different config
+3. Create "Chorus Scene" with automation sequences ready
+4. Recall scenes at section transitions
 ```
 
 ### Pattern 5: Polytemporal Layers
@@ -818,6 +833,7 @@ controlXYPresetUI.refresh()
 - All tweening uses `requestAnimationFrame` for smooth 60fps
 - Event propagation stopped to prevent score dragging
 - Multi-touch: each pointer controls nearest available handle
+- Data persists to localStorage, auto-loads on project open
 
 ---
 
@@ -828,7 +844,9 @@ controlXYPresetUI.refresh()
 1. **Spatial control surfaces** (the pads)
 2. **Parameter binding** (connecting space to parameters)
 3. **Preset/sequence system** (programming choreography)
-4. **Live performance** (manual override)
+4. **Scenes** (complete state snapshots)
+5. **Launcher** (quick performance access)
+6. **Live performance** (manual override)
 
 ...composers gain the ability to create **complex, evolving visual/sonic animations** directly within the score itself. The score becomes both **instrument and notation**, collapsing the traditional divide between composition and performance.
 
@@ -840,13 +858,15 @@ As a bonus, OSC output allows the same spatial gestures to control external synt
 
 ## Quick Start Checklist
 
-1. ✅ Add CSS: `<link rel="stylesheet" href="controlxy-preset-ui.css">`
+1. ✅ Add CSS: `<link rel="stylesheet" href="controlxy-minimal-light.css">`
 2. ✅ Define pad: `<rect cue="controlXY(uid:pad1, handle:dot1)"/>`
 3. ✅ Open UI: Press **Alt+Shift+P** or click ⚙
 4. ✅ Save states: Move handles, name them, click 💾
-5. ✅ Animate: Use `ui(action:'controlXYRecall', ...)` on playhead triggers
-6. ✅ Choreograph: Define sequences, play/loop them
-7. ✅ Bind: Connect handle positions to visual parameters
-8. ✅ Perform: Override automation with buttons or manual control
+5. ✅ Assign to launcher: Use dropdown in preset list
+6. ✅ Animate: Use `ui(action:'controlXYRecall', ...)` on playhead triggers
+7. ✅ Choreograph: Define sequences, play/loop them
+8. ✅ Save scene: Capture complete state for later recall
+9. ✅ Bind: Connect handle positions to visual parameters
+10. ✅ Perform: Use launcher buttons or manual control
 
 Now go create some animated scores! 🎼✨

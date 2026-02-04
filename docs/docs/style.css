@@ -62,6 +62,14 @@ body {
    Header (fixed)
    --------------------------------------------------------- */
 
+
+.docs-logo {
+  height: 32px;
+  width: auto;
+  display: block;
+}
+
+
 .docs-header {
   position: fixed;
   top: 0;

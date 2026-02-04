@@ -90,6 +90,13 @@ body {
   color: var(--link);
 }
 
+
+.docs-logo {
+  height: 32px;
+  width: auto;
+  display: block;
+}
+
 .docs-menu-toggle {
   display: none;
   align-items: center;

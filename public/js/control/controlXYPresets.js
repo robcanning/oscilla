@@ -8,25 +8,15 @@
  *   - Tween between presets with easing
  *   - Sequence playback with per-step timing
  *   - Per-handle timing for complex animations
- *   - Project-based storage with import/export
+ *   - Scenes (save/recall complete launcher state + handle positions)
+ *   - localStorage persistence via controlXYShared.js
+ *
+ * This module uses controlXYShared.js as the single source of truth for state.
  */
 
 import { publish } from "./paramBinding.js";
 import { sendOSCMessage } from "../cues/osc.js";
-
-// ============================================================================
-// PRESET STORAGE
-// ============================================================================
-
-const presetStore = {
-  presets: {},
-  sequences: {},
-  projectId: null
-};
-
-// Active tween state
-let activeTweens = new Map(); // uid -> tween state
-let activeSequence = null;
+import * as shared from "./controlXYShared.js";
 
 // ============================================================================
 // EASING FUNCTIONS
@@ -65,6 +55,10 @@ function getEasing(ease) {
   }
   return easings[ease] || easings.easeInOutSine;
 }
+
+// Active tween state
+let activeTweens = new Map(); // uid -> tween state
+let activeSequence = null;
 
 // ============================================================================
 // CORE FUNCTIONS
@@ -152,31 +146,25 @@ export function savePreset(name, uidFilter = null) {
     return false;
   }
   
-  const state = captureState(uidFilter);
+  const positions = captureState(uidFilter);
   
-  if (Object.keys(state).length === 0) {
+  if (Object.keys(positions).length === 0) {
     console.warn("[controlXY] savePreset: no controlXY instances found");
     return false;
   }
   
-  presetStore.presets[name] = {
-    ...state,
-    _meta: {
-      savedAt: Date.now(),
-      filter: uidFilter
-    }
+  const data = {
+    ...positions,
+    _meta: { savedAt: shared.nowMs(), filter: uidFilter }
   };
   
-  console.log(`[controlXY] Saved preset "${name}":`, state);
+  shared.savePreset(name, data);
   
-  // Auto-save to server if project is set
-  if (presetStore.projectId) {
-    savePresetsToServer();
-  }
+  console.log(`[controlXY] Saved preset "${name}":`, positions);
   
   // Dispatch event for UI updates
   window.dispatchEvent(new CustomEvent('controlxy:presetSaved', {
-    detail: { name, state }
+    detail: { name, positions }
   }));
   
   return true;
@@ -184,28 +172,6 @@ export function savePreset(name, uidFilter = null) {
 
 /**
  * Save a preset from explicit position data (programmatic creation)
- * 
- * @param {string} name - Preset name
- * @param {Object} data - Position data in format:
- *   {
- *     uid1: { handleId1: { x: 0.5, y: 0.8 }, handleId2: { x: 0.2, y: 0.3 } },
- *     uid2: { handleId: { x: 0.7, y: 0.4 } }
- *   }
- * @param {Object} options - Optional metadata
- * @returns {boolean} Success
- * 
- * @example
- * // Save a single-pad, single-handle preset
- * savePresetFromData('center', {
- *   pad1: { dot1: { x: 0.5, y: 0.5 } }
- * });
- * 
- * @example
- * // Save multi-pad, multi-handle preset
- * savePresetFromData('complex', {
- *   pad1: { dot1: { x: 0.2, y: 0.8 }, dot2: { x: 0.8, y: 0.2 } },
- *   pad2: { handle1: { x: 0.5, y: 0.5 } }
- * });
  */
 export function savePresetFromData(name, data, options = {}) {
   if (!name) {
@@ -218,216 +184,161 @@ export function savePresetFromData(name, data, options = {}) {
     return false;
   }
   
-  // Validate data format
-  const validatedData = {};
-  let hasValidData = false;
+  // Validate and normalize data structure
+  const normalizedState = {};
   
   for (const [uid, handles] of Object.entries(data)) {
     if (typeof handles !== 'object') continue;
     
-    const validatedHandles = {};
+    const normalizedHandles = {};
     for (const [handleId, pos] of Object.entries(handles)) {
       if (typeof pos !== 'object') continue;
-      if (typeof pos.x !== 'number' || typeof pos.y !== 'number') continue;
       
-      // Clamp to 0-1 range and round
-      validatedHandles[handleId] = {
-        x: Math.round(Math.max(0, Math.min(1, pos.x)) * 1000) / 1000,
-        y: Math.round(Math.max(0, Math.min(1, pos.y)) * 1000) / 1000
+      const x = typeof pos.x === 'number' ? Math.max(0, Math.min(1, pos.x)) : 0.5;
+      const y = typeof pos.y === 'number' ? Math.max(0, Math.min(1, pos.y)) : 0.5;
+      
+      normalizedHandles[handleId] = {
+        x: Math.round(x * 1000) / 1000,
+        y: Math.round(y * 1000) / 1000
       };
-      hasValidData = true;
     }
     
-    if (Object.keys(validatedHandles).length > 0) {
-      validatedData[uid] = validatedHandles;
+    if (Object.keys(normalizedHandles).length > 0) {
+      normalizedState[uid] = normalizedHandles;
     }
   }
   
-  if (!hasValidData) {
+  if (Object.keys(normalizedState).length === 0) {
     console.warn("[controlXY] savePresetFromData: no valid position data found");
     return false;
   }
   
-  presetStore.presets[name] = {
-    ...validatedData,
-    _meta: {
-      savedAt: Date.now(),
-      programmatic: true,
-      ...options
-    }
+  const presetData = {
+    ...normalizedState,
+    _meta: { savedAt: shared.nowMs(), source: 'data', ...options }
   };
   
-  console.log(`[controlXY] Saved programmatic preset "${name}":`, validatedData);
+  shared.savePreset(name, presetData);
   
-  // Auto-save to server if project is set
-  if (presetStore.projectId) {
-    savePresetsToServer();
-  }
-  
-  // Dispatch event for UI updates
-  window.dispatchEvent(new CustomEvent('controlxy:presetSaved', {
-    detail: { name, state: validatedData }
-  }));
+  console.log(`[controlXY] Saved preset from data "${name}":`, normalizedState);
   
   return true;
 }
-
 
 /**
  * Delete a preset
  */
 export function deletePreset(name) {
-  if (!presetStore.presets[name]) {
-    console.warn(`[controlXY] Preset "${name}" not found`);
-    return false;
+  const result = shared.deletePreset(name);
+  
+  if (result) {
+    console.log(`[controlXY] Deleted preset "${name}"`);
+    window.dispatchEvent(new CustomEvent('controlxy:presetDeleted', {
+      detail: { name }
+    }));
   }
   
-  delete presetStore.presets[name];
-  console.log(`[controlXY] Deleted preset "${name}"`);
-  
-  if (presetStore.projectId) {
-    savePresetsToServer();
-  }
-  
-  window.dispatchEvent(new CustomEvent('controlxy:presetDeleted', {
-    detail: { name }
-  }));
-  
-  return true;
+  return result;
 }
 
 /**
  * List all preset names
  */
 export function listPresets() {
-  return Object.keys(presetStore.presets);
+  return shared.listPresets();
 }
 
 /**
- * Get preset data
+ * Get preset data by name
  */
 export function getPreset(name) {
-  return presetStore.presets[name] || null;
+  const item = shared.getPreset(name);
+  return item?.data || null;
 }
 
-// ============================================================================
-// RECALL WITH TWEENING
-// ============================================================================
-
 /**
- * Recall a preset, optionally tweening to it
- * 
- * Options:
- *   dur: number (seconds) - tween duration, 0 = instant
- *   ease: string|number - easing function
- *   handles: { handleId: { dur, ease, delay } } - per-handle overrides
+ * Recall a preset by name
  */
 export function recallPreset(name, options = {}) {
-  const preset = presetStore.presets[name];
+  const presetData = getPreset(name);
   
-  if (!preset) {
+  if (!presetData) {
     console.warn(`[controlXY] Preset "${name}" not found`);
     return false;
   }
   
-  const dur = options.dur ?? 0;
-  const ease = options.ease ?? 'easeInOutSine';
-  const handleOverrides = options.handles || {};
+  const { dur = 0, ease = 'easeInOutSine', handles: handleFilter } = options;
   
-  console.log(`[controlXY] Recalling preset "${name}"`, { dur, ease });
-  
-  // Build target positions
-  const targets = [];
-  
-  for (const [uid, handleStates] of Object.entries(preset)) {
-    if (uid === '_meta') continue;
-    
-    const instance = getControlXY(uid);
-    if (!instance) {
-      console.warn(`[controlXY] Instance "${uid}" not found for recall`);
-      continue;
-    }
-    
-    for (const [handleId, pos] of Object.entries(handleStates)) {
-      const handle = instance.handles.find(h => h.id === handleId);
-      if (!handle) continue;
-      
-      const override = handleOverrides[handleId] || {};
-      
-      targets.push({
-        instance,
-        handle,
-        targetX: pos.x,
-        targetY: pos.y,
-        dur: override.dur ?? dur,
-        ease: override.ease ?? ease,
-        delay: override.delay ?? 0
-      });
+  // Extract position data (exclude _meta)
+  const positions = {};
+  for (const [key, val] of Object.entries(presetData)) {
+    if (key !== '_meta') {
+      positions[key] = val;
     }
   }
   
-  if (targets.length === 0) {
-    console.warn("[controlXY] No valid targets for recall");
-    return false;
-  }
-  
-  // Execute tweens
-  if (dur === 0 && !Object.keys(handleOverrides).length) {
+  if (dur <= 0) {
     // Instant recall
-    for (const t of targets) {
-      applyPositionNormalized(t.instance, t.handle, t.targetX, t.targetY);
-    }
+    applyPositions(positions, handleFilter);
   } else {
-    // Tweened recall
-    for (const t of targets) {
-      if (t.delay > 0) {
-        setTimeout(() => startTween(t), t.delay * 1000);
-      } else {
-        startTween(t);
-      }
-    }
+    // Tween to positions
+    tweenTo(positions, { dur, ease, handles: handleFilter });
   }
+  
+  console.log(`[controlXY] Recalled preset "${name}"`, dur > 0 ? `(tween ${dur}s)` : '(instant)');
   
   window.dispatchEvent(new CustomEvent('controlxy:presetRecalled', {
-    detail: { name, options }
+    detail: { name, dur }
   }));
   
   return true;
 }
 
 /**
- * Apply normalized position to a handle
+ * Apply positions instantly
  */
-function applyPositionNormalized(instance, handle, normX, normY) {
-  const bbox = instance.boundsEl?.getBBox();
-  if (!bbox) return;
-  
-  // Convert normalized to absolute
-  const absX = bbox.x + normX * bbox.width;
-  const absY = bbox.y + (1 - normY) * bbox.height; // Invert Y
-  
-  // Update handle state
-  handle.curX = absX;
-  handle.curY = absY;
-  handle.offsetX = absX - handle.originalCenterX;
-  handle.offsetY = absY - handle.originalCenterY;
-  
-  // Apply transform
-  handle.el.setAttribute("transform", `translate(${handle.offsetX}, ${handle.offsetY})`);
-  
-  // Emit values
-  emitHandleValues(instance, handle, normX, normY);
-  
-  // Update label if present
-  if (handle.label && instance.updateLabel) {
-    instance.updateLabel(handle.label, handle.el, normX, normY, handle.offsetX, handle.offsetY);
+function applyPositions(positions, handleFilter = null) {
+  for (const [uid, handlePositions] of Object.entries(positions)) {
+    const instance = getControlXY(uid);
+    if (!instance) continue;
+    
+    for (const handle of instance.handles) {
+      if (handleFilter && !handleFilter.includes(handle.id)) continue;
+      
+      const pos = handlePositions[handle.id];
+      if (!pos) continue;
+      
+      const bbox = instance.boundsEl?.getBBox();
+      if (!bbox) continue;
+      
+      // Convert normalized to world coordinates
+      const targetX = bbox.x + pos.x * bbox.width;
+      const targetY = bbox.y + (1 - pos.y) * bbox.height;
+      
+      // Apply position
+      handle.curX = targetX;
+      handle.curY = targetY;
+      handle.offsetX = targetX - handle.originalCenterX;
+      handle.offsetY = targetY - handle.originalCenterY;
+      
+      handle.el.setAttribute("transform", `translate(${handle.offsetX}, ${handle.offsetY})`);
+      
+      // Emit new values
+      emitHandleValues(instance, handle);
+    }
   }
 }
 
 /**
- * Emit handle values to control plane and OSC
+ * Emit values for a handle (publish + OSC)
  */
-function emitHandleValues(instance, handle, normX, normY) {
+function emitHandleValues(instance, handle) {
+  const bbox = instance.boundsEl?.getBBox();
+  if (!bbox) return;
+  
+  const normX = Math.max(0, Math.min(1, (handle.curX - bbox.x) / bbox.width));
+  const normY = Math.max(0, Math.min(1, 1 - (handle.curY - bbox.y) / bbox.height));
+  
   // Publish to control plane
   publish("controlXY", instance.uid, {
     handle: handle.id,
@@ -437,203 +348,120 @@ function emitHandleValues(instance, handle, normX, normY) {
     [`${handle.id}.y`]: normY
   });
   
+  // Update label if exists
+  if (handle.label && instance.updateLabel) {
+    instance.updateLabel(handle.label, handle.el, normX, normY, handle.offsetX, handle.offsetY);
+  }
+  
   // OSC output
   if (instance.oscEnabled) {
-    const now = performance.now();
-    if (now - (handle.lastOscSent || 0) >= (instance.oscThrottle || 30)) {
-      handle.lastOscSent = now;
-      
-      const addr = instance.handles.length > 1 
-        ? `${instance.oscAddr}/${handle.id}` 
-        : instance.oscAddr;
-      
-      sendOSCMessage?.({
-        type: "osc_value",
-        addr: addr,
-        args: [normX, normY],
-        timestamp: Date.now()
-      });
-    }
+    const addr = instance.handles.length > 1 
+      ? `${instance.oscAddr}/${handle.id}` 
+      : instance.oscAddr;
+    
+    sendOSCMessage?.({
+      type: "osc_value",
+      addr: addr,
+      args: [normX, normY],
+      timestamp: Date.now()
+    });
   }
 }
 
 // ============================================================================
-// TWEEN ENGINE
+// TWEENING
 // ============================================================================
 
 /**
- * Start a tween for a single handle
+ * Tween handles to target positions
  */
-function startTween(target) {
-  const { instance, handle, targetX, targetY, dur, ease } = target;
-  
-  // Cancel existing tween for this handle
-  const tweenKey = `${instance.uid}:${handle.id}`;
-  if (activeTweens.has(tweenKey)) {
-    cancelAnimationFrame(activeTweens.get(tweenKey).rafId);
-  }
-  
-  const bbox = instance.boundsEl?.getBBox();
-  if (!bbox) return;
-  
-  // Get current normalized position
-  const startX = (handle.curX - bbox.x) / bbox.width;
-  const startY = 1 - (handle.curY - bbox.y) / bbox.height;
-  
-  const easeFn = getEasing(ease);
-  const startTime = performance.now();
+export function tweenTo(positions, options = {}) {
+  const { dur = 1, ease = 'easeInOutSine', handles: handleFilter, onComplete } = options;
+  const easeFunc = getEasing(ease);
   const durationMs = dur * 1000;
   
-  const tweenState = {
-    startX, startY,
-    targetX, targetY,
-    startTime, durationMs,
-    easeFn,
-    instance, handle,
-    rafId: null
-  };
-  
-  function tick() {
-    const elapsed = performance.now() - startTime;
-    const progress = Math.min(1, elapsed / durationMs);
-    const easedProgress = easeFn(progress);
-    
-    const currentX = startX + (targetX - startX) * easedProgress;
-    const currentY = startY + (targetY - startY) * easedProgress;
-    
-    applyPositionNormalized(instance, handle, currentX, currentY);
-    
-    if (progress < 1) {
-      tweenState.rafId = requestAnimationFrame(tick);
-    } else {
-      activeTweens.delete(tweenKey);
-      
-      window.dispatchEvent(new CustomEvent('controlxy:tweenComplete', {
-        detail: { uid: instance.uid, handleId: handle.id }
-      }));
+  // Stop any active tweens for affected UIDs
+  for (const uid of Object.keys(positions)) {
+    if (activeTweens.has(uid)) {
+      cancelAnimationFrame(activeTweens.get(uid).rafId);
+      activeTweens.delete(uid);
     }
   }
   
-  tweenState.rafId = requestAnimationFrame(tick);
-  activeTweens.set(tweenKey, tweenState);
+  // Capture start positions
+  const startPositions = captureState();
+  const startTime = performance.now();
+  
+  function animate() {
+    const elapsed = performance.now() - startTime;
+    const progress = Math.min(1, elapsed / durationMs);
+    const easedProgress = easeFunc(progress);
+    
+    // Interpolate positions
+    for (const [uid, handlePositions] of Object.entries(positions)) {
+      const instance = getControlXY(uid);
+      if (!instance) continue;
+      
+      const startUid = startPositions[uid] || {};
+      
+      for (const handle of instance.handles) {
+        if (handleFilter && !handleFilter.includes(handle.id)) continue;
+        
+        const targetPos = handlePositions[handle.id];
+        const startPos = startUid[handle.id];
+        if (!targetPos) continue;
+        
+        const startX = startPos?.x ?? 0.5;
+        const startY = startPos?.y ?? 0.5;
+        
+        const currentX = startX + (targetPos.x - startX) * easedProgress;
+        const currentY = startY + (targetPos.y - startY) * easedProgress;
+        
+        const bbox = instance.boundsEl?.getBBox();
+        if (!bbox) continue;
+        
+        // Convert to world coordinates
+        const worldX = bbox.x + currentX * bbox.width;
+        const worldY = bbox.y + (1 - currentY) * bbox.height;
+        
+        // Apply
+        handle.curX = worldX;
+        handle.curY = worldY;
+        handle.offsetX = worldX - handle.originalCenterX;
+        handle.offsetY = worldY - handle.originalCenterY;
+        
+        handle.el.setAttribute("transform", `translate(${handle.offsetX}, ${handle.offsetY})`);
+        
+        emitHandleValues(instance, handle);
+      }
+    }
+    
+    if (progress < 1) {
+      const rafId = requestAnimationFrame(animate);
+      // Store for potential cancellation
+      for (const uid of Object.keys(positions)) {
+        activeTweens.set(uid, { rafId, startTime, durationMs });
+      }
+    } else {
+      // Complete
+      for (const uid of Object.keys(positions)) {
+        activeTweens.delete(uid);
+      }
+      onComplete?.();
+    }
+  }
+  
+  animate();
 }
 
 /**
  * Stop all active tweens
  */
 export function stopAllTweens() {
-  for (const [key, state] of activeTweens) {
+  for (const [uid, state] of activeTweens) {
     cancelAnimationFrame(state.rafId);
   }
   activeTweens.clear();
-  console.log("[controlXY] Stopped all tweens");
-}
-
-/**
- * Tween to arbitrary positions (not from preset)
- * 
- * Supports multiple formats:
- * 
- * 1. Simple format (applies to ALL controlXY instances):
- *    tweenTo({ x: 0.5, y: 0.5 }, 2, 'easeInOutSine')
- *    tweenTo(0.3, 0.7, 2, 'easeInOutSine')  // positional args
- * 
- * 2. Per-handle format (for multi-handle pads):
- *    tweenTo([
- *      { x: 0.2, y: 0.8 },
- *      { x: 0.5, y: 0.5 },
- *      { x: 0.8, y: 0.3 }
- *    ], 2)
- * 
- * 3. Explicit UIDs (original format):
- *    tweenTo({
- *      "pad1": { "dot1": { x: 0.5, y: 0.5 } }
- *    }, 2)
- */
-export function tweenTo(positions, dur = 1, ease = 'easeInOutSine', _ease2) {
-  // Handle positional arguments: tweenTo(x, y, dur, ease)
-  if (typeof positions === 'number' && typeof dur === 'number' && !_ease2) {
-    const x = positions;
-    const y = dur;
-    dur = ease;
-    ease = _ease2 || 'easeInOutSine';
-    positions = { x, y };
-  }
-  
-  // Normalize ease parameter position
-  if (typeof ease === 'number') {
-    const temp = dur;
-    dur = ease;
-    ease = _ease2 || 'easeInOutSine';
-  }
-  
-  const instances = getAllControlXY();
-  
-  if (instances.length === 0) {
-    console.warn("[controlXY] tweenTo: no controlXY instances found");
-    return;
-  }
-  
-  // Format 1: Simple object { x, y } - applies to ALL handles
-  if (positions.x !== undefined && positions.y !== undefined && !Array.isArray(positions)) {
-    console.log(`[controlXY] tweenTo: moving all handles to (${positions.x}, ${positions.y})`);
-    
-    for (const instance of instances) {
-      for (const handle of instance.handles) {
-        startTween({
-          instance,
-          handle,
-          targetX: positions.x,
-          targetY: positions.y,
-          dur,
-          ease
-        });
-      }
-    }
-    return;
-  }
-  
-  // Format 2: Array of positions - applies to handles by index
-  if (Array.isArray(positions)) {
-    console.log(`[controlXY] tweenTo: moving handles by index (${positions.length} positions)`);
-    
-    for (const instance of instances) {
-      for (let i = 0; i < instance.handles.length; i++) {
-        const pos = positions[i % positions.length]; // Wrap around if needed
-        if (!pos) continue;
-        
-        startTween({
-          instance,
-          handle: instance.handles[i],
-          targetX: pos.x,
-          targetY: pos.y,
-          dur,
-          ease
-        });
-      }
-    }
-    return;
-  }
-  
-  // Format 3: Original explicit UID format
-  for (const [uid, handlePositions] of Object.entries(positions)) {
-    const instance = getControlXY(uid);
-    if (!instance) continue;
-    
-    for (const [handleId, pos] of Object.entries(handlePositions)) {
-      const handle = instance.handles.find(h => h.id === handleId);
-      if (!handle) continue;
-      
-      startTween({
-        instance,
-        handle,
-        targetX: pos.x,
-        targetY: pos.y,
-        dur,
-        ease
-      });
-    }
-  }
 }
 
 // ============================================================================
@@ -641,237 +469,120 @@ export function tweenTo(positions, dur = 1, ease = 'easeInOutSine', _ease2) {
 // ============================================================================
 
 /**
- * Define a sequence
- * 
- * Supports nested sequences - a sequence can reference other sequences!
- * Use prefix 'seq:' to reference another sequence
- * 
- * @param {string} name - Sequence name
- * @param {Array} steps - Array of preset names or step objects
- * @param {Object} options - Sequence options (loop, defaultDur, defaultEase)
- * 
- * @example
- * // Define base sequences
- * defineSequence('pattern_a', ['state1', 'state2', 'state3']);
- * defineSequence('pattern_b', ['state4', 'state5', 'state6'], { loop: true });
- * 
- * // Define meta-sequence that combines them
- * defineSequence('meta', ['seq:pattern_a', 'seq:pattern_b', 'seq:pattern_a']);
- * 
- * // When played, 'meta' will expand to:
- * // ['state1', 'state2', 'state3', 'state4', 'state5', 'state6', 'state1', 'state2', 'state3']
+ * Define a named sequence
  */
 export function defineSequence(name, steps, options = {}) {
-  presetStore.sequences[name] = {
-    steps: steps,
-    loop: options.loop ?? false,
-    defaultDur: options.defaultDur ?? 1,
-    defaultEase: options.defaultEase ?? 'easeInOutSine'
-  };
-  console.log(`[controlXY] Defined sequence "${name}":`, { steps, options });
-  
-  if (presetStore.projectId) {
-    savePresetsToServer();
+  if (!name || !Array.isArray(steps)) {
+    console.warn("[controlXY] defineSequence: name and steps array required");
+    return false;
   }
+  
+  shared.saveSequence(name, steps, options);
+  
+  console.log(`[controlXY] Defined sequence "${name}" with ${steps.length} steps`);
   
   return true;
 }
 
 /**
- * Get sequence definition
+ * Get sequence data
  */
 export function getSequence(name) {
-  const seq = presetStore.sequences[name];
-  if (!seq) return null;
-  
-  // Handle legacy format (plain array)
-  if (Array.isArray(seq)) {
-    return { steps: seq, loop: false, defaultDur: 1, defaultEase: 'easeInOutSine' };
-  }
-  
-  return seq;
+  const item = shared.getSequence(name);
+  return item?.data || null;
 }
 
 /**
- * Expand a sequence, resolving any nested sequence references
- * 
- * @param {Array} steps - Sequence steps (may contain 'seq:name' references)
- * @param {Set} visited - Track visited sequences to prevent infinite loops
- * @returns {Array} Expanded flat sequence
+ * List all sequence names
  */
-function expandSequence(steps, visited = new Set()) {
-  const expanded = [];
-  
-  // Handle new format (object with steps property) or legacy (plain array)
-  const stepsArray = Array.isArray(steps) ? steps : (steps?.steps || []);
-  
-  for (const step of stepsArray) {
-    // Check if this is a sequence reference
-    const stepPreset = typeof step === 'string' ? step : step?.preset;
-    
-    if (typeof stepPreset === 'string' && stepPreset.startsWith('seq:')) {
-      const seqName = stepPreset.slice(4); // Remove 'seq:' prefix
-      
-      // Prevent infinite loops
-      if (visited.has(seqName)) {
-        console.warn(`[controlXY] Circular reference detected: ${seqName}`);
-        continue;
-      }
-      
-      // Get the referenced sequence
-      const nestedSeq = presetStore.sequences[seqName];
-      if (!nestedSeq) {
-        console.warn(`[controlXY] Nested sequence "${seqName}" not found`);
-        continue;
-      }
-      
-      // Recursively expand nested sequence
-      visited.add(seqName);
-      const nestedExpanded = expandSequence(nestedSeq, visited);
-      visited.delete(seqName);
-      
-      expanded.push(...nestedExpanded);
-    } else {
-      // Regular preset or step object
-      expanded.push(step);
-    }
-  }
-  
-  return expanded;
+export function listSequences() {
+  return shared.listSequences();
 }
 
 /**
- * Play a sequence of presets
- * 
- * Sequence steps can be:
- *   - String: preset name (uses global duration)
- *   - Object: { preset: 'name', dur: 1.5, ease: 'linear' }
- * 
- * Options:
- *   speed: number - speed multiplier (1 = normal, 2 = double speed, 0.5 = half speed)
- *   ease: string - default easing (overrides sequence default)
- *   loop: boolean | number - override loop setting (if not provided, uses sequence's stored loop state)
- *   dur: number - default duration for steps without explicit duration
- *   onStep: function(stepIndex, presetName, stepDur) - callback per step
- *   onComplete: function() - callback when done
+ * Play a sequence
  */
 export function playSequence(name, options = {}) {
-  const seqData = presetStore.sequences[name];
+  const seqData = getSequence(name);
   
   if (!seqData) {
     console.warn(`[controlXY] Sequence "${name}" not found`);
     return false;
   }
   
-  // Handle legacy format (plain array) vs new format (object with steps)
-  const isLegacy = Array.isArray(seqData);
-  const sequence = isLegacy ? seqData : seqData.steps;
-  const seqLoop = isLegacy ? false : (seqData.loop ?? false);
-  const seqDefaultDur = isLegacy ? 1 : (seqData.defaultDur ?? 1);
-  const seqDefaultEase = isLegacy ? 'easeInOutSine' : (seqData.defaultEase ?? 'easeInOutSine');
-  
-  if (!sequence || !Array.isArray(sequence)) {
-    console.warn(`[controlXY] Sequence "${name}" has no valid steps`);
-    return false;
-  }
-  
-  // Stop any active sequence
+  // Stop any currently playing sequence
   stopSequence();
   
-  // Expand nested sequences
-  const expandedSequence = expandSequence(sequence);
-  console.log(`[controlXY] Playing sequence "${name}" (${sequence.length} steps → ${expandedSequence.length} expanded)`);
-  
-  // Speed multiplier (default 1.0 = normal speed)
-  const speed = options.speed ?? 1;
-  // Use provided options, fall back to sequence defaults
-  const defaultDur = options.dur ?? seqDefaultDur;
-  const defaultEase = options.ease ?? seqDefaultEase;
-  // Loop: use provided option if explicitly set, otherwise use sequence's stored loop state
-  const loop = options.loop !== undefined ? options.loop : seqLoop;
-  const onStep = options.onStep || (() => {});
-  const onComplete = options.onComplete || (() => {});
+  const steps = seqData.steps || seqData; // Support legacy format
+  const loop = options.loop ?? seqData.loop ?? false;
+  const defaultDur = options.dur ?? seqData.defaultDur ?? 1;
+  const defaultEase = options.ease ?? seqData.defaultEase ?? 'easeInOutSine';
   
   let currentStep = 0;
   let loopCount = 0;
-  const maxLoops = loop === true ? Infinity : (loop || 1);
+  const maxLoops = typeof loop === 'number' ? loop : (loop ? Infinity : 1);
   
   activeSequence = {
     name,
-    sequence: expandedSequence,
+    steps,
     currentStep,
+    loop: maxLoops,
     loopCount,
-    maxLoops,
-    speed,
-    timeoutId: null,
     stopped: false
   };
   
   function playStep() {
-    if (activeSequence?.stopped) return;
+    if (activeSequence?.stopped) {
+      activeSequence = null;
+      return;
+    }
     
-    if (currentStep >= expandedSequence.length) {
+    if (currentStep >= steps.length) {
       loopCount++;
       if (loopCount >= maxLoops) {
-        console.log(`[controlXY] Sequence "${name}" complete`);
-        onComplete();
+        console.log(`[controlXY] Sequence "${name}" completed`);
         activeSequence = null;
+        window.dispatchEvent(new CustomEvent('controlxy:sequenceComplete', {
+          detail: { name }
+        }));
         return;
       }
       currentStep = 0;
     }
     
-    const step = expandedSequence[currentStep];
-    let presetName, stepDur, stepEase;
+    const step = steps[currentStep];
+    const presetName = typeof step === 'string' ? step : step.preset;
+    const stepDur = typeof step === 'object' ? (step.dur ?? defaultDur) : defaultDur;
+    const stepEase = typeof step === 'object' ? (step.ease ?? defaultEase) : defaultEase;
     
-    if (typeof step === 'string') {
-      // Simple string preset - use default duration
-      presetName = step;
-      stepDur = defaultDur;
-      stepEase = defaultEase;
-    } else if (typeof step === 'object') {
-      // Object with per-step settings
-      presetName = step.preset;
-      stepDur = step.dur ?? defaultDur;
-      stepEase = step.ease ?? defaultEase;
-    }
-    
-    // Apply speed multiplier (speed > 1 = faster = shorter duration)
-    const actualDur = stepDur / speed;
-    
-    console.log(`[controlXY] Sequence "${name}" step ${currentStep}: "${presetName}" (${stepDur}s × ${speed}x = ${actualDur.toFixed(2)}s)`);
-    
-    onStep(currentStep, presetName, actualDur);
-    
-    recallPreset(presetName, { dur: actualDur, ease: stepEase });
+    recallPreset(presetName, {
+      dur: stepDur,
+      ease: stepEase
+    });
     
     currentStep++;
-    activeSequence.currentStep = currentStep;
+    if (activeSequence) activeSequence.currentStep = currentStep;
     
-    // Schedule next step after tween completes
-    const waitTime = (actualDur + 0.05) * 1000; // Small buffer
-    activeSequence.timeoutId = setTimeout(playStep, waitTime);
+    // Schedule next step
+    setTimeout(playStep, stepDur * 1000);
   }
   
   playStep();
   
-  window.dispatchEvent(new CustomEvent('controlxy:sequenceStarted', {
-    detail: { name, options }
-  }));
+  console.log(`[controlXY] Playing sequence "${name}" (${steps.length} steps, loop: ${maxLoops})`);
   
   return true;
 }
 
 /**
- * Stop active sequence
+ * Stop current sequence
  */
 export function stopSequence() {
   if (activeSequence) {
     activeSequence.stopped = true;
-    clearTimeout(activeSequence.timeoutId);
     console.log(`[controlXY] Stopped sequence "${activeSequence.name}"`);
-    activeSequence = null;
   }
+  activeSequence = null;
   stopAllTweens();
 }
 
@@ -879,516 +590,364 @@ export function stopSequence() {
  * Get active sequence info
  */
 export function getActiveSequence() {
-  if (!activeSequence) return null;
-  return {
-    name: activeSequence.name,
-    currentStep: activeSequence.currentStep,
-    totalSteps: activeSequence.sequence.length,
-    loopCount: activeSequence.loopCount
+  return activeSequence;
+}
+
+// ============================================================================
+// SCENES - Save/recall complete state (launchers + handle positions)
+// ============================================================================
+
+/**
+ * Save current state as a named scene
+ * Includes: all launcher slot assignments, bank selection, mode, tween, + handle positions
+ */
+export function saveScene(name) {
+  if (!name) {
+    console.warn("[controlXY] saveScene: name required");
+    return false;
+  }
+  
+  // Capture current handle positions
+  const handlePositions = captureState();
+  
+  // Capture current launcher states
+  const launcherStates = {};
+  for (const uid of shared.listLaunchers()) {
+    const launcher = shared.getLauncher(uid);
+    if (launcher?.data) {
+      launcherStates[uid] = JSON.parse(JSON.stringify(launcher.data));
+    }
+  }
+  
+  const sceneData = {
+    handlePositions,
+    launchers: launcherStates,
+    savedAt: shared.nowMs()
   };
-}
-
-// ============================================================================
-// PERSISTENCE - SERVER
-// ============================================================================
-
-// Debounce timer for auto-save
-let saveDebounceTimer = null;
-const SAVE_DEBOUNCE_MS = 500;  // Wait 500ms after last change before saving
-
-/**
- * Initialize preset system for a project
- */
-export async function initPresets(projectId) {
-  presetStore.projectId = projectId;
-  presetStore.presets = {};
-  presetStore.sequences = {};
   
-  // Load from server
-  await loadPresetsFromServer();
+  // Save as a scene item
+  const existing = shared.state.items.find(i => i.kind === 'scene' && i.name === name);
   
-  // Also load launcher state if present
-  if (presetStore.launchers) {
-    console.log(`[controlXY] Loaded launcher states for ${Object.keys(presetStore.launchers).length} pads`);
-  }
-  
-  console.log(`[controlXY] Presets initialized for project "${projectId}"`);
-}
-
-/**
- * Save presets to server (debounced)
- * Called automatically on any preset/sequence change
- */
-function savePresetsToServer() {
-  if (!presetStore.projectId) return;
-  
-  // Clear any pending save
-  if (saveDebounceTimer) {
-    clearTimeout(saveDebounceTimer);
-  }
-  
-  // Debounce: wait for changes to settle before saving
-  saveDebounceTimer = setTimeout(async () => {
-    try {
-      const response = await fetch('/api/controlxy-presets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: presetStore.projectId,
-          presets: presetStore.presets,
-          sequences: presetStore.sequences,
-          launchers: presetStore.launchers || {}
-        })
-      });
-      
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      console.log(`[controlXY] Auto-saved to server`);
-      
-      // Dispatch event for UI feedback
-      window.dispatchEvent(new CustomEvent('controlxy:saved', {
-        detail: { 
-          presetCount: Object.keys(presetStore.presets).length,
-          sequenceCount: Object.keys(presetStore.sequences).length
-        }
-      }));
-    } catch (err) {
-      console.error("[controlXY] Failed to save presets:", err);
-      
-      window.dispatchEvent(new CustomEvent('controlxy:saveError', {
-        detail: { error: err.message }
-      }));
-    }
-  }, SAVE_DEBOUNCE_MS);
-}
-
-/**
- * Force immediate save (bypasses debounce)
- */
-export async function forceSave() {
-  if (!presetStore.projectId) return false;
-  
-  // Clear any pending debounced save
-  if (saveDebounceTimer) {
-    clearTimeout(saveDebounceTimer);
-    saveDebounceTimer = null;
-  }
-  
-  try {
-    const response = await fetch('/api/controlxy-presets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        projectId: presetStore.projectId,
-        presets: presetStore.presets,
-        sequences: presetStore.sequences,
-        launchers: presetStore.launchers || {}
-      })
+  if (existing) {
+    shared.updateItem(existing.id, { data: sceneData });
+  } else {
+    shared.addItem({
+      kind: 'scene',
+      name,
+      data: sceneData,
+      scope: 'local'
     });
-    
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-    console.log(`[controlXY] Force-saved to server`);
-    return true;
-  } catch (err) {
-    console.error("[controlXY] Failed to force-save:", err);
-    return false;
   }
-}
-
-/**
- * Load presets from server
- */
-async function loadPresetsFromServer() {
-  if (!presetStore.projectId) return;
   
-  try {
-    const response = await fetch(`/api/controlxy-presets?projectId=${presetStore.projectId}`);
-    
-    if (response.status === 404) {
-      console.log("[controlXY] No presets file found, starting fresh");
-      return;
+  console.log(`[controlXY] Saved scene "${name}"`);
+  
+  window.dispatchEvent(new CustomEvent('controlxy:sceneSaved', {
+    detail: { name }
+  }));
+  
+  return true;
+}
+
+/**
+ * Recall a saved scene
+ */
+export function recallScene(name, options = {}) {
+  const item = shared.state.items.find(i => i.kind === 'scene' && i.name === name);
+  
+  if (!item?.data) {
+    console.warn(`[controlXY] Scene "${name}" not found`);
+    return false;
+  }
+  
+  const { dur = 0, ease = 'easeInOutSine' } = options;
+  const sceneData = item.data;
+  
+  // Restore launcher states
+  if (sceneData.launchers) {
+    for (const [uid, launcherData] of Object.entries(sceneData.launchers)) {
+      shared.saveLauncher(uid, launcherData);
     }
     
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-    const data = await response.json();
-    presetStore.presets = data.presets || {};
-    presetStore.sequences = data.sequences || {};
-    presetStore.launchers = data.launchers || {};
-    
-    console.log(`[controlXY] Loaded ${Object.keys(presetStore.presets).length} presets, ${Object.keys(presetStore.sequences).length} sequences from server`);
-    
-    // Dispatch event for UI updates
-    window.dispatchEvent(new CustomEvent('controlxy:loaded', {
-      detail: { 
-        presetCount: Object.keys(presetStore.presets).length,
-        sequenceCount: Object.keys(presetStore.sequences).length
-      }
+    // Trigger launcher refresh
+    window.dispatchEvent(new CustomEvent('controlxy:launcherRefresh', {
+      detail: {}
     }));
-  } catch (err) {
-    console.error("[controlXY] Failed to load presets:", err);
   }
-}
-
-// ============================================================================
-// PERSISTENCE - EXPORT/IMPORT
-// ============================================================================
-
-/**
- * Export presets as JSON
- */
-export function exportPresets() {
-  return JSON.stringify({
-    presets: presetStore.presets,
-    sequences: presetStore.sequences,
-    exportedAt: Date.now(),
-    projectId: presetStore.projectId
-  }, null, 2);
-}
-
-/**
- * Import presets from JSON
- */
-export function importPresets(json, merge = false) {
-  try {
-    const data = typeof json === 'string' ? JSON.parse(json) : json;
-    
-    if (merge) {
-      Object.assign(presetStore.presets, data.presets || {});
-      Object.assign(presetStore.sequences, data.sequences || {});
+  
+  // Restore handle positions
+  if (sceneData.handlePositions) {
+    if (dur <= 0) {
+      applyPositions(sceneData.handlePositions);
     } else {
-      presetStore.presets = data.presets || {};
-      presetStore.sequences = data.sequences || {};
+      tweenTo(sceneData.handlePositions, { dur, ease });
     }
-    
-    console.log(`[controlXY] Imported ${Object.keys(presetStore.presets).length} presets`);
-    
-    if (presetStore.projectId) {
-      savePresetsToServer();
-    }
-    
-    window.dispatchEvent(new CustomEvent('controlxy:presetsImported', {
-      detail: { count: Object.keys(presetStore.presets).length }
-    }));
-    
-    return true;
-  } catch (err) {
-    console.error("[controlXY] Import failed:", err);
-    return false;
   }
+  
+  console.log(`[controlXY] Recalled scene "${name}"`);
+  
+  window.dispatchEvent(new CustomEvent('controlxy:sceneRecalled', {
+    detail: { name }
+  }));
+  
+  return true;
 }
 
 /**
- * Import presets from another project
+ * Delete a scene
  */
-export async function importFromProject(sourceProjectId, merge = true) {
-  try {
-    const response = await fetch(`/api/controlxy-presets?projectId=${sourceProjectId}`);
-    
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-    const data = await response.json();
-    return importPresets(data, merge);
-  } catch (err) {
-    console.error(`[controlXY] Failed to import from project "${sourceProjectId}":`, err);
+export function deleteScene(name) {
+  const item = shared.state.items.find(i => i.kind === 'scene' && i.name === name);
+  
+  if (!item) {
+    console.warn(`[controlXY] Scene "${name}" not found`);
     return false;
   }
+  
+  shared.deleteItem(item.id);
+  
+  console.log(`[controlXY] Deleted scene "${name}"`);
+  
+  window.dispatchEvent(new CustomEvent('controlxy:sceneDeleted', {
+    detail: { name }
+  }));
+  
+  return true;
+}
+
+/**
+ * List all scene names
+ */
+export function listScenes() {
+  return shared.state.items
+    .filter(i => i.kind === 'scene')
+    .map(i => i.name);
+}
+
+/**
+ * Get scene data
+ */
+export function getScene(name) {
+  const item = shared.state.items.find(i => i.kind === 'scene' && i.name === name);
+  return item?.data || null;
 }
 
 // ============================================================================
 // PATTERN GENERATORS
 // ============================================================================
 
-/**
- * Generate Lissajous curve presets
- * 
- * @param {string} baseName - Base name for presets (will append numbers)
- * @param {Object} options - Generation options
- * @returns {Array} Array of preset names
- * 
- * @example
- * const presets = generateLissajous('lissa', {
- *   uid: 'pad1',
- *   handleId: 'dot1',
- *   xCycles: 3,
- *   yCycles: 2,
- *   steps: 60,
- *   phase: 0,
- *   amplitude: 0.4
- * });
- * 
- * defineSequence('lissajous_3_2', presets);
- * playSequence('lissajous_3_2', { dur: 0.1, ease: 'linear', loop: true });
- */
-export function generateLissajous(baseName, options = {}) {
+export function generateLissajous(name, options = {}) {
   const {
-    uid = 'pad1',
-    handleId = 'dot1',
-    xCycles = 3,
-    yCycles = 2,
-    steps = 60,
-    phase = 0,
-    amplitude = 0.4,
-    centerX = 0.5,
-    centerY = 0.5
-  } = options;
-  
-  const presetNames = [];
-  
-  for (let i = 0; i <= steps; i++) {
-    const t = (i / steps) * Math.PI * 2;
-    const x = centerX + amplitude * Math.sin(xCycles * t);
-    const y = centerY + amplitude * Math.sin(yCycles * t + phase);
-    
-    const name = `${baseName}_${i}`;
-    savePresetFromData(name, {
-      [uid]: { [handleId]: { x, y } }
-    });
-    
-    presetNames.push(name);
-  }
-  
-  console.log(`[controlXY] Generated ${presetNames.length} Lissajous presets (${xCycles}:${yCycles})`);
-  return presetNames;
-}
-
-/**
- * Generate circular motion presets
- * 
- * @param {string} baseName - Base name for presets
- * @param {Object} options - Generation options
- * @returns {Array} Array of preset names
- * 
- * @example
- * const circle = generateCircle('orbit', {
- *   uid: 'pad1',
- *   handleId: 'dot1',
- *   radius: 0.4,
- *   steps: 32
- * });
- * 
- * defineSequence('orbit', circle);
- * playSequence('orbit', { dur: 0.1, loop: true });
- */
-export function generateCircle(baseName, options = {}) {
-  const {
-    uid = 'pad1',
-    handleId = 'dot1',
-    radius = 0.4,
+    uid = null,
+    handleId = null,
     steps = 32,
-    centerX = 0.5,
-    centerY = 0.5,
-    startAngle = 0
+    freqX = 3,
+    freqY = 2,
+    phaseX = 0,
+    phaseY = Math.PI / 2,
+    dur = 0.5
   } = options;
   
-  const presetNames = [];
+  const presets = [];
   
-  for (let i = 0; i <= steps; i++) {
-    const angle = startAngle + (i / steps) * Math.PI * 2;
-    const x = centerX + radius * Math.cos(angle);
-    const y = centerY + radius * Math.sin(angle);
+  for (let i = 0; i < steps; i++) {
+    const t = (i / steps) * Math.PI * 2;
+    const x = 0.5 + 0.45 * Math.sin(freqX * t + phaseX);
+    const y = 0.5 + 0.45 * Math.sin(freqY * t + phaseY);
     
-    const name = `${baseName}_${i}`;
-    savePresetFromData(name, {
-      [uid]: { [handleId]: { x, y } }
-    });
+    const presetName = `${name}_${i}`;
     
-    presetNames.push(name);
+    if (uid && handleId) {
+      savePresetFromData(presetName, {
+        [uid]: { [handleId]: { x, y } }
+      });
+    }
+    
+    presets.push({ preset: presetName, dur });
   }
   
-  console.log(`[controlXY] Generated ${presetNames.length} circular presets`);
-  return presetNames;
+  defineSequence(name, presets, { loop: true });
+  
+  return presets;
 }
 
-/**
- * Generate spiral motion presets
- * 
- * @param {string} baseName - Base name for presets
- * @param {Object} options - Generation options
- * @returns {Array} Array of preset names
- * 
- * @example
- * const spiral = generateSpiral('spiral', {
- *   uid: 'pad1',
- *   handleId: 'dot1',
- *   innerRadius: 0.1,
- *   outerRadius: 0.45,
- *   turns: 3,
- *   steps: 100
- * });
- */
-export function generateSpiral(baseName, options = {}) {
+export function generateCircle(name, options = {}) {
+  return generateLissajous(name, {
+    ...options,
+    freqX: 1,
+    freqY: 1,
+    phaseX: 0,
+    phaseY: Math.PI / 2
+  });
+}
+
+export function generateSpiral(name, options = {}) {
   const {
-    uid = 'pad1',
-    handleId = 'dot1',
-    innerRadius = 0.1,
-    outerRadius = 0.45,
+    uid = null,
+    handleId = null,
+    steps = 64,
     turns = 3,
-    steps = 100,
-    centerX = 0.5,
-    centerY = 0.5
+    dur = 0.3
   } = options;
   
-  const presetNames = [];
+  const presets = [];
   
-  for (let i = 0; i <= steps; i++) {
+  for (let i = 0; i < steps; i++) {
     const t = i / steps;
     const angle = t * turns * Math.PI * 2;
-    const radius = innerRadius + (outerRadius - innerRadius) * t;
+    const radius = 0.1 + t * 0.4;
     
-    const x = centerX + radius * Math.cos(angle);
-    const y = centerY + radius * Math.sin(angle);
+    const x = 0.5 + radius * Math.cos(angle);
+    const y = 0.5 + radius * Math.sin(angle);
     
-    const name = `${baseName}_${i}`;
-    savePresetFromData(name, {
-      [uid]: { [handleId]: { x, y } }
-    });
+    const presetName = `${name}_${i}`;
     
-    presetNames.push(name);
+    if (uid && handleId) {
+      savePresetFromData(presetName, {
+        [uid]: { [handleId]: { x, y } }
+      });
+    }
+    
+    presets.push({ preset: presetName, dur });
   }
   
-  console.log(`[controlXY] Generated ${presetNames.length} spiral presets`);
-  return presetNames;
+  defineSequence(name, presets, { loop: false });
+  
+  return presets;
 }
 
-/**
- * Generate random walk presets
- * 
- * @param {string} baseName - Base name for presets
- * @param {Object} options - Generation options
- * @returns {Array} Array of preset names
- * 
- * @example
- * const walk = generateRandomWalk('wander', {
- *   uid: 'pad1',
- *   handleId: 'dot1',
- *   steps: 50,
- *   stepSize: 0.1,
- *   startX: 0.5,
- *   startY: 0.5
- * });
- */
-export function generateRandomWalk(baseName, options = {}) {
+export function generateRandomWalk(name, options = {}) {
   const {
-    uid = 'pad1',
-    handleId = 'dot1',
-    steps = 50,
-    stepSize = 0.1,
-    startX = 0.5,
-    startY = 0.5,
-    seed = null
+    uid = null,
+    handleId = null,
+    steps = 16,
+    stepSize = 0.15,
+    dur = 0.8
   } = options;
   
-  const presetNames = [];
-  let x = startX;
-  let y = startY;
+  const presets = [];
+  let x = 0.5, y = 0.5;
   
-  // Simple seeded random if provided
-  let random = seed !== null 
-    ? () => {
-        const a = Math.sin(seed++) * 10000;
-        return a - Math.floor(a);
-      }
-    : Math.random;
-  
-  for (let i = 0; i <= steps; i++) {
-    const name = `${baseName}_${i}`;
+  for (let i = 0; i < steps; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    x = Math.max(0.05, Math.min(0.95, x + Math.cos(angle) * stepSize));
+    y = Math.max(0.05, Math.min(0.95, y + Math.sin(angle) * stepSize));
     
-    // Clamp to 0-1 range
-    const clampedX = Math.max(0, Math.min(1, x));
-    const clampedY = Math.max(0, Math.min(1, y));
+    const presetName = `${name}_${i}`;
     
-    savePresetFromData(name, {
-      [uid]: { [handleId]: { x: clampedX, y: clampedY } }
-    });
+    if (uid && handleId) {
+      savePresetFromData(presetName, {
+        [uid]: { [handleId]: { x, y } }
+      });
+    }
     
-    presetNames.push(name);
-    
-    // Take random step
-    const angle = random() * Math.PI * 2;
-    x += Math.cos(angle) * stepSize;
-    y += Math.sin(angle) * stepSize;
+    presets.push({ preset: presetName, dur });
   }
   
-  console.log(`[controlXY] Generated ${presetNames.length} random walk presets`);
-  return presetNames;
+  defineSequence(name, presets, { loop: true });
+  
+  return presets;
 }
 
-/**
- * Generate grid pattern presets
- * 
- * @param {string} baseName - Base name for presets
- * @param {Object} options - Generation options
- * @returns {Array} Array of preset names
- * 
- * @example
- * const grid = generateGrid('grid', {
- *   uid: 'pad1',
- *   handleId: 'dot1',
- *   rows: 4,
- *   cols: 4,
- *   margin: 0.1
- * });
- */
-export function generateGrid(baseName, options = {}) {
+export function generateGrid(name, options = {}) {
   const {
-    uid = 'pad1',
-    handleId = 'dot1',
-    rows = 4,
+    uid = null,
+    handleId = null,
     cols = 4,
-    margin = 0.1
+    rows = 4,
+    padding = 0.1,
+    dur = 0.5,
+    order = 'row' // 'row', 'col', 'spiral', 'random'
   } = options;
   
-  const presetNames = [];
-  const usableWidth = 1 - 2 * margin;
-  const usableHeight = 1 - 2 * margin;
+  const points = [];
   
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
-      const x = margin + (col / (cols - 1)) * usableWidth;
-      const y = margin + (row / (rows - 1)) * usableHeight;
-      
-      const name = `${baseName}_${row}_${col}`;
-      savePresetFromData(name, {
-        [uid]: { [handleId]: { x, y } }
-      });
-      
-      presetNames.push(name);
+      const x = padding + (col / (cols - 1)) * (1 - 2 * padding);
+      const y = padding + (row / (rows - 1)) * (1 - 2 * padding);
+      points.push({ x, y, row, col });
     }
   }
   
-  console.log(`[controlXY] Generated ${presetNames.length} grid presets (${rows}x${cols})`);
-  return presetNames;
+  // Order points
+  if (order === 'col') {
+    points.sort((a, b) => a.col - b.col || a.row - b.row);
+  } else if (order === 'random') {
+    for (let i = points.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [points[i], points[j]] = [points[j], points[i]];
+    }
+  }
+  
+  const presets = [];
+  
+  for (let i = 0; i < points.length; i++) {
+    const { x, y } = points[i];
+    const presetName = `${name}_${i}`;
+    
+    if (uid && handleId) {
+      savePresetFromData(presetName, {
+        [uid]: { [handleId]: { x, y } }
+      });
+    }
+    
+    presets.push({ preset: presetName, dur });
+  }
+  
+  defineSequence(name, presets, { loop: true });
+  
+  return presets;
 }
 
 // ============================================================================
-// DSL HANDLERS
+// INITIALIZATION
 // ============================================================================
 
 /**
- * Handle controlXYSave DSL cue
+ * Initialize preset system for a project
  */
-export function handleControlXYSaveCue(el, args = [], options = {}) {
-  const cfg = {};
-  for (const a of args) {
-    if (a?.type) cfg[a.type] = a.value;
-  }
+export async function initPresets(projectId) {
+  // Initialize shared state
+  shared.init(projectId);
   
-  const presetName = cfg.preset || cfg.name;
-  const uidFilter = cfg.uid || null;
-  
-  if (!presetName) {
-    console.warn("[controlXYSave] preset name required");
-    return;
-  }
-  
-  savePreset(presetName, uidFilter);
+  console.log(`[controlXYPresets] Initialized for project "${projectId}"`);
 }
 
 /**
- * Handle controlXYRecall DSL cue
+ * Force immediate save (bypasses debounce)
  */
+export function forceSave() {
+  return shared.forceSave();
+}
+
+// ============================================================================
+// EXPORT / IMPORT
+// ============================================================================
+
+/**
+ * Export all data as JSON string
+ */
+export function exportPresets() {
+  return JSON.stringify(shared.exportData(), null, 2);
+}
+
+/**
+ * Import data from JSON string
+ */
+export function importPresets(jsonString, options = {}) {
+  try {
+    const data = JSON.parse(jsonString);
+    return shared.importData(data, options);
+  } catch (e) {
+    console.warn("[controlXY] Import failed:", e);
+    return false;
+  }
+}
+
+// ============================================================================
+// DSL CUE HANDLERS
+// ============================================================================
+
 export function handleControlXYRecallCue(el, args = [], options = {}) {
   const cfg = {};
   for (const a of args) {
@@ -1409,9 +968,6 @@ export function handleControlXYRecallCue(el, args = [], options = {}) {
   });
 }
 
-/**
- * Handle controlXYSequence DSL cue
- */
 export function handleControlXYSequenceCue(el, args = [], options = {}) {
   const cfg = {};
   for (const a of args) {
@@ -1457,9 +1013,17 @@ window.controlXYPresets = {
   // Sequences
   defineSequence,
   getSequence,
+  listSequences,
   playSequence,
   stopSequence,
   getActiveSequence,
+  
+  // Scenes (NEW)
+  saveScene,
+  recallScene,
+  deleteScene,
+  listScenes,
+  getScene,
   
   // Pattern Generators
   generateLissajous,
@@ -1473,12 +1037,10 @@ window.controlXYPresets = {
   forceSave,
   export: exportPresets,
   import: importPresets,
-  importFromProject,
   
-  // Internal access (for launcher and other modules)
-  _store: presetStore,
-  _activeTweens: activeTweens,
-  _savePresetsToServer: savePresetsToServer
+  // Access to shared state (for debugging)
+  _shared: shared,
+  _activeTweens: activeTweens
 };
 
 console.log("[controlXYPresets] Module loaded. API available at window.controlXYPresets");

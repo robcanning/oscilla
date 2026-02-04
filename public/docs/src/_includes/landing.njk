@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Animated Graphic Score Framework</title>
+    <meta name="description" content="{{ description }}">
+    <link href="https://iosevka-webfonts.github.io/iosevka-term/iosevka-term.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/landing.css">
+    <link rel="icon" type="image/png" href="/logo-icon.png">
+</head>
+<body>
+    <header>
+        <a href="/" class="logo">
+            <img src="/logo-icon.png" alt="Oscilla" class="logo-img">
+            <span>oscilla</span>
+        </a>
+        <nav>
+            <a href="/docs/">docs</a>
+            <a href="https://git.kompot.si/rob/oscilla">repo</a>
+            <a href="/docs/about/">about</a>
+        </nav>
+    </header>
+
+    <main>
+        {{ content | safe }}
+    </main>
+
+    <footer>
+        <p>oscilla — open source graphic score framework</p>
+        <p>hosted by <a href="https://kompot.si">kompot.si</a> | licensed under gpl v3</p>
+    </footer>
+</body>
+</html>

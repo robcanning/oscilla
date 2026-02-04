@@ -17,6 +17,7 @@
 
 import { publish } from "../control/paramBinding.js";
 import { sendOSCMessage, createOscOverlay } from "./osc.js";
+import * as shared from "../control/controlXYShared.js";
 
 /**
  * handleControlXYCue()
@@ -671,17 +672,21 @@ function createLauncher(uid, bbox, slots, totalBanks, parent) {
 
 /**
  * Initialize launcher state and event handlers
+ * Uses controlXYShared for persistence (localStorage pattern matching shared.js)
  */
 function initializeLauncher(uid, container, slots, totalBanks) {
-  // Get or create launcher state in store
-  const store = window.controlXYPresets?._store;
-  if (!store) {
-    console.warn("[controlXY] Presets not loaded, launcher will not persist");
-    return;
+  // Use shared module for state management
+  if (!shared.state.initialized) {
+    console.warn("[controlXY] Shared state not initialized, launcher will not persist");
+    // Initialize with current project if possible
+    const project = shared.getProjectName();
+    if (project && project !== "unknown_project") {
+      shared.init(project);
+    }
   }
   
-  store.launchers = store.launchers || {};
-  store.launchers[uid] = store.launchers[uid] || {
+  // Get or create launcher state using shared module
+  const launcherData = shared.getOrCreateLauncher(uid, {
     currentBank: 0,
     mode: 'preset',
     tween: true,
@@ -690,14 +695,39 @@ function initializeLauncher(uid, container, slots, totalBanks) {
       name: `Bank ${i + 1}`,
       slots: Array(slots).fill(null)
     }))
-  };
+  });
   
-  const state = store.launchers[uid];
+  // Use launcherData as the state reference
+  const state = launcherData;
+  
+  // ====== PATCH: Ensure banks array has correct length ======
+  while (state.banks.length < totalBanks) {
+    state.banks.push({
+      name: `Bank ${state.banks.length + 1}`,
+      slots: Array(slots).fill(null)
+    });
+  }
+  
+  // Ensure each bank has correct number of slots
+  state.banks.forEach(bank => {
+    while ((bank.slots?.length || 0) < slots) {
+      bank.slots = bank.slots || [];
+      bank.slots.push(null);
+    }
+  });
+  // ====== END PATCH ======
+  
+  // Store uid on container for event lookup
+  container.dataset.uid = uid;
   
   // Get sequence list for sequence mode
   function getSequenceList() {
-    const sequences = Object.keys(store.sequences || {});
-    return sequences;
+    return shared.listSequences();
+  }
+  
+  // Helper to save current launcher state
+  function saveLauncherState() {
+    shared.saveLauncher(uid, state);
   }
   
   // Render current bank
@@ -906,25 +936,81 @@ function initializeLauncher(uid, container, slots, totalBanks) {
   // Initial render
   renderBank();
   
+  // ====== PATCH: Listen for external refresh requests ======
+  const refreshHandler = (event) => {
+    const { uid: targetUid } = event.detail || {};
+    // Refresh if this launcher matches or if no specific uid given
+    if (!targetUid || targetUid === uid) {
+      // Re-read state from shared module
+      const launcher = shared.getLauncher(uid);
+      const updatedState = launcher?.data;
+      if (updatedState) {
+        // Update local state reference - merge banks properly
+        state.currentBank = updatedState.currentBank ?? state.currentBank;
+        state.mode = updatedState.mode ?? state.mode;
+        state.tween = updatedState.tween ?? state.tween;
+        state.visible = updatedState.visible ?? state.visible;
+        if (updatedState.banks) {
+          state.banks = updatedState.banks;
+        }
+      }
+      renderBank();
+    }
+  };
+  
+  window.addEventListener('controlxy:launcherRefresh', refreshHandler);
+  
+  // ====== PATCH: Listen for presets loaded ======
+  // This handles the case where launcher initializes before data finish loading
+  const loadedHandler = (event) => {
+    console.log(`[controlXY] Data loaded, refreshing launcher ${uid}`);
+    // Re-read state from shared module after data is loaded
+    const launcher = shared.getLauncher(uid);
+    const loadedState = launcher?.data;
+    if (loadedState) {
+      // Merge loaded state into current state
+      state.currentBank = loadedState.currentBank ?? state.currentBank;
+      state.mode = loadedState.mode ?? state.mode;
+      state.tween = loadedState.tween ?? state.tween;
+      state.visible = loadedState.visible ?? state.visible;
+      if (loadedState.banks && loadedState.banks.length > 0) {
+        // Only use loaded banks if they have actual data
+        state.banks = loadedState.banks;
+        // Ensure slot arrays are correct length
+        state.banks.forEach(bank => {
+          while ((bank.slots?.length || 0) < slots) {
+            bank.slots = bank.slots || [];
+            bank.slots.push(null);
+          }
+        });
+      }
+      renderBank();
+      
+      // Update visibility
+      if (!state.visible) {
+        const launcherFO = container.closest('.controlxy-launcher-container');
+        if (launcherFO) {
+          launcherFO.style.display = 'none';
+        }
+      }
+    }
+  };
+  
+  window.addEventListener('controlxy:loaded', loadedHandler);
+  // ====== END PATCH ======
+  
+  // Store cleanup function for potential future use
+  container._launcherCleanup = () => {
+    window.removeEventListener('controlxy:launcherRefresh', refreshHandler);
+    window.removeEventListener('controlxy:loaded', loadedHandler);
+  };
+  
   // Apply saved visibility state - hide entire launcher if needed
   if (!state.visible) {
     const launcherFO = container.closest('.controlxy-launcher-container');
     if (launcherFO) {
       launcherFO.style.display = 'none';
     }
-  }
-}
-
-/**
- * Save launcher state to server
- */
-function saveLauncherState() {
-  const store = window.controlXYPresets?._store;
-  if (!store?.projectId) return;
-  
-  // Trigger save via presets module
-  if (window.controlXYPresets?._savePresetsToServer) {
-    window.controlXYPresets._savePresetsToServer();
   }
 }
 
@@ -938,9 +1024,11 @@ window.controlXYLauncher = {
       const launcherFO = launcher.closest('.controlxy-launcher-container');
       if (launcherFO) {
         launcherFO.style.display = 'block';
-        const store = window.controlXYPresets?._store;
-        if (store?.launchers?.[uid]) {
-          store.launchers[uid].visible = true;
+        // Update state via shared module
+        const launcherItem = shared.getLauncher(uid);
+        if (launcherItem?.data) {
+          launcherItem.data.visible = true;
+          shared.saveLauncher(uid, launcherItem.data);
         }
       }
     }
@@ -951,9 +1039,11 @@ window.controlXYLauncher = {
       const launcherFO = launcher.closest('.controlxy-launcher-container');
       if (launcherFO) {
         launcherFO.style.display = 'none';
-        const store = window.controlXYPresets?._store;
-        if (store?.launchers?.[uid]) {
-          store.launchers[uid].visible = false;
+        // Update state via shared module
+        const launcherItem = shared.getLauncher(uid);
+        if (launcherItem?.data) {
+          launcherItem.data.visible = false;
+          shared.saveLauncher(uid, launcherItem.data);
         }
       }
     }

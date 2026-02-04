@@ -4,6 +4,7 @@
  * © 2025 Rob Canning — GPLv3
  *
  * Provides a floating panel UI for managing controlXY presets
+ * Updated: Light theme, slot assignment for presets, removed quick save arrows
  */
 
 // ============================================================================
@@ -49,23 +50,7 @@ export function createPresetUI() {
           </div>
         </div>
         
-        <!-- Quick Save Positions -->
-        <div class="controlxy-section">
-          <div class="controlxy-section-title">⚡ Quick Save</div>
-          <div class="controlxy-button-grid">
-            <button class="controlxy-quick-save" data-pos='{"x":0.2,"y":0.8}' title="Top-Left">↖</button>
-            <button class="controlxy-quick-save" data-pos='{"x":0.5,"y":0.8}' title="Top">↑</button>
-            <button class="controlxy-quick-save" data-pos='{"x":0.8,"y":0.8}' title="Top-Right">↗</button>
-            <button class="controlxy-quick-save" data-pos='{"x":0.2,"y":0.5}' title="Left">←</button>
-            <button class="controlxy-quick-save" data-pos='{"x":0.5,"y":0.5}' title="Center">⊙</button>
-            <button class="controlxy-quick-save" data-pos='{"x":0.8,"y":0.5}' title="Right">→</button>
-            <button class="controlxy-quick-save" data-pos='{"x":0.2,"y":0.2}' title="Bottom-Left">↙</button>
-            <button class="controlxy-quick-save" data-pos='{"x":0.5,"y":0.2}' title="Bottom">↓</button>
-            <button class="controlxy-quick-save" data-pos='{"x":0.8,"y":0.2}' title="Bottom-Right">↘</button>
-          </div>
-        </div>
-        
-        <!-- Presets List -->
+        <!-- Presets List with Slot Assignment -->
         <div class="controlxy-section">
           <div class="controlxy-section-title">📋 Saved Presets</div>
           <div id="controlxy-preset-list" class="controlxy-preset-list">
@@ -93,6 +78,18 @@ export function createPresetUI() {
                 <option value="easeOutElastic">Elastic</option>
               </select>
             </label>
+          </div>
+        </div>
+        
+        <!-- Scenes Section -->
+        <div class="controlxy-section">
+          <div class="controlxy-section-title">🎭 Scenes</div>
+          <div class="controlxy-input-row">
+            <input type="text" id="controlxy-scene-name" placeholder="Scene name..." />
+            <button id="controlxy-scene-save-btn" title="Save current state as scene">Save</button>
+          </div>
+          <div id="controlxy-scene-list" class="controlxy-preset-list controlxy-scene-list">
+            <div class="controlxy-empty">No scenes saved</div>
           </div>
         </div>
         
@@ -241,7 +238,8 @@ export function createPresetUI() {
   // Initial refresh
   refreshPresetList();
   refreshSequenceList();
-  updateGeneratorOptions(); // Set initial options for lissajous
+  refreshSceneList();
+  updateGeneratorOptions();
   
   // Listen for changes
   window.addEventListener('controlxy:presetSaved', refreshPresetList);
@@ -251,7 +249,7 @@ export function createPresetUI() {
     refreshSequenceList();
   });
   
-  console.log("[controlXY] Preset UI created with tabs");
+  console.log("[controlXY] Preset UI created (light theme)");
   
   return panelElement;
 }
@@ -268,11 +266,9 @@ function bindTabSwitching() {
     tab.addEventListener('click', () => {
       const targetTab = tab.dataset.tab;
       
-      // Update tab buttons
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       
-      // Update content visibility
       contents.forEach(c => {
         if (c.dataset.tab === targetTab) {
           c.classList.add('active');
@@ -393,13 +389,13 @@ function handleGenerate() {
   
   if (!genName) {
     infoDiv.textContent = '⚠️ Please enter a pattern name';
-    infoDiv.style.color = '#ff4444';
+    infoDiv.style.color = '#c62828';
     return;
   }
   
   if (!genUID || !genHandle) {
     infoDiv.textContent = '⚠️ Please specify pad UID and handle ID';
-    infoDiv.style.color = '#ff4444';
+    infoDiv.style.color = '#c62828';
     return;
   }
   
@@ -409,7 +405,6 @@ function handleGenerate() {
       handleId: genHandle
     };
     
-    // Gather options based on generator type
     switch (genType) {
       case 'lissajous':
         options.xCycles = parseFloat(panelElement.querySelector('#gen-xCycles').value);
@@ -442,7 +437,6 @@ function handleGenerate() {
         break;
     }
     
-    // Generate pattern
     let presets;
     switch (genType) {
       case 'lissajous':
@@ -462,27 +456,22 @@ function handleGenerate() {
         break;
     }
     
-    // Define sequence
     window.controlXYPresets.defineSequence(genName, presets);
     
-    // Auto-play
     const dur = panelElement.querySelector('#controlxy-seq-dur').value;
     const ease = panelElement.querySelector('#controlxy-seq-ease').value;
-    const loop = panelElement.querySelector('#controlxy-seq-loop').checked;
     
-    window.controlXYPresets.playSequence(genName, { dur: parseFloat(dur), ease, loop });
+    window.controlXYPresets.playSequence(genName, { dur: parseFloat(dur), ease, loop: true });
     
-    // Show success
     infoDiv.textContent = `✓ Generated ${presets.length} presets, playing now!`;
-    infoDiv.style.color = '#44ff44';
+    infoDiv.style.color = '#2e7d32';
     
-    // Refresh lists
     refreshPresetList();
     refreshSequenceList();
     
   } catch (err) {
     infoDiv.textContent = `❌ Error: ${err.message}`;
-    infoDiv.style.color = '#ff4444';
+    infoDiv.style.color = '#c62828';
     console.error('[controlXY] Generation error:', err);
   }
 }
@@ -514,35 +503,6 @@ function bindUIEvents() {
     }
   });
   
-  // Quick save buttons
-  panelElement.querySelectorAll('.controlxy-quick-save').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const pos = JSON.parse(btn.dataset.pos);
-      const nameInput = panelElement.querySelector('#controlxy-save-name');
-      const name = nameInput.value.trim() || `quick_${Date.now()}`;
-      
-      // Get first registry entry (simplification - could be enhanced)
-      const firstUID = window._controlXYRegistry?.keys().next().value;
-      if (!firstUID) {
-        console.warn('[controlXY] No controlXY instances found');
-        return;
-      }
-      
-      const instance = window._controlXYRegistry.get(firstUID);
-      const firstHandle = instance.handles[0]?.id;
-      
-      if (!firstHandle) return;
-      
-      // Save using saveFromData
-      window.controlXYPresets.saveFromData(name, {
-        [firstUID]: { [firstHandle]: pos }
-      });
-      
-      nameInput.value = '';
-      refreshPresetList();
-    });
-  });
-  
   // Sequence creation from step editor
   panelElement.querySelector('#controlxy-seq-create-btn').addEventListener('click', () => {
     const nameInput = panelElement.querySelector('#controlxy-seq-name');
@@ -555,7 +515,6 @@ function bindUIEvents() {
       return;
     }
     
-    // Get steps from the step editor
     const steps = getStepsFromEditor();
     
     if (steps.length === 0) {
@@ -563,7 +522,6 @@ function bindUIEvents() {
       return;
     }
     
-    // Include loop state from editor checkbox
     const loop = loopCheckbox?.checked ?? false;
     
     window.controlXYPresets?.defineSequence(name, steps, { loop });
@@ -608,6 +566,7 @@ function bindUIEvents() {
   window.addEventListener('controlxy:loaded', () => {
     refreshPresetList();
     refreshSequenceList();
+    refreshSceneList();
     refreshPresetDropdown();
   });
   
@@ -620,6 +579,40 @@ function bindUIEvents() {
   });
   
   panelElement.querySelector('#controlxy-import-file').addEventListener('change', importPresets);
+  
+  // ====== SCENE BINDINGS ======
+  
+  // Save scene button
+  panelElement.querySelector('#controlxy-scene-save-btn').addEventListener('click', () => {
+    const nameInput = panelElement.querySelector('#controlxy-scene-name');
+    const name = nameInput.value.trim();
+    
+    if (!name) {
+      nameInput.classList.add('controlxy-input-error');
+      setTimeout(() => nameInput.classList.remove('controlxy-input-error'), 500);
+      return;
+    }
+    
+    window.controlXYPresets?.saveScene(name);
+    nameInput.value = '';
+    refreshSceneList();
+  });
+  
+  // Enter key in scene name input
+  panelElement.querySelector('#controlxy-scene-name').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      panelElement.querySelector('#controlxy-scene-save-btn').click();
+    }
+  });
+  
+  // Listen for scene events
+  window.addEventListener('controlxy:sceneSaved', refreshSceneList);
+  window.addEventListener('controlxy:sceneDeleted', refreshSceneList);
+  window.addEventListener('controlxy:sceneRecalled', (e) => {
+    showSaveIndicator(`Scene "${e.detail.name}" recalled`);
+  });
+  
+  // ====== END SCENE BINDINGS ======
   
   // Make panel draggable
   makeDraggable(panelElement, panelElement.querySelector('.controlxy-panel-header'));
@@ -666,11 +659,9 @@ function updateStepEase(index, ease) {
 
 function getStepsFromEditor() {
   return editorSteps.map(step => {
-    // If duration is default (1) and ease is default, just return preset name
     if (step.dur === 1 && step.ease === 'easeInOutSine') {
       return step.preset;
     }
-    // Otherwise return full object
     return { preset: step.preset, dur: step.dur, ease: step.ease };
   });
 }
@@ -686,7 +677,6 @@ function loadSequenceToEditor(name) {
   
   if (!seqData) return;
   
-  // Handle legacy format (plain array) vs new format (object with steps)
   const isLegacy = Array.isArray(seqData);
   const seq = isLegacy ? seqData : seqData.steps;
   const seqLoop = isLegacy ? false : (seqData.loop ?? false);
@@ -698,21 +688,24 @@ function loadSequenceToEditor(name) {
       return { preset: step, dur: 1, ease: 'easeInOutSine' };
     }
     return { 
-      preset: step.preset, 
-      dur: step.dur ?? 1, 
-      ease: step.ease ?? 'easeInOutSine' 
+      preset: step.preset || step, 
+      dur: step.dur || 1, 
+      ease: step.ease || 'easeInOutSine' 
     };
   });
   
-  // Set the name in the input
+  // Set name and loop checkbox
   const nameInput = panelElement.querySelector('#controlxy-seq-name');
-  if (nameInput) nameInput.value = name;
-  
-  // Set the loop checkbox
   const loopCheckbox = panelElement.querySelector('#controlxy-seq-loop-editor');
+  
+  if (nameInput) nameInput.value = name;
   if (loopCheckbox) loopCheckbox.checked = seqLoop;
   
   renderStepEditor();
+  
+  // Switch to sequences tab
+  const seqTab = panelElement.querySelector('[data-tab="sequences"]');
+  if (seqTab) seqTab.click();
 }
 
 function renderStepEditor() {
@@ -720,21 +713,20 @@ function renderStepEditor() {
   if (!list) return;
   
   if (editorSteps.length === 0) {
-    list.innerHTML = '<div class="controlxy-empty-steps">No steps added</div>';
+    list.innerHTML = '<div class="controlxy-empty-steps">No steps added yet</div>';
     return;
   }
   
   list.innerHTML = editorSteps.map((step, i) => `
     <div class="controlxy-step-row" data-index="${i}">
       <span class="step-num">${i + 1}</span>
-      <span class="step-preset" title="${step.preset}">${step.preset}</span>
+      <span class="step-preset">${step.preset}</span>
       <input type="number" class="step-dur-input" value="${step.dur}" min="0.01" max="30" step="0.1" />
       <select class="step-ease-select">
         <option value="linear" ${step.ease === 'linear' ? 'selected' : ''}>Lin</option>
         <option value="easeInOutSine" ${step.ease === 'easeInOutSine' ? 'selected' : ''}>Sin</option>
-        <option value="easeInOutQuad" ${step.ease === 'easeInOutQuad' ? 'selected' : ''}>Quad</option>
-        <option value="easeInOutCubic" ${step.ease === 'easeInOutCubic' ? 'selected' : ''}>Cub</option>
-        <option value="easeInOutBack" ${step.ease === 'easeInOutBack' ? 'selected' : ''}>Back</option>
+        <option value="easeInOutQuad" ${step.ease === 'easeInOutQuad' ? 'selected' : ''}>Qd</option>
+        <option value="easeInOutCubic" ${step.ease === 'easeInOutCubic' ? 'selected' : ''}>Cu</option>
       </select>
       <div class="step-actions">
         <button class="step-up" title="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
@@ -746,28 +738,28 @@ function renderStepEditor() {
   
   // Bind events
   list.querySelectorAll('.step-dur-input').forEach((input, i) => {
-    input.addEventListener('change', (e) => updateStepDuration(i, e.target.value));
+    input.addEventListener('change', () => updateStepDuration(i, input.value));
   });
   
   list.querySelectorAll('.step-ease-select').forEach((select, i) => {
-    select.addEventListener('change', (e) => updateStepEase(i, e.target.value));
+    select.addEventListener('change', () => updateStepEase(i, select.value));
   });
   
-  list.querySelectorAll('.step-up').forEach(btn => {
+  list.querySelectorAll('.step-up').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       const index = parseInt(e.target.closest('.controlxy-step-row').dataset.index);
       moveStep(index, -1);
     });
   });
   
-  list.querySelectorAll('.step-down').forEach(btn => {
+  list.querySelectorAll('.step-down').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       const index = parseInt(e.target.closest('.controlxy-step-row').dataset.index);
       moveStep(index, 1);
     });
   });
   
-  list.querySelectorAll('.step-delete').forEach(btn => {
+  list.querySelectorAll('.step-delete').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       const index = parseInt(e.target.closest('.controlxy-step-row').dataset.index);
       removeStepFromEditor(index);
@@ -816,29 +808,180 @@ function showSaveIndicator() {
 }
 
 // ============================================================================
-// PRESET LIST
+// PRESET LIST WITH SLOT ASSIGNMENT
 // ============================================================================
+
+/**
+ * Get all launcher UIDs and their bank/slot configurations
+ */
+function getLauncherSlotOptions() {
+  const store = window.controlXYPresets?._store;
+  const launchers = store?.launchers || {};
+  const options = [];
+  
+  // Add "unassigned" option
+  options.push({ value: '', label: 'No slot' });
+  
+  // Collect all launchers and their banks/slots
+  for (const [uid, launcher] of Object.entries(launchers)) {
+    const banks = launcher.banks || [];
+    const slotsPerBank = banks[0]?.slots?.length || 8;
+    
+    for (let bankIdx = 0; bankIdx < banks.length; bankIdx++) {
+      for (let slotIdx = 0; slotIdx < slotsPerBank; slotIdx++) {
+        const slotKey = `${uid}:${bankIdx}:${slotIdx}`;
+        const label = `${uid} B${bankIdx + 1}-${slotIdx + 1}`;
+        options.push({ value: slotKey, label, uid, bankIdx, slotIdx });
+      }
+    }
+  }
+  
+  return options;
+}
+
+/**
+ * Find which slot a preset is assigned to
+ */
+function findPresetSlot(presetName) {
+  const store = window.controlXYPresets?._store;
+  const launchers = store?.launchers || {};
+  
+  for (const [uid, launcher] of Object.entries(launchers)) {
+    const banks = launcher.banks || [];
+    for (let bankIdx = 0; bankIdx < banks.length; bankIdx++) {
+      const slots = banks[bankIdx]?.slots || [];
+      for (let slotIdx = 0; slotIdx < slots.length; slotIdx++) {
+        const slot = slots[slotIdx];
+        if (slot && slot.type === 'preset' && slot.name === presetName) {
+          return { uid, bankIdx, slotIdx, key: `${uid}:${bankIdx}:${slotIdx}` };
+        }
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Assign a preset to a launcher slot
+ */
+function assignPresetToSlot(presetName, slotKey) {
+  const store = window.controlXYPresets?._store;
+  if (!store) return;
+  
+  // First, remove preset from any existing slot
+  const existing = findPresetSlot(presetName);
+  if (existing) {
+    const { uid, bankIdx, slotIdx } = existing;
+    if (store.launchers?.[uid]?.banks?.[bankIdx]?.slots) {
+      store.launchers[uid].banks[bankIdx].slots[slotIdx] = null;
+    }
+  }
+  
+  // If no slot key provided, just unassign
+  if (!slotKey) {
+    window.controlXYPresets?._savePresetsToServer?.();
+    refreshLauncherUI();
+    return;
+  }
+  
+  // Parse the slot key
+  const [uid, bankIdxStr, slotIdxStr] = slotKey.split(':');
+  const bankIdx = parseInt(bankIdxStr);
+  const slotIdx = parseInt(slotIdxStr);
+  
+  // Ensure launcher structure exists
+  if (!store.launchers) store.launchers = {};
+  if (!store.launchers[uid]) {
+    store.launchers[uid] = {
+      currentBank: 0,
+      mode: 'preset',
+      tween: true,
+      visible: true,
+      banks: []
+    };
+  }
+  
+  // Ensure bank exists
+  while (store.launchers[uid].banks.length <= bankIdx) {
+    store.launchers[uid].banks.push({
+      name: `Bank ${store.launchers[uid].banks.length + 1}`,
+      slots: Array(8).fill(null)
+    });
+  }
+  
+  // Assign the preset
+  store.launchers[uid].banks[bankIdx].slots[slotIdx] = {
+    type: 'preset',
+    name: presetName
+  };
+  
+  // Save and refresh UI
+  window.controlXYPresets?._savePresetsToServer?.();
+  refreshLauncherUI();
+}
+
+/**
+ * Refresh launcher UI to reflect current slot assignments
+ */
+function refreshLauncherUI() {
+  // Trigger a re-render of any visible launchers
+  document.querySelectorAll('.controlxy-launcher').forEach(launcher => {
+    const uid = launcher.dataset.uid;
+    if (uid) {
+      const event = new CustomEvent('controlxy:launcherRefresh', { detail: { uid } });
+      window.dispatchEvent(event);
+    }
+  });
+}
 
 function refreshPresetList() {
   const list = panelElement?.querySelector('#controlxy-preset-list');
   if (!list) return;
   
   const presets = window.controlXYPresets?.list() || [];
+  const slotOptions = getLauncherSlotOptions();
   
   if (presets.length === 0) {
     list.innerHTML = '<div class="controlxy-empty">No presets saved</div>';
     return;
   }
   
-  list.innerHTML = presets.map(name => `
-    <div class="controlxy-preset-item" data-preset="${name}">
-      <span class="controlxy-preset-name">${name}</span>
-      <div class="controlxy-preset-actions">
-        <button class="controlxy-recall-btn" title="Recall preset">▶</button>
-        <button class="controlxy-delete-btn" title="Delete preset">🗑</button>
+  list.innerHTML = presets.map(name => {
+    const slot = findPresetSlot(name);
+    const slotBadge = slot 
+      ? `<span class="controlxy-preset-slot-badge">B${slot.bankIdx + 1}-${slot.slotIdx + 1}</span>`
+      : `<span class="controlxy-preset-slot-badge unassigned">—</span>`;
+    
+    const selectOptions = slotOptions.map(opt => {
+      const selected = (slot?.key === opt.value) ? 'selected' : '';
+      return `<option value="${opt.value}" ${selected}>${opt.label}</option>`;
+    }).join('');
+    
+    return `
+      <div class="controlxy-preset-item" data-preset="${name}">
+        <span class="controlxy-preset-name">${name}</span>
+        ${slotBadge}
+        <select class="controlxy-preset-slot-select" title="Assign to launcher slot">
+          ${selectOptions}
+        </select>
+        <div class="controlxy-preset-actions">
+          <button class="controlxy-recall-btn" title="Recall preset">▶</button>
+          <button class="controlxy-delete-btn" title="Delete preset">🗑</button>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+  
+  // Bind slot select handlers
+  list.querySelectorAll('.controlxy-preset-slot-select').forEach(select => {
+    select.addEventListener('change', (e) => {
+      const presetName = e.target.closest('.controlxy-preset-item').dataset.preset;
+      const slotKey = e.target.value;
+      assignPresetToSlot(presetName, slotKey);
+      refreshPresetList();
+    });
+  });
   
   // Bind recall buttons
   list.querySelectorAll('.controlxy-recall-btn').forEach(btn => {
@@ -856,6 +999,8 @@ function refreshPresetList() {
     btn.addEventListener('click', (e) => {
       const name = e.target.closest('.controlxy-preset-item').dataset.preset;
       if (confirm(`Delete preset "${name}"?`)) {
+        // Also remove from any slot assignment
+        assignPresetToSlot(name, '');
         window.controlXYPresets?.delete(name);
         refreshPresetList();
       }
@@ -871,10 +1016,8 @@ function refreshSequenceList() {
   const list = panelElement?.querySelector('#controlxy-sequence-list');
   if (!list) return;
   
-  const store = window.controlXYPresets?._store;
-  const sequences = Object.keys(store?.sequences || {});
+  const sequences = window.controlXYPresets?.listSequences() || [];
   
-  // Also refresh the preset dropdown
   refreshPresetDropdown();
   
   if (sequences.length === 0) {
@@ -883,21 +1026,18 @@ function refreshSequenceList() {
   }
   
   list.innerHTML = sequences.map(name => {
-    const seqData = store.sequences[name];
+    const seqData = window.controlXYPresets?.getSequence(name);
     
-    // Handle legacy format (plain array) vs new format (object with steps)
     const isLegacy = Array.isArray(seqData);
-    const seq = isLegacy ? seqData : seqData.steps;
-    const seqLoop = isLegacy ? false : (seqData.loop ?? false);
+    const seq = isLegacy ? seqData : (seqData?.steps || seqData);
+    const seqLoop = isLegacy ? false : (seqData?.loop ?? false);
     const stepCount = Array.isArray(seq) ? seq.length : 0;
     
-    // Check if sequence contains nested sequences
     const hasNested = Array.isArray(seq) && seq.some(step => {
       const preset = typeof step === 'string' ? step : step?.preset;
       return typeof preset === 'string' && preset.startsWith('seq:');
     });
     
-    // Check if sequence has per-step durations
     const hasPerStepDur = Array.isArray(seq) && seq.some(step => 
       typeof step === 'object' && step.dur !== undefined
     );
@@ -926,7 +1066,7 @@ function refreshSequenceList() {
     });
   });
   
-  // Bind play buttons - uses stored loop state automatically
+  // Bind play buttons
   list.querySelectorAll('.controlxy-play-seq-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const name = e.target.closest('.controlxy-preset-item').dataset.sequence;
@@ -934,7 +1074,6 @@ function refreshSequenceList() {
       const dur = parseFloat(panelElement.querySelector('#controlxy-seq-dur').value) || 1;
       const ease = panelElement.querySelector('#controlxy-seq-ease').value;
       
-      // Don't pass loop option - let it use the stored sequence loop state
       window.controlXYPresets?.playSequence(name, { speed, dur, ease });
       updateSequenceStatus(`Playing: ${name}`);
     });
@@ -945,13 +1084,62 @@ function refreshSequenceList() {
     btn.addEventListener('click', (e) => {
       const name = e.target.closest('.controlxy-preset-item').dataset.sequence;
       if (confirm(`Delete sequence "${name}"?`)) {
-        const store = window.controlXYPresets?._store;
-        if (store?.sequences) {
-          delete store.sequences[name];
-          // Trigger auto-save
-          window.controlXYPresets?._savePresetsToServer?.();
+        // Use the shared module API
+        const shared = window.controlXYPresets?._shared;
+        if (shared) {
+          shared.deleteSequence(name);
           refreshSequenceList();
         }
+      }
+    });
+  });
+}
+
+// ============================================================================
+// SCENE LIST
+// ============================================================================
+
+function refreshSceneList() {
+  const list = panelElement?.querySelector('#controlxy-scene-list');
+  if (!list) return;
+  
+  const scenes = window.controlXYPresets?.listScenes() || [];
+  
+  if (scenes.length === 0) {
+    list.innerHTML = '<div class="controlxy-empty">No scenes saved</div>';
+    return;
+  }
+  
+  list.innerHTML = scenes.map(name => {
+    return `
+      <div class="controlxy-scene-item" data-scene="${name}">
+        <span class="controlxy-scene-name">${name}</span>
+        <div class="controlxy-scene-actions">
+          <button class="controlxy-recall-scene-btn" title="Recall scene">▶</button>
+          <button class="controlxy-delete-scene-btn" title="Delete scene">🗑</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  // Bind recall buttons
+  list.querySelectorAll('.controlxy-recall-scene-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const name = e.target.closest('.controlxy-scene-item').dataset.scene;
+      const dur = parseFloat(panelElement.querySelector('#controlxy-recall-dur').value) || 0;
+      const ease = panelElement.querySelector('#controlxy-recall-ease').value;
+      
+      window.controlXYPresets?.recallScene(name, { dur, ease });
+    });
+  });
+  
+  // Bind delete buttons
+  list.querySelectorAll('.controlxy-delete-scene-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const name = e.target.closest('.controlxy-scene-item').dataset.scene;
+      if (confirm(`Delete scene "${name}"?`)) {
+        window.controlXYPresets?.deleteScene(name);
+        refreshSceneList();
       }
     });
   });
@@ -999,7 +1187,6 @@ function importPresets(e) {
   };
   reader.readAsText(file);
   
-  // Reset input
   e.target.value = '';
 }
 
@@ -1076,6 +1263,28 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================================
+// AUTO-REFRESH ON SAVE/LOAD EVENTS
+// ============================================================================
+
+// Refresh UI when presets are loaded from server
+window.addEventListener('controlxy:loaded', () => {
+  console.log("[controlXYPresetUI] Presets loaded, refreshing lists");
+  if (panelVisible) {
+    refreshPresetList();
+    refreshSequenceList();
+  }
+});
+
+// Refresh UI when presets are saved
+window.addEventListener('controlxy:saved', () => {
+  console.log("[controlXYPresetUI] Presets saved, refreshing lists");
+  if (panelVisible) {
+    refreshPresetList();
+    refreshSequenceList();
+  }
+});
+
+// ============================================================================
 // GLOBAL API
 // ============================================================================
 
@@ -1089,4 +1298,4 @@ window.controlXYPresetUI = {
   }
 };
 
-console.log("[controlXYPresetUI] Module loaded. Toggle with Alt+Shift+P or window.controlXYPresetUI.toggle()");
+console.log("[controlXYPresetUI] Module loaded (light theme). Toggle with Alt+Shift+P or window.controlXYPresetUI.toggle()");

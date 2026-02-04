@@ -1,4 +1,8 @@
-/*! controlXY Launcher - Minimal Light Theme (Invert-Friendly) */
+/*! controlXY - Complete Light Theme (Invert-Friendly)
+ * This uses light colors so when global CSS invert is applied for dark mode,
+ * the UI inverts to dark correctly.
+ * © 2025 Rob Canning — GPLv3
+ */
 
 /* ============================================================================
  * Hide/Show Circle (15px diameter, red border, corner of pad)
@@ -22,7 +26,7 @@
 .controlxy-launcher {
   display: flex;
   flex-direction: column;
-  gap: 1px;  /* Reduced from 4px to 1px */
+  gap: 1px;
   width: 100%;
   height: auto;
   min-height: 100%;
@@ -32,7 +36,7 @@
 }
 
 /* ============================================================================
- * Button Row - NOW FIRST (was second)
+ * Button Row - Slot buttons
  * ============================================================================ */
 .controlxy-launcher-buttons {
   display: flex;
@@ -40,19 +44,19 @@
   height: 44px;
   min-height: 44px;
   flex-shrink: 0;
-  order: 1;  /* Explicitly first */
-  margin-bottom: 4px;  /* Space before bank bar */
+  order: 1;
+  margin-bottom: 4px;
 }
 
 /* ============================================================================
- * Bank Bar - NOW SECOND (was first) - Full width, controls on right
+ * Bank Bar - Full width, controls on right
  * ============================================================================ */
 .controlxy-launcher-bank-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;  /* Push controls to the right */
-  background: #fafafa;  /* Very light - inverts to #050505 */
-  border: 1px solid #c0c0c0;  /* Subtle contrast border */
+  justify-content: flex-end;
+  background: #fafafa;
+  border: 1px solid #c0c0c0;
   border-radius: 3px;
   padding: 3px 5px;
   height: 34px;
@@ -60,28 +64,27 @@
   flex-shrink: 0;
   gap: 5px;
   box-sizing: border-box;
-  width: 100%;  /* Full width now */
-  order: 2;  /* Explicitly second */
+  width: 100%;
+  order: 2;
 }
 
-/* Placeholder for future features - takes remaining space on left */
 .controlxy-launcher-placeholder {
   flex: 1;
   min-width: 20px;
-  order: -1;  /* Push to far left */
+  order: -1;
 }
 
 /* ============================================================================
- * Bank Bar Buttons - Larger, light with subtle contrast
+ * Bank Bar Buttons - Light with subtle contrast
  * ============================================================================ */
 .controlxy-launcher-bank-btn,
 .controlxy-launcher-mode-btn,
 .controlxy-launcher-tween-btn,
 .controlxy-launcher-settings-btn {
-  background: #ffffff;  /* Pure white - inverts to black */
-  border: 1px solid #b0b0b0;  /* Medium gray border for contrast */
+  background: #ffffff;
+  border: 1px solid #b0b0b0;
   border-radius: 3px;
-  color: #222222;  /* Dark text */
+  color: #222222;
   font-size: 13px;
   min-width: 28px;
   height: 26px;
@@ -99,6 +102,14 @@
   box-sizing: border-box;
 }
 
+.controlxy-launcher-bank-btn:hover,
+.controlxy-launcher-mode-btn:hover,
+.controlxy-launcher-tween-btn:hover,
+.controlxy-launcher-settings-btn:hover {
+  background: #f0f0f0;
+  border-color: #909090;
+}
+
 .controlxy-launcher-bank-btn:active,
 .controlxy-launcher-mode-btn:active,
 .controlxy-launcher-tween-btn:active,
@@ -108,14 +119,14 @@
 
 /* Mode button - sequence mode (green tint) */
 .controlxy-launcher-mode-btn.sequence-mode {
-  background: #e8f5e9;  /* Light green */
+  background: #e8f5e9;
   border-color: #a5d6a7;
   color: #2e7d32;
 }
 
 /* Tween button - active state (orange tint) */
 .controlxy-launcher-tween-btn.active {
-  background: #fff3e0;  /* Light orange */
+  background: #fff3e0;
   border-color: #ffcc80;
   color: #e65100;
 }
@@ -147,7 +158,7 @@
 }
 
 /* ============================================================================
- * Slot Buttons - Larger font, clear outlines, touch-optimized
+ * Slot Buttons - Touch-optimized
  * ============================================================================ */
 .controlxy-launcher-slot {
   flex: 1;
@@ -155,8 +166,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #ffffff;  /* Pure white */
-  border: 2px solid #707070;  /* Strong contrasting border */
+  background: #ffffff;
+  border: 2px solid #707070;
   border-radius: 4px;
   color: #333333;
   cursor: pointer;
@@ -188,14 +199,14 @@
 
 /* Empty state */
 .controlxy-launcher-slot.empty {
-  background: #f8f8f8;  /* Slightly off-white */
+  background: #f8f8f8;
   border-color: #808080;
 }
 
 /* Assigned state (blue tint) */
 .controlxy-launcher-slot.assigned {
-  background: #e8f4fc;  /* Light blue */
-  border-color: #5a9fd4;  /* Stronger blue border */
+  background: #e8f4fc;
+  border-color: #5a9fd4;
 }
 
 .controlxy-launcher-slot.assigned .slot-label {
@@ -209,8 +220,8 @@
 
 /* Sequence type (green tint) */
 .controlxy-launcher-slot.type-sequence {
-  background: #e8f5e9;  /* Light green */
-  border-color: #66bb6a;  /* Stronger green border */
+  background: #e8f5e9;
+  border-color: #66bb6a;
 }
 
 .controlxy-launcher-slot.type-sequence .slot-label {
@@ -223,7 +234,7 @@
 
 /* Active state (momentary flash) */
 .controlxy-launcher-slot.active {
-  background: #fff3e0;  /* Light orange */
+  background: #fff3e0;
   border-color: #ffb74d;
   transform: scale(0.96);
 }
@@ -232,13 +243,12 @@
   color: #e65100;
 }
 
-/* Touch feedback */
 .controlxy-launcher-slot:active {
   transform: scale(0.94);
 }
 
 /* ============================================================================
- * Responsive - Maintain readability at small sizes
+ * Responsive
  * ============================================================================ */
 @media (max-width: 600px) {
   .controlxy-launcher-slot .slot-label,
@@ -253,40 +263,29 @@
 }
 
 /* ============================================================================
- * Value Labels - CLEAN, LARGE, BLACK, NO SHADOW
- * Hidden by default, shown on hover/drag/last-touched
+ * Value Labels
  * ============================================================================ */
 .controlxy-label {
   pointer-events: none;
   user-select: none;
   font-family: monospace;
   font-variant-numeric: tabular-nums;
-  fill: #000000;  /* Pure black */
-  font-size: 12px !important;  /* Larger text */
-  font-weight: 600;  /* Bold for clarity */
-  opacity: 0;  /* Hidden by default */
+  fill: #000000;
+  font-size: 12px !important;
+  font-weight: 600;
+  opacity: 0;
   transition: opacity 0.15s ease;
-  /* NO filter/shadow - removed drop-shadow */
 }
 
-/* Show label when handle is being dragged */
-.controlxy-label.dragging {
-  opacity: 1;
-}
-
-/* Show label when handle is hovered */
-.controlxy-label.hovered {
-  opacity: 1;
-}
-
-/* Show label for last touched handle */
+.controlxy-label.dragging,
+.controlxy-label.hovered,
 .controlxy-label.last-touched {
   opacity: 1;
 }
 
-
 /* ============================================================================
- * ControlXY Preset UI Styles
+ * ControlXY Preset UI Panel - LIGHT THEME
+ * Uses light colors that invert to dark when global invert is applied
  * ============================================================================ */
 
 #controlxy-preset-panel {
@@ -295,21 +294,21 @@
   right: 20px;
   transform: translateY(-50%);
   
-  width: 320px;
-  max-height: 80vh;
+  width: 340px;
+  max-height: 85vh;
   
-  background: rgba(30, 30, 30, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  /* Light theme - will invert to dark */
+  background: #f8f8f8;
+  border: 1px solid #cccccc;
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   
-  color: #fff;
+  color: #222222;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 13px;
   
   z-index: 10000;
   
-  /* Hidden by default */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -325,7 +324,7 @@
 }
 
 /* ============================================================================
- * Header
+ * Header - Light Theme
  * ============================================================================ */
 
 .controlxy-panel-header {
@@ -333,8 +332,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #eeeeee;
+  border-bottom: 1px solid #cccccc;
   cursor: grab;
   user-select: none;
 }
@@ -347,12 +346,13 @@
   font-weight: 600;
   font-size: 14px;
   letter-spacing: 0.5px;
+  color: #333333;
 }
 
 .controlxy-panel-close {
   background: none;
   border: none;
-  color: #fff;
+  color: #666666;
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
@@ -367,17 +367,18 @@
 }
 
 .controlxy-panel-close:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: #dddddd;
+  color: #333333;
 }
 
 /* ============================================================================
- * Tabs
+ * Tabs - Light Theme
  * ============================================================================ */
 
 .controlxy-tabs {
   display: flex;
-  background: rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #eeeeee;
+  border-bottom: 1px solid #cccccc;
 }
 
 .controlxy-tab {
@@ -386,7 +387,7 @@
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: rgba(255, 255, 255, 0.6);
+  color: #666666;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -394,24 +395,24 @@
 }
 
 .controlxy-tab:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.9);
+  background: #e0e0e0;
+  color: #333333;
 }
 
 .controlxy-tab.active {
-  color: #fff;
-  border-bottom-color: #4488ff;
-  background: rgba(68, 136, 255, 0.1);
+  color: #1565c0;
+  border-bottom-color: #1565c0;
+  background: #e3f2fd;
 }
 
 /* ============================================================================
- * Tab Content
+ * Tab Content - Light Theme
  * ============================================================================ */
 
 .controlxy-tab-content {
   display: none;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .controlxy-tab-content.active {
@@ -419,17 +420,18 @@
 }
 
 /* ============================================================================
- * Panel Body
+ * Panel Body - Light Theme
  * ============================================================================ */
 
 .controlxy-panel-body {
   padding: 16px;
   overflow-y: auto;
   flex: 1;
+  background: #ffffff;
 }
 
 /* ============================================================================
- * Sections
+ * Sections - Light Theme
  * ============================================================================ */
 
 .controlxy-section {
@@ -438,70 +440,72 @@
   gap: 10px;
 }
 
-.controlxy-section h3 {
+.controlxy-section-title {
   margin: 0;
   padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #e0e0e0;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
+  color: #666666;
 }
 
 /* ============================================================================
- * Save Row
+ * Input Row - Light Theme
  * ============================================================================ */
 
-.controlxy-save-row {
+.controlxy-input-row {
   display: flex;
   gap: 8px;
 }
 
-.controlxy-save-row input {
+.controlxy-input-row input[type="text"],
+.controlxy-input-row input[type="number"] {
   flex: 1;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #ffffff;
+  border: 1px solid #cccccc;
   border-radius: 4px;
   padding: 8px 12px;
-  color: #fff;
+  color: #333333;
   font-size: 13px;
   outline: none;
 }
 
-.controlxy-save-row input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+.controlxy-input-row input::placeholder {
+  color: #999999;
 }
 
-.controlxy-save-row input:focus {
-  border-color: rgba(68, 136, 255, 0.6);
+.controlxy-input-row input:focus {
+  border-color: #1565c0;
+  box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.1);
 }
 
-.controlxy-save-row button {
-  background: rgba(68, 136, 255, 0.8);
-  border: 1px solid rgba(68, 136, 255, 0.9);
+.controlxy-input-row button {
+  background: #1565c0;
+  border: 1px solid #0d47a1;
   border-radius: 4px;
   padding: 8px 16px;
-  color: #fff;
+  color: #ffffff;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
   transition: all 0.15s;
 }
 
-.controlxy-save-row button:hover {
-  background: rgba(68, 136, 255, 1);
+.controlxy-input-row button:hover {
+  background: #1976d2;
 }
 
 /* ============================================================================
- * Preset List
+ * Preset List - Light Theme
  * ============================================================================ */
 
 .controlxy-preset-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 200px;
+  max-height: 250px;
   overflow-y: auto;
   padding: 2px;
 }
@@ -509,7 +513,7 @@
 .controlxy-empty {
   padding: 20px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.4);
+  color: #999999;
   font-style: italic;
   font-size: 12px;
 }
@@ -519,15 +523,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
   border-radius: 4px;
   transition: all 0.15s;
 }
 
 .controlxy-preset-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: #eeeeee;
+  border-color: #cccccc;
 }
 
 .controlxy-preset-name {
@@ -537,25 +541,64 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: #333333;
 }
 
 .controlxy-preset-name small {
-  color: rgba(255, 255, 255, 0.5);
+  color: #888888;
   font-size: 11px;
   font-weight: normal;
+}
+
+/* Slot assignment badge */
+.controlxy-preset-slot-badge {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #1565c0;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.controlxy-preset-slot-badge.unassigned {
+  background: #f5f5f5;
+  border-color: #bdbdbd;
+  color: #757575;
+}
+
+/* Slot select dropdown in preset item */
+.controlxy-preset-slot-select {
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 11px;
+  color: #333333;
+  cursor: pointer;
+  min-width: 70px;
+  margin-left: 8px;
+}
+
+.controlxy-preset-slot-select:focus {
+  border-color: #1565c0;
+  outline: none;
 }
 
 .controlxy-preset-actions {
   display: flex;
   gap: 4px;
+  margin-left: 8px;
 }
 
 .controlxy-preset-actions button {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #e0e0e0;
+  border: 1px solid #cccccc;
   border-radius: 3px;
   padding: 4px 8px;
-  color: #fff;
+  color: #333333;
   cursor: pointer;
   font-size: 12px;
   transition: all 0.15s;
@@ -563,112 +606,119 @@
 }
 
 .controlxy-preset-actions button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: #d0d0d0;
+  border-color: #aaaaaa;
 }
 
 .controlxy-recall-btn:hover {
-  background: rgba(100, 255, 100, 0.3) !important;
-  border-color: rgba(100, 255, 100, 0.5) !important;
+  background: #c8e6c9 !important;
+  border-color: #81c784 !important;
+  color: #2e7d32 !important;
 }
 
 .controlxy-play-seq-btn:hover {
-  background: rgba(100, 255, 100, 0.3) !important;
-  border-color: rgba(100, 255, 100, 0.5) !important;
+  background: #c8e6c9 !important;
+  border-color: #81c784 !important;
+  color: #2e7d32 !important;
 }
 
 .controlxy-delete-btn:hover {
-  background: rgba(255, 100, 100, 0.3) !important;
-  border-color: rgba(255, 100, 100, 0.5) !important;
+  background: #ffcdd2 !important;
+  border-color: #ef9a9a !important;
+  color: #c62828 !important;
 }
 
 /* ============================================================================
- * Options Row
+ * Options Grid - Light Theme
  * ============================================================================ */
 
-.controlxy-options-row {
+.controlxy-options-grid {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.controlxy-options-row label {
+.controlxy-options-grid label {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #555555;
 }
 
-.controlxy-options-row input[type="number"] {
+.controlxy-options-grid input[type="number"] {
   width: 60px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #ffffff;
+  border: 1px solid #cccccc;
   border-radius: 4px;
   padding: 4px 8px;
-  color: #fff;
+  color: #333333;
   font-size: 12px;
   outline: none;
 }
 
-.controlxy-options-row select {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.controlxy-options-grid input[type="number"]:focus {
+  border-color: #1565c0;
+}
+
+.controlxy-options-grid select {
+  background: #ffffff;
+  border: 1px solid #cccccc;
   border-radius: 4px;
   padding: 4px 8px;
-  color: #fff;
+  color: #333333;
   font-size: 12px;
   outline: none;
   cursor: pointer;
 }
 
-.controlxy-options-row select option {
-  background: #1e1e1e;
-  color: #fff;
+.controlxy-options-grid select:focus {
+  border-color: #1565c0;
+}
+
+.unit {
+  color: #888888;
+  font-size: 11px;
 }
 
 /* ============================================================================
- * Sequence Controls
+ * Sequence Controls - Light Theme
  * ============================================================================ */
 
-.controlxy-sequence-controls {
+.controlxy-seq-controls {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-top: 8px;
 }
 
-.controlxy-sequence-controls button {
-  background: rgba(255, 100, 100, 0.3);
-  border: 1px solid rgba(255, 100, 100, 0.5);
+.controlxy-seq-controls button {
+  background: #ffebee;
+  border: 1px solid #ef9a9a;
   border-radius: 4px;
   padding: 6px 12px;
-  color: #fff;
+  color: #c62828;
   cursor: pointer;
   font-size: 12px;
   transition: all 0.15s;
 }
 
-.controlxy-sequence-controls button:hover {
-  background: rgba(255, 100, 100, 0.5);
-  border-color: rgba(255, 100, 100, 0.7);
+.controlxy-seq-controls button:hover {
+  background: #ffcdd2;
+  border-color: #e57373;
 }
 
-.controlxy-sequence-controls label {
+.controlxy-seq-controls label {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-}
-
-.controlxy-sequence-controls input[type="checkbox"] {
+  color: #555555;
   cursor: pointer;
 }
 
 /* ============================================================================
- * Button Row
+ * Button Row - Light Theme
  * ============================================================================ */
 
 .controlxy-button-row {
@@ -678,23 +728,23 @@
 
 .controlxy-button-row button {
   flex: 1;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #e0e0e0;
+  border: 1px solid #cccccc;
   border-radius: 4px;
   padding: 8px 12px;
-  color: #fff;
+  color: #333333;
   cursor: pointer;
   font-size: 12px;
   transition: all 0.15s;
 }
 
 .controlxy-button-row button:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: #d0d0d0;
+  border-color: #aaaaaa;
 }
 
 /* ============================================================================
- * ControlXY Handle Styles (for active state)
+ * ControlXY Handle Styles
  * ============================================================================ */
 
 .controlxy-handle {
@@ -712,7 +762,7 @@
 }
 
 /* ============================================================================
- * Toggle Button (on the pad)
+ * Toggle Button (on the pad) - Light Theme
  * ============================================================================ */
 
 .controlxy-toggle-btn {
@@ -720,8 +770,8 @@
   top: 4px;
   right: 4px;
   
-  background: rgba(30, 30, 30, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: #f0f0f0;
+  border: 1px solid #cccccc;
   border-radius: 4px;
   
   width: 28px;
@@ -731,7 +781,7 @@
   align-items: center;
   justify-content: center;
   
-  color: #fff;
+  color: #333333;
   font-size: 16px;
   cursor: pointer;
   
@@ -741,9 +791,8 @@
 }
 
 .controlxy-toggle-btn:hover {
-  background: rgba(30, 30, 30, 0.95);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: scale(1.05);
+  background: #e0e0e0;
+  border-color: #aaaaaa;
 }
 
 .controlxy-toggle-btn:active {
@@ -752,23 +801,19 @@
 
 /* ============================================================================
  * PAGE MODE FIXES
- * Ensure controlXY launcher displays correctly inside singlePage-content
  * ============================================================================ */
 
-/* foreignObject inside page mode SVG needs explicit overflow */
 #singlePage-content .controlxy-launcher-container,
 #singlePage-content foreignObject.controlxy-launcher-container {
   overflow: visible !important;
 }
 
-/* Ensure the HTML inside foreignObject isn't clipped */
 #singlePage-content .controlxy-launcher {
   overflow: visible !important;
   height: auto !important;
   min-height: 70px;
 }
 
-/* Prevent flexbox from collapsing button row */
 #singlePage-content .controlxy-launcher-buttons {
   flex-shrink: 0;
   min-height: 44px;
@@ -779,7 +824,6 @@
   min-height: 34px;
 }
 
-/* Fix bank bar buttons in page mode */
 #singlePage-content .controlxy-launcher-bank-btn,
 #singlePage-content .controlxy-launcher-mode-btn,
 #singlePage-content .controlxy-launcher-tween-btn,
@@ -796,7 +840,6 @@
   box-sizing: border-box !important;
 }
 
-/* Fix text centering in slot buttons */
 #singlePage-content .controlxy-launcher-slot {
   display: flex !important;
   flex-direction: column !important;
@@ -815,12 +858,12 @@
 }
 
 /* ============================================================================
- * Step Editor Styles
+ * Step Editor Styles - Light Theme
  * ============================================================================ */
 
 .controlxy-step-editor {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
   border-radius: 4px;
   margin-top: 8px;
   overflow: hidden;
@@ -831,17 +874,18 @@
   grid-template-columns: 1fr 60px 50px 70px;
   gap: 4px;
   padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #eeeeee;
+  border-bottom: 1px solid #e0e0e0;
   font-size: 10px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
+  color: #666666;
   text-transform: uppercase;
 }
 
 .controlxy-step-list {
   max-height: 200px;
   overflow-y: auto;
+  background: #ffffff;
 }
 
 .controlxy-step-row {
@@ -850,16 +894,16 @@
   gap: 4px;
   padding: 4px 6px;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid #f0f0f0;
   font-size: 11px;
 }
 
 .controlxy-step-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: #f5f5f5;
 }
 
 .controlxy-step-row .step-num {
-  color: rgba(255, 255, 255, 0.4);
+  color: #999999;
   font-weight: 600;
   font-size: 10px;
 }
@@ -868,27 +912,27 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(255, 255, 255, 0.9);
+  color: #333333;
 }
 
 .controlxy-step-row .step-dur-input {
   width: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #ffffff;
+  border: 1px solid #cccccc;
   border-radius: 3px;
   padding: 2px 4px;
-  color: #fff;
+  color: #333333;
   font-size: 11px;
   text-align: center;
 }
 
 .controlxy-step-row .step-ease-select {
   width: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #ffffff;
+  border: 1px solid #cccccc;
   border-radius: 3px;
   padding: 2px;
-  color: #fff;
+  color: #333333;
   font-size: 10px;
   cursor: pointer;
 }
@@ -899,10 +943,10 @@
 }
 
 .controlxy-step-row .step-actions button {
-  background: rgba(255, 255, 255, 0.1);
+  background: #e0e0e0;
   border: none;
   border-radius: 2px;
-  color: rgba(255, 255, 255, 0.7);
+  color: #666666;
   font-size: 10px;
   width: 20px;
   height: 20px;
@@ -914,8 +958,8 @@
 }
 
 .controlxy-step-row .step-actions button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: #d0d0d0;
+  color: #333333;
 }
 
 .controlxy-step-row .step-actions button:disabled {
@@ -924,38 +968,39 @@
 }
 
 .controlxy-step-row .step-delete:hover {
-  background: rgba(255, 100, 100, 0.3);
+  background: #ffcdd2;
+  color: #c62828;
 }
 
 .controlxy-step-actions {
   display: flex;
   gap: 6px;
   padding: 8px;
-  background: rgba(0, 0, 0, 0.2);
+  background: #f5f5f5;
 }
 
 .controlxy-step-actions button {
-  background: rgba(68, 136, 255, 0.6);
+  background: #1565c0;
   border: none;
   border-radius: 3px;
   padding: 6px 12px;
-  color: #fff;
+  color: #ffffff;
   font-size: 11px;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .controlxy-step-actions button:hover {
-  background: rgba(68, 136, 255, 0.8);
+  background: #1976d2;
 }
 
 .controlxy-step-actions select {
   flex: 1;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #ffffff;
+  border: 1px solid #cccccc;
   border-radius: 3px;
   padding: 6px 8px;
-  color: #fff;
+  color: #333333;
   font-size: 11px;
   cursor: pointer;
 }
@@ -963,7 +1008,7 @@
 .controlxy-empty-steps {
   padding: 20px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.4);
+  color: #999999;
   font-style: italic;
   font-size: 11px;
 }
@@ -971,10 +1016,11 @@
 .controlxy-seq-status {
   margin-top: 8px;
   padding: 4px 8px;
-  background: rgba(68, 136, 255, 0.2);
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
   border-radius: 3px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #1565c0;
   text-align: center;
   opacity: 0;
   transition: opacity 0.3s;
@@ -990,11 +1036,169 @@
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #555555;
   white-space: nowrap;
   padding: 0 8px;
 }
 
 .controlxy-loop-editor input[type="checkbox"] {
   margin: 0;
+}
+
+/* ============================================================================
+ * Full-width select for generators
+ * ============================================================================ */
+
+.controlxy-full-select {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #333333;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.controlxy-full-select:focus {
+  border-color: #1565c0;
+  outline: none;
+}
+
+/* ============================================================================
+ * Generator info
+ * ============================================================================ */
+
+.controlxy-gen-info {
+  padding: 8px;
+  font-size: 12px;
+  text-align: center;
+  border-radius: 4px;
+}
+
+.controlxy-gen-button {
+  width: 100%;
+  background: #4caf50;
+  border: 1px solid #388e3c;
+  border-radius: 4px;
+  padding: 10px 16px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.controlxy-gen-button:hover {
+  background: #43a047;
+}
+
+/* ============================================================================
+ * Import section - always visible
+ * ============================================================================ */
+
+.controlxy-always-show {
+  border-top: 1px solid #e0e0e0;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+/* ============================================================================
+ * Input error state
+ * ============================================================================ */
+
+.controlxy-input-error {
+  border-color: #e53935 !important;
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* ============================================================================
+ * Checkbox styling
+ * ============================================================================ */
+
+.controlxy-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #555555;
+  cursor: pointer;
+}
+
+.controlxy-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* ============================================================================
+ * Scene List Styles
+ * ============================================================================ */
+.controlxy-scene-list {
+  max-height: 150px;
+}
+
+.controlxy-scene-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f0f8ff;  /* Light blue tint for scenes */
+  border: 1px solid #a0c8e8;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  transition: all 0.15s;
+}
+
+.controlxy-scene-item:hover {
+  background: #e0f0ff;
+  border-color: #80b0d8;
+}
+
+.controlxy-scene-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2060a0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.controlxy-scene-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.controlxy-scene-actions button {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #a0c8e8;
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #2060a0;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+  min-width: 28px;
+}
+
+.controlxy-scene-actions button:hover {
+  background: #ffffff;
+  border-color: #4090d0;
+}
+
+.controlxy-recall-scene-btn:hover {
+  background: rgba(100, 200, 100, 0.3) !important;
+  border-color: rgba(100, 200, 100, 0.6) !important;
+}
+
+.controlxy-delete-scene-btn:hover {
+  background: rgba(255, 100, 100, 0.3) !important;
+  border-color: rgba(255, 100, 100, 0.5) !important;
 }
