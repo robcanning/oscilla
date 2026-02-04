@@ -10,6 +10,8 @@
 @import url("oscillaLightTheme.css");
 @import url("oscillaSplash.css");
 @import url("oscillaAnnotations.css");
+@import url("oscillaPreferences.css");
+
 
 
 
@@ -1539,12 +1541,4 @@ body.inverted #score {
   z-index: 40000 !important;
 }
 
-/* Modals and popups should be highest */
-.sl-dialog,
-sl-dialog::part(panel),
-#rehearsal-popup,
-#preferences-dialog,
-#project-modal {
-  z-index: 50000 !important;
-}
 

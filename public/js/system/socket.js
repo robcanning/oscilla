@@ -4,6 +4,8 @@
  * © 2025 Rob Canning — GPLv3
  *
  * Handles WebSocket connection, message routing, and OSC-in control dispatch.
+ * 
+ * UPDATED: Added client color support
  */
 
 import { scrollToPlayheadVisual, togglePlayButton } from '../oscillaTransport.js';
@@ -116,9 +118,15 @@ function handleSocketMessage(event) {
     switch (data.type) {
       case "welcome":
         window.localClientName = data.name;
+        // Store server-assigned color if provided
+        if (data.color) {
+          window.localClientColor = data.color;
+          localStorage.setItem("clientColor", data.color);
+        }
         break;
 
       case "client_list":
+        // Now receives array of {name, color} objects
         onUpdateClientList?.(data.clients);
         break;
 
@@ -434,11 +442,16 @@ export function sendScoreMeta(meta) {
 }
 
 /**
- * Send client name update
+ * Send client name and color update
  * @param {string} name - New client name
+ * @param {string} [color] - New client color (optional)
  */
-export function sendClientNameUpdate(name) {
-  sendSocketMessage("update_client_name", { name });
+export function sendClientNameUpdate(name, color) {
+  const payload = { name };
+  if (color) {
+    payload.color = color;
+  }
+  sendSocketMessage("update_client_name", payload);
 }
 
 /**

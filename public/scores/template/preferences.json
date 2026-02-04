@@ -1,29 +1,19 @@
 {
-  "_comment": "OscillaScore project preferences and metadata",
-
-  "oscillaVersion": "0.2.1_beta",
   "projectTitle": "Blank Score Template",
   "projectAuthor": "Composer Name",
   "projectDescription": "Template for new project",
-
   "darkMode": false,
-  "defaultPlaybackSpeed": 1.0,
-  "defaultViewMode": "scroll",
+  "defaultViewMode": "page",
   "defaultPage": "home",
-
-  "playzoneColor": "rgba(0, 128, 0, 0.1)",
-  "playheadColor": "rgba(0, 255, 179, 0.9)",
-  "playheadBorder": "1px dashed rgba(0, 255, 0, 0.8)",
-  "playheadWidth": "1px",
-
+  "pinControls": false,
+  "pinTopbar": true,
+  "defaultPlaybackSpeed": 1,
+  "loopPlayback": false,
   "audioSync": true,
   "oscOutput": true,
-  "loopPlayback": false,
-
-  "_notes": {
-    "playzoneColor": "Default color and opacity for the active playback zone overlay.",
-    "playheadColor": "Main color of the vertical playhead line.",
-    "playheadBorder": "Optional dashed outline for visibility.",
-    "playheadWidth": "Thickness of the playhead line."
-  }
+  "playzoneColor": "#008000",
+  "playheadColor": "#00ffb3",
+  "playheadWidth": 1,
+  "touchSeekFriction": 0.95,
+  "touchSeekStopThreshold": 5
 }

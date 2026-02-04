@@ -1,0 +1,198 @@
+/* ============================================================
+   PREFERENCES DIALOG — oscillaPreferences.css
+   Compact & Draggable Styles for Shoelace dialog
+   ============================================================ */
+
+/* Make dialog compact and positioned */
+#preferences-dialog {
+  --width: 340px;
+  --header-spacing: var(--sl-spacing-small);
+  --body-spacing: var(--sl-spacing-small);
+  --footer-spacing: var(--sl-spacing-small);
+}
+
+#preferences-dialog::part(panel) {
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#preferences-dialog::part(header) {
+  cursor: move;
+  user-select: none;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+#preferences-dialog::part(body) {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px;
+}
+
+#preferences-dialog::part(footer) {
+  padding: 8px 12px;
+}
+
+/* Compact form layout */
+.prefs-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+/* Section styling with collapsible details */
+.pref-section {
+  border: 1px solid var(--sl-color-neutral-200);
+  border-radius: 4px;
+  margin-bottom: 4px;
+  background: var(--sl-color-neutral-50);
+}
+
+.pref-section summary {
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--sl-color-neutral-700);
+  cursor: pointer;
+  user-select: none;
+  background: var(--sl-color-neutral-100);
+  border-radius: 3px 3px 0 0;
+  list-style: none;
+}
+
+.pref-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.pref-section summary::before {
+  content: "▶";
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 8px;
+  transition: transform 0.15s;
+}
+
+.pref-section[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.pref-section[open] summary {
+  border-bottom: 1px solid var(--sl-color-neutral-200);
+  border-radius: 3px 3px 0 0;
+}
+
+.pref-section-content {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Row layout - label and control side by side */
+.pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.pref-row label {
+  font-size: 12px;
+  color: var(--sl-color-neutral-700);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Compact input sizing */
+.pref-row sl-input {
+  --sl-input-height-small: 26px;
+  --sl-input-font-size-small: 12px;
+  max-width: 100px;
+}
+
+.pref-row sl-input[type="text"] {
+  max-width: 140px;
+}
+
+.pref-row sl-select {
+  --sl-input-height-small: 26px;
+  --sl-input-font-size-small: 12px;
+  min-width: 80px;
+  max-width: 100px;
+}
+
+.pref-row sl-switch {
+  --sl-toggle-size-small: 16px;
+}
+
+.pref-row sl-color-picker {
+  --sl-input-height-small: 26px;
+}
+
+.pref-row sl-color-picker::part(trigger) {
+  width: 50px;
+  height: 26px;
+}
+
+/* Range with value display */
+.pref-range-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  max-width: 140px;
+}
+
+.pref-range-wrap sl-range {
+  flex: 1;
+  --sl-input-height-small: 20px;
+}
+
+.pref-range-wrap span {
+  font-size: 10px;
+  min-width: 32px;
+  text-align: right;
+  color: var(--sl-color-neutral-600);
+  font-family: monospace;
+}
+
+/* Save button styling */
+#preferences-save {
+  width: 100%;
+}
+
+/* ============================================================
+   DARK MODE ADJUSTMENTS
+   ============================================================ */
+
+.dark-mode #preferences-dialog::part(panel) {
+  background: var(--sl-color-neutral-900);
+}
+
+.dark-mode .pref-section {
+  background: var(--sl-color-neutral-800);
+  border-color: var(--sl-color-neutral-700);
+}
+
+.dark-mode .pref-section summary {
+  background: var(--sl-color-neutral-700);
+  color: var(--sl-color-neutral-200);
+}
+
+.dark-mode .pref-section[open] summary {
+  border-bottom-color: var(--sl-color-neutral-600);
+}
+
+.dark-mode .pref-row label {
+  color: var(--sl-color-neutral-300);
+}
+
+.dark-mode .pref-range-wrap span {
+  color: var(--sl-color-neutral-400);
+}

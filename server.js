@@ -913,18 +913,63 @@ function stopServerCountdown() {
 
 ///////////////////////////////////////////////////////////////////////////
 
-const activeClients = new Set(); // Track active WebSocket connections
-const clientNames = new Map(); // Stores unique names for each WebSocket connection
+// ============================================================
+// CLIENT COLORS - synced with colorPicker.js MARKER_COLORS
+// ============================================================
+const MARKER_COLORS = [
+  "#ff9999",  // paleRed (DEFAULT)
+  "#99c2ff",  // paleBlue
+  "#99e699",  // paleGreen
+  "#ffeb99",  // paleYellow
+  "#d9b3ff",  // palePurple
+  "#ffcc99",  // paleOrange
+];
 
+const activeClients = new Set(); // Track active WebSocket connections
+const clientNames = new Map();   // ws → name
+const clientColors = new Map();  // ws → color
+
+/**
+ * Generate a random cartographer name
+ */
 const generateRandomName = () => {
   const names = [
     "Mercator", "Ortelius", "Blaeu", "Buondelmonti"];
   return names[Math.floor(Math.random() * names.length)] + "_" + Math.floor(Math.random() * 1000);
 };
 
+/**
+ * Assign a unique color not already used by other clients
+ * @returns {string} Hex color code
+ */
+const assignUniqueColor = () => {
+  const usedColors = new Set([...clientColors.values()]);
+  
+  // Find first available color
+  for (const color of MARKER_COLORS) {
+    if (!usedColors.has(color)) {
+      return color;
+    }
+  }
+  
+  // All colors taken - assign based on client count
+  return MARKER_COLORS[clientColors.size % MARKER_COLORS.length];
+};
+
+/**
+ * Broadcast client list with names AND colors
+ */
 const broadcastClientList = () => {
-  const clientList = [...clientNames.values()]; // Get all client names
-  const message = JSON.stringify({ type: "client_list", clients: clientList });
+  const clients = [];
+  
+  for (const [ws, name] of clientNames.entries()) {
+    clients.push({
+      name: name,
+      color: clientColors.get(ws) || MARKER_COLORS[0]
+    });
+  }
+  
+  const message = JSON.stringify({ type: "client_list", clients });
 
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
@@ -962,12 +1007,15 @@ let triggeredCues = new Set();
 
 wss.on('connection', (ws, req) => {
   const clientName = generateRandomName();
+  const clientColor = assignUniqueColor();
+  
   clientNames.set(ws, clientName);
+  clientColors.set(ws, clientColor);
   activeClients.add(ws);
-  console.log(`[DEBUG] New WebSocket connection: ${clientName}`);
+  console.log(`[DEBUG] New WebSocket connection: ${clientName} (${clientColor})`);
 
-  //  Send welcome message to client so they know their name
-  ws.send(JSON.stringify({ type: 'welcome', name: clientName }));
+  //  Send welcome message to client so they know their name and color
+  ws.send(JSON.stringify({ type: 'welcome', name: clientName, color: clientColor }));
 
   broadcastClientList();
 
@@ -1576,11 +1624,15 @@ wss.on('connection', (ws, req) => {
         if (typeof data.name === "string" && data.name.trim() !== "") {
           const oldName = clientNames.get(ws);
           const newName = data.name.trim();
+          const newColor = data.color || clientColors.get(ws);
 
           // ✅ Prevent duplicate names
           if (![...clientNames.values()].includes(newName) || oldName === newName) {
-            console.log(`[SERVER] Client ${oldName} updated their name to ${newName}`);
+            console.log(`[SERVER] Client ${oldName} updated: name=${newName}, color=${newColor}`);
             clientNames.set(ws, newName);
+            if (newColor) {
+              clientColors.set(ws, newColor);
+            }
             broadcastClientList();
           } else {
             console.warn("[SERVER] Name already taken, ignoring update.");
@@ -2153,6 +2205,7 @@ wss.on('connection', (ws, req) => {
 
     activeClients.delete(ws);
     clientNames.delete(ws);
+    clientColors.delete(ws);
     broadcastClientList();
 
     if (code !== 1000) {

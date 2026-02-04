@@ -97,6 +97,20 @@ export function cleanupProjectOverlays() {
 window.applyPreferences = function applyPreferences(prefs) {
   console.log("[Prefs] applyPreferences() called:", prefs);
 
+  // ⚡ CRITICAL: Set pin state globals FIRST, before any UI initialization
+  // These are read by oscillaTransport.js when it initializes
+  if (typeof prefs.pinControls === "boolean") {
+    window.oscillaControlsPinned = prefs.pinControls;
+    window.controlsPinned = prefs.pinControls;
+    console.log(`[Prefs] 📌 Controls pinned: ${prefs.pinControls}`);
+  }
+  
+  if (typeof prefs.pinTopbar === "boolean") {
+    window.oscillaTopbarPinned = prefs.pinTopbar;
+    window.topbarPinned = prefs.pinTopbar;
+    console.log(`[Prefs] 📌 Topbar pinned: ${prefs.pinTopbar}`);
+  }
+
   // 1. Dark mode
   applyDarkMode?.(!!prefs.darkMode);
 
@@ -128,6 +142,25 @@ window.applyPreferences = function applyPreferences(prefs) {
     }
   } catch (err) {
     console.warn("[Prefs] playhead/playzone styling failed:", err);
+  }
+
+  // 6. Touch seek settings
+  if (typeof prefs.touchSeekFriction === "number") {
+    window.touchSeekFriction = prefs.touchSeekFriction;
+  }
+  if (typeof prefs.touchSeekStopThreshold === "number") {
+    window.touchSeekStopThreshold = prefs.touchSeekStopThreshold;
+  }
+
+  // 7. Update pin button visual state if buttons exist
+  const pinControlsBtn = document.getElementById("pin-controls");
+  if (pinControlsBtn && typeof prefs.pinControls === "boolean") {
+    pinControlsBtn.classList.toggle("active", prefs.pinControls);
+  }
+  
+  const pinTopbarBtn = document.getElementById("pin-topbar");
+  if (pinTopbarBtn && typeof prefs.pinTopbar === "boolean") {
+    pinTopbarBtn.classList.toggle("active", prefs.pinTopbar);
   }
 };
 
@@ -374,6 +407,10 @@ async function loadPreferences(basePath) {
       darkMode: false,
       defaultPlaybackSpeed: 1.0,
       defaultViewMode: "scroll",
+      pinControls: true,
+      pinTopbar: true,
+      touchSeekFriction: 0.95,
+      touchSeekStopThreshold: 5,
     };
     window.oscillaPrefs = defaults;
     return defaults;
@@ -595,76 +632,51 @@ window.populateProjectMenu = populateProjectMenu;
 
 
 async function populateSplashProjects() {
-  const grid = document.getElementById("project-grid");
-  if (!grid) {
-    console.warn("[SPLASH] #project-grid not found");
-    return;
-  }
-
-  grid.innerHTML = "";
-
-  try {
-    const projects = await fetchProjects();
-
-    if (!projects.length) {
-      grid.innerHTML = `<div class="project-card muted">No projects found</div>`;
-      return;
-    }
-
-    // --- show first 3 projects ---
-    const visible = projects.slice(0, 3);
-
-    visible.forEach(name => {
-      grid.appendChild(makeProjectCard(name));
-    });
-
-    // --- add "Show all" if needed ---
-    if (projects.length > 3) {
-      grid.appendChild(makeShowAllCard(projects));
-    }
-
-  } catch (err) {
-    console.error("[SPLASH] Failed to populate projects", err);
-  }
+  // Note: The splash doesn't have a project grid - projects are shown via the Browse button/modal
+  // This function is kept for backwards compatibility but the splash uses buttons instead
+  console.log("[SPLASH] populateSplashProjects called (splash uses Browse button)");
 }
 
-function makeProjectCard(name) {
-  const card = document.createElement("div");
-  card.className = "project-card";
-  card.title = name; // 👈 tooltip
+function makeProjectItem(project) {
+  // Handle both string and object formats from API
+  const name = typeof project === 'string' ? project : (project.name || project.title || String(project));
+  
+  const item = document.createElement("div");
+  item.className = "project-item";
+  item.innerHTML = `<span class="project-name">${name}</span>`;
+  item.onclick = () => {
+    loadProject(name);
+    closeProjectModal();
+  };
+  return item;
+}
 
-  card.innerHTML = `
-    <img src="/favicon.svg" alt="">
-    <span>${name}</span>
-  `;
-  card.onclick = () => loadProject(name);
-  return card;
+// Legacy function name - alias to new function
+function makeProjectCard(project) {
+  return makeProjectItem(project);
 }
 
 function makeShowAllCard(projects) {
-  const card = document.createElement("div");
-  card.className = "project-card show-all";
-  card.innerHTML = `
-    <img src="/favicon.svg" alt="">
-    <span>Show all</span>
-  `;
-  card.onclick = () => openProjectModal(projects);
-  return card;
+  return makeProjectItem("Browse all...");
 }
 
 
 function openProjectModal(projects) {
   const modal = document.getElementById("project-modal");
-  const grid = document.getElementById("project-modal-grid");
+  const list = document.getElementById("project-list");
 
-  if (!modal || !grid) return;
+  if (!modal || !list) {
+    console.warn("[SPLASH] Modal elements not found", { modal: !!modal, list: !!list });
+    return;
+  }
 
-  grid.innerHTML = "";
-  projects.forEach(name => {
-    grid.appendChild(makeProjectCard(name));
+  list.innerHTML = "";
+  projects.forEach(project => {
+    list.appendChild(makeProjectItem(project));
   });
 
   modal.classList.remove("hidden");
+  console.log("[SPLASH] Modal opened with", projects.length, "projects");
 }
 
 function closeProjectModal() {
@@ -839,6 +851,7 @@ window.getCurrentViewState = function() {
 function wireSplashActions() {
   const newBtn = document.getElementById("new-project-btn");
   const importBtn = document.getElementById("import-project-btn");
+  const browseBtn = document.getElementById("browse-projects-btn");
 
   // If buttons aren't in the DOM yet, try again shortly
   if (!newBtn || !importBtn) {
@@ -860,6 +873,19 @@ function wireSplashActions() {
     console.log("[Splash] Import Project");
     window.projectImport?.();
   };
+
+  // Wire browse button to open modal with all projects
+  if (browseBtn) {
+    browseBtn.onclick = async () => {
+      console.log("[Splash] Browse Projects");
+      try {
+        const projects = await fetchProjects();
+        openProjectModal(projects);
+      } catch (err) {
+        console.error("[Splash] Failed to fetch projects for browse:", err);
+      }
+    };
+  }
 
   console.log("[Splash] Action buttons wired");
 }

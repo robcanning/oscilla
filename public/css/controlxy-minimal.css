@@ -1203,8 +1203,8 @@
   border-color: rgba(255, 100, 100, 0.5) !important;
 }
 /* ============================================================================
- * controlXY CSS Additions v2
- * - Glow/pulsate effects on touch
+ * controlXY CSS Additions v2 - FIXED
+ * - Glow/pulsate effects on touch (filter only, no transform conflicts)
  * - Mute overlay styling
  * - Sequence transport buttons
  * 
@@ -1213,57 +1213,57 @@
 
 /* ============================================================================
  * Handle Glow & Pulsate Effects
+ * NOTE: We only animate filter, NOT transform, because SVG handles use
+ * transform="translate(...)" for positioning and CSS animations would override it
  * ============================================================================ */
 
 .controlxy-handle {
   cursor: grab;
-  transition: filter 0.15s ease, transform 0.1s ease;
-  transform-origin: center center;
+  transition: filter 0.15s ease;
+  /* Don't transition transform - it's controlled by JS for positioning */
 }
 
 .controlxy-handle:hover {
-  filter: drop-shadow(0 0 4px rgba(68, 136, 255, 0.5));
+  filter: drop-shadow(0 0 6px rgba(68, 136, 255, 0.6));
 }
 
-/* Active state - glow and pulsate while touched */
+/* Active state - pulsating glow while touched (filter only) */
 .controlxy-handle--active {
   cursor: grabbing !important;
-  filter: drop-shadow(0 0 12px rgba(68, 136, 255, 0.9)) 
-          drop-shadow(0 0 20px rgba(68, 136, 255, 0.5));
-  animation: controlxy-pulsate 0.6s ease-in-out infinite;
+  animation: controlxy-glow-pulse 0.5s ease-in-out infinite;
 }
 
-@keyframes controlxy-pulsate {
+@keyframes controlxy-glow-pulse {
   0%, 100% {
-    filter: drop-shadow(0 0 12px rgba(68, 136, 255, 0.9)) 
-            drop-shadow(0 0 20px rgba(68, 136, 255, 0.5));
-    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(68, 136, 255, 0.8)) 
+            drop-shadow(0 0 16px rgba(68, 136, 255, 0.4));
   }
   50% {
-    filter: drop-shadow(0 0 18px rgba(68, 136, 255, 1)) 
-            drop-shadow(0 0 30px rgba(68, 136, 255, 0.7));
-    transform: scale(1.05);
+    filter: drop-shadow(0 0 16px rgba(68, 136, 255, 1)) 
+            drop-shadow(0 0 28px rgba(68, 136, 255, 0.6))
+            drop-shadow(0 0 40px rgba(68, 136, 255, 0.3));
   }
 }
 
 /* Muted handle - visual indication */
 .controlxy-handle--muted {
-  opacity: 0.5;
-  filter: grayscale(50%) drop-shadow(0 0 4px rgba(255, 107, 107, 0.6));
+  opacity: 0.6;
+  filter: grayscale(40%) drop-shadow(0 0 4px rgba(255, 107, 107, 0.5));
 }
 
 .controlxy-handle--muted.controlxy-handle--active {
-  animation: controlxy-pulsate-muted 0.6s ease-in-out infinite;
+  animation: controlxy-glow-pulse-muted 0.5s ease-in-out infinite;
 }
 
-@keyframes controlxy-pulsate-muted {
+@keyframes controlxy-glow-pulse-muted {
   0%, 100% {
-    filter: grayscale(50%) drop-shadow(0 0 8px rgba(255, 107, 107, 0.7));
-    transform: scale(1);
+    filter: grayscale(40%) 
+            drop-shadow(0 0 6px rgba(255, 107, 107, 0.7));
   }
   50% {
-    filter: grayscale(50%) drop-shadow(0 0 14px rgba(255, 107, 107, 0.9));
-    transform: scale(1.05);
+    filter: grayscale(40%) 
+            drop-shadow(0 0 14px rgba(255, 107, 107, 1))
+            drop-shadow(0 0 24px rgba(255, 107, 107, 0.5));
   }
 }
 
@@ -1274,19 +1274,23 @@
 .controlxy-mute-overlay {
   pointer-events: all;
   cursor: pointer;
-  transition: opacity 0.15s ease-out, transform 0.1s ease;
+  transition: opacity 0.15s ease-out;
 }
 
-.controlxy-mute-overlay:hover {
+.controlxy-mute-overlay:hover circle {
   transform: scale(1.15);
+  transform-origin: center;
+  transform-box: fill-box;
 }
 
-.controlxy-mute-overlay:active {
+.controlxy-mute-overlay:active circle {
   transform: scale(0.95);
+  transform-origin: center;
+  transform-box: fill-box;
 }
 
-.controlxy-mute-overlay-bg {
-  transition: fill 0.15s ease;
+.controlxy-mute-overlay circle {
+  transition: transform 0.1s ease, fill 0.15s ease;
 }
 
 /* ============================================================================
@@ -1381,7 +1385,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: #e8f4fc;  /* Light blue tint for scenes */
+  background: #e8f4fc;
   border: 1px solid #b8d4e8;
   border-radius: 4px;
   transition: all 0.15s;
@@ -1470,34 +1474,11 @@
 }
 
 /* ============================================================================
- * Multitouch Visual Feedback
- * Different colors for multiple simultaneous touches
- * ============================================================================ */
-
-.controlxy-handle--active[data-touch-index="0"] {
-  --glow-color: rgba(68, 136, 255, 0.9);
-}
-
-.controlxy-handle--active[data-touch-index="1"] {
-  --glow-color: rgba(255, 68, 136, 0.9);
-}
-
-.controlxy-handle--active[data-touch-index="2"] {
-  --glow-color: rgba(68, 255, 136, 0.9);
-}
-
-.controlxy-handle--active[data-touch-index="3"] {
-  --glow-color: rgba(255, 200, 68, 0.9);
-}
-
-/* ============================================================================
- * Page Mode Fixes - Ensure effects work inside foreignObject
+ * Page Mode Fixes
  * ============================================================================ */
 
 #singlePage-content .controlxy-handle--active {
-  filter: drop-shadow(0 0 12px rgba(68, 136, 255, 0.9)) 
-          drop-shadow(0 0 20px rgba(68, 136, 255, 0.5));
-  animation: controlxy-pulsate 0.6s ease-in-out infinite;
+  animation: controlxy-glow-pulse 0.5s ease-in-out infinite;
 }
 
 #singlePage-content .controlxy-mute-overlay {

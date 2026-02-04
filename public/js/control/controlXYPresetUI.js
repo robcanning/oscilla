@@ -672,16 +672,35 @@ function clearStepEditor() {
 }
 
 function loadSequenceToEditor(name) {
-  const store = window.controlXYPresets?._store;
-  const seqData = store?.sequences?.[name];
+  // Use the shared module's getSequence function, not _store
+  const shared = window.controlXYPresets?._shared;
+  const seqItem = shared?.getSequence?.(name);
   
-  if (!seqData) return;
+  if (!seqItem) {
+    console.warn(`[controlXY UI] Sequence "${name}" not found via shared.getSequence()`);
+    return;
+  }
   
+  // Ensure the panel exists and is visible
+  if (!panelElement) {
+    console.warn(`[controlXY UI] Panel not created yet`);
+    createPresetUI();
+  }
+  
+  // Show the panel if hidden
+  panelElement.classList.add('controlxy-panel-visible');
+  
+  // seqItem is the full item object with { id, kind, name, data, ... }
+  // The actual sequence data is in seqItem.data
+  const seqData = seqItem.data || seqItem;
   const isLegacy = Array.isArray(seqData);
-  const seq = isLegacy ? seqData : seqData.steps;
+  const seq = isLegacy ? seqData : (seqData.steps || seqData);
   const seqLoop = isLegacy ? false : (seqData.loop ?? false);
   
-  if (!seq || !Array.isArray(seq)) return;
+  if (!seq || !Array.isArray(seq)) {
+    console.warn(`[controlXY UI] Invalid sequence data for "${name}"`, seqData);
+    return;
+  }
   
   editorSteps = seq.map(step => {
     if (typeof step === 'string') {
@@ -705,7 +724,14 @@ function loadSequenceToEditor(name) {
   
   // Switch to sequences tab
   const seqTab = panelElement.querySelector('[data-tab="sequences"]');
-  if (seqTab) seqTab.click();
+  if (seqTab) {
+    // Trigger tab switch
+    seqTab.click();
+  } else {
+    console.warn(`[controlXY UI] Sequences tab not found`);
+  }
+  
+  console.log(`[controlXY UI] Loaded sequence "${name}" to editor (${editorSteps.length} steps)`);
 }
 
 function renderStepEditor() {
@@ -772,7 +798,8 @@ function refreshPresetDropdown() {
   if (!select) return;
   
   const presets = window.controlXYPresets?.list() || [];
-  const sequences = Object.keys(window.controlXYPresets?._store?.sequences || {});
+  const shared = window.controlXYPresets?._shared;
+  const sequences = shared?.listSequences?.() || [];
   
   select.innerHTML = '<option value="">Select preset...</option>';
   
@@ -815,15 +842,17 @@ function showSaveIndicator() {
  * Get all launcher UIDs and their bank/slot configurations
  */
 function getLauncherSlotOptions() {
-  const store = window.controlXYPresets?._store;
-  const launchers = store?.launchers || {};
+  const shared = window.controlXYPresets?._shared;
+  const launcherUids = shared?.listLaunchers?.() || [];
   const options = [];
   
   // Add "unassigned" option
   options.push({ value: '', label: 'No slot' });
   
   // Collect all launchers and their banks/slots
-  for (const [uid, launcher] of Object.entries(launchers)) {
+  for (const uid of launcherUids) {
+    const launcherItem = shared?.getLauncher?.(uid);
+    const launcher = launcherItem?.data || launcherItem || {};
     const banks = launcher.banks || [];
     const slotsPerBank = banks[0]?.slots?.length || 8;
     
@@ -843,11 +872,14 @@ function getLauncherSlotOptions() {
  * Find which slot a preset is assigned to
  */
 function findPresetSlot(presetName) {
-  const store = window.controlXYPresets?._store;
-  const launchers = store?.launchers || {};
+  const shared = window.controlXYPresets?._shared;
+  const launcherUids = shared?.listLaunchers?.() || [];
   
-  for (const [uid, launcher] of Object.entries(launchers)) {
+  for (const uid of launcherUids) {
+    const launcherItem = shared?.getLauncher?.(uid);
+    const launcher = launcherItem?.data || launcherItem || {};
     const banks = launcher.banks || [];
+    
     for (let bankIdx = 0; bankIdx < banks.length; bankIdx++) {
       const slots = banks[bankIdx]?.slots || [];
       for (let slotIdx = 0; slotIdx < slots.length; slotIdx++) {
@@ -866,21 +898,24 @@ function findPresetSlot(presetName) {
  * Assign a preset to a launcher slot
  */
 function assignPresetToSlot(presetName, slotKey) {
-  const store = window.controlXYPresets?._store;
-  if (!store) return;
+  const shared = window.controlXYPresets?._shared;
+  if (!shared) return;
   
   // First, remove preset from any existing slot
   const existing = findPresetSlot(presetName);
   if (existing) {
     const { uid, bankIdx, slotIdx } = existing;
-    if (store.launchers?.[uid]?.banks?.[bankIdx]?.slots) {
-      store.launchers[uid].banks[bankIdx].slots[slotIdx] = null;
+    const launcherItem = shared.getLauncher?.(uid);
+    const launcherData = launcherItem?.data || launcherItem;
+    if (launcherData?.banks?.[bankIdx]?.slots) {
+      launcherData.banks[bankIdx].slots[slotIdx] = null;
+      shared.saveLauncher?.(uid, launcherData);
     }
   }
   
   // If no slot key provided, just unassign
   if (!slotKey) {
-    window.controlXYPresets?._savePresetsToServer?.();
+    shared.save?.();
     refreshLauncherUI();
     return;
   }
@@ -890,34 +925,32 @@ function assignPresetToSlot(presetName, slotKey) {
   const bankIdx = parseInt(bankIdxStr);
   const slotIdx = parseInt(slotIdxStr);
   
-  // Ensure launcher structure exists
-  if (!store.launchers) store.launchers = {};
-  if (!store.launchers[uid]) {
-    store.launchers[uid] = {
-      currentBank: 0,
-      mode: 'preset',
-      tween: true,
-      visible: true,
-      banks: []
-    };
-  }
+  // Get or create launcher using shared module
+  const launcherData = shared.getOrCreateLauncher?.(uid, {
+    currentBank: 0,
+    mode: 'preset',
+    tween: true,
+    visible: true,
+    banks: []
+  }) || { banks: [] };
   
   // Ensure bank exists
-  while (store.launchers[uid].banks.length <= bankIdx) {
-    store.launchers[uid].banks.push({
-      name: `Bank ${store.launchers[uid].banks.length + 1}`,
+  while (launcherData.banks.length <= bankIdx) {
+    launcherData.banks.push({
+      name: `Bank ${launcherData.banks.length + 1}`,
       slots: Array(8).fill(null)
     });
   }
   
   // Assign the preset
-  store.launchers[uid].banks[bankIdx].slots[slotIdx] = {
+  launcherData.banks[bankIdx].slots[slotIdx] = {
     type: 'preset',
     name: presetName
   };
   
   // Save and refresh UI
-  window.controlXYPresets?._savePresetsToServer?.();
+  shared.saveLauncher?.(uid, launcherData);
+  shared.save?.();
   refreshLauncherUI();
 }
 

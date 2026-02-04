@@ -59,6 +59,7 @@ function getEasing(ease) {
 // Active tween state
 let activeTweens = new Map(); // uid -> tween state
 let activeSequence = null;
+let sequenceTimeoutId = null;  // Track setTimeout for proper cancellation
 
 // ============================================================================
 // CORE FUNCTIONS
@@ -69,13 +70,24 @@ let activeSequence = null;
  */
 function getAllControlXY() {
   const instances = [];
-  document.querySelectorAll('[id*="controlXY"]').forEach(el => {
-    if (el._controlXY) {
-      instances.push(el._controlXY);
-    }
-  });
   
-  // Also check window registry if available
+  // Check window._controlXYPads registry (primary)
+  if (window._controlXYPads) {
+    for (const [uid, instance] of Object.entries(window._controlXYPads)) {
+      instances.push(instance);
+    }
+  }
+  
+  // Fallback: check DOM elements with _controlXY property
+  if (instances.length === 0) {
+    document.querySelectorAll('[id*="controlXY"]').forEach(el => {
+      if (el._controlXY) {
+        instances.push(el._controlXY);
+      }
+    });
+  }
+  
+  // Also check legacy window._controlXYRegistry if available
   if (window._controlXYRegistry) {
     for (const [uid, instance] of window._controlXYRegistry) {
       if (!instances.find(i => i.uid === uid)) {
@@ -91,6 +103,12 @@ function getAllControlXY() {
  * Get a specific controlXY instance by uid
  */
 function getControlXY(uid) {
+  // Primary: check window._controlXYPads
+  if (window._controlXYPads?.[uid]) {
+    return window._controlXYPads[uid];
+  }
+  
+  // Legacy: check window._controlXYRegistry
   if (window._controlXYRegistry?.has(uid)) {
     return window._controlXYRegistry.get(uid);
   }
@@ -105,28 +123,19 @@ function getControlXY(uid) {
  */
 function captureState(uidFilter = null) {
   const state = {};
-  const instances = getAllControlXY();
   
-  for (const instance of instances) {
-    if (uidFilter && instance.uid !== uidFilter) continue;
-    
-    const handleStates = {};
-    for (const handle of instance.handles) {
-      const bbox = instance.boundsEl?.getBBox();
-      if (!bbox) continue;
+  // Use window._controlXYPads which has captureState methods on each pad
+  if (window._controlXYPads) {
+    for (const [uid, pad] of Object.entries(window._controlXYPads)) {
+      if (uidFilter && uid !== uidFilter) continue;
       
-      // Normalize current position
-      const normX = (handle.curX - bbox.x) / bbox.width;
-      const normY = 1 - (handle.curY - bbox.y) / bbox.height;
-      
-      handleStates[handle.id] = {
-        x: Math.round(normX * 1000) / 1000,
-        y: Math.round(normY * 1000) / 1000
-      };
-    }
-    
-    if (Object.keys(handleStates).length > 0) {
-      state[instance.uid] = handleStates;
+      // Each pad has its own captureState method that knows about its handles
+      if (typeof pad.captureState === 'function') {
+        const padState = pad.captureState();
+        if (padState && Object.keys(padState).length > 0) {
+          state[uid] = padState;
+        }
+      }
     }
   }
   
@@ -299,32 +308,30 @@ export function recallPreset(name, options = {}) {
  */
 function applyPositions(positions, handleFilter = null) {
   for (const [uid, handlePositions] of Object.entries(positions)) {
-    const instance = getControlXY(uid);
-    if (!instance) continue;
+    // Get pad from registry - it has setPosition method
+    const pad = window._controlXYPads?.[uid];
+    if (!pad) {
+      console.warn(`[controlXY] applyPositions: pad "${uid}" not found`);
+      continue;
+    }
     
-    for (const handle of instance.handles) {
-      if (handleFilter && !handleFilter.includes(handle.id)) continue;
-      
-      const pos = handlePositions[handle.id];
-      if (!pos) continue;
-      
-      const bbox = instance.boundsEl?.getBBox();
-      if (!bbox) continue;
-      
-      // Convert normalized to world coordinates
-      const targetX = bbox.x + pos.x * bbox.width;
-      const targetY = bbox.y + (1 - pos.y) * bbox.height;
-      
-      // Apply position
-      handle.curX = targetX;
-      handle.curY = targetY;
-      handle.offsetX = targetX - handle.originalCenterX;
-      handle.offsetY = targetY - handle.originalCenterY;
-      
-      handle.el.setAttribute("transform", `translate(${handle.offsetX}, ${handle.offsetY})`);
-      
-      // Emit new values
-      emitHandleValues(instance, handle);
+    // Use pad's applyPositions if available (handles mute check internally)
+    if (typeof pad.applyPositions === 'function') {
+      // Filter handles if needed
+      const filteredPositions = {};
+      for (const [handleId, pos] of Object.entries(handlePositions)) {
+        if (handleFilter && !handleFilter.includes(handleId)) continue;
+        filteredPositions[handleId] = pos;
+      }
+      pad.applyPositions(filteredPositions);
+    } else if (typeof pad.setPosition === 'function') {
+      // Fallback: use setPosition per handle
+      for (const [handleId, pos] of Object.entries(handlePositions)) {
+        if (handleFilter && !handleFilter.includes(handleId)) continue;
+        if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
+          pad.setPosition(handleId, pos.x, pos.y);
+        }
+      }
     }
   }
 }
@@ -399,40 +406,27 @@ export function tweenTo(positions, options = {}) {
     
     // Interpolate positions
     for (const [uid, handlePositions] of Object.entries(positions)) {
-      const instance = getControlXY(uid);
-      if (!instance) continue;
+      const pad = window._controlXYPads?.[uid];
+      if (!pad) continue;
       
       const startUid = startPositions[uid] || {};
       
-      for (const handle of instance.handles) {
-        if (handleFilter && !handleFilter.includes(handle.id)) continue;
+      // Iterate over target handle positions
+      for (const [handleId, targetPos] of Object.entries(handlePositions)) {
+        if (handleFilter && !handleFilter.includes(handleId)) continue;
+        if (!targetPos || typeof targetPos.x !== 'number') continue;
         
-        const targetPos = handlePositions[handle.id];
-        const startPos = startUid[handle.id];
-        if (!targetPos) continue;
-        
+        const startPos = startUid[handleId];
         const startX = startPos?.x ?? 0.5;
         const startY = startPos?.y ?? 0.5;
         
         const currentX = startX + (targetPos.x - startX) * easedProgress;
         const currentY = startY + (targetPos.y - startY) * easedProgress;
         
-        const bbox = instance.boundsEl?.getBBox();
-        if (!bbox) continue;
-        
-        // Convert to world coordinates
-        const worldX = bbox.x + currentX * bbox.width;
-        const worldY = bbox.y + (1 - currentY) * bbox.height;
-        
-        // Apply
-        handle.curX = worldX;
-        handle.curY = worldY;
-        handle.offsetX = worldX - handle.originalCenterX;
-        handle.offsetY = worldY - handle.originalCenterY;
-        
-        handle.el.setAttribute("transform", `translate(${handle.offsetX}, ${handle.offsetY})`);
-        
-        emitHandleValues(instance, handle);
+        // Use pad's setPosition method
+        if (typeof pad.setPosition === 'function') {
+          pad.setPosition(handleId, currentX, currentY);
+        }
       }
     }
     
@@ -533,8 +527,11 @@ export function playSequence(name, options = {}) {
   };
   
   function playStep() {
-    if (activeSequence?.stopped) {
+    // Check stopped flag BEFORE activeSequence is nullified
+    if (!activeSequence || activeSequence.stopped) {
+      console.log(`[controlXY] Sequence stopped, halting playback`);
       activeSequence = null;
+      sequenceTimeoutId = null;
       return;
     }
     
@@ -543,6 +540,7 @@ export function playSequence(name, options = {}) {
       if (loopCount >= maxLoops) {
         console.log(`[controlXY] Sequence "${name}" completed`);
         activeSequence = null;
+        sequenceTimeoutId = null;
         window.dispatchEvent(new CustomEvent('controlxy:sequenceComplete', {
           detail: { name }
         }));
@@ -575,8 +573,8 @@ export function playSequence(name, options = {}) {
     currentStep++;
     if (activeSequence) activeSequence.currentStep = currentStep;
     
-    // Schedule next step
-    setTimeout(playStep, stepDur * 1000);
+    // Schedule next step and track the timeout ID
+    sequenceTimeoutId = setTimeout(playStep, stepDur * 1000);
   }
   
   playStep();
@@ -596,6 +594,13 @@ export function playSequence(name, options = {}) {
  */
 export function stopSequence() {
   const wasPlaying = activeSequence?.name;
+  
+  // Clear the scheduled timeout FIRST
+  if (sequenceTimeoutId) {
+    clearTimeout(sequenceTimeoutId);
+    sequenceTimeoutId = null;
+  }
+  
   if (activeSequence) {
     activeSequence.stopped = true;
     console.log(`[controlXY] Stopped sequence "${activeSequence.name}"`);
@@ -1065,5 +1070,30 @@ window.controlXYPresets = {
   _shared: shared,
   _activeTweens: activeTweens
 };
+
+// Auto-initialize when the module loads
+// Try to get project name from various sources
+function autoInit() {
+  const projectName = shared.getProjectName();
+  if (projectName && projectName !== 'unknown_project') {
+    initPresets(projectName);
+  } else {
+    // Wait for project to be set, then init
+    console.log("[controlXYPresets] Waiting for project name...");
+    const checkInterval = setInterval(() => {
+      const name = shared.getProjectName();
+      if (name && name !== 'unknown_project') {
+        clearInterval(checkInterval);
+        initPresets(name);
+      }
+    }, 200);
+    
+    // Stop checking after 10 seconds
+    setTimeout(() => clearInterval(checkInterval), 10000);
+  }
+}
+
+// Run auto-init
+autoInit();
 
 console.log("[controlXYPresets] Module loaded. API available at window.controlXYPresets");
