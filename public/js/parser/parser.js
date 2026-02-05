@@ -710,6 +710,11 @@ function extractVal(node) {
 
   if (!node.children) return null;
 
+  // Array literal (must check BEFORE animValue unwrap — arrayValue nodes also have animValue children)
+  if (node.name === "arrayValue") {
+    return (node.children.animValue || []).map(extractVal);
+  }
+
   // Unwrap animValue wrapper
   if (node.children.animValue) return extractVal(node.children.animValue[0]);
   if (node.name === "animValue") {
@@ -732,11 +737,6 @@ function extractVal(node) {
 
   // Function call
   if (node.name === "simpleFuncCall") return extractFuncCallNode(node);
-
-  // Array literal
-  if (node.name === "arrayValue") {
-    return (node.children.animValue || []).map(extractVal);
-  }
 
   // Object literal
   if (node.name === "objectLiteral") return extractObjectLiteralNode(node);
