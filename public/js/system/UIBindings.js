@@ -8,6 +8,7 @@ import { forward, rewind, rewindToStart } from '../oscillaTransport.js';
 import { resetTriggeredCues } from '../cues/cueDispatcher.js';
 import { resetStopwatch } from '../cues/timers.js';
 import { setAnnotationMode, setAnnotationsEnabled } from '../interaction/interactionSurface.js';
+import { toggleMuted as toggleOscMuted } from '../system/oscillaOSCClient.js';
 
 // ===========================
 // Module State
@@ -47,6 +48,7 @@ export function initUIBindings(callbacks = {}) {
   initKeyboardShortcuts();
   initScoreNotesToggle();
   initAnnotationControls();
+  initOscMuteButton();
   initMiscUIHandlers();
 
   // Set initial UI state
@@ -244,6 +246,19 @@ function initAnnotationControls() {
   window.addEventListener("oscilla:annotation-mode", (e) => {
     const active = e.detail.active;
     btn.classList.toggle("active", active);
+  });
+}
+
+// ===========================
+// OSC Mute Button
+// ===========================
+
+function initOscMuteButton() {
+  const muteBtn = document.getElementById("osc-mute-btn");
+  if (!muteBtn) return;
+
+  muteBtn.addEventListener("click", () => {
+    toggleOscMuted();
   });
 }
 

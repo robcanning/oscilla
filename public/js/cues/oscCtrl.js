@@ -4,7 +4,8 @@
  */
 
 import { scheduleCueStart } from "./cueDispatcher.js";
-import { sendOSCMessage, createOscOverlay } from "./osc.js";
+import { createOscOverlay } from "./osc.js";
+import { sendOSC } from "../system/oscillaOSCClient.js";
 
 import {
     registerAnimation,
@@ -160,7 +161,7 @@ if (cfg._overlay) {
 }
 
 
-            sendOSCMessage({
+            sendOSC({
                 type: "osc_control",
                 addr: cfg.addr,
                 uid: cfg.uid,

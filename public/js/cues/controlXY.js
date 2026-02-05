@@ -14,7 +14,8 @@
  */
 
 import { publish } from "../control/paramBinding.js";
-import { sendOSCMessage, createOscOverlay } from "./osc.js";
+import { createOscOverlay } from "./osc.js";
+import { sendOSC } from "../system/oscillaOSCClient.js";
 import * as shared from "../control/controlXYShared.js";
 
 // ============================================================================
@@ -583,7 +584,7 @@ export function handleControlXYCue(el, args = [], options = {}) {
         // Include rotation in OSC if handle has rotation capability
         const args = handle.rotHandle ? [normX, normY, normP] : [normX, normY];
         
-        sendOSCMessage?.({
+        sendOSC({
           type: "osc_value",
           addr: addr,
           args: args,

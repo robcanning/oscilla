@@ -15,7 +15,7 @@ import { handleCueTrigger, teleportPlayhead } from '../cues/cueDispatcher.js';
 import { handleStopCue } from '../cues/stop.js';
 import { handleAudioCue } from '../cues/audio.js';
 import { dismissPauseCountdown, handlePauseCue } from '../cues/pause.js';
-import { handleOSCIn } from '../control/controlRouter.js';
+import { dispatchOSC } from '../system/oscillaOSCClient.js';
 
 // ===========================
 // Module State
@@ -386,9 +386,9 @@ function handleOSCInMessage(data) {
     return;
   }
 
-  // Dispatch to control router
+  // Dispatch through centralised OSC client (handles ParamBus, handlers, and control routing)
   try {
-    handleOSCIn(address, args || []);
+    dispatchOSC(address, args || []);
   } catch (err) {
     console.error('[WS] OSC-in handler error:', err);
   }
@@ -412,7 +412,7 @@ function handleControlSetMessage(data) {
   }
 
   try {
-    handleOSCIn('/oscilla/set', [uid, param, value]);
+    dispatchOSC('/oscilla/set', [uid, param, value]);
   } catch (err) {
     console.error('[WS] control_set handler error:', err);
   }

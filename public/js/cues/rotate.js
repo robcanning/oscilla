@@ -15,7 +15,8 @@ import {
     isOscEnabled
 } from "./animShared.js";
 
-import { sendOSCMessage, createOscOverlay } from "./osc.js";
+import { createOscOverlay } from "./osc.js";
+import { sendOSC } from "../system/oscillaOSCClient.js";
 import { publish } from '../control/paramBinding.js';
 
 
@@ -53,7 +54,7 @@ function sendOSCRotation(cfg, angle) {
 
     if (addr) payload.addr = addr;
 
-    sendOSCMessage(payload);
+    sendOSC(payload);
 }
 
 // ============================================================

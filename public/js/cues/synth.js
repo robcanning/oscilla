@@ -25,7 +25,8 @@
 //
 // ------------------------------------------------------------
 
-import { sendOSCMessage, createOscOverlay } from "./osc.js";
+import { createOscOverlay } from "./osc.js";
+import { sendOSC } from "../system/oscillaOSCClient.js";
 import { bindParam, isSignalRef } from '../control/paramBinding.js';
 
 // ============================================================
@@ -104,7 +105,7 @@ function sendOSCSynth(ast, params, payload) {
   if (addr) out.addr = addr;
 
   try {
-    sendOSCMessage(out);
+    sendOSC(out);
   } catch {
     /* ignore */
   }

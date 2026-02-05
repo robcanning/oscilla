@@ -33,7 +33,8 @@ import {
     ensureAnimWrapper
 } from "./animShared.js";
 
-import { sendOSCMessage, createOscOverlay } from "./osc.js";
+import { createOscOverlay } from "./osc.js";
+import { sendOSC } from "../system/oscillaOSCClient.js";
 
 import { publish } from '../control/paramBinding.js';
 
@@ -395,7 +396,7 @@ function emitO2POsc({ cfg, uid, path, point, pathT }) {
         tLocal = (pathT - cfg.startPos + 1) % 1;
     }
 
-    sendOSCMessage({
+    sendOSC({
         type: "osc_value",
         addr,
         args: [

@@ -5,7 +5,25 @@
  * Supports both local (standalone) and server-synced modes.
  */
 
-import { sendMetronomeOsc } from "../oscUtils.js";
+import { sendOSC } from "../system/oscillaOSCClient.js";
+
+// Throttled metronome OSC sender (inlined from former oscUtils.js)
+const _metroThrottleMap = new Map();
+function sendMetronomeOsc(uid, beat, bpm) {
+  const cleanUid = String(uid).replace(/^uid:/, "") || "default";
+  const now = Date.now();
+  if (_metroThrottleMap.has(cleanUid) && now - _metroThrottleMap.get(cleanUid) < 50) return;
+  _metroThrottleMap.set(cleanUid, now);
+
+  sendOSC({
+    type: "oscilla/metro",
+    uid: cleanUid,
+    beat,
+    bpm,
+    client: window.localClientName || "unnamed",
+    timestamp: now
+  });
+}
 
 export const QuantiseRegistry = {
   actions: [],

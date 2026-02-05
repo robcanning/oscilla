@@ -74,6 +74,9 @@ import {
   openRehearsalPopup, closeRehearsalPopup, initRehearsalButton
 } from './system/rehearsalUI.js';
 
+// OSC client gateway
+import { setMuted as setOscMuted } from './system/oscillaOSCClient.js';
+
 // ===========================
 // Global Window Bindings
 // ===========================
@@ -201,6 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize rehearsal marks button
   initRehearsalButton();
+
+  // Initialize OSC client — sync any pre-existing mute state
+  setOscMuted(!!window.oscMuted);
 
   // Initialize project menu
   populateProjectMenu();

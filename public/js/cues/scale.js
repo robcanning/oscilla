@@ -7,7 +7,8 @@ import { applyPrestateBeforeStart, applyPrestateOnStart, ensureAnimWrapper,
     armGhostClickable, needsArming, installOscToggleHandler, isOscEnabled
 } from "./animShared.js";
 
-import { sendOSCMessage, createOscOverlay } from "./osc.js";
+import { createOscOverlay } from "./osc.js";
+import { sendOSC } from "../system/oscillaOSCClient.js";
 import { publish } from '../control/paramBinding.js';
 
 // ============================================================
@@ -19,7 +20,7 @@ function sendOSCScale(cfg, sx, sy) {
             ? String(cfg.oscaddr).trim()
             : `scale/${cfg.uid || "unknown"}`;
 
-    sendOSCMessage({
+    sendOSC({
         type: "osc_scale",
         uid: cfg.uid,
         addr,
@@ -422,7 +423,7 @@ export function handleScaleSequence(el, cfg) {
         el.style.transform = `scale(${tgtX}, ${tgtY})`;
 
         if (isOscEnabled(cfg, oscMode)) {
-            sendOSCMessage({
+            sendOSC({
                 addr: oscAddr,
                 type: "osc_scale",
                 uid: cfg.uid,
@@ -459,7 +460,7 @@ export function handleScaleSequence(el, cfg) {
             el.style.transform = `scale(${driver.sx}, ${driver.sy})`;
 
             if (isOscEnabled(cfg, oscMode)) {
-                sendOSCMessage({
+                sendOSC({
                     addr: oscAddr,
                     type: "osc_scale",
                     uid: cfg.uid,
@@ -560,7 +561,7 @@ export function handleScaleContinuous(el, cfg) {
     function sendOSC(sx, sy) {
         if (!oscEnabled(cfg)) return;
 
-        sendOSCMessage({
+        sendOSC({
             type: "osc_scale",
             uid: cfg.uid,
             addr: oscaddr,

@@ -15,7 +15,7 @@
  */
 
 import { publish } from "./paramBinding.js";
-import { sendOSCMessage } from "../cues/osc.js";
+import { sendOSC } from "../system/oscillaOSCClient.js";
 import * as shared from "./controlXYShared.js";
 
 // ============================================================================
@@ -391,7 +391,7 @@ function emitHandleValues(instance, handle) {
       ? [normX, normY, publishData.p] 
       : [normX, normY];
     
-    sendOSCMessage?.({
+    sendOSC({
       type: "osc_value",
       addr: addr,
       args: args,

@@ -13,6 +13,7 @@
 
 import { scheduleCueStart } from "./cueDispatcher.js";
 import { emitCueComplete } from "./cueDispatcher.js";
+import { sendOSC } from "../system/oscillaOSCClient.js";
 import {
     applyPrestateBeforeStart,
     applyPrestateOnStart,
@@ -194,58 +195,9 @@ function fmt(v) {
     return Number(v.toFixed(3));                 // 0.123456 → 0.123
 }
 
-// Centralised OSC sender
-export function sendOSCMessage(payload, options = {}) {
-    const { silent = false } = options;
-
-    if (!payload || typeof payload !== "object") return;
-    window.lastOscMessage = payload;
-
-
-    // GLOBAL OSC MUTE
-    if (window.oscMuted) {
-        // still update UI preview, but don't send
-        try {
-            const box = document.getElementById("osc-latest");
-            if (box) box.textContent = "[muted] " + box.textContent;
-        } catch { }
-
-        return;
-    }
-
-
-    try {
-        const box = document.getElementById("osc-latest");
-
-        if (box) {
-            let path = "/oscilla";
-            if (payload.addr) path += `/${payload.addr}`;
-
-            let values = [];
-
-            if (Array.isArray(payload.args)) {
-                values = payload.args.map(fmt);
-            } else {
-                for (const [k, v] of Object.entries(payload)) {
-                    if (k === "addr" || k === "type" || k === "timestamp") continue;
-                    if (typeof v === "number") values.push(fmt(v));
-                }
-            }
-
-            box.textContent = `${path} ${values.join(" ")}`.trim();
-        }
-    } catch { }
-
-    if (!window.socket || window.socket.readyState !== WebSocket.OPEN) {
-        if (!silent) console.warn("[osc] socket not ready", payload);
-        return;
-    }
-
-    try {
-        window.socket.send(JSON.stringify(payload));
-    } catch (err) {
-        console.warn("[osc] send failed", err, payload);
-    }
+// Centralised OSC sender — delegates to oscillaOSCClient
+function sendOSCMessage(payload, options = {}) {
+    sendOSC(payload, options);
 }
 
 
@@ -687,30 +639,7 @@ if (overlayBtn) {
 
 
 
-window.oscMuted = false;
-
-const muteBtn = document.getElementById("osc-mute-btn");
-
-function updateMuteUI() {
-  if (!muteBtn) return;
-
-  muteBtn.textContent = "M";   // always the same
-
-  if (window.oscMuted) {
-    muteBtn.classList.add("is-muted");
-    muteBtn.title = "Enable OSC output";
-  } else {
-    muteBtn.classList.remove("is-muted");
-    muteBtn.title = "Mute OSC output";
-  }
-}
-
-muteBtn?.addEventListener("click", () => {
-  window.oscMuted = !window.oscMuted;
-  updateMuteUI();
-});
-
-updateMuteUI();
+// OSC mute is now handled by oscillaOSCClient.js
 
 
 

@@ -20,7 +20,8 @@ import {
     isOscEnabled
 } from "./animShared.js";
 
-import { sendOSCMessage, createOscOverlay } from "./osc.js";
+import { createOscOverlay } from "./osc.js";
+import { sendOSC } from "../system/oscillaOSCClient.js";
 
 // ============================================================
 // COLOR UTILITIES
@@ -219,7 +220,7 @@ function sendOSCColor(cfg, hsl) {
     
     if (addr) payload.addr = addr;
     
-    sendOSCMessage(payload);
+    sendOSC(payload);
 }
 
 // ============================================================
