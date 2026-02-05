@@ -8,7 +8,7 @@
 // ------------------------------------------------------------
 
 const TAG = "[OSCILLA_ANIM]";
-const DEBUG = true;
+const DEBUG = false;
 
 // -----------------------------
 // Logger helpers
@@ -29,12 +29,11 @@ import { parseCueToAST } from "../parser/parser.js";
 window.oscillaAnimRegistry = window.oscillaAnimRegistry || {};
 
 // --------------------------------------------------------------
-// ⭐ FIXED: runningAnimations is now a Map(), not a plain object
+// runningAnimations is now a Map(), not a plain object
 // --------------------------------------------------------------
 window.runningAnimations = window.runningAnimations instanceof Map
     ? window.runningAnimations
     : new Map();
-
 
 // ------------------------------------------------------------
 //  UID RESOLUTION HELPER
