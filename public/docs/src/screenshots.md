@@ -56,6 +56,28 @@ oscilla-timers-fullscreen.png
 </figure>
 
 
+## Oscilla OSC controller design in Inkscape
+<figure class="doc-image">
+  <video 
+    controls 
+    loop 
+    muted 
+    playsinline
+    style="max-width: 800px; width: 100%;"
+    src="{{ '/img/oscilla-controlXY-pageview.mp4' | url }}"
+    alt="Oscilla controlXY multitouch OSC controller demonstration"
+  >
+    Your browser does not support the video tag.
+  </video>
+  <figcaption>
+    The <strong>controlXY</strong> multitouch OSC controller created in Inkscape. 
+    Each control object can be dragged freely across the canvas, sending X, Y, and rotation (twist) values via OSC. 
+    The orange rings indicate touch mode (<code>trig:touch</code>) is active. 
+    Multiple simultaneous touches are supported, with each object independently sending its position and rotation state. 
+    This example shows the page view with preset management and parameter display.
+  </figcaption>
+</figure>
+
 ## Oscilla "Native WebAudio Utility Synth"
 <figure class="doc-image">
   <img

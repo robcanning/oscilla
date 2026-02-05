@@ -1,14 +1,14 @@
 /*!
- * oscillaControlXY.js — Multitouch XY Control Pad
+ * oscillaControlXY.js â€” Multitouch XY Control Pad
  * Part of oscillaScore control plane
- * © 2025 Rob Canning — GPLv3
+ * Â© 2025 Rob Canning â€” GPLv3
  *
  * controlXY(...) defines a persistent, multitouch control surface.
  * Multiple handles can be constrained to a bounding shape and each
  * continuously publishes normalized X/Y values (0..1, up = 1).
  *
  * NEW FEATURES:
- *   - Sequence transport controls in launcher bar (▶/■)
+ *   - Sequence transport controls in launcher bar (â–¶/â– )
  *   - Glow/pulsate effect when handles are touched
  *   - Mute/manual override: click handle to show toggle overlay
  */
@@ -79,6 +79,99 @@ window.controlXYMute = {
 };
 
 /**
+ * Parse hmode parameter - supports both single value and array
+ * Returns an array matching touchpoint length
+ */
+function parseHmode(hmodeValue, touchptCount) {
+  // If no hmode specified, default to continuous for all
+  if (hmodeValue === undefined || hmodeValue === null || hmodeValue === '') {
+    return Array(touchptCount).fill('continuous');
+  }
+  
+  // Array form: parallel to touchpoints
+  if (Array.isArray(hmodeValue)) {
+    const result = [];
+    for (let i = 0; i < touchptCount; i++) {
+      const val = hmodeValue[i];
+      // Normalize each value, defaulting to continuous if undefined/null
+      result.push(val ? normalizeHmodeValue(val) : 'continuous');
+    }
+    return result;
+  }
+  
+  // Single value: normalize and apply to all touchpoints
+  const normalized = normalizeHmodeValue(hmodeValue);
+  return Array(touchptCount).fill(normalized);
+}
+
+/**
+ * Normalize hmode value to 'continuous' or 'limited'
+ * Anything falsy or unrecognized defaults to 'continuous'
+ */
+function normalizeHmodeValue(val) {
+  // Explicitly check for limited variants
+  if (val === 'limited' || val === 'limit' || val === 'clamped' || val === 'clamp') {
+    return 'limited';
+  }
+  // Explicitly check for continuous variants  
+  if (val === 'continuous' || val === 'cont' || val === 'wrap') {
+    return 'continuous';
+  }
+  // Default to continuous for any other value (including null/undefined)
+  return 'continuous';
+}
+
+/**
+ * Parse rotation range parameter (in degrees)
+ * Default: 270 degrees for limited mode, 360 for continuous
+ */
+function parseRotRange(rotRangeValue, hmode) {
+  if (typeof rotRangeValue === 'number') {
+    return rotRangeValue;
+  }
+  // Default based on hmode
+  return hmode === 'limited' ? 270 : 360;
+}
+
+/**
+ * Constrain rotation angle based on hmode
+ * Incoming angle is in the 0-360 range where 0° = 7 o'clock, clockwise positive
+ * 
+ * Examples with 270° range (limited mode default):
+ * - 0° (7 o'clock) = minimum, can't rotate further counterclockwise
+ * - 270° (4 o'clock) = maximum, can't rotate further clockwise
+ * - 350° (trying to go past min) → clamps to 0°
+ * - 300° (trying to go past max) → clamps to 270°
+ */
+function constrainRotation(angleDeg, hmode, range, currentAngle = 0) {
+  if (hmode === 'continuous') {
+    // Wrapping mode - normalize to 0-360
+    return ((angleDeg % 360) + 360) % 360;
+  }
+  
+  // Limited mode - stops at min/max
+  // In this coordinate system: 0° = 7 o'clock (minimum)
+  // Range extends clockwise from 0° (e.g., 270° range goes from 0° to 270°)
+  
+  // Normalize angle to 0-360
+  let normalized = ((angleDeg % 360) + 360) % 360;
+  
+  // Simple case: clamp to [0, range]
+  if (normalized > range) {
+    // We're past the maximum - need to decide if we're closer to min or max
+    // If angle is in upper half (closer to 360), clamp to 0 (minimum)
+    // If angle is in lower half, clamp to range (maximum)
+    const distToMin = Math.min(normalized, 360 - normalized); // Distance to 0° (wrapping either way)
+    const distToMax = Math.abs(normalized - range);
+    
+    return distToMin < distToMax ? 0 : range;
+  }
+  
+  // Within range [0, range]
+  return normalized;
+}
+
+/**
  * handleControlXYCue()
  */
 export function handleControlXYCue(el, args = [], options = {}) {
@@ -117,27 +210,76 @@ export function handleControlXYCue(el, args = [], options = {}) {
     }
   }
 
-  // Parse handles
-  let handleIds = cfg.handle;
-  if (!handleIds) {
-    console.warn("[controlXY] Missing handle parameter");
+  // Parse touchpoints (renamed from handles)
+  let touchptIds = cfg.touchpt || cfg.handle; // support old 'handle' for backwards compat
+  if (!touchptIds) {
+    console.warn("[controlXY] Missing touchpt parameter");
     return;
   }
-  if (!Array.isArray(handleIds)) {
-    handleIds = [handleIds];
+  if (!Array.isArray(touchptIds)) {
+    touchptIds = [touchptIds];
   }
 
-  const handleEls = handleIds.map(id => {
-    const handleEl = svg.getElementById(id);
-    if (!handleEl) {
-      console.warn(`[controlXY] handle element not found: ${id}`);
+  // Parse rotation handles (optional)
+  let rotHandleIds = cfg.handle || null;
+  let rotHandles = [];
+  let sharedHandleMode = false;
+  let sharedHandleEl = null;
+  
+  if (rotHandleIds) {
+    if (!Array.isArray(rotHandleIds)) {
+      // Single handle shared across all touchpoints
+      sharedHandleMode = true;
+      sharedHandleEl = svg.getElementById(rotHandleIds);
+      if (!sharedHandleEl) {
+        console.warn(`[controlXY] shared rotation handle not found: ${rotHandleIds}`);
+        sharedHandleMode = false;
+      } else {
+        // Create array of nulls - we'll handle the shared element separately
+        rotHandles = touchptIds.map(() => null);
+      }
+    } else {
+      // Parallel array of handles
+      rotHandles = rotHandleIds;
+    }
+  }
+
+  // Parse hmode - rotation mode for each touchpoint (NEW - only if we have rotation handles)
+  const hmodes = rotHandleIds ? parseHmode(cfg.hmode, touchptIds.length) : Array(touchptIds.length).fill(null);
+  const rotRangeGlobal = cfg.rotRange; // Store global rotRange config
+
+  const touchptEls = touchptIds.map((id, index) => {
+    const touchptEl = svg.getElementById(id);
+    if (!touchptEl) {
+      console.warn(`[controlXY] touchpt element not found: ${id}`);
       return null;
     }
-    return { id, el: handleEl };
+    
+    // Get rotation handle for this touchpoint (if any)
+    let rotHandleEl = null;
+    const rotHandleId = rotHandles[index];
+    
+    // In shared handle mode, individual touchpoints don't get the handle
+    // (it will be managed globally)
+    if (!sharedHandleMode && rotHandleId) {
+      rotHandleEl = svg.getElementById(rotHandleId);
+      if (!rotHandleEl) {
+        console.warn(`[controlXY] rotation handle element not found: ${rotHandleId}`);
+      }
+    }
+    
+    return { 
+      id, 
+      el: touchptEl, 
+      rotHandleId, 
+      rotHandleEl,
+      hmode: rotHandleIds ? (hmodes[index] || 'continuous') : null,  // Ensure default is continuous
+      rotRange: rotHandleIds ? parseRotRange(rotRangeGlobal, hmodes[index] || 'continuous') : null // Calculate if we have rotation
+    };
   }).filter(Boolean);
 
-  if (handleEls.length === 0) {
-    console.warn("[controlXY] No valid handles found");
+  if (touchptEls.length === 0) {
+    console.warn("[controlXY] No valid touchpoints found");
     return;
   }
 
@@ -171,6 +313,36 @@ export function handleControlXYCue(el, args = [], options = {}) {
   function clamp(val, min, max) {
     return Math.max(min, Math.min(max, val));
   }
+  
+  // Apply rotation transform to both touchpoint and rotation handle
+  // Handle is positioned on the perimeter of the touchpoint
+  function updateRotationTransform(touchptEl, rotHandleEl, touchptX, touchptY, 
+                                   touchptOffsetX, touchptOffsetY,
+                                   touchptRadius, handleOriginalCX, handleOriginalCY, 
+                                   touchptOriginalCX, touchptOriginalCY, angleDeg) {
+    if (!rotHandleEl) return;
+    
+    // Our zero is 7 o'clock (120° in standard SVG coords)
+    const standardAngle = angleDeg + 120;
+    const angleRad = (standardAngle * Math.PI) / 180;
+    
+    // Rotate touchpoint around its ORIGINAL center, then translate
+    // SVG transforms read right-to-left, so this rotates first, then translates
+    touchptEl.setAttribute("transform", 
+      `translate(${touchptOffsetX}, ${touchptOffsetY}) rotate(${standardAngle} ${touchptOriginalCX} ${touchptOriginalCY})`);
+    
+    // Calculate handle position on the perimeter (relative to current touchpoint position)
+    const handleX = touchptX + Math.cos(angleRad) * touchptRadius;
+    const handleY = touchptY + Math.sin(angleRad) * touchptRadius;
+    
+    // Translate handle from its original position to perimeter position
+    const handleOffsetX = handleX - handleOriginalCX;
+    const handleOffsetY = handleY - handleOriginalCY;
+    
+    // Rotate handle around its ORIGINAL center, then translate
+    rotHandleEl.setAttribute("transform", 
+      `translate(${handleOffsetX}, ${handleOffsetY}) rotate(${standardAngle} ${handleOriginalCX} ${handleOriginalCY})`);
+  }
 
   function createLabel(handleEl) {
     const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -197,42 +369,142 @@ export function handleControlXYCue(el, args = [], options = {}) {
   }
 
   let lastTouchedHandle = null;
+  let activeRotationTouchpt = null; // Track which touchpoint is being rotated (for shared handle)
 
-  // Per-handle state
-  const handles = handleEls.map(({ id, el: handleEl }, index) => {
-    const originalTransform = handleEl.getAttribute("transform") || "";
-    handleEl.removeAttribute("transform");
+  // Setup shared handle if in shared mode
+  if (sharedHandleMode && sharedHandleEl) {
+    // Get shared handle's original properties for cloning
+    sharedHandleEl.removeAttribute("transform");
+    const shbbox = sharedHandleEl.getBBox();
+    const sharedHandleOriginalCX = shbbox.x + shbbox.width / 2;
+    const sharedHandleOriginalCY = shbbox.y + shbbox.height / 2;
     
-    const hbbox = handleEl.getBBox();
+    // Store shared handle template info
+    window._controlXYSharedHandle = window._controlXYSharedHandle || {};
+    window._controlXYSharedHandle[uid] = {
+      templateEl: sharedHandleEl,
+      originalCX: sharedHandleOriginalCX,
+      originalCY: sharedHandleOriginalCY,
+      clones: []
+    };
+    
+    // Hide the original template element
+    sharedHandleEl.style.display = 'none';
+  }
+
+  // Per-touchpoint state
+  const handles = touchptEls.map(({ id, el: touchptEl, rotHandleId, rotHandleEl }, index) => {
+    const originalTransform = touchptEl.getAttribute("transform") || "";
+    touchptEl.removeAttribute("transform");
+    
+    const hbbox = touchptEl.getBBox();
     const originalCenterX = hbbox.x + hbbox.width / 2;
     const originalCenterY = hbbox.y + hbbox.height / 2;
     
     if (originalTransform) {
-      handleEl.setAttribute("transform", originalTransform);
+      touchptEl.setAttribute("transform", originalTransform);
     }
 
     let curX = bbox.x + bbox.width / 2;
     let curY = bbox.y + bbox.height / 2;
-    const label = showLabels ? createLabel(handleEl) : null;
+    const label = showLabels ? createLabel(touchptEl) : null;
     let offsetX = curX - originalCenterX;
     let offsetY = curY - originalCenterY;
 
-    handleEl.setAttribute("transform", `translate(${offsetX}, ${offsetY})`);
-    handleEl.style.pointerEvents = "auto";
-    handleEl.style.cursor = "grab";
-    handleEl.style.touchAction = "none";
-    handleEl.classList.add("controlxy-handle");
-    handleEl.dataset.controlxyUid = uid;
-    handleEl.dataset.controlxyHandle = id;
-    handleEl.parentNode.appendChild(handleEl);
+    touchptEl.setAttribute("transform", `translate(${offsetX}, ${offsetY})`);
+    touchptEl.style.pointerEvents = "auto";
+    touchptEl.style.cursor = "grab";
+    touchptEl.style.touchAction = "none";
+    touchptEl.classList.add("controlxy-handle");
+    touchptEl.dataset.controlxyUid = uid;
+    touchptEl.dataset.controlxyHandle = id;
+    touchptEl.parentNode.appendChild(touchptEl);
 
     if (label) {
-      updateLabel(label, handleEl, 0.5, 0.5, offsetX, offsetY);
+      updateLabel(label, touchptEl, 0.5, 0.5, offsetX, offsetY);
+    }
+
+    // Rotation handle setup (if present)
+    let rotHandle = null;
+    let curAngle = 0; // in degrees, 0 = 7 o'clock (120° standard SVG)
+    
+    // Calculate touchpoint radius for handle positioning on perimeter
+    const touchptRadius = Math.max(hbbox.width, hbbox.height) / 2;
+    
+    if (rotHandleEl) {
+      // Individual handle for this touchpoint
+      rotHandleEl.style.pointerEvents = "auto";
+      rotHandleEl.style.cursor = "grab";
+      rotHandleEl.style.touchAction = "none";
+      rotHandleEl.classList.add("controlxy-rotation-handle");
+      rotHandleEl.dataset.controlxyUid = uid;
+      rotHandleEl.dataset.controlxyTouchpt = id;
+      rotHandleEl.parentNode.appendChild(rotHandleEl);
+      
+      // Get rotation handle's original center
+      rotHandleEl.removeAttribute("transform");
+      const rhbbox = rotHandleEl.getBBox();
+      const rotHandleOriginalCX = rhbbox.x + rhbbox.width / 2;
+      const rotHandleOriginalCY = rhbbox.y + rhbbox.height / 2;
+      
+      rotHandle = {
+        id: rotHandleId,
+        el: rotHandleEl,
+        originalCX: rotHandleOriginalCX,
+        originalCY: rotHandleOriginalCY,
+        dragging: false,
+        pointerId: null
+      };
+      
+      // Apply initial position
+      updateRotationTransform(touchptEl, rotHandleEl, curX, curY, offsetX, offsetY, 
+                              touchptRadius, rotHandleOriginalCX, rotHandleOriginalCY, 
+                              originalCenterX, originalCenterY, curAngle);
+    } else if (sharedHandleMode) {
+      // Using shared handle - create a clone for this touchpoint
+      const shared = window._controlXYSharedHandle[uid];
+      const clonedHandle = shared.templateEl.cloneNode(true);
+      
+      // Setup cloned handle
+      clonedHandle.removeAttribute('id'); // Don't duplicate IDs
+      clonedHandle.style.display = '';
+      clonedHandle.style.pointerEvents = "auto";
+      clonedHandle.style.cursor = "grab";
+      clonedHandle.style.touchAction = "none";
+      clonedHandle.classList.add("controlxy-rotation-handle", "controlxy-shared-handle-clone");
+      clonedHandle.dataset.controlxyUid = uid;
+      clonedHandle.dataset.controlxyTouchpt = id;
+      
+      // Insert clone into SVG
+      shared.templateEl.parentNode.appendChild(clonedHandle);
+      
+      // Get clone's center (should match template)
+      const cloneBbox = clonedHandle.getBBox();
+      const cloneCX = cloneBbox.x + cloneBbox.width / 2;
+      const cloneCY = cloneBbox.y + cloneBbox.height / 2;
+      
+      rotHandle = {
+        shared: true,
+        id: 'shared_clone',
+        el: clonedHandle,
+        originalCX: cloneCX,
+        originalCY: cloneCY,
+        dragging: false,
+        pointerId: null
+      };
+      
+      // Store reference to clone
+      shared.clones.push({ handle: rotHandle, touchptId: id });
+      
+      // Apply initial position
+      updateRotationTransform(touchptEl, clonedHandle, curX, curY, offsetX, offsetY, 
+                              touchptRadius, cloneCX, cloneCY, 
+                              originalCenterX, originalCenterY, curAngle);
     }
 
     return {
       id,
-      el: handleEl,
+      el: touchptEl,
       label,
       originalCenterX,
       originalCenterY,
@@ -245,7 +517,14 @@ export function handleControlXYCue(el, args = [], options = {}) {
       lastOscSent: 0,
       muteOverlay: null,
       muteOverlayTimer: null,
-      showOverlayTimer: null
+      showOverlayTimer: null,
+      // Rotation properties
+      rotHandle,
+      curAngle,
+      touchptRadius,
+      // NEW: Rotation mode and range
+      hmode: touchptEls[index].hmode,
+      rotRange: touchptEls[index].rotRange
     };
   });
 
@@ -253,17 +532,46 @@ export function handleControlXYCue(el, args = [], options = {}) {
   function emit(handle) {
     const normX = clamp((handle.curX - bbox.x) / bbox.width, 0, 1);
     const normY = clamp(1 - (handle.curY - bbox.y) / bbox.height, 0, 1);
+    
+    // Calculate normalized rotation (0-1) based on hmode
+    let normP = 0;
+    if (handle.rotHandle) {
+      if (handle.hmode === 'limited' && handle.rotRange) {
+        // For limited mode, map the range to 0-1
+        normP = handle.curAngle / handle.rotRange;
+        normP = clamp(normP, 0, 1);
+      } else {
+        // For continuous mode, full 360° maps to 0-1
+        normP = ((handle.curAngle % 360) + 360) % 360 / 360;
+      }
+    }
 
-    publish("controlXY", uid, {
+    const publishData = {
       handle: handle.id,
       x: normX,
       y: normY,
       [`${handle.id}.x`]: normX,
       [`${handle.id}.y`]: normY
-    });
+    };
+    
+    // Add rotation if handle has rotation capability
+    if (handle.rotHandle) {
+      publishData.p = normP;
+      publishData[`${handle.id}.p`] = normP;
+    }
+
+    publish("controlXY", uid, publishData);
 
     if (handle.label) {
-      updateLabel(handle.label, handle.el, normX, normY, handle.offsetX, handle.offsetY);
+      const labelText = handle.rotHandle 
+        ? `${normX.toFixed(2)}, ${normY.toFixed(2)}, ${normP.toFixed(2)}`
+        : `${normX.toFixed(2)}, ${normY.toFixed(2)}`;
+      handle.label.textContent = labelText;
+      const hbox = handle.el.getBBox();
+      const labelX = hbox.x + hbox.width / 2 + handle.offsetX;
+      const labelY = hbox.y + handle.offsetY - 8;
+      handle.label.setAttribute("x", labelX);
+      handle.label.setAttribute("y", labelY);
     }
 
     if (oscEnabled) {
@@ -271,10 +579,14 @@ export function handleControlXYCue(el, args = [], options = {}) {
       if (now - handle.lastOscSent >= oscThrottle) {
         handle.lastOscSent = now;
         const addr = handles.length > 1 ? `${oscAddr}/${handle.id}` : oscAddr;
+        
+        // Include rotation in OSC if handle has rotation capability
+        const args = handle.rotHandle ? [normX, normY, normP] : [normX, normY];
+        
         sendOSCMessage?.({
           type: "osc_value",
           addr: addr,
-          args: [normX, normY],
+          args: args,
           timestamp: Date.now()
         });
       }
@@ -286,7 +598,54 @@ export function handleControlXYCue(el, args = [], options = {}) {
     handle.curY = clamp(targetY, bbox.y, bbox.y + bbox.height);
     handle.offsetX = handle.curX - handle.originalCenterX;
     handle.offsetY = handle.curY - handle.originalCenterY;
-    handle.el.setAttribute("transform", `translate(${handle.offsetX}, ${handle.offsetY})`);
+    
+    if (handle.rotHandle) {
+      // Both individual and shared (cloned) handles use the same update function
+      updateRotationTransform(
+        handle.el, 
+        handle.rotHandle.el, 
+        handle.curX, 
+        handle.curY,
+        handle.offsetX, 
+        handle.offsetY,
+        handle.touchptRadius,
+        handle.rotHandle.originalCX,
+        handle.rotHandle.originalCY,
+        handle.originalCenterX,
+        handle.originalCenterY,
+        handle.curAngle
+      );
+    } else {
+      // No rotation, just translate
+      handle.el.setAttribute("transform", `translate(${handle.offsetX}, ${handle.offsetY})`);
+    }
+  }
+  
+  function applyRotation(handle, angleDeg) {
+    // NEW: Apply rotation constraints based on hmode
+    if (handle.hmode && handle.rotRange) {
+      angleDeg = constrainRotation(angleDeg, handle.hmode, handle.rotRange, handle.curAngle);
+    }
+    
+    handle.curAngle = angleDeg;
+    
+    if (handle.rotHandle) {
+      // Both individual and shared (cloned) handles use the same update function
+      updateRotationTransform(
+        handle.el,
+        handle.rotHandle.el,
+        handle.curX,
+        handle.curY,
+        handle.offsetX,
+        handle.offsetY,
+        handle.touchptRadius,
+        handle.rotHandle.originalCX,
+        handle.rotHandle.originalCY,
+        handle.originalCenterX,
+        handle.originalCenterY,
+        handle.curAngle
+      );
+    }
   }
 
   function findHandleByPointerId(pointerId) {
@@ -397,19 +756,58 @@ export function handleControlXYCue(el, args = [], options = {}) {
 
     const svgPt = svgPointFromEvent(e);
     let targetHandle = null;
+    let isRotationHandle = false;
     
+    // Check if we clicked on any rotation handle (individual or cloned shared)
     for (const h of handles) {
-      if (h.el === e.target || h.el.contains(e.target)) {
+      if (h.rotHandle && h.rotHandle.el && (h.rotHandle.el === e.target || h.rotHandle.el.contains(e.target))) {
         targetHandle = h;
+        isRotationHandle = true;
         break;
       }
     }
+    
+    // If not a rotation handle, check for touchpoint
+    if (!targetHandle) {
+      for (const h of handles) {
+        if (h.el === e.target || h.el.contains(e.target)) {
+          targetHandle = h;
+          break;
+        }
+      }
+    }
 
+    // If still not found, find nearest free touchpoint
     if (!targetHandle) {
       targetHandle = findNearestFreeHandle(svgPt);
     }
 
-    if (!targetHandle || targetHandle.dragging) return;
+    if (!targetHandle) return;
+    
+    // Check if rotation handle is being dragged
+    if (isRotationHandle && targetHandle.rotHandle) {
+      if (targetHandle.rotHandle.dragging || targetHandle.dragging) return;
+      
+      // Start rotation drag (works for both individual and cloned shared handles)
+      targetHandle.rotHandle.dragging = true;
+      targetHandle.rotHandle.pointerId = e.pointerId;
+      targetHandle.rotHandle.el.setPointerCapture?.(e.pointerId);
+      targetHandle.rotHandle.el.classList.add("controlxy-handle--active");
+      
+      // Calculate initial angle from touchpoint center
+      const dx = svgPt.x - targetHandle.curX;
+      const dy = svgPt.y - targetHandle.curY;
+      let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      // Convert to our coordinate system (0 = 7 o'clock = 120°)
+      angle = ((angle - 120) + 360) % 360;
+      
+      applyRotation(targetHandle, angle);
+      emit(targetHandle);
+      return;
+    }
+
+    // Regular touchpoint drag (X/Y movement)
+    if (targetHandle.dragging || (targetHandle.rotHandle && targetHandle.rotHandle.dragging)) return;
 
     // Show mute overlay after brief delay (not during drag start)
     clearTimeout(targetHandle.showOverlayTimer);
@@ -436,20 +834,67 @@ export function handleControlXYCue(el, args = [], options = {}) {
     applyPosition(targetHandle, svgPt.x, svgPt.y);
     emit(targetHandle);
   }
+  
+  function findNearestHandleWithRotation(svgPt) {
+    let nearest = null;
+    let nearestDist = Infinity;
+    for (const h of handles) {
+      if (!h.rotHandle) continue;
+      if (h.dragging) continue;
+      const dx = h.curX - svgPt.x;
+      const dy = h.curY - svgPt.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = h;
+      }
+    }
+    return nearest;
+  }
 
   function onPointerMove(e) {
+    const svgPt = svgPointFromEvent(e);
+    
+    // Check if any rotation handle is being dragged
+    for (const handle of handles) {
+      if (handle.rotHandle && handle.rotHandle.el && handle.rotHandle.dragging && handle.rotHandle.pointerId === e.pointerId) {
+        // Calculate angle from touchpoint center to pointer
+        const dx = svgPt.x - handle.curX;
+        const dy = svgPt.y - handle.curY;
+        let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        // Convert to our coordinate system (0 = 7 o'clock = 120°)
+        angle = ((angle - 120) + 360) % 360;
+        
+        applyRotation(handle, angle);
+        emit(handle);
+        return;
+      }
+    }
+    
+    // Regular touchpoint dragging
     const handle = findHandleByPointerId(e.pointerId);
     if (!handle || !handle.dragging) return;
     
     // Cancel mute overlay show if dragging
     clearTimeout(handle.showOverlayTimer);
 
-    const svgPt = svgPointFromEvent(e);
     applyPosition(handle, svgPt.x, svgPt.y);
     emit(handle);
   }
 
   function onPointerUp(e) {
+    // Check if any rotation handle is being released
+    for (const handle of handles) {
+      if (handle.rotHandle && handle.rotHandle.el && handle.rotHandle.pointerId === e.pointerId) {
+        handle.rotHandle.dragging = false;
+        handle.rotHandle.pointerId = null;
+        handle.rotHandle.el.releasePointerCapture?.(e.pointerId);
+        handle.rotHandle.el.classList.remove("controlxy-handle--active");
+        return;
+      }
+    }
+    
+    // Regular touchpoint release
     const handle = findHandleByPointerId(e.pointerId);
     if (!handle) return;
 
@@ -481,6 +926,11 @@ export function handleControlXYCue(el, args = [], options = {}) {
         handle.label.classList.remove("hovered");
       }
     });
+    
+    // Register events for rotation handle (individual or cloned shared)
+    if (handle.rotHandle && handle.rotHandle.el) {
+      handle.rotHandle.el.addEventListener("pointerdown", onPointerDown);
+    }
   }
 
   // Prevent score dragging
@@ -509,7 +959,7 @@ export function handleControlXYCue(el, args = [], options = {}) {
   // External position updates (presets, tweening)
   // Respects mute state!
   // ---------------------------------------------
-  function setPosition(handleId, normX, normY) {
+  function setPosition(handleId, normX, normY, normP) {
     // Check if handle is muted
     if (isHandleMuted(uid, handleId)) {
       console.log(`[controlXY] Handle ${handleId} is muted, ignoring automation`);
@@ -523,6 +973,21 @@ export function handleControlXYCue(el, args = [], options = {}) {
     const targetY = bbox.y + (1 - normY) * bbox.height;
     
     applyPosition(handle, targetX, targetY);
+    
+    // Apply rotation if provided and handle has rotation capability
+    if (normP !== undefined && handle.rotHandle) {
+      // NEW: Convert normalized rotation to angle based on hmode
+      let angleDeg;
+      if (handle.hmode === 'limited' && handle.rotRange) {
+        // For limited mode, 0-1 maps to 0-rotRange
+        angleDeg = normP * handle.rotRange;
+      } else {
+        // For continuous mode, 0-1 maps to 0-360
+        angleDeg = normP * 360;
+      }
+      applyRotation(handle, angleDeg);
+    }
+    
     emit(handle);
   }
 
@@ -531,7 +996,23 @@ export function handleControlXYCue(el, args = [], options = {}) {
     for (const handle of handles) {
       const normX = clamp((handle.curX - bbox.x) / bbox.width, 0, 1);
       const normY = clamp(1 - (handle.curY - bbox.y) / bbox.height, 0, 1);
-      state[handle.id] = { x: normX, y: normY };
+      
+      const handleState = { x: normX, y: normY };
+      
+      // Include rotation if handle has rotation capability
+      if (handle.rotHandle) {
+        // NEW: Normalize rotation based on hmode
+        let normP;
+        if (handle.hmode === 'limited' && handle.rotRange) {
+          normP = handle.curAngle / handle.rotRange;
+          normP = clamp(normP, 0, 1);
+        } else {
+          normP = ((handle.curAngle % 360) + 360) % 360 / 360;
+        }
+        handleState.p = normP;
+      }
+      
+      state[handle.id] = handleState;
     }
     return state;
   }
@@ -543,7 +1024,7 @@ export function handleControlXYCue(el, args = [], options = {}) {
         console.log(`[controlXY] Handle ${handleId} is muted, skipping`);
         continue;
       }
-      setPosition(handleId, pos.x, pos.y);
+      setPosition(handleId, pos.x, pos.y, pos.p);
     }
   }
 
@@ -575,6 +1056,17 @@ export function handleControlXYCue(el, args = [], options = {}) {
     }
     
     delete window._controlXYPads[uid];
+  }
+
+  // Log initialization with hmode info
+  console.log(`[controlXY] Initialized pad "${uid}" with ${handles.length} handle(s)`);
+  if (rotHandleIds) {
+    console.log(`[controlXY] With rotation - modes:`, handles.map(h => {
+      if (!h.rotHandle) return `${h.id}:no-rotation`;
+      const mode = h.hmode || 'continuous';
+      const range = h.rotRange || (mode === 'limited' ? 270 : 360);
+      return `${h.id}:${mode}(${range}°)`;
+    }).join(', '));
   }
 
   return { cleanup, uid, handles, setPosition, captureState, applyPositions };
@@ -628,19 +1120,19 @@ function createLauncher(uid, bbox, slots, totalBanks, parent) {
   const bankBar = document.createElement("div");
   bankBar.className = "controlxy-launcher-bank-bar";
   bankBar.innerHTML = `
-    <button class="controlxy-launcher-seq-play" data-action="seq-play" title="Play Sequence">▶</button>
-    <button class="controlxy-launcher-seq-stop" data-action="seq-stop" title="Stop Sequence">■</button>
+    <button class="controlxy-launcher-seq-play" data-action="seq-play" title="Play Sequence">â–¶</button>
+    <button class="controlxy-launcher-seq-stop" data-action="seq-stop" title="Stop Sequence">â– </button>
     <span class="controlxy-launcher-seq-status"></span>
     <span class="controlxy-launcher-spacer"></span>
-    <button class="controlxy-launcher-bank-btn" data-action="prev" title="Previous Bank">←</button>
+    <button class="controlxy-launcher-bank-btn" data-action="prev" title="Previous Bank">â†</button>
     <span class="controlxy-launcher-bank-label">
       <span class="bank-name">Bank 1</span>
       <span class="bank-count">(1/${totalBanks})</span>
     </span>
-    <button class="controlxy-launcher-bank-btn" data-action="next" title="Next Bank">→</button>
+    <button class="controlxy-launcher-bank-btn" data-action="next" title="Next Bank">â†’</button>
     <button class="controlxy-launcher-mode-btn" data-mode="preset" title="Toggle Preset/Sequence Mode">P</button>
     <button class="controlxy-launcher-tween-btn active" data-tween="true" title="Toggle Tween/Jump">~</button>
-    <button class="controlxy-launcher-settings-btn" title="Open Preset Manager">⚙</button>
+    <button class="controlxy-launcher-settings-btn" title="Open Preset Manager">âš™</button>
   `;
   container.appendChild(bankBar);
   
@@ -706,7 +1198,7 @@ function initializeLauncher(uid, container, slots, totalBanks) {
   function updateSeqStatus() {
     const active = window.controlXYPresets?.getActiveSequence?.();
     if (active && active.running) {
-      seqStatus.textContent = `▶ ${active.name}`;
+      seqStatus.textContent = `â–¶ ${active.name}`;
       seqStatus.classList.add('active');
       seqPlayBtn.classList.add('playing');
       seqStopBtn.classList.add('active');

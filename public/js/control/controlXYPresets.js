@@ -206,10 +206,17 @@ export function savePresetFromData(name, data, options = {}) {
       const x = typeof pos.x === 'number' ? Math.max(0, Math.min(1, pos.x)) : 0.5;
       const y = typeof pos.y === 'number' ? Math.max(0, Math.min(1, pos.y)) : 0.5;
       
-      normalizedHandles[handleId] = {
+      const handleData = {
         x: Math.round(x * 1000) / 1000,
         y: Math.round(y * 1000) / 1000
       };
+      
+      // Include p (rotation) if present
+      if (typeof pos.p === 'number') {
+        handleData.p = Math.round(Math.max(0, Math.min(1, pos.p)) * 1000) / 1000;
+      }
+      
+      normalizedHandles[handleId] = handleData;
     }
     
     if (Object.keys(normalizedHandles).length > 0) {
@@ -329,7 +336,7 @@ function applyPositions(positions, handleFilter = null) {
       for (const [handleId, pos] of Object.entries(handlePositions)) {
         if (handleFilter && !handleFilter.includes(handleId)) continue;
         if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
-          pad.setPosition(handleId, pos.x, pos.y);
+          pad.setPosition(handleId, pos.x, pos.y, pos.p);
         }
       }
     }
@@ -346,14 +353,28 @@ function emitHandleValues(instance, handle) {
   const normX = Math.max(0, Math.min(1, (handle.curX - bbox.x) / bbox.width));
   const normY = Math.max(0, Math.min(1, 1 - (handle.curY - bbox.y) / bbox.height));
   
-  // Publish to control plane
-  publish("controlXY", instance.uid, {
+  const publishData = {
     handle: handle.id,
     x: normX,
     y: normY,
     [`${handle.id}.x`]: normX,
     [`${handle.id}.y`]: normY
-  });
+  };
+  
+  // Include rotation if handle has rotation capability
+  if (handle.rotHandle) {
+    let normP = 0;
+    if (handle.hmode === 'limited' && handle.rotRange) {
+      normP = Math.max(0, Math.min(1, handle.curAngle / handle.rotRange));
+    } else {
+      normP = ((handle.curAngle % 360) + 360) % 360 / 360;
+    }
+    publishData.p = normP;
+    publishData[`${handle.id}.p`] = normP;
+  }
+  
+  // Publish to control plane
+  publish("controlXY", instance.uid, publishData);
   
   // Update label if exists
   if (handle.label && instance.updateLabel) {
@@ -366,10 +387,14 @@ function emitHandleValues(instance, handle) {
       ? `${instance.oscAddr}/${handle.id}` 
       : instance.oscAddr;
     
+    const args = handle.rotHandle 
+      ? [normX, normY, publishData.p] 
+      : [normX, normY];
+    
     sendOSCMessage?.({
       type: "osc_value",
       addr: addr,
-      args: [normX, normY],
+      args: args,
       timestamp: Date.now()
     });
   }
@@ -423,9 +448,16 @@ export function tweenTo(positions, options = {}) {
         const currentX = startX + (targetPos.x - startX) * easedProgress;
         const currentY = startY + (targetPos.y - startY) * easedProgress;
         
+        // Interpolate rotation (p) if present in target
+        let currentP = undefined;
+        if (typeof targetPos.p === 'number') {
+          const startP = startPos?.p ?? 0;
+          currentP = startP + (targetPos.p - startP) * easedProgress;
+        }
+        
         // Use pad's setPosition method
         if (typeof pad.setPosition === 'function') {
-          pad.setPosition(handleId, currentX, currentY);
+          pad.setPosition(handleId, currentX, currentY, currentP);
         }
       }
     }
