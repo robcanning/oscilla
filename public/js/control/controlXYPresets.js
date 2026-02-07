@@ -9,52 +9,18 @@
  *   - Sequence playback with per-step timing
  *   - Per-handle timing for complex animations
  *   - Scenes (save/recall complete launcher state + handle positions)
- *   - localStorage persistence via controlXYShared.js
+ *   - localStorage persistence via controlShared.js
  *
- * This module uses controlXYShared.js as the single source of truth for state.
+ * This module uses controlShared.js as the single source of truth for state.
  */
 
 import { publish } from "./paramBinding.js";
 import { sendOSC } from "../system/oscillaOSCClient.js";
-import * as shared from "./controlXYShared.js";
+import * as shared from "./controlShared.js";
+import { getEasing } from "./easing.js";
+import { normalizeRotation } from "./rotationMath.js";
 
-// ============================================================================
-// EASING FUNCTIONS
-// ============================================================================
-
-const easings = {
-  linear: t => t,
-  easeInSine: t => 1 - Math.cos((t * Math.PI) / 2),
-  easeOutSine: t => Math.sin((t * Math.PI) / 2),
-  easeInOutSine: t => -(Math.cos(Math.PI * t) - 1) / 2,
-  easeInQuad: t => t * t,
-  easeOutQuad: t => 1 - (1 - t) * (1 - t),
-  easeInOutQuad: t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
-  easeInCubic: t => t * t * t,
-  easeOutCubic: t => 1 - Math.pow(1 - t, 3),
-  easeInOutCubic: t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
-  easeInBack: t => 2.70158 * t * t * t - 1.70158 * t * t,
-  easeOutBack: t => 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2),
-  easeInOutBack: t => {
-    const c1 = 1.70158, c2 = c1 * 1.525;
-    return t < 0.5
-      ? (Math.pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2
-      : (Math.pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
-  },
-  easeInElastic: t => t === 0 ? 0 : t === 1 ? 1 
-    : -Math.pow(2, 10 * t - 10) * Math.sin((t * 10 - 10.75) * ((2 * Math.PI) / 3)),
-  easeOutElastic: t => t === 0 ? 0 : t === 1 ? 1 
-    : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1,
-};
-
-function getEasing(ease) {
-  if (typeof ease === 'function') return ease;
-  if (typeof ease === 'number') {
-    const names = Object.keys(easings);
-    return easings[names[ease % names.length]] || easings.easeInOutSine;
-  }
-  return easings[ease] || easings.easeInOutSine;
-}
+// Easing functions are now imported from ./easing.js
 
 // Active tween state
 let activeTweens = new Map(); // uid -> tween state
@@ -363,12 +329,7 @@ function emitHandleValues(instance, handle) {
   
   // Include rotation if handle has rotation capability
   if (handle.rotHandle) {
-    let normP = 0;
-    if (handle.hmode === 'limited' && handle.rotRange) {
-      normP = Math.max(0, Math.min(1, handle.curAngle / handle.rotRange));
-    } else {
-      normP = ((handle.curAngle % 360) + 360) % 360 / 360;
-    }
+    const normP = normalizeRotation(handle.curAngle, handle.hmode, handle.rotRange);
     publishData.p = normP;
     publishData[`${handle.id}.p`] = normP;
   }

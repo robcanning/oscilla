@@ -2,7 +2,7 @@
  * OSCILLA SCORE SYNCHRONIZATION MODEL (TRANSFORM-BASED, DRIFT-PROOF)
  * ------------------------------------------------------------------
  * The score has a single shared coordinate system ("world space") defined by
- * `scoreWidth`, the SVG’s horizontal extent in viewBox units. The playback
+ * `scoreWidth`, the SVG's horizontal extent in viewBox units. The playback
  * position (`playheadX`) always exists in this world coordinate space and is
  * synchronized across all clients via the server.
  *
@@ -30,11 +30,11 @@
  *
  * Key Terms:
  *
- *   scoreWidth            → Width of SVG in world / viewBox units
- *   canonicalRenderedWidth → The pixel width reported by the first client
- *   canonicalScale        → World → Pixel scale shared by all clients
- *   playheadX             → Playback position in world units
- *   scrollStage           → The wrapper div that is translated horizontally
+ *   scoreWidth            -> Width of SVG in world / viewBox units
+ *   canonicalRenderedWidth -> The pixel width reported by the first client
+ *   canonicalScale        -> World -> Pixel scale shared by all clients
+ *   playheadX             -> Playback position in world units
+ *   scrollStage           -> The wrapper div that is translated horizontally
  *
  * The result is stable, resolution-independent, zero-drift visual synchronization.
  */
@@ -42,8 +42,7 @@
 
 import { getSpeedForPosition, updateSpeedFromPosition } from "./cues/speed.js";
 import { resetAllFadePriming } from "./cues/fade.js";
-import { stopAllCueTexts } from "./cues/text.js";
-import { destroyAllHitLabels } from "./oscillaHitLabels.js";
+import { checkCueTriggers } from "./cues/cueDispatcher.js";
 import { 
   dismissAllStopwatchOverlays, 
   startTransportTime, 
@@ -52,11 +51,6 @@ import {
   resetTransportTime 
 } from "./cues/timers.js";
 
-// ============================================================================
-// REHEARSAL MARK NAVIGATION STATE
-// ============================================================================
-
-let currentRehearsalIndex = 0; // Track current position in sorted rehearsal marks
 
 // ============================================================================
 // SEEKING STATE
@@ -121,28 +115,6 @@ document.addEventListener('keydown', (event) => {
 });
 
 
-
-
-
-
-// const //updatestopwatch = () => {
-//   // Use the accurate elapsed time without re-applying totalPauseDuration unnecessarily
-//   const effectiveElapsedTime = window.elapsedTime;
-//   const minutesElapsed = Math.floor(effectiveElapsedTime / 60000);
-//   const secondsElapsed = Math.floor((effectiveElapsedTime % 60000) / 1000);
-//   const minutesTotal = Math.floor(duration / 60000);
-//   const secondsTotal = Math.floor((duration % 60000) / 1000);
-
-
-//   const formattedElapsed = `${minutesElapsed}:${secondsElapsed.toString().padStart(2, '0')}`;
-//   const formattedTotal = `${minutesTotal}:${secondsTotal.toString().padStart(2, '0')}`;
-
-//   // stopwatch.textContent = `${formattedElapsed} / ${formattedTotal}`;
-//   stopwatch.textContent = `${formattedElapsed}`;
-
-//   log(LogLevel.INFO, `Stopwatch updated: Elapsed = ${formattedElapsed}, Total = ${formattedTotal}`);
-// };
-
 window.isSeeking = false;
 
 /**
@@ -153,7 +125,7 @@ window.isSeeking = false;
 * - Sends an updated state to the server to sync all clients.
 */
 
-window.ignoreRewindOnStartup = false; //  Prevents unnecessary resets
+window.ignoreRewindOnStartup = false;
 window.suppressSync = false;
 
 export const rewindToStart = () => {
@@ -161,25 +133,20 @@ export const rewindToStart = () => {
 
   window.playheadX = 0;
   window.elapsedTime = 0;
-  // resetStopwatch(); // Reset stopwatch
   
   // Reset transport time (performance timer)
   resetTransportTime();
 
   scrollToPlayheadVisual();
-  // window.speedMultiplier = getSpeedForPosition(window.playheadX);
   updateSpeedFromPosition();
   
   window.updateSpeedDisplay();
 
   // Reset rehearsal mark navigation index
-  resetRehearsalIndex?.();
-
-  // updatePosition();
-  // updateSeekBar();
+  window.resetRehearsalIndex?.();
 
   if (triggeredCues) {
-    triggeredCues.clear(); //  Ensure cues retrigger after rewind
+    triggeredCues.clear();
 
     resetAllFadePriming();
     dismissAllStopwatchOverlays();
@@ -189,8 +156,6 @@ export const rewindToStart = () => {
 
     // Reset annotation playhead triggers
     window.resetAnnotationPlayheadTriggers?.();
-
-    // console.log("[DEBUG] Cleared triggered cues due to rewind.");
   }
 
   suppressSync = true;
@@ -224,14 +189,11 @@ export const rewind = () => {
 
   scrollToPlayheadVisual();
 
-  // console.log(`[DEBUG] Rewind applied. Newwindow.playheadX: ${window.playheadX}`);
-
   //  Calculate `elapsedTime` based on `playheadX` for reference
   window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-  // console.log(`[DEBUG] Synced elapsedTime fromwindow.playheadX: ${elapsedTime}`);
 
   if (triggeredCues) {
-    triggeredCues.clear(); //  Ensure cues retrigger after rewind
+    triggeredCues.clear();
     resetAllFadePriming();
     dismissAllStopwatchOverlays();
 
@@ -241,24 +203,16 @@ export const rewind = () => {
 
     // Reset annotation playhead triggers
     window.resetAnnotationPlayheadTriggers?.();
-
-    // console.log("[DEBUG] Cleared triggered cues due to rewind.");
   }
 
   window.resetCueEdgeTracking();
 
 
   //  Apply and store correct speed based on the new playhead position
-  // window.speedMultiplier = getSpeedForPosition(window.playheadX);
   updateSpeedFromPosition();
 
-  // console.log(`[DEBUG] After rewind, applying speed: ${speedMultiplier}`);
   window.updateSpeedDisplay();
 
-
-  // updatePosition();
-  // updateSeekBar();
-  //updatestopwatch();
 
   if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
     window.socket?.send(JSON.stringify({
@@ -273,9 +227,6 @@ export const rewind = () => {
   /*  Prevent server from overriding our new position for a short window */
   window.recentlyRecalculatedPlayhead = true;
   setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
-
-  // NOTE: Play state resume is now handled by the keydown handler's setTimeout
-  // to ensure proper state management when seeking ends
 
 };
 
@@ -293,11 +244,9 @@ export const forward = () => {
   window.playheadX = Math.min(window.playheadX + FORWARD_INCREMENT_X, window.scoreWidth);
 
   scrollToPlayheadVisual();
-  // console.log(`[DEBUG] Forward applied. Newwindow.playheadX: ${window.playheadX}`);
 
   //  Calculate `elapsedTime` based on `playheadX` for reference
   window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-  // console.log(`[DEBUG] Synced window.elapsedTime fromwindow.playheadX: ${elapsedTime}`);
 
   if (triggeredCues) {
     triggeredCues.clear(); // Ensure cues retrigger after forward
@@ -307,24 +256,16 @@ export const forward = () => {
 
     window._cueInsideState?.clear();
     window.navRepeatMap?.clear();
-
-    // console.log("[DEBUG] Cleared triggered cues due to forward.");
   }
 
   window.resetCueEdgeTracking();
 
   //  Apply and store correct speed based on the new playhead position
-  //window.speedMultiplier = getSpeedForPosition(window.playheadX);
   updateSpeedFromPosition();
 
   window.updateSpeedDisplay();
 
   window.resetAnnotationPlayheadTriggers?.();
-
-
-  // updatePosition();
-  // updateSeekBar();
-  // updatestopwatch();
 
   if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
     window.socket?.send(JSON.stringify({
@@ -339,9 +280,6 @@ export const forward = () => {
   /*  Prevent server from overriding our new position for a short window */
   window.recentlyRecalculatedPlayhead = true;
   setTimeout(() => { window.recentlyRecalculatedPlayhead = false; }, 500);
-
-  // NOTE: Play state resume is now handled by the keydown handler's setTimeout
-  // to ensure proper state management when seeking ends
 
 };
 
@@ -413,7 +351,7 @@ export function setSpeed(relativeMultiplier) {
  */
 export function updateSpeedDisplay() {
   const display = document.getElementById("speedDisplay");
-  if (display) display.textContent = `${window.speedMultiplier.toFixed(1)}×`;
+  if (display) display.textContent = `${window.speedMultiplier.toFixed(1)}x`;
 }
 
 /**
@@ -433,7 +371,6 @@ export function sendSpeedUpdateToServer(speed) {
   };
 
   window.socket.send(JSON.stringify(message));
-  // console.log("[speedControl] Sent speed update:", message);
 }
 
 
@@ -466,161 +403,12 @@ window.updateSeekBar = updateSeekBar;
 
 
 
-// ---------------------------------------------------------
-// UI interaction state (menus / hover)
-// ---------------------------------------------------------
-window.__oscillaMenuActive = false;
-
-function shouldAutoHideControls() {
-  if (window.controlsPinned) return false;
-  if (window.__oscillaMenuActive) return false;
-  return true;
-}
-
-function shouldAutoHideTopbar() {
-  if (window.topbarPinned) return false;
-  if (window.__oscillaMenuActive) return false;
-  return true;
-}
-
-
-let controlsTimeout; // Timer to hide controls after inactivity
-
-export const hideControls = () => {
-  const controls = document.getElementById('controls');
-  const topBar = document.getElementById('top-bar');
-
-  // Hide controls if not pinned
-  if (shouldAutoHideControls()) {
-    controls?.classList.add('dismissed');
-  }
-  
-  // Hide topbar if not pinned (independent of controls)
-  if (shouldAutoHideTopbar()) {
-    topBar?.classList.add('dismissed');
-  }
-};
-
-
-
-
-export const showControls = () => {
-  const controls = document.getElementById('controls');
-  const topBar = document.getElementById('top-bar');
-
-  if (controls) controls.classList.remove('dismissed');
-  if (topBar) topBar.classList.remove('dismissed');
-};
-
-
-window.hideControls = hideControls;
-
-// -------------------------------------------------------------------
-// 🧷 Controls Pin Toggle
-// -------------------------------------------------------------------
-// Default to pinned, but can be overridden by preferences
-window.controlsPinned = window.oscillaControlsPinned ?? true;
-window.topbarPinned = window.oscillaTopbarPinned ?? true;
-
-let _controlsPinInitialized = false;
-let _topbarPinInitialized = false;
-
-export function initializeControlsPin() {
-  if (_controlsPinInitialized) {
-    console.log("[UI] Controls pin already initialized, skipping.");
-    return;
-  }
-  
-  const pinButton = document.getElementById("pin-controls");
-  if (!pinButton) return console.warn("[UI] No #pin-controls button found.");
-
-  _controlsPinInitialized = true;
-  
-  // Set initial visual state
-  pinButton.classList.toggle("active", window.controlsPinned);
-  
-  pinButton.addEventListener("click", () => {
-    window.controlsPinned = !window.controlsPinned;
-    pinButton.classList.toggle("active", window.controlsPinned);
-
-    const controls = document.getElementById('controls');
-    
-    if (window.controlsPinned) {
-      console.log("[UI] Controls pinned — will stay visible.");
-      controls?.classList.remove('dismissed');
-    } else {
-      console.log("[UI] Controls unpinned — auto-hide re-enabled.");
-      window.hideControlsLater();
-    }
-  });
-  
-  console.log("[UI] Controls pin initialized.");
-}
-
-export function initializeTopbarPin() {
-  if (_topbarPinInitialized) {
-    console.log("[UI] Topbar pin already initialized, skipping.");
-    return;
-  }
-  
-  const btn = document.getElementById("pin-topbar");
-  if (!btn) return console.warn("[UI] No #pin-topbar button found.");
-
-  _topbarPinInitialized = true;
-  
-  // Set initial visual state
-  btn.classList.toggle("active", window.topbarPinned);
-  
-  btn.addEventListener("click", () => {
-    window.topbarPinned = !window.topbarPinned;
-    btn.classList.toggle("active", window.topbarPinned);
-
-    const topBar = document.getElementById('top-bar');
-    
-    if (window.topbarPinned) {
-      console.log("[UI] Top-bar pinned.");
-      topBar?.classList.remove('dismissed');
-    } else {
-      console.log("[UI] Top-bar unpinned.");
-      window.hideControlsLater();
-    }
-  });
-  
-  console.log("[UI] Topbar pin initialized.");
-}
-
-// ---------------------------------------------------------
-// Unified Hide Controls Timer (respects pin state, never resets on re-call)
-// ---------------------------------------------------------
-// ---------------------------------------------------------
-// Unified Hide Controls Timer (FIXED)
-// ---------------------------------------------------------
-window.hideControlsLater = function (delay = 4000) {
-  clearTimeout(window._hideControlsTimer);
-
-  window._hideControlsTimer = setTimeout(() => {
-
-    if (!shouldAutoHideTopbar()) {
-      console.log("[UI] Auto-hide suppressed (pin or menu active)");
-      return;
-    }
-
-    hideControls();
-    console.log("[UI] Auto-hide executed");
-
-  }, delay);
-};
-
-
-
 // Function to synchronize playback time
 // Updates `elapsedTime` and aligns the score
 // Ensures correct positioning and checks for active cues.
 export const setElapsedTime = (newTime) => {
-  window.elapsedTime = newTime; // Update playback time
-  // updatePosition(window.playheadX); // Use the correct playhead position
-
-  checkCueTriggers(window.elapsedTime); // Recheck cues
+  window.elapsedTime = newTime;
+  checkCueTriggers(window.elapsedTime);
 };
 
 // transport.js
@@ -813,9 +601,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-
-import { checkCueTriggers } from "./cues/cueDispatcher.js";
-
 /**
  *  Starts playback
  * - Sets all state flags
@@ -845,7 +630,7 @@ export function startPlayback() {
   // --- Speed setup ---
   window.speedMultiplier = getSpeedForPosition(window.playheadX) * (window.baseSpeedMultiplier || 1);
   console.log(
-    `[Playback] 🎚 Applying speed multiplier: ${window.speedMultiplier} (playheadX=${window.playheadX.toFixed(
+    `[Playback] Applying speed multiplier: ${window.speedMultiplier} (playheadX=${window.playheadX.toFixed(
       2
     )})`
   );
@@ -866,7 +651,7 @@ export function startPlayback() {
 
   // --- UI sync ---
   togglePlayButton?.();
-  hideControls?.();
+  window.hideControls?.();
 
   // --- Cue trigger sync ---
   checkCueTriggers?.();
@@ -886,14 +671,14 @@ export function startPlayback() {
     );
   }
 
-  console.log("[Playback] ✅ Playback initialized");
+  console.log("[Playback] Playback initialized");
 }
 
 
 // Pauses playback: sets state, stops animation + stopwatch, syncs with server
 export function pausePlayback() {
   if (window.isPlaying) {
-    console.log("[Playback] ⏸ Pausing playback");
+    console.log("[Playback] Pausing playback");
     window.isPlaying = false;
     window.isMusicalPause = false;
     window.animationPaused = true;
@@ -922,194 +707,6 @@ export function resumePlayback() {
   console.log("[Playback] resumePlayback() called");
   window.startPlayback();
 };
-
-
-
-// ---------------------------------------------------------------------------
-// Mode Toggle UI (Scroll ↔ Node/Page)
-// ---------------------------------------------------------------------------
-// Displays a small toggle in the top UI that shows where clicking will go next.
-//   • If currently in scrolling mode → label shows "→ node"
-//   • If currently in node/page mode → label shows "→ scroll"
-// Clicking switches between the two modes:
-//   → node : opens the first (or last-used) page view
-//   → scroll : returns to the continuous scrolling score
-// The label always reflects the *destination*, not the current state.
-// ---------------------------------------------------------------------------
-
-function updateModeToggleUI() {
-  const el = document.getElementById("mode-toggle");
-  if (!el) return;
-
-  const ps = window.pageState;
-  if (!ps) return;
-
-  // Display where clicking will go next
-  if (ps.mode === "page") {
-    el.textContent = "→ scroll";   // currently in page, link goes to scroll
-  } else {
-    el.textContent = "→ node";     // currently in scroll, link goes to page mode
-  }
-}
-
-function toggleMode() {
-  const ps = window.pageState;
-  if (!ps) return;
-
-  if (ps.mode === "page") {
-    // go to scroll mode
-    window.returnToScrollingScore?.();
-  } else {
-    // go to node mode — open last or first page
-    // const firstPage = Object.keys(window.pageRegistry || {})[0];
-    // if (firstPage) {
-    handleCueTrigger?.(`nav(home)`);
-    // }
-  }
-
-  // Update label shortly after UI shift
-  setTimeout(updateModeToggleUI, 50);
-}
-
-document.getElementById("mode-toggle")?.addEventListener("click", toggleMode);
-window.updateModeToggleUI = updateModeToggleUI;
-
-// -----------------------------------------------------
-
-
-
-
-window.returnToScrollingScore = function returnToScrollingScore() {
-
-  console.log("[cuePage] Returning to scrolling score.");
-  stopAllCueTexts();
-
-  destroyAllHitLabels()
-
-
-  const container = document.getElementById("singlePage-container");
-  const content = document.getElementById("singlePage-content");
-  const mainScore = document.getElementById("scoreInner");
-  const ps = window.pageState || (window.pageState = { mode: "scroll", current: null });
-
-  if (!container || !content) {
-    console.warn("[cuePage] No page overlay present — just resuming scroll.");
-    ps.mode = "scroll";
-    updateModeToggleUI();
-
-    ps.current = null;
-    resumeScrollScore?.();
-    return;
-  }
-
-  container.style.transition = "opacity 0.5s ease";
-  container.style.opacity = "0";
-
-  setTimeout(() => {
-    // Remove any leftover cue buttons safely
-    window._activePageButtons?.forEach(btn => btn._destroyCueButton?.());
-    window._activePageButtons = [];
-
-    container.style.display = "none";
-    content.innerHTML = "";
-
-    ps.mode = "scroll";
-    updateModeToggleUI();
-
-    ps.current = null;
-
-    if (mainScore) {
-      mainScore.style.opacity = "1";
-      mainScore.style.pointerEvents = "auto";
-    }
-
-    // Show transport controls when returning to scroll mode
-    console.log("[cuePage] 🎛️ Showing transport for scroll mode.");
-    showControls?.();
-
-    resumeScrollScore?.();
-  }, 500);
-};
-
-
-
-/**
- * pauseScrollScore() / resumeScrollScore()
- * ----------------------------------------
- * Encapsulate your pause/resume logic.
- */
-function pauseScrollScore() {
-  window.isPlaying = false;
-  window.isMusicalPause = true;
-  window.stopAnimation?.();
-
-  const socket = window.socket;
-  if (window.wsEnabled && socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(
-      JSON.stringify({
-        type: "pause",
-        playheadX: window.playheadX,
-        elapsedTime: window.elapsedTime,
-      })
-    );
-  }
-}
-
-function resumeScrollScore() {
-  console.log(" Resuming scrolling score...");
-
-  // If we arrived here from nav(mode:scrollPaused@X)
-  if (window._resumeAfterJump === false) {
-    console.log(" ⏸ Staying paused after jump (scrollPaused mode).");
-
-    // Ensure playback remains paused
-    window.isPlaying = false;
-    window.animationPaused = true;
-    window.isMusicalPause = true;
-
-    // Ensure remote sync does NOT resume playback
-    window.ignoreNextSync = true;
-
-    // Ensure stopwatch is paused
-    window.pauseStopwatch?.();
-
-    // Reset so next resumeScrollScore() isn't blocked
-    window._resumeAfterJump = null;
-    return;
-  }
-
-  // Normal resume (mode(scroll) or general resume)
-  window.ignoreNextSync = true;
-  window.isPlaying = true;
-  window.isMusicalPause = false;
-
-  if (typeof window.resumePlayback === "function") {
-    window.resumePlayback();
-  } else if (typeof window.startPlayback === "function") {
-    window.startPlayback();
-  }
-
-  window.startStopwatch?.();
-
-  // if (resumeReason === "scroll-mode-switch") {
-  //   window.lastSyncTime = performance.now();
-  //   window.lastElapsedTime = window.elapsedTime ?? 0;
-  // }
-
-  const socket = window.socket;
-  if (window.wsEnabled && socket?.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({
-      type: "play",
-      playheadX: window.playheadX,
-      elapsedTime: window.elapsedTime,
-    }));
-  }
-
-  // Reset flag so future scroll resumes behave normally
-  window._resumeAfterJump = null;
-
-  console.log("▶ Scroll resume complete.");
-}
 
 
 // ============================================================================
@@ -1155,786 +752,6 @@ export function getWorldWidth(element, svgElement = null) {
 
 window.getWorldX = getWorldX;
 window.getWorldWidth = getWorldWidth;
-
-// ============================================================================
-// JUMP TO CUE BY ID
-// ============================================================================
-
-export const jumpToCueId = (id) => {
-  const target = window.cues?.find(c => c.id === id || c.id.startsWith(id + "-"))
-    || document.getElementById(id);
-
-  if (!target) {
-    console.warn(`[jumpToCueId] Cue not found: ${id}`);
-    return;
-  }
-
-  // Get accurate world position using getBoundingClientRect
-  const targetX = getWorldX(target);
-
-  // Set world playhead
-  window.playheadX = targetX;
-
-  // Sync musical timeline
-  window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-
-  // Convert world → screen (centering, padding, canonicalScale)
-  scrollToPlayheadVisual();
-
-  window.ignoreNextSync = true;
-
-  // Sync to other clients
-  if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-    window.socket.send(JSON.stringify({
-      type: "jump",
-      playheadX: window.playheadX,
-      elapsedTime: window.elapsedTime,
-    }));
-  }
-
-  window.resetAnnotationPlayheadTriggers?.();
-};
-
-window.jumpToCueId = jumpToCueId;
-
-// ============================================================================
-// REHEARSAL MARK NAVIGATION
-// ============================================================================
-
-/**
- * Jump to a specific rehearsal mark by name
- * @param {string} mark - The rehearsal mark name (e.g., "A", "B", "0")
- */
-export function jumpToRehearsalMark(mark) {
-  console.log(`[JUMP] Requested jump to rehearsal mark: ${mark}`);
-
-  const rehearsalMarks = window.rehearsalMarks;
-  if (!rehearsalMarks) {
-    console.error("[JUMP] ❌ No rehearsal marks loaded.");
-    return;
-  }
-
-  const entry = rehearsalMarks[mark];
-  if (!entry) {
-    console.error(`[JUMP] ❌ Mark "${mark}" not found.`);
-    return;
-  }
-
-  // Disable cues during jump
-  window.suppressCueTriggers = true;
-
-  // Pause during teleport
-  window.isPlaying = false;
-  window.animationPaused = true;
-
-  // Teleport playhead to the stored world X position
-  window.playheadX = entry.x;
-  
-  // Sync musical timeline
-  window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
-  
-  scrollToPlayheadVisual();
-
-  // Prevent drift glitch
-  window.lastAnimationFrameTime = null;
-
-  // Reset cue state
-  window._prevCueLefts = new Map();
-  window._cueInsideState = new Map();
-  window.triggeredCues = new Set();
-  
-  // Reset other state
-  resetAllFadePriming?.();
-  dismissAllStopwatchOverlays?.();
-  window.navRepeatMap?.clear();
-  window.resetAnnotationPlayheadTriggers?.();
-  window.resetCueEdgeTracking?.();
-
-  // Apply speed for new position
-  updateSpeedFromPosition?.();
-  window.updateSpeedDisplay?.();
-
-  // Notify server
-  if (window.socket && window.socket.readyState === WebSocket.OPEN) {
-    window.socket.send(JSON.stringify({ 
-      type: "jump", 
-      playheadX: window.playheadX,
-      elapsedTime: window.elapsedTime
-    }));
-  }
-
-  window.suppressCueTriggers = false;
-  
-  // Update current index to match the mark we jumped to
-  const sortedMarks = window.sortedMarks || [];
-  const newIndex = sortedMarks.indexOf(mark);
-  if (newIndex !== -1) {
-    currentRehearsalIndex = newIndex;
-  }
-
-  console.log(`[JUMP] ✅ Jumped to "${mark}" at playheadX: ${window.playheadX}`);
-}
-
-window.jumpToRehearsalMark = jumpToRehearsalMark;
-
-/**
- * Jump to the next rehearsal mark
- */
-export function jumpToNextRehearsalMark() {
-  const sortedMarks = window.sortedMarks || [];
-  
-  if (sortedMarks.length === 0) {
-    console.warn("[NAV] No rehearsal marks available.");
-    return;
-  }
-
-  if (currentRehearsalIndex < sortedMarks.length - 1) {
-    currentRehearsalIndex++;
-    const nextMark = sortedMarks[currentRehearsalIndex];
-    console.log(`[NAV] Forward to: ${nextMark} (Index: ${currentRehearsalIndex})`);
-    jumpToRehearsalMark(nextMark);
-  } else {
-    console.log("[NAV] Already at the last rehearsal mark.");
-  }
-}
-
-window.jumpToNextRehearsalMark = jumpToNextRehearsalMark;
-
-/**
- * Jump to the previous rehearsal mark
- */
-export function jumpToPreviousRehearsalMark() {
-  const sortedMarks = window.sortedMarks || [];
-  
-  if (sortedMarks.length === 0) {
-    console.warn("[NAV] No rehearsal marks available.");
-    return;
-  }
-
-  if (currentRehearsalIndex > 0) {
-    currentRehearsalIndex--;
-    const prevMark = sortedMarks[currentRehearsalIndex];
-    console.log(`[NAV] Back to: ${prevMark} (Index: ${currentRehearsalIndex})`);
-    jumpToRehearsalMark(prevMark);
-  } else {
-    console.log("[NAV] Already at the first rehearsal mark.");
-  }
-}
-
-window.jumpToPreviousRehearsalMark = jumpToPreviousRehearsalMark;
-
-/**
- * Reset rehearsal index (call when loading new score or rewinding to start)
- */
-export function resetRehearsalIndex() {
-  currentRehearsalIndex = 0;
-}
-
-window.resetRehearsalIndex = resetRehearsalIndex;
-
-/**
- * Sync rehearsal index to current playhead position
- * Useful after seeking or manual position changes
- */
-export function syncRehearsalIndexToPlayhead() {
-  const sortedMarks = window.sortedMarks || [];
-  const rehearsalMarks = window.rehearsalMarks || {};
-  
-  if (sortedMarks.length === 0) return;
-  
-  // Find the last mark that's at or before current playhead
-  let newIndex = 0;
-  for (let i = 0; i < sortedMarks.length; i++) {
-    const mark = sortedMarks[i];
-    const markX = rehearsalMarks[mark]?.x || 0;
-    if (markX <= window.playheadX) {
-      newIndex = i;
-    } else {
-      break;
-    }
-  }
-  
-  currentRehearsalIndex = newIndex;
-}
-
-window.syncRehearsalIndexToPlayhead = syncRehearsalIndexToPlayhead;
-
-// ============================================================================
-// REHEARSAL MARK KEYBOARD NAVIGATION (Arrow Up/Down)
-// ============================================================================
-
-document.addEventListener('keydown', (event) => {
-  if (window.oscillaTextInputActive && event.key !== "Escape") return;
-  
-  if (!["ArrowUp", "ArrowDown"].includes(event.key)) return;
-  
-  event.preventDefault();
-  
-  if (event.key === "ArrowUp") {
-    jumpToNextRehearsalMark();
-  } else if (event.key === "ArrowDown") {
-    jumpToPreviousRehearsalMark();
-  }
-});
-
-// ============================================================================
-// FAST FORWARD / REWIND BUTTON HANDLERS
-// ============================================================================
-
-document.addEventListener('DOMContentLoaded', () => {
-  const fastForwardBtn = document.getElementById('fast-forward-button');
-  const fastRewindBtn = document.getElementById('fast-rewind-button');
-  
-  if (fastForwardBtn) {
-    fastForwardBtn.addEventListener('click', () => {
-      console.log("[NAV] Fast Forward clicked");
-      jumpToNextRehearsalMark();
-    });
-  }
-  
-  if (fastRewindBtn) {
-    fastRewindBtn.addEventListener('click', () => {
-      console.log("[NAV] Fast Rewind clicked");
-      jumpToPreviousRehearsalMark();
-    });
-  }
-});
-
-
-document.addEventListener('fullscreenchange', () => {
-
-  if (document.fullscreenElement) {
-    hideControls();
-  } else {
-    showControls();
-    clearTimeout(controlsTimeout);
-  }
-
-  // Ensurewindow.playheadX is recalculated on fullscreen change
-  // recalculatePlayheadPosition(window.scoreSVG);
-  // calculateMaxScrollDistance();
-  requestAnimationFrame(scrollToPlayheadVisual);
-
-  // extractScoreElements(svgElement);
-
-})
-
-window.dispatchEvent(new Event("resize"));
-window.addEventListener('resize', () => {
-  const startTime = performance.now();
-  // extractScoreElements(window.scoreSVG);
-  const endTime = performance.now();
-  console.log(`[DEBUG] extractScoreElements executed in ${(endTime - startTime).toFixed(2)}ms`);
-  console.log("[DEBUG] Extracted Score Elements. Now Checking Sync...");
-  console.log("[DEBUG] Resize detected, recalculating maxScrollDistance and aligning playhead...");
-  // calculateMaxScrollDistance();
-});
-
-
-/* ---------------------------------------------------------------------------
-*  DOUBLE-TAP / DOUBLE-CLICK CONTROL TOGGLE (VERBOSE DEBUG VERSION)
-*  ---------------------------------------------------------------------------
-*  Purpose:
-*    • Shows playback controls only after a confirmed double-tap (mobile)
-*      or double-click (desktop).
-*    • Ignores single taps and scroll gestures.
-*    • Avoids browser [Intervention] warnings by not preventing native scroll.
-*
-*  Debug Output:
-*    Logs every phase of touch detection to identify false triggers.
-* --------------------------------------------------------------------------- */
-
-// 🟢 Show controls immediately and restart hide timer
-function showControlsAndAutoHide() {
-  showControls();
-  hideControlsLater();
-}
-
-(() => {
-  // Track timing & motion state
-  let lastTap = 0;           // timestamp of previous tap
-  let touchStartY = 0;       // Y position when touch starts
-  let touchMoved = false;    // did the finger move more than threshold?
-  let hideTimeout = null;    // timeout to hide controls after showing
-
-  const DOUBLE_TAP_WINDOW = 200; // ms between taps to count as double
-  const MOVE_THRESHOLD = 10;     // px movement allowed before it's treated as scroll
-  const SHOW_DURATION = 4000;    // ms controls stay visible
-
-function revealControlsTemporarily() {
-  showControls();
-
-  clearTimeout(hideTimeout);
-  hideTimeout = setTimeout(() => {
-    if (!window.controlsPinned && !window.topbarPinned) {
-      hideControls();
-      console.log("[TAP]  Hiding controls (timeout expired)");
-    } else {
-      console.log("[TAP] ⏸ Pin active — skipping auto-hide");
-    }
-  }, SHOW_DURATION);
-}
-
-
-  let lastTapTime = 0;
-  let tapTimeout;
-  const DOUBLE_TAP_MIN = 150;   // ignore ultra-fast taps
-  const DOUBLE_TAP_MAX = 500;   // require second tap within 0.5 s
-  const MOVE_TOLERANCE = 20;    // px
-
-  let startX = 0, startY = 0;
-
-  document.addEventListener("touchstart", (e) => {
-    const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-  });
-
-document.addEventListener("touchend", (e) => {
-
-  //  Block global gestures while menu is active
-  if (window.__oscillaMenuActive) {
-    console.log("[TAP] Ignored (menu active)");
-    return;
-  }
-
-  const t = e.changedTouches[0];
-  const dx = Math.abs(t.clientX - startX);
-  const dy = Math.abs(t.clientY - startY);
-  if (dx > MOVE_TOLERANCE || dy > MOVE_TOLERANCE) return; // it’s a scroll
-
-  const now = Date.now();
-  const delta = now - lastTapTime;
-
-  clearTimeout(tapTimeout);
-
-  if (delta >= DOUBLE_TAP_MIN && delta <= DOUBLE_TAP_MAX) {
-    console.log("[TAP] Confirmed DOUBLE TAP");
-    showControls();
-    hideControlsLater();
-    lastTapTime = 0; // reset
-  } else {
-    lastTapTime = now;
-    tapTimeout = setTimeout(() => {
-      lastTapTime = 0;
-    }, DOUBLE_TAP_MAX + 50);
-  }
-});
-
-
-  // -------------------------------------------------------------------------
-  //  DESKTOP DOUBLE CLICK SUPPORT
-  // -------------------------------------------------------------------------
-  document.addEventListener("dblclick", (e) => {
-    console.log("[CLICK] 🖱️ Double-click detected at", e.clientX, e.clientY);
-    revealControlsTemporarily();
-  });
-
-  console.log("[UI] 🎛️ Verbose double-tap/double-click toggle initialized.");
-})();
-
-
-
-
-// ============================================================
-// TOUCH-DRAG SEEK HANDLER (with momentum / inertia)
-// ============================================================
-// Add this to oscillaTransport.js or import as separate module.
-//
-// Behavior:
-//   - Drag left/right to scrub through the score
-//   - Release → continues with momentum, gradually slowing down
-//   - Tap anywhere during momentum → stops immediately
-//   - Feels like iOS scroll inertia
-// ============================================================
-
-
-
-(() => {
-  const scoreArea = document.getElementById("scoreContainer");
-  if (!scoreArea) {
-    console.warn("[TouchSeek] #scoreContainer not found");
-    return;
-  }
-
-  // --- Configuration ---
-  const DRAG_THRESHOLD = 10;          // px before we consider it a drag
-  const SEND_INTERVAL = 100;          // ms between WS updates
-  const SEEK_END_DELAY = 300;         // ms after momentum ends before resuming playback
-  const MOMENTUM_INTERVAL = 16;       // ~60fps
-  
-  // Momentum physics — can be overridden by preferences
-  // window.touchSeekFriction and window.touchSeekStopThreshold are set by oscillaPreferences.js
-  function getFriction() {
-    return window.touchSeekFriction ?? 0.95;  // Higher = longer glide
-  }
-  function getStopThreshold() {
-    return window.touchSeekStopThreshold ?? 5; // Stop when velocity drops below this
-  }
-
-  // --- State ---
-  let isDragging = false;
-  let startX = 0;
-  let startY = 0;
-  let startPlayheadX = 0;
-  let wasPlayingBeforeDrag = false;
-  let lastSendTime = 0;
-  let seekEndTimer = null;
-  let hasMoved = false;
-
-  // Velocity tracking
-  let velocitySamples = [];
-  let currentVelocity = 0;
-  let momentumTimer = null;
-  let isMomentumActive = false;
-
-  // --- Helpers ---
-  function getLocalScale() {
-    if (window.localScale) return window.localScale;
-    
-    const svg = document.querySelector("#scrollStage svg, #scoreInner svg");
-    if (!svg || !window.scoreWidth) return 1;
-    
-    const renderedWidth = svg.getBoundingClientRect().width;
-    return renderedWidth / window.scoreWidth;
-  }
-
-  function clampPlayhead(x) {
-    return Math.max(0, Math.min(x, window.scoreWidth || x));
-  }
-
-  function calculateVelocity() {
-    if (velocitySamples.length < 2) return 0;
-
-    // Use recent samples for smoother velocity
-    const recent = velocitySamples.slice(-6);
-    if (recent.length < 2) return 0;
-
-    const first = recent[0];
-    const last = recent[recent.length - 1];
-    const dt = (last.time - first.time) / 1000;
-
-    if (dt <= 0) return 0;
-
-    const dx = last.x - first.x;
-    const scale = getLocalScale();
-    const worldDx = -dx / scale;
-
-    return worldDx / dt;
-  }
-
-  function updatePlayheadPosition(newX, sendWs = true) {
-    window.playheadX = clampPlayhead(newX);
-
-    if (window.scoreWidth > 0) {
-      window.elapsedTime = (window.playheadX / window.scoreWidth) * (window.duration || 0);
-    }
-
-    window.scrollToPlayheadVisual?.();
-
-    if (sendWs) {
-      const now = performance.now();
-      if (now - lastSendTime > SEND_INTERVAL) {
-        lastSendTime = now;
-
-        if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-          window.socket.send(JSON.stringify({
-            type: "jump",
-            playheadX: window.playheadX,
-            elapsedTime: window.elapsedTime,
-            source: "touch-drag"
-          }));
-        }
-      }
-    }
-  }
-
-  function startMomentum() {
-    const stopThreshold = getStopThreshold();
-    
-    if (Math.abs(currentVelocity) < stopThreshold) {
-      finishSeeking();
-      return;
-    }
-
-    isMomentumActive = true;
-    console.log("[TouchSeek] 🌀 Momentum started, velocity:", currentVelocity.toFixed(1));
-
-    let lastFrameTime = performance.now();
-
-    function momentumFrame() {
-      if (!isMomentumActive) return;
-
-      const now = performance.now();
-      const dt = (now - lastFrameTime) / 1000;
-      lastFrameTime = now;
-
-      // Apply friction (read fresh each frame in case prefs change)
-      currentVelocity *= getFriction();
-
-      // Stop if too slow
-      if (Math.abs(currentVelocity) < getStopThreshold()) {
-        console.log("[TouchSeek] 🛑 Momentum finished");
-        stopMomentum();
-        finishSeeking();
-        return;
-      }
-
-      // Calculate new position
-      const delta = currentVelocity * dt;
-      const newX = window.playheadX + delta;
-
-      // Stop at boundaries
-      if (newX <= 0) {
-        updatePlayheadPosition(0);
-        console.log("[TouchSeek] 🛑 Hit start boundary");
-        stopMomentum();
-        finishSeeking();
-        return;
-      }
-      if (newX >= window.scoreWidth) {
-        updatePlayheadPosition(window.scoreWidth);
-        console.log("[TouchSeek] 🛑 Hit end boundary");
-        stopMomentum();
-        finishSeeking();
-        return;
-      }
-
-      updatePlayheadPosition(newX);
-
-      momentumTimer = setTimeout(momentumFrame, MOMENTUM_INTERVAL);
-    }
-
-    momentumFrame();
-  }
-
-  function stopMomentum() {
-    isMomentumActive = false;
-    currentVelocity = 0;
-    if (momentumTimer) {
-      clearTimeout(momentumTimer);
-      momentumTimer = null;
-    }
-  }
-
-  function finishSeeking() {
-    // Send final position
-    if (window.wsEnabled && window.socket?.readyState === WebSocket.OPEN) {
-      window.socket.send(JSON.stringify({
-        type: "jump",
-        playheadX: window.playheadX,
-        elapsedTime: window.elapsedTime,
-        source: "touch-drag-end"
-      }));
-    }
-
-    // Reset flags after delay
-    clearTimeout(seekEndTimer);
-    seekEndTimer = setTimeout(() => {
-      if (window.triggeredCues) {
-        window.triggeredCues.clear();
-        resetAllFadePriming?.();
-        dismissAllStopwatchOverlays?.();
-        window._cueInsideState?.clear();
-        window.navRepeatMap?.clear();
-      }
-
-      window.resetCueEdgeTracking?.();
-      updateSpeedFromPosition?.();
-      window.updateSpeedDisplay?.();
-
-      window.isSeeking = false;
-      window.suppressCueTriggers = false;
-      window.ignoreSyncPlayback = false;
-      window.ignoreNextSync = true;
-      window.recentlyRecalculatedPlayhead = true;
-
-      setTimeout(() => {
-        window.recentlyRecalculatedPlayhead = false;
-      }, 500);
-
-      if (wasPlayingBeforeDrag) {
-        console.log("[TouchSeek] ▶️ Resuming playback");
-        window.isPlaying = true;
-        window.animationPaused = false;
-        window.startAnimation?.();
-        window.startStopwatch?.();
-      }
-
-      wasPlayingBeforeDrag = false;
-
-    }, SEEK_END_DELAY);
-  }
-
-  // --- Start drag ---
-  function onTouchStart(e) {
-    // If momentum is active, stop it immediately (tap to stop)
-    if (isMomentumActive) {
-      console.log("[TouchSeek] 👆 Tap to stop momentum");
-      stopMomentum();
-      finishSeeking();
-      return;
-    }
-
-    if (e.touches.length > 1) return;
-
-    const target = e.target;
-    if (target.closest("#controls, #top-bar, button, input, sl-menu, .osc-anno-editor")) {
-      return;
-    }
-
-    const touch = e.touches[0];
-    startX = touch.clientX;
-    startY = touch.clientY;
-    startPlayheadX = window.playheadX || 0;
-    hasMoved = false;
-    isDragging = false;
-
-    velocitySamples = [{ x: startX, time: performance.now() }];
-    currentVelocity = 0;
-
-    wasPlayingBeforeDrag = window.isPlaying === true;
-  }
-
-  // --- During drag ---
-  function onTouchMove(e) {
-    if (e.touches.length > 1) {
-      isDragging = false;
-      return;
-    }
-
-    const touch = e.touches[0];
-    const dx = touch.clientX - startX;
-    const dy = touch.clientY - startY;
-
-    // Ignore vertical scrolling
-    if (!isDragging && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > DRAG_THRESHOLD) {
-      return;
-    }
-
-    // Start dragging after threshold
-    if (!isDragging && Math.abs(dx) > DRAG_THRESHOLD) {
-      isDragging = true;
-      hasMoved = true;
-
-      window.isSeeking = true;
-      window.suppressCueTriggers = true;
-      window.ignoreSyncPlayback = true;
-
-      if (wasPlayingBeforeDrag) {
-        window.stopAnimation?.();
-        window.isPlaying = false;
-        window.animationPaused = true;
-        console.log("[TouchSeek] 🖐️ Drag started");
-      }
-
-      if (window.triggeredCues) {
-        window.triggeredCues.clear();
-      }
-      window._cueInsideState?.clear();
-
-      clearTimeout(seekEndTimer);
-    }
-
-    if (!isDragging) return;
-
-    e.preventDefault();
-
-    // Track velocity samples
-    const now = performance.now();
-    velocitySamples.push({ x: touch.clientX, time: now });
-    while (velocitySamples.length > 10) {
-      velocitySamples.shift();
-    }
-
-    // Update playhead
-    const scale = getLocalScale();
-    const deltaWorld = -dx / scale;
-    const newPlayheadX = clampPlayhead(startPlayheadX + deltaWorld);
-    
-    updatePlayheadPosition(newPlayheadX);
-  }
-
-  // --- End drag ---
-  function onTouchEnd(e) {
-    if (!isDragging && !hasMoved) {
-      return;
-    }
-
-    if (!isDragging) return;
-
-    isDragging = false;
-
-    // Calculate release velocity
-    currentVelocity = calculateVelocity();
-
-    console.log("[TouchSeek] 🖐️ Released, velocity:", currentVelocity.toFixed(1));
-
-    // Start momentum or finish immediately
-    startMomentum();
-  }
-
-  // --- Cancel ---
-  function onTouchCancel() {
-    stopMomentum();
-
-    if (isDragging) {
-      isDragging = false;
-      clearTimeout(seekEndTimer);
-
-      window.isSeeking = false;
-      window.suppressCueTriggers = false;
-      window.ignoreSyncPlayback = false;
-
-      wasPlayingBeforeDrag = false;
-    }
-  }
-
-  // --- Attach listeners ---
-  scoreArea.addEventListener("touchstart", onTouchStart, { passive: true });
-  scoreArea.addEventListener("touchmove", onTouchMove, { passive: false });
-  scoreArea.addEventListener("touchend", onTouchEnd, { passive: true });
-  scoreArea.addEventListener("touchcancel", onTouchCancel, { passive: true });
-
-  console.log("[TouchSeek] ✅ Touch-drag seek with momentum initialized");
-})();
-
-
-
-
-// ------------------------------------------------------------
-// 🌙 Dark Mode Utility (Console-Equivalent)
-// ------------------------------------------------------------
-export function applyDarkMode(on = false) {
-  const html = document.documentElement;
-  if (on) {
-    html.style.filter = "invert(1) hue-rotate(180deg)";
-    document.body.style.background = "black";
-  } else {
-    html.style.filter = "";
-    document.body.style.background = "";
-  }
-  console.log(`[DarkMode] ${on ? "🌑 Enabled" : "☀️ Disabled"}`);
-}
-
-// ------------------------------------------------------------
-// 🌗 Dark Mode Toggle Button
-// ------------------------------------------------------------
-export function initializeDarkModeToggle() {
-  const invertBtn = document.getElementById("invert-button");
-  if (!invertBtn) {
-    console.warn("[DarkMode] ⚠️ No #invert-button found in DOM.");
-    return;
-  }
-
-  invertBtn.addEventListener("click", () => {
-    const active = document.documentElement.style.filter.includes("invert");
-    applyDarkMode(!active);
-  });
-
-  console.log("[DarkMode] 🌗 Toggle ready.");
-}
-
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -2027,210 +844,12 @@ export function scrollToPlayheadVisual() {
 window.scrollToPlayheadVisual = scrollToPlayheadVisual;
 
 
-
 // ============================================================================
-// Playhead / Playzone Toggle Button Listener
-// ============================================================================
-// Add this code to oscillaUI.js (or your main app initialization)
-//
-// Cycles through 4 states:
-//   1. "both"     → playhead + playzone visible
-//   2. "playhead" → playhead only
-//   3. "playzone" → playzone only  
-//   4. "none"     → neither visible
+// Window exports for cross-module access
 // ============================================================================
 
-/**
- * Visibility state for playhead/playzone
- * Can be: "both" | "playhead" | "playzone" | "none"
- */
-let playheadVisibilityState = "both";
-
-/**
- * Initialize the playhead toggle button listener
- * Call this once after DOM is ready
- */
-export function initPlayheadToggle() {
-  const btn = document.getElementById("playhead-toggle-button");
-  if (!btn) {
-    console.warn("[playheadToggle] Button #playhead-toggle-button not found");
-    return;
-  }
-
-  btn.addEventListener("click", cyclePlayheadVisibility);
-  
-  // Initialize icon state
-  updatePlayheadToggleIcon(btn, playheadVisibilityState);
-  
-  console.log("[playheadToggle] Initialized");
-}
-
-/**
- * Cycle through visibility states: both → playhead → playzone → none → both
- */
-function cyclePlayheadVisibility() {
-  const states = ["both", "playhead", "playzone", "none"];
-  const currentIndex = states.indexOf(playheadVisibilityState);
-  const nextIndex = (currentIndex + 1) % states.length;
-  
-  playheadVisibilityState = states[nextIndex];
-  
-  applyPlayheadVisibility(playheadVisibilityState);
-  
-  const btn = document.getElementById("playhead-toggle-button");
-  if (btn) {
-    btn.dataset.state = playheadVisibilityState;
-    btn.title = getPlayheadToggleTitle(playheadVisibilityState);
-    updatePlayheadToggleIcon(btn, playheadVisibilityState);
-  }
-  
-  console.log(`[playheadToggle] State: ${playheadVisibilityState}`);
-}
-
-/**
- * Apply visibility to playhead and playzone elements
- */
-function applyPlayheadVisibility(state) {
-  // Get playhead element(s) - adjust selector as needed for your app
-  const playhead = document.getElementById("playhead") 
-    || document.querySelector(".playhead")
-    || document.querySelector("[data-playhead]");
-    
-  // Get playzone element(s) - adjust selector as needed
-  const playzone = document.getElementById("playzone")
-    || document.querySelector(".playzone")
-    || document.querySelector("[data-playzone]");
-
-  const showPlayhead = (state === "both" || state === "playhead");
-  const showPlayzone = (state === "both" || state === "playzone");
-
-  // Apply to playhead
-  if (playhead) {
-    playhead.style.opacity = showPlayhead ? "" : "0";
-    playhead.style.pointerEvents = showPlayhead ? "" : "none";
-    // Alternative: use visibility or display
-    // playhead.style.visibility = showPlayhead ? "visible" : "hidden";
-  }
-
-  // Apply to playzone
-  if (playzone) {
-    playzone.style.opacity = showPlayzone ? "" : "0";
-    playzone.style.pointerEvents = showPlayzone ? "" : "none";
-  }
-
-  // Dispatch event for other modules to react
-  window.dispatchEvent(new CustomEvent("oscilla:playheadVisibility", {
-    detail: { 
-      state,
-      playheadVisible: showPlayhead,
-      playzoneVisible: showPlayzone
-    }
-  }));
-}
-
-/**
- * Update the toggle button icon to reflect current state
- */
-function updatePlayheadToggleIcon(btn, state) {
-  const lineEl = btn.querySelector("#playhead-icon-line");
-  const zoneEl = btn.querySelector("#playhead-icon-zone");
-
-  if (!lineEl || !zoneEl) return;
-
-  switch (state) {
-    case "both":
-      lineEl.style.opacity = "1";
-      zoneEl.style.opacity = "0.3";
-      break;
-    case "playhead":
-      lineEl.style.opacity = "1";
-      zoneEl.style.opacity = "0";
-      break;
-    case "playzone":
-      lineEl.style.opacity = "0.2";
-      zoneEl.style.opacity = "0.5";
-      break;
-    case "none":
-      lineEl.style.opacity = "0.2";
-      zoneEl.style.opacity = "0";
-      break;
-  }
-}
-
-/**
- * Get tooltip text for current state
- */
-function getPlayheadToggleTitle(state) {
-  switch (state) {
-    case "both":     return "Showing: Playhead + Playzone (click to cycle)";
-    case "playhead": return "Showing: Playhead only (click to cycle)";
-    case "playzone": return "Showing: Playzone only (click to cycle)";
-    case "none":     return "Showing: Neither (click to cycle)";
-    default:         return "Toggle playhead/playzone visibility";
-  }
-}
-
-/**
- * Programmatically set visibility state
- * @param {"both"|"playhead"|"playzone"|"none"} state 
- */
-export function setPlayheadVisibility(state) {
-  const validStates = ["both", "playhead", "playzone", "none"];
-  if (!validStates.includes(state)) {
-    console.warn(`[playheadToggle] Invalid state: ${state}`);
-    return;
-  }
-  
-  playheadVisibilityState = state;
-  applyPlayheadVisibility(state);
-  
-  const btn = document.getElementById("playhead-toggle-button");
-  if (btn) {
-    btn.dataset.state = state;
-    btn.title = getPlayheadToggleTitle(state);
-    updatePlayheadToggleIcon(btn, state);
-  }
-}
-
-/**
- * Get current visibility state
- * @returns {"both"|"playhead"|"playzone"|"none"}
- */
-export function getPlayheadVisibility() {
-  return playheadVisibilityState;
-}
-
-// ============================================================================
-// CSS for the button states (add to your stylesheet)
-// ============================================================================
-/*
-.gui-grid-2x3 {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  gap: 4px;
-}
-
-
-*/
-
-
-// ============================================================================
-// Auto-initialize if DOM is ready
-// ============================================================================
-console.log("[playheadToggle] Script loaded, readyState:", document.readyState);
-
-if (document.readyState === "loading") {
-  console.log("[playheadToggle] DOM still loading, adding DOMContentLoaded listener");
-  document.addEventListener("DOMContentLoaded", () => {
-    console.log("[playheadToggle] DOMContentLoaded fired, calling initPlayheadToggle()");
-    initPlayheadToggle();
-  });
-} else {
-  // DOM already loaded, init immediately (but defer to next tick)
-  console.log("[playheadToggle] DOM already ready, scheduling init on next tick");
-  setTimeout(() => {
-    console.log("[playheadToggle] Next tick, calling initPlayheadToggle()");
-    initPlayheadToggle();
-  }, 0);
-}
+window.startPlayback = startPlayback;
+window.pausePlayback = pausePlayback;
+window.resumePlayback = resumePlayback;
+window.togglePlay = togglePlay;
+window.rewindToStart = rewindToStart;

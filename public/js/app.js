@@ -1,6 +1,6 @@
 /*!
- * oscillaScore — Real-time SVG Score Performance Environment
- * © 2025 Rob Canning
+ * oscillaScore â€” Real-time SVG Score Performance Environment
+ * Â© 2025 Rob Canning
  *
  * Licensed under the GNU General Public License v3.0
  * https://www.gnu.org/licenses/gpl-3.0.html
@@ -14,7 +14,10 @@
 
 // Existing modules
 import { enableLiveInspector } from "./oscillaLive.js";
-import { initializeDarkModeToggle, scrollToPlayheadVisual } from "./oscillaTransport.js";
+import { scrollToPlayheadVisual } from "./oscillaTransport.js";
+import { initializeDarkModeToggle, hideControls, showControls, initializeControlsPin, initializeTopbarPin } from "./transportUI.js";
+import { jumpToCueId } from "./transportNav.js";
+import './transportTouch.js';
 import { loadProject } from './projectLoader.js';
 import { setupScore, extractScoreElements, autoInjectGroupsInScroll } from './projectScoreSetup.js';
 import { registerAnimation, animationAssign } from "./cues/animation.js";
@@ -25,8 +28,8 @@ import {
   forward, rewind, rewindToStart,
   initializeSpeedControls, adjustSpeed, setSpeed, updateSpeedDisplay,
   sendSpeedUpdateToServer, togglePlay, togglePlayButton, startPlayback,
-  pausePlayback, resumePlayback, jumpToCueId, hideControls, showControls,
-  updateSeekBar, initSeekBarListeners, initializeControlsPin, initializeTopbarPin
+  pausePlayback, resumePlayback,
+  updateSeekBar, initSeekBarListeners
 } from './oscillaTransport.js';
 
 import {
@@ -74,8 +77,7 @@ import {
   openRehearsalPopup, closeRehearsalPopup, initRehearsalButton
 } from './system/rehearsalUI.js';
 
-// OSC client gateway
-import { setMuted as setOscMuted } from './system/oscillaOSCClient.js';
+
 
 // ===========================
 // Global Window Bindings
@@ -204,9 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize rehearsal marks button
   initRehearsalButton();
-
-  // Initialize OSC client — sync any pre-existing mute state
-  setOscMuted(!!window.oscMuted);
 
   // Initialize project menu
   populateProjectMenu();

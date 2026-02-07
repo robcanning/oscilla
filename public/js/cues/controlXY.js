@@ -16,7 +16,11 @@
 import { publish } from "../control/paramBinding.js";
 import { createOscOverlay } from "./osc.js";
 import { sendOSC } from "../system/oscillaOSCClient.js";
-import * as shared from "../control/controlXYShared.js";
+import * as shared from "../control/controlShared.js";
+import {
+  normalizeHmodeValue, parseHmode, parseRotRange, constrainRotation,
+  normalizeRotation, denormalizeRotation
+} from "../control/rotationMath.js";
 
 // ============================================================================
 // Global muted handles set - handles in this set ignore automation updates
@@ -79,98 +83,9 @@ window.controlXYMute = {
   clearAllMutes
 };
 
-/**
- * Parse hmode parameter - supports both single value and array
- * Returns an array matching touchpoint length
- */
-function parseHmode(hmodeValue, touchptCount) {
-  // If no hmode specified, default to continuous for all
-  if (hmodeValue === undefined || hmodeValue === null || hmodeValue === '') {
-    return Array(touchptCount).fill('continuous');
-  }
-  
-  // Array form: parallel to touchpoints
-  if (Array.isArray(hmodeValue)) {
-    const result = [];
-    for (let i = 0; i < touchptCount; i++) {
-      const val = hmodeValue[i];
-      // Normalize each value, defaulting to continuous if undefined/null
-      result.push(val ? normalizeHmodeValue(val) : 'continuous');
-    }
-    return result;
-  }
-  
-  // Single value: normalize and apply to all touchpoints
-  const normalized = normalizeHmodeValue(hmodeValue);
-  return Array(touchptCount).fill(normalized);
-}
-
-/**
- * Normalize hmode value to 'continuous' or 'limited'
- * Anything falsy or unrecognized defaults to 'continuous'
- */
-function normalizeHmodeValue(val) {
-  // Explicitly check for limited variants
-  if (val === 'limited' || val === 'limit' || val === 'clamped' || val === 'clamp') {
-    return 'limited';
-  }
-  // Explicitly check for continuous variants  
-  if (val === 'continuous' || val === 'cont' || val === 'wrap') {
-    return 'continuous';
-  }
-  // Default to continuous for any other value (including null/undefined)
-  return 'continuous';
-}
-
-/**
- * Parse rotation range parameter (in degrees)
- * Default: 270 degrees for limited mode, 360 for continuous
- */
-function parseRotRange(rotRangeValue, hmode) {
-  if (typeof rotRangeValue === 'number') {
-    return rotRangeValue;
-  }
-  // Default based on hmode
-  return hmode === 'limited' ? 270 : 360;
-}
-
-/**
- * Constrain rotation angle based on hmode
- * Incoming angle is in the 0-360 range where 0° = 7 o'clock, clockwise positive
- * 
- * Examples with 270° range (limited mode default):
- * - 0° (7 o'clock) = minimum, can't rotate further counterclockwise
- * - 270° (4 o'clock) = maximum, can't rotate further clockwise
- * - 350° (trying to go past min) → clamps to 0°
- * - 300° (trying to go past max) → clamps to 270°
- */
-function constrainRotation(angleDeg, hmode, range, currentAngle = 0) {
-  if (hmode === 'continuous') {
-    // Wrapping mode - normalize to 0-360
-    return ((angleDeg % 360) + 360) % 360;
-  }
-  
-  // Limited mode - stops at min/max
-  // In this coordinate system: 0° = 7 o'clock (minimum)
-  // Range extends clockwise from 0° (e.g., 270° range goes from 0° to 270°)
-  
-  // Normalize angle to 0-360
-  let normalized = ((angleDeg % 360) + 360) % 360;
-  
-  // Simple case: clamp to [0, range]
-  if (normalized > range) {
-    // We're past the maximum - need to decide if we're closer to min or max
-    // If angle is in upper half (closer to 360), clamp to 0 (minimum)
-    // If angle is in lower half, clamp to range (maximum)
-    const distToMin = Math.min(normalized, 360 - normalized); // Distance to 0° (wrapping either way)
-    const distToMax = Math.abs(normalized - range);
-    
-    return distToMin < distToMax ? 0 : range;
-  }
-  
-  // Within range [0, range]
-  return normalized;
-}
+// Rotation math functions (parseHmode, normalizeHmodeValue, parseRotRange,
+// constrainRotation, normalizeRotation, denormalizeRotation) are now
+// imported from ../control/rotationMath.js
 
 /**
  * handleControlXYCue()
@@ -222,7 +137,9 @@ export function handleControlXYCue(el, args = [], options = {}) {
   }
 
   // Parse rotation handles (optional)
-  let rotHandleIds = cfg.handle || null;
+  // Only treat cfg.handle as rotation handles when cfg.touchpt was explicitly
+  // provided. Otherwise cfg.handle is being used as the touchpoint parameter.
+  let rotHandleIds = cfg.touchpt ? (cfg.handle || null) : null;
   let rotHandles = [];
   let sharedHandleMode = false;
   let sharedHandleEl = null;
@@ -977,15 +894,8 @@ export function handleControlXYCue(el, args = [], options = {}) {
     
     // Apply rotation if provided and handle has rotation capability
     if (normP !== undefined && handle.rotHandle) {
-      // NEW: Convert normalized rotation to angle based on hmode
-      let angleDeg;
-      if (handle.hmode === 'limited' && handle.rotRange) {
-        // For limited mode, 0-1 maps to 0-rotRange
-        angleDeg = normP * handle.rotRange;
-      } else {
-        // For continuous mode, 0-1 maps to 0-360
-        angleDeg = normP * 360;
-      }
+      // Convert normalized rotation to angle based on hmode
+      const angleDeg = denormalizeRotation(normP, handle.hmode, handle.rotRange);
       applyRotation(handle, angleDeg);
     }
     
@@ -1000,16 +910,9 @@ export function handleControlXYCue(el, args = [], options = {}) {
       
       const handleState = { x: normX, y: normY };
       
-      // Include rotation if handle has rotation capability
       if (handle.rotHandle) {
-        // NEW: Normalize rotation based on hmode
-        let normP;
-        if (handle.hmode === 'limited' && handle.rotRange) {
-          normP = handle.curAngle / handle.rotRange;
-          normP = clamp(normP, 0, 1);
-        } else {
-          normP = ((handle.curAngle % 360) + 360) % 360 / 360;
-        }
+        // Normalize rotation based on hmode using shared math
+        const normP = normalizeRotation(handle.curAngle, handle.hmode, handle.rotRange);
         handleState.p = normP;
       }
       

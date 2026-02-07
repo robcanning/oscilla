@@ -7,7 +7,6 @@
 // • Mirrors SVG opacity (ghost / fade / hidden)
 // • Supports fixed-size dots AND size-following rings
 // • LARGE invisible hit area + small visible marker
-// • Rotation ring support for o2p touch mode
 // ============================================================
 
 window._oscillaHitLabels = window._oscillaHitLabels || [];
@@ -669,11 +668,6 @@ export function updateHitCircle(rec) {
         rec.valueLabel.style.left = `${pos.x}px`;
         rec.valueLabel.style.top = `${pos.y}px`;
     }
-
-    // Update rotation ring position if it exists
-    if (rec._rotationRing) {
-        updateRotationRingPosition(rec);
-    }
 }
 
 // ------------------------------------------------------------
@@ -773,7 +767,7 @@ export function toggleHitLabels() {
 // DESTROY ALL HIT LABELS
 // ------------------------------------------------------------
 export function destroyAllHitLabels(reason = "") {
-    console.log("[hitLabel] DESTROY ALL", reason);
+    console.log("[hitLabel] 🧹 DESTROY ALL", reason);
 
     document
         .querySelectorAll("[data-oscilla-hit], .oscilla-hit")
@@ -789,235 +783,4 @@ export function destroyAllHitLabels(reason = "") {
         }
         window._oscillaHitLabels.length = 0;
     }
-}
-
-// ============================================================
-// ROTATION RING (auto-generated for o2p touch mode)
-// Creates an HTML overlay ring + indicator dot around the hit label
-// ============================================================
-
-/**
- * Create an auto-generated rotation ring around a hit label
- * Returns an object with references to the ring elements and metadata
- *
- * @param {Object} hitRecord - the hit label record from _oscillaHitLabels
- * @param {string} hmode - "limited" or "continuous"
- * @param {number} rotrange - rotation range in degrees
- * @returns {Object} { ring, dot, hit, radius, hmode, rotrange }
- */
-export function createRotationRing(hitRecord, hmode, rotrange) {
-    if (!hitRecord || !hitRecord.div) return null;
-
-    const ringRadius = 24;   // radius of the rotation ring (in CSS px)
-    const ringStroke = 3;
-    const dotRadius = 5;
-
-    // Ring hit area (invisible, larger for easy dragging)
-    const ringHit = document.createElement("div");
-    ringHit.dataset.uid = hitRecord.uid;
-    ringHit.dataset.rotRing = "1";
-
-    const hitDiameter = (ringRadius + 8) * 2;
-    Object.assign(ringHit.style, {
-        position: "fixed",
-        left: "0px",
-        top: "0px",
-        width: `${hitDiameter}px`,
-        height: `${hitDiameter}px`,
-        marginLeft: `-${hitDiameter / 2}px`,
-        marginTop: `-${hitDiameter / 2}px`,
-        background: "transparent",
-        borderRadius: "50%",
-        pointerEvents: "auto",
-        cursor: "grab",
-        zIndex: 999998   // just below hit label
-    });
-
-    // Visible ring (CSS border circle)
-    const ring = document.createElement("div");
-    ring.dataset.uid = hitRecord.uid;
-    ring.dataset.rotRingVisible = "1";
-
-    const ringDiameter = ringRadius * 2;
-    Object.assign(ring.style, {
-        position: "fixed",
-        left: "0px",
-        top: "0px",
-        width: `${ringDiameter}px`,
-        height: `${ringDiameter}px`,
-        marginLeft: `-${ringRadius}px`,
-        marginTop: `-${ringRadius}px`,
-        background: "transparent",
-        border: `${ringStroke}px solid rgba(255, 165, 0, 0.35)`,
-        borderRadius: "50%",
-        pointerEvents: "none",
-        zIndex: 999998,
-        boxSizing: "border-box"
-    });
-
-    // Indicator dot (positioned on ring perimeter)
-    const dot = document.createElement("div");
-    dot.dataset.uid = hitRecord.uid;
-    dot.dataset.rotDot = "1";
-
-    Object.assign(dot.style, {
-        position: "fixed",
-        left: "0px",
-        top: "0px",
-        width: `${dotRadius * 2}px`,
-        height: `${dotRadius * 2}px`,
-        marginLeft: `-${dotRadius}px`,
-        marginTop: `-${dotRadius}px`,
-        background: "orange",
-        borderRadius: "50%",
-        pointerEvents: "none",
-        zIndex: 999999,
-        boxShadow: "0 0 4px rgba(255, 165, 0, 0.6)"
-    });
-
-    document.body.appendChild(ringHit);
-    document.body.appendChild(ring);
-    document.body.appendChild(dot);
-
-    const ringData = {
-        ring,
-        dot,
-        hit: ringHit,
-        radius: ringRadius,
-        hmode,
-        rotrange,
-        currentAngle: 0    // in the 7-o'clock-zero coordinate system
-    };
-
-    // Store on hit record for position updates
-    hitRecord._rotationRing = ringData;
-
-    return ringData;
-}
-
-
-// ============================================================
-// UPDATE ROTATION RING POSITION
-// Called from updateHitCircle to keep ring aligned with hit label
-// ============================================================
-
-function updateRotationRingPosition(rec) {
-    const ringData = rec._rotationRing;
-    if (!ringData) return;
-
-    // Get the hit label's current screen position
-    const hitLeft = parseFloat(rec.hit.style.left) || 0;
-    const hitTop = parseFloat(rec.hit.style.top) || 0;
-
-    // Position ring elements at the same center
-    ringData.hit.style.left = `${hitLeft}px`;
-    ringData.hit.style.top = `${hitTop}px`;
-    ringData.ring.style.left = `${hitLeft}px`;
-    ringData.ring.style.top = `${hitTop}px`;
-
-    // Position indicator dot on perimeter at current angle
-    const angleDeg = ringData.currentAngle || 0;
-    // Convert from 7-o'clock-zero to standard angle (add 120)
-    const standardAngle = angleDeg + 120;
-    const angleRad = (standardAngle * Math.PI) / 180;
-    const dotX = hitLeft + Math.cos(angleRad) * ringData.radius;
-    const dotY = hitTop + Math.sin(angleRad) * ringData.radius;
-    ringData.dot.style.left = `${dotX}px`;
-    ringData.dot.style.top = `${dotY}px`;
-}
-
-
-// ============================================================
-// ROTATION DRAG HANDLER (for o2p touch mode rotation handles)
-// Works with both auto-generated ring (HTML) and user-supplied (SVG)
-// ============================================================
-
-/**
- * Initialize a rotation drag handler for an o2p touch-mode fader
- *
- * @param {HTMLElement|SVGElement} dragTargetEl - the element to attach drag events to
- * @param {Object} hitRecord - the hit label record (used for center position)
- * @param {SVGPathElement} pathEl - the path element (for SVG coordinate conversion)
- * @param {Object} cfg - the o2p configuration object
- * @param {Function} onRotate - callback(angleDeg) called on each rotation update
- * @returns {Object} { destroy } - cleanup function
- */
-export function initO2PRotationDragHandler(dragTargetEl, hitRecord, pathEl, cfg, onRotate) {
-    if (!dragTargetEl || !hitRecord) {
-        console.warn("[hitLabel] initO2PRotationDragHandler: missing required elements");
-        return null;
-    }
-
-    let dragging = false;
-
-    // Get center coordinates in screen space
-    function getCenter() {
-        // Use hit label position as the center
-        const hitLeft = parseFloat(hitRecord.hit.style.left) || 0;
-        const hitTop = parseFloat(hitRecord.hit.style.top) || 0;
-        return { x: hitLeft, y: hitTop };
-    }
-
-    function onPointerDown(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        dragging = true;
-        dragTargetEl.style.cursor = "grabbing";
-
-        document.addEventListener("mousemove", onPointerMove, { passive: false });
-        document.addEventListener("mouseup", onPointerUp);
-        document.addEventListener("touchmove", onPointerMove, { passive: false });
-        document.addEventListener("touchend", onPointerUp);
-
-        // Immediately compute angle
-        onPointerMove(e);
-    }
-
-    function onPointerMove(e) {
-        if (!dragging) return;
-        e.preventDefault();
-
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-        const center = getCenter();
-        const dx = clientX - center.x;
-        const dy = clientY - center.y;
-
-        // Calculate angle in degrees (standard math: 0 = 3 o'clock, counterclockwise)
-        let angle = Math.atan2(dy, dx) * 180 / Math.PI;
-
-        // Convert to 7-o'clock-zero coordinate system (subtract 120, clockwise positive)
-        angle = ((angle - 120) + 360) % 360;
-
-        onRotate(angle);
-    }
-
-    function onPointerUp(e) {
-        if (!dragging) return;
-        dragging = false;
-        dragTargetEl.style.cursor = "grab";
-
-        document.removeEventListener("mousemove", onPointerMove);
-        document.removeEventListener("mouseup", onPointerUp);
-        document.removeEventListener("touchmove", onPointerMove);
-        document.removeEventListener("touchend", onPointerUp);
-    }
-
-    dragTargetEl.style.cursor = "grab";
-    dragTargetEl.addEventListener("mousedown", onPointerDown);
-    dragTargetEl.addEventListener("touchstart", onPointerDown, { passive: false });
-
-    console.log("[hitLabel] rotation drag handler initialized for", cfg.uid);
-
-    return {
-        destroy() {
-            dragTargetEl.removeEventListener("mousedown", onPointerDown);
-            dragTargetEl.removeEventListener("touchstart", onPointerDown);
-            document.removeEventListener("mousemove", onPointerMove);
-            document.removeEventListener("mouseup", onPointerUp);
-            document.removeEventListener("touchmove", onPointerMove);
-            document.removeEventListener("touchend", onPointerUp);
-        }
-    };
 }

@@ -7,15 +7,17 @@
 import { showLoader, updateLoader, hideLoader } from "./projectLoadProgressUI.js";
 import { initializeSVG } from "./app.js";
 import { initializeObserver } from "./oscillaObserver.js";
-import { setSpeed, applyDarkMode, initializeControlsPin, initializeTopbarPin } from "./oscillaTransport.js";
-import { destroyAllHitLabels } from "./oscillaHitLabels.js";
 import { preloadReuseBlocksFromPages } from "./parser/preProcessReuse.js";
 
 import "./control/controlXYPresets.js";  
 import "./control/controlXYPresetUI.js";  
+import "./control/o2pPresets.js";
+import "./control/o2pPresetUI.js";
 
-import {jumpToCueId, hideControls, showControls} from './oscillaTransport.js';
-
+import { setSpeed } from "./oscillaTransport.js";
+import { jumpToCueId } from "./transportNav.js";
+import { applyDarkMode, initializeControlsPin, initializeTopbarPin, hideControls, showControls } from "./transportUI.js";
+import { destroyAllHitLabels } from "./interaction/oscTouchOverlays.js";
 
 let loadInProgress = false;
 let projectMenuWired = false;
@@ -384,6 +386,14 @@ if (typeof controlXYPresets?.init === "function") {
   setTimeout(() => {
     console.log(`[loadProject] ✅ Project "${projectName}" controlXYPresets initialised.`);
     controlXYPresets.init(projectName);
+  }, 100);
+}
+
+// initialize o2p presets - after everything else is ready
+if (typeof o2pPresets?.init === "function") {
+  setTimeout(() => {
+    console.log(`[loadProject] ✅ Project "${projectName}" o2pPresets initialised.`);
+    o2pPresets.init(projectName);
   }, 100);
 }
 

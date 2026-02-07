@@ -1,0 +1,69 @@
+/* ============================================================================
+ * o2p Preset Panel
+ * Same structure as controlXY panel, positioned on left side to avoid overlap
+ * ============================================================================ */
+
+#o2p-preset-panel {
+  position: fixed;
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
+  
+  width: 340px;
+  max-height: 85vh;
+  
+  /* Light theme - will invert to dark */
+  background: #f8f8f8;
+  border: 1px solid #cccccc;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  
+  color: #222222;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  
+  z-index: 10000;
+  
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#o2p-preset-panel.controlxy-panel-visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ============================================================================
+ * o2p Launcher Color Overrides (orange accent)
+ * Applied via .o2p-launcher modifier class on the container div
+ * ============================================================================ */
+
+/* Assigned slot - orange instead of blue */
+.controlxy-launcher.o2p-launcher .controlxy-launcher-slot.assigned {
+  background: #fef3e2;
+  border-color: #e89830;
+}
+
+.controlxy-launcher.o2p-launcher .controlxy-launcher-slot.assigned .slot-label {
+  color: #c47a18;
+  font-weight: 600;
+}
+
+.controlxy-launcher.o2p-launcher .controlxy-launcher-slot.assigned .slot-number {
+  color: #d48a20;
+}
+
+/* Active state momentary flash - deeper orange */
+.controlxy-launcher.o2p-launcher .controlxy-launcher-slot.active {
+  background: #fde8c8;
+  border-color: #e89830;
+}
+
+.controlxy-launcher.o2p-launcher .controlxy-launcher-slot.active .slot-label {
+  color: #a06010;
+}

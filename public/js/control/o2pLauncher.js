@@ -50,10 +50,13 @@ export function createO2PLauncher(groupId, bbox, parent, opts = {}) {
   const launcherY = bbox.y + bbox.height + 8;
 
   // -- foreignObject container --
+  const minLauncherWidth = 360;
+  const launcherWidth = Math.max(minLauncherWidth, bbox.width);
+
   const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
   fo.setAttribute("x", bbox.x);
   fo.setAttribute("y", launcherY);
-  fo.setAttribute("width", bbox.width);
+  fo.setAttribute("width", launcherWidth);
   fo.setAttribute("height", totalHeight);
   fo.classList.add("controlxy-launcher-container");
   fo.style.overflow = "visible";
@@ -108,6 +111,30 @@ export function createO2PLauncher(groupId, bbox, parent, opts = {}) {
   createdLaunchers.add(groupId);
 
   initializeLauncher(groupId, container, slots, totalBanks);
+
+  // -- Toggle circle: small clickable dot at bottom-right of group bbox --
+  const circleR = 7.5;
+  const circleX = bbox.x + bbox.width + 30;
+  const circleY = bbox.y + bbox.height - circleR;
+
+  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  circle.setAttribute("cx", circleX);
+  circle.setAttribute("cy", circleY);
+  circle.setAttribute("r", circleR);
+  circle.setAttribute("fill", "rgba(232, 152, 48, 0.15)");
+  circle.setAttribute("stroke", "#e89830");
+  circle.setAttribute("stroke-width", "2");
+  circle.setAttribute("cursor", "pointer");
+  circle.classList.add("controlxy-hideshow-circle");
+  circle.style.pointerEvents = "all";
+
+  circle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const visible = fo.style.display !== "none";
+    fo.style.display = visible ? "none" : "";
+  });
+
+  parent.appendChild(circle);
 
   console.log(`[o2pLauncher] Created launcher for group "${groupId}"`);
   return fo;

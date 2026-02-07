@@ -22,7 +22,7 @@
 
 import { registerAnimation, resolveAnimationUid } from "./animation.js";
 import { scheduleCueStart } from "./cueDispatcher.js";
-import { createHitLabel, repositionAllHitLabels, initO2PDragHandler, updateHitLabelValue } from "../oscillaHitLabels.js";
+import { createHitLabel, repositionAllHitLabels, initO2PDragHandler, updateHitLabelValue } from "../interaction/oscTouchOverlays.js";
 
 import {
     applyPrestateBeforeStart,
@@ -37,6 +37,57 @@ import { createOscOverlay } from "./osc.js";
 import { sendOSC } from "../system/oscillaOSCClient.js";
 
 import { publish } from '../control/paramBinding.js';
+
+import {
+    normalizeHmodeValue, parseRotRange,
+    constrainRotation, normalizeRotation, denormalizeRotation
+} from '../control/rotationMath.js';
+
+
+/* ---------------------------------------------------------
+ *  Rotation indicator visual update helpers
+ * --------------------------------------------------------*/
+
+/**
+ * Update the auto-generated rotation ring indicator dot position
+ * @param {Object} ringData - from createRotationRing()
+ * @param {number} angleDeg - angle in the 7-o'clock-zero coordinate system
+ */
+function updateRotationIndicator(ringData, angleDeg) {
+    if (!ringData || !ringData.dot) return;
+    // Convert from 7-o'clock-zero to standard SVG angle (add 120)
+    const standardAngle = angleDeg + 120;
+    const angleRad = (standardAngle * Math.PI) / 180;
+    const r = ringData.radius;
+    ringData.dot.setAttribute("cx", Math.cos(angleRad) * r);
+    ringData.dot.setAttribute("cy", Math.sin(angleRad) * r);
+}
+
+/**
+ * Update a user-supplied rotation handle element position
+ * Translates the element to follow the fader's current path position
+ * and rotates it to show current rotation angle
+ * @param {Object} faderEntry - fader registry entry
+ * @param {number} angleDeg - angle in the 7-o'clock-zero coordinate system
+ */
+function updateO2PUserHandle(faderEntry, angleDeg) {
+    if (!faderEntry || !faderEntry.userHandleEl) return;
+    const el = faderEntry.userHandleEl;
+    const point = faderEntry.cfg._currentPoint;
+    if (!point) return;
+
+    // Get the element's original center
+    const bbox = el.getBBox();
+    const cx = bbox.x + bbox.width / 2;
+    const cy = bbox.y + bbox.height / 2;
+
+    // Translate to fader position and rotate
+    const standardAngle = angleDeg + 120;
+    const dx = point.x - cx;
+    const dy = point.y - cy;
+    el.setAttribute("transform",
+        `translate(${dx}, ${dy}) rotate(${standardAngle} ${cx} ${cy})`);
+}
 
 
 /* ---------------------------------------------------------
@@ -853,6 +904,12 @@ export function handleO2PCue(el, args, options = {}) {
 
             kind: "o2p",
 
+            // Preset/group system
+            group: null,         // Group ID for preset grouping
+            handle: null,        // SVG element ID for user-supplied rotation handle
+            hmode: null,         // "limited" | "continuous" | null (no rotation)
+            rotrange: null,      // Degrees of rotation range
+
             astArgs: args,
             fromCueTrigger
         };
@@ -938,6 +995,23 @@ export function handleO2PCue(el, args, options = {}) {
                 case "trig":
                     cfg.trig = String(val).toLowerCase();
                     break;
+
+                // Preset/group system
+                case "group":
+                    cfg.group = String(val);
+                    break;
+
+                case "handle":
+                    cfg.handle = String(val);
+                    break;
+
+                case "hmode":
+                    cfg.hmode = normalizeHmodeValue(String(val));
+                    break;
+
+                case "rotrange":
+                    cfg.rotrange = Number(val) || null;
+                    break;
             }
         }
 
@@ -953,6 +1027,11 @@ export function handleO2PCue(el, args, options = {}) {
         if (cfg.mode === "fwd") cfg.mode = "forward";
         if (cfg.mode === "rev") cfg.mode = "reverse";
         if (cfg.mode === "alt") cfg.mode = "alternate";
+
+        // Resolve rotation handle config
+        if (cfg.hmode) {
+            cfg.rotrange = parseRotRange(cfg.rotrange, cfg.hmode);
+        }
 
         if (!cfg.uid) {
             cfg.uid = "o2p_" + Math.random().toString(36).slice(2, 10);
@@ -1108,12 +1187,19 @@ export function handleO2PCue(el, args, options = {}) {
                 const normX = bbox.width > 0 ? (point.x - bbox.x) / bbox.width : 0;
                 const normY = bbox.height > 0 ? (point.y - bbox.y) / bbox.height : 0;
                 
-                publish("o2p", cfg.uid, {
+                const publishData = {
                     t: mappedT,
                     x: normX,
                     y: normY,
                     angle: angle
-                });
+                };
+
+                // Include current rotation value if rotation handle is active
+                if (cfg.hmode && faderEntry) {
+                    publishData.p = faderEntry.curP;
+                }
+
+                publish("o2p", cfg.uid, publishData);
 
 
                 // Emit OSC if enabled
@@ -1138,13 +1224,194 @@ export function handleO2PCue(el, args, options = {}) {
                 cfg._currentT = mappedT;
                 cfg._currentPoint = point;
                 cfg._currentAngle = angle;
+
+                // Update fader entry in group registry
+                if (faderEntry) {
+                    faderEntry.curT = mappedT;
+                }
             };
+
+            // -----------------------------------------------------------
+            // Group registry fader entry (referenced by updatePosition and rotation handler)
+            // Declared before drag handler so updatePosition can access it
+            // -----------------------------------------------------------
+            let faderEntry = null;
 
             // Initialize the drag handler
             if (hitRecord) {
                 initO2PDragHandler(hitRecord, pathEl, cfg, updatePosition);
             } else {
                 console.warn("[o2pCue] Touch mode: hit label not found for drag handler", cfg.uid);
+            }
+
+            // -----------------------------------------------------------
+            // GROUP REGISTRATION + ROTATION HANDLE SETUP
+            // -----------------------------------------------------------
+            if (cfg.group) {
+                window._o2pTouchGroups = window._o2pTouchGroups || {};
+                const group = window._o2pTouchGroups[cfg.group] = window._o2pTouchGroups[cfg.group] || {
+                    groupId: cfg.group,
+                    faders: {},
+
+                    captureState() {
+                        const state = {};
+                        for (const [id, f] of Object.entries(this.faders)) {
+                            const entry = { t: f.curT };
+                            if (f.hmode) entry.p = f.curP;
+                            state[id] = entry;
+                        }
+                        return state;
+                    },
+
+                    setPosition(faderId, t, p) {
+                        const f = this.faders[faderId];
+                        if (!f) return;
+                        const start = f.cfg.startPos ?? 0;
+                        const end = f.cfg.endPos ?? 1;
+                        const range = end - start;
+                        const clamped = Math.max(start, Math.min(end, t));
+                        const rawT = range > 0 ? (clamped - start) / range : 0;
+                        f.updatePosition(clamped, rawT);
+                        f.curT = clamped;
+                        if (f.hmode && typeof p === 'number') {
+                            const angleDeg = denormalizeRotation(p, f.hmode, f.rotrange);
+                            const constrained = constrainRotation(angleDeg, f.hmode, f.rotrange, f.curAngle);
+                            f.curAngle = constrained;
+                            f.curP = normalizeRotation(constrained, f.hmode, f.rotrange);
+                            // Update visual indicator
+                            if (f.rotationRing) {
+                                updateRotationIndicator(f.rotationRing, constrained);
+                            }
+                            if (f.userHandleEl) {
+                                updateO2PUserHandle(f, constrained);
+                            }
+                        }
+                    },
+
+                    applyPositions(positions) {
+                        for (const [faderId, pos] of Object.entries(positions)) {
+                            this.setPosition(faderId, pos.t, pos.p);
+                        }
+                    }
+                };
+
+                const faderId = el.id || cfg.uid;
+                faderEntry = {
+                    uid: cfg.uid,
+                    cfg,
+                    pathEl,
+                    wrapper,
+                    updatePosition,
+                    rotationRing: null,
+                    userHandleEl: null,
+                    curT: cfg.startPos ?? 0,
+                    curP: 0,
+                    curAngle: 0,
+                    hmode: cfg.hmode,
+                    rotrange: cfg.rotrange
+                };
+
+                group.faders[faderId] = faderEntry;
+
+                console.log(`[o2pCue] Registered fader "${faderId}" in group "${cfg.group}"`);
+
+                // Create launcher bar for this group (once per group)
+                if (!group._launcherCreated) {
+                    group._launcherCreated = true;
+                    import('../control/o2pLauncher.js').then(({ createO2PLauncher, getGroupBBox }) => {
+                        const svgRoot = el.ownerSVGElement || document.querySelector("svg");
+                        const bbox = getGroupBBox(cfg.group);
+                        if (bbox && svgRoot) {
+                            createO2PLauncher(cfg.group, bbox, svgRoot);
+                        } else {
+                            console.warn(`[o2pCue] Could not create launcher for group "${cfg.group}" - no bbox`);
+                        }
+                    }).catch(err => {
+                        console.warn(`[o2pCue] o2pLauncher.js not available:`, err.message);
+                    });
+                }
+            }
+
+            // -----------------------------------------------------------
+            // ROTATION HANDLE SETUP (dual-mode: user-supplied or auto-generated)
+            // -----------------------------------------------------------
+            if (cfg.hmode && hitRecord) {
+                const svg = el.ownerSVGElement || document.querySelector("svg");
+                let rotationHandleEl = null;
+                let rotationRingData = null;
+
+                if (cfg.handle) {
+                    // User-supplied rotation handle element
+                    rotationHandleEl = svg?.getElementById(cfg.handle);
+                    if (!rotationHandleEl) {
+                        console.warn(`[o2pCue] Rotation handle element not found: "${cfg.handle}", falling back to auto-generated ring`);
+                    } else {
+                        console.log(`[o2pCue] Using user-supplied rotation handle: "${cfg.handle}"`);
+                        if (faderEntry) faderEntry.userHandleEl = rotationHandleEl;
+                    }
+                }
+
+                if (!rotationHandleEl) {
+                    // Auto-generate rotation ring around hit label
+                    rotationRingData = createRotationRing(hitRecord, cfg.hmode, cfg.rotrange);
+                    if (rotationRingData && faderEntry) {
+                        faderEntry.rotationRing = rotationRingData;
+                    }
+                    console.log(`[o2pCue] Auto-generated rotation ring for "${cfg.uid}"`);
+                }
+
+                // Determine the element to use for rotation drag
+                const rotDragTarget = rotationHandleEl || (rotationRingData ? rotationRingData.hit : null);
+
+                if (rotDragTarget) {
+                    // Set up the rotation drag handler
+                    initO2PRotationDragHandler(
+                        rotDragTarget,
+                        hitRecord,
+                        pathEl,
+                        cfg,
+                        // onRotate callback
+                        (angleDeg) => {
+                            const constrained = constrainRotation(angleDeg, cfg.hmode, cfg.rotrange,
+                                faderEntry ? faderEntry.curAngle : 0);
+                            const normP = normalizeRotation(constrained, cfg.hmode, cfg.rotrange);
+
+                            if (faderEntry) {
+                                faderEntry.curAngle = constrained;
+                                faderEntry.curP = normP;
+                            }
+
+                            // Update visual indicator
+                            if (rotationRingData) {
+                                updateRotationIndicator(rotationRingData, constrained);
+                            }
+                            if (rotationHandleEl) {
+                                updateO2PUserHandle(faderEntry, constrained);
+                            }
+
+                            // Publish to control plane
+                            const publishData = {
+                                t: faderEntry ? faderEntry.curT : (cfg._currentT ?? 0),
+                                p: normP
+                            };
+
+                            publish("o2p", cfg.uid, publishData);
+
+                            // OSC emit with rotation
+                            if (cfg.oscCfg?.enabled) {
+                                emitO2POsc({
+                                    cfg,
+                                    uid: cfg.uid,
+                                    path: pathEl,
+                                    point: cfg._currentPoint,
+                                    pathT: cfg._currentT || 0
+                                });
+                            }
+                        }
+                    );
+
+                    console.log(`[o2pCue] Rotation handle active: ${cfg.hmode}(${cfg.rotrange}deg)`);
+                }
             }
 
             // Mark as ready (no animation running, but interactive)

@@ -1,5 +1,5 @@
 import { pausePlayback } from "../oscillaTransport.js";
-import { destroyAllHitLabels } from "../oscillaHitLabels.js";
+import { destroyAllHitLabels } from "../interaction/oscTouchOverlays.js";
 
 
 window.resetCueEdgeTracking = function () {

@@ -1,7 +1,7 @@
-// public/js/control/controlXYShared.js
+// public/js/control/controlShared.js
 //
-// Shared utilities and state management for ControlXY system
-// Mirrors the pattern from oscillaContributionShared.js (annotations)
+// Shared utilities and state management for the control plane
+// Renamed from controlXYShared.js -- serves controlXY, o2p, and future controllers
 //
 // This module provides:
 // - Shared state object
@@ -9,12 +9,13 @@
 // - localStorage persistence
 // - WebSocket helpers (optional sharing)
 // - CRUD operations for presets, sequences, launchers, configurations
+// - Dynamic kind indexing (any kind string auto-indexes)
 
 // =============================================================
 // CONSTANTS
 // =============================================================
 
-export const STORAGE_PREFIX = "oscilla_controlxy_v1";
+export const STORAGE_PREFIX = "oscilla_controlxy_v1"; // keep for data continuity
 export const SAVE_DEBOUNCE_MS = 500;
 
 // =============================================================
@@ -26,11 +27,14 @@ export const state = {
   project: null,
   items: [],
   
-  // Derived views (updated on load/save)
-  presets: {},      // { name: item }
-  sequences: {},    // { name: item }
-  launchers: {},    // { uid: item }
-  configurations: {},// { name: item }
+  // Derived views (rebuilt dynamically from items by kind)
+  // Standard controlXY kinds:
+  presets: {},
+  sequences: {},
+  launchers: {},
+  configurations: {},
+  // Additional kinds (o2pPresets, o2pSequences, o2pLaunchers, scenes, etc.)
+  // are created dynamically by rebuildDerivedState()
 };
 
 // =============================================================
@@ -90,30 +94,50 @@ export function getProjectName() {
 // DERIVED STATE BUILDERS
 // =============================================================
 
+// Fixed state keys that are never treated as kind buckets
+const FIXED_KEYS = new Set(['initialized', 'project', 'items']);
+
+/**
+ * Pluralize a kind string for use as a state bucket key
+ * "preset" -> "presets", "o2pPreset" -> "o2pPresets", "launcher" -> "launchers"
+ */
+function pluralizeKind(kind) {
+  return kind + 's';
+}
+
+/**
+ * Determine the lookup key for an item based on its kind
+ * Launchers use uid, everything else uses name
+ */
+function itemKey(item) {
+  // Any kind ending in "auncher" (launcher, o2pLauncher) keys by uid
+  if (item.kind && item.kind.toLowerCase().endsWith('auncher')) {
+    return item.uid;
+  }
+  return item.name;
+}
+
 /**
  * Rebuild derived state objects from items array
+ * Dynamic: any kind string gets its own bucket automatically
  */
 function rebuildDerivedState() {
-  state.presets = {};
-  state.sequences = {};
-  state.launchers = {};
-  state.configurations = {};
+  // Clear all dynamic buckets
+  for (const key of Object.keys(state)) {
+    if (!FIXED_KEYS.has(key)) {
+      state[key] = {};
+    }
+  }
   
   for (const item of state.items) {
-    switch (item.kind) {
-      case "preset":
-        state.presets[item.name] = item;
-        break;
-      case "sequence":
-        state.sequences[item.name] = item;
-        break;
-      case "launcher":
-        state.launchers[item.uid] = item;
-        break;
-      case "configuration":
-        state.configurations[item.name] = item;
-        break;
-    }
+    const kind = item.kind;
+    if (!kind) continue;
+    
+    const bucket = pluralizeKind(kind);
+    if (!state[bucket]) state[bucket] = {};
+    
+    const key = itemKey(item);
+    if (key) state[bucket][key] = item;
   }
 }
 
@@ -154,7 +178,7 @@ export function saveLocal(project, items) {
     );
     return true;
   } catch (e) {
-    console.warn("[controlXY] localStorage save failed:", e);
+    console.warn("[controlShared] localStorage save failed:", e);
     return false;
   }
 }
@@ -178,16 +202,15 @@ export function wsCanSend(ws) {
 export function wsSend(type, payload) {
   const ws = getWs();
   if (!wsCanSend(ws)) {
-    // Silent fail - WebSocket sharing is optional
     return false;
   }
   
   try {
     ws.send(JSON.stringify({ type, ...payload }));
-    console.log("[controlXY] wsSend:", type);
+    console.log("[controlShared] wsSend:", type);
     return true;
   } catch (e) {
-    console.warn("[controlXY] wsSend failed:", e);
+    console.warn("[controlShared] wsSend failed:", e);
     return false;
   }
 }
@@ -197,7 +220,7 @@ export function wsSend(type, payload) {
 // =============================================================
 
 /**
- * Initialize the controlXY state for a project
+ * Initialize the control state for a project
  */
 export function init(project) {
   if (!project) {
@@ -209,19 +232,25 @@ export function init(project) {
   rebuildDerivedState();
   state.initialized = true;
   
-  console.log(`[controlXY] Initialized for "${project}": ${state.items.length} items`);
-  console.log(`[controlXY]   Presets: ${Object.keys(state.presets).length}`);
-  console.log(`[controlXY]   Sequences: ${Object.keys(state.sequences).length}`);
-  console.log(`[controlXY]   Launchers: ${Object.keys(state.launchers).length}`);
-  console.log(`[controlXY]   Configurations: ${Object.keys(state.configurations).length}`);
+  console.log(`[controlShared] Initialized for "${project}": ${state.items.length} items`);
+  
+  // Log known buckets
+  for (const key of Object.keys(state)) {
+    if (!FIXED_KEYS.has(key) && typeof state[key] === 'object') {
+      const count = Object.keys(state[key]).length;
+      if (count > 0) {
+        console.log(`[controlShared]   ${key}: ${count}`);
+      }
+    }
+  }
   
   // Dispatch loaded event
   window.dispatchEvent(new CustomEvent('controlxy:loaded', {
     detail: {
       project,
-      presetCount: Object.keys(state.presets).length,
-      sequenceCount: Object.keys(state.sequences).length,
-      configCount: Object.keys(state.configurations).length
+      presetCount: Object.keys(state.presets || {}).length,
+      sequenceCount: Object.keys(state.sequences || {}).length,
+      configCount: Object.keys(state.configurations || {}).length
     }
   }));
   
@@ -248,7 +277,7 @@ export function save() {
     const success = saveLocal(state.project, state.items);
     
     if (success) {
-      console.log(`[controlXY] Saved ${state.items.length} items`);
+      console.log(`[controlShared] Saved ${state.items.length} items`);
       
       window.dispatchEvent(new CustomEvent('controlxy:saved', {
         detail: {
@@ -274,7 +303,7 @@ export function forceSave() {
   const success = saveLocal(state.project, state.items);
   
   if (success) {
-    console.log(`[controlXY] Force-saved ${state.items.length} items`);
+    console.log(`[controlShared] Force-saved ${state.items.length} items`);
   }
   
   return success;
@@ -301,7 +330,6 @@ function triggerRender() {
  * Add a new item
  */
 export function addItem(item) {
-  // Ensure required fields
   if (!item.id) item.id = uniqueId(item.kind || "item");
   if (!item.createdAt) item.createdAt = nowMs();
   if (!item.updatedAt) item.updatedAt = nowMs();
@@ -310,7 +338,6 @@ export function addItem(item) {
   rebuildDerivedState();
   save();
   
-  // WebSocket sync for shared items
   if (item.scope === "shared") {
     wsSend("controlxy_add", { project: state.project, item });
   }
@@ -337,11 +364,9 @@ export function updateItem(id, patch) {
   rebuildDerivedState();
   save();
   
-  // WebSocket sync
   if (next.scope === "shared") {
     wsSend("controlxy_update", { project: state.project, item: next });
   } else if (prev.scope === "shared") {
-    // Was shared, now local - tell others to remove
     wsSend("controlxy_delete", { project: state.project, id: next.id });
   }
   
@@ -362,7 +387,7 @@ export function deleteItem(id) {
   save();
   
   if (prev.scope === "shared") {
-    wsSend("controlxy_delete", { project: state.project, id });
+    wsSend("controlxy_delete", { project: state.project, id: prev.id });
   }
   
   triggerRender();
@@ -384,28 +409,28 @@ export function findByKind(kind) {
 }
 
 // =============================================================
-// PRESET HELPERS
+// PRESET HELPERS (controlXY backward compat)
 // =============================================================
 
 /**
  * Get preset by name
  */
 export function getPreset(name) {
-  return state.presets[name] || null;
+  return state.presets?.[name] || null;
 }
 
 /**
  * List all preset names
  */
 export function listPresets() {
-  return Object.keys(state.presets);
+  return Object.keys(state.presets || {});
 }
 
 /**
  * Save/update a preset
  */
 export function savePreset(name, data) {
-  const existing = state.presets[name];
+  const existing = state.presets?.[name];
   
   if (existing) {
     return updateItem(existing.id, { data });
@@ -423,7 +448,7 @@ export function savePreset(name, data) {
  * Delete a preset by name
  */
 export function deletePreset(name) {
-  const item = state.presets[name];
+  const item = state.presets?.[name];
   if (!item) return false;
   return deleteItem(item.id);
 }
@@ -436,21 +461,21 @@ export function deletePreset(name) {
  * Get sequence by name
  */
 export function getSequence(name) {
-  return state.sequences[name] || null;
+  return state.sequences?.[name] || null;
 }
 
 /**
  * List all sequence names
  */
 export function listSequences() {
-  return Object.keys(state.sequences);
+  return Object.keys(state.sequences || {});
 }
 
 /**
  * Save/update a sequence
  */
 export function saveSequence(name, steps, options = {}) {
-  const existing = state.sequences[name];
+  const existing = state.sequences?.[name];
   
   const data = {
     steps,
@@ -473,7 +498,7 @@ export function saveSequence(name, steps, options = {}) {
  * Delete a sequence by name
  */
 export function deleteSequence(name) {
-  const item = state.sequences[name];
+  const item = state.sequences?.[name];
   if (!item) return false;
   return deleteItem(item.id);
 }
@@ -486,21 +511,21 @@ export function deleteSequence(name) {
  * Get launcher state by UID
  */
 export function getLauncher(uid) {
-  return state.launchers[uid] || null;
+  return state.launchers?.[uid] || null;
 }
 
 /**
  * List all launcher UIDs
  */
 export function listLaunchers() {
-  return Object.keys(state.launchers);
+  return Object.keys(state.launchers || {});
 }
 
 /**
  * Save/update launcher state
  */
 export function saveLauncher(uid, launcherData) {
-  const existing = state.launchers[uid];
+  const existing = state.launchers?.[uid];
   
   if (existing) {
     return updateItem(existing.id, { data: launcherData });
@@ -516,16 +541,14 @@ export function saveLauncher(uid, launcherData) {
 
 /**
  * Get or create launcher state
- * Returns the data object (banks, mode, etc.)
  */
 export function getOrCreateLauncher(uid, defaults = {}) {
-  const existing = state.launchers[uid];
+  const existing = state.launchers?.[uid];
   
   if (existing && existing.data) {
     return existing.data;
   }
   
-  // Create new launcher with defaults
   const launcherData = {
     currentBank: 0,
     mode: 'preset',
@@ -544,34 +567,24 @@ export function getOrCreateLauncher(uid, defaults = {}) {
 // CONFIGURATION HELPERS
 // =============================================================
 
-/**
- * Get configuration by name
- */
 export function getConfiguration(name) {
-  return state.configurations[name] || null;
+  return state.configurations?.[name] || null;
 }
 
-/**
- * List all configuration names
- */
 export function listConfigurations() {
-  return Object.keys(state.configurations);
+  return Object.keys(state.configurations || {});
 }
 
-/**
- * Save current launcher states as a named configuration
- */
 export function saveConfiguration(name) {
-  // Deep copy current launcher states
   const launchersSnapshot = {};
   
-  for (const [uid, item] of Object.entries(state.launchers)) {
+  for (const [uid, item] of Object.entries(state.launchers || {})) {
     if (item && item.data) {
       launchersSnapshot[uid] = JSON.parse(JSON.stringify(item.data));
     }
   }
   
-  const existing = state.configurations[name];
+  const existing = state.configurations?.[name];
   
   if (existing) {
     return updateItem(existing.id, { data: { launchers: launchersSnapshot } });
@@ -585,48 +598,122 @@ export function saveConfiguration(name) {
   }
 }
 
-/**
- * Recall a named configuration (restore launcher states)
- */
 export function recallConfiguration(name) {
-  const config = state.configurations[name];
+  const config = state.configurations?.[name];
   if (!config || !config.data || !config.data.launchers) {
-    console.warn(`[controlXY] Configuration "${name}" not found`);
+    console.warn(`[controlShared] Configuration "${name}" not found`);
     return false;
   }
   
   const launchersData = config.data.launchers;
   
-  // Update each launcher's state
   for (const [uid, launcherData] of Object.entries(launchersData)) {
     saveLauncher(uid, launcherData);
   }
   
-  // Trigger refresh of all launchers
   window.dispatchEvent(new CustomEvent('controlxy:launcherRefresh', {
     detail: {}
   }));
   
-  console.log(`[controlXY] Recalled configuration "${name}"`);
+  console.log(`[controlShared] Recalled configuration "${name}"`);
   return true;
 }
 
-/**
- * Delete a configuration by name
- */
 export function deleteConfiguration(name) {
-  const item = state.configurations[name];
+  const item = state.configurations?.[name];
   if (!item) return false;
   return deleteItem(item.id);
+}
+
+// =============================================================
+// GENERIC KIND HELPERS (for o2p and future controllers)
+// =============================================================
+
+/**
+ * Get item from any kind bucket by name
+ * Usage: getByKind("o2pPreset", "warm_mix")
+ */
+export function getByKind(kind, name) {
+  const bucket = pluralizeKind(kind);
+  return state[bucket]?.[name] || null;
+}
+
+/**
+ * List all names in a kind bucket
+ * Usage: listByKind("o2pPreset") -> ["warm_mix", "dark_mix"]
+ */
+export function listByKind(kind) {
+  const bucket = pluralizeKind(kind);
+  return Object.keys(state[bucket] || {});
+}
+
+/**
+ * Save/update an item in any kind bucket
+ * Usage: saveByKind("o2pPreset", "warm_mix", data)
+ */
+export function saveByKind(kind, name, data) {
+  const existing = getByKind(kind, name);
+  
+  if (existing) {
+    return updateItem(existing.id, { data });
+  } else {
+    return addItem({
+      kind,
+      name,
+      data,
+      scope: "local"
+    });
+  }
+}
+
+/**
+ * Delete an item from any kind bucket
+ */
+export function deleteByKind(kind, name) {
+  const item = getByKind(kind, name);
+  if (!item) return false;
+  return deleteItem(item.id);
+}
+
+/**
+ * Save/update a launcher-style item (keyed by uid)
+ */
+export function saveLauncherByKind(kind, uid, data) {
+  const bucket = pluralizeKind(kind);
+  const existing = state[bucket]?.[uid];
+  
+  if (existing) {
+    return updateItem(existing.id, { data });
+  } else {
+    return addItem({
+      kind,
+      uid,
+      data,
+      scope: "local"
+    });
+  }
+}
+
+/**
+ * Get or create a launcher-style item
+ */
+export function getOrCreateLauncherByKind(kind, uid, defaults = {}) {
+  const bucket = pluralizeKind(kind);
+  const existing = state[bucket]?.[uid];
+  
+  if (existing && existing.data) {
+    return existing.data;
+  }
+  
+  const data = { ...defaults };
+  saveLauncherByKind(kind, uid, data);
+  return data;
 }
 
 // =============================================================
 // EXPORT / IMPORT
 // =============================================================
 
-/**
- * Export all data as JSON object
- */
 export function exportData() {
   return {
     version: 1,
@@ -636,9 +723,6 @@ export function exportData() {
   };
 }
 
-/**
- * Export as downloadable JSON file
- */
 export function exportToFile(filename) {
   const data = exportData();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -652,19 +736,15 @@ export function exportToFile(filename) {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Import data from JSON object
- */
 export function importData(data, options = {}) {
   const { merge = false } = options;
   
   if (!data || !Array.isArray(data.items)) {
-    console.warn("[controlXY] Invalid import data");
+    console.warn("[controlShared] Invalid import data");
     return false;
   }
   
   if (merge) {
-    // Merge: add items that don't exist
     for (const item of data.items) {
       const exists = state.items.some(x => x.id === item.id);
       if (!exists) {
@@ -672,7 +752,6 @@ export function importData(data, options = {}) {
       }
     }
   } else {
-    // Replace: overwrite all items
     state.items = data.items;
   }
   
@@ -680,12 +759,11 @@ export function importData(data, options = {}) {
   forceSave();
   triggerRender();
   
-  // Refresh launchers
   window.dispatchEvent(new CustomEvent('controlxy:launcherRefresh', {
     detail: {}
   }));
   
-  console.log(`[controlXY] Imported ${data.items.length} items (merge: ${merge})`);
+  console.log(`[controlShared] Imported ${data.items.length} items (merge: ${merge})`);
   return true;
 }
 
@@ -693,71 +771,43 @@ export function importData(data, options = {}) {
 // GLOBAL API
 // =============================================================
 
-// Expose on window for debugging and external access
 window.controlXYState = state;
 
 export default {
-  // Constants
   STORAGE_PREFIX,
-  
-  // State
   state,
   
   // Utilities
-  uniqueId,
-  nowMs,
-  safeJsonParse,
-  clamp01,
-  getProjectName,
+  uniqueId, nowMs, safeJsonParse, clamp01, getProjectName,
   
   // Init
   init,
   
   // Persistence
-  save,
-  forceSave,
-  loadLocal,
-  saveLocal,
+  save, forceSave, loadLocal, saveLocal,
   
   // WebSocket
-  wsCanSend,
-  wsSend,
+  wsCanSend, wsSend,
   
   // CRUD
-  setRenderCallback,
-  addItem,
-  updateItem,
-  deleteItem,
-  findById,
-  findByKind,
+  setRenderCallback, addItem, updateItem, deleteItem, findById, findByKind,
   
-  // Presets
-  getPreset,
-  listPresets,
-  savePreset,
-  deletePreset,
+  // controlXY presets (backward compat)
+  getPreset, listPresets, savePreset, deletePreset,
   
   // Sequences
-  getSequence,
-  listSequences,
-  saveSequence,
-  deleteSequence,
+  getSequence, listSequences, saveSequence, deleteSequence,
   
   // Launchers
-  getLauncher,
-  listLaunchers,
-  saveLauncher,
-  getOrCreateLauncher,
+  getLauncher, listLaunchers, saveLauncher, getOrCreateLauncher,
   
   // Configurations
-  getConfiguration,
-  listConfigurations,
-  saveConfiguration,
-  recallConfiguration,
-  deleteConfiguration,
+  getConfiguration, listConfigurations, saveConfiguration, recallConfiguration, deleteConfiguration,
+  
+  // Generic kind helpers
+  getByKind, listByKind, saveByKind, deleteByKind,
+  saveLauncherByKind, getOrCreateLauncherByKind,
   
   // Export/Import
-  exportData,
-  exportToFile,
-  importData,
+  exportData, exportToFile, importData,
 };

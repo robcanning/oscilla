@@ -7,7 +7,7 @@ layout: docs_layout.njk
 `o2p(...)` animates an SVG object along a named `<path>`.  
 It supports path traversal, directional modes, rotation modes, looping, OSC output,
 partial-path motion, trigger-based activation, delayed start, visual pre-start states,
-and **interactive touch/drag control**.
+**interactive touch/drag control**, and **grouped fader presets with launcher bars**.
 
 ---
 
@@ -147,7 +147,7 @@ Emits:
 |---------|----------|
 | `trig:auto` | starts automatically in page mode |
 | `trig:edge` | starts when the playhead intersects in scroll mode |
-| `trig:touch` | **NEW** — no auto-animation; object is draggable along path |
+| `trig:touch` | no auto-animation; object is draggable along path |
 
 Cues may also be activated programmatically.  
 `tdelay` applies after the trigger is detected.
@@ -186,14 +186,132 @@ o2p(path:verticalLine, trig:touch, osc:true, oscAddr:fader1)
 o2p(path:knobArc, trig:touch, start:0.1, end:0.9, osc:true, oscAddr:knob1)
 ```
 
-**Example — XY Pad (rectangular path):**
-```
-o2p(path:xyBounds, trig:touch, osc:true, oscAddr:xyPad)
-```
-
 **Visual Indicator:**
 Touch mode objects display an **orange** hit-label ring (instead of purple) 
 to indicate they are draggable.
+
+---
+
+# FADER GROUPS AND PRESETS
+
+Touch-mode faders can be collected into named **groups**. A group enables
+saving and recalling all fader positions as named presets, tweening between
+presets with easing, and sequencing preset recalls over time.
+
+## Grouping Faders
+
+Add `group:<name>` and `uid:<id>` to each touch-mode fader:
+
+```
+o2p(path:track1, trig:touch, group:mixer1, uid:vol, osc:true)
+o2p(path:track2, trig:touch, group:mixer1, uid:pan, osc:true)
+o2p(path:track3, trig:touch, group:mixer1, uid:send, osc:true)
+```
+
+All three faders register under `window._o2pTouchGroups["mixer1"]` and can be
+saved/recalled as a unit. The `group` value is freeform — any string.
+
+## Launcher Bar
+
+When a group registers, a **launcher bar** appears below the group's bounding box.
+It provides direct access to presets and sequences without opening the full
+preset panel.
+
+The launcher includes:
+
+- **Preset/Sequence slots** — left-click to recall, long-press to store current positions
+- **Bank navigation** — arrow buttons to page through banks of slots
+- **Mode toggle** (P/S) — switch between preset and sequence slot modes
+- **Tween toggle** (~) — smooth interpolation or instant jump on recall
+- **Sequence transport** — play/stop buttons for sequence playback
+- **Settings gear** — opens the full o2p Preset Manager panel
+
+An **orange toggle circle** appears to the right of the group. Click it to
+show or hide the launcher bar.
+
+## Preset Manager Panel
+
+The preset panel (keyboard shortcut **Alt+Shift+O**, or gear button on launcher)
+provides full preset management:
+
+- **Presets tab** — save, recall, delete named presets with tween duration and easing
+- **Sequences tab** — define ordered lists of presets with per-step timing
+- **Import/Export** — save and load preset collections as JSON files
+
+Console access: `window.o2pPresetUI.toggle()`
+
+## Preset Data
+
+Each preset stores the normalized position of every fader in the group:
+
+```json
+{
+  "mixer1": {
+    "vol": { "t": 0.75 },
+    "pan": { "t": 0.3 },
+    "send": { "t": 0.5 }
+  }
+}
+```
+
+If a fader has a rotation handle (`hmode:`), a `p` value is also stored:
+
+```json
+{ "vol": { "t": 0.75, "p": 0.6 } }
+```
+
+## Console API
+
+```javascript
+window.o2pPresets.save("intro")           // save current positions
+window.o2pPresets.recall("intro")         // instant recall
+window.o2pPresets.recall("intro", { dur: 2, ease: "easeInOutSine" })  // tween
+window.o2pPresets.list()                  // list all preset names
+window.o2pPresets.delete("intro")         // delete a preset
+
+// Sequences
+window.o2pPresets.defineSequence("drift", [
+  { preset: "intro", dur: 3 },
+  { preset: "verse", dur: 2 },
+  { preset: "chorus", dur: 4 }
+], { loop: true })
+window.o2pPresets.playSequence("drift")
+window.o2pPresets.stopSequence()
+```
+
+---
+
+# ROTATION HANDLES
+
+Touch-mode faders can have a secondary **rotation handle** that adds a second
+control dimension. This is useful for parameters like pan, filter cutoff, or
+any value that benefits from a rotary control alongside the linear fader.
+
+## `hmode:<continuous|limited>`
+
+Determines the rotation behavior:
+
+- `continuous` — full 360-degree rotation with wraparound (suitable for azimuth, phase)
+- `limited` — constrained arc with hard stops like a physical potentiometer (suitable for volume, gain)
+
+## `rotrange:<degrees>`
+
+Sets the arc range for `hmode:limited`. Default is 270 degrees.
+
+```
+o2p(path:track1, trig:touch, group:mixer1, uid:vol, hmode:limited, rotrange:270, osc:true)
+```
+
+## `handle:<elementId>`
+
+Reference a user-drawn SVG element as the rotation handle instead of the
+auto-generated one:
+
+```
+o2p(path:track1, trig:touch, group:mixer1, uid:vol, hmode:limited, handle:knob1, osc:true)
+```
+
+Where `knob1` is the ID of an existing SVG element in the score.
 
 ---
 
@@ -226,6 +344,10 @@ Later cues with the same `uid` modify running animations.
 `trig` | trigger mode (`auto`, `edge`, `touch`)
 `tdelay` | time delay after trigger  
 `prestate` | show/hide/ghost before start  
+`group` | fader group name (touch mode only)  
+`hmode` | rotation handle mode: `continuous` or `limited` (touch mode only)  
+`rotrange` | arc range in degrees for `hmode:limited` (default 270)  
+`handle` | ID of user-drawn SVG element to use as rotation handle  
 
 ---
 
@@ -240,4 +362,15 @@ o2p(path:circle, rotate:spin, rotspeed:2, rotdir:-1)
 // Touch mode controllers
 o2p(path:faderTrack, trig:touch, osc:true, oscAddr:volume)
 o2p(path:knobPath, trig:touch, start:0.15, end:0.85, osc:true)
+
+// Grouped faders with preset system
+o2p(path:track1, trig:touch, group:mixer1, uid:vol, osc:true)
+o2p(path:track2, trig:touch, group:mixer1, uid:pan, osc:true)
+o2p(path:track3, trig:touch, group:mixer1, uid:send, osc:true)
+
+// Grouped fader with rotation handle
+o2p(path:track1, trig:touch, group:mixer1, uid:vol, hmode:limited, rotrange:270, osc:true)
+
+// Grouped fader with user-drawn rotation handle
+o2p(path:track1, trig:touch, group:mixer1, uid:vol, hmode:continuous, handle:knob1, osc:true)
 ```
