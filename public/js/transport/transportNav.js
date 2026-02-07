@@ -11,9 +11,9 @@
  */
 
 import { getWorldX, scrollToPlayheadVisual } from "./oscillaTransport.js";
-import { resetAllFadePriming } from "./cues/fade.js";
-import { dismissAllStopwatchOverlays } from "./cues/timers.js";
-import { updateSpeedFromPosition } from "./cues/speed.js";
+import { resetAllFadePriming } from "../cues/fade.js";
+import { dismissAllStopwatchOverlays } from "../cues/timers.js";
+import { updateSpeedFromPosition } from "../cues/speed.js";
 
 // ============================================================================
 // REHEARSAL MARK NAVIGATION STATE

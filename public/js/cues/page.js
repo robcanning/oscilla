@@ -21,7 +21,7 @@
 
 import { propagate } from "../parser/preProcessPropagate.js";
 import { animationAssign } from "./animation.js";
-import { initializeObserver } from "../oscillaObserver.js";
+import { initializeObserver } from "../system/oscillaObserver.js";
 // import { registerReuseBlocks, autoInjectUseBlocks } from "./reuse.js";
 import { buildCueButtonsIn } from "./button.js";
 import { handleCueTrigger } from "./cueDispatcher.js";

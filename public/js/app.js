@@ -13,13 +13,13 @@
 // ===========================
 
 // Existing modules
-import { enableLiveInspector } from "./oscillaLive.js";
-import { scrollToPlayheadVisual } from "./oscillaTransport.js";
-import { initializeDarkModeToggle, hideControls, showControls, initializeControlsPin, initializeTopbarPin } from "./transportUI.js";
-import { jumpToCueId } from "./transportNav.js";
-import './transportTouch.js';
-import { loadProject } from './projectLoader.js';
-import { setupScore, extractScoreElements, autoInjectGroupsInScroll } from './projectScoreSetup.js';
+import { enableLiveInspector } from "./system/oscillaLive.js";
+import { scrollToPlayheadVisual } from "./transport/oscillaTransport.js";
+import { initializeDarkModeToggle, hideControls, showControls, initializeControlsPin, initializeTopbarPin } from "./transport/transportUI.js";
+import { jumpToCueId } from "./transport/transportNav.js";
+import './transport/transportTouch.js';
+import { loadProject } from './system/projectLoader.js';
+import { setupScore, extractScoreElements, autoInjectGroupsInScroll } from './system/projectScoreSetup.js';
 import { registerAnimation, animationAssign } from "./cues/animation.js";
 import { buildCueButtonsIn, hideAllButtonPlaceholders } from "./cues/button.js";
 import { registerReuseBlocks, autoInjectUseBlocks, preloadReuseBlocksFromPages } from "./parser/preProcessReuse.js";
@@ -30,7 +30,7 @@ import {
   sendSpeedUpdateToServer, togglePlay, togglePlayButton, startPlayback,
   pausePlayback, resumePlayback,
   updateSeekBar, initSeekBarListeners
-} from './oscillaTransport.js';
+} from './transport/oscillaTransport.js';
 
 import {
   startStopwatch, stopStopwatch, resetStopwatch,

@@ -4,7 +4,7 @@
  * © 2025 Rob Canning — GPLv3
  */
 
-import { scrollToPlayheadVisual, updateSeekBar } from '../oscillaTransport.js';
+import { scrollToPlayheadVisual, updateSeekBar } from '../transport/oscillaTransport.js';
 import { checkCueTriggers } from '../cues/cueDispatcher.js';
 import { checkImpulseRegions } from '../cues/audio.js';
 import { checkSynthRegions } from '../cues/synth.js';

@@ -2,19 +2,19 @@ import {
   registerReuseBlocks,
   autoInjectUseBlocks,
   preloadReuseBlocksFromPages
-} from "./parser/preProcessReuse.js";
+} from "../parser/preProcessReuse.js";
 
-import { hideAllButtonPlaceholders } from "./cues/button.js";
-import { setSpeedCueMap, extractSpeedCues } from './cues/speed.js';
+import { hideAllButtonPlaceholders } from "../cues/button.js";
+import { setSpeedCueMap, extractSpeedCues } from '../cues/speed.js';
 
 import {
   initOscillaAnnotations,
   setAnnotationsProject,
   exportAnnotationsJSON,
   importAnnotationsJSON
-} from "./interaction/interactionSurface.js";
+} from "../interaction/interactionSurface.js";
 
-import { openRehearsalPopup } from "./system/rehearsalUI.js";
+import { openRehearsalPopup } from "./rehearsalUI.js";
 
 
 

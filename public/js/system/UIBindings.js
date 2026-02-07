@@ -4,7 +4,7 @@
  * © 2025 Rob Canning — GPLv3
  */
 
-import { forward, rewind, rewindToStart } from '../oscillaTransport.js';
+import { forward, rewind, rewindToStart } from '../transport/oscillaTransport.js';
 import { resetTriggeredCues } from '../cues/cueDispatcher.js';
 import { resetStopwatch } from '../cues/timers.js';
 import { setAnnotationMode, setAnnotationsEnabled } from '../interaction/interactionSurface.js';

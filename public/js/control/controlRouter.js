@@ -17,7 +17,7 @@
  */
 
 import * as ParamBus from './paramBus.js';
-import * as Targets from '../oscillaTargets.js';
+import * as Targets from '../system/oscillaTargets.js';
 
 // ===========================
 // Module State

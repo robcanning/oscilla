@@ -10,9 +10,9 @@
  *   - Feels like iOS scroll inertia
  */
 
-import { resetAllFadePriming } from "./cues/fade.js";
-import { dismissAllStopwatchOverlays } from "./cues/timers.js";
-import { updateSpeedFromPosition } from "./cues/speed.js";
+import { resetAllFadePriming } from "../cues/fade.js";
+import { dismissAllStopwatchOverlays } from "../cues/timers.js";
+import { updateSpeedFromPosition } from "../cues/speed.js";
 
 (() => {
   const scoreArea = document.getElementById("scoreContainer");

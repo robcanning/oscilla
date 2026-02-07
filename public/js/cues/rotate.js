@@ -2,7 +2,7 @@
 
 import { registerAnimation } from "./animation.js";
 import { scheduleCueStart } from "./cueDispatcher.js";
-import { createHitLabel, repositionAllHitLabels } from "../oscillaHitLabels.js";
+import { createHitLabel, repositionAllHitLabels } from "../control/o2pTouchOverlays.js";
 import {
     applyPrestateBeforeStart,
     applyPrestateOnStart,

@@ -40,16 +40,16 @@
  */
 
 
-import { getSpeedForPosition, updateSpeedFromPosition } from "./cues/speed.js";
-import { resetAllFadePriming } from "./cues/fade.js";
-import { checkCueTriggers } from "./cues/cueDispatcher.js";
+import { getSpeedForPosition, updateSpeedFromPosition } from "../cues/speed.js";
+import { resetAllFadePriming } from "../cues/fade.js";
+import { checkCueTriggers } from "../cues/cueDispatcher.js";
 import { 
   dismissAllStopwatchOverlays, 
   startTransportTime, 
   pauseTransportTime, 
   resumeTransportTime,
   resetTransportTime 
-} from "./cues/timers.js";
+} from "../cues/timers.js";
 
 
 // ============================================================================

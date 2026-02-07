@@ -5,11 +5,11 @@
  */
 
 import { propagate } from "../parser/preProcessPropagate.js";
-import { destroyAllHitLabels } from "../oscillaHitLabels.js";
+import { destroyAllHitLabels } from "../control/o2pTouchOverlays.js";
 import { registerReuseBlocks, autoInjectUseBlocks } from "../parser/preProcessReuse.js";
 import { hideAllButtonPlaceholders, buildCueButtonsIn } from "../cues/button.js";
 import { animationAssign } from "../cues/animation.js";
-import { initializeObserver } from "../oscillaObserver.js";
+import { initializeObserver } from "./oscillaObserver.js";
 import { assignCues } from "../cues/cueDispatcher.js";
 import { storePathVariants } from "./paths.js";
 import { sendScoreMeta } from "./socket.js";

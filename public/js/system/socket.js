@@ -8,7 +8,7 @@
  * UPDATED: Added client color support
  */
 
-import { scrollToPlayheadVisual, togglePlayButton } from '../oscillaTransport.js';
+import { scrollToPlayheadVisual, togglePlayButton } from '../transport/oscillaTransport.js';
 import { startStopwatch } from '../cues/timers.js';
 import { loadSharedAnnotations, annotationsHandleSocketMessage } from '../interaction/interactionSurface.js';
 import { handleCueTrigger, teleportPlayhead } from '../cues/cueDispatcher.js';

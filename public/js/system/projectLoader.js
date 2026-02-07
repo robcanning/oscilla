@@ -5,18 +5,18 @@
  */
 
 import { showLoader, updateLoader, hideLoader } from "./projectLoadProgressUI.js";
-import { initializeSVG } from "./app.js";
+import { initializeSVG } from "../app.js";
 import { initializeObserver } from "./oscillaObserver.js";
-import { preloadReuseBlocksFromPages } from "./parser/preProcessReuse.js";
+import { preloadReuseBlocksFromPages } from "../parser/preProcessReuse.js";
 
-import "./control/controlXYPresets.js";  
-import "./control/controlXYPresetUI.js";  
-import "./control/o2pPresets.js";
-import "./control/o2pPresetUI.js";
+import "../control/controlXYPresets.js";  
+import "../control/controlXYPresetUI.js";  
+import "../control/o2pPresets.js";
+import "../control/o2pPresetUI.js";
 
-import { setSpeed } from "./oscillaTransport.js";
-import { jumpToCueId } from "./transportNav.js";
-import { applyDarkMode, initializeControlsPin, initializeTopbarPin, hideControls, showControls } from "./transportUI.js";
+import { setSpeed } from "../transport/oscillaTransport.js";
+import { jumpToCueId } from "../transport/transportNav.js";
+import { applyDarkMode, initializeControlsPin, initializeTopbarPin, hideControls, showControls } from "../transport/transportUI.js";
 
 let loadInProgress = false;
 let projectMenuWired = false;

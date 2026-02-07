@@ -1,4 +1,4 @@
-import { pausePlayback } from "../oscillaTransport.js";
+import { pausePlayback } from "../transport/oscillaTransport.js";
 
 
 window.resetCueEdgeTracking = function () {
