@@ -15,7 +15,7 @@
 
 import { scrollToPlayheadVisual } from "./oscillaTransport.js";
 import { stopAllCueTexts } from "./cues/text.js";
-import { destroyAllHitLabels } from "./interaction/oscTouchOverlays.js";
+import { destroyAllHitLabels } from "./control/o2pTouchOverlays.js";
 
 // ---------------------------------------------------------
 // UI interaction state (menus / hover)

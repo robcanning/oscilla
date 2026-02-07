@@ -1,5 +1,4 @@
 import { pausePlayback } from "../oscillaTransport.js";
-import { destroyAllHitLabels } from "../interaction/oscTouchOverlays.js";
 
 
 window.resetCueEdgeTracking = function () {
@@ -19,7 +18,8 @@ window.resetCueEdgeTracking = function () {
 
 export function handleNavCue(ast) {
     
-    destroyAllHitLabels();
+    // Clean up o2p touch overlays before navigation
+    window.destroyAllHitLabels?.();
     
     // ------------------------------------------------------------
     // Extended debug logger

@@ -784,3 +784,5 @@ export function destroyAllHitLabels(reason = "") {
         window._oscillaHitLabels.length = 0;
     }
 }
+
+window.destroyAllHitLabels = destroyAllHitLabels;

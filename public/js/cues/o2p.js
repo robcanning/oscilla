@@ -22,7 +22,7 @@
 
 import { registerAnimation, resolveAnimationUid } from "./animation.js";
 import { scheduleCueStart } from "./cueDispatcher.js";
-import { createHitLabel, repositionAllHitLabels, initO2PDragHandler, updateHitLabelValue } from "../interaction/oscTouchOverlays.js";
+import { createHitLabel, repositionAllHitLabels, initO2PDragHandler, updateHitLabelValue } from "../control/o2pTouchOverlays.js";
 
 import {
     applyPrestateBeforeStart,

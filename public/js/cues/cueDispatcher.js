@@ -73,8 +73,6 @@ import { handleControlXYCue } from "./controlXY.js";
 
 // import { handleScaleCue, handleO2PCue } from "./oscillaAnim.js";
 
-import { destroyAllHitLabels } from "../interaction/oscTouchOverlays.js";
-
 
 
 

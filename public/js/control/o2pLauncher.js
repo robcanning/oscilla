@@ -7,6 +7,14 @@
  * bounding box in SVG space. Same DOM structure as controlXY launchers
  * with `o2p-launcher` modifier class for color differentiation.
  *
+ * APPROACH: The launcher is embedded in the SVG via <foreignObject>, not
+ * as an HTML overlay. This means it automatically tracks the group's
+ * position through any SVG transforms (pan, zoom, viewBox changes)
+ * without manual repositioning. The trade-off is that coordinate math
+ * must map from each path's local space into SVG root user-space
+ * (see getGroupBBox). An HTML overlay would avoid coordinate issues
+ * but require constant recalculation on scroll/zoom/resize.
+ *
  * Persistence: kind "o2pLauncher" via controlShared generic helpers.
  */
 
@@ -49,7 +57,9 @@ export function createO2PLauncher(groupId, bbox, parent, opts = {}) {
 
   const launcherY = bbox.y + bbox.height + 8;
 
-  // -- foreignObject container --
+  // -- foreignObject: embeds HTML launcher inside the SVG DOM tree.
+  // Placed as a direct child of the SVG root so it shares the root
+  // coordinate system. Minimum width prevents button crush in narrow groups.
   const minLauncherWidth = 360;
   const launcherWidth = Math.max(minLauncherWidth, bbox.width);
 
@@ -112,7 +122,11 @@ export function createO2PLauncher(groupId, bbox, parent, opts = {}) {
 
   initializeLauncher(groupId, container, slots, totalBanks);
 
-  // -- Toggle circle: small clickable dot at bottom-right of group bbox --
+  // -- Toggle circle: orange dot to the right of the group bbox.
+  // Clicking it shows/hides the launcher foreignObject. Placed as a
+  // sibling SVG element (not inside the foreignObject) so it remains
+  // visible when the launcher is hidden. Offset 30px right to avoid
+  // overlap with fader paths/objects.
   const circleR = 7.5;
   const circleX = bbox.x + bbox.width + 30;
   const circleY = bbox.y + bbox.height - circleR;
@@ -164,23 +178,62 @@ export function repositionLauncher(groupId, bbox) {
 // ============================================================================
 
 /**
- * Compute a union bounding box of all fader paths in a group.
+ * Compute a union bounding box of all fader paths in a group,
+ * expressed in SVG root user-space coordinates.
+ *
+ * Why not just getBBox()? Because getBBox() returns coordinates in
+ * the element's LOCAL coordinate system, ignoring any transforms on
+ * parent <g> elements. Since the launcher foreignObject is a child
+ * of the SVG root, we need coordinates in the ROOT's user-space.
+ *
+ * The transform chain:
+ *   pathEl.getScreenCTM()  maps  local coords -> screen pixels
+ *   svg.getScreenCTM()     maps  root coords  -> screen pixels
+ *   inverse(svg) * pathEl  maps  local coords  -> root coords
+ *
+ * We transform all 4 corners of each path's local bbox through this
+ * matrix, then take the min/max to get the axis-aligned union bbox.
  */
 export function getGroupBBox(groupId) {
   const group = window._o2pTouchGroups?.[groupId];
   if (!group) return null;
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let svg = null;
 
   for (const fader of Object.values(group.faders)) {
     const pathEl = fader.pathEl;
     if (!pathEl) continue;
 
+    if (!svg) svg = pathEl.ownerSVGElement;
+    if (!svg) continue;
+
     const b = pathEl.getBBox();
-    minX = Math.min(minX, b.x);
-    minY = Math.min(minY, b.y);
-    maxX = Math.max(maxX, b.x + b.width);
-    maxY = Math.max(maxY, b.y + b.height);
+
+    // Build the local-to-root matrix (see JSDoc above)
+    const elCTM = pathEl.getScreenCTM();
+    const svgCTM = svg.getScreenCTM();
+    if (!elCTM || !svgCTM) continue;
+
+    const toSvgRoot = svgCTM.inverse().multiply(elCTM);
+
+    const pt = svg.createSVGPoint();
+    const corners = [
+      { x: b.x,           y: b.y },
+      { x: b.x + b.width, y: b.y },
+      { x: b.x,           y: b.y + b.height },
+      { x: b.x + b.width, y: b.y + b.height }
+    ];
+
+    for (const c of corners) {
+      pt.x = c.x;
+      pt.y = c.y;
+      const t = pt.matrixTransform(toSvgRoot);
+      minX = Math.min(minX, t.x);
+      minY = Math.min(minY, t.y);
+      maxX = Math.max(maxX, t.x);
+      maxY = Math.max(maxY, t.y);
+    }
   }
 
   if (!isFinite(minX)) return null;

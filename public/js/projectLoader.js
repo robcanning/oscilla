@@ -17,7 +17,6 @@ import "./control/o2pPresetUI.js";
 import { setSpeed } from "./oscillaTransport.js";
 import { jumpToCueId } from "./transportNav.js";
 import { applyDarkMode, initializeControlsPin, initializeTopbarPin, hideControls, showControls } from "./transportUI.js";
-import { destroyAllHitLabels } from "./interaction/oscTouchOverlays.js";
 
 let loadInProgress = false;
 let projectMenuWired = false;
@@ -37,7 +36,8 @@ function recordRecentProject(name) {
 export function cleanupProjectOverlays() {
   console.log("[Cleanup] Removing overlays, videos, audio, metronomes, stopwatches, cue buttons…");
 
-  destroyAllHitLabels("project-load");
+  // Clean up o2p touch overlays (registered on window by o2pTouchOverlays.js)
+  window.destroyAllHitLabels?.("project-load");
 
   // --- Metronomes
   document.querySelectorAll(".cue-metronome").forEach(el => el.remove());
@@ -216,7 +216,7 @@ export async function loadProject(projectName, options = {}) {
 
     cleanupProjectOverlays();
     
-    destroyAllHitLabels("project-load / mode-switch");
+    window.destroyAllHitLabels?.("project-load / mode-switch");
 
     // Reset cue state that tends to cause “misfire at load”
     window._prevCueLefts = new Map();
