@@ -796,7 +796,8 @@ function startServerCountdown(cue, sequenceName, cueIndex, totalCues, loop, curr
     loop: loop || 1,
     currentLoop: currentLoop || 1,
     cues: null,  // Will be set if running a sequence
-    chainTo: null
+    chainTo: null,
+    onComplete: cue.onComplete || null  // Per-cue completion action
   };
   console.log(`[Countdown] ▶ Started: ${cue.name} (${cue.seconds}s)`);
 
@@ -841,8 +842,40 @@ function advanceCountdown() {
   const cd = sharedState.countdown;
   if (!cd || !cd.running) return;
 
+  // ─── Broadcast onComplete for the cue that just finished ───
+  if (cd.cues && cd.cues[cd.cueIndex]) {
+    const completedCue = cd.cues[cd.cueIndex];
+    if (completedCue.onComplete) {
+      const msg = JSON.stringify({
+        type: "countdown_cue_complete",
+        onComplete: completedCue.onComplete,
+        cueName: completedCue.name || "Countdown"
+      });
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(msg);
+        }
+      });
+      console.log(`[Countdown] Broadcasting onComplete for "${completedCue.name}": ${completedCue.onComplete}`);
+    }
+  }
+
   // Single cue (not a sequence)
   if (!cd.cues) {
+    // Broadcast onComplete for single cue
+    if (cd.onComplete) {
+      const msg = JSON.stringify({
+        type: "countdown_cue_complete",
+        onComplete: cd.onComplete,
+        cueName: cd.cueName || "Countdown"
+      });
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(msg);
+        }
+      });
+      console.log(`[Countdown] Broadcasting onComplete for single cue "${cd.cueName}": ${cd.onComplete}`);
+    }
     stopServerCountdown();
     return;
   }

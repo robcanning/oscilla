@@ -13,12 +13,13 @@ Markers are part of Oscilla's **interaction layer** — features that work on to
 
 - Load any image or simple graphic as a score
 - Drop markers to create structure
-- Use the timer system for durational cues
+- Navigate between markers with arrow keys and transport buttons
+- Use the timer system for durational cues, with automatic jumps to markers on completion
 - Annotate with pins and text
 
-This makes markers an accessible entry point for ensembles who want networked coordination and shared visual structure without diving into Oscilla's more advanced SVG-based cue system. The score becomes a backdrop; markers become the notation.
+This makes markers an accessible entry point for ensembles who want networked coordination and shared visual structure without diving into Oscilla's more advanced SVG-based cue system. The score becomes a backdrop; markers become the notation. Combined with countdown timer sequences and `onComplete` actions, markers can form a complete temporal framework — a **session layer** built entirely from the interaction tools.
 
-For groups working with graphic scores, text scores, or fully improvised sets, this approach lets you use Oscilla as a **shared timeline and coordination tool** rather than a notation rendering engine.
+For groups working with graphic scores, text scores, or fully improvised sets, this approach lets you use Oscilla as a **shared timeline and coordination tool** rather than a notation rendering engine. Wire markers to timer sequences and you have automated section navigation without writing a single line of SVG.
 
 ## What markers are for
 
@@ -28,8 +29,9 @@ Markers serve as **compositional scaffolding** for loosely-defined works. In gra
 - **Solo assignments** — designate who plays when across a 20-minute set
 - **Moments to revisit** — flag a passage during a run-through without stopping
 - **Cues for coordination** — visible anchors that all performers can see and anticipate
+- **Navigation targets** — named markers can be jumped to with arrow keys, transport buttons, `nav()` cues, or timer completion actions
 
-Think of markers as sticky notes on a shared timeline. They're fast to place, easy to move, and visible to everyone (or just yourself, if you prefer).
+Think of markers as sticky notes on a shared timeline. They're fast to place, easy to move, and visible to everyone (or just yourself, if you prefer). Unlike plain sticky notes, though, they're wired into the transport — you can jump between them, and other systems can target them.
 
 ## Pre-performance planning
 
@@ -48,10 +50,10 @@ This creates a shared map that's visible on every connected client. During perfo
 Markers shine as a **non-interruptive annotation tool**:
 
 - Spot something interesting or problematic? Drop a marker without stopping.
-- After the run-through, click any marker to jump back and discuss.
+- After the run-through, use Arrow Up/Down to jump between markers, or click any marker label to jump back and discuss.
 - The marker label (editable) can hold a quick note: "bass too loud", "nice texture", "try again".
 
-This keeps rehearsals flowing. Instead of "stop, let's go back to... where was it?", you have a trail of breadcrumbs to follow.
+This keeps rehearsals flowing. Instead of "stop, let's go back to... where was it?", you have a trail of breadcrumbs to follow — and keyboard shortcuts to follow them instantly.
 
 ## Shared and local markers
 
@@ -82,6 +84,8 @@ The marker tools appear in the top bar:
 | ↓ (arrow) | **Drop marker** at current playhead position |
 | M (marker icon) | **Toggle visibility** of all markers on/off |
 | 📡 (network icon) | **Toggle sharing** — when active (blue), new markers sync to all clients |
+| ⏩ / ⏪ (transport) | **Fast forward / rewind** between markers and rehearsal marks |
+| Arrow Up / Down | **Keyboard navigation** between markers and rehearsal marks |
 
 ### Dragging markers
 
@@ -109,9 +113,60 @@ Large font sizes combined with central vertical positioning create bold structur
 
 Markers work alongside Oscilla's other timing features:
 
-- **Rehearsal marks** — Navigation points defined in the SVG score using Oscilla's cue syntax. These require authoring `cue_rehearsal(...)` IDs in your SVG file. Markers offer similar landmark functionality without any SVG editing — they live in the interaction layer, not the score file.
+- **Rehearsal marks** — Navigation points defined in the SVG score using Oscilla's cue syntax. These require authoring `cue_rehearsal(...)` IDs in your SVG file. Markers offer similar landmark functionality without any SVG editing — they live in the interaction layer, not the score file. Since both rehearsal marks and markers share the same navigation system (arrow keys, fast forward/rewind, rehearsal popup), they function interchangeably as structural waypoints — the difference is only in how they're created.
 
-- **Countdown timer sequences** — For non-timeline-based structures, the timer system can trigger sequences of countdowns (e.g., "5 minutes → 3 minutes → 2 minutes → done"). This offers another way to create loose temporal scaffolding without relying on the scrolling playhead. Markers and timer sequences can complement each other: markers for spatial/visual structure, timers for purely durational structure. Like markers, timers work without SVG authoring.
+- **Countdown timer sequences** — For non-timeline-based structures, the timer system can trigger sequences of countdowns (e.g., "5 minutes → 3 minutes → 2 minutes → done"). Each timer slot has an optional **onComplete** field that accepts any cue expression. Setting `nav(scroll@intro)` or `nav(mark@bridge)` as a slot's onComplete action causes the playhead to jump to that marker when the countdown finishes. This means you can build an entire performance structure from markers and timers alone — no SVG authoring required.
+
+- **`nav()` cues** — Named markers can be targeted from SVG cue syntax or from timer onComplete fields. See *Navigation targets* below.
+
+## Navigation targets
+
+Named markers (any marker whose label has been edited from the default "m") can be jumped to programmatically using Oscilla's cue syntax:
+
+| Syntax | Behavior |
+|--------|----------|
+| `nav(scroll@myMarker)` | Jumps to rehearsal mark "myMarker" first; if not found, jumps to the user marker with that name. Playback auto-resumes. |
+| `nav(mark@myMarker)` | Jumps directly to the user marker (skips rehearsal marks). Playback auto-resumes. |
+| `nav(markPaused@myMarker)` | Jumps to the user marker and stays paused. |
+| `nav(scrollPaused@myMarker)` | Jumps to rehearsal mark or marker and stays paused. |
+
+These expressions work anywhere a cue string is accepted:
+
+- **In SVG cue IDs** — embed navigation in the score itself
+- **In timer onComplete fields** — jump to a marker when a countdown slot finishes
+- **In button triggers** — wire a `button()` cue to jump to a specific marker
+
+When multiple markers share the same name, the leftmost one (by score position) is used. A console warning is logged when duplicates are found.
+
+## Keyboard and transport navigation
+
+Markers integrate into Oscilla's transport navigation alongside rehearsal marks:
+
+| Control | Action |
+|---------|--------|
+| **Arrow Up** | Jump to the next navigation point (marker or rehearsal mark) after the current playhead position |
+| **Arrow Down** | Jump to the previous navigation point before the current playhead position |
+| **Fast Forward button** | Same as Arrow Up |
+| **Fast Rewind button** | Same as Arrow Down |
+| **Rehearsal popup** | Shows all rehearsal marks and named markers; click any to jump |
+
+All navigation points — rehearsal marks and markers — are sorted by their position on the score. Arrow keys and transport buttons walk this unified list based on where the playhead currently is, not on a stored index. This means navigation stays correct regardless of how the playhead got to its current position (manual seeking, cue jumps, timer actions, etc.).
+
+Default unnamed markers ("m") are included in keyboard navigation. All markers with a valid position are navigable.
+
+## The session layer
+
+Markers, timers, and the `nav()` cue together form what could be called a **session layer** — a way to construct temporal structure on top of any score without editing SVG files.
+
+A typical session-layer workflow:
+
+1. **Load any image or graphic as a score** — it doesn't need cue IDs, rehearsal marks, or any Oscilla-specific markup.
+2. **Drop and name markers** — create structural waypoints: "intro", "bridge", "climax", "ending".
+3. **Build a countdown sequence** — create timer slots matching your planned section durations.
+4. **Wire onComplete actions** — set each slot's onComplete to `nav(scroll@nextSection)` so the playhead automatically jumps forward when each timer finishes.
+5. **Optionally add `ui()` calls** — use `ui(#layerName, visible:true)` in onComplete fields to show/hide visual layers at section boundaries.
+
+The result is a fully navigable, timed performance structure built entirely from the interaction layer. The score provides visual material; markers and timers provide the temporal framework.
 
 ## Typical workflow
 
@@ -120,14 +175,16 @@ Markers work alongside Oscilla's other timing features:
 2. Set the duration/tempo
 3. Drop markers to outline the set structure
 4. Assign colors or labels as needed
+5. Optionally: build a countdown sequence with onComplete actions targeting your markers
 
 **During rehearsal:**
 1. Start playback
 2. Drop markers on-the-fly when something notable happens
-3. Don't stop — keep playing
+3. Use Arrow Up/Down to jump between markers without stopping
+4. Don't stop — keep playing
 
 **After the run-through:**
-1. Click markers to jump back to flagged moments
+1. Click markers (or use arrow keys) to jump back to flagged moments
 2. Discuss, adjust, make notes
 3. Delete or reposition markers as the interpretation evolves
 
@@ -138,4 +195,4 @@ Markers work alongside Oscilla's other timing features:
 
 ---
 
-Markers are intentionally simple. They're not cues that trigger events or automation—they're just visible points on a shared timeline. That simplicity is the point: a low-friction way to give shape to music that resists rigid notation.
+Markers are intentionally simple to create — drop, name, drag, done. But they connect into Oscilla's deeper systems: they're navigable by keyboard and transport controls, targetable by `nav()` cues, and triggerable from timer completion actions. This makes them a bridge between casual annotation and structured performance — start with sticky notes on a timeline, and wire them into a full temporal framework when you're ready.

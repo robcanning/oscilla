@@ -14,12 +14,48 @@ import { getWorldX, scrollToPlayheadVisual } from "./oscillaTransport.js";
 import { resetAllFadePriming } from "../cues/fade.js";
 import { dismissAllStopwatchOverlays } from "../cues/timers.js";
 import { updateSpeedFromPosition } from "../cues/speed.js";
+import { findMarkerByName, getSortedMarkerNavPoints } from "../interaction/markers.js";
 
 // ============================================================================
-// REHEARSAL MARK NAVIGATION STATE
+// UNIFIED NAVIGATION STATE
+// ============================================================================
+// Merges rehearsal marks (from SVG) and user markers (from annotation system)
+// into a single sorted list of navigation points.
+// Rebuilds on every navigation action — cheap (microseconds for ~50 items)
+// and avoids stale-cache bugs from marker CRUD bypassing invalidation.
 // ============================================================================
 
-let currentRehearsalIndex = 0;
+let currentNavIndex = 0;
+
+/**
+ * Build unified list of nav points from rehearsal marks + user markers.
+ * Sorted by world X position. Called on each nav action.
+ * @returns {Array<{name: string, x: number, source: "rehearsal"|"marker"}>}
+ */
+function getUnifiedNavPoints() {
+  const points = [];
+
+  // Rehearsal marks (from SVG parsing)
+  const sortedMarks = window.sortedMarks || [];
+  const rehearsalMarks = window.rehearsalMarks || {};
+  for (const name of sortedMarks) {
+    const entry = rehearsalMarks[name];
+    if (entry) {
+      points.push({ name, x: entry.x, source: "rehearsal" });
+    }
+  }
+
+  // User markers (from annotation system) — only named ones (not default "m")
+  const markerPoints = getSortedMarkerNavPoints();
+  points.push(...markerPoints);
+
+  // Sort all by world X position
+  points.sort((a, b) => a.x - b.x);
+
+  return points;
+}
+
+window.getUnifiedNavPoints = getUnifiedNavPoints;
 
 // ============================================================================
 // JUMP TO CUE BY ID
@@ -74,14 +110,27 @@ export function jumpToRehearsalMark(mark) {
   console.log(`[JUMP] Requested jump to rehearsal mark: ${mark}`);
 
   const rehearsalMarks = window.rehearsalMarks;
-  if (!rehearsalMarks) {
-    console.error("[JUMP] No rehearsal marks loaded.");
-    return;
+  let targetX = null;
+
+  // Try rehearsal marks first
+  if (rehearsalMarks) {
+    const entry = rehearsalMarks[mark];
+    if (entry) {
+      targetX = entry.x;
+    }
   }
 
-  const entry = rehearsalMarks[mark];
-  if (!entry) {
-    console.error(`[JUMP] Mark "${mark}" not found.`);
+  // Fallback: search user markers by name
+  if (targetX === null) {
+    const marker = findMarkerByName(mark);
+    if (marker) {
+      targetX = marker.placement.x;
+      console.log(`[JUMP] Resolved "${mark}" via user marker at x=${targetX}`);
+    }
+  }
+
+  if (targetX === null) {
+    console.error(`[JUMP] Mark "${mark}" not found in rehearsal marks or user markers.`);
     return;
   }
 
@@ -92,8 +141,8 @@ export function jumpToRehearsalMark(mark) {
   window.isPlaying = false;
   window.animationPaused = true;
 
-  // Teleport playhead to the stored world X position
-  window.playheadX = entry.x;
+  // Teleport playhead to the resolved world X position
+  window.playheadX = targetX;
   
   // Sync musical timeline
   window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
@@ -131,10 +180,10 @@ export function jumpToRehearsalMark(mark) {
   window.suppressCueTriggers = false;
   
   // Update current index to match the mark we jumped to
-  const sortedMarks = window.sortedMarks || [];
-  const newIndex = sortedMarks.indexOf(mark);
+  const navPoints = getUnifiedNavPoints();
+  const newIndex = navPoints.findIndex(p => p.name === mark);
   if (newIndex !== -1) {
-    currentRehearsalIndex = newIndex;
+    currentNavIndex = newIndex;
   }
 
   console.log(`[JUMP] Jumped to "${mark}" at playheadX: ${window.playheadX}`);
@@ -143,83 +192,164 @@ export function jumpToRehearsalMark(mark) {
 window.jumpToRehearsalMark = jumpToRehearsalMark;
 
 /**
- * Jump to the next rehearsal mark
+ * Jump to a specific navigation point (rehearsal mark or user marker).
+ * Rehearsal marks resolve by name, markers resolve by world X position directly.
+ * @param {{name: string, x: number, source: "rehearsal"|"marker"}} point
+ */
+function jumpToNavPoint(point) {
+  if (point.source === "rehearsal") {
+    // Rehearsal marks go through name-based lookup
+    jumpToRehearsalMark(point.name);
+  } else {
+    // Markers: jump directly to world X position (avoids name collision on "m")
+    jumpToWorldX(point.x);
+  }
+}
+
+/**
+ * Jump playhead to an exact world X position.
+ * Used for marker-based navigation where name lookup isn't reliable.
+ * @param {number} worldX
+ */
+function jumpToWorldX(worldX) {
+  console.log(`[JUMP] Direct jump to worldX: ${worldX}`);
+
+  // Disable cues during jump
+  window.suppressCueTriggers = true;
+
+  // Pause during teleport
+  window.isPlaying = false;
+  window.animationPaused = true;
+
+  // Teleport playhead
+  window.playheadX = worldX;
+
+  // Sync musical timeline
+  window.elapsedTime = (window.playheadX / window.scoreWidth) * window.duration;
+
+  scrollToPlayheadVisual();
+
+  // Prevent drift glitch
+  window.lastAnimationFrameTime = null;
+
+  // Reset cue state
+  window._prevCueLefts = new Map();
+  window._cueInsideState = new Map();
+  window.triggeredCues = new Set();
+
+  // Reset other state
+  resetAllFadePriming?.();
+  dismissAllStopwatchOverlays?.();
+  window.navRepeatMap?.clear();
+  window.resetAnnotationPlayheadTriggers?.();
+  window.resetCueEdgeTracking?.();
+
+  // Apply speed for new position
+  updateSpeedFromPosition?.();
+  window.updateSpeedDisplay?.();
+
+  // Notify server
+  if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+    window.socket.send(JSON.stringify({
+      type: "jump",
+      playheadX: window.playheadX,
+      elapsedTime: window.elapsedTime
+    }));
+  }
+
+  window.suppressCueTriggers = false;
+
+  console.log(`[JUMP] Jumped to worldX: ${worldX}`);
+}
+
+/**
+ * Jump to the next navigation point after current playhead position
  */
 export function jumpToNextRehearsalMark() {
-  const sortedMarks = window.sortedMarks || [];
+  const navPoints = getUnifiedNavPoints();
   
-  if (sortedMarks.length === 0) {
-    console.warn("[NAV] No rehearsal marks available.");
+  if (navPoints.length === 0) {
+    console.warn("[NAV] No navigation points available.");
     return;
   }
 
-  if (currentRehearsalIndex < sortedMarks.length - 1) {
-    currentRehearsalIndex++;
-    const nextMark = sortedMarks[currentRehearsalIndex];
-    console.log(`[NAV] Forward to: ${nextMark} (Index: ${currentRehearsalIndex})`);
-    jumpToRehearsalMark(nextMark);
-  } else {
-    console.log("[NAV] Already at the last rehearsal mark.");
+  // Find first nav point AFTER current playhead (small tolerance to avoid getting stuck)
+  const nextIdx = navPoints.findIndex(p => p.x > window.playheadX + 1);
+  if (nextIdx === -1) {
+    console.log("[NAV] Already past the last navigation point.");
+    return;
   }
+
+  currentNavIndex = nextIdx;
+  const next = navPoints[nextIdx];
+  console.log(`[NAV] Forward to: ${next.name} (${next.source}) at x=${next.x}`);
+  jumpToNavPoint(next);
 }
 
 window.jumpToNextRehearsalMark = jumpToNextRehearsalMark;
 
 /**
- * Jump to the previous rehearsal mark
+ * Jump to the previous navigation point before current playhead position
  */
 export function jumpToPreviousRehearsalMark() {
-  const sortedMarks = window.sortedMarks || [];
+  const navPoints = getUnifiedNavPoints();
   
-  if (sortedMarks.length === 0) {
-    console.warn("[NAV] No rehearsal marks available.");
+  if (navPoints.length === 0) {
+    console.warn("[NAV] No navigation points available.");
     return;
   }
 
-  if (currentRehearsalIndex > 0) {
-    currentRehearsalIndex--;
-    const prevMark = sortedMarks[currentRehearsalIndex];
-    console.log(`[NAV] Back to: ${prevMark} (Index: ${currentRehearsalIndex})`);
-    jumpToRehearsalMark(prevMark);
-  } else {
-    console.log("[NAV] Already at the first rehearsal mark.");
+  // Find last nav point BEFORE current playhead (small tolerance)
+  let prevIdx = -1;
+  for (let i = navPoints.length - 1; i >= 0; i--) {
+    if (navPoints[i].x < window.playheadX - 1) {
+      prevIdx = i;
+      break;
+    }
   }
+
+  if (prevIdx === -1) {
+    console.log("[NAV] Already before the first navigation point.");
+    return;
+  }
+
+  currentNavIndex = prevIdx;
+  const prev = navPoints[prevIdx];
+  console.log(`[NAV] Back to: ${prev.name} (${prev.source}) at x=${prev.x}`);
+  jumpToNavPoint(prev);
 }
 
 window.jumpToPreviousRehearsalMark = jumpToPreviousRehearsalMark;
 
 /**
- * Reset rehearsal index (call when loading new score or rewinding to start)
+ * Reset navigation index (call when loading new score or rewinding to start)
  */
 export function resetRehearsalIndex() {
-  currentRehearsalIndex = 0;
+  currentNavIndex = 0;
 }
 
 window.resetRehearsalIndex = resetRehearsalIndex;
 
 /**
- * Sync rehearsal index to current playhead position
+ * Sync navigation index to current playhead position
  * Useful after seeking or manual position changes
  */
 export function syncRehearsalIndexToPlayhead() {
-  const sortedMarks = window.sortedMarks || [];
-  const rehearsalMarks = window.rehearsalMarks || {};
+  const navPoints = getUnifiedNavPoints();
   
-  if (sortedMarks.length === 0) return;
+  if (navPoints.length === 0) return;
   
-  // Find the last mark that's at or before current playhead
+  // Find the last nav point that's at or before current playhead
   let newIndex = 0;
-  for (let i = 0; i < sortedMarks.length; i++) {
-    const mark = sortedMarks[i];
-    const markX = rehearsalMarks[mark]?.x || 0;
-    if (markX <= window.playheadX) {
+  for (let i = 0; i < navPoints.length; i++) {
+    if (navPoints[i].x <= window.playheadX) {
       newIndex = i;
     } else {
       break;
     }
   }
   
-  currentRehearsalIndex = newIndex;
+  currentNavIndex = newIndex;
 }
 
 window.syncRehearsalIndexToPlayhead = syncRehearsalIndexToPlayhead;

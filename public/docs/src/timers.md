@@ -14,6 +14,7 @@ The Timer system is designed for:
 - **Ensembles** synchronizing timed sections across multiple devices
 - **Improvisers** using time-based structures without traditional notation
 - **Conductors** managing sectional rehearsals or timed cues
+- **Session-layer workflows** where timer slots trigger navigation to markers, creating automated performance structures
 
 ---
 
@@ -86,14 +87,14 @@ Click the **red ring** to open the Countdown Sequences editor.
 
 ### Creating Sequences
 
-A **sequence** is a named group of timed sections that play consecutively.
+A **sequence** is a named group of timed sections that play consecutively. Each section can optionally trigger an action when it finishes.
 
 **Example — Sonata Form:**
 ```
 Sequence: "Sonata"
-├── Exposition    120 seconds
-├── Development   180 seconds
-└── Recapitulation 90 seconds
+├── Exposition      120s  onComplete: nav(scroll@development)
+├── Development     180s  onComplete: nav(scroll@recap)
+└── Recapitulation   90s
 ```
 
 ### Editor Controls
@@ -109,6 +110,7 @@ Sequence: "Sonata"
 | **+ Add Cue** | Add a timed section to sequence |
 | **Cue Name** | Name displayed during countdown |
 | **Duration (s)** | Length in seconds |
+| **onComplete** | Cue expression to trigger when this slot finishes (e.g. `nav(scroll@B)`) |
 | **▶ (on cue)** | Play single cue only |
 | **✕** | Delete cue |
 
@@ -144,12 +146,40 @@ The **Then** dropdown lets you chain sequences together:
 
 This creates a **playlist** of sequences without manual intervention.
 
+### Per-Cue Completion Actions (onComplete)
+
+Each cue slot has an optional **onComplete** field — a cue expression that fires when that slot's countdown reaches zero. This connects the timer system to Oscilla's navigation and UI systems.
+
+| onComplete expression | What happens |
+|----------------------|--------------|
+| `nav(scroll@B)` | Jump to rehearsal mark or marker "B", auto-resume playback |
+| `nav(mark@bridge)` | Jump to user marker "bridge" (skips rehearsal marks) |
+| `nav(markPaused@ending)` | Jump to marker "ending", stay paused |
+| `ui(#brass, visible:true)` | Show a visual layer |
+| `page(C)` | Switch to page C |
+| `audio(src:gong.wav)` | Play a sound |
+
+Any valid Oscilla cue expression works in the onComplete field. The action fires on **all connected clients** simultaneously (since the server owns the timer).
+
+**Example — timed sections with automatic navigation:**
+```
+Sequence: "Performance"
+├── Intro        120s  onComplete: nav(scroll@development)
+├── Development  180s  onComplete: nav(scroll@climax)
+└── Climax        90s  onComplete: nav(scroll@ending)
+```
+
+When each section's countdown finishes, the playhead automatically jumps to the next marker. The score scrolls itself through the performance structure.
+
+onComplete actions also work with single cues (not just sequences). If you start a standalone countdown that has an onComplete expression, it fires when that countdown reaches zero.
+
 ### Playback Behavior
 
 When a countdown runs:
 - Main display shows **section name** as label
 - Time counts down in **MM:SS** format
 - Sequences auto-advance to next section
+- **onComplete** action (if set) fires when each section finishes
 - Single cues return to normal timer when complete
 - Play button changes to **⏹** (stop)
 
@@ -170,8 +200,9 @@ The Timer system automatically synchronizes across all connected clients.
 | Event | Behavior |
 |-------|----------|
 | **Client connects** | Receives current sequences from server |
-| **Sequence created/edited** | Changes broadcast to all clients |
+| **Sequence created/edited** | Changes broadcast to all clients (including onComplete fields) |
 | **Countdown started** | All clients show synchronized countdown |
+| **Cue slot completes** | Server broadcasts onComplete action; all clients execute it simultaneously |
 | **Countdown stopped** | All clients return to normal display |
 
 ### Server-Owned Timer
@@ -202,7 +233,7 @@ Click **Export** to download `countdown-sequences.json` containing all sequences
     "loop": 1,
     "chain": 1,
     "cues": [
-      { "name": "Stretch", "seconds": 120 }
+      { "name": "Stretch", "seconds": 120, "onComplete": null }
     ]
   },
   {
@@ -210,9 +241,9 @@ Click **Export** to download `countdown-sequences.json` containing all sequences
     "loop": 1,
     "chain": null,
     "cues": [
-      { "name": "Exposition", "seconds": 120 },
-      { "name": "Development", "seconds": 180 },
-      { "name": "Recapitulation", "seconds": 90 }
+      { "name": "Exposition", "seconds": 120, "onComplete": "nav(scroll@development)" },
+      { "name": "Development", "seconds": 180, "onComplete": "nav(scroll@recap)" },
+      { "name": "Recapitulation", "seconds": 90, "onComplete": null }
     ]
   }
 ]
@@ -241,7 +272,25 @@ Create a sequence of timed sections:
 
 All performers see the same countdown, enabling synchronized structural changes without traditional cues.
 
-### 2. Rehearsal Sectionals
+### 2. Session Layer — Markers + Timers
+
+Use markers and timer onComplete actions to build a complete performance structure without editing SVG:
+
+1. Load any image as a score
+2. Drop and name markers at key positions: "intro", "development", "climax", "ending"
+3. Create a countdown sequence with onComplete actions:
+
+```
+"Performance"
+├── Intro          120s  onComplete: nav(scroll@development)
+├── Development    180s  onComplete: ui(#overlay, visible:true)
+├── Climax          90s  onComplete: nav(scroll@ending)
+└── Ending          60s
+```
+
+The playhead jumps between markers automatically as each section finishes. Layers can appear/disappear at section boundaries. No SVG cue authoring needed.
+
+### 3. Rehearsal Sectionals
 
 Time individual sections during rehearsal:
 ```
@@ -252,7 +301,7 @@ Time individual sections during rehearsal:
 └── Development work   600s
 ```
 
-### 3. Performance Timing
+### 4. Performance Timing
 
 For pieces with strict durational requirements:
 ```
@@ -262,11 +311,12 @@ For pieces with strict durational requirements:
 └── Movement II   360s
 ```
 
-### 4. Minimal Cue Scores
+### 5. Minimal Cue Scores
 
 Use **Transparent mode** with countdown sequences as a time-based score:
-- Score contains only markers and cues
+- Score contains only markers
 - Timer overlays showing current section
+- onComplete actions handle navigation between sections
 - Performers follow time structure, not traditional notation
 
 ---
@@ -276,6 +326,7 @@ Use **Transparent mode** with countdown sequences as a time-based score:
 ### Storage
 
 - Sequences stored in `localStorage` as `oscilla.countdownSequences`
+- Each cue object contains `name`, `seconds`, and optional `onComplete` (cue expression string or null)
 - Selected sequence/cue stored as `oscilla.countdownControls.type` and `.index`
 - Persists between sessions
 
@@ -313,7 +364,8 @@ The Timer system transforms Oscilla into a flexible time-structuring tool:
 - **Simple**: Click stopwatch → fullscreen timer
 - **Quick access**: Play button and dropdown right in the fullscreen view
 - **Sequenced**: Create named countdown sections with looping and chaining
+- **Actionable**: Per-cue onComplete fields trigger navigation, UI changes, or any cue expression
 - **Synchronized**: All clients automatically stay aligned
 - **Portable**: Import/export sequences as JSON
 
-Whether for strict durational works, timed improvisations, or rehearsal management, the Timer provides a unified interface for musical time.
+Combined with markers, the Timer system enables a **session layer** approach — building complete performance structures from the interaction layer without editing score files. Whether for strict durational works, timed improvisations, or rehearsal management, the Timer provides a unified interface for musical time.

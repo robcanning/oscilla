@@ -1233,6 +1233,19 @@ export function setupStopwatchFullscreenToggle() {
               saveCountdownSequences();
             };
             
+            const cueOnCompleteInput = document.createElement("input");
+            cueOnCompleteInput.type = "text";
+            cueOnCompleteInput.value = cue.onComplete || "";
+            cueOnCompleteInput.placeholder = "onComplete: nav(scroll@B)";
+            cueOnCompleteInput.className = "countdown-cue-oncomplete";
+            cueOnCompleteInput.title = "Cue expression to trigger when this slot finishes (e.g. nav(scroll@B), ui(#layer, visible:true))";
+            cueOnCompleteInput.onchange = () => {
+              const val = cueOnCompleteInput.value.trim();
+              cue.onComplete = val || null;
+              saveCountdownSequences();
+              broadcastSequencesUpdate();
+            };
+            
             const playCueBtn = document.createElement("button");
             playCueBtn.textContent = "▶";
             playCueBtn.title = "Play this cue only";
@@ -1249,6 +1262,7 @@ export function setupStopwatchFullscreenToggle() {
             cueEl.appendChild(cueNameInput);
             cueEl.appendChild(cueDurInput);
             cueEl.appendChild(document.createTextNode("s"));
+            cueEl.appendChild(cueOnCompleteInput);
             cueEl.appendChild(playCueBtn);
             cueEl.appendChild(deleteCueBtn);
             
@@ -1261,7 +1275,7 @@ export function setupStopwatchFullscreenToggle() {
           addCueBtn.textContent = "+ Add Cue";
           addCueBtn.onclick = () => {
             seq.cues = seq.cues || [];
-            seq.cues.push({ name: "", seconds: 60 });
+            seq.cues.push({ name: "", seconds: 60, onComplete: null });
             saveCountdownSequences();
             renderSequencesList();
           };
@@ -1280,7 +1294,7 @@ export function setupStopwatchFullscreenToggle() {
           name: "New Sequence",
           loop: 1,
           chain: null,
-          cues: [{ name: "Section 1", seconds: 60 }]
+          cues: [{ name: "Section 1", seconds: 60, onComplete: null }]
         });
         saveCountdownSequences();
         broadcastSequencesUpdate();

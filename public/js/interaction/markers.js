@@ -152,7 +152,7 @@ export function makeMarkerEl(marker, onEdit) {
         el.style.display = "none";
     }
 
-    // Get localScale for world→screen conversion
+    // Get localScale for worldâ†’screen conversion
     const localScale = (typeof window.localScale === "number" && 
                         isFinite(window.localScale) && 
                         window.localScale > 0) 
@@ -343,7 +343,7 @@ export function openMarkerEditor(marker) {
     const input = document.createElement("input");
     input.type = "text";
     input.value = marker.text || "";
-    input.placeholder = "Marker label…";
+    input.placeholder = "Marker labelâ€¦";
     editor.appendChild(input);
     
     // Vertical checkbox row
@@ -379,7 +379,7 @@ export function openMarkerEditor(marker) {
     // Add info icon/tooltip
     const sharedInfo = document.createElement("span");
     sharedInfo.className = "osc-marker-editor-info";
-    sharedInfo.textContent = "ℹ";
+    sharedInfo.textContent = "â„¹";
     sharedInfo.title = "When enabled, this marker will appear on all connected clients' scores";
     
     sharedRow.appendChild(sharedChk);
@@ -624,6 +624,46 @@ export function wireMarkerButtons() {
 }
 
 // =============================================================
+// MARKER LOOKUP BY NAME
+// =============================================================
+
+/**
+ * Find the first marker matching a given name (text), sorted by world X position.
+ * Used by nav(@mark:name) and unified transport navigation.
+ * @param {string} name - The marker text to search for
+ * @returns {Object|null} The matching marker, or null
+ */
+export function findMarkerByName(name) {
+    if (!name) return null;
+    const matches = state.items
+        .filter(i => i.kind === "marker" && i.text === name)
+        .sort((a, b) => (a.placement?.x || 0) - (b.placement?.x || 0));
+
+    if (matches.length > 1) {
+        console.warn(`[marker] Multiple markers named "${name}" — using leftmost (x=${matches[0].placement?.x})`);
+    }
+
+    return matches[0] || null;
+}
+
+/**
+ * Get all markers sorted by world X position.
+ * Used by unified transport nav and rehearsal popup.
+ * @returns {Array<{name: string, x: number, id: string, source: string}>}
+ */
+export function getSortedMarkerNavPoints() {
+    return state.items
+        .filter(i => i.kind === "marker" && i.placement?.x != null)
+        .map(i => ({
+            name: i.text || "m",
+            x: i.placement.x,
+            id: i.id,
+            source: "marker"
+        }))
+        .sort((a, b) => a.x - b.x);
+}
+
+// =============================================================
 // GET MARKERS
 // =============================================================
 
@@ -666,6 +706,8 @@ export function initMarkers() {
     window.dropMarker = dropMarker;
     window.toggleMarkersVisibility = toggleMarkersVisibility;
     window.toggleMarkerSharing = toggleMarkerSharing;
+    window.findMarkerByName = findMarkerByName;
+    window.getSortedMarkerNavPoints = getSortedMarkerNavPoints;
     
     console.log("[marker] Initialized (sharing:", shareMarkersEnabled ? "enabled" : "disabled", ")");
 }
@@ -689,6 +731,10 @@ export default {
     // Editor
     openMarkerEditor,
     closeMarkerEditor,
+    
+    // Lookup
+    findMarkerByName,
+    getSortedMarkerNavPoints,
     
     // Actions
     dropMarker,

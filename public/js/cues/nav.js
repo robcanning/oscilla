@@ -75,6 +75,78 @@ export function handleNavCue(ast) {
 
     
 // ============================================================
+// CASE 0 — mark (explicit user-marker jump, auto-resume)
+// nav(mark@myMarker) — only searches user markers, not rehearsal marks
+// ============================================================
+if (action === "mark") {
+  dbg("CASE: mark (explicit marker jump)", { target });
+
+  if (!target) {
+    dbg("⚠️ mark action requires a target marker name");
+    return;
+  }
+
+  // Only search user markers — findMarkerByName is on window
+  const marker = window.findMarkerByName?.(target);
+  if (!marker) {
+    dbg(`⚠️ User marker "${target}" not found`);
+    return;
+  }
+
+  // Mode switching
+  if (window.currentMode === "page") {
+    dbg("Leaving page-mode → returnToScrollingScore()");
+    window.returnToScrollingScore?.();
+  }
+
+  window._resumeAfterJump = true;
+
+  // Perform the jump using the marker's world X directly
+  dbg(`Jumping to user marker "${target}" at x=${marker.placement.x}`);
+  window.jumpToRehearsalMark?.(target);
+
+  // Ensure animation loop is alive and playback continues
+  if (!window.isPlaying) {
+    console.log("[nav] Auto-resuming playback after mark jump");
+    window.startPlayback?.();
+  }
+
+  window.animationPaused = false;
+  window.requestAnimationFrame?.(window.animate);
+
+  dbgState("after mark jump");
+  return;
+}
+
+// ============================================================
+// CASE 0b — markPaused (explicit user-marker jump, stay paused)
+// nav(markPaused@myMarker)
+// ============================================================
+if (action === "markPaused") {
+  dbg("CASE: markPaused", { target });
+
+  if (!target) {
+    dbg("⚠️ markPaused action requires a target marker name");
+    return;
+  }
+
+  if (window.currentMode === "page") {
+    dbg("Leaving page-mode → returnToScrollingScore()");
+    window.returnToScrollingScore?.();
+  }
+
+  dbg("PausePlayback()");
+  pausePlayback();
+
+  dbg(`Jumping to user marker "${target}"`);
+  window.jumpToRehearsalMark?.(target);
+
+  dbgState("after markPaused jump");
+  return;
+}
+
+
+// ============================================================
 // CASE 1 — scroll (auto-resume)
 // ============================================================
 if (action === "scroll") {

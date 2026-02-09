@@ -1,7 +1,7 @@
 /*!
- * oscillaSystemSocket.js — WebSocket Transport & Message Routing
+ * oscillaSystemSocket.js â€” WebSocket Transport & Message Routing
  * Part of oscillaScore modular architecture
- * © 2025 Rob Canning — GPLv3
+ * Â© 2025 Rob Canning â€” GPLv3
  *
  * Handles WebSocket connection, message routing, and OSC-in control dispatch.
  * 
@@ -15,12 +15,7 @@ import { handleCueTrigger, teleportPlayhead } from '../cues/cueDispatcher.js';
 import { handleStopCue } from '../cues/stop.js';
 import { handleAudioCue } from '../cues/audio.js';
 import { dismissPauseCountdown, handlePauseCue } from '../cues/pause.js';
-import { dispatchOSC } from '../system/oscillaOSCClient.js';
-import {
-  handleDragSync,
-  handleDragPositionsResponse,
-  handleDragPositionsReset,
-} from "../parser/preProcessDrag.js";
+import { handleOSCIn } from '../control/controlRouter.js';
 
 // ===========================
 // Module State
@@ -85,13 +80,7 @@ export async function connectWebSocket() {
       reconnectAttempts = 0;
       window.wsEnabled = true;
       socket.send(JSON.stringify({ type: "get_repeat_state" }));
-
-      // Request saved drag positions from server
-      const project = window.currentProject || "default";
-      if (project !== "default") {
-        socket.send(JSON.stringify({ type: "drag_positions_request", project }));
-      }
-
+      
       // Sync countdown sequences to server on connect
       // This ensures server has sequences even after reconnect
       setTimeout(() => {
@@ -235,20 +224,17 @@ function handleSocketMessage(event) {
         handleControlSetMessage(data);
         break;
 
-      case "drag_position":
-        handleDragSync(data);
+      // ===========================
+      // COUNTDOWN CUE COMPLETION
+      // Dispatches onComplete cue expression when a timer slot finishes
+      // ===========================
+      case "countdown_cue_complete":
+        if (data.onComplete) {
+          console.log(`[Countdown] Cue "${data.cueName}" completed → dispatching: ${data.onComplete}`);
+          window.handleCueTrigger?.(data.onComplete, false, true);
+        }
         break;
-
-      case "drag_positions_response":
-        handleDragPositionsResponse(data);
-        break;
-
-      case "drag_positions_reset":
-        handleDragPositionsReset(data);
-        break;
-
     }
-
   } catch (error) {
     console.error("[WS] Message error:", error);
   }
@@ -280,13 +266,13 @@ function handleCuePauseMessage(data) {
 function handleSyncMessage(data) {
   const state = data.state;
   if (!state) return;
-
+  
   const wasPlaying = window.isPlaying;
   window.scoreWidth = state.scoreWidth;
 
   if (state.canonicalRenderedWidth) {
     window.canonicalRenderedWidth = state.canonicalRenderedWidth;
-
+    
     const inner = document.getElementById("scoreInner");
     const stage = document.getElementById("scrollStage");
     if (inner) { inner.style.width = "max-content"; inner.style.height = "100%"; }
@@ -296,7 +282,7 @@ function handleSyncMessage(data) {
   if (state.duration > 0) window.duration = state.duration;
   window.elapsedTime = state.elapsedTime;
   window.isPlaying = state.isPlaying;
-
+  
   // Only accept server playhead position if we haven't just manually navigated
   if (state.playheadX !== undefined) {
     if (!window.ignoreNextSync && !window.recentlyRecalculatedPlayhead) {
@@ -305,22 +291,22 @@ function handleSyncMessage(data) {
       const serverX = state.playheadX;
       const drift = Math.abs(serverX - currentX);
       const refWidth = window.remoteScoreWidth || window.scoreWidth || 1;
-
+      
       // If drift is more than 2% of score width, use teleport mode
       if (drift > refWidth * 0.02) {
         window._isTeleporting = true;
         window.suppressCueTriggers = true;
         window.serverSyncPlayheadX = serverX;
-
+        
         // For very large drifts (>5%), jump immediately instead of relying on RAF
         if (drift > refWidth * 0.05) {
           window.playheadX = serverX;
           window.resetCueEdgeTracking?.();
-          console.log(`[WS] SYNC teleport: drift=${drift.toFixed(1)}px (${(drift / refWidth * 100).toFixed(1)}%)`);
+          console.log(`[WS] SYNC teleport: drift=${drift.toFixed(1)}px (${(drift/refWidth*100).toFixed(1)}%)`);
         }
-
+        
         window._skipTriggerFrame = Math.max(window._skipTriggerFrame || 0, 5);
-
+        
         // Clear teleport flags after RAF has processed
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
@@ -343,7 +329,7 @@ function handleSyncMessage(data) {
   if (!window.isPlaying && wasPlaying) {
     cancelAnimationFrame(window.animationFrameId);
   }
-
+  
   // ===========================
   // COUNTDOWN SYNC - SERVER OWNED
   // Just display what server sends
@@ -351,7 +337,7 @@ function handleSyncMessage(data) {
   if (!window.auxwatchNetworkDisabled && window.updateCountdownDisplay) {
     window.updateCountdownDisplay(state.countdown);
   }
-
+  
   // Sync sequences if we don't have any
   if (!window.auxwatchNetworkDisabled && state.countdownSequences && state.countdownSequences.length > 0) {
     const localSeqs = JSON.parse(localStorage.getItem("oscilla.countdownSequences") || "[]");
@@ -379,10 +365,10 @@ function handleJumpMessage(data) {
     return;
   }
   if (window.recentlyRecalculatedPlayhead) return;
-
+  
   // Calculate how far we need to jump
   const jumpDistance = Math.abs((data.playheadX ?? 0) - (window.playheadX ?? 0));
-
+  
   if (jumpDistance > 10) {
     // Significant jump - use teleport mode to prevent cue cascade
     teleportPlayhead(data.playheadX, data.elapsedTime ?? 0);
@@ -405,15 +391,15 @@ function handleJumpMessage(data) {
  */
 function handleOSCInMessage(data) {
   const { address, args } = data;
-
+  
   if (!address) {
     console.warn('[WS] OSC-in missing address:', data);
     return;
   }
 
-  // Dispatch through centralised OSC client (handles ParamBus, handlers, and control routing)
+  // Dispatch to control router
   try {
-    dispatchOSC(address, args || []);
+    handleOSCIn(address, args || []);
   } catch (err) {
     console.error('[WS] OSC-in handler error:', err);
   }
@@ -430,14 +416,14 @@ function handleOSCInMessage(data) {
  */
 function handleControlSetMessage(data) {
   const { uid, param, value } = data;
-
+  
   if (!uid || !param) {
     console.warn('[WS] control_set missing uid or param:', data);
     return;
   }
 
   try {
-    dispatchOSC('/oscilla/set', [uid, param, value]);
+    handleOSCIn('/oscilla/set', [uid, param, value]);
   } catch (err) {
     console.error('[WS] control_set handler error:', err);
   }

@@ -403,7 +403,7 @@
   position: absolute;
   top: 70px;
   right: 20px;
-  width: 320px;
+  width: 420px;
   max-height: 70vh;
   background: rgba(200, 200, 200, 0.95);
   border: 1px solid rgba(0, 0, 0, 0.2);
@@ -579,6 +579,28 @@
   color: #222;
   font-size: 12px;
   text-align: right;
+}
+
+.countdown-cue-oncomplete {
+  flex: 1;
+  min-width: 60px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #222;
+  font-family: 'Iosevka Term Web', monospace;
+  font-size: 11px;
+}
+
+.countdown-cue-oncomplete::placeholder {
+  color: rgba(0, 0, 0, 0.3);
+  font-style: italic;
+}
+
+.countdown-cue-oncomplete:focus {
+  border-color: rgba(255, 100, 100, 0.5);
+  outline: none;
 }
 
 .countdown-cue button {
