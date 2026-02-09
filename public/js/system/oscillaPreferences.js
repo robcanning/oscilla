@@ -2,6 +2,8 @@
 // 🔹 PREFERENCES DIALOG — oscillaPreferences.js
 // ============================================================
 
+import { buildLayerFilterSection, wireLayerFilterUI, saveLayerFilterFromForm } from "./layerFilter.js";
+
 // Track the current save handler so we can remove it
 let currentSaveController = null;
 
@@ -152,6 +154,9 @@ async function openPreferencesDialog() {
       html += `</div></details>`;
     }
     
+    // Append dynamic layer filter section (if layers exist in loaded SVG)
+    html += buildLayerFilterSection(projectName);
+
     form.innerHTML = html;
 
     // Wire up range sliders to show live values
@@ -163,6 +168,9 @@ async function openPreferencesDialog() {
         });
       }
     });
+
+    // Wire layer filter controls (live preview)
+    wireLayerFilterUI(form, projectName);
 
     // Flatten fields for save
     const allFields = sections.flatMap(s => s.fields);
@@ -179,6 +187,7 @@ async function openPreferencesDialog() {
         saveBtn.loading = true;
         try {
           await savePreferences(projectName, allFields, form);
+          saveLayerFilterFromForm(form, projectName);
           dialog.hide();
         } catch (err) {
           console.error("[Preferences] Save error:", err);

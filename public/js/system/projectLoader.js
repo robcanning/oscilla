@@ -14,6 +14,7 @@ import "../control/controlXYPresetUI.js";
 import "../control/o2pPresets.js";
 import "../control/o2pPresetUI.js";
 
+import { scanLayers, applyLayerFilter } from "./layerFilter.js";
 import { setSpeed } from "../transport/oscillaTransport.js";
 import { jumpToCueId } from "../transport/transportNav.js";
 import { applyDarkMode, initializeControlsPin, initializeTopbarPin, hideControls, showControls } from "../transport/transportUI.js";
@@ -485,6 +486,11 @@ async function loadScrollMode(container) {
   console.log("[ScrollMode] ✅ Loaded score.svg into #scrollStage → #scoreInner → <svg>");
 
   if (typeof initializeSVG === "function") initializeSVG(svg);
+
+  // Scan Inkscape layers and apply per-performer filter
+  scanLayers(svg);
+  applyLayerFilter();
+
   window.hideControls?.();
 }
 
