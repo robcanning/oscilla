@@ -1,7 +1,7 @@
 /*!
- * oscillaParamBinding.js — Parameter Binding & Signal Publishing
+ * oscillaParamBinding.js â€” Parameter Binding & Signal Publishing
  * Part of oscillaScore control plane architecture
- * © 2025 Rob Canning — GPLv3
+ * Â© 2025 Rob Canning â€” GPLv3
  *
  * This module provides:
  *   - bindParam(): Subscribe a parameter to a signal source
@@ -83,9 +83,10 @@ export function mapRange(value, inMin, inMax, outMin, outMax) {
 }
 
 /**
- * Attempt to infer source type from channel name
- * @param {string} channel - Channel name
- * @returns {string} Source type
+ * DEPRECATED — no longer used by bindParam().
+ * Kept for backward compatibility with any external callers.
+ * bindParam now subscribes to source-agnostic paths ("uid.channel")
+ * so it does not need to guess the source type.
  */
 function inferSourceType(channel) {
   // O2P channels
@@ -141,9 +142,12 @@ export function bindParam(paramValue, onUpdate, options = {}) {
   const outMin = range?.[0] ?? min;
   const outMax = range?.[1] ?? max;
 
-  // Build signal path
-  const type = sourceType || inferSourceType(channel);
-  const path = `${type}:${source}.${channel}`;
+  // Build source-agnostic signal path.
+  // The composer writes "freq:fader1.t[200,2000]" — the parser extracts
+  // source="fader1", channel="t".  We subscribe to "fader1.t" which is
+  // the agnostic path that publish() writes regardless of the source type
+  // (o2p, controlXY, rotate, scale, color, fade, oscCtrl, ...).
+  const path = `${source}.${channel}`;
 
   // Smoothing state
   let smoothedValue = null;
@@ -178,7 +182,7 @@ export function bindParam(paramValue, onUpdate, options = {}) {
     }
   });
 
-  console.log(`[bindParam] Bound to ${path} → range [${outMin}, ${outMax}]`);
+  console.log(`[bindParam] Bound to ${path} â†’ range [${outMin}, ${outMax}]`);
 
   return {
     value: initialValue,
@@ -258,19 +262,30 @@ export function publish(sourceType, uid, channels, meta = {}) {
   }
   publishTimestamps.set(throttleKey, now);
 
-  // Publish each channel
+  // Publish each channel to both typed and source-agnostic paths.
+  // Typed path   (e.g. "controlXY:pad1.x") — for debugging, explicit
+  //               modulation via oscillaRouter, and OSC routing.
+  // Agnostic path (e.g. "pad1.x") — what bindParam() subscribes to,
+  //               so the composer never needs to know the source type.
   for (const [channel, value] of Object.entries(channels)) {
     if (value === undefined || value === null) continue;
     if (!Number.isFinite(value)) continue;
 
-    const path = `${sourceType}:${uid}.${channel}`;
-    ParamBus.set(path, value, {
+    const pubMeta = {
       ...meta,
       sourceType,
       uid,
       channel,
       timestamp: now
-    });
+    };
+
+    // Typed path (always written)
+    const typedPath = `${sourceType}:${uid}.${channel}`;
+    ParamBus.set(typedPath, value, pubMeta);
+
+    // Source-agnostic path (what bindParam subscribes to)
+    const agnosticPath = `${uid}.${channel}`;
+    ParamBus.set(agnosticPath, value, pubMeta);
   }
 }
 

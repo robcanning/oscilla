@@ -13,6 +13,7 @@ import { initializeObserver } from "./oscillaObserver.js";
 import { assignCues } from "../cues/cueDispatcher.js";
 import { storePathVariants } from "./paths.js";
 import { sendScoreMeta } from "./socket.js";
+import { preProcessDrag, cleanupDrag } from "../parser/preProcessDrag.js";  // ← ADD
 
 // ===========================
 // SVG Initialization
@@ -26,6 +27,8 @@ export async function initializeSVG(svgElement) {
   await settleDomForPropagate();
   console.log("[initializeSVG] 🔧 propagate() after FULL DOM settle");
   propagate(svgElement);
+  cleanupDrag();                // clean OLD handlers from previous SVG
+  preProcessDrag(svgElement);   // strip drag() tokens + attach handlers
 
   const isPageOverlay =
     svgElement.id === "pageSVG" ||
@@ -56,6 +59,7 @@ export async function initializeSVG(svgElement) {
  * @param {SVGElement} svgElement - The SVG element
  */
 async function initializePageMode(svgElement) {
+   
   if (!window.pageRegistry || Object.keys(window.pageRegistry).length === 0) {
     window.buildPageRegistryFromDirIndex?.();
   }
@@ -80,6 +84,7 @@ async function initializePageMode(svgElement) {
  * @param {SVGElement} svgElement - The SVG element
  */
 async function initializeScrollMode(svgElement) {
+
   window.buildPageRegistryFromDirIndex?.();
   window.refreshAllPagesMenu?.();
   registerReuseBlocks(svgElement);

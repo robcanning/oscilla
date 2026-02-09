@@ -6,6 +6,7 @@
 import { scheduleCueStart } from "./cueDispatcher.js";
 import { createOscOverlay } from "./osc.js";
 import { sendOSC } from "../system/oscillaOSCClient.js";
+import { publish } from '../control/paramBinding.js';
 
 import {
     registerAnimation,
@@ -169,6 +170,9 @@ if (cfg._overlay) {
                 t,
                 timestamp: Date.now()
             });
+
+            // Control plane publish (ny is the 0-1 normalized Y)
+            publish("oscCtrl", cfg.uid, { t, v: ny });
         }
     };
 

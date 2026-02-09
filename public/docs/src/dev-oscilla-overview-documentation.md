@@ -1,3 +1,8 @@
+---
+title:  Oscilla System
+layout: docs_layout.njk
+---
+
 # Oscilla — Complete System Documentation
 
 **Version:** 0.4.2  

@@ -17,6 +17,8 @@ Nothing else should permanently set opacity on fade targets.
 // -----------------------------------------------------------------------------
 // Internal registry (one fade per element)
 // -----------------------------------------------------------------------------
+import { publish } from '../control/paramBinding.js';
+
 window._fadeCues ??= new Map();
 
 // -----------------------------------------------------------------------------
@@ -168,9 +170,11 @@ export function handleFadeCueFromAST(ast, cueElement) {
     update: anim => {
       const v = parseFloat(anim.animations?.[0]?.currentValue ?? from);
       sendFadeOSC(v);
+      publish("fade", uid, { opacity: v });
     },
     complete: () => {
       sendFadeOSC(to);
+      publish("fade", uid, { opacity: to });
       console.log("[cueFade] ✅ Complete");
     },
   };
@@ -249,6 +253,7 @@ export function handleFadeCueFromAST(ast, cueElement) {
         const v = visible ? to : from;
         target.style.opacity = v;
         sendFadeOSC(v);
+        publish("fade", uid, { opacity: v });
       }, interval);
 
       break;

@@ -2,6 +2,7 @@
 title: cueSystem
 layout: docs_layout.njk
 ---
+
 # Cue System Overview (oscillaScore)
 
 The cue system in oscillaScore is based on SVG object IDs that trigger actions when intersected by the playhead. Each cue follows a standardized naming convention and is handled by a registered cue handler.

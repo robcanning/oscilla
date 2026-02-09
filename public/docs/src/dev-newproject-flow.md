@@ -1,3 +1,8 @@
+---
+title:  New Project Flow
+layout: docs_layout.njk
+---
+
 # New Project Flow - Developer Documentation
 
 ## Overview

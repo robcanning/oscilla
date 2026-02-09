@@ -22,6 +22,7 @@ import {
 
 import { createOscOverlay } from "./osc.js";
 import { sendOSC } from "../system/oscillaOSCClient.js";
+import { publish } from '../control/paramBinding.js';
 
 // ============================================================
 // COLOR UTILITIES
@@ -421,6 +422,13 @@ function handleColorHueCycle(el, cfg) {
         
         applyColor(el, hsl, target);
         
+        // Control plane publish
+        publish("color", cfg.uid, {
+            hNorm: currentHue / 360,
+            sNorm: baseSat / 100,
+            lNorm: baseLight / 100
+        });
+        
         // OSC
         if (isOscEnabled(cfg, oscMode)) {
             sendOSCColor(cfg, hsl);
@@ -597,6 +605,13 @@ function handleColorSequence(el, cfg) {
         }
         
         applyColor(el, currentHSL, target);
+        
+        // Control plane publish
+        publish("color", cfg.uid, {
+            hNorm: currentHSL.h / 360,
+            sNorm: currentHSL.s / 100,
+            lNorm: currentHSL.l / 100
+        });
         
         // OSC
         if (isOscEnabled(cfg, oscMode)) {

@@ -136,7 +136,7 @@ app.post("/api/project/import", upload.single("file"), async (req, res) => {
 
 
 app.get("/api/projects", (req, res) => {
-const scoresDir = path.join(WRITE_DIR, "public", "scores");
+  const scoresDir = path.join(WRITE_DIR, "public", "scores");
 
   fs.readdir(scoresDir, { withFileTypes: true }, (err, entries) => {
     if (err) {
@@ -244,11 +244,11 @@ function handleAudioTree(req, res, subPath = "") {
       return res.json({ path: subPath, directories: [], files: [] });
     }
 
-console.log("[AUDIO TREE]", {
-  project,
-  audioRoot,
-  exists: fs.existsSync(audioRoot)
-});
+    console.log("[AUDIO TREE]", {
+      project,
+      audioRoot,
+      exists: fs.existsSync(audioRoot)
+    });
 
     const entries = fs.readdirSync(targetDir, { withFileTypes: true });
 
@@ -297,7 +297,7 @@ const audioUpload = multer({
   fileFilter: (req, file, cb) => {
     // Accept by file extension
     const allowedExtensions = /\.(wav|aif|aiff|mp3|ogg|m4a|webm)$/i;
-    
+
     // Accept by MIME type (for browser MediaRecorder)
     const allowedMimes = [
       'audio/wav',
@@ -313,10 +313,10 @@ const audioUpload = multer({
       'audio/m4a',
       'audio/x-m4a'
     ];
-    
+
     const extOk = allowedExtensions.test(file.originalname);
     const mimeOk = allowedMimes.includes(file.mimetype);
-    
+
     if (extOk || mimeOk) {
       cb(null, true);
     } else {
@@ -720,13 +720,13 @@ const broadcastState = () => {
   // Calculate remaining time on server, clients just display it
   // =====================================================
   let countdownSync = null;
-  
+
   if (sharedState.countdown && sharedState.countdown.running) {
     const cd = sharedState.countdown;
     const elapsed = Date.now() - cd.startTime;
     const remainingMs = Math.max(0, (cd.totalSeconds * 1000) - elapsed);
     const remainingSec = Math.ceil(remainingMs / 1000);
-    
+
     countdownSync = {
       running: true,
       cueName: cd.cueName,
@@ -737,11 +737,11 @@ const broadcastState = () => {
       loop: cd.loop,
       currentLoop: cd.currentLoop
     };
-    
+
     // Check if countdown finished
     if (remainingMs <= 0) {
       console.log(`[Countdown] Cue finished: ${cd.cueName}`);
-      
+
       // Advance to next cue or handle loop/chain
       advanceCountdown();
     }
@@ -799,7 +799,7 @@ function startServerCountdown(cue, sequenceName, cueIndex, totalCues, loop, curr
     chainTo: null
   };
   console.log(`[Countdown] ▶ Started: ${cue.name} (${cue.seconds}s)`);
-  
+
   // Immediately broadcast so clients update right away
   broadcastState();
 }
@@ -812,9 +812,9 @@ function startServerSequence(sequence, loopCount) {
     console.warn(`[Countdown] ⚠️ Cannot start sequence - no cues found`);
     return;
   }
-  
+
   const loops = loopCount !== undefined ? loopCount : (sequence.loop ?? 1);
-  
+
   sharedState.countdown = {
     running: true,
     cueName: sequence.cues[0].name || "Countdown",
@@ -829,7 +829,7 @@ function startServerSequence(sequence, loopCount) {
     chainTo: sequence.chain
   };
   console.log(`[Countdown] ▶ Sequence started: ${sequence.name} (${sequence.cues.length} cues, loop: ${loops})`);
-  
+
   // Immediately broadcast so clients update right away
   broadcastState();
 }
@@ -840,20 +840,20 @@ function startServerSequence(sequence, loopCount) {
 function advanceCountdown() {
   const cd = sharedState.countdown;
   if (!cd || !cd.running) return;
-  
+
   // Single cue (not a sequence)
   if (!cd.cues) {
     stopServerCountdown();
     return;
   }
-  
+
   // Move to next cue
   cd.cueIndex++;
-  
+
   // Check if sequence complete
   if (cd.cueIndex >= cd.cues.length) {
     cd.currentLoop++;
-    
+
     // Check if we should loop
     if (cd.loop === Infinity || cd.currentLoop <= cd.loop) {
       // Loop: restart from beginning
@@ -865,7 +865,7 @@ function advanceCountdown() {
       console.log(`[Countdown] Loop ${cd.currentLoop}${cd.loop === Infinity ? ' (∞)' : ' of ' + cd.loop}`);
       return;
     }
-    
+
     // Check if we should chain to another sequence
     if (cd.chainTo !== null && cd.chainTo !== undefined) {
       const sequences = sharedState.countdownSequences || [];
@@ -876,12 +876,12 @@ function advanceCountdown() {
         return;
       }
     }
-    
+
     // Done
     stopServerCountdown();
     return;
   }
-  
+
   // Continue to next cue
   const cue = cd.cues[cd.cueIndex];
   cd.cueName = cue.name || "Countdown";
@@ -898,7 +898,7 @@ function stopServerCountdown() {
     console.log(`[Countdown] ⏹ Stopped`);
   }
   sharedState.countdown = null;
-  
+
   // Immediately broadcast so clients clear their displays
   broadcastState();
 }
@@ -944,14 +944,14 @@ const generateRandomName = () => {
  */
 const assignUniqueColor = () => {
   const usedColors = new Set([...clientColors.values()]);
-  
+
   // Find first available color
   for (const color of MARKER_COLORS) {
     if (!usedColors.has(color)) {
       return color;
     }
   }
-  
+
   // All colors taken - assign based on client count
   return MARKER_COLORS[clientColors.size % MARKER_COLORS.length];
 };
@@ -961,14 +961,14 @@ const assignUniqueColor = () => {
  */
 const broadcastClientList = () => {
   const clients = [];
-  
+
   for (const [ws, name] of clientNames.entries()) {
     clients.push({
       name: name,
       color: clientColors.get(ws) || MARKER_COLORS[0]
     });
   }
-  
+
   const message = JSON.stringify({ type: "client_list", clients });
 
   wss.clients.forEach((client) => {
@@ -987,6 +987,59 @@ const broadcastClientList = () => {
 // project → Map(annotationId → annotationObject)
 
 const annotationsByProject = {};
+
+// ═══════════════════════════════════════════════════════════════════
+// Drag Position Persistence (file-backed)
+// ═══════════════════════════════════════════════════════════════════
+// project → { elementId → { x, y } }
+const dragPositionsByProject = {};
+
+// Debounce timers for file writes (one per project)
+const dragSaveTimers = {};
+
+function dragPositionsFilePath(project) {
+  return path.join(WRITE_DIR, "public", "scores", project, "drag-positions.json");
+}
+
+/**
+ * Load drag positions from JSON file into memory (if not already loaded)
+ */
+function ensureDragPositionsLoaded(project) {
+  if (dragPositionsByProject[project]) return; // already in memory
+
+  const filePath = dragPositionsFilePath(project);
+  try {
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, "utf8");
+      dragPositionsByProject[project] = JSON.parse(raw);
+      const count = Object.keys(dragPositionsByProject[project]).length;
+      if (count > 0) {
+        console.log(`[DRAG] 📂 Loaded ${count} position(s) from ${filePath}`);
+      }
+    }
+  } catch (err) {
+    console.warn(`[DRAG] Failed to load ${filePath}:`, err.message);
+  }
+}
+
+/**
+ * Save drag positions to JSON file (debounced — writes at most every 500ms)
+ */
+function saveDragPositions(project) {
+  if (dragSaveTimers[project]) clearTimeout(dragSaveTimers[project]);
+
+  dragSaveTimers[project] = setTimeout(() => {
+    const filePath = dragPositionsFilePath(project);
+    const data = dragPositionsByProject[project];
+    if (!data) return;
+
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+    } catch (err) {
+      console.warn(`[DRAG] Failed to save ${filePath}:`, err.message);
+    }
+  }, 500);
+}
 
 function broadcastToOthers(ws, payload) {
   const msg = JSON.stringify(payload);
@@ -1008,7 +1061,7 @@ let triggeredCues = new Set();
 wss.on('connection', (ws, req) => {
   const clientName = generateRandomName();
   const clientColor = assignUniqueColor();
-  
+
   clientNames.set(ws, clientName);
   clientColors.set(ws, clientColor);
   activeClients.add(ws);
@@ -1042,6 +1095,87 @@ wss.on('connection', (ws, req) => {
     }
 
     switch (data.type) {
+
+// ===========================
+      // DRAG POSITION PERSISTENCE
+      // ===========================
+
+      case "drag_position": {
+        const { project, elementId, x, y } = data;
+        if (!project || !elementId) {
+          console.warn("[DRAG] Invalid drag_position payload");
+          break;
+        }
+
+        // Store position in memory + save to file
+        dragPositionsByProject[project] ??= {};
+        dragPositionsByProject[project][elementId] = { x, y };
+        saveDragPositions(project);
+
+        // Broadcast to other clients
+        broadcastToOthers(ws, {
+          type: "drag_position",
+          project,
+          elementId,
+          x,
+          y,
+        });
+
+        break;
+      }
+
+      case "drag_positions_request": {
+        const { project } = data;
+        if (!project) {
+          console.warn("[DRAG] Invalid drag_positions_request payload");
+          break;
+        }
+
+        // Load from file if not already in memory
+        ensureDragPositionsLoaded(project);
+
+        const positions = dragPositionsByProject[project] || {};
+        const count = Object.keys(positions).length;
+
+        if (count > 0) {
+          console.log(`[DRAG] 📤 positions request  project=${project}  count=${count}`);
+        }
+
+        // Reply ONLY to requesting client
+        ws.send(JSON.stringify({
+          type: "drag_positions_response",
+          project,
+          positions,
+        }));
+
+        break;
+      }
+
+      case "drag_positions_reset": {
+        const { project } = data;
+        if (!project) break;
+
+        delete dragPositionsByProject[project];
+
+        // Delete the JSON file
+        try {
+          const filePath = dragPositionsFilePath(project);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        } catch (err) {
+          console.warn(`[DRAG] Failed to delete file:`, err.message);
+        }
+
+        console.log(`[DRAG] 🔄 reset all positions  project=${project}`);
+
+        // Broadcast reset to all other clients
+        broadcastToOthers(ws, {
+          type: "drag_positions_reset",
+          project,
+        });
+
+        break;
+      }
+
       case "cueStop":
         console.log(`[DEBUG] Broadcasting cue_stop from client.`);
 
@@ -1784,7 +1918,7 @@ wss.on('connection', (ws, req) => {
       // =====================================================
       // COUNTDOWN - SERVER OWNED
       // =====================================================
-      
+
       case "countdown_start_cue": {
         // Start a single countdown cue
         const { cue } = data;
@@ -1793,16 +1927,16 @@ wss.on('connection', (ws, req) => {
         }
         break;
       }
-      
+
       case "countdown_start_sequence": {
         // Start a sequence - use sent sequence data if provided, or fall back to stored
         const { sequenceIndex, sequence: sentSequence } = data;
         const sequences = sharedState.countdownSequences || [];
-        
+
         // Prefer the sequence data sent with the message (more reliable)
         // Fall back to stored sequences if not provided
         const seq = sentSequence || sequences[sequenceIndex];
-        
+
         if (seq) {
           console.log(`[Countdown] Starting sequence: ${seq.name || 'unnamed'} (index: ${sequenceIndex})`);
           startServerSequence(seq);
@@ -1811,12 +1945,12 @@ wss.on('connection', (ws, req) => {
         }
         break;
       }
-      
+
       case "countdown_stop": {
         stopServerCountdown();
         break;
       }
-      
+
       case "countdown_sequences_update": {
         // Store sequences on server
         sharedState.countdownSequences = data.sequences;
@@ -1828,7 +1962,7 @@ wss.on('connection', (ws, req) => {
         broadcastToOthers(ws, data);
         break;
       }
-      
+
       case "countdown_sequences_request": {
         // Send stored sequences directly to requesting client
         if (sharedState.countdownSequences && sharedState.countdownSequences.length > 0) {
@@ -2225,7 +2359,7 @@ wss.on('connection', (ws, req) => {
 
 const updateLoop = () => {
   const countdownRunning = sharedState.countdown && sharedState.countdown.running;
-  
+
   if (sharedState.isPlaying) {
     updateElapsedTime();
     broadcastState();
