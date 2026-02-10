@@ -1,11 +1,13 @@
 /*!
- * oscillaControlXYPresetUI.js — Preset Management UI
+ * oscillaControlXYPresetUI.js â€” Preset Management UI
  * Part of oscillaScore control plane
- * © 2025 Rob Canning — GPLv3
+ * Â© 2025 Rob Canning â€” GPLv3
  *
  * Provides a floating panel UI for managing controlXY presets
  * Updated: Light theme, slot assignment for presets, removed quick save arrows
  */
+
+import { makeDraggable } from "../system/uiUtils.js";
 
 // ============================================================================
 // UI STATE
@@ -25,8 +27,8 @@ export function createPresetUI() {
   panelElement.id = 'controlxy-preset-panel';
   panelElement.innerHTML = `
     <div class="controlxy-panel-header">
-      <span class="controlxy-panel-title">🎛️ XY Control</span>
-      <button class="controlxy-panel-close" title="Close">×</button>
+      <span class="controlxy-panel-title">ðŸŽ›ï¸ XY Control</span>
+      <button class="controlxy-panel-close" title="Close">Ã—</button>
     </div>
     
     <!-- Tab Navigation -->
@@ -43,7 +45,7 @@ export function createPresetUI() {
         
         <!-- Save Preset -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">💾 Save Preset</div>
+          <div class="controlxy-section-title">ðŸ’¾ Save Preset</div>
           <div class="controlxy-input-row">
             <input type="text" id="controlxy-save-name" placeholder="Preset name..." />
             <button id="controlxy-save-btn" title="Save current positions">Save</button>
@@ -52,7 +54,7 @@ export function createPresetUI() {
         
         <!-- Presets List with Slot Assignment -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">📋 Saved Presets</div>
+          <div class="controlxy-section-title">ðŸ“‹ Saved Presets</div>
           <div id="controlxy-preset-list" class="controlxy-preset-list">
             <div class="controlxy-empty">No presets saved</div>
           </div>
@@ -60,7 +62,7 @@ export function createPresetUI() {
         
         <!-- Recall Options -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">🎬 Recall Options</div>
+          <div class="controlxy-section-title">ðŸŽ¬ Recall Options</div>
           <div class="controlxy-options-grid">
             <label>
               <span>Duration</span>
@@ -83,7 +85,7 @@ export function createPresetUI() {
         
         <!-- Scenes Section -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">🎭 Scenes</div>
+          <div class="controlxy-section-title">ðŸŽ­ Scenes</div>
           <div class="controlxy-input-row">
             <input type="text" id="controlxy-scene-name" placeholder="Scene name..." />
             <button id="controlxy-scene-save-btn" title="Save current state as scene">Save</button>
@@ -100,14 +102,14 @@ export function createPresetUI() {
         
         <!-- Sequence Editor -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">🎬 Sequence Editor</div>
+          <div class="controlxy-section-title">ðŸŽ¬ Sequence Editor</div>
           <div class="controlxy-input-row">
             <input type="text" id="controlxy-seq-name" placeholder="Sequence name..." />
             <label class="controlxy-checkbox controlxy-loop-editor">
               <input type="checkbox" id="controlxy-seq-loop-editor" />
               <span>Loop</span>
             </label>
-            <button id="controlxy-seq-create-btn" title="Create/Update">💾</button>
+            <button id="controlxy-seq-create-btn" title="Create/Update">ðŸ’¾</button>
           </div>
           
           <!-- Step Editor -->
@@ -132,7 +134,7 @@ export function createPresetUI() {
         
         <!-- Sequences List -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">📜 Saved Sequences</div>
+          <div class="controlxy-section-title">ðŸ“œ Saved Sequences</div>
           <div id="controlxy-sequence-list" class="controlxy-preset-list">
             <div class="controlxy-empty">No sequences defined</div>
           </div>
@@ -140,12 +142,12 @@ export function createPresetUI() {
         
         <!-- Sequence Playback -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">▶️ Playback</div>
+          <div class="controlxy-section-title">â–¶ï¸ Playback</div>
           <div class="controlxy-options-grid">
             <label>
               <span>Speed</span>
               <input type="number" id="controlxy-seq-speed" value="1" min="0.1" max="10" step="0.1" />
-              <span class="unit">×</span>
+              <span class="unit">Ã—</span>
             </label>
             <label>
               <span>Default Dur</span>
@@ -165,7 +167,7 @@ export function createPresetUI() {
             </label>
           </div>
           <div class="controlxy-seq-controls">
-            <button id="controlxy-seq-stop" title="Stop sequence">⏹ Stop</button>
+            <button id="controlxy-seq-stop" title="Stop sequence">â¹ Stop</button>
           </div>
           <div id="controlxy-seq-status" class="controlxy-seq-status"></div>
         </div>
@@ -177,7 +179,7 @@ export function createPresetUI() {
         
         <!-- Pattern Type Selector -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">🌀 Pattern Generator</div>
+          <div class="controlxy-section-title">ðŸŒ€ Pattern Generator</div>
           <select id="controlxy-gen-type" class="controlxy-full-select">
             <option value="lissajous">Lissajous Curve</option>
             <option value="circle">Circle / Orbit</option>
@@ -189,7 +191,7 @@ export function createPresetUI() {
         
         <!-- Target Selection -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">🎯 Target</div>
+          <div class="controlxy-section-title">ðŸŽ¯ Target</div>
           <div class="controlxy-input-row">
             <input type="text" id="controlxy-gen-uid" placeholder="Pad UID" value="pad1" />
             <input type="text" id="controlxy-gen-handle" placeholder="Handle ID" value="dot1" />
@@ -198,7 +200,7 @@ export function createPresetUI() {
         
         <!-- Generator Options (dynamic based on type) -->
         <div class="controlxy-section">
-          <div class="controlxy-section-title">⚙️ Options</div>
+          <div class="controlxy-section-title">âš™ï¸ Options</div>
           <div id="controlxy-gen-options" class="controlxy-options-grid">
             <!-- Dynamically populated based on generator type -->
           </div>
@@ -217,10 +219,10 @@ export function createPresetUI() {
       
       <!-- ========== IMPORT/EXPORT (Always Visible) ========== -->
       <div class="controlxy-section controlxy-always-show">
-        <div class="controlxy-section-title">💾 Import / Export</div>
+        <div class="controlxy-section-title">ðŸ’¾ Import / Export</div>
         <div class="controlxy-button-row">
-          <button id="controlxy-export-btn">📤 Export</button>
-          <button id="controlxy-import-btn">📥 Import</button>
+          <button id="controlxy-export-btn">ðŸ“¤ Export</button>
+          <button id="controlxy-import-btn">ðŸ“¥ Import</button>
         </div>
         <input type="file" id="controlxy-import-file" accept=".json" style="display:none" />
       </div>
@@ -388,13 +390,13 @@ function handleGenerate() {
   const infoDiv = panelElement.querySelector('#controlxy-gen-info');
   
   if (!genName) {
-    infoDiv.textContent = '⚠️ Please enter a pattern name';
+    infoDiv.textContent = 'âš ï¸ Please enter a pattern name';
     infoDiv.style.color = '#c62828';
     return;
   }
   
   if (!genUID || !genHandle) {
-    infoDiv.textContent = '⚠️ Please specify pad UID and handle ID';
+    infoDiv.textContent = 'âš ï¸ Please specify pad UID and handle ID';
     infoDiv.style.color = '#c62828';
     return;
   }
@@ -463,14 +465,14 @@ function handleGenerate() {
     
     window.controlXYPresets.playSequence(genName, { dur: parseFloat(dur), ease, loop: true });
     
-    infoDiv.textContent = `✓ Generated ${presets.length} presets, playing now!`;
+    infoDiv.textContent = `âœ“ Generated ${presets.length} presets, playing now!`;
     infoDiv.style.color = '#2e7d32';
     
     refreshPresetList();
     refreshSequenceList();
     
   } catch (err) {
-    infoDiv.textContent = `❌ Error: ${err.message}`;
+    infoDiv.textContent = `âŒ Error: ${err.message}`;
     infoDiv.style.color = '#c62828';
     console.error('[controlXY] Generation error:', err);
   }
@@ -755,9 +757,9 @@ function renderStepEditor() {
         <option value="easeInOutCubic" ${step.ease === 'easeInOutCubic' ? 'selected' : ''}>Cu</option>
       </select>
       <div class="step-actions">
-        <button class="step-up" title="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
-        <button class="step-down" title="Move down" ${i === editorSteps.length - 1 ? 'disabled' : ''}>↓</button>
-        <button class="step-delete" title="Remove">×</button>
+        <button class="step-up" title="Move up" ${i === 0 ? 'disabled' : ''}>â†‘</button>
+        <button class="step-down" title="Move down" ${i === editorSteps.length - 1 ? 'disabled' : ''}>â†“</button>
+        <button class="step-delete" title="Remove">Ã—</button>
       </div>
     </div>
   `).join('');
@@ -829,7 +831,7 @@ function showSaveIndicator() {
   const title = panelElement?.querySelector('.controlxy-panel-title');
   if (title) {
     const original = title.textContent;
-    title.textContent = '💾 Saved!';
+    title.textContent = 'ðŸ’¾ Saved!';
     setTimeout(() => { title.textContent = original; }, 1000);
   }
 }
@@ -984,7 +986,7 @@ function refreshPresetList() {
     const slot = findPresetSlot(name);
     const slotBadge = slot 
       ? `<span class="controlxy-preset-slot-badge">B${slot.bankIdx + 1}-${slot.slotIdx + 1}</span>`
-      : `<span class="controlxy-preset-slot-badge unassigned">—</span>`;
+      : `<span class="controlxy-preset-slot-badge unassigned">â€”</span>`;
     
     const selectOptions = slotOptions.map(opt => {
       const selected = (slot?.key === opt.value) ? 'selected' : '';
@@ -999,8 +1001,8 @@ function refreshPresetList() {
           ${selectOptions}
         </select>
         <div class="controlxy-preset-actions">
-          <button class="controlxy-recall-btn" title="Recall preset">▶</button>
-          <button class="controlxy-delete-btn" title="Delete preset">🗑</button>
+          <button class="controlxy-recall-btn" title="Recall preset">â–¶</button>
+          <button class="controlxy-delete-btn" title="Delete preset">ðŸ—‘</button>
         </div>
       </div>
     `;
@@ -1075,17 +1077,17 @@ function refreshSequenceList() {
       typeof step === 'object' && step.dur !== undefined
     );
     
-    const nestedIcon = hasNested ? ' 🔗' : '';
-    const durIcon = hasPerStepDur ? ' ⏱' : '';
-    const loopIcon = seqLoop ? ' 🔄' : '';
+    const nestedIcon = hasNested ? ' ðŸ”—' : '';
+    const durIcon = hasPerStepDur ? ' â±' : '';
+    const loopIcon = seqLoop ? ' ðŸ”„' : '';
     
     return `
       <div class="controlxy-preset-item" data-sequence="${name}">
         <span class="controlxy-preset-name">${name}${loopIcon}${nestedIcon}${durIcon} <small>(${stepCount})</small></span>
         <div class="controlxy-preset-actions">
-          <button class="controlxy-edit-seq-btn" title="Edit sequence">✏️</button>
-          <button class="controlxy-play-seq-btn" title="Play sequence">▶</button>
-          <button class="controlxy-delete-seq-btn" title="Delete sequence">🗑</button>
+          <button class="controlxy-edit-seq-btn" title="Edit sequence">âœï¸</button>
+          <button class="controlxy-play-seq-btn" title="Play sequence">â–¶</button>
+          <button class="controlxy-delete-seq-btn" title="Delete sequence">ðŸ—‘</button>
         </div>
       </div>
     `;
@@ -1148,8 +1150,8 @@ function refreshSceneList() {
       <div class="controlxy-scene-item" data-scene="${name}">
         <span class="controlxy-scene-name">${name}</span>
         <div class="controlxy-scene-actions">
-          <button class="controlxy-recall-scene-btn" title="Recall scene">▶</button>
-          <button class="controlxy-delete-scene-btn" title="Delete scene">🗑</button>
+          <button class="controlxy-recall-scene-btn" title="Recall scene">â–¶</button>
+          <button class="controlxy-delete-scene-btn" title="Delete scene">ðŸ—‘</button>
         </div>
       </div>
     `;
@@ -1248,39 +1250,6 @@ export function togglePresetUI() {
   } else {
     showPresetUI();
   }
-}
-
-// ============================================================================
-// DRAGGABLE
-// ============================================================================
-
-function makeDraggable(element, handle) {
-  let offsetX = 0, offsetY = 0;
-  let isDragging = false;
-  
-  handle.addEventListener('mousedown', (e) => {
-    if (e.target.tagName === 'BUTTON') return;
-    
-    isDragging = true;
-    offsetX = e.clientX - element.offsetLeft;
-    offsetY = e.clientY - element.offsetTop;
-    
-    handle.style.cursor = 'grabbing';
-  });
-  
-  document.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-    
-    element.style.left = (e.clientX - offsetX) + 'px';
-    element.style.top = (e.clientY - offsetY) + 'px';
-    element.style.right = 'auto';
-    element.style.bottom = 'auto';
-  });
-  
-  document.addEventListener('mouseup', () => {
-    isDragging = false;
-    handle.style.cursor = 'grab';
-  });
 }
 
 // ============================================================================

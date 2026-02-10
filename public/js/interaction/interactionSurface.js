@@ -70,6 +70,17 @@ import {
     makeEditor,
 } from "./annotationEditor.js";
 
+// Drawing system
+import {
+    initDrawing,
+    destroyDrawing,
+    setDrawMode,
+    isDrawMode,
+    isEraserMode,
+    renderStrokes,
+    toggleDrawMode,
+} from "./drawing.js";
+
 // Re-export for external use
 export { 
     toggleMarkersVisibility, 
@@ -77,6 +88,7 @@ export {
     dropMarker,
     checkAnnotationPlayheadTriggers,
     resetAnnotationPlayheadTriggers,
+    toggleDrawMode,
 };
 
 // =============================================================
@@ -251,6 +263,9 @@ function renderAll() {
         if (item.kind === "marker") {
             const markerEl = makeMarkerEl(item, (m) => openMarkerEditor(m));
             layer.appendChild(markerEl);
+        } else if (item.kind === "stroke") {
+            // Strokes are rendered by the drawing module
+            continue;
         } else {
             const pin = makePinEl(item, (ann) => openEditForExisting(ann));
             layer.appendChild(pin);
@@ -258,6 +273,9 @@ function renderAll() {
             pin._renderExtent?.();
         }
     }
+
+    // Render drawing strokes on the SVG overlay
+    renderStrokes();
 }
 
 // =============================================================
@@ -366,6 +384,7 @@ function openEditForExisting(annotation) {
 
 function onScoreClick(evt) {
     if (!state.enabled || !state.annotationMode) return;
+    if (isDrawMode() || isEraserMode()) return;
     if (!isWithinScoreArea(evt.target)) return;
     if (evt.target.closest(".osc-anno-pin")) return;
     if (evt.target.closest(".osc-anno-editor")) return;
@@ -418,6 +437,7 @@ function onScoreClick(evt) {
 
 function onPageClick(evt) {
     if (!state.enabled || !state.annotationMode) return;
+    if (isDrawMode() || isEraserMode()) return;
 
     const content = getPageContentContainer();
     if (!content) return;
@@ -657,6 +677,9 @@ export function initOscillaAnnotations(opts = {}) {
     // Initialize marker system
     initMarkers();
 
+    // Initialize drawing system
+    initDrawing();
+
     // Re-attach layers on resize
     const reattach = () => {
         attachDomLayersIfPossible();
@@ -691,7 +714,22 @@ export function initOscillaAnnotations(opts = {}) {
         getMarkers: getMarkers,
         toggleMarkers: toggleMarkersVisibility,
         markersVisible: getMarkersVisible,
+
+        // Drawing API
+        toggleDrawMode: toggleDrawMode,
+        setDrawMode: setDrawMode,
     };
+
+    // Wire draw mode toggle button
+    const drawToggleBtn = document.getElementById("draw-toggle");
+    if (drawToggleBtn) {
+        drawToggleBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleDrawMode();
+            drawToggleBtn.classList.toggle("active", isDrawMode());
+        });
+    }
 
     console.log("[annotations] Initialized:", {
         project: state.project,
@@ -706,6 +744,8 @@ export function initOscillaAnnotations(opts = {}) {
 
 export function destroyOscillaAnnotations() {
     if (!state.initialized) return;
+
+    destroyDrawing();
 
     detachEventListeners();
 

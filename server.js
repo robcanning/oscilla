@@ -50,7 +50,7 @@ import multer from "multer";
 
 const app = express();
 
-// ✅ REQUIRED for your new project APIs
+// âœ… REQUIRED for your new project APIs
 app.use(express.json());
 
 const upload = multer();
@@ -60,7 +60,7 @@ const upload = multer();
 // ---------------------------------------------
 
 // WebSocket / HTTP port
-// Priority: CLI arg → env var → fallback default
+// Priority: CLI arg â†’ env var â†’ fallback default
 const port = argv.port || process.env.PORT || 8001;
 
 // OSC settings object
@@ -136,7 +136,7 @@ app.post("/api/project/import", upload.single("file"), async (req, res) => {
 
 
 app.get("/api/projects", (req, res) => {
-  const scoresDir = path.join(WRITE_DIR, "public", "scores");
+const scoresDir = path.join(WRITE_DIR, "public", "scores");
 
   fs.readdir(scoresDir, { withFileTypes: true }, (err, entries) => {
     if (err) {
@@ -196,8 +196,8 @@ app.get('/config', (req, res) => {
 /// ---------------------------------------------
 // pkg-safe paths (READ vs WRITE)
 // ---------------------------------------------
-// READ_DIR  → bundled assets (pkg snapshot)
-// WRITE_DIR → user-writable working directory
+// READ_DIR  â†’ bundled assets (pkg snapshot)
+// WRITE_DIR â†’ user-writable working directory
 
 // const IS_PKG = !!process.pkg;
 
@@ -244,11 +244,11 @@ function handleAudioTree(req, res, subPath = "") {
       return res.json({ path: subPath, directories: [], files: [] });
     }
 
-    console.log("[AUDIO TREE]", {
-      project,
-      audioRoot,
-      exists: fs.existsSync(audioRoot)
-    });
+console.log("[AUDIO TREE]", {
+  project,
+  audioRoot,
+  exists: fs.existsSync(audioRoot)
+});
 
     const entries = fs.readdirSync(targetDir, { withFileTypes: true });
 
@@ -297,7 +297,7 @@ const audioUpload = multer({
   fileFilter: (req, file, cb) => {
     // Accept by file extension
     const allowedExtensions = /\.(wav|aif|aiff|mp3|ogg|m4a|webm)$/i;
-
+    
     // Accept by MIME type (for browser MediaRecorder)
     const allowedMimes = [
       'audio/wav',
@@ -313,10 +313,10 @@ const audioUpload = multer({
       'audio/m4a',
       'audio/x-m4a'
     ];
-
+    
     const extOk = allowedExtensions.test(file.originalname);
     const mimeOk = allowedMimes.includes(file.mimetype);
-
+    
     if (extOk || mimeOk) {
       cb(null, true);
     } else {
@@ -583,10 +583,10 @@ app.post("/save-preferences/:project", express.json(), (req, res) => {
 
   try {
     fs.writeFileSync(file, JSON.stringify(prefs, null, 2), "utf8");
-    console.log(`[Prefs] ✅ Saved preferences for ${project}`);
+    console.log(`[Prefs] âœ… Saved preferences for ${project}`);
     res.json({ ok: true });
   } catch (err) {
-    console.error("[Prefs] ❌ Failed to save preferences:", err);
+    console.error("[Prefs] âŒ Failed to save preferences:", err);
     res.status(500).json({ error: "Failed to write preferences.json" });
   }
 });
@@ -694,7 +694,7 @@ function retargetStartTimestampFromElapsed(now, elapsedMs, speedMul) {
 
 
 
-// ✅ Store connected clients and their names
+// âœ… Store connected clients and their names
 let connectedClients = {}; // { socketId: "ClientName" }
 
 const broadcastState = () => {
@@ -720,13 +720,13 @@ const broadcastState = () => {
   // Calculate remaining time on server, clients just display it
   // =====================================================
   let countdownSync = null;
-
+  
   if (sharedState.countdown && sharedState.countdown.running) {
     const cd = sharedState.countdown;
     const elapsed = Date.now() - cd.startTime;
     const remainingMs = Math.max(0, (cd.totalSeconds * 1000) - elapsed);
     const remainingSec = Math.ceil(remainingMs / 1000);
-
+    
     countdownSync = {
       running: true,
       cueName: cd.cueName,
@@ -737,11 +737,28 @@ const broadcastState = () => {
       loop: cd.loop,
       currentLoop: cd.currentLoop
     };
-
+    
     // Check if countdown finished
     if (remainingMs <= 0) {
       console.log(`[Countdown] Cue finished: ${cd.cueName}`);
-
+      
+      // Broadcast onComplete cue trigger if present
+      const finishedOnComplete = cd.cues 
+        ? (cd.cues[cd.cueIndex]?.onComplete || null)
+        : (cd.onComplete || null);
+      
+      if (finishedOnComplete) {
+        const completeMsg = JSON.stringify({
+          type: "countdown_cue_complete",
+          onComplete: finishedOnComplete,
+          cueName: cd.cueName
+        });
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) client.send(completeMsg);
+        });
+        console.log(`[Countdown] onComplete trigger: ${finishedOnComplete} (from: ${cd.cueName})`);
+      }
+      
       // Advance to next cue or handle loop/chain
       advanceCountdown();
     }
@@ -770,7 +787,7 @@ const broadcastState = () => {
     }
   });
 
-  const frames = ["·", "•", " ● ", "•"];
+  const frames = ["Â·", "â€¢", " â— ", "â€¢"];
   if (!global._hb) global._hb = 0;
 
   process.stdout.write(`\x1b[32m${frames[global._hb++ % frames.length]}\x1b[0m`);
@@ -797,10 +814,10 @@ function startServerCountdown(cue, sequenceName, cueIndex, totalCues, loop, curr
     currentLoop: currentLoop || 1,
     cues: null,  // Will be set if running a sequence
     chainTo: null,
-    onComplete: cue.onComplete || null  // Per-cue completion action
+    onComplete: cue.onComplete || null  // Cue trigger on completion
   };
-  console.log(`[Countdown] ▶ Started: ${cue.name} (${cue.seconds}s)`);
-
+  console.log(`[Countdown] â–¶ Started: ${cue.name} (${cue.seconds}s)`);
+  
   // Immediately broadcast so clients update right away
   broadcastState();
 }
@@ -810,12 +827,12 @@ function startServerCountdown(cue, sequenceName, cueIndex, totalCues, loop, curr
  */
 function startServerSequence(sequence, loopCount) {
   if (!sequence || !sequence.cues || sequence.cues.length === 0) {
-    console.warn(`[Countdown] ⚠️ Cannot start sequence - no cues found`);
+    console.warn(`[Countdown] âš ï¸ Cannot start sequence - no cues found`);
     return;
   }
-
+  
   const loops = loopCount !== undefined ? loopCount : (sequence.loop ?? 1);
-
+  
   sharedState.countdown = {
     running: true,
     cueName: sequence.cues[0].name || "Countdown",
@@ -829,8 +846,8 @@ function startServerSequence(sequence, loopCount) {
     cues: sequence.cues,
     chainTo: sequence.chain
   };
-  console.log(`[Countdown] ▶ Sequence started: ${sequence.name} (${sequence.cues.length} cues, loop: ${loops})`);
-
+  console.log(`[Countdown] â–¶ Sequence started: ${sequence.name} (${sequence.cues.length} cues, loop: ${loops})`);
+  
   // Immediately broadcast so clients update right away
   broadcastState();
 }
@@ -841,52 +858,20 @@ function startServerSequence(sequence, loopCount) {
 function advanceCountdown() {
   const cd = sharedState.countdown;
   if (!cd || !cd.running) return;
-
-  // ─── Broadcast onComplete for the cue that just finished ───
-  if (cd.cues && cd.cues[cd.cueIndex]) {
-    const completedCue = cd.cues[cd.cueIndex];
-    if (completedCue.onComplete) {
-      const msg = JSON.stringify({
-        type: "countdown_cue_complete",
-        onComplete: completedCue.onComplete,
-        cueName: completedCue.name || "Countdown"
-      });
-      wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(msg);
-        }
-      });
-      console.log(`[Countdown] Broadcasting onComplete for "${completedCue.name}": ${completedCue.onComplete}`);
-    }
-  }
-
+  
   // Single cue (not a sequence)
   if (!cd.cues) {
-    // Broadcast onComplete for single cue
-    if (cd.onComplete) {
-      const msg = JSON.stringify({
-        type: "countdown_cue_complete",
-        onComplete: cd.onComplete,
-        cueName: cd.cueName || "Countdown"
-      });
-      wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(msg);
-        }
-      });
-      console.log(`[Countdown] Broadcasting onComplete for single cue "${cd.cueName}": ${cd.onComplete}`);
-    }
     stopServerCountdown();
     return;
   }
-
+  
   // Move to next cue
   cd.cueIndex++;
-
+  
   // Check if sequence complete
   if (cd.cueIndex >= cd.cues.length) {
     cd.currentLoop++;
-
+    
     // Check if we should loop
     if (cd.loop === Infinity || cd.currentLoop <= cd.loop) {
       // Loop: restart from beginning
@@ -895,10 +880,10 @@ function advanceCountdown() {
       cd.cueName = cue.name || "Countdown";
       cd.totalSeconds = cue.seconds || 0;
       cd.startTime = Date.now();
-      console.log(`[Countdown] Loop ${cd.currentLoop}${cd.loop === Infinity ? ' (∞)' : ' of ' + cd.loop}`);
+      console.log(`[Countdown] Loop ${cd.currentLoop}${cd.loop === Infinity ? ' (âˆž)' : ' of ' + cd.loop}`);
       return;
     }
-
+    
     // Check if we should chain to another sequence
     if (cd.chainTo !== null && cd.chainTo !== undefined) {
       const sequences = sharedState.countdownSequences || [];
@@ -909,12 +894,12 @@ function advanceCountdown() {
         return;
       }
     }
-
+    
     // Done
     stopServerCountdown();
     return;
   }
-
+  
   // Continue to next cue
   const cue = cd.cues[cd.cueIndex];
   cd.cueName = cue.name || "Countdown";
@@ -928,10 +913,10 @@ function advanceCountdown() {
  */
 function stopServerCountdown() {
   if (sharedState.countdown) {
-    console.log(`[Countdown] ⏹ Stopped`);
+    console.log(`[Countdown] â¹ Stopped`);
   }
   sharedState.countdown = null;
-
+  
   // Immediately broadcast so clients clear their displays
   broadcastState();
 }
@@ -959,8 +944,8 @@ const MARKER_COLORS = [
 ];
 
 const activeClients = new Set(); // Track active WebSocket connections
-const clientNames = new Map();   // ws → name
-const clientColors = new Map();  // ws → color
+const clientNames = new Map();   // ws â†’ name
+const clientColors = new Map();  // ws â†’ color
 
 /**
  * Generate a random cartographer name
@@ -977,14 +962,14 @@ const generateRandomName = () => {
  */
 const assignUniqueColor = () => {
   const usedColors = new Set([...clientColors.values()]);
-
+  
   // Find first available color
   for (const color of MARKER_COLORS) {
     if (!usedColors.has(color)) {
       return color;
     }
   }
-
+  
   // All colors taken - assign based on client count
   return MARKER_COLORS[clientColors.size % MARKER_COLORS.length];
 };
@@ -994,14 +979,14 @@ const assignUniqueColor = () => {
  */
 const broadcastClientList = () => {
   const clients = [];
-
+  
   for (const [ws, name] of clientNames.entries()) {
     clients.push({
       name: name,
       color: clientColors.get(ws) || MARKER_COLORS[0]
     });
   }
-
+  
   const message = JSON.stringify({ type: "client_list", clients });
 
   wss.clients.forEach((client) => {
@@ -1017,62 +1002,9 @@ const broadcastClientList = () => {
 // -----------------------------------------------------------
 //  Shared Annotations (session-scoped)
 // -----------------------------------------------------------
-// project → Map(annotationId → annotationObject)
+// project â†’ Map(annotationId â†’ annotationObject)
 
 const annotationsByProject = {};
-
-// ═══════════════════════════════════════════════════════════════════
-// Drag Position Persistence (file-backed)
-// ═══════════════════════════════════════════════════════════════════
-// project → { elementId → { x, y } }
-const dragPositionsByProject = {};
-
-// Debounce timers for file writes (one per project)
-const dragSaveTimers = {};
-
-function dragPositionsFilePath(project) {
-  return path.join(WRITE_DIR, "public", "scores", project, "drag-positions.json");
-}
-
-/**
- * Load drag positions from JSON file into memory (if not already loaded)
- */
-function ensureDragPositionsLoaded(project) {
-  if (dragPositionsByProject[project]) return; // already in memory
-
-  const filePath = dragPositionsFilePath(project);
-  try {
-    if (fs.existsSync(filePath)) {
-      const raw = fs.readFileSync(filePath, "utf8");
-      dragPositionsByProject[project] = JSON.parse(raw);
-      const count = Object.keys(dragPositionsByProject[project]).length;
-      if (count > 0) {
-        console.log(`[DRAG] 📂 Loaded ${count} position(s) from ${filePath}`);
-      }
-    }
-  } catch (err) {
-    console.warn(`[DRAG] Failed to load ${filePath}:`, err.message);
-  }
-}
-
-/**
- * Save drag positions to JSON file (debounced — writes at most every 500ms)
- */
-function saveDragPositions(project) {
-  if (dragSaveTimers[project]) clearTimeout(dragSaveTimers[project]);
-
-  dragSaveTimers[project] = setTimeout(() => {
-    const filePath = dragPositionsFilePath(project);
-    const data = dragPositionsByProject[project];
-    if (!data) return;
-
-    try {
-      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
-    } catch (err) {
-      console.warn(`[DRAG] Failed to save ${filePath}:`, err.message);
-    }
-  }, 500);
-}
 
 function broadcastToOthers(ws, payload) {
   const msg = JSON.stringify(payload);
@@ -1084,9 +1016,9 @@ function broadcastToOthers(ws, payload) {
 }
 
 ////////////////////////////////
-let cuePauseAcks = new Set(); // ✅ Moved to global scope so it persists for all clients
+let cuePauseAcks = new Set(); // âœ… Moved to global scope so it persists for all clients
 
-let repeatStateMap = {}; // cueId → { currentCount, count, active, ... }
+let repeatStateMap = {}; // cueId â†’ { currentCount, count, active, ... }
 
 // Declare a set to track triggered cues
 let triggeredCues = new Set();
@@ -1094,7 +1026,7 @@ let triggeredCues = new Set();
 wss.on('connection', (ws, req) => {
   const clientName = generateRandomName();
   const clientColor = assignUniqueColor();
-
+  
   clientNames.set(ws, clientName);
   clientColors.set(ws, clientColor);
   activeClients.add(ws);
@@ -1128,87 +1060,6 @@ wss.on('connection', (ws, req) => {
     }
 
     switch (data.type) {
-
-// ===========================
-      // DRAG POSITION PERSISTENCE
-      // ===========================
-
-      case "drag_position": {
-        const { project, elementId, x, y } = data;
-        if (!project || !elementId) {
-          console.warn("[DRAG] Invalid drag_position payload");
-          break;
-        }
-
-        // Store position in memory + save to file
-        dragPositionsByProject[project] ??= {};
-        dragPositionsByProject[project][elementId] = { x, y };
-        saveDragPositions(project);
-
-        // Broadcast to other clients
-        broadcastToOthers(ws, {
-          type: "drag_position",
-          project,
-          elementId,
-          x,
-          y,
-        });
-
-        break;
-      }
-
-      case "drag_positions_request": {
-        const { project } = data;
-        if (!project) {
-          console.warn("[DRAG] Invalid drag_positions_request payload");
-          break;
-        }
-
-        // Load from file if not already in memory
-        ensureDragPositionsLoaded(project);
-
-        const positions = dragPositionsByProject[project] || {};
-        const count = Object.keys(positions).length;
-
-        if (count > 0) {
-          console.log(`[DRAG] 📤 positions request  project=${project}  count=${count}`);
-        }
-
-        // Reply ONLY to requesting client
-        ws.send(JSON.stringify({
-          type: "drag_positions_response",
-          project,
-          positions,
-        }));
-
-        break;
-      }
-
-      case "drag_positions_reset": {
-        const { project } = data;
-        if (!project) break;
-
-        delete dragPositionsByProject[project];
-
-        // Delete the JSON file
-        try {
-          const filePath = dragPositionsFilePath(project);
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        } catch (err) {
-          console.warn(`[DRAG] Failed to delete file:`, err.message);
-        }
-
-        console.log(`[DRAG] 🔄 reset all positions  project=${project}`);
-
-        // Broadcast reset to all other clients
-        broadcastToOthers(ws, {
-          type: "drag_positions_reset",
-          project,
-        });
-
-        break;
-      }
-
       case "cueStop":
         console.log(`[DEBUG] Broadcasting cue_stop from client.`);
 
@@ -1248,7 +1099,7 @@ wss.on('connection', (ws, req) => {
           : `/oscilla/rotate/${uid}`;
 
         console.log(
-          `[OSC] 🔁 ROTATE ${uid}  → ${address}  deg=${d.toFixed(2)}  rad=${(rad ?? 0).toFixed?.(4) ?? "0"}  norm=${(norm ?? 0).toFixed?.(4) ?? "0"}`
+          `[OSC] ðŸ” ROTATE ${uid}  â†’ ${address}  deg=${d.toFixed(2)}  rad=${(rad ?? 0).toFixed?.(4) ?? "0"}  norm=${(norm ?? 0).toFixed?.(4) ?? "0"}`
         );
 
         oscPort.send({
@@ -1256,7 +1107,7 @@ wss.on('connection', (ws, req) => {
           args: [
             { type: "f", value: d },          // degrees
             { type: "f", value: Number(rad) || 0 },   // radians
-            { type: "f", value: Number(norm) || 0 }   // 0–1 normalized
+            { type: "f", value: Number(norm) || 0 }   // 0â€“1 normalized
           ]
         });
 
@@ -1265,14 +1116,14 @@ wss.on('connection', (ws, req) => {
 
 
       // -----------------------------------------------------------
-      // 🎚️ OSC Fade updates from client
+      // ðŸŽšï¸ OSC Fade updates from client
       // -----------------------------------------------------------
       case "osc_fade": {
         let { uid, value } = data;
         if (!uid) uid = "unknown";
         uid = String(uid).replace(/[^a-zA-Z0-9_\-]/g, "");
 
-        console.log(`[OSC] 🎚 FADER ${uid}: value=${Number(value).toFixed(3)}`);
+        console.log(`[OSC] ðŸŽš FADER ${uid}: value=${Number(value).toFixed(3)}`);
 
         oscPort.send({
           address: `/oscilla/fade/${uid}`,
@@ -1298,7 +1149,7 @@ wss.on('connection', (ws, req) => {
           : `/oscilla/scale/${uid}`;
 
         console.log(
-          `[OSC] 📏 SCALE  ${uid}  →  ${address}   X=${scaleX.toFixed(3)}  Y=${scaleY.toFixed(3)}`
+          `[OSC] ðŸ“ SCALE  ${uid}  â†’  ${address}   X=${scaleX.toFixed(3)}  Y=${scaleY.toFixed(3)}`
         );
 
         oscPort.send({
@@ -1313,7 +1164,7 @@ wss.on('connection', (ws, req) => {
       }
 
       // -----------------------------------------------------------
-      // 🔊 OSC Audio Pool trigger
+      // ðŸ”Š OSC Audio Pool trigger
       // -----------------------------------------------------------
       case "osc_audio_pool": {
         const { filename, amp, fadeIn, fadeOut, pan, pitch, addr } = data;
@@ -1329,7 +1180,7 @@ wss.on('connection', (ws, req) => {
         const fadeOutVal = parseFloat(fadeOut) || 0;
 
         console.log(
-          `[OSC] 🔊 POOL → ${address}  file=${filename}  amp=${ampVal.toFixed(2)}  pan=${panVal.toFixed(2)}  pitch=${pitchVal.toFixed(2)}`
+          `[OSC] ðŸ”Š POOL â†’ ${address}  file=${filename}  amp=${ampVal.toFixed(2)}  pan=${panVal.toFixed(2)}  pitch=${pitchVal.toFixed(2)}`
         );
 
         // Args: filename, amp, pan, pitch, fadeIn, fadeOut
@@ -1350,7 +1201,7 @@ wss.on('connection', (ws, req) => {
 
 
       // -----------------------------------------------------------
-      // 🌧 OSC Audio Impulse hit
+      // ðŸŒ§ OSC Audio Impulse hit
       // -----------------------------------------------------------
       case "osc_audio_impulse": {
         const { filename, amp, fadeIn, fadeOut, pan, pitch, addr } = data;
@@ -1366,7 +1217,7 @@ wss.on('connection', (ws, req) => {
         const fadeOutVal = parseFloat(fadeOut) || 0;
 
         console.log(
-          `[OSC] 🌧 IMPULSE → ${address}  file=${filename}  amp=${ampVal.toFixed(2)}  pan=${panVal.toFixed(2)}  pitch=${pitchVal.toFixed(2)}`
+          `[OSC] ðŸŒ§ IMPULSE â†’ ${address}  file=${filename}  amp=${ampVal.toFixed(2)}  pan=${panVal.toFixed(2)}  pitch=${pitchVal.toFixed(2)}`
         );
 
         // Args: filename, amp, pan, pitch, fadeIn, fadeOut
@@ -1387,7 +1238,7 @@ wss.on('connection', (ws, req) => {
 
 
       // -----------------------------------------------------------
-      // 🎧 OSC Audio Trigger (generic cueAudio)
+      // ðŸŽ§ OSC Audio Trigger (generic cueAudio)
       // -----------------------------------------------------------
       case "osc_audio_trigger": {
         const { filename, volume, loop, addr } = data;
@@ -1400,7 +1251,7 @@ wss.on('connection', (ws, req) => {
         const loopCount = parseInt(loop) || 1;
 
         console.log(
-          `[OSC] 🎧 TRIGGER → ${address}  file=${filename}  vol=${vol.toFixed(2)}  loop=${loopCount}`
+          `[OSC] ðŸŽ§ TRIGGER â†’ ${address}  file=${filename}  vol=${vol.toFixed(2)}  loop=${loopCount}`
         );
 
         oscPort.send({
@@ -1417,7 +1268,7 @@ wss.on('connection', (ws, req) => {
 
 
       // -----------------------------------------------------------
-      // 🛑 OSC Audio Stop
+      // ðŸ›‘ OSC Audio Stop
       // -----------------------------------------------------------
       case "osc_audio_stop": {
         const { filename, fadeOutMs, addr } = data;
@@ -1429,7 +1280,7 @@ wss.on('connection', (ws, req) => {
         const fadeMs = parseFloat(fadeOutMs) || 0;
 
         console.log(
-          `[OSC] 🛑 STOP → ${address}  file=${filename || "all"}  fadeOut=${fadeMs}ms`
+          `[OSC] ðŸ›‘ STOP â†’ ${address}  file=${filename || "all"}  fadeOut=${fadeMs}ms`
         );
 
         oscPort.send({
@@ -1445,7 +1296,7 @@ wss.on('connection', (ws, req) => {
 
 
         // -----------------------------------------------------------
-        // 🎛 Generic OSC value sender (from osc() cue)
+        // ðŸŽ› Generic OSC value sender (from osc() cue)
         // -----------------------------------------------------------
 
         // ------------------------------------
@@ -1497,7 +1348,7 @@ wss.on('connection', (ws, req) => {
         const oscAddress = `/oscilla/${String(addr)}`;
 
         // =========================================================
-        // 1️⃣ NEW POSITIONAL FORMAT
+        // 1ï¸âƒ£ NEW POSITIONAL FORMAT
         // =========================================================
         //
         // Browser sends:
@@ -1510,7 +1361,7 @@ wss.on('connection', (ws, req) => {
         // =========================================================
         if (Array.isArray(args)) {
           console.log(
-            `[OSC] 🎹 VALUE (positional) ${oscAddress}`,
+            `[OSC] ðŸŽ¹ VALUE (positional) ${oscAddress}`,
             args.join(" ")
           );
 
@@ -1522,11 +1373,11 @@ wss.on('connection', (ws, req) => {
             }))
           });
 
-          break;   //  IMPORTANT — do not continue into legacy path
+          break;   //  IMPORTANT â€” do not continue into legacy path
         }
 
         // =========================================================
-        // 2️⃣ LEGACY KEY / VALUE FORMAT
+        // 2ï¸âƒ£ LEGACY KEY / VALUE FORMAT
         // =========================================================
         //
         // Browser sends (old):
@@ -1539,7 +1390,7 @@ wss.on('connection', (ws, req) => {
         //
         // =========================================================
         if (typeof values !== "object") {
-          console.warn("[OSC] ⚠️ Invalid legacy osc_value payload:", data);
+          console.warn("[OSC] âš ï¸ Invalid legacy osc_value payload:", data);
           break;
         }
 
@@ -1621,7 +1472,7 @@ wss.on('connection', (ws, req) => {
         }
 
         console.log(
-          `[OSC] 🎹 VALUE (legacy) ${oscAddress}`,
+          `[OSC] ðŸŽ¹ VALUE (legacy) ${oscAddress}`,
           logParts.join(" ")
         );
 
@@ -1639,7 +1490,7 @@ wss.on('connection', (ws, req) => {
         const { addr, value, t } = data;
 
         if (!addr) {
-          console.warn("[OSC] ⚠️ Missing addr in osc_control message.");
+          console.warn("[OSC] âš ï¸ Missing addr in osc_control message.");
           break;
         }
 
@@ -1653,13 +1504,13 @@ wss.on('connection', (ws, req) => {
         const oscAddress = `/oscilla/control${addr.startsWith("/") ? "" : "/"}${addr}`;
 
         console.log(
-          `[OSC] 🎛 control → ${oscAddress}  v=${nv.toFixed(3)} t=${nt.toFixed(3)}`
+          `[OSC] ðŸŽ› control â†’ ${oscAddress}  v=${nv.toFixed(3)} t=${nt.toFixed(3)}`
         );
 
         oscPort.send({
           address: oscAddress,
           args: [
-            // value + t only — clean signal
+            // value + t only â€” clean signal
             { type: "f", value: nv },
             { type: "f", value: nt }
           ]
@@ -1674,7 +1525,7 @@ wss.on('connection', (ws, req) => {
         const { uid, x, y, angle } = data;
 
         if (!uid) {
-          console.warn("[OSC] ⚠️ Missing uid in osc_obj2path message.");
+          console.warn("[OSC] âš ï¸ Missing uid in osc_obj2path message.");
           break;
         }
 
@@ -1683,7 +1534,7 @@ wss.on('connection', (ws, req) => {
         const na = parseFloat(angle) || 0;
 
         console.log(
-          `[OSC] 🛰 obj2path ${uid}: x=${nx.toFixed(3)} y=${ny.toFixed(3)} a=${na.toFixed(1)}`
+          `[OSC] ðŸ›° obj2path ${uid}: x=${nx.toFixed(3)} y=${ny.toFixed(3)} a=${na.toFixed(1)}`
         );
 
         oscPort.send({
@@ -1722,7 +1573,7 @@ wss.on('connection', (ws, req) => {
               sharedState.duration
             );
 
-            // ✅ Retarget startTimestamp so phase continuity is preserved
+            // âœ… Retarget startTimestamp so phase continuity is preserved
             sharedState.startTimestamp = now - (currentElapsedMs / newMul);
 
             // Keep legacy fields aligned
@@ -1745,7 +1596,7 @@ wss.on('connection', (ws, req) => {
 
 
       /**
-       * 🔁 Handles incoming repeat cycle updates from clients.
+       * ðŸ” Handles incoming repeat cycle updates from clients.
        * - Each message contains a cueId and repeatData (currentCount, active, etc.)
        * - Server stores the state in `repeatStateMap`
        * - Then broadcasts the update to all connected clients
@@ -1767,14 +1618,14 @@ wss.on('connection', (ws, req) => {
           repeatData: data.repeatData
         });
 
-        // ✅ Only send to *other* clients — NOT the one that triggered it
+        // âœ… Only send to *other* clients â€” NOT the one that triggered it
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN && client !== ws) {
             client.send(repeatUpdateMessage);
           }
         });
 
-        console.log(`[SERVER] 🔁 Broadcasted repeat state update for ${data.cueId}`);
+        console.log(`[SERVER] ðŸ” Broadcasted repeat state update for ${data.cueId}`);
         break;
 
 
@@ -1783,7 +1634,7 @@ wss.on('connection', (ws, req) => {
           type: "repeat_state_map",
           repeatStateMap
         }));
-        console.log("[SERVER] 📡 Sent full repeat state map to reconnecting client.");
+        console.log("[SERVER] ðŸ“¡ Sent full repeat state map to reconnecting client.");
         break;
 
 
@@ -1793,7 +1644,7 @@ wss.on('connection', (ws, req) => {
           const newName = data.name.trim();
           const newColor = data.color || clientColors.get(ws);
 
-          // ✅ Prevent duplicate names
+          // âœ… Prevent duplicate names
           if (![...clientNames.values()].includes(newName) || oldName === newName) {
             console.log(`[SERVER] Client ${oldName} updated: name=${newName}, color=${newColor}`);
             clientNames.set(ws, newName);
@@ -1826,7 +1677,7 @@ wss.on('connection', (ws, req) => {
 
         // Only log if there are items to report
         if (items.length > 0) {
-          console.log(`[ANNOTATION] 📤 list request  project=${project}  count=${items.length}`);
+          console.log(`[ANNOTATION] ðŸ“¤ list request  project=${project}  count=${items.length}`);
         }
 
         // reply ONLY to requesting client
@@ -1851,7 +1702,7 @@ wss.on('connection', (ws, req) => {
         annotationsByProject[project][item.id] = item;
 
         console.log(
-          `[ANNOTATION] ➕ add  project=${project}  id=${item.id}`
+          `[ANNOTATION] âž• add  project=${project}  id=${item.id}`
         );
 
         broadcastToOthers(ws, {
@@ -1874,7 +1725,7 @@ wss.on('connection', (ws, req) => {
         annotationsByProject[project][item.id] = item;
 
         console.log(
-          `[ANNOTATION] ✏️ update  project=${project}  id=${item.id}`
+          `[ANNOTATION] âœï¸ update  project=${project}  id=${item.id}`
         );
 
         broadcastToOthers(ws, {
@@ -1898,7 +1749,7 @@ wss.on('connection', (ws, req) => {
         }
 
         console.log(
-          `[ANNOTATION] 🗑 delete  project=${project}  id=${id}`
+          `[ANNOTATION] ðŸ—‘ delete  project=${project}  id=${id}`
         );
 
         broadcastToOthers(ws, {
@@ -1914,7 +1765,7 @@ wss.on('connection', (ws, req) => {
 
 
       /**
-      * ✅ Handles manual pause requests from a client.
+      * âœ… Handles manual pause requests from a client.
       * - Updates `isPlaying` state to false and stops playback tracking.
       * - Broadcasts the pause state to all clients to keep them in sync.
       * - Ensures `playheadX` remains accurate.
@@ -1951,7 +1802,7 @@ wss.on('connection', (ws, req) => {
       // =====================================================
       // COUNTDOWN - SERVER OWNED
       // =====================================================
-
+      
       case "countdown_start_cue": {
         // Start a single countdown cue
         const { cue } = data;
@@ -1960,34 +1811,34 @@ wss.on('connection', (ws, req) => {
         }
         break;
       }
-
+      
       case "countdown_start_sequence": {
         // Start a sequence - use sent sequence data if provided, or fall back to stored
         const { sequenceIndex, sequence: sentSequence } = data;
         const sequences = sharedState.countdownSequences || [];
-
+        
         // Prefer the sequence data sent with the message (more reliable)
         // Fall back to stored sequences if not provided
         const seq = sentSequence || sequences[sequenceIndex];
-
+        
         if (seq) {
           console.log(`[Countdown] Starting sequence: ${seq.name || 'unnamed'} (index: ${sequenceIndex})`);
           startServerSequence(seq);
         } else {
-          console.warn(`[Countdown] ⚠️ No sequence found at index ${sequenceIndex} and no sequence data sent`);
+          console.warn(`[Countdown] âš ï¸ No sequence found at index ${sequenceIndex} and no sequence data sent`);
         }
         break;
       }
-
+      
       case "countdown_stop": {
         stopServerCountdown();
         break;
       }
-
+      
       case "countdown_sequences_update": {
         // Store sequences on server
         sharedState.countdownSequences = data.sequences;
-        console.log(`[Countdown] ✅ Sequences updated from client: ${data.sequences?.length || 0} sequences`);
+        console.log(`[Countdown] âœ… Sequences updated from client: ${data.sequences?.length || 0} sequences`);
         if (data.sequences?.length > 0) {
           console.log(`[Countdown]    Names: ${data.sequences.map(s => s.name || 'unnamed').join(', ')}`);
         }
@@ -1995,7 +1846,7 @@ wss.on('connection', (ws, req) => {
         broadcastToOthers(ws, data);
         break;
       }
-
+      
       case "countdown_sequences_request": {
         // Send stored sequences directly to requesting client
         if (sharedState.countdownSequences && sharedState.countdownSequences.length > 0) {
@@ -2011,7 +1862,7 @@ wss.on('connection', (ws, req) => {
 
 
       /**
-      * ✅ Handles confirmation from clients that they have processed a cue pause.
+      * âœ… Handles confirmation from clients that they have processed a cue pause.
       * - Once all clients acknowledge, the server broadcasts the confirmed pause state.
       */
       case "cue_pause_processed":
@@ -2026,7 +1877,7 @@ wss.on('connection', (ws, req) => {
         break;
 
       /**
-      * ✅ Updates the global duration of the score if a valid value is received.
+      * âœ… Updates the global duration of the score if a valid value is received.
       */
       case "set_duration":
         if (!isNaN(data.duration) && data.duration > 0) {
@@ -2039,7 +1890,7 @@ wss.on('connection', (ws, req) => {
         break;
 
       /**
-      * ✅ Handles cue triggers from a client and rebroadcasts them to all clients
+      * âœ… Handles cue triggers from a client and rebroadcasts them to all clients
       except the one that sent them to avoid infinite loops.
       */
 
@@ -2051,7 +1902,7 @@ wss.on('connection', (ws, req) => {
           cueId: data.cueId
         });
 
-        // ✅ Broadcast to all *other* clients, not the sender
+        // âœ… Broadcast to all *other* clients, not the sender
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN && client !== ws) {
             client.send(cueMessage);
@@ -2061,7 +1912,7 @@ wss.on('connection', (ws, req) => {
 
 
       /**
-      * ✅ Handles cue-based pauses, updating the server state and notifying clients.
+      * âœ… Handles cue-based pauses, updating the server state and notifying clients.
       */
       case "cue_pause":
         const resolvedDuration = Number.isFinite(data.duration) ? data.duration : 5000; // fallback to 5s if missing
@@ -2072,7 +1923,7 @@ wss.on('connection', (ws, req) => {
         lastUpdateTime = null;
         sharedState.lastPausedTime = sharedState.elapsedTime;
 
-        // ✅ Build the message with full duration
+        // âœ… Build the message with full duration
         const cuePauseMessage = JSON.stringify({
           type: "cue_pause",
           id: data.id,
@@ -2081,7 +1932,7 @@ wss.on('connection', (ws, req) => {
           playheadX: sharedState.playheadX
         });
 
-        // ✅ Send to all connected clients
+        // âœ… Send to all connected clients
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(cuePauseMessage);
@@ -2093,7 +1944,7 @@ wss.on('connection', (ws, req) => {
 
 
       /**
-      * ✅ Handles acknowledgments of cue pauses from clients.
+      * âœ… Handles acknowledgments of cue pauses from clients.
       * - Once all clients confirm, a pause state is rebroadcasted to keep them in sync.
       */
       case "cue_pause_ack":
@@ -2120,7 +1971,7 @@ wss.on('connection', (ws, req) => {
         break;
 
       /**
-      * ✅ Handles play requests from clients.
+      * âœ… Handles play requests from clients.
       * - Updates `playheadX` and ensures synchronization across clients.
       */
       case "play": {
@@ -2141,7 +1992,7 @@ wss.on('connection', (ws, req) => {
 
 
       /**
-      * ✅ Handles dismissing the pause countdown popup across all clients.
+      * âœ… Handles dismissing the pause countdown popup across all clients.
       */
       case "dismiss_pause_countdown":
         console.log("[DEBUG] Received dismiss_pause_countdown request. Broadcasting to all clients.");
@@ -2172,13 +2023,13 @@ wss.on('connection', (ws, req) => {
 
       case "osc":
         /**
-        * ✅ Handles incoming `cue_osc` messages from clients.
+        * âœ… Handles incoming `cue_osc` messages from clients.
         * - Prevents duplicate OSC messages by tracking triggered cues.
         * - Sends the cue number as an integer argument to `/cue/trigger`.
         */
         console.log(`[DEBUG] Received OSC WebSocket message:`, data);
 
-        // ✅ Extract cue number from message
+        // âœ… Extract cue number from message
         const cueNumber = parseInt(data.data, 10);
 
         if (isNaN(cueNumber)) {
@@ -2186,19 +2037,19 @@ wss.on('connection', (ws, req) => {
           break;
         }
 
-        // ✅ Prevent duplicate messages
+        // âœ… Prevent duplicate messages
         if (triggeredCues.has(cueNumber)) {
           console.log(`[INFO] Cue ${cueNumber} has already been sent. Ignoring duplicate.`);
           break;
         }
 
-        // ✅ Mark cue as triggered
+        // âœ… Mark cue as triggered
         triggeredCues.add(cueNumber);
 
-        // ✅ Send OSC message with integer argument
+        // âœ… Send OSC message with integer argument
         oscPort.send({
-          address: `/cue/trigger`, // ✅ Static address
-          args: [{ type: "i", value: cueNumber }] // ✅ Integer cue number
+          address: `/cue/trigger`, // âœ… Static address
+          args: [{ type: "i", value: cueNumber }] // âœ… Integer cue number
         });
 
         console.log(`[DEBUG] Sent OSC cue: /cue/trigger ${cueNumber}`);
@@ -2231,7 +2082,7 @@ wss.on('connection', (ws, req) => {
 
 
         console.log(
-          `[SERVER] 🎯 Jump received → x=${sharedState.playheadX}, ` +
+          `[SERVER] ðŸŽ¯ Jump received â†’ x=${sharedState.playheadX}, ` +
           `elapsed=${sharedState.elapsedTime}`
         );
 
@@ -2307,23 +2158,23 @@ wss.on('connection', (ws, req) => {
           break;
         }
 
-        // ✅ duration (minutes converted to ms by client)
+        // âœ… duration (minutes converted to ms by client)
         if (duration > 0) {
           durationByProject[project] = duration;
-          console.log(`[SERVER] ⏱ duration for ${project} = ${duration}ms (updated)`);
+          console.log(`[SERVER] â± duration for ${project} = ${duration}ms (updated)`);
         }
 
 
-        // ✅ Set project-specific scoreWidth if not already stored
+        // âœ… Set project-specific scoreWidth if not already stored
         if (!scoreWidthByProject[project] && typeof scoreWidth === "number" && scoreWidth > 0) {
           scoreWidthByProject[project] = scoreWidth;
-          console.log(`[SERVER] 📏 scoreWidth set for ${project} = ${scoreWidth}`);
+          console.log(`[SERVER] ðŸ“ scoreWidth set for ${project} = ${scoreWidth}`);
         }
 
-        // ✅ Set project-specific canonicalRenderedWidth if not already stored
+        // âœ… Set project-specific canonicalRenderedWidth if not already stored
         if (!canonicalRenderedWidthByProject[project] && typeof renderedWidth === "number" && renderedWidth > 0) {
           canonicalRenderedWidthByProject[project] = renderedWidth;
-          console.log(`[SERVER] 🎯 canonicalRenderedWidth set for ${project} = ${renderedWidth}`);
+          console.log(`[SERVER] ðŸŽ¯ canonicalRenderedWidth set for ${project} = ${renderedWidth}`);
         }
 
         //  Update sharedState to reflect current project
@@ -2392,7 +2243,7 @@ wss.on('connection', (ws, req) => {
 
 const updateLoop = () => {
   const countdownRunning = sharedState.countdown && sharedState.countdown.running;
-
+  
   if (sharedState.isPlaying) {
     updateElapsedTime();
     broadcastState();

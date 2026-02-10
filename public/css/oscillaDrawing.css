@@ -1,0 +1,92 @@
+/* ============================================================================
+ * oscillaDrawing.css — Freehand Drawing Overlay
+ * Styles for the SVG drawing layer, draw toolbar, and button states
+ * ============================================================================ */
+
+/* ---------------------------------------------------------------------------
+ * Drawing overlay
+ * --------------------------------------------------------------------------- */
+
+#oscilla-drawing-overlay {
+    touch-action: none;            /* prevent browser gestures when drawing */
+}
+
+#oscilla-drawing-overlay path {
+    /* Keep stroke width constant regardless of SVG viewBox scaling.
+       Remove this line if you want strokes to scale with the score. */
+    vector-effect: non-scaling-stroke;
+}
+
+#oscilla-drawing-overlay path.osc-drawing-active {
+    opacity: 0.7;
+}
+
+/* ---------------------------------------------------------------------------
+ * Draw toggle button (topbar)
+ * --------------------------------------------------------------------------- */
+
+#draw-toggle.active {
+    background: rgba(68, 170, 255, 0.25);
+    border-color: rgba(68, 170, 255, 0.6);
+    color: #88ccff;
+}
+
+/* ---------------------------------------------------------------------------
+ * Draw toolbar (floating bar at bottom center)
+ * --------------------------------------------------------------------------- */
+
+.osc-draw-toolbar {
+    animation: osc-draw-toolbar-in 0.15s ease-out;
+    font-family: inherit;
+}
+
+@keyframes osc-draw-toolbar-in {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Swatch hover */
+.osc-draw-toolbar div[style*="border-radius: 50%"]:hover {
+    transform: scale(1.15);
+    transition: transform 0.1s;
+}
+
+/* Width slider - match system dark theme */
+.osc-draw-toolbar input[type="range"] {
+    height: 4px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    outline: none;
+}
+
+.osc-draw-toolbar input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #888;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+}
+
+.osc-draw-toolbar input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #888;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+}
+
+/* Eraser button hover */
+.osc-draw-toolbar #draw-eraser-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}

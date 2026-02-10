@@ -22,6 +22,7 @@ import {
     TRIGGER_BORDER_COLOR,
     executeTrigger 
 } from "./trigger.js";
+import { makeDraggable } from "../system/uiUtils.js";
 
 // =============================================================
 // SCORE INNER WRAPPER
@@ -68,7 +69,7 @@ export function getScoreScrollInner() {
 export function positionAnnotation(el, annotation) {
     if (!el || !annotation?.placement) return;
 
-    // Get localScale for world→screen conversion
+    // Get localScale for worldâ†’screen conversion
     const localScale = (typeof window.localScale === "number" && 
                         isFinite(window.localScale) && 
                         window.localScale > 0) 
@@ -314,7 +315,7 @@ export function makePinEl(annotation, onClick) {
         labelEl = document.createElement("div");
         labelEl.textContent =
             annotation.text.length > 300
-                ? annotation.text.slice(0, 300) + "…"
+                ? annotation.text.slice(0, 300) + "â€¦"
                 : annotation.text;
 
         // Vertical centering
@@ -363,9 +364,9 @@ export function makePinEl(annotation, onClick) {
 
             const icon = document.createElement("span");
             const triggerType = annotation.trigger.type;
-            if (triggerType === "audioImpulse") icon.textContent = "⚡";
-            else if (triggerType === "audioPool") icon.textContent = "🎲";
-            else icon.textContent = "🔊";
+            if (triggerType === "audioImpulse") icon.textContent = "âš¡";
+            else if (triggerType === "audioPool") icon.textContent = "ðŸŽ²";
+            else icon.textContent = "ðŸ”Š";
 
             icon.style.position = "absolute";
             icon.style.top = "2px";
@@ -425,7 +426,7 @@ export function makePinEl(annotation, onClick) {
     function onPointerMove(e) {
         if (!dragging) return;
         
-        // Get current localScale for screen→world conversion
+        // Get current localScale for screenâ†’world conversion
         const localScale = (typeof window.localScale === "number" && 
                             isFinite(window.localScale) && 
                             window.localScale > 0) 
@@ -480,30 +481,6 @@ export function makePinEl(annotation, onClick) {
     return pin;
 }
 
-// =============================================================
-// MAKE DRAGGABLE (helper for editor)
-// =============================================================
-
-function makeDraggable(el, handleEl = el) {
-    let dragging = false;
-    let offsetX = 0, offsetY = 0;
-
-    handleEl.addEventListener("mousedown", (e) => {
-        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
-        dragging = true;
-        offsetX = e.clientX - el.offsetLeft;
-        offsetY = e.clientY - el.offsetTop;
-        e.preventDefault();
-    });
-
-    window.addEventListener("mousemove", (e) => {
-        if (!dragging) return;
-        el.style.left = `${e.clientX - offsetX}px`;
-        el.style.top = `${e.clientY - offsetY}px`;
-    });
-
-    window.addEventListener("mouseup", () => { dragging = false; });
-}
 
 // =============================================================
 // MAKE EDITOR
@@ -571,7 +548,7 @@ export function makeEditor({
     // Textarea
     const ta = document.createElement("textarea");
     ta.value = initialText;
-    ta.placeholder = "Annotation…";
+    ta.placeholder = "Annotationâ€¦";
     ta.rows = 3;
     ta.style.width = "100%";
     ta.style.resize = "vertical";
@@ -635,7 +612,7 @@ export function makeEditor({
 
     const execLabel = document.createElement("label");
     execLabel.htmlFor = "osc-exec-chk";
-    execLabel.textContent = "🔊 Executable (Audio Trigger)";
+    execLabel.textContent = "ðŸ”Š Executable (Audio Trigger)";
     execLabel.style.fontSize = "12px";
     execLabel.style.fontWeight = "500";
 
@@ -775,7 +752,7 @@ export function makeEditor({
 
     const browseBtn = document.createElement("button");
     browseBtn.type = "button";
-    browseBtn.textContent = "📂";
+    browseBtn.textContent = "ðŸ“‚";
     browseBtn.title = "Browse audio files";
     browseBtn.style.padding = "4px 8px";
     browseBtn.style.borderRadius = "4px";
@@ -794,7 +771,7 @@ export function makeEditor({
 
     const uploadBtn = document.createElement("button");
     uploadBtn.type = "button";
-    uploadBtn.textContent = "⬆️ Upload";
+    uploadBtn.textContent = "â¬†ï¸ Upload";
     uploadBtn.style.flex = "1";
     uploadBtn.style.padding = "4px 8px";
     uploadBtn.style.borderRadius = "4px";
@@ -806,7 +783,7 @@ export function makeEditor({
 
     const recordBtn = document.createElement("button");
     recordBtn.type = "button";
-    recordBtn.textContent = "🎤 Record";
+    recordBtn.textContent = "ðŸŽ¤ Record";
     recordBtn.style.flex = "1";
     recordBtn.style.padding = "4px 8px";
     recordBtn.style.borderRadius = "4px";
@@ -988,7 +965,7 @@ export function makeEditor({
     impulseSection.style.display = typeSelect.value === "audioImpulse" ? "block" : "none";
 
     const impulseTitle = document.createElement("div");
-    impulseTitle.textContent = "⚡ Impulse Settings";
+    impulseTitle.textContent = "âš¡ Impulse Settings";
     impulseTitle.style.fontSize = "11px";
     impulseTitle.style.fontWeight = "500";
     impulseTitle.style.marginBottom = "6px";
@@ -1096,7 +1073,7 @@ export function makeEditor({
 
     const playheadLabel = document.createElement("label");
     playheadLabel.htmlFor = "trig-playhead";
-    playheadLabel.textContent = "▶ Trigger on Playhead Enter";
+    playheadLabel.textContent = "â–¶ Trigger on Playhead Enter";
     playheadLabel.style.fontSize = "10px";
 
     playheadRow.appendChild(playheadCheck);
@@ -1134,11 +1111,11 @@ export function makeEditor({
 
     const optLocal = document.createElement("option");
     optLocal.value = "local";
-    optLocal.textContent = "🔒 Local (only me)";
+    optLocal.textContent = "ðŸ”’ Local (only me)";
 
     const optShared = document.createElement("option");
     optShared.value = "shared";
-    optShared.textContent = "🌐 Shared (all performers)";
+    optShared.textContent = "ðŸŒ Shared (all performers)";
 
     scopeSelect.appendChild(optLocal);
     scopeSelect.appendChild(optShared);
@@ -1264,7 +1241,7 @@ export function makeEditor({
                     onComplete: (result) => {
                         if (result?.path) {
                             sourceInput.value = result.path;
-                            statusMsg.textContent = `✓ Recorded: ${result.path}`;
+                            statusMsg.textContent = `âœ“ Recorded: ${result.path}`;
                             statusMsg.style.color = "#6f6";
                         }
                     },
