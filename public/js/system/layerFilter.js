@@ -50,6 +50,9 @@ export function scanLayers(svgElement) {
     const label = readInkscapeAttr(g, "label");
     if (!label) continue;
 
+    // Only include layers whose name contains "part" (case-insensitive)
+    if (!label.toLowerCase().includes("part")) continue;
+
     layers.push({
       id: g.id,
       label: label.trim(),

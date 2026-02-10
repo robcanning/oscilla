@@ -18,10 +18,11 @@ labels shown in the Oscilla preferences dialog.
 ```
 Layer panel in Inkscape:
 
-  Part 1 Violin    <-- inkscape:label="Part 1 Violin"
-  Part 2 Viola     <-- inkscape:label="Part 2 Viola"
-  Part 3 Cello     <-- inkscape:label="Part 3 Cello"
-  Shared            <-- shared notation, always visible
+  Part: Violin        <-- contains "part", detected
+  Part: Viola         <-- contains "part", detected
+  Part: Electronics   <-- contains "part", detected
+  Background          <-- no "part", always visible
+  Shared              <-- no "part", always visible
 ```
 
 Each layer corresponds to a `<g>` element in the SVG with Inkscape's
@@ -29,19 +30,28 @@ layer attributes:
 
 ```xml
 <g inkscape:groupmode="layer"
-   inkscape:label="Part 1 Violin"
+   inkscape:label="Part: Violin"
    id="layer1">
   <!-- score content for violin -->
 </g>
 ```
 
+The only naming requirement is that the layer label contains the word
+"part" (case-insensitive). Everything else about the name is freeform.
+Layers without "part" in their name are never filtered, making them
+suitable for shared notation, grids, or background elements.
+
 ### Layer detection
 
 When a score is loaded, Oscilla scans the SVG for all `<g>` elements
-with `inkscape:groupmode="layer"` and reads their `inkscape:label`
-attribute. These are stored in `window.scoreLayers` and used to populate
-the preferences UI. Only top-level Inkscape layers are detected --
-sublayers and plain `<g>` groups are ignored.
+with `inkscape:groupmode="layer"` whose label contains the word "part"
+(case-insensitive). Layers without "part" in their name are left
+untouched by the filter and always render at their authored visibility.
+
+This means layers like "Part 1 Violin", "viola part", or
+"PART: Electronics" are all detected, while layers named "Background",
+"Grid", or "Shared" are excluded and remain fully visible regardless
+of the performer's selection.
 
 ### Preferences UI
 
@@ -78,19 +88,20 @@ oscilla_layerFilter_<projectName>
 ```
 
 This means each browser or device maintains its own part selection.
-A violinist's tablet remembers "Part 1 Violin" while the cellist's
-tablet remembers "Part 3 Cello", even when viewing the same score.
+A violinist's tablet remembers "Part: Violin" while the cellist's
+tablet remembers "Part: Cello", even when viewing the same score.
 
 The preference is not saved to `preferences.json` on the server and
 does not affect other connected clients.
 
 ### Authoring tips
 
-- Use clear, descriptive layer names in Inkscape -- these appear directly
-  in the dropdown (e.g. "Violin I" rather than "layer1").
+- Include the word "part" in any layer name that should appear in the
+  performer's dropdown (e.g. "Part: Violin I", "Electronics Part",
+  "Percussion part"). The match is case-insensitive.
 - Place shared notation (rehearsal marks, structural cues, tempo markings)
-  on a dedicated layer so performers always see it regardless of their
-  part selection.
+  on a layer whose name does not contain "part" -- it will always remain
+  visible regardless of the performer's selection.
 - Layer ordering in Inkscape determines rendering order in the SVG.
   Place shared/background layers below part layers.
 - Cue elements (animations, navigation, audio triggers) work normally
@@ -112,8 +123,9 @@ browsers resolve XML namespaces when SVG is embedded in an HTML document.
 
 ### Notes
 
-- Only Inkscape layers are detected. Plain SVG `<g>` groups without
-  `inkscape:groupmode="layer"` are not affected by the filter.
+- Only Inkscape layers whose label contains "part" (case-insensitive)
+  are detected. Other layers and plain SVG `<g>` groups are not
+  affected by the filter.
 - The filter applies to scroll mode. Page mode loads individual SVG
   files which may have their own layer structure.
 - All animations, cue triggers, and OSC output continue to function
