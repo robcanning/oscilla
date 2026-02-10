@@ -13,7 +13,6 @@
 // ===========================
 
 // Existing modules
-import { enableLiveInspector } from "./system/oscillaLive.js";
 import { scrollToPlayheadVisual } from "./transport/oscillaTransport.js";
 import { initializeDarkModeToggle, hideControls, showControls, initializeControlsPin, initializeTopbarPin } from "./transport/transportUI.js";
 import { jumpToCueId } from "./transport/transportNav.js";
@@ -77,6 +76,7 @@ import {
   openRehearsalPopup, closeRehearsalPopup, initRehearsalButton
 } from './system/rehearsalUI.js';
 
+import { initLiveConsole } from "./system/oscillaLive.js";
 
 
 // ===========================
@@ -206,6 +206,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize rehearsal marks button
   initRehearsalButton();
+
+  // Initialize live coding console
+  initLiveConsole();
 
   // Initialize project menu
   populateProjectMenu();

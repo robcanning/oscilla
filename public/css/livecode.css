@@ -1,0 +1,387 @@
+/* ============================================================================
+ * OSCILLA LIVE CONSOLE — livecode.css
+ * Styles for the live coding console panel
+ * ============================================================================ */
+
+/* --- Topbar toggle button ------------------------------------------------ */
+
+#livecode-toggle {
+  font-family: ui-monospace, 'Iosevka Term Web', Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  cursor: pointer;
+  background: transparent;
+  color: currentColor;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  line-height: 1.4;
+  opacity: 0.7;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+}
+
+#livecode-toggle:hover {
+  opacity: 1;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+#livecode-toggle.livecode-active {
+  opacity: 1;
+  color: #0ff;
+  border-color: #0ff;
+  background: rgba(0, 255, 255, 0.08);
+}
+
+
+/* --- Main panel ---------------------------------------------------------- */
+
+#livecode-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 340px;
+  height: 100vh;
+  background: rgba(10, 10, 14, 0.94);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ccc;
+  font-family: ui-monospace, 'Iosevka Term Web', SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  z-index: 38000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+}
+
+
+/* --- Panel header -------------------------------------------------------- */
+
+.livecode-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.livecode-header-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #0ff;
+  flex-shrink: 0;
+}
+
+.livecode-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.livecode-close:hover {
+  color: #fff;
+}
+
+
+/* --- Target selector ----------------------------------------------------- */
+
+.livecode-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.livecode-target-label {
+  font-size: 10px;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.livecode-target-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: #eee;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 6px;
+  outline: none;
+}
+
+.livecode-target-input:focus {
+  border-color: rgba(0, 255, 255, 0.4);
+}
+
+.livecode-target-input::placeholder {
+  color: #555;
+}
+
+.livecode-pick-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  color: #aaa;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 3px 8px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.livecode-pick-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.livecode-pick-btn.picking {
+  color: #0f0;
+  border-color: #0f0;
+  background: rgba(0, 255, 0, 0.08);
+}
+
+
+/* --- Target info line ---------------------------------------------------- */
+
+.livecode-target-info {
+  padding: 0 10px 4px;
+  font-size: 10px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  min-height: 14px;
+}
+
+.livecode-target-info span {
+  color: #999;
+}
+
+
+/* --- Console editor ------------------------------------------------------ */
+
+.livecode-editor-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.livecode-editor {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  color: #e8e8e8;
+  border: none;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  tab-size: 2;
+  white-space: pre;
+  overflow-y: auto;
+}
+
+.livecode-editor::placeholder {
+  color: #444;
+}
+
+.livecode-actions {
+  display: flex;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+}
+
+.livecode-run-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  color: #aaa;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 3px 10px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.livecode-run-btn:hover {
+  background: rgba(0, 255, 255, 0.1);
+  color: #0ff;
+  border-color: rgba(0, 255, 255, 0.3);
+}
+
+.livecode-run-btn kbd {
+  font-family: inherit;
+  font-size: 9px;
+  color: #666;
+  margin-left: 4px;
+}
+
+
+/* --- Output log ---------------------------------------------------------- */
+
+.livecode-output-wrap {
+  display: flex;
+  flex-direction: column;
+  max-height: 160px;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.livecode-output-header {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+}
+
+.livecode-output-clear {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  font-size: 10px;
+  font-family: inherit;
+  padding: 0 4px;
+}
+
+.livecode-output-clear:hover {
+  color: #aaa;
+}
+
+.livecode-output {
+  overflow-y: auto;
+  padding: 4px 10px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.livecode-output-line {
+  padding: 1px 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.livecode-output-line.ok {
+  color: #6c6;
+}
+
+.livecode-output-line.err {
+  color: #f66;
+}
+
+.livecode-output-line.info {
+  color: #69c;
+}
+
+
+/* --- Signal monitor ------------------------------------------------------ */
+
+.livecode-signals-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.livecode-signals-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.livecode-signals-header:hover {
+  color: #999;
+}
+
+.livecode-signals-filter {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  color: #ccc;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 1px 5px;
+  outline: none;
+}
+
+.livecode-signals-filter::placeholder {
+  color: #444;
+}
+
+.livecode-signals {
+  overflow-y: auto;
+  padding: 4px 10px;
+  font-size: 10px;
+  line-height: 1.6;
+  flex: 1;
+  min-height: 0;
+}
+
+.livecode-signal-row {
+  display: flex;
+  gap: 6px;
+  padding: 1px 0;
+  color: #888;
+}
+
+.livecode-signal-path {
+  color: #9cf;
+  flex-shrink: 0;
+}
+
+.livecode-signal-val {
+  color: #cb8;
+  text-align: right;
+  margin-left: auto;
+}
+
+
+/* --- Element highlight during pick mode ---------------------------------- */
+
+.livecode-highlight {
+  outline: 2px solid rgba(0, 255, 0, 0.7) !important;
+  outline-offset: 2px;
+}
+
+.livecode-selected {
+  outline: 2px solid rgba(0, 255, 255, 0.6) !important;
+  outline-offset: 2px;
+}
