@@ -76,7 +76,7 @@ import {
   openRehearsalPopup, closeRehearsalPopup, initRehearsalButton
 } from './system/rehearsalUI.js';
 
-import { initLiveConsole } from "./system/oscillaLive.js";
+import { initLiveConsole } from "./interaction/oscillaLive.js";
 
 
 // ===========================
@@ -209,6 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize live coding console
   initLiveConsole();
+  
 
   // Initialize project menu
   populateProjectMenu();
