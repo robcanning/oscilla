@@ -111,6 +111,92 @@
     background: rgba(255, 255, 255, 0.4);
 }
 
+/* Width grid: 2 rows of 4 */
+.osc-draw-width-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+}
+
+.osc-draw-width-btn {
+    width: 24px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.osc-draw-width-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.osc-draw-width-btn.selected {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+.osc-draw-width-dot {
+    display: block;
+    border-radius: 50%;
+    background: #ccc;
+}
+
+.osc-draw-width-btn.selected .osc-draw-width-dot {
+    background: #fff;
+}
+
+/* Compact color picker inside drawing toolbar */
+.osc-draw-toolbar .osc-color-picker-compact {
+    margin-top: 0;
+}
+
+.osc-draw-toolbar .osc-color-picker-compact .osc-color-picker-swatches {
+    gap: 4px;
+}
+
+.osc-draw-toolbar .osc-color-picker-compact .osc-color-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+}
+
+.osc-draw-toolbar .osc-color-picker-compact .osc-color-custom-wrapper {
+    width: 22px;
+    height: 22px;
+}
+
+.osc-draw-toolbar .osc-color-picker-compact .osc-color-custom-input {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: conic-gradient(
+        hsl(0,80%,60%),
+        hsl(60,80%,60%),
+        hsl(120,80%,60%),
+        hsl(180,80%,60%),
+        hsl(240,80%,60%),
+        hsl(300,80%,60%),
+        hsl(360,80%,60%)
+    );
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+}
+
+/* Hide the native color swatch so the conic-gradient background is visible */
+.osc-draw-toolbar .osc-color-picker-compact .osc-color-custom-input::-webkit-color-swatch {
+    opacity: 0;
+}
+
+.osc-draw-toolbar .osc-color-picker-compact .osc-color-custom-input::-moz-color-swatch {
+    opacity: 0;
+}
+
 /* ---------------------------------------------------------------------------
  * Group selection & hover
  * --------------------------------------------------------------------------- */

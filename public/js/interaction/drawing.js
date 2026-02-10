@@ -27,7 +27,8 @@ import {
 
 import {
     createColorPicker,
-    DEFAULT_MARKER_COLOR,
+    getDrawingPresetColors,
+    DEFAULT_DRAWING_COLOR,
 } from "./colorPicker.js";
 
 import { getScoreScrollInner } from "./annotationEditor.js";
@@ -37,7 +38,7 @@ import { makeDraggable } from "../system/uiUtils.js";
 // CONSTANTS
 // =============================================================
 
-const DEFAULT_STROKE_COLOR = "#ffffff";
+const DEFAULT_STROKE_COLOR = DEFAULT_DRAWING_COLOR;
 const DEFAULT_STROKE_WIDTH = 3;       // world units
 const MIN_STROKE_WIDTH = 1;
 const MAX_STROKE_WIDTH = 20;
@@ -925,63 +926,60 @@ export function createDrawToolbar() {
         userSelect: "none",
     });
 
-    // --- Color swatches ---
-    const colors = ["#ffffff", "#ff4444", "#44aaff", "#44ff88", "#ffcc00", "#ff88ff", "#888888"];
-    const swatchRow = document.createElement("div");
-    swatchRow.style.display = "flex";
-    swatchRow.style.gap = "4px";
-
-    for (const c of colors) {
-        const swatch = document.createElement("div");
-        Object.assign(swatch.style, {
-            width: "22px",
-            height: "22px",
-            borderRadius: "50%",
-            background: c,
-            border: c === strokeColor ? "2px solid #fff" : "2px solid transparent",
-            cursor: "pointer",
-            transition: "border-color 0.15s",
-        });
-
-        swatch.addEventListener("click", () => {
-            setStrokeColor(c);
-            swatchRow.querySelectorAll("div").forEach(s => {
-                s.style.border = "2px solid transparent";
-            });
-            swatch.style.border = "2px solid #fff";
+    // --- Color picker (from shared colorPicker.js) ---
+    const colorPicker = createColorPicker({
+        currentColor: strokeColor,
+        presets: getDrawingPresetColors(),
+        compact: true,
+        showCustom: true,
+        onChange: (color) => {
+            setStrokeColor(color);
             // Return to draw mode after picking a color
             if (!drawMode) {
                 setDrawMode(true);
             }
-        });
-
-        swatchRow.appendChild(swatch);
-    }
-    drawToolbar.appendChild(swatchRow);
+        },
+    });
+    drawToolbar.appendChild(colorPicker);
 
     // --- Separator ---
     drawToolbar.appendChild(createSeparator());
 
-    // --- Width slider ---
-    const widthLabel = document.createElement("span");
-    widthLabel.textContent = "W";
-    widthLabel.style.color = "#aaa";
-    widthLabel.style.fontSize = "11px";
-    drawToolbar.appendChild(widthLabel);
+    // --- Width grid (8 sizes, 2 rows of 4) ---
+    const STROKE_SIZES = [1, 2, 3, 5, 8, 12, 16, 20];
 
-    const widthSlider = document.createElement("input");
-    widthSlider.type = "range";
-    widthSlider.min = String(MIN_STROKE_WIDTH);
-    widthSlider.max = String(MAX_STROKE_WIDTH);
-    widthSlider.value = String(strokeWidth);
-    Object.assign(widthSlider.style, {
-        width: "70px",
-        accentColor: "#888",
-    });
-    widthSlider.addEventListener("input", () => {
-        setStrokeWidth(parseFloat(widthSlider.value));
-    });
-    drawToolbar.appendChild(widthSlider);
+    const widthGrid = document.createElement("div");
+    widthGrid.className = "osc-draw-width-grid";
+
+    for (const size of STROKE_SIZES) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "osc-draw-width-btn";
+        if (size === strokeWidth) btn.classList.add("selected");
+        btn.title = `Width ${size}`;
+        btn.dataset.width = size;
+
+        // Dot preview scaled to size
+        const dot = document.createElement("span");
+        dot.className = "osc-draw-width-dot";
+        const dotSize = Math.max(3, Math.min(16, size * 0.8 + 2));
+        Object.assign(dot.style, {
+            width: `${dotSize}px`,
+            height: `${dotSize}px`,
+        });
+        btn.appendChild(dot);
+
+        btn.addEventListener("click", () => {
+            setStrokeWidth(size);
+            widthGrid.querySelectorAll(".osc-draw-width-btn").forEach(b => {
+                b.classList.remove("selected");
+            });
+            btn.classList.add("selected");
+        });
+
+        widthGrid.appendChild(btn);
+    }
+    drawToolbar.appendChild(widthGrid);
 
     // --- Separator ---
     drawToolbar.appendChild(createSeparator());

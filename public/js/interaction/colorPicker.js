@@ -27,12 +27,31 @@ export const MARKER_COLORS = {
     paleOrange: { hex: "#ffcc99", label: "Orange" },
 };
 
+// Drawing preset colors - bright/saturated for visibility on dark score backgrounds
+export const DRAWING_COLORS = {
+    white:   { hex: "#ffffff", label: "White" },
+    red:     { hex: "#ff4444", label: "Red" },
+    blue:    { hex: "#44aaff", label: "Blue" },
+    green:   { hex: "#44ff88", label: "Green" },
+    yellow:  { hex: "#ffcc00", label: "Yellow" },
+    pink:    { hex: "#ff88ff", label: "Pink" },
+    grey:    { hex: "#888888", label: "Grey" },
+};
+
 // Default marker color (used when no color specified)
 export const DEFAULT_MARKER_COLOR = MARKER_COLORS.paleRed.hex;
+
+// Default drawing color
+export const DEFAULT_DRAWING_COLOR = DRAWING_COLORS.white.hex;
 
 // Get an array of preset colors for iteration
 export function getPresetColors() {
     return Object.values(MARKER_COLORS);
+}
+
+// Get an array of drawing preset colors
+export function getDrawingPresetColors() {
+    return Object.values(DRAWING_COLORS);
 }
 
 // =============================================================
@@ -115,6 +134,7 @@ export function getContrastTextColor(bgHex) {
  * @param {string} options.currentColor - Current selected color (hex)
  * @param {Function} options.onChange - Callback when color changes
  * @param {boolean} options.showCustom - Show custom color picker (default: true)
+ * @param {boolean} options.compact - Compact mode: no label, smaller swatches (default: false)
  * @param {Array} options.presets - Custom preset array (default: MARKER_COLORS values)
  * @returns {HTMLElement} The color picker container element
  */
@@ -123,17 +143,20 @@ export function createColorPicker(options = {}) {
         currentColor = DEFAULT_MARKER_COLOR,
         onChange = () => {},
         showCustom = true,
+        compact = false,
         presets = getPresetColors()
     } = options;
 
     const container = document.createElement("div");
-    container.className = "osc-color-picker";
+    container.className = "osc-color-picker" + (compact ? " osc-color-picker-compact" : "");
 
-    // Label
-    const label = document.createElement("div");
-    label.className = "osc-color-picker-label";
-    label.textContent = "Color";
-    container.appendChild(label);
+    // Label (skip in compact mode)
+    if (!compact) {
+        const label = document.createElement("div");
+        label.className = "osc-color-picker-label";
+        label.textContent = "Color";
+        container.appendChild(label);
+    }
 
     // Swatches container
     const swatchesRow = document.createElement("div");
@@ -288,8 +311,11 @@ export function applyMarkerColor(element, hex) {
 
 export default {
     MARKER_COLORS,
+    DRAWING_COLORS,
     DEFAULT_MARKER_COLOR,
+    DEFAULT_DRAWING_COLOR,
     getPresetColors,
+    getDrawingPresetColors,
     createColorPicker,
     hexToRgb,
     rgbToHex,
