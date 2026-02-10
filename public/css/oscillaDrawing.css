@@ -90,3 +90,48 @@
 .osc-draw-toolbar #draw-eraser-btn:hover {
     background: rgba(255, 255, 255, 0.1);
 }
+
+/* Select button hover */
+.osc-draw-toolbar #draw-select-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Share button hover */
+.osc-draw-toolbar #draw-share-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Drag handle */
+.osc-draw-toolbar-handle {
+    background: rgba(255, 255, 255, 0.2);
+    transition: background 0.15s;
+}
+
+.osc-draw-toolbar-handle:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+/* ---------------------------------------------------------------------------
+ * Group selection & hover
+ * --------------------------------------------------------------------------- */
+
+/* Hover highlight on group strokes in select mode */
+#oscilla-drawing-overlay path.osc-drawing-hover {
+    filter: drop-shadow(0 0 3px rgba(68, 170, 255, 0.6));
+}
+
+/* Selected group strokes */
+#oscilla-drawing-overlay path.osc-drawing-selected {
+    filter: drop-shadow(0 0 2px rgba(68, 170, 255, 0.5));
+}
+
+/* Selection bounding box */
+#oscilla-drawing-overlay .osc-drawing-selection {
+    animation: osc-selection-dash 0.6s linear infinite;
+}
+
+@keyframes osc-selection-dash {
+    to {
+        stroke-dashoffset: -9;
+    }
+}

@@ -77,6 +77,7 @@ import {
     setDrawMode,
     isDrawMode,
     isEraserMode,
+    isSelectMode,
     renderStrokes,
     toggleDrawMode,
 } from "./drawing.js";
@@ -384,7 +385,7 @@ function openEditForExisting(annotation) {
 
 function onScoreClick(evt) {
     if (!state.enabled || !state.annotationMode) return;
-    if (isDrawMode() || isEraserMode()) return;
+    if (isDrawMode() || isEraserMode() || isSelectMode()) return;
     if (!isWithinScoreArea(evt.target)) return;
     if (evt.target.closest(".osc-anno-pin")) return;
     if (evt.target.closest(".osc-anno-editor")) return;
@@ -437,7 +438,7 @@ function onScoreClick(evt) {
 
 function onPageClick(evt) {
     if (!state.enabled || !state.annotationMode) return;
-    if (isDrawMode() || isEraserMode()) return;
+    if (isDrawMode() || isEraserMode() || isSelectMode()) return;
 
     const content = getPageContentContainer();
     if (!content) return;
@@ -519,7 +520,7 @@ function loadProjectAnnotations(project) {
     renderAll();
 
     // Request shared annotations from server
-    wsSend("annotation_request", { project });
+    wsSend("annotation_list_request", { project });
 
     console.log("[annotations] Loaded project:", project, "items:", state.items.length);
 }
@@ -536,7 +537,7 @@ function socketPoll() {
 
     // Request shared annotations if not yet received
     if (!window._sharedAnnotationsRequested) {
-        wsSend("annotation_request", { project: state.project });
+        wsSend("annotation_list_request", { project: state.project });
         window._sharedAnnotationsRequested = true;
     }
 }

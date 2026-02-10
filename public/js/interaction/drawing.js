@@ -1,4 +1,4 @@
-// public/js/contributions/drawing.js
+// public/js/interaction/drawing.js
 //
 // Freehand Drawing Module for Oscilla Contribution Surface
 // Provides ink-on-paper style markup over the score using SVG paths.
@@ -8,7 +8,8 @@
 // - viewBox matches score SVG so coordinates are in world units directly
 // - Strokes stored as kind:"stroke" items via shared.js CRUD (auto-saved)
 // - Eraser = stroke-level tap-to-delete
-// - Integrates with existing colorPicker.js for color selection
+// - Select mode: tap a stroke to select its group, drag to reposition
+// - Session grouping: all strokes drawn in one draw-mode session share a groupId
 // - Network sharing via existing WebSocket annotation pipeline
 //
 // Usage:
@@ -19,6 +20,7 @@ import {
     ulidLike,
     nowMs,
     addAnnotation,
+    updateAnnotation,
     deleteAnnotation,
     shouldRenderItem,
 } from "./shared.js";
@@ -29,6 +31,7 @@ import {
 } from "./colorPicker.js";
 
 import { getScoreScrollInner } from "./annotationEditor.js";
+import { makeDraggable } from "../system/uiUtils.js";
 
 // =============================================================
 // CONSTANTS
@@ -47,13 +50,23 @@ const SIMPLIFY_TOLERANCE = 0.8;       // world units — skip points closer than
 let drawingEnabled = false;     // global on/off (follows annotation enabled)
 let drawMode = false;           // draw mode active (captures pointer)
 let eraserMode = false;         // erase mode active
+let selectMode = false;         // select/move mode active
 
 let strokeColor = DEFAULT_STROKE_COLOR;
 let strokeWidth = DEFAULT_STROKE_WIDTH;
+let shareDrawingEnabled = true;     // sharing ON by default (matches markers)
 
 let svgOverlay = null;          // the <svg> overlay element
 let activeStroke = null;        // stroke currently being drawn
 let activePathEl = null;        // <path> being drawn live
+
+// Session grouping
+let currentGroupId = null;      // set on draw-mode activate, shared by all strokes in session
+
+// Selection state
+let selectedGroupIds = new Set();  // currently selected group(s) — shift-click to multi-select
+let dragState = null;              // { startWorld, currentWorld, pointerId } during drag
+let selectionRect = null;          // <rect> element showing combined bounding box
 
 // Toolbar references
 let drawToolbar = null;
@@ -102,7 +115,6 @@ function ensureOverlay() {
     if (!vb) return null;
 
     if (svgOverlay && svgOverlay.isConnected) {
-        // Update viewBox in case score dimensions changed
         svgOverlay.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.width} ${vb.height}`);
         return svgOverlay;
     }
@@ -118,8 +130,8 @@ function ensureOverlay() {
         top: "0",
         width: "100%",
         height: "100%",
-        pointerEvents: "none",      // toggled when draw/erase mode active
-        zIndex: "15",               // above score SVG, below annotation layer (20)
+        pointerEvents: "none",
+        zIndex: "15",
         overflow: "visible",
     });
 
@@ -146,12 +158,10 @@ function removeOverlay() {
 
 /**
  * Convert a pointer event to world (viewBox) coordinates
- * Uses SVG's built-in coordinate transform matrix
  */
 function worldCoordsFromEvent(e) {
     if (!svgOverlay) return null;
 
-    // Use SVG's own CTM for accurate coordinate conversion
     const pt = svgOverlay.createSVGPoint();
     pt.x = e.clientX;
     pt.y = e.clientY;
@@ -174,7 +184,6 @@ function worldCoordsFromEvent(e) {
 function buildPathD(points) {
     if (!points || points.length === 0) return "";
     if (points.length === 1) {
-        // Single dot
         const p = points[0];
         return `M ${p.x} ${p.y} L ${p.x + 0.1} ${p.y}`;
     }
@@ -186,7 +195,6 @@ function buildPathD(points) {
         return d;
     }
 
-    // Quadratic bezier through midpoints for smooth curves
     for (let i = 1; i < points.length - 1; i++) {
         const cp = points[i];
         const next = points[i + 1];
@@ -195,7 +203,6 @@ function buildPathD(points) {
         d += ` Q ${cp.x} ${cp.y} ${mx} ${my}`;
     }
 
-    // Final segment
     const last = points[points.length - 1];
     d += ` L ${last.x} ${last.y}`;
 
@@ -220,6 +227,63 @@ function createPathElement(stroke, id) {
 }
 
 // =============================================================
+// GROUP HELPERS
+// =============================================================
+
+/**
+ * Get all stroke items belonging to a group
+ */
+function getGroupStrokes(groupId) {
+    if (!groupId) return [];
+    return state.items.filter(
+        i => i.kind === "stroke" && i.stroke?.groupId === groupId && shouldRenderItem(i)
+    );
+}
+
+/**
+ * Compute the bounding box of one or more groups of strokes (world coords)
+ * @param {string|Set<string>} groupIds - single groupId or Set of groupIds
+ */
+function getGroupBounds(groupIds) {
+    const ids = groupIds instanceof Set ? groupIds : new Set([groupIds]);
+    let strokes = [];
+    for (const gid of ids) {
+        strokes = strokes.concat(getGroupStrokes(gid));
+    }
+    if (strokes.length === 0) return null;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    for (const item of strokes) {
+        for (const pt of item.stroke.points) {
+            if (pt.x < minX) minX = pt.x;
+            if (pt.y < minY) minY = pt.y;
+            if (pt.x > maxX) maxX = pt.x;
+            if (pt.y > maxY) maxY = pt.y;
+        }
+    }
+
+    const pad = 10;
+    return {
+        x: minX - pad,
+        y: minY - pad,
+        width: (maxX - minX) + pad * 2,
+        height: (maxY - minY) + pad * 2,
+    };
+}
+
+/**
+ * Find the groupId of the stroke under a pointer event
+ */
+function hitTestGroup(e) {
+    const target = document.elementFromPoint(e.clientX, e.clientY);
+    if (!target || target.tagName !== "path" || !target.dataset.strokeId) return null;
+
+    const item = state.items.find(i => i.id === target.dataset.strokeId);
+    return item?.stroke?.groupId || null;
+}
+
+// =============================================================
 // POINTER EVENT HANDLING
 // =============================================================
 
@@ -231,14 +295,13 @@ function attachPointerListeners() {
     svgOverlay.addEventListener("pointerup", onPointerUp);
     svgOverlay.addEventListener("pointercancel", onPointerUp);
 
-    // Prevent score dragging when drawing
     svgOverlay.addEventListener("touchstart", (e) => {
-        if (drawMode || eraserMode) e.preventDefault();
+        if (drawMode || eraserMode || selectMode) e.preventDefault();
     }, { passive: false });
 }
 
 function onPointerDown(e) {
-    if (!drawMode && !eraserMode) return;
+    if (!drawMode && !eraserMode && !selectMode) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -248,7 +311,12 @@ function onPointerDown(e) {
         return;
     }
 
-    // Start drawing
+    if (selectMode) {
+        handleSelectDown(e);
+        return;
+    }
+
+    // --- Draw mode ---
     const world = worldCoordsFromEvent(e);
     if (!world) return;
 
@@ -261,13 +329,18 @@ function onPointerDown(e) {
         opacity: 1,
     };
 
-    // Create live path element
     activePathEl = createPathElement(activeStroke, "");
     activePathEl.classList.add("osc-drawing-active");
     svgOverlay.appendChild(activePathEl);
 }
 
 function onPointerMove(e) {
+    // Handle drag in select mode
+    if (selectMode && dragState) {
+        handleSelectMove(e);
+        return;
+    }
+
     if (!activeStroke || !activePathEl) return;
 
     e.preventDefault();
@@ -276,7 +349,6 @@ function onPointerMove(e) {
     const world = worldCoordsFromEvent(e);
     if (!world) return;
 
-    // Distance-based thinning to avoid excessive points
     const pts = activeStroke.points;
     const last = pts[pts.length - 1];
     const dx = world.x - last.x;
@@ -286,19 +358,22 @@ function onPointerMove(e) {
     if (dist < SIMPLIFY_TOLERANCE) return;
 
     pts.push({ x: world.x, y: world.y, p: e.pressure || 0.5 });
-
-    // Update path live
     activePathEl.setAttribute("d", buildPathD(pts));
 }
 
 function onPointerUp(e) {
+    // Handle drag end in select mode
+    if (selectMode && dragState) {
+        handleSelectUp(e);
+        return;
+    }
+
     if (!activeStroke || !activePathEl) return;
 
     svgOverlay.releasePointerCapture?.(e.pointerId);
 
     const pts = activeStroke.points;
 
-    // Discard tiny accidental taps (fewer than 2 points or very short)
     if (pts.length < 2) {
         activePathEl.remove();
         activeStroke = null;
@@ -306,17 +381,15 @@ function onPointerUp(e) {
         return;
     }
 
-    // Remove live path (renderStrokes will recreate it from data)
     activePathEl.remove();
 
-    // Build annotation item and persist via shared.js
     const { mode, pageId } = getModeContextLocal();
 
     const item = {
         id: ulidLike(),
         kind: "stroke",
-        text: "",                       // strokes have no text
-        scope: state.shareByDefault ? "shared" : "local",
+        text: "",
+        scope: shareDrawingEnabled ? "shared" : "local",
         author: { id: getAuthorIdLocal(), label: getAuthorLabelLocal() },
         createdAt: nowMs(),
         updatedAt: nowMs(),
@@ -330,10 +403,11 @@ function onPointerUp(e) {
             color: activeStroke.color,
             width: activeStroke.width,
             opacity: activeStroke.opacity,
+            groupId: currentGroupId,
         },
     };
 
-    addAnnotation(item);    // saves to localStorage + sends via WebSocket if shared
+    addAnnotation(item);
 
     activeStroke = null;
     activePathEl = null;
@@ -346,12 +420,200 @@ function onPointerUp(e) {
 function handleEraserTap(e) {
     if (!svgOverlay) return;
 
-    // Hit-test: find the topmost <path> under the pointer
     const target = document.elementFromPoint(e.clientX, e.clientY);
 
     if (target && target.tagName === "path" && target.dataset.strokeId) {
         const id = target.dataset.strokeId;
-        deleteAnnotation(id);       // removes from state.items, saves, re-renders
+        deleteAnnotation(id);
+    }
+}
+
+// =============================================================
+// SELECT / DRAG
+// =============================================================
+
+function handleSelectDown(e) {
+    const groupId = hitTestGroup(e);
+
+    if (!groupId) {
+        // Tapped empty space — deselect all
+        deselectGroup();
+        return;
+    }
+
+    if (e.shiftKey) {
+        // Shift-click: toggle this group in/out of selection
+        if (selectedGroupIds.has(groupId)) {
+            selectedGroupIds.delete(groupId);
+        } else {
+            selectedGroupIds.add(groupId);
+        }
+        refreshSelection();
+    } else if (!selectedGroupIds.has(groupId)) {
+        // Normal click on unselected group — replace selection
+        selectGroup(groupId);
+    }
+
+    // Begin drag if we have a selection
+    if (selectedGroupIds.size > 0) {
+        const world = worldCoordsFromEvent(e);
+        if (!world) return;
+
+        svgOverlay.setPointerCapture(e.pointerId);
+        dragState = {
+            startWorld: { x: world.x, y: world.y },
+            currentWorld: { x: world.x, y: world.y },
+            pointerId: e.pointerId,
+        };
+    }
+}
+
+function handleSelectMove(e) {
+    if (!dragState || selectedGroupIds.size === 0) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const world = worldCoordsFromEvent(e);
+    if (!world) return;
+
+    dragState.currentWorld = { x: world.x, y: world.y };
+
+    const dx = dragState.currentWorld.x - dragState.startWorld.x;
+    const dy = dragState.currentWorld.y - dragState.startWorld.y;
+
+    // Live translate all paths in all selected groups
+    for (const gid of selectedGroupIds) {
+        const groupPaths = svgOverlay.querySelectorAll(`[data-group-id="${gid}"]`);
+        for (const pathEl of groupPaths) {
+            pathEl.setAttribute("transform", `translate(${dx}, ${dy})`);
+        }
+    }
+
+    // Move selection rect too
+    if (selectionRect && selectionRect._baseBounds) {
+        const b = selectionRect._baseBounds;
+        selectionRect.setAttribute("x", b.x + dx);
+        selectionRect.setAttribute("y", b.y + dy);
+    }
+}
+
+function handleSelectUp(e) {
+    if (!dragState || selectedGroupIds.size === 0) {
+        dragState = null;
+        return;
+    }
+
+    svgOverlay.releasePointerCapture?.(dragState.pointerId);
+
+    const dx = dragState.currentWorld.x - dragState.startWorld.x;
+    const dy = dragState.currentWorld.y - dragState.startWorld.y;
+
+    dragState = null;
+
+    // Skip if barely moved (treat as a tap, not a drag)
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+
+    // Commit: offset all stroke points in all selected groups and save
+    for (const gid of selectedGroupIds) {
+        const strokes = getGroupStrokes(gid);
+
+        for (const item of strokes) {
+            const movedPoints = item.stroke.points.map(pt => ({
+                x: pt.x + dx,
+                y: pt.y + dy,
+                p: pt.p,
+            }));
+
+            updateAnnotation(item.id, {
+                stroke: {
+                    ...item.stroke,
+                    points: movedPoints,
+                },
+            });
+        }
+    }
+
+    // renderAll triggered by updateAnnotation -> triggerRender
+    // Refresh selection to update bounding box at new position
+    refreshSelection();
+
+    console.log("[drawing] moved", selectedGroupIds.size, "group(s) by", dx.toFixed(1), dy.toFixed(1));
+}
+
+/**
+ * Select a single group (replaces current selection)
+ */
+function selectGroup(groupId) {
+    deselectGroup();
+    selectedGroupIds.add(groupId);
+    refreshSelection();
+}
+
+/**
+ * Refresh visual selection state — bounding box + path highlights.
+ * Call after modifying selectedGroupIds.
+ */
+function refreshSelection() {
+    // Remove old visuals
+    if (selectionRect) {
+        selectionRect.remove();
+        selectionRect = null;
+    }
+    if (svgOverlay) {
+        svgOverlay.querySelectorAll(".osc-drawing-selected").forEach(el => {
+            el.classList.remove("osc-drawing-selected");
+        });
+    }
+
+    if (selectedGroupIds.size === 0) return;
+
+    // Combined bounding box across all selected groups
+    const bounds = getGroupBounds(selectedGroupIds);
+    if (bounds && svgOverlay) {
+        selectionRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        selectionRect.setAttribute("x", bounds.x);
+        selectionRect.setAttribute("y", bounds.y);
+        selectionRect.setAttribute("width", bounds.width);
+        selectionRect.setAttribute("height", bounds.height);
+        selectionRect.setAttribute("fill", "none");
+        selectionRect.setAttribute("stroke", "#44aaff");
+        selectionRect.setAttribute("stroke-width", "1.5");
+        selectionRect.setAttribute("stroke-dasharray", "6 3");
+        selectionRect.setAttribute("opacity", "0.7");
+        selectionRect.style.pointerEvents = "none";
+        selectionRect.style.vectorEffect = "non-scaling-stroke";
+        selectionRect.classList.add("osc-drawing-selection");
+        selectionRect._baseBounds = { ...bounds };
+        svgOverlay.appendChild(selectionRect);
+    }
+
+    // Highlight paths in all selected groups
+    for (const gid of selectedGroupIds) {
+        const groupPaths = svgOverlay.querySelectorAll(`[data-group-id="${gid}"]`);
+        for (const pathEl of groupPaths) {
+            pathEl.classList.add("osc-drawing-selected");
+        }
+    }
+
+    console.log("[drawing] selection:", selectedGroupIds.size, "group(s)");
+}
+
+/**
+ * Deselect all groups
+ */
+function deselectGroup() {
+    selectedGroupIds.clear();
+
+    if (selectionRect) {
+        selectionRect.remove();
+        selectionRect = null;
+    }
+
+    if (svgOverlay) {
+        svgOverlay.querySelectorAll(".osc-drawing-selected").forEach(el => {
+            el.classList.remove("osc-drawing-selected");
+        });
     }
 }
 
@@ -366,7 +628,8 @@ function handleEraserTap(e) {
 export function renderStrokes() {
     if (!ensureOverlay()) return;
 
-    // Clear existing rendered strokes
+    const prevSelected = new Set(selectedGroupIds);
+
     clearDrawingLayer();
 
     for (const item of state.items) {
@@ -378,7 +641,11 @@ export function renderStrokes() {
 
         const pathEl = createPathElement(stroke, item.id);
 
-        // Eraser hover feedback
+        // Tag with groupId for group operations
+        if (stroke.groupId) {
+            pathEl.dataset.groupId = stroke.groupId;
+        }
+
         if (eraserMode) {
             pathEl.style.cursor = "crosshair";
             pathEl.style.pointerEvents = "stroke";
@@ -390,20 +657,53 @@ export function renderStrokes() {
                 pathEl.setAttribute("stroke", stroke.color || DEFAULT_STROKE_COLOR);
                 pathEl.setAttribute("opacity", stroke.opacity ?? 1);
             });
+        } else if (selectMode) {
+            pathEl.style.cursor = "move";
+            pathEl.style.pointerEvents = "stroke";
+            // Hover: highlight entire group
+            pathEl.addEventListener("pointerenter", () => {
+                if (dragState) return;
+                const gid = stroke.groupId;
+                if (!gid) return;
+                svgOverlay.querySelectorAll(`[data-group-id="${gid}"]`).forEach(p => {
+                    p.classList.add("osc-drawing-hover");
+                });
+            });
+            pathEl.addEventListener("pointerleave", () => {
+                if (dragState) return;
+                svgOverlay.querySelectorAll(".osc-drawing-hover").forEach(p => {
+                    p.classList.remove("osc-drawing-hover");
+                });
+            });
         } else {
             pathEl.style.pointerEvents = "none";
         }
 
         svgOverlay.appendChild(pathEl);
     }
+
+    // Restore selection after re-render
+    if (prevSelected.size > 0 && selectMode) {
+        // Remove any groups that no longer exist
+        for (const gid of prevSelected) {
+            if (getGroupStrokes(gid).length === 0) {
+                prevSelected.delete(gid);
+            }
+        }
+        selectedGroupIds = prevSelected;
+        if (selectedGroupIds.size > 0) {
+            refreshSelection();
+        }
+    }
 }
 
 /**
- * Remove all rendered stroke paths from the overlay
+ * Remove all rendered stroke paths and selection visuals from the overlay
  */
 export function clearDrawingLayer() {
     if (!svgOverlay) return;
-    svgOverlay.querySelectorAll("path").forEach(p => p.remove());
+    svgOverlay.querySelectorAll("path, .osc-drawing-selection").forEach(el => el.remove());
+    selectionRect = null;
 }
 
 // =============================================================
@@ -412,44 +712,69 @@ export function clearDrawingLayer() {
 
 /**
  * Set draw mode on/off.
- * When active, the overlay captures pointer events for drawing.
+ * When activating, generates a new groupId for this drawing session.
  */
 export function setDrawMode(on) {
     drawMode = !!on;
 
     if (drawMode) {
         eraserMode = false;
+        selectMode = false;
+        deselectGroup();
+        // New session = new group
+        currentGroupId = "grp_" + ulidLike();
+        console.log("[drawing] new session group:", currentGroupId);
     }
 
     updateOverlayPointerEvents();
     updateToolbarState();
+    updateTopbarButton();
 
     console.log("[drawing] draw mode:", drawMode);
 }
 
 /**
  * Set eraser mode on/off.
- * When active, tapping a stroke deletes it.
  */
 export function setEraserMode(on) {
     eraserMode = !!on;
 
     if (eraserMode) {
         drawMode = false;
+        selectMode = false;
+        deselectGroup();
     }
 
     updateOverlayPointerEvents();
     updateToolbarState();
-
-    // Re-render to attach/detach hover listeners
+    updateTopbarButton();
     renderStrokes();
 
     console.log("[drawing] eraser mode:", eraserMode);
 }
 
 /**
- * Toggle draw mode
+ * Set select mode on/off.
+ * When active, tap a stroke to select its group, drag to reposition.
  */
+export function setSelectMode(on) {
+    selectMode = !!on;
+
+    if (selectMode) {
+        drawMode = false;
+        eraserMode = false;
+    } else {
+        deselectGroup();
+    }
+
+    updateOverlayPointerEvents();
+    updateToolbarState();
+    updateTopbarButton();
+    renderStrokes();
+
+    console.log("[drawing] select mode:", selectMode);
+}
+
 export function toggleDrawMode() {
     if (drawMode) {
         setDrawMode(false);
@@ -458,9 +783,6 @@ export function toggleDrawMode() {
     }
 }
 
-/**
- * Toggle eraser mode
- */
 export function toggleEraserMode() {
     if (eraserMode) {
         setEraserMode(false);
@@ -469,13 +791,26 @@ export function toggleEraserMode() {
     }
 }
 
+export function toggleSelectMode() {
+    if (selectMode) {
+        setSelectMode(false);
+    } else {
+        setSelectMode(true);
+    }
+}
+
 export function isDrawMode() { return drawMode; }
 export function isEraserMode() { return eraserMode; }
+export function isSelectMode() { return selectMode; }
 
 function updateOverlayPointerEvents() {
     if (!svgOverlay) return;
-    svgOverlay.style.pointerEvents = (drawMode || eraserMode) ? "all" : "none";
-    svgOverlay.style.cursor = drawMode ? "crosshair" : eraserMode ? "pointer" : "default";
+    const active = drawMode || eraserMode || selectMode;
+    svgOverlay.style.pointerEvents = active ? "all" : "none";
+    svgOverlay.style.cursor = drawMode ? "crosshair"
+        : eraserMode ? "pointer"
+        : selectMode ? "default"
+        : "default";
 }
 
 // =============================================================
@@ -494,12 +829,77 @@ export function getStrokeColor() { return strokeColor; }
 export function getStrokeWidth() { return strokeWidth; }
 
 // =============================================================
+// SHARING
+// =============================================================
+
+/**
+ * Toggle whether new drawings are shared or local
+ */
+export function toggleShareDrawing(forceState) {
+    if (typeof forceState === "boolean") {
+        shareDrawingEnabled = forceState;
+    } else {
+        shareDrawingEnabled = !shareDrawingEnabled;
+    }
+
+    updateToolbarState();
+
+    console.log("[drawing] share:", shareDrawingEnabled ? "shared" : "local");
+    return shareDrawingEnabled;
+}
+
+export function isShareDrawing() { return shareDrawingEnabled; }
+
+/**
+ * Toggle scope of all strokes in the selected group(s)
+ * between "local" and "shared"
+ */
+export function toggleSelectedScope() {
+    if (selectedGroupIds.size === 0) return;
+
+    // Determine target scope: if any stroke in selection is local, make all shared; otherwise make all local
+    let hasLocal = false;
+    for (const gid of selectedGroupIds) {
+        for (const item of getGroupStrokes(gid)) {
+            if (item.scope === "local") {
+                hasLocal = true;
+                break;
+            }
+        }
+        if (hasLocal) break;
+    }
+
+    const newScope = hasLocal ? "shared" : "local";
+
+    for (const gid of selectedGroupIds) {
+        for (const item of getGroupStrokes(gid)) {
+            if (item.scope !== newScope) {
+                updateAnnotation(item.id, { scope: newScope });
+            }
+        }
+    }
+
+    console.log("[drawing] set selected scope to", newScope);
+}
+
+/**
+ * Sync the topbar draw-toggle button with current draw mode state.
+ * Called when draw mode is re-activated from inside the toolbar (e.g. color pick).
+ */
+function updateTopbarButton() {
+    const btn = document.getElementById("draw-toggle");
+    if (btn) {
+        btn.classList.toggle("active", drawMode);
+    }
+}
+
+// =============================================================
 // TOOLBAR UI
 // =============================================================
 
 /**
- * Create the drawing toolbar (floats near the draw toggle button).
- * Contains: color swatches, width slider, eraser toggle.
+ * Create the drawing toolbar (floats at bottom center).
+ * Contains: color swatches, width slider, select/move toggle, eraser toggle.
  */
 export function createDrawToolbar() {
     if (drawToolbar && drawToolbar.isConnected) return drawToolbar;
@@ -545,11 +945,14 @@ export function createDrawToolbar() {
 
         swatch.addEventListener("click", () => {
             setStrokeColor(c);
-            // Update swatch borders
             swatchRow.querySelectorAll("div").forEach(s => {
                 s.style.border = "2px solid transparent";
             });
             swatch.style.border = "2px solid #fff";
+            // Return to draw mode after picking a color
+            if (!drawMode) {
+                setDrawMode(true);
+            }
         });
 
         swatchRow.appendChild(swatch);
@@ -557,12 +960,7 @@ export function createDrawToolbar() {
     drawToolbar.appendChild(swatchRow);
 
     // --- Separator ---
-    const sep1 = document.createElement("div");
-    Object.assign(sep1.style, {
-        width: "1px", height: "24px",
-        background: "rgba(255,255,255,0.2)", margin: "0 4px",
-    });
-    drawToolbar.appendChild(sep1);
+    drawToolbar.appendChild(createSeparator());
 
     // --- Width slider ---
     const widthLabel = document.createElement("span");
@@ -586,8 +984,38 @@ export function createDrawToolbar() {
     drawToolbar.appendChild(widthSlider);
 
     // --- Separator ---
-    const sep2 = sep1.cloneNode();
-    drawToolbar.appendChild(sep2);
+    drawToolbar.appendChild(createSeparator());
+
+    // --- Select/Move toggle ---
+    const selectBtn = document.createElement("button");
+    selectBtn.id = "draw-select-btn";
+    selectBtn.title = "Select & Move (tap a drawing to select, drag to move)";
+    selectBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 9l-3 3 3 3"/>
+        <path d="M9 5l3-3 3 3"/>
+        <path d="M15 19l-3 3-3-3"/>
+        <path d="M19 9l3 3-3 3"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <line x1="12" y1="2" x2="12" y2="22"/>
+    </svg>`;
+    Object.assign(selectBtn.style, {
+        background: "transparent",
+        border: "1px solid rgba(255,255,255,0.2)",
+        borderRadius: "6px",
+        color: "#ccc",
+        padding: "4px 6px",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+    });
+    selectBtn.addEventListener("click", () => {
+        toggleSelectMode();
+    });
+    drawToolbar.appendChild(selectBtn);
+
+    // --- Separator ---
+    drawToolbar.appendChild(createSeparator());
 
     // --- Eraser toggle ---
     const eraserBtn = document.createElement("button");
@@ -613,22 +1041,109 @@ export function createDrawToolbar() {
     });
     drawToolbar.appendChild(eraserBtn);
 
+    // --- Separator ---
+    drawToolbar.appendChild(createSeparator());
+
+    // --- Share toggle ---
+    const shareBtn = document.createElement("button");
+    shareBtn.id = "draw-share-btn";
+    shareBtn.title = "Drawings shared with all clients (click for local only)";
+    shareBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 8a10 10 0 0 1 20 0"/>
+        <path d="M5 11a7 7 0 0 1 14 0"/>
+        <path d="M8 14a4 4 0 0 1 8 0"/>
+        <circle cx="12" cy="17" r="1.5" fill="currentColor"/>
+    </svg>`;
+    Object.assign(shareBtn.style, {
+        background: shareDrawingEnabled ? "rgba(68,255,136,0.3)" : "transparent",
+        border: `1px solid ${shareDrawingEnabled ? "#44ff88" : "rgba(255,255,255,0.2)"}`,
+        borderRadius: "6px",
+        color: shareDrawingEnabled ? "#88ffaa" : "#ccc",
+        padding: "4px 6px",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+    });
+    shareBtn.addEventListener("click", () => {
+        toggleShareDrawing();
+    });
+    drawToolbar.appendChild(shareBtn);
+
+    // --- Drag handle (left edge) ---
+    const dragHandle = document.createElement("div");
+    dragHandle.className = "osc-draw-toolbar-handle";
+    Object.assign(dragHandle.style, {
+        width: "6px",
+        height: "20px",
+        borderRadius: "2px",
+        background: "rgba(255,255,255,0.2)",
+        cursor: "grab",
+        marginLeft: "4px",
+        flexShrink: "0",
+    });
+    drawToolbar.appendChild(dragHandle);
+
     document.body.appendChild(drawToolbar);
+
+    // makeDraggable uses offsetLeft which breaks with transform: translateX(-50%).
+    // We convert to absolute positioning on first show (see updateToolbarState).
+    makeDraggable(drawToolbar, dragHandle);
+
     return drawToolbar;
+}
+
+function createSeparator() {
+    const sep = document.createElement("div");
+    Object.assign(sep.style, {
+        width: "1px", height: "24px",
+        background: "rgba(255,255,255,0.2)", margin: "0 4px",
+    });
+    return sep;
 }
 
 function updateToolbarState() {
     if (!drawToolbar) return;
 
-    // Show/hide toolbar
-    drawToolbar.style.display = (drawMode || eraserMode) ? "flex" : "none";
+    const shouldShow = drawMode || eraserMode || selectMode;
+    const wasHidden = drawToolbar.style.display === "none";
 
-    // Eraser button state
+    drawToolbar.style.display = shouldShow ? "flex" : "none";
+
+    // On first show, convert CSS centering to absolute left/top so
+    // makeDraggable's offsetLeft calculation works correctly.
+    if (shouldShow && wasHidden && drawToolbar.style.transform !== "none") {
+        requestAnimationFrame(() => {
+            const rect = drawToolbar.getBoundingClientRect();
+            drawToolbar.style.left = `${rect.left}px`;
+            drawToolbar.style.top = `${rect.top}px`;
+            drawToolbar.style.bottom = "auto";
+            drawToolbar.style.transform = "none";
+        });
+    }
+
     const eraserBtn = drawToolbar.querySelector("#draw-eraser-btn");
     if (eraserBtn) {
         eraserBtn.style.background = eraserMode ? "rgba(255,68,68,0.3)" : "transparent";
         eraserBtn.style.borderColor = eraserMode ? "#ff4444" : "rgba(255,255,255,0.2)";
         eraserBtn.style.color = eraserMode ? "#ff8888" : "#ccc";
+    }
+
+    const selectBtn = drawToolbar.querySelector("#draw-select-btn");
+    if (selectBtn) {
+        selectBtn.style.background = selectMode ? "rgba(68,170,255,0.3)" : "transparent";
+        selectBtn.style.borderColor = selectMode ? "#44aaff" : "rgba(255,255,255,0.2)";
+        selectBtn.style.color = selectMode ? "#88ccff" : "#ccc";
+    }
+
+    const shareBtn = drawToolbar.querySelector("#draw-share-btn");
+    if (shareBtn) {
+        shareBtn.style.background = shareDrawingEnabled ? "rgba(68,255,136,0.3)" : "transparent";
+        shareBtn.style.borderColor = shareDrawingEnabled ? "#44ff88" : "rgba(255,255,255,0.2)";
+        shareBtn.style.color = shareDrawingEnabled ? "#88ffaa" : "#ccc";
+        shareBtn.title = shareDrawingEnabled
+            ? "Drawings shared with all clients (click for local only)"
+            : "Drawings are local only (click to share)";
     }
 }
 
@@ -636,13 +1151,9 @@ function updateToolbarState() {
 // UNDO (last stroke)
 // =============================================================
 
-/**
- * Undo the last stroke by the current author.
- */
 export function undoLastStroke() {
     const authorId = getAuthorIdLocal();
 
-    // Find the most recent stroke by this author
     for (let i = state.items.length - 1; i >= 0; i--) {
         const item = state.items[i];
         if (item.kind === "stroke" && item.author?.id === authorId) {
@@ -654,13 +1165,9 @@ export function undoLastStroke() {
 }
 
 // =============================================================
-// CLEAR ALL STROKES
+// CLEAR / DELETE
 // =============================================================
 
-/**
- * Clear all local strokes for the current project.
- * Does not affect shared strokes from other authors.
- */
 export function clearLocalStrokes() {
     const authorId = getAuthorIdLocal();
     const toDelete = state.items
@@ -674,37 +1181,82 @@ export function clearLocalStrokes() {
     console.log("[drawing] cleared", toDelete.length, "local strokes");
 }
 
+/**
+ * Delete all strokes in all selected groups
+ */
+export function deleteSelectedGroup() {
+    if (selectedGroupIds.size === 0) return;
+
+    const groupCount = selectedGroupIds.size;
+    let count = 0;
+    for (const gid of selectedGroupIds) {
+        const strokes = getGroupStrokes(gid);
+        for (const item of strokes) {
+            deleteAnnotation(item.id);
+            count++;
+        }
+    }
+
+    deselectGroup();
+
+    console.log("[drawing] deleted", count, "strokes from", groupCount, "group(s)");
+}
+
 // =============================================================
 // KEYBOARD SHORTCUTS
 // =============================================================
 
-/**
- * Handle keyboard shortcuts for drawing.
- * Call this from a global keydown listener.
- */
 export function handleDrawingKeydown(e) {
-    // Don't capture when text input is active
     if (window.oscillaTextInputActive) return false;
 
-    // Ctrl/Cmd+Z = undo last stroke (only in draw mode)
+    // Ctrl/Cmd+Z = undo last stroke (in draw mode)
     if ((drawMode || eraserMode) && (e.ctrlKey || e.metaKey) && e.key === "z") {
         e.preventDefault();
         undoLastStroke();
         return true;
     }
 
-    // 'e' = toggle eraser (only when draw mode is on)
-    if (drawMode && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === "e") {
+    // 'e' = toggle eraser
+    if ((drawMode || selectMode) && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === "e") {
         e.preventDefault();
         toggleEraserMode();
         return true;
     }
 
-    // Escape = exit draw/erase mode
-    if ((drawMode || eraserMode) && e.key === "Escape") {
+    // 'v' = toggle select/move mode
+    if ((drawMode || eraserMode) && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === "v") {
+        e.preventDefault();
+        toggleSelectMode();
+        return true;
+    }
+
+    // 'd' = back to draw mode
+    if ((selectMode || eraserMode) && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === "d") {
+        e.preventDefault();
+        setDrawMode(true);
+        return true;
+    }
+
+    // Delete/Backspace = delete selected group(s)
+    if (selectMode && selectedGroupIds.size > 0 && (e.key === "Delete" || e.key === "Backspace")) {
+        e.preventDefault();
+        deleteSelectedGroup();
+        return true;
+    }
+
+    // 's' = toggle scope (local/shared) on selected group(s)
+    if (selectMode && selectedGroupIds.size > 0 && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === "s") {
+        e.preventDefault();
+        toggleSelectedScope();
+        return true;
+    }
+
+    // Escape = exit all modes
+    if ((drawMode || eraserMode || selectMode) && e.key === "Escape") {
         e.preventDefault();
         setDrawMode(false);
         setEraserMode(false);
+        setSelectMode(false);
         return true;
     }
 
@@ -712,7 +1264,7 @@ export function handleDrawingKeydown(e) {
 }
 
 // =============================================================
-// HELPER — MODE & AUTHOR (avoid circular import with interactionSurface)
+// HELPER — MODE & AUTHOR
 // =============================================================
 
 function getModeContextLocal() {
@@ -751,48 +1303,46 @@ function getAuthorLabelLocal() {
 // INITIALIZATION
 // =============================================================
 
-/**
- * Initialize drawing system.
- * Call after annotations system is initialized and score SVG is loaded.
- */
 export function initDrawing() {
     ensureOverlay();
     createDrawToolbar();
 
-    // Keyboard listener
     window.addEventListener("keydown", handleDrawingKeydown);
 
-    // Re-create overlay if score dimensions change (window resize)
     window.addEventListener("resize", () => {
         ensureOverlay();
         renderStrokes();
     });
 
-    // Expose on window API
     window.oscillaDrawing = {
         setDrawMode,
         setEraserMode,
+        setSelectMode,
         toggleDrawMode,
         toggleEraserMode,
+        toggleSelectMode,
         isDrawMode: () => drawMode,
         isEraserMode: () => eraserMode,
+        isSelectMode: () => selectMode,
         setStrokeColor,
         setStrokeWidth,
         getStrokeColor: () => strokeColor,
         getStrokeWidth: () => strokeWidth,
+        toggleShareDrawing,
+        isShareDrawing: () => shareDrawingEnabled,
+        toggleSelectedScope,
         undoLastStroke,
         clearLocalStrokes,
+        deleteSelectedGroup,
     };
 
     console.log("[drawing] initialized");
 }
 
-/**
- * Tear down drawing system
- */
 export function destroyDrawing() {
     setDrawMode(false);
     setEraserMode(false);
+    setSelectMode(false);
     removeOverlay();
 
     if (drawToolbar) {
