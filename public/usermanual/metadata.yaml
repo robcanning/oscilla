@@ -1,0 +1,21 @@
+---
+subtitle: "Animated Graphic Score Framework"
+lang: en
+documentclass: report
+classoption:
+  - a4paper
+  - 10pt
+  - twoside
+geometry:
+  - top=2cm
+  - bottom=2cm
+  - left=2cm
+  - right=2cm
+toc: true
+toc-depth: 2
+numbersections: true
+secnumdepth: 2
+linkcolor: blue
+header-includes:
+  - \input{../shared-latex/preamble.tex}
+---

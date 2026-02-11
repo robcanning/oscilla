@@ -1,0 +1,137 @@
+% ============================================================
+% Oscilla — Shared LaTeX Preamble
+% ============================================================
+
+% -- Typography & spacing --
+\usepackage{microtype}
+\usepackage{parskip}
+\setlength{\parskip}{3pt plus 1pt minus 1pt}
+\setlength{\parindent}{0pt}
+\usepackage{setspace}
+\setstretch{1.15}
+
+% -- Fonts (IBM Plex, requires XeLaTeX) --
+\usepackage{fontspec}
+\setmainfont{IBM Plex Serif}
+\setsansfont{IBM Plex Sans}
+\setmonofont{IBM Plex Mono}[Scale=0.82]
+
+% -- Headings: sans, tight spacing --
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\sffamily\LARGE\bfseries}
+  {\chaptertitlename\ \thechapter}{12pt}{\huge\sffamily}
+\titlespacing*{\chapter}{0pt}{-10pt}{18pt}
+\titleformat{\section}{\sffamily\large\bfseries}{}{0em}{}
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+\titleformat{\subsection}{\sffamily\normalsize\bfseries}{}{0em}{}
+\titlespacing*{\subsection}{0pt}{8pt}{3pt}
+\titleformat{\subsubsection}{\sffamily\small\bfseries}{}{0em}{}
+\titlespacing*{\subsubsection}{0pt}{6pt}{2pt}
+
+% -- Colors --
+\usepackage{xcolor}
+\definecolor{oscblue}{HTML}{1f6feb}
+\definecolor{oscbg}{HTML}{0d1117}
+\definecolor{oscgray}{HTML}{9da7b3}
+\definecolor{osclink}{HTML}{58a6ff}
+
+% -- Links --
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=oscblue,
+  urlcolor=oscblue,
+  citecolor=oscblue,
+  pdftitle={Oscilla},
+  pdfauthor={Rob Canning},
+}
+
+% -- Code listings: tighter --
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{
+  breaklines,
+  commandchars=\\\{\},
+  fontsize=\footnotesize,
+  xleftmargin=0.5em,
+  formatcom=\vspace{-0.5ex}
+}
+\usepackage{etoolbox}
+\AtBeginEnvironment{Highlighting}{\vspace{-0.5ex}}
+\AfterEndEnvironment{Highlighting}{\vspace{-1ex}}
+
+% -- Lists: tighter --
+\usepackage{enumitem}
+\setlist{nosep, leftmargin=1.5em, topsep=2pt}
+
+% -- Graphics --
+\usepackage{graphicx}
+\usepackage{float}
+
+% -- Tables --
+\usepackage{booktabs}
+\usepackage{longtable}
+
+% -- Captions --
+\usepackage[font=small,labelfont=bf,skip=4pt]{caption}
+
+% -- Headers and footers --
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{\small\thepage}
+\fancyhead[RE]{\small\sffamily\leftmark}
+\fancyhead[LO]{\small\sffamily\rightmark}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% -- Block quotes --
+\usepackage{csquotes}
+\renewenvironment{quote}
+  {\list{}{\leftmargin=1.2em\rightmargin=1.2em\topsep=2pt\parsep=1pt}\item\relax\small\itshape}
+  {\endlist}
+
+% -- Prevent widows/orphans --
+\widowpenalty=10000
+\clubpenalty=10000
+
+% -- Tighter TOC --
+\usepackage{tocloft}
+\setlength{\cftbeforesecskip}{1pt}
+\setlength{\cftbeforesubsecskip}{0pt}
+\setlength{\cftbeforechapskip}{4pt}
+
+% -- Custom macros --
+\newcommand{\oscilla}{\textsc{Oscilla}}
+\newcommand{\cue}[1]{\texttt{#1}}
+
+% -- Custom title page --
+\renewcommand{\maketitle}{%
+  \begin{titlepage}
+    \centering
+    \vspace*{\stretch{2}}
+
+    {\sffamily\bfseries\fontsize{72}{78}\selectfont
+     OSCILLA\par}
+
+    \vspace{0.6em}
+
+    {\sffamily\fontsize{24}{30}\selectfont
+     User Manual\par}
+
+    \vspace{1.5em}
+
+    {\sffamily\large\color{oscgray}
+     Animated Graphic Score Framework\par}
+
+    \vspace{\stretch{2}}
+
+    {\sffamily\large Rob Canning\par}
+    \vspace{0.8em}
+    {\sffamily\normalsize\color{oscgray}
+     \href{https://oscilla.cc}{oscilla.cc}\par}
+    \vspace{0.5em}
+    {\sffamily\normalsize\color{oscgray} \the\year\par}
+
+    \vspace{\stretch{1}}
+  \end{titlepage}
+}

@@ -6,7 +6,7 @@
 set -e  # Exit on error
 
 echo "════════════════════════════════════════"
-echo "🎵  Building Oscilla for kompot.si"
+echo "  Building Oscilla for kompot.si"
 echo "════════════════════════════════════════"
 echo ""
 
@@ -33,7 +33,7 @@ echo "   ✓ Cleaned"
 echo ""
 
 # Build landing page first (goes to root)
-echo "📄 Building landing page..."
+echo " Building landing page..."
 npx @11ty/eleventy --config .eleventy.landing.js --quiet
 if [ ! -f "$OUTPUT_DIR/index.html" ]; then
     echo "   ❌ Landing page build failed - index.html not found"
@@ -45,7 +45,7 @@ echo "   ✓ Landing page built → $OUTPUT_DIR/"
 echo ""
 
 # Build documentation (goes to /docs/)
-echo "📚 Building documentation..."
+echo " Building documentation..."
 npx @11ty/eleventy --config "$DOCS_CONFIG" --quiet
 if [ ! -d "$OUTPUT_DIR/docs" ]; then
     echo "   ❌ Documentation build failed - docs/ not found"
@@ -57,66 +57,66 @@ echo "   ✓ Documentation built → $OUTPUT_DIR/docs/"
 echo ""
 
 # Verify critical files exist
-echo "🔍 Verifying build..."
+echo " Verifying build..."
 ERRORS=0
 WARNINGS=0
 
 if [ ! -f "$OUTPUT_DIR/index.html" ]; then
-    echo "   ❌ Missing: index.html"
+    echo "    Missing: index.html"
     ERRORS=$((ERRORS + 1))
 else
-    echo "   ✓ index.html"
+    echo "    index.html"
 fi
 
 if [ ! -f "$OUTPUT_DIR/landing.css" ]; then
-    echo "   ❌ Missing: landing.css"
+    echo "    Missing: landing.css"
     ERRORS=$((ERRORS + 1))
 else
-    echo "   ✓ landing.css"
+    echo "    landing.css"
 fi
 
 if [ ! -f "$OUTPUT_DIR/logo-icon.png" ]; then
-    echo "   ❌ Missing: logo-icon.png"
+    echo "    Missing: logo-icon.png"
     ERRORS=$((ERRORS + 1))
 else
-    echo "   ✓ logo-icon.png"
+    echo "    logo-icon.png"
 fi
 
 if [ ! -d "$OUTPUT_DIR/builds" ]; then
-    echo "   ⚠️  builds/ directory not found (check ../../dist/ has binaries)"
+    echo "     builds/ directory not found (check ../../dist/ has binaries)"
     WARNINGS=$((WARNINGS + 1))
 else
     BUILD_COUNT=$(ls -1 "$OUTPUT_DIR/builds/" 2>/dev/null | wc -l)
     if [ $BUILD_COUNT -eq 0 ]; then
-        echo "   ⚠️  builds/ is empty (check ../../dist/ has binaries)"
+        echo "     builds/ is empty (check ../../dist/ has binaries)"
         WARNINGS=$((WARNINGS + 1))
     else
-        echo "   ✓ builds/ ($BUILD_COUNT files)"
+        echo "    builds/ ($BUILD_COUNT files)"
     fi
 fi
 
 if [ ! -f "$OUTPUT_DIR/docs/index.html" ]; then
-    echo "   ❌ Missing: docs/index.html"
+    echo "    Missing: docs/index.html"
     ERRORS=$((ERRORS + 1))
 else
-    echo "   ✓ docs/index.html"
+    echo "    docs/index.html"
 fi
 
 if [ $ERRORS -gt 0 ]; then
     echo ""
-    echo "❌ Build completed with $ERRORS error(s)"
+    echo " Build completed with $ERRORS error(s)"
     exit 1
 fi
 
 if [ $WARNINGS -gt 0 ]; then
     echo ""
-    echo "⚠️  Build completed with $WARNINGS warning(s)"
+    echo "  Build completed with $WARNINGS warning(s)"
 fi
 
 echo ""
 
 # Show structure
-echo "📦 Build output structure:"
+echo "Build output structure:"
 echo ""
 echo "   $OUTPUT_DIR/"
 echo "   ├── index.html           ← Landing page"
@@ -134,13 +134,13 @@ echo "       └── ..."
 echo ""
 
 echo "════════════════════════════════════════"
-echo "✅ Build successful!"
+echo " Build successful!"
 echo "════════════════════════════════════════"
 echo ""
 
 # Deploy if requested
 if [ "$1" == "--deploy" ] || [ "$1" == "-d" ]; then
-    echo "🚀 Deploying to kompot.si..."
+    echo " Deploying to kompot.si..."
     echo ""
     
     # Show what will be deployed
@@ -157,13 +157,13 @@ if [ "$1" == "--deploy" ] || [ "$1" == "-d" ]; then
         rsync -avz --delete "$OUTPUT_DIR"/* rob@kompot.si:/home/rob/oscilla-doc/
         echo ""
         echo "════════════════════════════════════════"
-        echo "✅ Deployed successfully!"
+        echo " Deployed successfully!"
         echo "════════════════════════════════════════"
         echo ""
-        echo "🌐 Landing page:   https://oscilla.kompot.si/"
-        echo "📚 Documentation:  https://oscilla.kompot.si/docs/"
-        echo "📦 Downloads:      https://oscilla.kompot.si/builds/"
-        echo "🔧 Repository:     https://git.kompot.si/rob/oscilla"
+        echo " Landing page:   https://oscilla.kompot.si/"
+        echo " Documentation:  https://oscilla.kompot.si/docs/"
+        echo " Downloads:      https://oscilla.kompot.si/builds/"
+        echo " Repository:     https://git.kompot.si/rob/oscilla"
         echo ""
     else
         echo "   Deployment cancelled."

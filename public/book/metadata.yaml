@@ -1,0 +1,25 @@
+---
+title: "Oscilla"
+subtitle: "Composing with Animated Graphic Scores"
+author: "Rob"
+date: \today
+lang: en
+documentclass: book
+classoption:
+  - a4paper
+  - 11pt
+  - twoside
+  - openright
+geometry:
+  - margin=2.5cm
+  - bindingoffset=0.5cm
+toc: true
+toc-depth: 2
+numbersections: true
+secnumdepth: 2
+lot: false
+lof: true
+linkcolor: blue
+header-includes:
+  - \input{../shared-latex/preamble.tex}
+---
