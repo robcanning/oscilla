@@ -20,6 +20,7 @@
 //    addCursor(handle, cursorId, opts)    -- multi-cursor
 //    removeCursor(handle, cursorId)       -- multi-cursor
 //    removeAllCursors(handle)             -- multi-cursor
+//    updatePeaks(handle, buffer, filename) -- pool file switching
 //    destroyWaveform(uid)
 //    getWaveform(uid)
 // =============================================================
@@ -168,6 +169,10 @@ export function renderWaveform(svg, target, buffer, uid, filename, opts = {}) {
   // If a waveform already exists for this uid, reuse the group
   const existing = activeWaveforms.get(uid);
   if (existing?.group?.parentNode) {
+    // Update peaks if the filename has changed (e.g. audioPool switching files)
+    if (filename && existing._filename !== filename) {
+      updatePeaks(existing, buffer, filename);
+    }
     // Update info label if provided
     if (opts.info && existing._infoText) {
       existing._infoText.textContent = opts.info;
@@ -271,6 +276,7 @@ export function renderWaveform(svg, target, buffer, uid, filename, opts = {}) {
     upperLine,
     lowerLine,
     _infoText: infoText,
+    _filename: filename,
     _rafId: null,
     _running: false,
   };
@@ -354,6 +360,30 @@ export function removeAllCursors(handle) {
     try { sub.cursor?.remove(); } catch {}
   }
   handle._cursors.clear();
+}
+
+
+/**
+ * Update the peak polylines of an existing waveform to show a different file.
+ * Used by audioPool when switching between pool files.
+ *
+ * @param {object} handle   - waveform handle
+ * @param {AudioBuffer} buffer - new audio buffer
+ * @param {string} filename  - new filename (for peak cache key)
+ */
+export function updatePeaks(handle, buffer, filename) {
+  if (!handle?.upperLine || !handle?.lowerLine || !handle?.bbox) return;
+
+  const bbox = handle.bbox;
+  const buckets = Math.min(Math.round(bbox.width), 2000);
+  const peaks = getPeaks(filename, buffer, buckets);
+
+  handle.upperLine.setAttribute("points",
+    peaksToPoints(peaks.maxPeaks, bbox.x, bbox.y, bbox.width, bbox.height));
+  handle.lowerLine.setAttribute("points",
+    peaksToPoints(peaks.minPeaks, bbox.x, bbox.y, bbox.width, bbox.height));
+
+  handle._filename = filename;
 }
 
 

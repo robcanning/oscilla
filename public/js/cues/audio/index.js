@@ -18,7 +18,8 @@ export {
   generateToneBuffer,
   sendAudioOscTrigger,
   createAudioOverlay,
-  evalMaybeRandom
+  evalMaybeRandom,
+  selectFromPool
 } from "./audioShared.js";
 
 // --- audioFile ---
@@ -34,7 +35,8 @@ export {
 export {
   ensureAudioPool,
   handleAudioPoolCue,
-  primeAudioPoolOverlay
+  primeAudioPoolOverlay,
+  primePoolWaveform
 } from "./audioPool.js";
 
 // --- audioImpulse ---

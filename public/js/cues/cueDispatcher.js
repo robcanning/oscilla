@@ -57,7 +57,7 @@ import {
   handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues,
   handleAudioPoolCue, handleAudioImpulseCue,
   primeAudioOverlay, primeAudioPoolOverlay, primeAudioImpulseOverlay,
-  primeWaveform, primeImpulseWaveform
+  primeWaveform, primeImpulseWaveform, primePoolWaveform
 } from "./audio/index.js";
 
 import { handleSynthCue, primeSynthOverlay } from "./synth.js";
@@ -710,6 +710,7 @@ export function assignCues(svgRoot, cuesArray = []) {
 
         if (ast.type === "cueAudioPool") {
           primeAudioPoolOverlay(ast, child);
+          primePoolWaveform(ast, child);
         }
 
         if (ast.type === "cueAudioImpulse") {

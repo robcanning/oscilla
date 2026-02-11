@@ -1,28 +1,40 @@
 // =============================================================
-//  audioPool.js -- randomized audio pool engine
-//
-//  ensureAudioPool, handleAudioPoolCue, primeAudioPoolOverlay
+//  audioPool.js -- randomised pool playback
 // =============================================================
 
 import { sendOSC } from "../../system/oscillaOSCClient.js";
+
 import {
   evalMaybeRandom,
   createAudioOverlay,
   formatAudioPoolOverlay,
-  parseOverlayLevel
+  parseOverlayLevel,
+  audioBufferCache,
+  sharedAudioCtx,
+  selectFromPool
 } from "./audioShared.js";
+
 import { handleAudioCue } from "./audioFile.js";
+import {
+  renderWaveform,
+  getWaveform,
+  updatePeaks,
+  startCursor,
+  resetCursor
+} from "../../system/waveform.js";
 
 
 // =============================================================
 //  Pool cache
 // =============================================================
+
 const audioPools = window.audioPools || (window.audioPools = new Map());
 
 
 // =============================================================
-//  ensureAudioPool -- fetch and cache file list for a pool
+//  ensureAudioPool -- fetch file list from server, cache it
 // =============================================================
+
 export async function ensureAudioPool(uid, params) {
   if (audioPools.has(uid)) return audioPools.get(uid);
 
@@ -58,8 +70,9 @@ export async function ensureAudioPool(uid, params) {
 
 
 // =============================================================
-//  handleAudioPoolCue -- single hit from randomized pool
+//  handleAudioPoolCue -- single hit from randomised pool
 // =============================================================
+
 export async function handleAudioPoolCue(ast, el, opts = {}) {
   try {
     const params = ast.params || ast;
@@ -78,7 +91,8 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       loop = 1,
 
       osc,
-      oscaddr
+      oscaddr,
+      waveform  // waveform target: "self" (default), "none", or element id
     } = params;
 
     if (!path) {
@@ -93,27 +107,17 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       return;
     }
 
-    let file = null;
+    let file = selectFromPool(pool);
 
-    // selection logic
-    if (pool.mode === "rand") {
-      file = pool.files[Math.floor(Math.random() * pool.files.length)];
-    } else {
-      // shuffle (no repeat until exhausted)
-      file = pool.files[pool.cursor % pool.files.length];
-      pool.cursor++;
-
-      // reshuffle when looped
-      if (pool.cursor >= pool.files.length) {
-        pool.files = [...pool.files].sort(() => Math.random() - 0.5);
-        pool.cursor = 0;
-      }
+    if (!file) {
+      console.warn("[audioPool] Pool selection returned null:", params);
+      return;
     }
 
-    // Evaluate randomizable params
+    // Evaluate randomisable params
     const evaluatedAmp = evalMaybeRandom(amp) ?? 1;
-    const panVal       = evalMaybeRandom(params.pan) ?? 0;
-    const pitchVal     = evalMaybeRandom(params.pitch) ?? 1;
+    const panVal = evalMaybeRandom(params.pan) ?? 0;
+    const pitchVal = evalMaybeRandom(params.pitch) ?? 1;
 
     // Handle fade values - pass through raw for resolveFade in handleAudioCue
     let fadeInVal, fadeOutVal;
@@ -128,12 +132,10 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
     let name = file.endsWith(`.${format}`) ? file : `${file}.${format}`;
     const filename = path ? `${path}/${name}` : name;
 
-    // polyphony control
+    // Polyphony control
     const poly = Number(params.poly ?? (params.overlap ? 99 : 1));
 
     let playUid = uid;
-
-    // If more than one allowed, generate unique instance IDs
     if (poly > 1) {
       playUid = `${uid}__${Date.now()}_${Math.floor(Math.random() * 9999)}`;
     }
@@ -152,7 +154,11 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
     };
 
     // OVERLAY - show filename AND evaluated params
-    if (el) {
+    // Suppressed when waveform is active (waveform has its own info label)
+    const wfParam = waveform ?? "self";
+    const wfActive = wfParam !== "none" && wfParam !== "0" && el;
+
+    if (el && !wfActive) {
       const overlay = createAudioOverlay({
         anchorEl: el,
         label: `${path}`,
@@ -168,13 +174,12 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       overlay.update(`${file} | ${details}`);
       overlay.position();
 
-      // Auto-destroy after a short time (since audioPool is a one-shot)
       setTimeout(() => {
         overlay.destroy();
       }, 1500);
     }
 
-    // optional OSC announcement
+    // Optional OSC announcement
     if (osc || oscaddr) {
       try {
         sendOSC({
@@ -193,7 +198,24 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       }
     }
 
-    return handleAudioCue(cue);
+    // Fire audio playback
+    await handleAudioCue(cue);
+
+    // Waveform: update peaks to selected file, start cursor
+    if (wfActive) {
+      const wfUid = `wf-pool-${uid}`;
+      const wfHandle = getWaveform(wfUid);
+      if (wfHandle) {
+        const buf = audioBufferCache.get(filename);
+        if (buf) {
+          updatePeaks(wfHandle, buf, filename);
+          resetCursor(wfHandle);
+          if (sharedAudioCtx) {
+            startCursor(wfHandle, sharedAudioCtx, sharedAudioCtx.currentTime, buf.duration, pitchVal);
+          }
+        }
+      }
+    }
 
   } catch (err) {
     console.error("[audioPool] error:", err);
@@ -204,6 +226,7 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
 // =============================================================
 //  Prime audioPool overlay (called during assignCues)
 // =============================================================
+
 export function primeAudioPoolOverlay(ast, cueElement) {
   if (!ast || !cueElement) return;
 
@@ -230,4 +253,70 @@ export function primeAudioPoolOverlay(ast, cueElement) {
   }
 
   console.log(`[audioPool] Primed overlay for ${params.path || ast.path}`);
+}
+
+
+// =============================================================
+//  Prime pool waveform (called during assignCues)
+//  Fetches pool, decodes first file's buffer, renders waveform.
+// =============================================================
+
+export async function primePoolWaveform(ast, cueElement) {
+  if (!ast || !cueElement) return;
+
+  const params = ast.params || ast;
+  const waveformParam = params.waveform ?? "self";
+
+  if (waveformParam === "none" || waveformParam === "0") return;
+  if (cueElement._poolWaveformPrimed) return;
+  cueElement._poolWaveformPrimed = true;
+
+  const svg = cueElement.ownerSVGElement;
+  if (!svg) return;
+
+  const {
+    path,
+    glob,
+    format = "wav",
+    mode = "shuffle",
+    uid = `${path || "pool"}-${glob || "all"}`
+  } = params;
+
+  if (!path) return;
+
+  try {
+    const pool = await ensureAudioPool(uid, { path, glob, format, mode });
+    if (!pool?.files?.length) return;
+
+    const firstFile = pool.files[0];
+    let filename = path ? `${path}/${firstFile}` : firstFile;
+    if (!filename.endsWith(`.${format}`)) filename = `${filename}.${format}`;
+
+    const ctx = sharedAudioCtx;
+
+    let buf = audioBufferCache.get(filename);
+    if (!buf) {
+      const projectPath = resolveProjectPath("audio", filename);
+      const sharedPath = `${window.sharedDir}audio/${filename}`;
+
+      let resp;
+      try {
+        const head = await fetch(projectPath, { method: "HEAD" });
+        resp = await fetch(head.ok ? projectPath : sharedPath);
+      } catch {
+        resp = await fetch(sharedPath);
+      }
+
+      buf = await ctx.decodeAudioData(await resp.arrayBuffer());
+      audioBufferCache.set(filename, buf);
+    }
+
+    renderWaveform(svg, waveformParam, buf, `wf-pool-${uid}`, filename, {
+      element: cueElement
+    });
+
+    console.log(`[audioPool] Primed waveform for ${uid}`);
+  } catch (err) {
+    console.warn(`[audioPool] Waveform prime failed:`, err);
+  }
 }

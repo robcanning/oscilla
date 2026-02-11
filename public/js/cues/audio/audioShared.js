@@ -1,52 +1,36 @@
 // =============================================================
-//  audioShared.js -- shared state, utilities, and overlay system
-//  for all audio cue modules (audioFile, audioPool, audioImpulse)
+//  audioShared.js -- shared state, utilities, overlay system
+//  Used by: audio.js, audioPool.js, audioImpulse.js
 // =============================================================
-
-import { sendOSC } from "../../system/oscillaOSCClient.js";
 
 // =============================================================
 //  Shared AudioContext (singleton)
 // =============================================================
+
 export const sharedAudioCtx =
   window.sharedAudioCtx ||
   (window.sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
 
 // =============================================================
-//  Shared caches and state
+//  Shared state
 // =============================================================
-export const audioBufferCache = window.audioBufferCache || new Map();
-export const audioLastHit     = window.audioLastHit     || new Map();
-export let   activeAudioCues  = window.activeAudioCues  || new Set();
 
-export const audioDebounce     = new Map();
+export const audioBufferCache = window.audioBufferCache || new Map();
+window.audioBufferCache = audioBufferCache;
+
+export const audioLastHit = window.audioLastHit || new Map();
+window.audioLastHit = audioLastHit;
+
+export let activeAudioCues = window.activeAudioCues || new Set();
+window.activeAudioCues = activeAudioCues;
+
+export const audioDebounce = new Map();
 export const maxAudioInstances = 10;
 
 // =============================================================
-//  Utility: generate fallback sine buffer (for offline testing)
+//  Utility: evaluate random expressions from DSL
 // =============================================================
-export function generateToneBuffer(ctx, freq = 440, dur = 0.3, amp = 0.3) {
-  const rate = ctx.sampleRate;
-  const len  = rate * dur;
-  const buf  = ctx.createBuffer(1, len, rate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) data[i] = Math.sin((2 * Math.PI * freq * i) / rate) * amp;
-  return buf;
-}
 
-// =============================================================
-//  normalizeAudioSource
-// =============================================================
-export function normalizeAudioSource(src) {
-  if (!src) return null;
-  src = src.replace(/['"]/g, "").trim();
-  if (/\.(wav|ogg|mp3|m4a)$/i.test(src)) return src;
-  return `${src}.wav`;
-}
-
-// =============================================================
-//  evalMaybeRandom -- resolve rand/irand/funcCall objects
-// =============================================================
 export function evalMaybeRandom(v) {
   if (v == null) return v;
 
@@ -73,8 +57,75 @@ export function evalMaybeRandom(v) {
 }
 
 // =============================================================
-//  Send OSC audio trigger via WebSocket
+//  Utility: normalise audio source filename
 // =============================================================
+
+export function normalizeAudioSource(src) {
+  if (!src) return null;
+  src = src.replace(/['"]/g, "").trim();
+  if (/\.(wav|ogg|mp3|m4a)$/i.test(src)) return src;
+  return `${src}.wav`;
+}
+
+// =============================================================
+//  Utility: select file from pool
+//
+//  Shared selection logic for audioPool and audioImpulse.
+//  Modes:
+//    "rand"      -- pure random, repeats possible
+//    "shuffle"   -- no repeats until pool exhausted, then reshuffle
+//    "sequential"-- play in order, wrap around
+// =============================================================
+
+/**
+ * Select the next file from a pool object.
+ * Mutates pool.cursor and pool.files (on reshuffle).
+ *
+ * @param {object} pool - { files: string[], mode: string, cursor: number }
+ * @returns {string|null} selected filename, or null if pool empty
+ */
+export function selectFromPool(pool) {
+  if (!pool?.files?.length) return null;
+
+  if (pool.mode === "rand") {
+    return pool.files[Math.floor(Math.random() * pool.files.length)];
+  }
+
+  // sequential or shuffle: use cursor
+  const file = pool.files[pool.cursor % pool.files.length];
+  pool.cursor++;
+
+  // shuffle: reshuffle when exhausted
+  if (pool.mode !== "sequential" && pool.cursor >= pool.files.length) {
+    pool.files = [...pool.files].sort(() => Math.random() - 0.5);
+    pool.cursor = 0;
+  }
+
+  // sequential: wrap around
+  if (pool.mode === "sequential" && pool.cursor >= pool.files.length) {
+    pool.cursor = 0;
+  }
+
+  return file;
+}
+
+// =============================================================
+//  Utility: generate fallback sine buffer (for offline testing)
+// =============================================================
+
+export function generateToneBuffer(ctx, freq = 440, dur = 0.3, amp = 0.3) {
+  const rate = ctx.sampleRate;
+  const len = rate * dur;
+  const buf = ctx.createBuffer(1, len, rate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = Math.sin((2 * Math.PI * freq * i) / rate) * amp;
+  return buf;
+}
+
+// =============================================================
+//  OSC audio trigger via WebSocket
+// =============================================================
+
 export function sendAudioOscTrigger({ cueId, filename, volume = 1, loop = 1 }) {
   if (!window.wsEnabled || !window.socket || window.socket.readyState !== WebSocket.OPEN) {
     console.warn("[AUDIO] OSC send skipped (socket not open)");
@@ -92,6 +143,7 @@ export function sendAudioOscTrigger({ cueId, filename, volume = 1, loop = 1 }) {
   console.log("[OSC] Sending audio cue:", message);
   window.socket.send(JSON.stringify(message));
 }
+
 
 // =============================================================
 //  AUDIO OVERLAY SYSTEM
@@ -210,7 +262,7 @@ export function formatAudioImpulseOverlay(params, level) {
 
 
 /**
- * Create audio overlay - SELF-CONTAINED HTML overlay
+ * Create audio overlay - SELF-CONTAINED (does not use createOscOverlay)
  */
 export function createAudioOverlay({
   anchorEl,
