@@ -793,20 +793,24 @@ export function scrollToPlayheadVisual() {
 
   const worldPx = window.playheadX * localScale;
   const viewportWidth = container.clientWidth;
-  const halfViewport = viewportWidth / 2;
 
-  // Calculate ideal position (playhead centered)
-  let translateX = halfViewport - worldPx;
+  // Use configurable offset ratio (default 0.5 = center)
+  // Set by playheadOffset.js — drag handle or preferences
+  const offsetRatio = window.playheadOffsetRatio ?? 0.5;
+  const targetScreenX = viewportWidth * offsetRatio;
+
+  // Calculate ideal position (playhead at offset position)
+  let translateX = targetScreenX - worldPx;
   
   // Track if we're clamping and where the playhead should appear
-  let playheadScreenX = halfViewport; // Default: center of screen
+  let playheadScreenX = targetScreenX; // Default: offset position
   let isClamped = false;
 
   // CLAMP LEFT: Don't let score shift right of left edge
   // (when playhead is near start, keep score left edge at screen left edge)
   if (translateX > 0) {
     // Playhead is in the left "unclamped" zone
-    // Score stays at left edge, playhead moves from left toward center
+    // Score stays at left edge, playhead moves from left toward offset
     playheadScreenX = worldPx; // playhead position relative to screen left
     translateX = 0;
     isClamped = true;
@@ -817,7 +821,7 @@ export function scrollToPlayheadVisual() {
   const maxShiftLeft = -(localRenderedWidth - viewportWidth);
   if (translateX < maxShiftLeft && maxShiftLeft < 0) {
     // Playhead is in the right "unclamped" zone
-    // Score stays at right edge, playhead moves from center toward right
+    // Score stays at right edge, playhead moves from offset toward right
     const distanceFromEnd = localRenderedWidth - worldPx;
     playheadScreenX = viewportWidth - distanceFromEnd;
     translateX = maxShiftLeft;
@@ -832,10 +836,10 @@ export function scrollToPlayheadVisual() {
     if (isClamped) {
       // Move playhead to its actual screen position
       playheadEl.style.left = `${playheadScreenX}px`;
-      playheadEl.style.transform = 'translateX(-50%)'; // Center the line on that position
+      playheadEl.style.transform = 'translateX(-50%)';
     } else {
-      // Playhead stays centered
-      playheadEl.style.left = '50%';
+      // Playhead stays at configured offset position
+      playheadEl.style.left = `${offsetRatio * 100}%`;
       playheadEl.style.transform = 'translateX(-50%)';
     }
   }

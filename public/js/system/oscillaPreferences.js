@@ -88,6 +88,7 @@ async function openPreferencesDialog() {
           { key: "playzoneColor", label: "Playzone Color", type: "color", default: "#00ff0033" },
           { key: "playheadColor", label: "Playhead Color", type: "color", default: "#ff0000" },
           { key: "playheadWidth", label: "Playhead Width", type: "number", default: 4, min: 1, max: 20 },
+          { key: "playheadOffset", label: "Playhead Position %", type: "range", default: 50, min: 10, max: 90, step: 1 },
         ]
       },
       {
@@ -264,6 +265,11 @@ function applyPreferencesLive(prefs) {
   if (prefs.playzoneColor) {
     const playzone = document.getElementById("playzone");
     if (playzone) playzone.style.backgroundColor = prefs.playzoneColor;
+  }
+
+  if (prefs.playheadOffset != null) {
+    const ratio = Number(prefs.playheadOffset) / 100;
+    window.setPlayheadOffset?.(ratio);
   }
 
   if (typeof prefs.darkMode === "boolean") {

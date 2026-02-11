@@ -1,0 +1,116 @@
+/* ============================================================================
+ * PLAYHEAD OFFSET — Drag Handle & Lock UI
+ * ============================================================================ */
+
+/* --- Handle container: sits at top of playhead line --- */
+#playhead-offset-handle {
+  position: absolute;
+  top: 36px;               /* below the top bar */
+  left: 50%;
+  transform: translateX(-50%);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+
+  pointer-events: auto;    /* override #playhead pointer-events:none */
+  z-index: 2;
+
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* Show handle on hover over the playhead region */
+#playhead:hover #playhead-offset-handle,
+#playhead-offset-handle:hover,
+#playhead-offset-handle.dragging {
+  opacity: 1;
+}
+
+/* --- Grip dots (visual drag affordance) --- */
+.playhead-grip-dots {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  cursor: grab;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: background 0.15s;
+}
+
+.playhead-grip-dots:hover {
+  background: rgba(0, 0, 0, 0.85);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+#playhead-offset-handle.dragging .playhead-grip-dots {
+  cursor: grabbing;
+  background: rgba(0, 80, 60, 0.9);
+  border-color: rgba(0, 255, 179, 0.5);
+}
+
+/* The three dots */
+.playhead-grip-dots span {
+  display: block;
+  width: 12px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 1px;
+}
+
+#playhead-offset-handle.dragging .playhead-grip-dots span {
+  background: rgba(0, 255, 179, 0.7);
+}
+
+/* When locked, dim the grip and show not-allowed cursor */
+#playhead-offset-handle.locked .playhead-grip-dots {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* --- Lock/unlock button --- */
+.playhead-offset-lock {
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: white;
+  padding: 4px 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  pointer-events: auto;
+}
+
+.playhead-offset-lock:hover {
+  background: rgba(0, 0, 0, 0.9);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Icon visibility based on lock state */
+#playhead-offset-handle.locked .lock-icon-locked   { display: block; }
+#playhead-offset-handle.locked .lock-icon-unlocked  { display: none; }
+#playhead-offset-handle.unlocked .lock-icon-locked  { display: none; }
+#playhead-offset-handle.unlocked .lock-icon-unlocked { display: block; }
+
+/* Colour hint when unlocked */
+#playhead-offset-handle.unlocked .playhead-offset-lock {
+  border-color: rgba(0, 255, 179, 0.4);
+  color: rgba(0, 255, 179, 0.9);
+}
+
+/* --- Make the playhead hoverable for the handle reveal --- */
+/* Expand the hover target area around the thin playhead line */
+#playhead::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -15px;
+  width: 30px;
+  pointer-events: auto;
+}

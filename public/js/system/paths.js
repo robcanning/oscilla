@@ -86,7 +86,7 @@ export function ensureWindowPlayheadX() {
   if (!svg) return;
 
   const pt = svg.createSVGPoint();
-  pt.x = window.innerWidth / 2;
+  pt.x = window.innerWidth * (window.playheadOffsetRatio ?? 0.5);
   pt.y = 0;
 
   const ctm = svg.getScreenCTM();

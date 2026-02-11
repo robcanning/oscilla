@@ -77,6 +77,7 @@ import {
 } from './system/rehearsalUI.js';
 
 import { initLiveConsole } from "./interaction/oscillaLive.js";
+import { initPlayheadOffset } from './system/playheadOffset.js';
 
 
 // ===========================
@@ -216,6 +217,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize animation loop
   initAnimationLoop();
+
+  // Initialize playhead offset (drag handle, lock, persistence)
+  initPlayheadOffset();
 
   // ===========================
   // Global Playback State
