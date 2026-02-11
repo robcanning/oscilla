@@ -759,3 +759,54 @@ body {
     break-inside: avoid;
   }
 }
+
+
+
+/* ---------------------------------------------------------
+   Sidebar Collapsible Sections (<details>/<summary>)
+   --------------------------------------------------------- */
+
+.sidebar details {
+  margin: 0 0 0.25rem;
+}
+
+.sidebar summary {
+  display: block;
+  margin: 0.75rem 0 0.25rem;
+  padding-bottom: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.sidebar summary::-webkit-details-marker {
+  display: none;
+}
+
+.sidebar summary::before {
+  content: "▸ ";
+  display: inline-block;
+  transition: transform var(--transition-fast);
+}
+
+.sidebar details[open] > summary::before {
+  content: "▾ ";
+}
+
+.sidebar summary:hover {
+  color: var(--text-muted);
+}
+
+.sidebar details:first-of-type > summary {
+  margin-top: 0;
+}
+
+.sidebar details > ul {
+  margin: 0 0 0.25rem;
+}

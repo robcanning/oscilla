@@ -126,6 +126,10 @@ document.addEventListener('click', (e) => {
       if (a.href === current) {
         a.classList.add("active");
         a.setAttribute("aria-current", "page");
+
+        // Auto-open the <details> section containing the active link
+        const details = a.closest("details");
+        if (details) details.open = true;
       }
     });
 

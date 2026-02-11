@@ -1,155 +1,99 @@
 <nav class="sidebar" aria-label="Documentation navigation">
 
-  <h3>Getting Started</h3>
-  <ul>
-    <li><a href="{{ '/' | url }}">Docs Overview</a></li>
-    <li><a href="{{ '/about' | url }}">What is Oscilla?</a></li>
-    <li><a href="{{ '/screenshots/' | url }}">Screenshots</a></li>
-    <li><a href="{{ '/workflow/' | url }}">Workflow</a></li>
-    <li><a href="{{ '/cheatsheet/' | url }}" class="popup-link">Cheatsheet ↗</a></li>
-    <li><a href="{{ '/QUICKSTART/' | url }}">Quickstart</a></li>
-    <li><a href="{{ '/INSTALL/' | url }}">Install</a></li>
-  </ul>
+  <details open>
+    <summary>Getting Started</summary>
+    <ul>
+      <li><a href="{{ '/' | url }}">Docs Overview</a></li>
+      <li><a href="{{ '/getting-started/about/' | url }}">What is Oscilla?</a></li>
+      <li><a href="{{ '/getting-started/screenshots/' | url }}">Screenshots</a></li>
+      <li><a href="{{ '/getting-started/workflow/' | url }}">Workflow</a></li>
+      <li><a href="{{ '/cheatsheet/' | url }}" class="popup-link">Cheatsheet &#8599;</a></li>
+      <li><a href="{{ '/getting-started/QUICKSTART/' | url }}">Quickstart</a></li>
+      <li><a href="{{ '/getting-started/INSTALL/' | url }}">Install</a></li>
+      <li><a href="{{ '/getting-started/working-with-parts/' | url }}">Working with Parts</a></li>
+    </ul>
+  </details>
 
+  <details>
+    <summary>Session Layer</summary>
+    <ul>
+      <li><a href="{{ '/session/playhead/' | url }}">The Playhead</a></li>
+      <li><a href="{{ '/session/parts-layers/' | url }}">Instrumental Parts</a></li>
+      <li><a href="{{ '/session/performer_annotations/' | url }}">Text/Audio Annotations</a></li>
+      <li><a href="{{ '/session/drawing/' | url }}">Freehand Annotation</a></li>
+      <li><a href="{{ '/session/markers/' | url }}">Drop Marker</a></li>
+      <li><a href="{{ '/session/timers/' | url }}">Sequence Timers</a></li>
+      <li><a href="{{ '/session/drag/' | url }}">Draggable Groups</a></li>
+      <li><a href="{{ '/session/liveconsole/' | url }}">Live Console</a></li>
+    </ul>
+  </details>
 
-  <h3>More</h3>
-  <ul>
+  <details>
+    <summary>Cues</summary>
+    <ul>
+      <li><a href="{{ '/cues/cue_stop/' | url }}">stop()</a></li>
+      <li><a href="{{ '/cues/cue_pause/' | url }}">pause()</a></li>
+      <li><a href="{{ '/cues/cue_speed/' | url }}">speed()</a></li>
+      <li><a href="{{ '/cues/cue_stopwatch/' | url }}">stopwatch()</a></li>
+      <li><a href="{{ '/cues/cue_metronome/' | url }}">metronome()</a></li>
+      <li><a href="{{ '/cues/cue_page/' | url }}">page()</a></li>
+      <li><a href="{{ '/cues/cue_nav/' | url }}">nav()</a></li>
+      <li><a href="{{ '/cues/cue_button/' | url }}">button()</a></li>
+      <li><a href="{{ '/cues/cue_propagate/' | url }}">propagate()</a></li>
+      <li><a href="{{ '/cues/cue_reuse/' | url }}">reuse()</a></li>
+      <li><a href="{{ '/cues/cue_text/' | url }}">text()</a></li>
+      <li><a href="{{ '/cues/cue_audio/' | url }}">audio()</a></li>
+      <li><a href="{{ '/cues/cue_video/' | url }}">video()</a></li>
+      <li><a href="{{ '/cues/cue_synth/' | url }}">synth()</a></li>
+      <li><a href="{{ '/cues/cue_osc/' | url }}">osc()</a></li>
+      <li><a href="{{ '/cues/cue_oscCtrl/' | url }}">oscCtrl()</a></li>
+    </ul>
+  </details>
 
-    <li><a href="{{ '/working-with-parts/' | url }}">Working with Instrumental Parts</a></li>
-  </ul>
+  <details>
+    <summary>Animation</summary>
+    <ul>
+      <li><a href="{{ '/animation/cue_scale/' | url }}">scale()</a></li>
+      <li><a href="{{ '/animation/cue_rotate/' | url }}">rotate()</a></li>
+      <li><a href="{{ '/animation/cue_o2p/' | url }}">o2p()</a></li>
+      <li><a href="{{ '/animation/cue_traverse/' | url }}">traverse()</a></li>
+      <li><a href="{{ '/animation/cue_color/' | url }}">color()</a></li>
+      <li><a href="{{ '/animation/cue_fade/' | url }}">fade()</a></li>
+      <li><a href="{{ '/animation/cue_ui/' | url }}">ui()</a></li>
+    </ul>
+  </details>
 
+  <details>
+    <summary>Control & Interaction</summary>
+    <ul>
+      <li><a href="{{ '/control/control-and-modulation/' | url }}">Control & Modulation</a></li>
+      <li><a href="{{ '/control/controlXY/' | url }}">controlXY()</a></li>
+    </ul>
+  </details>
 
+  <details>
+    <summary>Tools</summary>
+    <ul>
+      <li><a href="{{ '/tools/inkscape_extension/' | url }}">Inkscape Extension</a></li>
+    </ul>
+  </details>
 
-  <h3>Session Layer</h3>
-  <ul>
-
-        <li><a href="{{ '/playhead/' | url }}">
-The Playhead    </a></li>
-
-    <li><a href="{{ '/parts-layers/' | url }}">
-     Instrumental Parts
-    </a></li>
-
-
-    <li><a href="{{ '/performer_annotations/' | url }}">
-     Text/Audio Annotations
-    </a></li>
-
-                    <li><a href="{{ '/drawing/' | url }}">
-      Freehand Annotation
-    </a></li>
-
-                <li><a href="{{ '/markers/' | url }}">
-      Drop Marker
-    </a></li>
-
-        <li><a href="{{ '/timers/' | url }}">
-      Sequence Timers
-    </a></li>
-
-
-  <li><a href="{{ '/drag/' | url }}">
-  Dragable Groups
-    </a></li>
-
-      <li><a href="{{ '/liveconsole/' | url }}">
-Live Console    </a></li>
-
-  </ul>
-  <h3>Cues</h3>
-  <ul>
-    <li><a href="{{ '/cue_stop/' | url }}">stop()</a></li>
-    <li><a href="{{ '/cue_pause/' | url }}">pause()</a></li>
-    <li><a href="{{ '/cue_speed/' | url }}">speed()</a></li>
-    <li><a href="{{ '/cue_stopwatch/' | url }}">stopwatch()</a></li>
-    <li><a href="{{ '/cue_metronome/' | url }}">metronome()</a></li>
-    <li><a href="{{ '/cue_page/' | url }}">page()</a></li>
-    <li><a href="{{ '/cue_nav/' | url }}">nav()</a></li>
-    <li><a href="{{ '/cue_button' | url }}">button()</a></li>
-    <li><a href="{{ '/cue_propagate/' | url }}">propagate()</a></li>
-    <li><a href="{{ '/cue_reuse/' | url }}">reuse()</a></li>
-    <li><a href="{{ '/cue_text/' | url }}">text()</a></li>
-    <li><a href="{{ '/cue_audio/' | url }}">audio()</a></li>
-    <li><a href="{{ '/cue_video/' | url }}">video()</a></li>
-    <li><a href="{{ '/cue_synth/' | url }}">synth()</a></li>
-    <li><a href="{{ '/cue_osc/' | url }}">osc()</a></li>
-    <li><a href="{{ '/cue_oscCtrl/' | url }}">oscCtrl()</a></li>
-  </ul>
-
-  <h3>Animation</h3>
-  <ul>
-    <li><a href="{{ '/cue_scale/' | url }}">scale()</a></li>
-    <li><a href="{{ '/cue_rotate/' | url }}">rotate()</a></li>
-    <li><a href="{{ '/cue_o2p/' | url }}">o2p()</a></li>
-    <li><a href="{{ '/traverse/' | url }}">traverse()</a></li>
-    <li><a href="{{ '/cue_color/' | url }}">color()</a></li>
-    <li><a href="{{ '/cue_fade/' | url }}">fade()</a></li>
-    <li><a href="{{ '/cue_ui/' | url }}">ui()</a></li>
-  </ul>
-
-  <h3>Control & Interaction</h3>
-  <ul>
-    <li><a href="{{ '/control-and-modulation/' | url }}">
-      Control & Modulation
-    </a></li>
-    
-        <li><a href="{{ '/controlXY/' | url }}">
-      controlXY()
-    </a></li>
-
-
-  </ul>
-
-
-
-
-  <h3>Tools</h3>
-  <ul>
-    <li><a href="{{ '/inkscape_extension/' | url }}">Inkscape Extension</a></li>
-  </ul>
-
-  <h3>Developer</h3>
-  <ul>
-    <li><a href="{{ '/dev-oscilla-overview-documentation/' | url }}"> 
-    Dev: Complete Sytem Overview    
-</a></li>
-
-    <li><a href="{{ '/oscilla_architecture_overview/' | url }}">
-      Dev_ Architecture Overview
-    </a></li>
-    <li><a href="{{ '/dev-sync-architecture/' | url }}">
-     Dev: Sync Architecture
-    </a></li>
-    <li><a href="{{ '/oscilla-developer-guide-new-cue/' | url }}">
-      Dev: DevHowto New Cue
-    </a></li>
-
-  <li><a href="{{ '/dev-control-modulation/' | url }}">
-      Dev: Control Signal Architecture
-    </a></li>
-
-
-    <li><a href="{{ '/dev-newproject-flow/' | url }}">
-Dev: New Project Flow    </a></li>
-
-    <li><a href="{{ '/dev-osc/' | url }}">
-Dev: Oscilla OSC System   </a></li>
-
-    <li><a href="{{ '/dev-drag/' | url }}">
-Dev: Preprocessor: drag()   </a></li>
-
-    <li><a href="{{ '/dev-marker-nav/' | url }}">
-Dev: Parsing Marker Nav   </a></li>
-
-    <li><a href="{{ '/dev-drawing/' | url }}">
-Dev: Freehand Annotation </a></li>
-
-    <li><a href="{{ '/dev-liveconsole/' | url }}">
-Dev: Live Console  </a></li>
-
-        <li><a href="{{ '/dev-playhead/' | url }}">
-Dev: The Playhead    </a></li>
-
-  </ul>
+  <details>
+    <summary>Developer</summary>
+    <ul>
+      <li><a href="{{ '/dev/dev-oscilla-overview-documentation/' | url }}">Complete System Overview</a></li>
+      <li><a href="{{ '/dev/oscilla_architecture_overview/' | url }}">Architecture Overview</a></li>
+      <li><a href="{{ '/dev/dev-sync-architecture/' | url }}">Sync Architecture</a></li>
+      <li><a href="{{ '/dev/oscilla-developer-guide-new-cue/' | url }}">How to Add a New Cue</a></li>
+      <li><a href="{{ '/dev/dev-control-modulation/' | url }}">Control Signal Architecture</a></li>
+      <li><a href="{{ '/dev/dev-newproject-flow/' | url }}">New Project Flow</a></li>
+      <li><a href="{{ '/dev/dev-osc/' | url }}">OSC System</a></li>
+      <li><a href="{{ '/dev/dev-drag/' | url }}">Preprocessor: drag()</a></li>
+      <li><a href="{{ '/dev/dev-marker-nav/' | url }}">Parsing Marker Nav</a></li>
+      <li><a href="{{ '/dev/dev-drawing/' | url }}">Freehand Annotation</a></li>
+      <li><a href="{{ '/dev/dev-liveconsole/' | url }}">Live Console</a></li>
+      <li><a href="{{ '/dev/dev-playhead/' | url }}">The Playhead</a></li>
+    </ul>
+  </details>
 
 </nav>

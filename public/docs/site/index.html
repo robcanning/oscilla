@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Oscilla Documentation</title>
   <link rel="stylesheet" href="/oscilla/docs/style.css">
-  <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="/oscilla/docs/favicon.ico">
 
 </head>
 
@@ -24,7 +24,7 @@
     </button>
       <a href="/oscilla/docs/docs/" class="docs-brand">
         <img
-          src="/oscilla/docs/img/logos/logo-header-docs.svg"
+          src="/oscilla/docs/img/logos/logo-header-docs.png"
           alt="Oscilla"
           class="docs-logo"
           aria-hidden="true"
@@ -40,87 +40,101 @@
   <div class="docs-container">
     <nav class="sidebar" aria-label="Documentation navigation">
 
-  <h3>Getting Started</h3>
-  <ul>
-    <li><a href="/oscilla/docs/">Docs Overview</a></li>
-    <li><a href="/oscilla/docs/about">What is Oscilla?</a></li>
-    <li><a href="/oscilla/docs/screenshots/">Screenshots</a></li>
-    <li><a href="/oscilla/docs/workflow/">Workflow</a></li>
-    <li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet ↗</a></li>
-    <li><a href="/oscilla/docs/QUICKSTART/">Quickstart</a></li>
-    <li><a href="/oscilla/docs/INSTALL/">Install</a></li>
-  </ul>
+  <details open>
+    <summary>Getting Started</summary>
+    <ul>
+      <li><a href="/oscilla/docs/">Docs Overview</a></li>
+      <li><a href="/oscilla/docs/getting-started/about/">What is Oscilla?</a></li>
+      <li><a href="/oscilla/docs/getting-started/screenshots/">Screenshots</a></li>
+      <li><a href="/oscilla/docs/getting-started/workflow/">Workflow</a></li>
+      <li><a href="/oscilla/docs/cheatsheet/" class="popup-link">Cheatsheet &#8599;</a></li>
+      <li><a href="/oscilla/docs/getting-started/QUICKSTART/">Quickstart</a></li>
+      <li><a href="/oscilla/docs/getting-started/INSTALL/">Install</a></li>
+      <li><a href="/oscilla/docs/getting-started/working-with-parts/">Working with Parts</a></li>
+    </ul>
+  </details>
 
-  <h3>Cues</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cue_stop/">stop()</a></li>
-    <li><a href="/oscilla/docs/cue_pause/">pause()</a></li>
-    <li><a href="/oscilla/docs/cue_speed/">speed()</a></li>
-    <li><a href="/oscilla/docs/cue_stopwatch/">stopwatch()</a></li>
-    <li><a href="/oscilla/docs/cue_metronome/">metronome()</a></li>
-    <li><a href="/oscilla/docs/cue_page/">page()</a></li>
-    <li><a href="/oscilla/docs/cue_nav/">nav()</a></li>
-    <li><a href="/oscilla/docs/cue_button">button()</a></li>
-    <li><a href="/oscilla/docs/cue_propagate/">propagate()</a></li>
-    <li><a href="/oscilla/docs/cue_reuse/">reuse()</a></li>
-    <li><a href="/oscilla/docs/cue_text/">text()</a></li>
-    <li><a href="/oscilla/docs/cue_audio/">audio()</a></li>
-    <li><a href="/oscilla/docs/cue_video/">video()</a></li>
-    <li><a href="/oscilla/docs/cue_synth/">synth()</a></li>
-    <li><a href="/oscilla/docs/cue_osc/">osc()</a></li>
-    <li><a href="/oscilla/docs/cue_oscCtrl/">oscCtrl()</a></li>
-  </ul>
+  <details>
+    <summary>Session Layer</summary>
+    <ul>
+      <li><a href="/oscilla/docs/session/playhead/">The Playhead</a></li>
+      <li><a href="/oscilla/docs/session/parts-layers/">Instrumental Parts</a></li>
+      <li><a href="/oscilla/docs/session/performer_annotations/">Text/Audio Annotations</a></li>
+      <li><a href="/oscilla/docs/session/drawing/">Freehand Annotation</a></li>
+      <li><a href="/oscilla/docs/session/markers/">Drop Marker</a></li>
+      <li><a href="/oscilla/docs/session/timers/">Sequence Timers</a></li>
+      <li><a href="/oscilla/docs/session/drag/">Draggable Groups</a></li>
+      <li><a href="/oscilla/docs/session/liveconsole/">Live Console</a></li>
+    </ul>
+  </details>
 
-  <h3>Animation</h3>
-  <ul>
-    <li><a href="/oscilla/docs/cue_scale/">scale()</a></li>
-    <li><a href="/oscilla/docs/cue_rotate/">rotate()</a></li>
-    <li><a href="/oscilla/docs/cue_o2p/">o2p()</a></li>
-    <li><a href="/oscilla/docs/traverse/">traverse()</a></li>
-    <li><a href="/oscilla/docs/cue_color/">color()</a></li>
-    <li><a href="/oscilla/docs/cue_fade/">fade()</a></li>
-    <li><a href="/oscilla/docs/cue_ui/">ui()</a></li>
-  </ul>
+  <details>
+    <summary>Cues</summary>
+    <ul>
+      <li><a href="/oscilla/docs/cues/cue_stop/">stop()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_pause/">pause()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_speed/">speed()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_stopwatch/">stopwatch()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_metronome/">metronome()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_page/">page()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_nav/">nav()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_button/">button()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_propagate/">propagate()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_reuse/">reuse()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_text/">text()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_audio/">audio()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_video/">video()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_synth/">synth()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_osc/">osc()</a></li>
+      <li><a href="/oscilla/docs/cues/cue_oscCtrl/">oscCtrl()</a></li>
+    </ul>
+  </details>
 
-  <h3>Control & Interaction</h3>
-  <ul>
-    <li><a href="/oscilla/docs/control-and-modulation/">
-      Control, Modulation & Feedback
-    </a></li>
-    
-        <li><a href="/oscilla/docs/controlXY/">
-      ControlXY
-    </a></li>
-  </ul>
+  <details>
+    <summary>Animation</summary>
+    <ul>
+      <li><a href="/oscilla/docs/animation/cue_scale/">scale()</a></li>
+      <li><a href="/oscilla/docs/animation/cue_rotate/">rotate()</a></li>
+      <li><a href="/oscilla/docs/animation/cue_o2p/">o2p()</a></li>
+      <li><a href="/oscilla/docs/animation/cue_traverse/">traverse()</a></li>
+      <li><a href="/oscilla/docs/animation/cue_color/">color()</a></li>
+      <li><a href="/oscilla/docs/animation/cue_fade/">fade()</a></li>
+      <li><a href="/oscilla/docs/animation/cue_ui/">ui()</a></li>
+    </ul>
+  </details>
 
-  <h3>Performer</h3>
-  <ul>
-    <li><a href="/oscilla/docs/performer_annotations/">
-      Performer Annotations
-    </a></li>
+  <details>
+    <summary>Control & Interaction</summary>
+    <ul>
+      <li><a href="/oscilla/docs/control/control-and-modulation/">Control & Modulation</a></li>
+      <li><a href="/oscilla/docs/control/controlXY/">controlXY()</a></li>
+    </ul>
+  </details>
 
-        <li><a href="/oscilla/docs/timers/">
-      Sequence Timers
-    </a></li>
-  </ul>
+  <details>
+    <summary>Tools</summary>
+    <ul>
+      <li><a href="/oscilla/docs/tools/inkscape_extension/">Inkscape Extension</a></li>
+    </ul>
+  </details>
 
-  <h3>Tools</h3>
-  <ul>
-    <li><a href="/oscilla/docs/inkscape_extension/">Inkscape Extension</a></li>
-  </ul>
-
-  <h3>Developer</h3>
-  <ul>
-    <li><a href="/oscilla/docs/oscilla_architecture_overview/">
-      Architecture Overview
-    </a></li>
-    <li><a href="/oscilla/docs/dev-sync-architecture/">
-      Sync Architecture
-    </a></li>
-    <li><a href="/oscilla/docs/oscilla-developer-guide-new-cue/">
-      DevHowto New Cue
-    </a></li>
-  </ul>
+  <details>
+    <summary>Developer</summary>
+    <ul>
+      <li><a href="/oscilla/docs/dev/dev-oscilla-overview-documentation/">Complete System Overview</a></li>
+      <li><a href="/oscilla/docs/dev/oscilla_architecture_overview/">Architecture Overview</a></li>
+      <li><a href="/oscilla/docs/dev/dev-sync-architecture/">Sync Architecture</a></li>
+      <li><a href="/oscilla/docs/dev/oscilla-developer-guide-new-cue/">How to Add a New Cue</a></li>
+      <li><a href="/oscilla/docs/dev/dev-control-modulation/">Control Signal Architecture</a></li>
+      <li><a href="/oscilla/docs/dev/dev-newproject-flow/">New Project Flow</a></li>
+      <li><a href="/oscilla/docs/dev/dev-osc/">OSC System</a></li>
+      <li><a href="/oscilla/docs/dev/dev-drag/">Preprocessor: drag()</a></li>
+      <li><a href="/oscilla/docs/dev/dev-marker-nav/">Parsing Marker Nav</a></li>
+      <li><a href="/oscilla/docs/dev/dev-drawing/">Freehand Annotation</a></li>
+      <li><a href="/oscilla/docs/dev/dev-liveconsole/">Live Console</a></li>
+      <li><a href="/oscilla/docs/dev/dev-playhead/">The Playhead</a></li>
+    </ul>
+  </details>
 
 </nav>
 
@@ -395,6 +409,10 @@ document.addEventListener('click', (e) => {
       if (a.href === current) {
         a.classList.add("active");
         a.setAttribute("aria-current", "page");
+
+        // Auto-open the <details> section containing the active link
+        const details = a.closest("details");
+        if (details) details.open = true;
       }
     });
 
