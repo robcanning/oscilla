@@ -42,7 +42,7 @@ import {
 } from './cues/cueDispatcher.js';
 
 import { handleStopCue } from './cues/stop.js';
-import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues, checkImpulseRegions } from "./cues/audio.js";
+import { handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues, checkImpulseRegions } from "./cues/audio/index.js";
 import { dismissPauseCountdown, pauseDismissClickHandler, handlePauseCue } from "./cues/pause.js";
 import { checkSynthRegions } from "./cues/synth.js";
 import { checkSpeedForPosition, resetSpeedWatcher } from "./cues/speed.js";

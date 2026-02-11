@@ -42,6 +42,7 @@
 
 import { getSpeedForPosition, updateSpeedFromPosition } from "../cues/speed.js";
 import { resetAllFadePriming } from "../cues/fade.js";
+import { clearAllPins } from "../system/cuePin.js";
 import { checkCueTriggers } from "../cues/cueDispatcher.js";
 import { 
   dismissAllStopwatchOverlays, 
@@ -149,6 +150,7 @@ export const rewindToStart = () => {
     triggeredCues.clear();
 
     resetAllFadePriming();
+    clearAllPins();
     dismissAllStopwatchOverlays();
 
     window._cueInsideState?.clear();

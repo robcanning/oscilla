@@ -6,9 +6,10 @@
 
 import { scrollToPlayheadVisual, updateSeekBar } from '../transport/oscillaTransport.js';
 import { checkCueTriggers } from '../cues/cueDispatcher.js';
-import { checkImpulseRegions } from '../cues/audio.js';
+import { checkImpulseRegions } from '../cues/audio/index.js';
 import { checkSynthRegions } from '../cues/synth.js';
 import { checkSpeedForPosition } from '../cues/speed.js';
+import { updatePins } from './cuePin.js';
 
 // ===========================
 // Animation Loop
@@ -113,6 +114,9 @@ async function animate(currentTime) {
   if (typeof checkSpeedForPosition === "function") {
     checkSpeedForPosition();
   }
+
+  // Pin-to-playhead tracker
+  updatePins();
 
   // Check annotation playhead triggers
   if (typeof window.checkAnnotationPlayheadTriggers === "function") {

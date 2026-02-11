@@ -56,12 +56,14 @@ import { handlePageCue } from "./page.js";
 import {
   handleAudioCue, handleAudioStopCue, stopAllAudio, activeAudioCues,
   handleAudioPoolCue, handleAudioImpulseCue,
-  primeAudioOverlay, primeAudioPoolOverlay, primeAudioImpulseOverlay
-} from "./audio.js";
+  primeAudioOverlay, primeAudioPoolOverlay, primeAudioImpulseOverlay,
+  primeWaveform, primeImpulseWaveform
+} from "./audio/index.js";
 
 import { handleSynthCue, primeSynthOverlay } from "./synth.js";
 
 import { propagate } from "../parser/preProcessPropagate.js";
+import { registerPin } from "../system/cuePin.js";
 import { handleSpeedCue, handleSpeedRamp } from "./speed.js";
 import { stopAllCueTexts } from "./text.js";
 import { handleOscCue } from "./osc.js";
@@ -467,7 +469,7 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
         return;
       }
       console.log("[dispatch] cueAudio AST →", ast);
-      return handleAudioCue(ast);
+      return handleAudioCue(ast, cueElement);
 
     case "cueAudioStop":
       return stopAudioCue(ast.filename || ast.file);
@@ -698,7 +700,12 @@ export function assignCues(svgRoot, cuesArray = []) {
         // Pre-prime audio overlays
         // -----------------------------------
         if (ast.type === "cueAudio") {
-          primeAudioOverlay(ast, child);
+          // Waveform defaults to "self" — suppress HTML overlay when active
+          const wfParam = ast.waveform ?? ast.params?.waveform ?? "self";
+          if (wfParam === "none" || wfParam === "0") {
+            primeAudioOverlay(ast, child);
+          }
+          primeWaveform(ast, child);
         }
 
         if (ast.type === "cueAudioPool") {
@@ -707,6 +714,7 @@ export function assignCues(svgRoot, cuesArray = []) {
 
         if (ast.type === "cueAudioImpulse") {
           primeAudioImpulseOverlay(ast, child);
+          primeImpulseWaveform(ast, child);
         }
 
         const box = child.getBBox();
@@ -722,6 +730,12 @@ export function assignCues(svgRoot, cuesArray = []) {
         });
 
         registerCueUid(cueExpr, "walk");
+
+        // Generic pin: any cue with pin:N gets pinned to playhead
+        const pinDur = ast.params?.pin ?? ast.pin;
+        if (pinDur != null && pinDur > 0) {
+          registerPin(child, Number(pinDur));
+        }
       }
 
       // Continue walking down
