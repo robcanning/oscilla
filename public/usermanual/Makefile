@@ -12,6 +12,7 @@ META     := metadata.yaml
 FRONT    := frontmatter.md
 PREAMBLE := ../shared-latex/preamble.tex
 FILTER   := oscilla-manual-filter.lua
+VERSION  := $(shell cat ../../VERSION 2>/dev/null || echo "dev")
 
 # -- Pandoc settings --
 PANDOC   := pandoc
@@ -128,6 +129,11 @@ $(BUILD)/%.md: $(DOCS)/%.md
 	@mkdir -p $(dir $@)
 	sed '0,/^# /{s/^# \(.*\)/# \1 {.chapter}/}' $< > $@
 
+# Generate version header for LaTeX
+$(BUILD)/version.tex:
+	@mkdir -p $(BUILD)
+	echo "\\renewcommand{\\oscillaversion}{$(VERSION)}" > $@
+
 # -- Targets --
 
 .PHONY: all pdf html epub clean
@@ -137,9 +143,10 @@ all: pdf html epub
 $(OUT):
 	mkdir -p $(OUT)
 
-pdf: $(INDEX_BUILT) | $(OUT)
+pdf: $(INDEX_BUILT) $(BUILD)/version.tex | $(OUT)
 	$(PANDOC) $(COMMON) $(ENGINE) \
 		--include-in-header=$(PREAMBLE) \
+		--include-in-header=$(BUILD)/version.tex \
 		-o $(OUT)/oscilla-usermanual.pdf \
 		$(SOURCES)
 	@echo "Built: $(OUT)/oscilla-usermanual.pdf"
