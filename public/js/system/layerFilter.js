@@ -174,70 +174,152 @@ export function applyLayerFilter(projectName) {
 }
 
 // ============================================================
-// Preferences UI Section
+// Preferences UI — Parts Tab Content
 // ============================================================
 
 /**
- * Build the HTML for the "Parts" section in the preferences dialog.
- * Returns empty string if no layers found.
- *
- * Uses layer.id as the option value (reliable, no spaces).
- * Displays layer.label as the visible text.
+ * Pretty-print a score filename for display.
+ * "score.svg" → "Full Score"
+ * "score-part-violin.svg" → "part violin"
+ * "score-conductor.svg" → "conductor"
+ */
+function scoreFileLabel(filename) {
+  if (filename === "score.svg") return "Full Score";
+  return filename
+    .replace(/^score-?/, "")
+    .replace(/\.svg$/i, "")
+    .replace(/-/g, " ");
+}
+
+/**
+ * Build the HTML content for the "Parts" tab panel.
+ * Includes:
+ *  - Score file selector (when multiple score*.svg exist)
+ *  - Layer filter controls (when layers detected)
+ *  - Explanatory text when features are unavailable
  *
  * @param {string} projectName
  * @returns {string} HTML string
  */
 export function buildLayerFilterSection(projectName) {
   const layers = window.scoreLayers;
-  if (!layers || layers.length === 0) return "";
+  const scores = window.availableScores || [];
+  const hasLayers = layers && layers.length > 0;
+  const hasMultipleScores = scores.length > 1;
 
-  const prefs = getLayerFilterPrefs(projectName);
+  let html = '<div class="pref-grid">';
 
-  let options = `<sl-option value="all">All (no filter)</sl-option>`;
-  for (const layer of layers) {
-    options += `<sl-option value="${layer.id}">${layer.label}</sl-option>`;
+  // ---- Score file selector ----
+  if (hasMultipleScores) {
+    const scoreSelKey = `oscilla_scoreFile_${projectName}`;
+    const current = localStorage.getItem(scoreSelKey) || scores[0];
+
+    let options = "";
+    for (const file of scores) {
+      const selected = (file === current) ? " selected" : "";
+      options += `<option value="${file}"${selected}>${scoreFileLabel(file)}</option>`;
+    }
+
+    html += `<div class="pref-row">
+      <label for="pref-scoreFile">Score</label>
+      <select id="pref-scoreFile">${options}</select>
+    </div>`;
   }
 
-  const currentOpacity = Math.round((prefs.otherOpacity ?? 0.15) * 100);
+  // ---- Layer filter ----
+  if (hasLayers) {
+    if (hasMultipleScores) html += '<hr class="pref-divider">';
 
-  return `<details class="pref-section" open>
-    <summary>Parts</summary>
-    <div class="pref-section-content">
-      <div class="pref-row">
-        <label for="pref-layerMyPart">My Part</label>
-        <sl-select id="pref-layerMyPart" name="layerMyPart"
-                   value="${prefs.myPart || 'all'}" size="small">
-          ${options}
-        </sl-select>
-      </div>
-      <div class="pref-row">
-        <label for="pref-layerOtherOpacity">Other Parts</label>
-        <div class="pref-range-wrap">
-          <sl-range id="pref-layerOtherOpacity" name="layerOtherOpacity"
-                    value="${currentOpacity}"
-                    min="0" max="100" step="5"
-                    label="Other parts opacity"></sl-range>
-          <span id="pref-layerOtherOpacity-value">${currentOpacity}%</span>
-        </div>
-      </div>
+    const prefs = getLayerFilterPrefs(projectName);
+
+    let layerOptions = '<option value="all">All (no filter)</option>';
+    for (const layer of layers) {
+      const selected = (prefs.myPart === layer.id) ? " selected" : "";
+      layerOptions += `<option value="${layer.id}"${selected}>${layer.label}</option>`;
+    }
+
+    const currentOpacity = Math.round((prefs.otherOpacity ?? 0.15) * 100);
+
+    html += `<div class="pref-row">
+      <label for="pref-layerMyPart">My Part</label>
+      <select id="pref-layerMyPart">${layerOptions}</select>
     </div>
-  </details>`;
+    <div class="pref-row">
+      <label for="pref-layerOtherOpacity">Other Parts</label>
+      <div class="pref-range-wrap">
+        <input type="range" id="pref-layerOtherOpacity"
+               value="${currentOpacity}" min="0" max="100" step="5">
+        <span class="pref-range-value" id="pref-layerOtherOpacity-value">${currentOpacity}%</span>
+      </div>
+    </div>`;
+  }
+
+  html += '</div>';
+
+  // ---- Explanatory text ----
+  if (!hasMultipleScores && !hasLayers) {
+    html = `<div class="pref-parts-empty">
+      <p>No parts detected in this score.</p>
+      <p><strong>Separate score files:</strong> create individual SVGs
+      named <code>score-part-violin.svg</code>,
+      <code>score-part-cello.svg</code>, etc. alongside <code>score.svg</code>.
+      Each performer can then choose their own scroll.</p>
+      <p><strong>Stacked layers:</strong> organise a single SVG into
+      Inkscape layers with the word <strong>part</strong> in each name
+      (e.g. part-violin, part-cello). Each performer can highlight
+      their layer and dim others.</p>
+    </div>`;
+  } else if (!hasLayers && hasMultipleScores) {
+    html += `<div class="pref-parts-empty">
+      <p>Tip: you can also add <strong>part</strong> layers
+      inside each score SVG for per-layer filtering.</p>
+    </div>`;
+  } else if (hasLayers && !hasMultipleScores) {
+    html += `<div class="pref-parts-empty">
+      <p>Tip: you can also create separate score files
+      (<code>score-part-violin.svg</code>, etc.) for
+      per-performer scrolling scores.</p>
+    </div>`;
+  }
+
+  return html;
 }
 
 /**
- * Wire up the Parts section event handlers after it's been
- * inserted into the preferences form. Provides live preview.
+ * Wire up the Parts controls for live preview.
+ * Handles both score file selector and layer filter.
  * @param {HTMLElement} form - The preferences form element
  * @param {string} projectName
  */
 export function wireLayerFilterUI(form, projectName) {
+  // ---- Score file selector ----
+  const scoreSelect = form.querySelector("#pref-scoreFile");
+  if (scoreSelect) {
+    scoreSelect.addEventListener("change", () => {
+      const scoreSelKey = `oscilla_scoreFile_${projectName}`;
+      localStorage.setItem(scoreSelKey, scoreSelect.value);
+      console.log(`[ScoreFile] Selection saved: ${scoreSelect.value} — reload to apply`);
+
+      // Show reload notice
+      let notice = form.querySelector("#pref-scoreFile-notice");
+      if (!notice) {
+        notice = document.createElement("div");
+        notice.id = "pref-scoreFile-notice";
+        notice.className = "pref-parts-empty";
+        notice.style.marginTop = "4px";
+        notice.innerHTML = '<p style="color:#fa3;">Score change takes effect on next project load.</p>';
+        scoreSelect.parentElement.after(notice);
+      }
+    });
+  }
+
+  // ---- Layer filter ----
   const partSelect = form.querySelector("#pref-layerMyPart");
   const opacityRange = form.querySelector("#pref-layerOtherOpacity");
   const opacityValue = form.querySelector("#pref-layerOtherOpacity-value");
 
   if (!partSelect || !opacityRange) return;
 
-  // Live preview on change
   const applyLive = () => {
     const val = partSelect.value;
     console.log("[LayerFilter] UI change — select value:", JSON.stringify(val),
@@ -251,21 +333,30 @@ export function wireLayerFilterUI(form, projectName) {
     applyLayerFilter(projectName);
   };
 
-  partSelect.addEventListener("sl-change", applyLive);
+  partSelect.addEventListener("change", applyLive);
 
-  opacityRange.addEventListener("sl-input", () => {
+  opacityRange.addEventListener("input", () => {
     if (opacityValue) opacityValue.textContent = opacityRange.value + "%";
   });
-  opacityRange.addEventListener("sl-change", applyLive);
+  opacityRange.addEventListener("change", applyLive);
 }
 
 /**
  * Read layer filter values from the form during a general save.
+ * Also persists score file selection.
  * Called from oscillaPreferences.js save handler.
  * @param {HTMLElement} form
  * @param {string} projectName
  */
 export function saveLayerFilterFromForm(form, projectName) {
+  // Score file selection
+  const scoreSelect = form.querySelector("#pref-scoreFile");
+  if (scoreSelect) {
+    const scoreSelKey = `oscilla_scoreFile_${projectName}`;
+    localStorage.setItem(scoreSelKey, scoreSelect.value);
+  }
+
+  // Layer filter
   const partSelect = form.querySelector("#pref-layerMyPart");
   const opacityRange = form.querySelector("#pref-layerOtherOpacity");
 

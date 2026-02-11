@@ -192,6 +192,10 @@ function toggleMode() {
   if (!ps) return;
 
   if (ps.mode === "page") {
+    if (!window.scrollModeAvailable) {
+      console.warn("[UI] Cannot toggle to scroll — no score.svg loaded.");
+      return;
+    }
     // go to scroll mode
     window.returnToScrollingScore?.();
   } else {
@@ -210,6 +214,12 @@ window.updateModeToggleUI = updateModeToggleUI;
 
 
 window.returnToScrollingScore = function returnToScrollingScore() {
+
+  // Guard: if scroll mode was never loaded (pure page project), do nothing
+  if (!window.scrollModeAvailable) {
+    console.warn("[cuePage] Cannot return to scroll — no score.svg loaded (pure page mode).");
+    return;
+  }
 
   console.log("[cuePage] Returning to scrolling score.");
   stopAllCueTexts();

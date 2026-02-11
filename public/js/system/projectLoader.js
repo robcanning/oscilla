@@ -306,24 +306,68 @@ export async function loadProject(projectName, options = {}) {
     // 4️⃣ Determine and load view mode
     updateLoader("Loading score...", 30);
 
-    const viewMode = prefs.defaultViewMode || "scroll";
+    const viewMode = prefs.defaultViewMode || "hybrid";
     const container = document.getElementById("scoreContainer") || document.querySelector("#scoreContainer");
     if (!container) throw new Error("Could not find #scoreContainer in the DOM.");
     window.scoreContainer = container;
 
+    // Track whether scroll infrastructure is available
+    window.scrollModeAvailable = false;
+
+    // Discover available score*.svg files
+    let availableScores = ["score.svg"];
+    try {
+      const scoreRes = await fetch(`/api/score-files/${encodeURIComponent(projectName)}`);
+      if (scoreRes.ok) {
+        const files = await scoreRes.json();
+        if (files.length > 0) availableScores = files;
+      }
+    } catch (e) {
+      console.warn("[loadProject] Could not fetch score file list, using default");
+    }
+    window.availableScores = availableScores;
+    console.log(`[loadProject] Available scores: ${availableScores.join(", ")}`);
+
+    // Read per-performer score selection from localStorage
+    const scoreSelKey = `oscilla_scoreFile_${projectName}`;
+    let selectedScore = localStorage.getItem(scoreSelKey);
+    if (!selectedScore || !availableScores.includes(selectedScore)) {
+      selectedScore = availableScores[0]; // default: score.svg (sorted first by server)
+    }
+
+    // For scroll and hybrid modes: load score.svg as the base layer.
+    // For page mode: try to load it gracefully (allows return-to-scroll if it exists).
+    const needsScroll = (viewMode === "scroll" || viewMode === "hybrid");
+
+    try {
+      await loadScrollMode(container, selectedScore);
+      window.scrollModeAvailable = true;
+    } catch (err) {
+      if (needsScroll) {
+        // scroll/hybrid modes require score.svg — this is a real error
+        throw err;
+      }
+      // page mode: score.svg missing is fine, just log and continue
+      console.log("[loadProject] No score.svg found — pure page mode, scroll unavailable.");
+    }
+
+    // Update mode toggle visibility based on what's available
+    const modeToggle = document.getElementById("mode-toggle");
+    if (modeToggle) {
+      modeToggle.style.display = window.scrollModeAvailable ? "" : "none";
+    }
+
+    // If page or hybrid-starting-on-page, switch to page view
     if (viewMode === "page") {
-      const startPage = prefs.startPage || "home";
-      console.log(`[loadProject] 📄 Page mode requested, loading "${startPage}"...`);
-      // Defer page loading until after basic setup is complete
+      const startPage = prefs.defaultPage || prefs.startPage || "home";
+      console.log(`[loadProject] Page mode — loading "${startPage}"...`);
       setTimeout(() => {
         if (typeof window.handleCueTrigger === "function") {
           window.handleCueTrigger(`page(${startPage})`, false, true);
         } else {
-          console.error("[loadProject] ❌ handleCueTrigger not available for page mode");
+          console.error("[loadProject] handleCueTrigger not available for page mode");
         }
       }, 100);
-    } else {
-      await loadScrollMode(container);
     }
 
     updateLoader("Initializing playback...", 85);
@@ -420,7 +464,7 @@ async function loadPreferences(basePath) {
     const defaults = {
       darkMode: false,
       defaultPlaybackSpeed: 1.0,
-      defaultViewMode: "scroll",
+      defaultViewMode: "hybrid",
       pinControls: true,
       pinTopbar: true,
       touchSeekFriction: 0.95,
@@ -433,10 +477,13 @@ async function loadPreferences(basePath) {
 
 
 // ------------------------------------------------------------
-// 🧾 SCROLL MODE — load main score.svg
+// 🧾 SCROLL MODE — load a score SVG
 // ------------------------------------------------------------
-async function loadScrollMode(container) {
-  const scorePath = `${window.svgDir}score.svg`;
+// scoreFile defaults to "score.svg" but can be any score*.svg
+// e.g. "score-part-violin.svg", "score-part-viola.svg"
+// ------------------------------------------------------------
+async function loadScrollMode(container, scoreFile = "score.svg") {
+  const scorePath = `${window.svgDir}${scoreFile}`;
   const res = await fetch(scorePath);
   if (!res.ok) throw new Error(`Failed to load ${scorePath}`);
 
@@ -483,7 +530,8 @@ async function loadScrollMode(container) {
   inner.appendChild(svg);
 
   window.mode = "scroll";
-  console.log("[ScrollMode] ✅ Loaded score.svg into #scrollStage → #scoreInner → <svg>");
+  window.currentScoreFile = scoreFile;
+  console.log(`[ScrollMode] Loaded ${scoreFile} into #scrollStage → #scoreInner → <svg>`);
 
   if (typeof initializeSVG === "function") initializeSVG(svg);
 

@@ -319,20 +319,20 @@
     <div id="project-list" class="project-list"></div>
   </sl-dialog>
 
-  <sl-dialog id="preferences-dialog" label="Preferences">
-    <form id="preferences-form" class="prefs-form"></form>
-    <sl-button slot="footer" id="preferences-save" variant="primary">Save</sl-button>
-  </sl-dialog>
-
-  <style>
-    .prefs-form {
-      display: grid;
-      grid-template-columns: 180px 1fr;
-      gap: 6px 12px;
-      padding: 8px;
-      z-index: 99999;
-    }
-  </style>
+  <!-- Preferences overlay + dialog (native HTML) -->
+  <div id="preferences-overlay"></div>
+  <div id="preferences-dialog">
+    <div id="preferences-header">
+      <h3>Preferences</h3>
+      <button id="preferences-close">&times;</button>
+    </div>
+    <div id="preferences-body">
+      <form id="preferences-form"></form>
+    </div>
+    <div id="preferences-footer">
+      <button id="preferences-save">Save</button>
+    </div>
+  </div>
 
   <!-- 🔹 Controls -->
   <div id="controls" class="gui-sticky-bottom gui-bar">

@@ -568,6 +568,34 @@ app.use(
 // ---------------------------------------------
 // API: save preferences (WRITE)
 // ---------------------------------------------
+// List score*.svg files in a project directory
+// Used by the client to offer per-performer score selection
+// ---------------------------------------------
+
+app.get("/api/score-files/:project", (req, res) => {
+  const project = req.params.project;
+  const projectDir = path.join(WRITE_DIR, "public", "scores", project);
+
+  fs.readdir(projectDir, (err, files) => {
+    if (err) {
+      console.error(`[ScoreFiles] Failed to read ${projectDir}:`, err);
+      return res.status(500).json([]);
+    }
+
+    const scoreFiles = files
+      .filter(f => /^score.*\.svg$/i.test(f))
+      .sort((a, b) => {
+        // score.svg always first
+        if (a === "score.svg") return -1;
+        if (b === "score.svg") return 1;
+        return a.localeCompare(b);
+      });
+
+    res.json(scoreFiles);
+  });
+});
+
+// ---------------------------------------------
 
 app.post("/save-preferences/:project", express.json(), (req, res) => {
   const project = req.params.project;

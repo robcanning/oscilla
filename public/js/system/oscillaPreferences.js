@@ -1,57 +1,72 @@
 // ============================================================
-// 🔹 PREFERENCES DIALOG — oscillaPreferences.js
+// PREFERENCES DIALOG — oscillaPreferences.js
+// Native HTML — tabbed layout with Parts tab
 // ============================================================
 
 import { buildLayerFilterSection, wireLayerFilterUI, saveLayerFilterFromForm } from "./layerFilter.js";
 
-// Track the current save handler so we can remove it
 let currentSaveController = null;
 
-/**
- * Opens the preferences dialog and populates it with current project settings.
- */
-async function openPreferencesDialog() {
-  const dialog = document.querySelector("#preferences-dialog");
-  const form = document.querySelector("#preferences-form");
-  const saveBtn = document.querySelector("#preferences-save");
+// ============================================================
+// OPEN / CLOSE
+// ============================================================
 
-  if (!dialog || !form) {
-    console.error("[Preferences] ❌ Dialog or form element not found");
-    alert("Preferences dialog not available");
+function showPreferencesDialog() {
+  document.getElementById("preferences-overlay")?.classList.add("visible");
+  document.getElementById("preferences-dialog")?.classList.add("visible");
+}
+
+function hidePreferencesDialog() {
+  document.getElementById("preferences-overlay")?.classList.remove("visible");
+  const dlg = document.getElementById("preferences-dialog");
+  if (dlg) {
+    dlg.classList.remove("visible");
+    dlg.style.transform = "translate(-50%, -50%)";
+  }
+}
+
+// ============================================================
+// MAIN ENTRY POINT
+// ============================================================
+
+async function openPreferencesDialog() {
+  const form = document.getElementById("preferences-form");
+  const saveBtn = document.getElementById("preferences-save");
+  const dialog = document.getElementById("preferences-dialog");
+
+  if (!form || !dialog) {
+    console.error("[Preferences] Dialog or form element not found");
     return;
   }
 
-  // Clear previous form content and show loading
-  form.innerHTML = '<sl-spinner style="font-size: 2rem; display: block; margin: 2rem auto;"></sl-spinner>';
-  
-  // Open dialog immediately to show loading state
-  dialog.show();
-
-  // Initialize dragging after dialog opens
-  setTimeout(() => initDraggableDialog(dialog), 100);
+  form.innerHTML = '<p style="text-align:center; padding:1.5rem; opacity:0.5;">Loading...</p>';
+  showPreferencesDialog();
+  initDraggableDialog();
 
   try {
     const projectName = window.currentProjectName;
     if (!projectName) {
-      form.innerHTML = '<p style="color: var(--sl-color-danger-600);">No project loaded.</p>';
+      form.innerHTML = '<p style="color:#e55;">No project loaded.</p>';
       return;
     }
 
-    // Fetch current preferences
     let prefs = {};
     try {
       const res = await fetch(`/scores/${projectName}/preferences.json`);
-      if (res.ok) {
-        prefs = await res.json();
-      }
+      if (res.ok) prefs = await res.json();
     } catch (e) {
       console.warn("[Preferences] Could not load existing preferences, using defaults");
     }
 
-    // Define the preference fields with defaults - organized into sections
-    const sections = [
+    // ---- Tab definitions ----
+    // Fields with type "checkbox" or "color" render as half-width cells.
+    // Fields with type "divider" insert a horizontal rule.
+    // Tabs with custom:true get their content from buildLayerFilterSection.
+
+    const tabs = [
       {
-        title: "Project Info",
+        id: "project",
+        label: "Project",
         fields: [
           { key: "projectTitle", label: "Title", type: "text", default: projectName },
           { key: "projectAuthor", label: "Author", type: "text", default: "" },
@@ -59,156 +74,190 @@ async function openPreferencesDialog() {
         ]
       },
       {
-        title: "Display",
+        id: "settings",
+        label: "Settings",
         fields: [
           { key: "darkMode", label: "Dark Mode", type: "checkbox", default: false },
-          { key: "defaultViewMode", label: "Default View", type: "select", default: "scroll", options: ["scroll", "page"] },
-          { key: "defaultPage", label: "Default Page", type: "text", default: "" },
-        ]
-      },
-      {
-        title: "UI Behavior",
-        fields: [
+          { key: "loopPlayback", label: "Loop", type: "checkbox", default: false },
           { key: "pinControls", label: "Pin Transport", type: "checkbox", default: true },
           { key: "pinTopbar", label: "Pin Top Bar", type: "checkbox", default: true },
-        ]
-      },
-      {
-        title: "Playback",
-        fields: [
-          { key: "defaultPlaybackSpeed", label: "Default Speed", type: "number", default: 1, min: 0.1, max: 10, step: 0.1 },
-          { key: "loopPlayback", label: "Loop", type: "checkbox", default: false },
           { key: "audioSync", label: "Audio Sync", type: "checkbox", default: true },
           { key: "oscOutput", label: "OSC Output", type: "checkbox", default: true },
+          { type: "divider" },
+          { key: "defaultViewMode", label: "Default View", type: "select", default: "hybrid", options: ["hybrid", "scroll", "page"] },
+          { key: "defaultPage", label: "Default Page", type: "text", default: "" },
+          { key: "defaultPlaybackSpeed", label: "Default Speed", type: "number", default: 1, min: 0.1, max: 10, step: 0.1 },
         ]
       },
       {
-        title: "Appearance",
+        id: "appearance",
+        label: "UI",
         fields: [
-          { key: "playzoneColor", label: "Playzone Color", type: "color", default: "#00ff0033" },
-          { key: "playheadColor", label: "Playhead Color", type: "color", default: "#ff0000" },
+          { key: "playzoneColor", label: "Playzone", type: "color", default: "#00ff0033" },
+          { key: "playheadColor", label: "Playhead", type: "color", default: "#ff0000" },
           { key: "playheadWidth", label: "Playhead Width", type: "number", default: 4, min: 1, max: 20 },
-          { key: "playheadOffset", label: "Playhead Position %", type: "range", default: 50, min: 10, max: 90, step: 1 },
+          { key: "playheadOffset", label: "Playhead Pos %", type: "range", default: 50, min: 10, max: 90, step: 1 },
+          { type: "divider" },
+          { key: "touchSeekFriction", label: "Touch Friction", type: "range", default: 0.95, min: 0.85, max: 0.99, step: 0.01 },
+          { key: "touchSeekStopThreshold", label: "Touch Stop", type: "number", default: 5, min: 1, max: 50, step: 1 },
         ]
       },
       {
-        title: "Touch Settings",
-        collapsed: true,
-        fields: [
-          { key: "touchSeekFriction", label: "Seek Friction", type: "range", default: 0.95, min: 0.85, max: 0.99, step: 0.01 },
-          { key: "touchSeekStopThreshold", label: "Stop Threshold", type: "number", default: 5, min: 1, max: 50, step: 1 },
-        ]
+        id: "parts",
+        label: "Parts",
+        custom: true
       },
     ];
 
-    // Build compact form HTML
-    let html = '';
-    
-    for (const section of sections) {
-      html += `<details class="pref-section" ${section.collapsed ? '' : 'open'}>
-        <summary>${section.title}</summary>
-        <div class="pref-section-content">`;
-      
-      for (const field of section.fields) {
+    // ---- Build HTML ----
+
+    // Tab bar
+    let html = '<div class="pref-tabs">';
+    for (let i = 0; i < tabs.length; i++) {
+      const tab = tabs[i];
+      html += `<button type="button" class="pref-tab${i === 0 ? ' active' : ''}" data-tab="${tab.id}">${tab.label}</button>`;
+    }
+    html += '</div>';
+
+    // Tab panels
+    for (let i = 0; i < tabs.length; i++) {
+      const tab = tabs[i];
+      html += `<div class="pref-panel${i === 0 ? ' active' : ''}" data-panel="${tab.id}">`;
+
+      // Custom tab: content from layerFilter.js
+      if (tab.custom) {
+        html += buildLayerFilterSection(projectName);
+        html += '</div>';
+        continue;
+      }
+
+      // Standard tab: build field grid
+      html += '<div class="pref-grid">';
+
+      for (const field of tab.fields) {
+        if (field.type === "divider") {
+          html += '<hr class="pref-divider">';
+          continue;
+        }
+
         const value = prefs[field.key] ?? field.default;
-        
+
+        // Checkbox: half-width cell
+        if (field.type === "checkbox") {
+          html += `<div class="pref-cell">
+            <label class="pref-toggle">
+              <input type="checkbox" id="pref-${field.key}" ${value ? 'checked' : ''}>
+              <span class="slider"></span>
+            </label>
+            <label for="pref-${field.key}">${field.label}</label>
+          </div>`;
+          continue;
+        }
+
+        // Color: half-width cell
+        if (field.type === "color") {
+          html += `<div class="pref-cell">
+            <input type="color" id="pref-${field.key}" value="${value}">
+            <label for="pref-${field.key}">${field.label}</label>
+          </div>`;
+          continue;
+        }
+
+        // Full-width row
         html += `<div class="pref-row">
           <label for="pref-${field.key}">${field.label}</label>`;
-        
+
         switch (field.type) {
-          case "checkbox":
-            html += `<sl-switch id="pref-${field.key}" name="${field.key}" size="small" ${value ? "checked" : ""}></sl-switch>`;
-            break;
-            
           case "select":
-            html += `<sl-select id="pref-${field.key}" name="${field.key}" value="${value}" size="small">`;
+            html += `<select id="pref-${field.key}">`;
             for (const opt of field.options) {
-              html += `<sl-option value="${opt}">${opt}</sl-option>`;
+              html += `<option value="${opt}" ${opt === value ? 'selected' : ''}>${opt}</option>`;
             }
-            html += `</sl-select>`;
+            html += `</select>`;
             break;
-            
-          case "color":
-            html += `<sl-color-picker id="pref-${field.key}" name="${field.key}" value="${value}" format="hex" no-format-toggle size="small"></sl-color-picker>`;
-            break;
-          
+
           case "range":
             html += `<div class="pref-range-wrap">
-              <sl-range id="pref-${field.key}" name="${field.key}" value="${value}" 
-                        min="${field.min ?? 0}" max="${field.max ?? 1}" step="${field.step ?? 0.01}"></sl-range>
-              <span id="pref-${field.key}-value">${value}</span>
+              <input type="range" id="pref-${field.key}" value="${value}"
+                     min="${field.min ?? 0}" max="${field.max ?? 1}" step="${field.step ?? 0.01}">
+              <span class="pref-range-value" id="pref-${field.key}-value">${value}</span>
             </div>`;
             break;
-            
+
           case "number":
-            html += `<sl-input id="pref-${field.key}" name="${field.key}" type="number" value="${value}" 
-                      min="${field.min ?? ''}" max="${field.max ?? ''}" step="${field.step ?? 1}" size="small"></sl-input>`;
+            html += `<input type="number" id="pref-${field.key}" value="${value}"
+                      min="${field.min ?? ''}" max="${field.max ?? ''}" step="${field.step ?? 1}">`;
             break;
-            
+
           default:
-            html += `<sl-input id="pref-${field.key}" name="${field.key}" type="text" value="${value || ''}" size="small"></sl-input>`;
+            html += `<input type="text" id="pref-${field.key}" value="${value || ''}">`;
         }
-        
+
         html += `</div>`;
       }
-      
-      html += `</div></details>`;
+
+      html += '</div>'; // .pref-grid
+      html += '</div>'; // .pref-panel
     }
-    
-    // Append dynamic layer filter section (if layers exist in loaded SVG)
-    html += buildLayerFilterSection(projectName);
 
     form.innerHTML = html;
 
-    // Wire up range sliders to show live values
-    form.querySelectorAll('sl-range').forEach(range => {
+    // ---- Wire tab switching ----
+    form.querySelectorAll('.pref-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        form.querySelectorAll('.pref-tab').forEach(t => t.classList.remove('active'));
+        form.querySelectorAll('.pref-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        form.querySelector(`.pref-panel[data-panel="${btn.dataset.tab}"]`)?.classList.add('active');
+      });
+    });
+
+    // ---- Wire range sliders ----
+    form.querySelectorAll('input[type="range"]').forEach(range => {
       const valueSpan = form.querySelector(`#${range.id}-value`);
       if (valueSpan) {
-        range.addEventListener('sl-input', () => {
+        range.addEventListener('input', () => {
           valueSpan.textContent = range.value;
         });
       }
     });
 
-    // Wire layer filter controls (live preview)
+    // Wire layer filter controls (if present)
     wireLayerFilterUI(form, projectName);
 
-    // Flatten fields for save
-    const allFields = sections.flatMap(s => s.fields);
+    // ---- Wire save button ----
+    const allFields = tabs.flatMap(t => t.fields || []).filter(f => f.key);
 
-    // Wire save button using AbortController to manage listener lifecycle
     if (saveBtn) {
-      // Abort any previous listener
-      if (currentSaveController) {
-        currentSaveController.abort();
-      }
+      if (currentSaveController) currentSaveController.abort();
       currentSaveController = new AbortController();
 
       saveBtn.addEventListener("click", async () => {
-        saveBtn.loading = true;
+        saveBtn.classList.add("saving");
+        saveBtn.textContent = "Saving...";
         try {
           await savePreferences(projectName, allFields, form);
           saveLayerFilterFromForm(form, projectName);
-          dialog.hide();
+          hidePreferencesDialog();
         } catch (err) {
           console.error("[Preferences] Save error:", err);
         } finally {
-          saveBtn.loading = false;
+          saveBtn.classList.remove("saving");
+          saveBtn.textContent = "Save";
         }
       }, { signal: currentSaveController.signal });
-    } else {
-      console.warn("[Preferences] ⚠️ Save button (#preferences-save) not found");
     }
 
   } catch (err) {
     console.error("[Preferences] Failed to load:", err);
-    form.innerHTML = `<p style="color: var(--sl-color-danger-600);">Failed to load preferences: ${err.message}</p>`;
+    form.innerHTML = `<p style="color:#e55;">Failed to load preferences: ${err.message}</p>`;
   }
 }
 
-/**
- * Saves preferences to the server
- */
+// ============================================================
+// SAVE
+// ============================================================
+
 async function savePreferences(projectName, fields, form) {
   const prefs = {};
 
@@ -224,18 +273,11 @@ async function savePreferences(projectName, fields, form) {
       case "range":
         prefs[field.key] = parseFloat(el.value) || field.default;
         break;
-      case "color":
-        prefs[field.key] = el.value;
-        break;
-      case "select":
-        prefs[field.key] = el.value;
-        break;
       default:
         prefs[field.key] = el.value;
     }
   }
 
-  // Use the correct endpoint: /save-preferences/:project
   const res = await fetch(`/save-preferences/${encodeURIComponent(projectName)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -247,15 +289,14 @@ async function savePreferences(projectName, fields, form) {
     throw new Error(err.error || "Save failed");
   }
 
-  console.log("[Preferences] ✅ Saved successfully");
-  
-  // Apply some preferences immediately
+  console.log("[Preferences] Saved successfully");
   applyPreferencesLive(prefs);
 }
 
-/**
- * Apply preferences to the current session (live updates after save)
- */
+// ============================================================
+// LIVE APPLICATION
+// ============================================================
+
 function applyPreferencesLive(prefs) {
   if (prefs.playheadColor) {
     const playhead = document.getElementById("playhead");
@@ -280,32 +321,24 @@ function applyPreferencesLive(prefs) {
     window.setPlaybackSpeed(prefs.defaultPlaybackSpeed);
   }
 
-  // Pin state preferences - update both the global state and UI
   if (typeof prefs.pinControls === "boolean") {
     window.controlsPinned = prefs.pinControls;
     window.oscillaControlsPinned = prefs.pinControls;
     const pinBtn = document.getElementById("pin-controls");
     if (pinBtn) pinBtn.classList.toggle("active", prefs.pinControls);
-    
     const controls = document.getElementById('controls');
-    if (prefs.pinControls) {
-      controls?.classList.remove('dismissed');
-    }
+    if (prefs.pinControls) controls?.classList.remove('dismissed');
   }
-  
+
   if (typeof prefs.pinTopbar === "boolean") {
     window.topbarPinned = prefs.pinTopbar;
     window.oscillaTopbarPinned = prefs.pinTopbar;
     const pinBtn = document.getElementById("pin-topbar");
     if (pinBtn) pinBtn.classList.toggle("active", prefs.pinTopbar);
-    
     const topBar = document.getElementById('top-bar');
-    if (prefs.pinTopbar) {
-      topBar?.classList.remove('dismissed');
-    }
+    if (prefs.pinTopbar) topBar?.classList.remove('dismissed');
   }
 
-  // Touch seek momentum settings (read by oscillaTouchSeek.js)
   if (typeof prefs.touchSeekFriction === "number") {
     window.touchSeekFriction = prefs.touchSeekFriction;
   }
@@ -315,79 +348,70 @@ function applyPreferencesLive(prefs) {
 }
 
 // ============================================================
-// DRAGGABLE DIALOG SUPPORT
+// DRAGGABLE DIALOG
 // ============================================================
 
-/**
- * Makes a Shoelace dialog draggable by its header
- */
-function initDraggableDialog(dialog) {
-  if (!dialog || dialog._draggableInitialized) return;
+let _draggableInit = false;
 
-  // Wait for shadow DOM
-  const tryInit = () => {
-    const panel = dialog.shadowRoot?.querySelector('[part="panel"]');
-    const header = dialog.shadowRoot?.querySelector('[part="header"]');
-    
-    if (!panel || !header) {
-      setTimeout(tryInit, 50);
-      return;
+function initDraggableDialog() {
+  if (_draggableInit) return;
+
+  const dialog = document.getElementById("preferences-dialog");
+  const header = document.getElementById("preferences-header");
+  if (!dialog || !header) return;
+
+  let isDragging = false;
+  let startX, startY, initialX, initialY;
+
+  function getOffset() {
+    const style = window.getComputedStyle(dialog);
+    const matrix = new DOMMatrix(style.transform);
+    return { x: matrix.m41, y: matrix.m42 };
+  }
+
+  header.addEventListener('mousedown', (e) => {
+    if (e.target.id === 'preferences-close') return;
+    isDragging = true;
+    const offset = getOffset();
+    startX = e.clientX;
+    startY = e.clientY;
+    initialX = offset.x;
+    initialY = offset.y;
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    dialog.style.transform = `translate(${initialX + (e.clientX - startX)}px, ${initialY + (e.clientY - startY)}px)`;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      document.body.style.userSelect = '';
     }
+  });
 
-    let isDragging = false;
-    let startX, startY, initialX, initialY;
-
-    function getTransform() {
-      const style = window.getComputedStyle(panel);
-      const matrix = new DOMMatrix(style.transform);
-      return { x: matrix.m41, y: matrix.m42 };
-    }
-
-    header.style.cursor = 'move';
-    header.style.userSelect = 'none';
-
-    header.addEventListener('mousedown', (e) => {
-      if (e.target.closest('[part="close-button"]')) return;
-      
-      isDragging = true;
-      const transform = getTransform();
-      startX = e.clientX;
-      startY = e.clientY;
-      initialX = transform.x;
-      initialY = transform.y;
-      
-      panel.style.transition = 'none';
-      document.body.style.userSelect = 'none';
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      
-      panel.style.transform = `translate(${initialX + dx}px, ${initialY + dy}px)`;
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        document.body.style.userSelect = '';
-      }
-    });
-
-    // Reset position when dialog is closed
-    dialog.addEventListener('sl-after-hide', () => {
-      panel.style.transform = '';
-      panel.style.transition = '';
-    });
-
-    dialog._draggableInitialized = true;
-    console.log("[Preferences] Dialog dragging enabled");
-  };
-
-  tryInit();
+  _draggableInit = true;
 }
 
-// Make available globally
+// ============================================================
+// CLOSE HANDLERS
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById("preferences-close")?.addEventListener("click", hidePreferencesDialog);
+  document.getElementById("preferences-overlay")?.addEventListener("click", hidePreferencesDialog);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.getElementById("preferences-dialog")?.classList.contains("visible")) {
+      hidePreferencesDialog();
+    }
+  });
+});
+
+// ============================================================
+// GLOBAL
+// ============================================================
+
 window.openPreferencesDialog = openPreferencesDialog;
+window.hidePreferencesDialog = hidePreferencesDialog;

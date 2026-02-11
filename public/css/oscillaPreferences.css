@@ -1,198 +1,391 @@
 /* ============================================================
    PREFERENCES DIALOG — oscillaPreferences.css
-   Compact & Draggable Styles for Shoelace dialog
+   Native HTML — tabbed layout
    ============================================================ */
 
-/* Make dialog compact and positioned */
-#preferences-dialog {
-  --width: 340px;
-  --header-spacing: var(--sl-spacing-small);
-  --body-spacing: var(--sl-spacing-small);
-  --footer-spacing: var(--sl-spacing-small);
-}
-
-#preferences-dialog::part(panel) {
-  max-height: 80vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-#preferences-dialog::part(header) {
-  cursor: move;
-  user-select: none;
-  padding: 8px 12px;
-  font-size: 14px;
-}
-
-#preferences-dialog::part(body) {
-  overflow-y: auto;
-  flex: 1;
-  padding: 8px;
-}
-
-#preferences-dialog::part(footer) {
-  padding: 8px 12px;
-}
-
-/* Compact form layout */
-.prefs-form {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-}
-
-/* Section styling with collapsible details */
-.pref-section {
-  border: 1px solid var(--sl-color-neutral-200);
-  border-radius: 4px;
-  margin-bottom: 4px;
-  background: var(--sl-color-neutral-50);
-}
-
-.pref-section summary {
-  padding: 6px 10px;
-  font-weight: 600;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--sl-color-neutral-700);
-  cursor: pointer;
-  user-select: none;
-  background: var(--sl-color-neutral-100);
-  border-radius: 3px 3px 0 0;
-  list-style: none;
-}
-
-.pref-section summary::-webkit-details-marker {
+/* ---- Overlay ---- */
+#preferences-overlay {
   display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 200000;
 }
+#preferences-overlay.visible { display: block; }
 
-.pref-section summary::before {
-  content: "▶";
-  display: inline-block;
-  margin-right: 6px;
-  font-size: 8px;
-  transition: transform 0.15s;
-}
-
-.pref-section[open] summary::before {
-  transform: rotate(90deg);
-}
-
-.pref-section[open] summary {
-  border-bottom: 1px solid var(--sl-color-neutral-200);
-  border-radius: 3px 3px 0 0;
-}
-
-.pref-section-content {
-  padding: 6px 8px;
-  display: flex;
+/* ---- Dialog ---- */
+#preferences-dialog {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 340px;
+  max-width: 94vw;
+  max-height: 84vh;
+  background: #1a1a1a;
+  color: #ddd;
+  border: 1px solid #444;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 200001;
+  font-family: "Iosevka Term", "Consolas", monospace;
+  font-size: 11px;
   flex-direction: column;
-  gap: 4px;
+  overflow: hidden;
 }
+#preferences-dialog.visible { display: flex; }
 
-/* Row layout - label and control side by side */
-.pref-row {
+/* ---- Header ---- */
+#preferences-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  min-height: 28px;
+  padding: 6px 12px;
+  background: #222;
+  border-bottom: 1px solid #444;
+  cursor: move;
+  user-select: none;
+  flex-shrink: 0;
 }
-
-.pref-row label {
+#preferences-header h3 {
+  margin: 0;
   font-size: 12px;
-  color: var(--sl-color-neutral-700);
-  white-space: nowrap;
+  font-weight: 600;
+}
+#preferences-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+#preferences-close:hover { color: #fff; }
+
+/* ============================================================
+   TABS
+   ============================================================ */
+
+.pref-tabs {
+  display: flex;
+  border-bottom: 1px solid #333;
+  background: #1e1e1e;
   flex-shrink: 0;
 }
 
-/* Compact input sizing */
-.pref-row sl-input {
-  --sl-input-height-small: 26px;
-  --sl-input-font-size-small: 12px;
-  max-width: 100px;
+.pref-tab {
+  flex: 1;
+  padding: 7px 4px;
+  font-size: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  text-align: center;
+  color: #777;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
 }
 
-.pref-row sl-input[type="text"] {
-  max-width: 140px;
+.pref-tab:hover {
+  color: #bbb;
 }
 
-.pref-row sl-select {
-  --sl-input-height-small: 26px;
-  --sl-input-font-size-small: 12px;
-  min-width: 80px;
-  max-width: 100px;
+.pref-tab.active {
+  color: #5af;
+  border-bottom-color: #5af;
 }
 
-.pref-row sl-switch {
-  --sl-toggle-size-small: 16px;
+/* ---- Tab panels ---- */
+.pref-panel {
+  display: none;
+  padding: 10px 12px;
 }
 
-.pref-row sl-color-picker {
-  --sl-input-height-small: 26px;
+.pref-panel.active {
+  display: block;
 }
 
-.pref-row sl-color-picker::part(trigger) {
-  width: 50px;
-  height: 26px;
+/* ---- Body ---- */
+#preferences-body {
+  flex: 1;
+  overflow-y: auto;
 }
 
-/* Range with value display */
+/* ---- Footer ---- */
+#preferences-footer {
+  padding: 6px 10px;
+  border-top: 1px solid #333;
+  flex-shrink: 0;
+}
+#preferences-save {
+  display: block;
+  width: 100%;
+  padding: 6px 0;
+  background: #3a3;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+#preferences-save:hover { background: #4c4; }
+#preferences-save.saving { opacity: 0.6; pointer-events: none; }
+
+/* ============================================================
+   FIELD GRID — 2 columns within each panel
+   ============================================================ */
+
+.pref-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  align-items: center;
+}
+
+/* Full-width row: text, number, select, range */
+.pref-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+}
+
+.pref-row label {
+  font-size: 11px;
+  color: #aaa;
+  white-space: nowrap;
+  flex: 0 0 110px;
+}
+
+/* Half-width cell: checkbox, color */
+.pref-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+}
+
+.pref-cell label {
+  font-size: 11px;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   NATIVE INPUTS
+   ============================================================ */
+
+.pref-row input[type="text"],
+.pref-row input[type="number"],
+.pref-row select {
+  background: #111;
+  color: #ddd;
+  border: 1px solid #444;
+  border-radius: 3px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-family: inherit;
+  outline: none;
+}
+.pref-row input[type="text"]:focus,
+.pref-row input[type="number"]:focus,
+.pref-row select:focus { border-color: #5af; }
+
+.pref-row input[type="text"] { flex: 1; min-width: 0; }
+.pref-row input[type="number"] { width: 64px; flex: none; }
+.pref-row select { width: 100px; flex: none; cursor: pointer; }
+.pref-row select option { background: #1a1a1a; color: #ddd; }
+
+/* Color — half-width */
+.pref-cell input[type="color"] {
+  width: 32px;
+  height: 20px;
+  border: 1px solid #444;
+  border-radius: 3px;
+  background: #111;
+  cursor: pointer;
+  padding: 1px;
+  flex: none;
+}
+
+/* ============================================================
+   TOGGLE SWITCH
+   ============================================================ */
+
+.pref-toggle {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  flex: none;
+}
+.pref-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.pref-toggle .slider {
+  position: absolute;
+  inset: 0;
+  background: #444;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pref-toggle .slider::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 12px;
+  height: 12px;
+  background: #999;
+  border-radius: 50%;
+  transition: transform 0.15s, background 0.15s;
+}
+.pref-toggle input:checked + .slider { background: #3a3; }
+.pref-toggle input:checked + .slider::before {
+  transform: translateX(12px);
+  background: #fff;
+}
+
+/* ============================================================
+   RANGE SLIDER
+   ============================================================ */
+
 .pref-range-wrap {
   display: flex;
   align-items: center;
   gap: 6px;
   flex: 1;
-  max-width: 140px;
+  min-width: 0;
 }
-
-.pref-range-wrap sl-range {
+.pref-range-wrap input[type="range"] {
   flex: 1;
-  --sl-input-height-small: 20px;
+  min-width: 0;
+  height: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #444;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
 }
-
-.pref-range-wrap span {
+.pref-range-wrap input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #5af;
+  border: none;
+  cursor: pointer;
+}
+.pref-range-wrap input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #5af;
+  border: none;
+  cursor: pointer;
+}
+.pref-range-value {
   font-size: 10px;
-  min-width: 32px;
+  min-width: 30px;
   text-align: right;
-  color: var(--sl-color-neutral-600);
+  color: #888;
   font-family: monospace;
-}
-
-/* Save button styling */
-#preferences-save {
-  width: 100%;
+  flex-shrink: 0;
 }
 
 /* ============================================================
-   DARK MODE ADJUSTMENTS
+   SECTION DIVIDER (within a tab panel)
    ============================================================ */
 
-.dark-mode #preferences-dialog::part(panel) {
-  background: var(--sl-color-neutral-900);
+.pref-divider {
+  grid-column: 1 / -1;
+  border: none;
+  border-top: 1px solid #333;
+  margin: 4px 0;
 }
 
-.dark-mode .pref-section {
-  background: var(--sl-color-neutral-800);
-  border-color: var(--sl-color-neutral-700);
+/* ============================================================
+   PARTS TAB — empty state
+   ============================================================ */
+
+.pref-parts-empty {
+  color: #999;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 4px 0;
 }
 
-.dark-mode .pref-section summary {
-  background: var(--sl-color-neutral-700);
-  color: var(--sl-color-neutral-200);
+.pref-parts-empty p {
+  margin: 0 0 6px;
 }
 
-.dark-mode .pref-section[open] summary {
-  border-bottom-color: var(--sl-color-neutral-600);
+.pref-parts-empty ul {
+  margin: 2px 0 8px 18px;
+  padding: 0;
 }
 
-.dark-mode .pref-row label {
-  color: var(--sl-color-neutral-300);
+.pref-parts-empty li {
+  margin-bottom: 2px;
+  font-family: monospace;
+  color: #bbb;
 }
 
-.dark-mode .pref-range-wrap span {
-  color: var(--sl-color-neutral-400);
+.pref-parts-empty strong {
+  color: #ddd;
 }
+
+.pref-parts-empty code {
+  background: #333;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 10px;
+  color: #ccc;
+}
+
+/* ============================================================
+   LIGHT MODE
+   ============================================================ */
+
+body:not(.dark-mode) #preferences-overlay { background: rgba(0,0,0,0.25); }
+body:not(.dark-mode) #preferences-dialog {
+  background: #f5f5f5; color: #222;
+  border-color: #ccc; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+body:not(.dark-mode) #preferences-header { background: #e8e8e8; border-bottom-color: #ccc; }
+body:not(.dark-mode) #preferences-close { color: #666; }
+body:not(.dark-mode) #preferences-close:hover { color: #000; }
+body:not(.dark-mode) .pref-tabs { background: #eee; border-bottom-color: #ccc; }
+body:not(.dark-mode) .pref-tab { color: #888; }
+body:not(.dark-mode) .pref-tab:hover { color: #444; }
+body:not(.dark-mode) .pref-tab.active { color: #2566d4; border-bottom-color: #2566d4; }
+body:not(.dark-mode) #preferences-footer { border-top-color: #ddd; }
+body:not(.dark-mode) .pref-row label,
+body:not(.dark-mode) .pref-cell label { color: #555; }
+body:not(.dark-mode) .pref-row input[type="text"],
+body:not(.dark-mode) .pref-row input[type="number"],
+body:not(.dark-mode) .pref-row select {
+  background: #fff; color: #222; border-color: #ccc;
+}
+body:not(.dark-mode) .pref-cell input[type="color"] { border-color: #ccc; background: #fff; }
+body:not(.dark-mode) .pref-toggle .slider { background: #ccc; }
+body:not(.dark-mode) .pref-toggle .slider::before { background: #888; }
+body:not(.dark-mode) .pref-toggle input:checked + .slider { background: #3a3; }
+body:not(.dark-mode) .pref-toggle input:checked + .slider::before {
+  transform: translateX(12px);
+  background: #fff;
+}
+body:not(.dark-mode) .pref-range-wrap input[type="range"] { background: #ccc; }
+body:not(.dark-mode) .pref-range-value { color: #666; }
+body:not(.dark-mode) .pref-divider { border-top-color: #ddd; }
+body:not(.dark-mode) .pref-parts-empty { color: #666; }
+body:not(.dark-mode) .pref-parts-empty li { color: #333; }
+body:not(.dark-mode) .pref-parts-empty strong { color: #111; }
+body:not(.dark-mode) .pref-parts-empty code { background: #e8e8e8; color: #333; }
