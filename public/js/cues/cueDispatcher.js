@@ -471,8 +471,11 @@ export function handleCueTrigger(cueExprOrAst, isRemote = false, force = false, 
       console.log("[dispatch] cueAudio AST →", ast);
       return handleAudioCue(ast, cueElement);
 
-    case "cueAudioStop":
-      return stopAudioCue(ast.filename || ast.file);
+    case "cueAudioStop": {
+      const stopParams = ast.params || {};
+      const choice = stopParams.choice || stopParams.file || ast.filename || ast.file;
+      return handleAudioStopCue(ast.raw || ast.id || "cueAudioStop", { ...stopParams, choice });
+    }
 
 
     // AUDIO POOL — single-event randomised selection
@@ -534,11 +537,47 @@ export function emitCueComplete(id, type = "generic") {
 function splitCueId(id) {
   if (!id || typeof id !== "string") return [];
 
-  return id
-    .split(/\)\s*(?=[a-zA-Z_][a-zA-Z0-9_-]*\s*\()/)
-    .map(s => s.trim())
-    .filter(Boolean)
-    .map(s => s.endsWith(")") ? s : s + ")");
+  // Paren-depth-aware split: walk characters, track depth,
+  // split at depth==0 boundaries between expressions.
+  const results = [];
+  let depth = 0;
+  let start = 0;
+  let inString = false;
+  let stringChar = "";
+
+  for (let i = 0; i < id.length; i++) {
+    const ch = id[i];
+
+    // Track string literals to avoid counting parens inside them
+    if ((ch === '"' || ch === "'") && !inString) {
+      inString = true;
+      stringChar = ch;
+      continue;
+    }
+    if (inString && ch === stringChar) {
+      inString = false;
+      continue;
+    }
+    if (inString) continue;
+
+    if (ch === "(") {
+      depth++;
+    } else if (ch === ")") {
+      depth--;
+      if (depth === 0) {
+        // End of a complete expression
+        const expr = id.slice(start, i + 1).trim();
+        if (expr) results.push(expr);
+        start = i + 1;
+      }
+    }
+  }
+
+  // Anything remaining (no matching close paren) -- include as-is
+  const tail = id.slice(start).trim();
+  if (tail) results.push(tail);
+
+  return results;
 }
 
 const CUE_PREFIX_RE = /^(?:cue:)?(oscCtrl|osc|controlXY|ui|video|scale|scaleXY|rotate|o2p|page|text|fade|pause|speed|audio|audioPool|audioImpulse|synth|nav|stop|stopwatch|button|metro|metronome)\s*\(/i;

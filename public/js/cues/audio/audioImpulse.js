@@ -7,11 +7,22 @@ import {
   createAudioOverlay,
   formatAudioImpulseOverlay,
   parseOverlayLevel,
-  selectFromPool
+  selectFromPool,
+  audioBufferCache,
+  sharedAudioCtx
 } from "./audioShared.js";
 
 import { handleAudioCue } from "./audioFile.js";
 import { ensureAudioPool } from "./audioPool.js";
+import {
+  renderWaveform,
+  getWaveform,
+  addCursor,
+  startCursor,
+  resetCursor,
+  removeCursor,
+  removeAllCursors
+} from "../../system/waveform.js";
 
 
 // =============================================================
@@ -62,6 +73,14 @@ function scheduleNextImpulse(state) {
   state.timer = setTimeout(async () => {
     if (state.stopped) return;
 
+    // During seeking the RAF loop is paused and checkImpulseRegions
+    // cannot police region bounds.  Skip the hit but keep scheduling
+    // so the process resumes naturally once seeking ends.
+    if (window.isSeeking) {
+      scheduleNextImpulse(state);
+      return;
+    }
+
     try {
       await playImpulseHit(state);
     } catch (err) {
@@ -81,6 +100,25 @@ async function playImpulseHit(state) {
   const { uid, params, pool } = state;
 
   if (!pool?.files?.length) return;
+
+  // For region-lifetime impulses that have already been confirmed inside,
+  // verify playhead is still inside the region. This prevents voice
+  // accumulation during seeking/rewind when the timer keeps firing but
+  // the playhead has moved outside the bounding box.
+  // Skip this check until _wasInsideOnce is set -- before that, the
+  // edge-crossing detector in checkCueTriggers is the authority.
+  if (state.lifetime === "region" && state._regionEl && state._wasInsideOnce) {
+    const playX = window.getPlayheadX?.();
+    if (playX != null) {
+      const rect = state._regionEl.getBoundingClientRect();
+      const containerRect = window.scoreContainer?.getBoundingClientRect();
+      const rectLeft = rect.left - (containerRect?.left || 0);
+      const rectRight = rect.right - (containerRect?.left || 0);
+      if (playX < rectLeft - 5 || playX > rectRight + 5) {
+        return;
+      }
+    }
+  }
 
   // Select file from pool (shared logic with audioPool)
   const file = selectFromPool(pool);
@@ -123,6 +161,21 @@ async function playImpulseHit(state) {
 
   const poly = Number(params.poly ?? 1);
 
+  // Enforce polyphony limit: count active voices for this impulse
+  const reg = window.activeAudioCues;
+  if (reg && poly > 0) {
+    const activeKeys = [];
+    for (const key of reg.keys()) {
+      if (key === uid || key.startsWith(`${uid}__`)) {
+        activeKeys.push(key);
+      }
+    }
+    if (activeKeys.length >= poly) {
+      // At capacity -- skip this hit, wait for a voice to free up
+      return;
+    }
+  }
+
   let playUid = uid;
   if (poly > 1) {
     playUid = `${uid}__${Date.now()}_${Math.floor(Math.random() * 9999)}`;
@@ -141,7 +194,47 @@ async function playImpulseHit(state) {
     toggle: false
   };
 
-  return handleAudioCue(cue);
+  await handleAudioCue(cue);
+
+  // --- Per-hit waveform cursor ---
+  const wfHandle = state._waveformHandle;
+  const ctx = window.sharedAudioCtx;
+  const audioFilename = cue.src.endsWith(".wav") ? cue.src : `${cue.src}.wav`;
+  const buf = audioBufferCache.get(audioFilename);
+
+  console.log("[impulse:cursor]", {
+    playUid,
+    hasHandle: !!wfHandle,
+    hasCtx: !!ctx,
+    audioFilename,
+    hasBuf: !!buf,
+    cacheKeys: [...audioBufferCache.keys()],
+    wfUid: `wf-impulse-${uid}`,
+  });
+
+  if (wfHandle && ctx && buf) {
+    // Remove any existing cursor with same id (mono mode: poly=1)
+    removeCursor(wfHandle, playUid);
+
+    const subCursor = addCursor(wfHandle, playUid, {
+      color: "#c00", width: "0.8", opacity: "0.45"
+    });
+
+    console.log("[impulse:cursor] addCursor result:", !!subCursor);
+
+    if (subCursor) {
+      startCursor(subCursor, ctx, ctx.currentTime, buf.duration, pitch);
+
+      // Auto-remove cursor when this voice ends
+      const onStop = (e) => {
+        if (e.detail?.uid === playUid && e.detail?.state === "stop") {
+          removeCursor(wfHandle, playUid);
+          window.removeEventListener("oscilla:audio", onStop);
+        }
+      };
+      window.addEventListener("oscilla:audio", onStop);
+    }
+  }
 }
 
 
@@ -226,6 +319,9 @@ export async function handleAudioImpulseCue(ast, el, opts = {}) {
       pan: state.params.pan,
       playheadX: window.getPlayheadX?.()
     });
+
+    // Look up primed waveform handle (from primeImpulseWaveform)
+    state._waveformHandle = getWaveform(`wf-impulse-${uid}`) || null;
 
     audioImpulses.set(uid, state);
 
@@ -334,6 +430,11 @@ export function stopAudioImpulse(uid, releaseSec = 0) {
   // Get release time from params if not provided
   const fadeTime = releaseSec || st.params?.release || st.params?.rel || 0.3;
 
+  // Remove all per-hit waveform cursors
+  if (st._waveformHandle) {
+    removeAllCursors(st._waveformHandle);
+  }
+
   // Fade out any currently playing audio from this impulse
   const reg = window.activeAudioCues;
   if (reg && fadeTime > 0) {
@@ -348,18 +449,17 @@ export function stopAudioImpulse(uid, releaseSec = 0) {
     }
   }
 
+  // Remove from map immediately so retrigger can create a fresh entry.
+  // The captured `st` object keeps delayed cleanup closures working.
+  audioImpulses.delete(uid);
+
   // Destroy overlay after fade completes
   if (st._overlay) {
+    const overlay = st._overlay;
     setTimeout(() => {
-      st._overlay?.destroy();
-      st._overlay = null;
+      overlay?.destroy();
     }, fadeTime * 1000 + 50);
   }
-
-  // Clean up after fade
-  setTimeout(() => {
-    audioImpulses.delete(uid);
-  }, fadeTime * 1000 + 100);
 
   console.log(`[audioImpulse] Stopping ${uid} with ${fadeTime}s release`);
 }
@@ -369,7 +469,7 @@ export function stopAudioImpulse(uid, releaseSec = 0) {
 //  stopAllAudioImpulses
 // =============================================================
 
-function stopAllAudioImpulses() {
+export function stopAllAudioImpulses() {
   if (!window.audioImpulses) return;
 
   for (const uid of window.audioImpulses.keys()) {
@@ -410,4 +510,70 @@ export function primeAudioImpulseOverlay(ast, cueElement) {
   }
 
   console.log(`[audioImpulse] Primed overlay for ${params.path || ast.path}`);
+}
+
+
+// =============================================================
+//  Prime impulse waveform (called during assignCues)
+//  Fetches pool, decodes first file's buffer, renders waveform.
+// =============================================================
+
+export async function primeImpulseWaveform(ast, cueElement) {
+  if (!ast || !cueElement) return;
+
+  const params = ast.params || ast;
+  const waveformParam = params.waveform ?? "self";
+
+  if (waveformParam === "none" || waveformParam === "0") return;
+  if (cueElement._impulseWaveformPrimed) return;
+  cueElement._impulseWaveformPrimed = true;
+
+  const svg = cueElement.ownerSVGElement;
+  if (!svg) return;
+
+  const {
+    path,
+    glob,
+    format = "wav",
+    mode = "shuffle",
+    uid = `impulse-${path || "pool"}`
+  } = params;
+
+  if (!path) return;
+
+  try {
+    const pool = await ensureImpulsePool(uid, { path, glob, format, mode });
+    if (!pool?.files?.length) return;
+
+    const firstFile = pool.files[0];
+    let filename = path ? `${path}/${firstFile}` : firstFile;
+    if (!filename.endsWith(`.${format}`)) filename = `${filename}.${format}`;
+
+    const ctx = sharedAudioCtx;
+
+    let buf = audioBufferCache.get(filename);
+    if (!buf) {
+      const projectPath = resolveProjectPath("audio", filename);
+      const sharedPath = `${window.sharedDir}audio/${filename}`;
+
+      let resp;
+      try {
+        const head = await fetch(projectPath, { method: "HEAD" });
+        resp = await fetch(head.ok ? projectPath : sharedPath);
+      } catch {
+        resp = await fetch(sharedPath);
+      }
+
+      buf = await ctx.decodeAudioData(await resp.arrayBuffer());
+      audioBufferCache.set(filename, buf);
+    }
+
+    renderWaveform(svg, waveformParam, buf, `wf-impulse-${uid}`, filename, {
+      element: cueElement
+    });
+
+    console.log(`[audioImpulse] Primed waveform for ${uid}`);
+  } catch (err) {
+    console.warn(`[audioImpulse] Waveform prime failed:`, err);
+  }
 }

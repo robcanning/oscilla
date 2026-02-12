@@ -77,11 +77,45 @@ const THROTTLE_MS = 16; // ~60fps for socket/OSC sends
 
 function splitCompoundId(id) {
   if (!id || typeof id !== "string") return [];
-  return id
-    .split(/\)\s*(?=[a-zA-Z_][a-zA-Z0-9_-]*\s*\()/)
-    .map(s => s.trim())
-    .filter(Boolean)
-    .map(s => s.endsWith(")") ? s : s + ")");
+
+  // Paren-depth-aware split: walk characters, track depth,
+  // split at depth==0 boundaries between expressions.
+  const results = [];
+  let depth = 0;
+  let start = 0;
+  let inString = false;
+  let stringChar = "";
+
+  for (let i = 0; i < id.length; i++) {
+    const ch = id[i];
+
+    if ((ch === '"' || ch === "'") && !inString) {
+      inString = true;
+      stringChar = ch;
+      continue;
+    }
+    if (inString && ch === stringChar) {
+      inString = false;
+      continue;
+    }
+    if (inString) continue;
+
+    if (ch === "(") {
+      depth++;
+    } else if (ch === ")") {
+      depth--;
+      if (depth === 0) {
+        const expr = id.slice(start, i + 1).trim();
+        if (expr) results.push(expr);
+        start = i + 1;
+      }
+    }
+  }
+
+  const tail = id.slice(start).trim();
+  if (tail) results.push(tail);
+
+  return results;
 }
 
 // ═══════════════════════════════════════════════════════════════════

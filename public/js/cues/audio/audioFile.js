@@ -32,7 +32,7 @@ export async function handleAudioStopCue(cueId, cueParams = {}) {
 
   try {
     if (choice) {
-      stopAudioCue(choice, fadeOutMs);
+      stopAllAudio(choice, fadeOutMs);
       console.log(`[AUDIO] cueAudioStop -> ${choice}`);
     } else {
       stopAllAudio(fadeOutMs);
@@ -42,9 +42,6 @@ export async function handleAudioStopCue(cueId, cueParams = {}) {
     sendOSC('/cueAudio/stop', { filename: choice || 'all', fadeOutMs });
   } catch (err) {
     console.warn(`[AUDIO] Error in handleAudioStopCue:`, err);
-  } finally {
-    if (typeof triggeredCues !== 'undefined') triggeredCues.clear();
-    if (window._cueInsideState) window._cueInsideState.clear();
   }
 }
 
@@ -211,12 +208,6 @@ export async function handleAudioCue(ast, cueElement = null) {
       return isNaN(num) ? fallback : num;
     }
 
-    fadeIn = resolveFade(fadeIn, 0);
-    fadeOut = resolveFade(fadeOut, 0);
-
-    // Clamp to never exceed duration
-    fadeIn = Math.min(fadeIn, effectiveDuration);
-    fadeOut = Math.min(fadeOut, effectiveDuration);
 
     console.log("[cueAudio] resolved fades", {
       fadeIn,
@@ -413,9 +404,6 @@ export async function handleAudioCue(ast, cueElement = null) {
         }));
       }
     } catch { }
-  } finally {
-    try { window.triggeredCues?.clear?.(); } catch { }
-    try { window._cueInsideState?.clear?.(); } catch { }
   }
 }
 

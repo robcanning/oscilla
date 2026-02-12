@@ -21,7 +21,7 @@ window.audioBufferCache = audioBufferCache;
 export const audioLastHit = window.audioLastHit || new Map();
 window.audioLastHit = audioLastHit;
 
-export let activeAudioCues = window.activeAudioCues || new Set();
+export let activeAudioCues = window.activeAudioCues || new Map();
 window.activeAudioCues = activeAudioCues;
 
 export const audioDebounce = new Map();
