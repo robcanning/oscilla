@@ -1,294 +1,196 @@
 ---
-title: Audio Cues
+title: cue_audio
 layout: docs_layout.njk
 ---
 
-# Audio Cues -- `audio`, `audioPool`, `audioImpulse`
+# `audio(...)` -- Play a Single File
 
-Oscilla's audio system provides three cue types for embedding sound into the score. All three share common parameters for amplitude, panning, pitch, and fades. Pool and impulse share a unified file selection engine.
+Triggers playback of a named audio file when the playhead crosses the cue element. The basic building block of Oscilla's audio system.
 
 ---
 
-## 1. `audio(...)` -- Play a Single File
-
-The basic building block. Triggers playback of a named audio file when the playhead crosses the cue element.
-
-### Syntax
+## Syntax
 
 ```
-audio(src:kick, amp:0.9, loop:1, fade:0.3, pan:-0.5, pitch:1.2)
+audio(src:kick, amp:0.9, loop:1, fade:0.3, pan:-0.5, speed:1.2)
 ```
 
-### Parameters
+---
+
+## Parameters
 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `src` (required) | -- | Filename or stem (`.wav` auto-appended) |
 | `amp` | 1 | Gain, 0--1 |
 | `pan` | 0 | Stereo position, -1 (left) to 1 (right) |
-| `pitch` | 1 | Playback rate multiplier. <1 slows, >1 speeds up |
+| `speed` | 1 | Playback rate multiplier. Negative values play in reverse |
 | `loop` | 1 | 1=once, N>1 repeats, 0=infinite |
 | `fade` | 0 | Shorthand for both fadeIn and fadeOut |
 | `fadeIn` | 0 | Fade-in duration (seconds or percentage) |
 | `fadeOut` | 0 | Fade-out duration (seconds or percentage) |
+| `in` | 0 | Start offset in seconds |
+| `out` | 0 | End point in seconds (0 = full file) |
 | `toggle` | false | Second trigger stops instead of restarting |
 | `uid` | src | Playback identity for stop/toggle tracking |
 | `waveform` | `self` | Waveform display target: `self`, `none`, or element id |
+| `overlay` | 2 | Overlay detail level: 0/off, 1/brief, 2/expanded |
 | `pin` | -- | Pin element to playhead for N seconds (see [pin](../cue_pin/)) |
 
-### File Resolution
+See [audio_shared](../cue_audio_shared/) for details on fades, random expressions, waveform display, and OSC output.
 
-Files load from the project `/audio` folder first, falling back to the shared `/audio` directory. Extensions `.wav`, `.ogg`, `.mp3`, `.m4a` are recognised; bare stems default to `.wav`.
+---
 
-### Waveform Display
+## File Resolution
 
-When `waveform` is not `none`, a waveform visualisation is rendered inside the cue element at score load time. A cursor line tracks playback progress in real time. The waveform shape is drawn from the decoded audio buffer.
+Files load from the project `/audio` folder first, falling back to the shared `/audio` directory. Extensions `.wav`, `.ogg`, `.mp3`, `.m4a` are recognised. Bare stems without an extension default to `.wav`.
 
-### Examples
+---
+
+## Speed and Reverse Playback
+
+The `speed` parameter controls both playback rate and direction:
+
+| Value | Effect |
+|-------|--------|
+| `speed:1` | Normal playback |
+| `speed:0.5` | Half speed (lower pitch) |
+| `speed:2` | Double speed (higher pitch) |
+| `speed:-1` | Reverse at normal speed |
+| `speed:-0.5` | Reverse at half speed |
+
+Reverse playback uses a sample-reversed buffer copy (cached after first use). The waveform display mirrors horizontally and the cursor moves right-to-left.
+
+---
+
+## In/Out Points
+
+Loop a subsection of a file by specifying start and end positions in seconds:
 
 ```
+audio(src:longfile, in:2, out:8, loop:0)
+```
+
+This loops seconds 2--8 of the file. In/out points work with both forward and reverse playback. When `speed` is negative, the segment plays backwards.
+
+In/out points are deferred during live update -- they take effect on the next loop iteration.
+
+---
+
+## Toggle Mode
+
+With `toggle:true`, the first trigger starts playback and the second trigger stops it. The playback state is tracked by `uid`, so multiple elements sharing the same `uid` act as a single toggle group.
+
+---
+
+## Waveform Display
+
+When `waveform` is not `none`, a waveform visualisation is rendered inside the cue element at score load time. A cursor line tracks playback progress. The waveform shape is drawn from the decoded audio buffer.
+
+Waveforms are preloaded during `assignCues` so they appear immediately when the score loads, not only when the cue fires.
+
+An info text line above the waveform peaks shows current parameter values (filename, amp, speed, pan, loop, fades, in/out). This text updates in real time during live console changes.
+
+When reverse playback is active, the waveform contours mirror horizontally via SVG transform and the cursor sweeps right-to-left.
+
+---
+
+## Live Console Hot-Update
+
+Running audio cues can be modified in real time from the live console. Retrigger with the same `uid` to update parameters without restarting playback. If a voice with that uid is already playing, the `update()` method is called instead of stop-and-restart.
+
+### Immediate Parameters
+
+These take effect within 50ms via smooth Web Audio ramps on the running nodes:
+
+| Parameter | Behaviour |
+|-----------|-----------|
+| `amp` | Gain ramp on the GainNode |
+| `pan` | Stereo position ramp on the StereoPannerNode (created on the fly if needed) |
+| `speed` | Playback rate ramp (same direction only) |
+
+### Deferred Parameters
+
+These take effect on the next loop iteration when `playOne` creates a fresh BufferSource:
+
+| Parameter | Behaviour |
+|-----------|-----------|
+| `fadeIn`, `fadeOut` | New envelope values |
+| `in`, `out` | New segment boundaries |
+| `src` | Async fetch + decode of the new file; swaps buffer on next loop |
+| `speed` (direction change) | Swaps between forward/reversed buffer on next loop |
+
+### Loop Control
+
+The `loop` parameter can be changed while playing:
+
+| Value | Effect |
+|-------|--------|
+| `loop:1` | Finish after the current iteration |
+| `loop:3` | Play 3 more iterations then stop |
+| `loop:0` | Switch to infinite looping |
+
+### Waveform Reconnection
+
+When a voice finishes and is later restarted from the live console (which has no cue element), the new voice reconnects to the existing waveform SVG via `getWaveform(uid)`. The cursor and info text resume as normal.
+
+### Example Workflow
+
+```
+// Start an infinite drone
+audio(src:drone, loop:0, uid:myDrone)
+
+// Drop the speed live
+audio(src:drone, speed:0.5, uid:myDrone)
+
+// Loop just seconds 2--8
+audio(src:drone, in:2, out:8, uid:myDrone)
+
+// Swap to a different file on next loop
+audio(src:other, uid:myDrone)
+
+// Reverse playback on next loop
+audio(src:drone, speed:-1, uid:myDrone)
+
+// Finish after current iteration
+audio(src:drone, loop:1, uid:myDrone)
+```
+
+---
+
+## Examples
+
+```
+// Simple drone with slow fade
 audio(src:drone, loop:0, fade:2)
 
-audio(src:atmosphere, pitch:0.5, loop:0, fadeIn:3, fadeOut:5)
+// Slowed-down atmosphere
+audio(src:atmosphere, speed:0.5, loop:0, fadeIn:3, fadeOut:5)
 
+// Reverse playback with fade
+audio(src:texture, speed:-1, loop:0, fadeIn:2)
+
+// Loop a section of a file
+audio(src:longfile, in:4.5, out:12, loop:0, speed:0.8)
+
+// Togglable click track
 audio(src:click, amp:0.6, toggle:true, uid:metroClick)
+
+// Short percussive hit, no waveform
+audio(src:rimshot, amp:0.8, waveform:none)
+
+// Looping pad with percentage fade
+audio(src:pad, loop:0, fadeIn:"10%", fadeOut:"30%")
+
+// Pinned for 15 seconds at the playhead
+audio(src:long-texture, loop:0, fade:5, pin:15)
 ```
 
 ---
 
-## 2. `audioPool(...)` -- One-Shot From a Folder
-
-Builds a pool by scanning a directory on the server. Each trigger selects one file according to the current selection mode.
-
-### Syntax
-
-```
-audioPool(path:sfx/birds, mode:shuffle, amp:rand(0.2, 0.8), pan:rand(-1,1))
-```
-
-### Parameters
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `path` (required) | -- | Folder inside project audio directory |
-| `glob` | -- | Optional filename filter |
-| `format` | `wav` | File extension |
-| `mode` | `shuffle` | Selection mode (see below) |
-| `amp` | 1 | Gain, or `rand(a, b)` |
-| `pan` | 0 | Stereo position, or `rand(-1, 1)` |
-| `pitch` | 1 | Playback rate, or `rand(a, b)` |
-| `fade` | 0 | Shorthand for fadeIn + fadeOut |
-| `fadein` | 0 | Fade-in (seconds or percentage) |
-| `fadeout` | 0 | Fade-out (seconds or percentage) |
-| `loop` | 1 | Loop the selected file |
-| `poly` | 1 | Max overlapping voices (0=unlimited) |
-| `uid` | auto | Pool identity. Multiple cues with the same uid share a cursor |
-| `waveform` | `self` | Waveform display target: `self`, `none`, or element id |
-| `osc` | 0 | Enable OSC mirroring (1=on) |
-| `oscaddr` | `/audio/client/pool` | Custom OSC address |
-| `pin` | -- | Pin element to playhead for N seconds |
-
-### Selection Modes
-
-| Mode | Behaviour |
-|------|-----------|
-| `shuffle` | No repeats until the entire pool is exhausted, then reshuffle |
-| `rand` | Pure random, repeats possible |
-| `sequential` | Play files in directory order, wrap around |
-
-The selection cursor is persistent and keyed by `uid`. Multiple cue elements sharing the same uid advance through the same sequence. For example, five rects all with `audioPool(path:"sfx/birds", uid:birdsA, mode:shuffle)` will collectively play through all files before any repeats.
-
-### Waveform Display
-
-At score load, the waveform of the first pool file is rendered. On each trigger, the waveform shape updates to show the currently selected file. A cursor tracks playback.
-
-### Example
-
-```
-audioPool(
-  path:sfx/birds,
-  format:wav,
-  mode:shuffle,
-  amp:rand(0.2, 0.8),
-  pan:rand(-1, 1),
-  pitch:rand(0.8, 1.2),
-  fadein:0.05,
-  fadeout:"30%",
-  poly:4,
-  uid:birdsA,
-  osc:1,
-  oscaddr:"/audio/pool/birds"
-)
-```
-
----
-
-## 3. `audioImpulse(...)` -- Stochastic Repeating Process
-
-Uses the same pool and selection engine as audioPool, but runs as a continuous process that keeps firing hits autonomously at a configurable rate. Designed for textures, granular clouds, stochastic rhythms, and ambient layers.
-
-### Syntax
-
-```
-audioImpulse(path:sfx/rain, rate:30, jitter:0.4, poly:6, lifetime:region)
-```
-
-### Timing Parameters
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `rate` | 30 | Events per minute |
-| `jitter` | 0 | Timing randomisation 0--1 (0=steady clock, 1=fully random) |
-
-### Sound Parameters
-
-Same as audioPool: `amp`, `pan`, `pitch`, `fade`, `fadein`, `fadeout`, `poly`, `loop`.
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `poly` | 6 | Max simultaneous voices. Oldest evicted when exceeded |
-
-### Lifetime Modes
-
-| Value | Behaviour |
-|-------|-----------|
-| `process` | Runs until explicitly stopped |
-| `region` | Runs only while the playhead is inside the cue element's bounding box |
-
-In `region` mode, the process starts when the playhead enters the element and stops automatically on exit. A grace period prevents false exits from sub-pixel jitter.
-
-### Selection Modes
-
-Impulse supports the same modes as audioPool via the `mode` parameter: `shuffle`, `rand`, `sequential`. Both use the shared `selectFromPool` engine.
-
-### Waveform Display
-
-A single waveform is rendered once for the element. Each polyphonic hit adds an independent red cursor line that sweeps across the waveform and auto-removes when the hit completes. The poly cap applies to both audio voices and visual cursors.
-
-### OSC Parameters
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `osc` | 0 | Enable OSC mirroring (1=on) |
-| `oscaddr` | `/oscilla/audio/impulse` | Custom OSC address |
-
-### Full Example
-
-```
-audioImpulse(
-  path:sfx/rain,
-  rate:40,
-  jitter:0.4,
-  mode:shuffle,
-  amp:rand(0.1, 0.5),
-  pan:rand(-1, 1),
-  pitch:rand(0.5, 2),
-  fadein:0.1,
-  fadeout:rand("10%", "60%"),
-  poly:6,
-  lifetime:region,
-  uid:rainfall,
-  osc:1,
-  oscaddr:"/audio/impulse/rain",
-  pin:30
-)
-```
-
----
-
-## Shared Features
-
-### Fade Values
-
-Fades can be specified in several formats:
-
-| Format | Example | Meaning |
-|--------|---------|---------|
-| Seconds | `fadeout:0.5` | 0.5 second fade |
-| Percentage | `fadeout:"50%"` | 50% of the file's duration |
-| Random seconds | `fadeout:rand(0.1, 0.5)` | Random between 0.1--0.5s |
-| Random percentage | `fadeout:rand("10%","60%")` | Random between 10--60% of duration |
-
-Percentage fades adjust to each file's actual duration, accounting for pitch changes.
-
-### Random Expressions
-
-Evaluated fresh on every trigger or hit:
-
-```
-amp:rand(0.2, 0.9)
-pan:rand(-1, 1)
-pitch:rand(0.5, 2)
-fadeout:rand(0.05, 0.3)
-fadeout:rand("10%","50%")
-```
-
-Use `irand(a, b)` for integer random values.
-
-### Waveform Display
-
-All three cue types support waveform visualisation rendered as SVG polylines inside the cue element. The `waveform` parameter controls where the waveform appears:
-
-| Value | Behaviour |
-|-------|-----------|
-| `self` (default) | Render inside the cue element itself |
-| `none` | Suppress waveform display |
-| `<element_id>` | Render inside a different SVG element |
-
-Waveforms are preloaded at score load time (during `assignCues`). The cursor tracks playback position in real time.
-
-### Pin to Playhead
-
-All audio cues (and any other cue type) accept `pin:N` to keep the element visible at the playhead for N seconds. See [pin](../cue_pin/) for details.
-
-### OSC Output
-
-When `osc:1` is enabled, each audio event sends an OSC message via WebSocket to the server, which forwards it over UDP.
-
-```
-/oscilla/audio/pool    sfffff filename amp pan pitch fadeIn fadeOut
-/oscilla/audio/impulse sfffff filename amp pan pitch fadeIn fadeOut
-/oscilla/audio/trigger sfi    filename volume loop
-```
-
-Use `oscaddr` to override the default address.
-
-### Stopping
-
-Audio can be stopped by:
-
-- Toggle mode (`toggle:true`) on second trigger
-- Region exit (audioImpulse with `lifetime:region`)
-- Programmatic stop: `stopAudioImpulse(uid)`, `stopAllAudio()`
-- Transport rewind or stop
-
----
-
-## Quick Reference
-
-```
-// Simple file playback
-audio(src:drone, loop:0, fade:2)
-
-// Pitched-down atmosphere
-audio(src:atmosphere, pitch:0.5, loop:0, fadeIn:3, fadeOut:5)
-
-// Shuffled one-shots with stereo spread
-audioPool(path:sfx/wood, mode:shuffle, pan:rand(-0.8,0.8), poly:5)
-
-// Sequential pool playback
-audioPool(path:sfx/steps, mode:sequential, amp:0.7)
-
-// Rainfall texture
-audioImpulse(
-  path:sfx/rain, rate:30, jitter:0.5,
-  amp:rand(0.2,0.6), pan:rand(-1,1), pitch:rand(0.8,1.3),
-  fadeout:"40%", lifetime:region, poly:6
-)
-
-// Pinned impulse (stays visible at playhead for 30s)
-audioImpulse(
-  path:sfx/birds, rate:20, poly:6,
-  lifetime:region, pin:30
-)
-```
+## See Also
+
+- [audioPool](../cue_audioPool/) -- one-shot selection from a folder
+- [audioImpulse](../cue_audioImpulse/) -- stochastic repeating process
+- [audio_shared](../cue_audio_shared/) -- fades, random expressions, waveform, OSC
+- [pin](../cue_pin/) -- pin element to playhead

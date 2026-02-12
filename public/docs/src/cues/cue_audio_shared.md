@@ -20,7 +20,7 @@ Fades can be specified in several formats. All three cue types support `fade`, `
 | Random seconds | `fadeout:rand(0.1, 0.5)` | Random value between 0.1 and 0.5 seconds |
 | Random percentage | `fadeout:rand("10%","60%")` | Random between 10% and 60% of duration |
 
-Percentage fades adjust to each file's actual duration, accounting for pitch changes. The `fade` shorthand applies the same value to both fadeIn and fadeOut. Explicit `fadeIn` / `fadeOut` values override the shorthand.
+Percentage fades adjust to each file's actual duration, accounting for speed changes. The `fade` shorthand applies the same value to both fadeIn and fadeOut. Explicit `fadeIn` / `fadeOut` values override the shorthand.
 
 ---
 
@@ -31,7 +31,7 @@ Random values are evaluated fresh on every trigger or hit. They can be used for 
 ```
 amp:rand(0.2, 0.9)         // continuous random float
 pan:rand(-1, 1)             // continuous random float
-pitch:rand(0.5, 2)          // continuous random float
+speed:rand(0.5, 2)          // continuous random float
 fadeout:rand(0.05, 0.3)     // random fade in seconds
 fadeout:rand("10%", "50%")  // random fade as percentage of duration
 ```
@@ -43,6 +43,40 @@ loop:irand(1, 4)            // random integer between 1 and 4
 ```
 
 Random expressions are objects in the parsed AST (`{ type: "rand", min, max }`) and are resolved at playback time by `evalMaybeRandom()`.
+
+---
+
+## Speed and Reverse Playback
+
+All three cue types use the `speed` parameter to control playback rate. Negative values play audio in reverse.
+
+| Value | Effect |
+|-------|--------|
+| `speed:1` | Normal playback |
+| `speed:0.5` | Half speed (lower pitch) |
+| `speed:2` | Double speed (higher pitch) |
+| `speed:-1` | Reverse at normal speed |
+| `speed:-0.5` | Reverse at half speed |
+
+### Reverse Buffer
+
+Web Audio API does not support negative `playbackRate`. Instead, Oscilla creates a sample-reversed copy of the audio buffer and plays it forward at the absolute speed value. Reversed buffers are cached by filename so the reversal only happens once per file.
+
+### Waveform Mirroring
+
+When speed is negative, the waveform display mirrors horizontally via SVG transform. The base contour, all peak layers, and cursor direction all update to reflect the reversed playback. The cursor sweeps right-to-left.
+
+---
+
+## In/Out Points
+
+`audio(...)` supports `in` and `out` parameters to loop a subsection of a file:
+
+```
+audio(src:longfile, in:2, out:8, loop:0)
+```
+
+This plays only seconds 2--8 of the buffer. The segment is passed to the Web Audio `BufferSource.start(when, offset, duration)` call. In/out points work with both forward and reverse playback -- when speed is negative, the offset is flipped to the corresponding position in the reversed buffer.
 
 ---
 
@@ -72,11 +106,47 @@ All three cue types render a waveform visualisation inside the cue element. The 
 
 Waveforms are preloaded at score load time during `assignCues`. They appear immediately, not only when the cue fires.
 
-**audio:** a static waveform with a single cursor tracking playback.
+### Per-Cue Behaviour
 
-**audioPool:** waveform shape updates on each trigger to show whichever file was selected. Cursor tracks the current hit.
+**audio:** A static waveform with a single cursor tracking playback. Info text shows current filename and parameters.
 
-**audioImpulse:** a single waveform rendered once. Each polyphonic hit adds an independent red sub-cursor. Multiple cursors sweep simultaneously, visually representing the stochastic density. Cursors auto-remove when their hit completes.
+**audioPool:** Waveform shape updates on each trigger to show whichever file was selected. Cursor tracks the current hit. Info text updates to reflect the newly selected file and its evaluated random parameters.
+
+**audioImpulse:** A single base waveform rendered once. Each polyphonic hit adds its own peak layer and cursor (see Multi-Cursor Display below).
+
+### Info Text
+
+A text line is rendered above the waveform peaks showing current parameter values: filename, amp, speed, pan, loop count, fades, and in/out points. This text updates in real time during live console parameter changes, reflecting the current state of the running voice.
+
+### Reverse Direction
+
+When speed is negative, `setWaveformDirection(handle, true)` applies a horizontal mirror transform (`scale(-1,1)`) to the base contour and all peak layers. Cursors are not transformed -- instead, the cursor animation code computes right-to-left position directly from the negative speed value.
+
+### Waveform Reconnection
+
+When a voice finishes and is later restarted from the live console (which has no cue element context), the new voice reconnects to the existing waveform SVG via `getWaveform(uid)`. The waveform element persists in the score after cleanup, so the cursor and info text resume on the existing element.
+
+---
+
+## Multi-Cursor Display (audioImpulse)
+
+audioImpulse uses a layered waveform display where each polyphonic voice gets its own visual representation.
+
+### Peak Layers
+
+Each active voice draws a coloured waveform contour (upper and lower polylines) layered on top of the base waveform. Colours are assigned automatically from a 12-colour palette. Layers are added via `addPeakLayer` when a hit starts and removed when the voice completes.
+
+If the waveform direction is currently reversed (negative speed), new peak layers are automatically given the same horizontal mirror transform as the base contour.
+
+### Preview Layers
+
+Before any live hits fire, three random files from the pool are rendered as preview peak layers at reduced opacity. This gives a visual sense of the pool content at score load time. Preview layers are cleared on the first live hit.
+
+### Cursors
+
+Each voice gets an independent cursor line that sweeps across the waveform tracking playback position. Cursor colour matches its peak layer colour. Cursors auto-remove when their voice completes.
+
+With `poly:6`, up to six cursors and six peak layers can be visible simultaneously, creating a dense visual representation of the stochastic texture.
 
 ---
 
@@ -88,15 +158,52 @@ Audio cues display HTML overlay labels showing the cue type, filename, and param
 |-------|---------|
 | 0 / `off` / `none` | No overlay |
 | 1 / `brief` | Minimal: type and filename only |
-| 2 / `expanded` (default) | Full: type, filename, amp, pan, pitch, fades |
+| 2 / `expanded` (default) | Full: type, filename, amp, pan, speed, fades |
 
-**audio:** overlay appears on trigger, shows filename and params.
+**audio:** Overlay appears on trigger, shows filename and params.
 
-**audioPool:** overlay shows selected filename and evaluated random params. Auto-destroys after 1.5 seconds. Suppressed when waveform is active.
+**audioPool:** Overlay shows selected filename and evaluated random params. Auto-destroys after 1.5 seconds. Suppressed when waveform is active (since the waveform info text already shows the same information).
 
-**audioImpulse:** persistent overlay updates on every hit showing current filename and params. Destroys on region exit or stop.
+**audioImpulse:** Persistent overlay updates on every hit showing current filename and params. Destroys on region exit or stop.
 
 Overlays are positioned at the top-left of the cue element and track its position as the score scrolls.
+
+---
+
+## Live Console Hot-Update
+
+Running audio cues can be modified in real time from the live console. Retrigger with the same `uid` to update parameters on a playing voice without restarting playback.
+
+### How It Works
+
+When the audio handler detects that a voice with the given uid is already playing and has an `update()` method, it calls `update(params)` instead of stopping and restarting. The `update` method splits parameters into immediate and deferred categories.
+
+### Immediate (50ms ramp)
+
+| Parameter | Behaviour |
+|-----------|-----------|
+| `amp` | `gainNode.gain.linearRampToValueAtTime` |
+| `pan` | `panNode.pan.linearRampToValueAtTime` (creates StereoPannerNode on the fly if needed) |
+| `speed` | `srcNode.playbackRate.linearRampToValueAtTime` (same direction only) |
+
+### Deferred (next loop iteration)
+
+| Parameter | Behaviour |
+|-----------|-----------|
+| `fadeIn`, `fadeOut` | New envelope applied when `playOne` creates the next BufferSource |
+| `in`, `out` | New segment boundaries passed to `start(when, offset, duration)` |
+| `src` | Async fetch + decode of the new file; swaps buffer when ready |
+| `speed` (direction change) | Buffer swap between forward/reversed copy on next loop |
+
+### Loop Control
+
+| Value | Effect |
+|-------|--------|
+| `loop:1` | Finish after the current iteration |
+| `loop:N` | Play N more iterations, with fadeOut on the final one |
+| `loop:0` | Switch to infinite looping |
+
+The `remaining` counter is decremented on each `onended` event. When it reaches zero, the voice cleans up.
 
 ---
 
@@ -107,12 +214,12 @@ audioPool and audioImpulse can mirror each audio event as an OSC message to exte
 ### Message Format
 
 ```
-/oscilla/audio/pool    sfffff filename amp pan pitch fadeIn fadeOut
-/oscilla/audio/impulse sfffff filename amp pan pitch fadeIn fadeOut
+/oscilla/audio/pool    sfffff filename amp pan speed fadeIn fadeOut
+/oscilla/audio/impulse sfffff filename amp pan speed fadeIn fadeOut
 /oscilla/audio/trigger sfi    filename volume loop
 ```
 
-Arguments: filename (string), then amp, pan, pitch, fadeIn, fadeOut (all floats).
+Arguments: filename (string), then amp, pan, speed, fadeIn, fadeOut (all floats).
 
 ### Custom Address
 
@@ -150,9 +257,13 @@ audioPool and audioImpulse support the `poly` parameter to limit simultaneous ov
 | Cue Type | Default | Behaviour when exceeded |
 |----------|---------|------------------------|
 | audioPool | 1 | Previous sound stops before new one starts |
-| audioImpulse | 6 | Oldest voice evicted, oldest cursor removed |
+| audioImpulse | 6 | New hit skipped until a voice slot opens up |
 
 With `poly:0`, there is no limit.
+
+Voice counting for audioImpulse is done by scanning `window.activeAudioCues` for keys matching the impulse uid prefix. When at the poly limit, the hit is skipped and the scheduling timer continues -- the next interval will try again once a voice has freed up.
+
+Waveform cursors are also limited to the poly count. When at the cursor limit, the oldest cursor is evicted from the display.
 
 ---
 
@@ -161,9 +272,12 @@ With `poly:0`, there is no limit.
 Audio playback can be stopped by:
 
 - **Toggle mode:** `audio(src:x, toggle:true)` -- second trigger stops playback
+- **Loop control:** `audio(src:x, loop:1, uid:x)` via live console -- finish after current iteration
 - **Region exit:** audioImpulse with `lifetime:region` stops on playhead exit
 - **Transport:** rewind or stop clears all active audio
 - **Programmatic:** `stopAllAudio()`, `stopAudioImpulse(uid)`, `stopAllAudioImpulses()`
+
+On stop, all active voices fade out, all waveform cursors are removed, and all peak layers are cleared.
 
 ---
 

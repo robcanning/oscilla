@@ -20,7 +20,8 @@ import {
   getWaveform,
   updatePeaks,
   startCursor,
-  resetCursor
+  resetCursor,
+  setWaveformDirection
 } from "../../system/waveform.js";
 
 
@@ -206,11 +207,21 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       const wfUid = `wf-pool-${uid}`;
       const wfHandle = getWaveform(wfUid);
       if (wfHandle) {
+        // Update info text with resolved per-hit details
+        if (wfHandle._infoText) {
+          const parts = [`audioPool`, file];
+          parts.push(`amp:${evaluatedAmp.toFixed(2)}`);
+          parts.push(`pitch:${pitchVal.toFixed(2)}`);
+          parts.push(`pan:${panVal.toFixed(2)}`);
+          wfHandle._infoText.textContent = parts.join(" | ");
+        }
+
         const buf = audioBufferCache.get(filename);
         if (buf) {
           updatePeaks(wfHandle, buf, filename);
           resetCursor(wfHandle);
           if (sharedAudioCtx) {
+            setWaveformDirection(wfHandle, pitchVal < 0);
             startCursor(wfHandle, sharedAudioCtx, sharedAudioCtx.currentTime, buf.duration, pitchVal);
           }
         }
@@ -233,6 +244,10 @@ export function primeAudioPoolOverlay(ast, cueElement) {
   const params = ast.params || ast;
   const overlayLevel = parseOverlayLevel(params.overlay ?? ast.overlay);
   if (overlayLevel <= 0) return;
+
+  // Skip HTML overlay if waveform display is active (it has its own info text)
+  const waveformParam = params.waveform ?? "self";
+  if (waveformParam !== "none" && waveformParam !== "0") return;
 
   if (cueElement._audioPoolOverlayPrimed) return;
   cueElement._audioPoolOverlayPrimed = true;
@@ -311,8 +326,14 @@ export async function primePoolWaveform(ast, cueElement) {
       audioBufferCache.set(filename, buf);
     }
 
+    // Build info label
+    const infoParts = [`audioPool`, `path:${path}`];
+    if (params.mode && params.mode !== "shuffle") infoParts.push(`mode:${params.mode}`);
+    if (params.poly && params.poly !== 1) infoParts.push(`poly:${params.poly}`);
+
     renderWaveform(svg, waveformParam, buf, `wf-pool-${uid}`, filename, {
-      element: cueElement
+      element: cueElement,
+      info: infoParts.join(" | ")
     });
 
     console.log(`[audioPool] Primed waveform for ${uid}`);

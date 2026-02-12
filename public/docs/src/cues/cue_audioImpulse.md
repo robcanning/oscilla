@@ -37,18 +37,25 @@ The interval between hits is computed as `base = 60 / rate` seconds. Jitter wide
 | `mode` | `shuffle` | Selection mode: `shuffle`, `rand`, or `sequential` |
 | `amp` | 1 | Gain, or `rand(a, b)` |
 | `pan` | 0 | Stereo position, or `rand(-1, 1)` |
-| `pitch` | 1 | Playback rate, or `rand(a, b)` |
+| `speed` | 1 | Playback rate, or `rand(a, b)`. Negative = reverse |
+| `speedRandom` | 0 | Per-hit randomisation range centred on `speed` |
 | `fade` | 0 | Shorthand for fadeIn + fadeOut |
 | `fadein` | 0 | Fade-in (seconds or percentage) |
 | `fadeout` | 0 | Fade-out (seconds or percentage) |
 | `loop` | 1 | Loop each hit |
-| `poly` | 6 | Max simultaneous voices. Oldest evicted when exceeded |
+| `poly` | 6 | Max simultaneous voices |
 | `uid` | auto | Process identity |
 | `waveform` | `self` | Waveform display target: `self`, `none`, or element id |
 | `overlay` | 2 | Overlay detail level: 0/off, 1/brief, 2/expanded |
 | `pin` | -- | Pin element to playhead for N seconds (see [pin](../cue_pin/)) |
 
 See [audio_shared](../cue_audio_shared/) for details on fades, random expressions, waveform display, and OSC output.
+
+### Speed and speedRandom
+
+The `speed` parameter sets the base playback rate for each hit. `speedRandom` adds per-hit randomisation centred on the base value. For example, `speed:1, speedRandom:0.3` produces speeds between 0.7 and 1.3.
+
+Negative `speed` values play each hit in reverse using a sample-reversed buffer copy.
 
 ---
 
@@ -81,18 +88,48 @@ Impulse supports the same modes as audioPool via the `mode` parameter. Both use 
 
 ## Polyphony
 
-The `poly` parameter limits simultaneous voices. When the limit is reached, the oldest voice is evicted. This cap is enforced in two places:
+The `poly` parameter limits simultaneous voices. When the limit is reached, new hits are skipped until a voice frees up. This is enforced by counting active keys in `window.activeAudioCues` that match the impulse uid prefix.
 
-1. **Audio voices** -- counted in `window.activeAudioCues`. New hits are skipped if at the limit.
-2. **Waveform cursors** -- oldest cursor evicted from the waveform display when at the limit.
+With `poly:0`, there is no limit.
 
 ---
 
 ## Multi-Cursor Waveform
 
-A single waveform is rendered once for the element at score load time. Each polyphonic hit adds an independent red cursor line that sweeps across the waveform tracking its playback position. Cursors auto-remove when their hit completes.
+A single base waveform is rendered once for the element at score load time. Each polyphonic hit adds its own visual layer:
 
-With `poly:6`, up to six cursors can be visible simultaneously, creating a visual representation of the stochastic density.
+### Peak Layers
+
+Each active voice draws a coloured waveform contour (upper and lower polylines) layered on top of the base waveform. Colours are assigned automatically from a 12-colour palette. Layers are added when a hit starts and removed when it completes.
+
+Before any live hits, three random files from the pool are displayed as preview layers (at reduced opacity) to give a visual sense of the pool content. These preview layers are cleared on the first live hit.
+
+### Cursors
+
+Each voice gets an independent cursor line that sweeps across the waveform tracking playback position. The cursor colour matches its peak layer colour. Cursors auto-remove when their voice completes.
+
+With `poly:6`, up to six cursors and six peak layers can be visible simultaneously, creating a dense visual representation of the stochastic texture.
+
+### Reverse Display
+
+When `speed` is negative, the waveform contours (base and all layers) mirror horizontally via SVG transform, and cursors move right-to-left.
+
+---
+
+## Live Console Hot-Update
+
+Running impulse processes can be modified from the live console by retrigering with the same `uid`. The following parameters update immediately without restarting the process:
+
+| Parameter | Behaviour |
+|-----------|-----------|
+| `rate` | New trigger interval on next timer tick |
+| `jitter` | New jitter range on next timer tick |
+| `poly` | Updated voice limit |
+| `amp`, `pan`, `speed` | Applied to subsequent hits |
+
+If `path` changes, the file pool is rebuilt asynchronously. Hits are suppressed during the rebuild and resume once the new pool is ready.
+
+The waveform info text updates to reflect the new parameter values.
 
 ---
 
@@ -103,7 +140,7 @@ With `poly:6`, up to six cursors can be visible simultaneously, creating a visua
 | `osc` | 0 | Enable OSC mirroring (1=on) |
 | `oscaddr` | `/oscilla/audio/impulse` | Custom OSC address |
 
-Each hit sends an OSC message with filename, amp, pan, pitch, fadeIn, fadeOut as arguments.
+Each hit sends an OSC message with filename, amp, pan, speed, fadeIn, fadeOut as arguments.
 
 ---
 
@@ -115,7 +152,7 @@ An impulse process can be stopped by:
 - Transport rewind or stop
 - Programmatic: `stopAudioImpulse(uid)` or `stopAllAudioImpulses()`
 
-On stop, all active voices fade out and all waveform cursors are removed.
+On stop, all active voices fade out, all waveform cursors are removed, and all peak layers are cleared.
 
 ---
 
@@ -132,8 +169,19 @@ audioImpulse(
   jitter:0.8,
   amp:rand(0.05, 0.3),
   pan:rand(-1, 1),
-  pitch:rand(0.2, 4),
+  speed:rand(0.2, 4),
   poly:12,
+  lifetime:region
+)
+
+// Reverse texture cloud
+audioImpulse(
+  path:sfx/textures,
+  rate:15,
+  jitter:0.7,
+  speed:-0.8,
+  speedRandom:0.3,
+  poly:6,
   lifetime:region
 )
 
@@ -145,7 +193,7 @@ audioImpulse(
   mode:shuffle,
   amp:rand(0.4, 1),
   pan:rand(-1, 1),
-  pitch:rand(0.1, 2),
+  speed:rand(0.1, 2),
   fadein:0.2,
   fadeout:rand("1%", "60%"),
   poly:6,

@@ -27,7 +27,7 @@ audioPool(path:sfx/birds, mode:shuffle, amp:rand(0.2,0.8), pan:rand(-1,1))
 | `mode` | `shuffle` | Selection mode (see below) |
 | `amp` | 1 | Gain, or `rand(a, b)` |
 | `pan` | 0 | Stereo position, or `rand(-1, 1)` |
-| `pitch` | 1 | Playback rate, or `rand(a, b)` |
+| `speed` | 1 | Playback rate, or `rand(a, b)`. Negative = reverse |
 | `fade` | 0 | Shorthand for fadeIn + fadeOut |
 | `fadein` | 0 | Fade-in (seconds or percentage) |
 | `fadeout` | 0 | Fade-out (seconds or percentage) |
@@ -62,9 +62,29 @@ If no `uid` is specified, one is generated automatically from `path` and `glob`.
 
 ---
 
+## Speed and Reverse
+
+The `speed` parameter controls playback rate. Negative values play the selected file in reverse using a sample-reversed buffer copy (cached after first use).
+
+```
+audioPool(path:sfx/textures, speed:-1, mode:shuffle)
+```
+
+With random speed expressions, each hit evaluates independently:
+
+```
+audioPool(path:sfx/grain, speed:rand(0.3, 2), mode:rand)
+```
+
+---
+
 ## Waveform Display
 
 At score load, the waveform of the first pool file is rendered inside the cue element. On each trigger, the waveform shape updates to show the currently selected file -- the polyline redraws to match the new buffer. A cursor line tracks playback progress.
+
+An info text line above the waveform shows the current filename and evaluated parameters (speed, amp, pan, fades). This updates on each trigger.
+
+When `speed` is negative, the waveform contours mirror horizontally and the cursor sweeps right-to-left.
 
 Suppress waveform display with `waveform:none`.
 
@@ -87,6 +107,9 @@ audioPool(path:sfx/wood, mode:shuffle, pan:rand(-0.8,0.8), poly:5)
 // Sequential playback through a folder
 audioPool(path:sfx/steps, mode:sequential, amp:0.7)
 
+// Reverse playback from a pool
+audioPool(path:sfx/textures, speed:-0.7, mode:shuffle, fade:0.1)
+
 // Full configuration
 audioPool(
   path:sfx/birds,
@@ -94,7 +117,7 @@ audioPool(
   mode:shuffle,
   amp:rand(0.2, 0.8),
   pan:rand(-1, 1),
-  pitch:rand(0.8, 1.2),
+  speed:rand(0.8, 1.2),
   fadein:0.05,
   fadeout:"30%",
   poly:4,

@@ -15,7 +15,7 @@
 //
 //  Exports:
 //    renderWaveform(svg, target, buffer, uid, filename, opts)
-//    startCursor(handle, audioCtx, startTime, duration, pitch)
+//    startCursor(handle, audioCtx, startTime, duration, speed)
 //    resetCursor(handle)
 //    addCursor(handle, cursorId, opts)    -- multi-cursor
 //    removeCursor(handle, cursorId)       -- multi-cursor
@@ -183,8 +183,27 @@ export function renderWaveform(svg, target, buffer, uid, filename, opts = {}) {
 
   const bbox = targetEl.getBBox();
 
+  // --- Text padding: info text at top, waveform below ---
+  const CURSOR_OVERHANG = 10; // SVG units above bbox top
+  let textPad = 0;
+  let infoText = null;
+
+  // Pre-calculate text area so peaks render below it
+  const fontSize = Math.max(14, Math.min(bbox.height * 0.07, 28));
+  if (opts.info) {
+    textPad = fontSize + 4; // font height + small gap
+  }
+
+  // The area where peaks are drawn (below text)
+  const drawBbox = {
+    x: bbox.x,
+    y: bbox.y + textPad,
+    width: bbox.width,
+    height: bbox.height - textPad
+  };
+
   // Horizontal resolution: 1 bucket per SVG unit of width, capped
-  const buckets = Math.min(Math.round(bbox.width), 2000);
+  const buckets = Math.min(Math.round(drawBbox.width), 2000);
   const peaks   = getPeaks(filename || uid, buffer, buckets);
 
   // --- Build SVG group ---
@@ -193,9 +212,22 @@ export function renderWaveform(svg, target, buffer, uid, filename, opts = {}) {
   g.setAttribute("pointer-events", "none");
   g.dataset.uid = uid;
 
-  // Upper contour (max peaks)
+  // --- Info text label at top of waveform ---
+  if (opts.info) {
+    infoText = document.createElementNS(SVG_NS, "text");
+    infoText.setAttribute("x", bbox.x + 2);
+    infoText.setAttribute("y", bbox.y + fontSize);
+    infoText.setAttribute("font-family", "monospace");
+    infoText.setAttribute("font-size", fontSize);
+    infoText.setAttribute("fill", "#000");
+    infoText.setAttribute("opacity", "0.55");
+    infoText.textContent = opts.info;
+    g.appendChild(infoText);
+  }
+
+  // Upper contour (max peaks) -- in draw area below text
   const upperLine = document.createElementNS(SVG_NS, "polyline");
-  upperLine.setAttribute("points", peaksToPoints(peaks.maxPeaks, bbox.x, bbox.y, bbox.width, bbox.height));
+  upperLine.setAttribute("points", peaksToPoints(peaks.maxPeaks, drawBbox.x, drawBbox.y, drawBbox.width, drawBbox.height));
   upperLine.setAttribute("fill", "none");
   upperLine.setAttribute("stroke", "#000");
   upperLine.setAttribute("stroke-width", "0.8");
@@ -203,16 +235,16 @@ export function renderWaveform(svg, target, buffer, uid, filename, opts = {}) {
 
   // Lower contour (min peaks)
   const lowerLine = document.createElementNS(SVG_NS, "polyline");
-  lowerLine.setAttribute("points", peaksToPoints(peaks.minPeaks, bbox.x, bbox.y, bbox.width, bbox.height));
+  lowerLine.setAttribute("points", peaksToPoints(peaks.minPeaks, drawBbox.x, drawBbox.y, drawBbox.width, drawBbox.height));
   lowerLine.setAttribute("fill", "none");
   lowerLine.setAttribute("stroke", "#000");
   lowerLine.setAttribute("stroke-width", "0.8");
   lowerLine.setAttribute("stroke-linejoin", "round");
 
-  // Cursor line (initially at x=0 of rect)
+  // Cursor line -- protrudes above bbox, extends full height
   const cursor = document.createElementNS(SVG_NS, "line");
   cursor.setAttribute("x1", bbox.x);
-  cursor.setAttribute("y1", bbox.y);
+  cursor.setAttribute("y1", bbox.y - CURSOR_OVERHANG);
   cursor.setAttribute("x2", bbox.x);
   cursor.setAttribute("y2", bbox.y + bbox.height);
   cursor.setAttribute("stroke", "#000");
@@ -222,22 +254,6 @@ export function renderWaveform(svg, target, buffer, uid, filename, opts = {}) {
   g.appendChild(upperLine);
   g.appendChild(lowerLine);
   g.appendChild(cursor);
-
-  // --- Info text label at bottom of waveform ---
-  let infoText = null;
-  if (opts.info) {
-    infoText = document.createElementNS(SVG_NS, "text");
-    // Font size relative to bbox height, clamped to readable range
-    const fontSize = Math.max(10, Math.min(bbox.height * 0.04, 20));
-    infoText.setAttribute("x", bbox.x + 2);
-    infoText.setAttribute("y", bbox.y + bbox.height - 2);
-    infoText.setAttribute("font-family", "monospace");
-    infoText.setAttribute("font-size", fontSize);
-    infoText.setAttribute("fill", "#000");
-    infoText.setAttribute("opacity", "0.55");
-    infoText.textContent = opts.info;
-    g.appendChild(infoText);
-  }
 
   // Insert waveform group.
   // If target is a <g>, append as child so it inherits transforms (drag, etc.)
@@ -273,6 +289,8 @@ export function renderWaveform(svg, target, buffer, uid, filename, opts = {}) {
     group: g,
     cursor,
     bbox,
+    _drawBbox: drawBbox,
+    _cursorOverhang: CURSOR_OVERHANG,
     upperLine,
     lowerLine,
     _infoText: infoText,
@@ -308,9 +326,11 @@ export function renderWaveform(svg, target, buffer, uid, filename, opts = {}) {
 export function addCursor(handle, cursorId, opts = {}) {
   if (!handle?.group || !handle?.bbox) return null;
 
+  const overhang = handle._cursorOverhang || 0;
+
   const cursor = document.createElementNS(SVG_NS, "line");
   cursor.setAttribute("x1", handle.bbox.x);
-  cursor.setAttribute("y1", handle.bbox.y);
+  cursor.setAttribute("y1", handle.bbox.y - overhang);
   cursor.setAttribute("x2", handle.bbox.x);
   cursor.setAttribute("y2", handle.bbox.y + handle.bbox.height);
   cursor.setAttribute("stroke", opts.color || "#c00");
@@ -374,14 +394,14 @@ export function removeAllCursors(handle) {
 export function updatePeaks(handle, buffer, filename) {
   if (!handle?.upperLine || !handle?.lowerLine || !handle?.bbox) return;
 
-  const bbox = handle.bbox;
-  const buckets = Math.min(Math.round(bbox.width), 2000);
+  const drawArea = handle._drawBbox || handle.bbox;
+  const buckets = Math.min(Math.round(drawArea.width), 2000);
   const peaks = getPeaks(filename, buffer, buckets);
 
   handle.upperLine.setAttribute("points",
-    peaksToPoints(peaks.maxPeaks, bbox.x, bbox.y, bbox.width, bbox.height));
+    peaksToPoints(peaks.maxPeaks, drawArea.x, drawArea.y, drawArea.width, drawArea.height));
   handle.lowerLine.setAttribute("points",
-    peaksToPoints(peaks.minPeaks, bbox.x, bbox.y, bbox.width, bbox.height));
+    peaksToPoints(peaks.minPeaks, drawArea.x, drawArea.y, drawArea.width, drawArea.height));
 
   handle._filename = filename;
 }
@@ -422,15 +442,15 @@ export function addPeakLayer(handle, buffer, filename, opts = {}) {
   // Avoid duplicate layers for same file
   if (handle._peakLayers.has(layerId)) return layerId;
 
-  const { bbox } = handle;
-  const buckets = Math.min(Math.round(bbox.width), 2000);
+  const drawArea = handle._drawBbox || handle.bbox;
+  const buckets = Math.min(Math.round(drawArea.width), 2000);
   const peaks = getPeaks(filename, buffer, buckets);
 
   const color = opts.color || LAYER_COLORS[layerColorIndex++ % LAYER_COLORS.length];
   const opacity = opts.opacity || "0.5";
 
   const upper = document.createElementNS(SVG_NS, "polyline");
-  upper.setAttribute("points", peaksToPoints(peaks.maxPeaks, bbox.x, bbox.y, bbox.width, bbox.height));
+  upper.setAttribute("points", peaksToPoints(peaks.maxPeaks, drawArea.x, drawArea.y, drawArea.width, drawArea.height));
   upper.setAttribute("fill", "none");
   upper.setAttribute("stroke", color);
   upper.setAttribute("stroke-width", "0.6");
@@ -438,7 +458,7 @@ export function addPeakLayer(handle, buffer, filename, opts = {}) {
   upper.setAttribute("opacity", opacity);
 
   const lower = document.createElementNS(SVG_NS, "polyline");
-  lower.setAttribute("points", peaksToPoints(peaks.minPeaks, bbox.x, bbox.y, bbox.width, bbox.height));
+  lower.setAttribute("points", peaksToPoints(peaks.minPeaks, drawArea.x, drawArea.y, drawArea.width, drawArea.height));
   lower.setAttribute("fill", "none");
   lower.setAttribute("stroke", color);
   lower.setAttribute("stroke-width", "0.6");
@@ -456,6 +476,15 @@ export function addPeakLayer(handle, buffer, filename, opts = {}) {
   }
 
   handle._peakLayers.set(layerId, { upper, lower, color });
+
+  // Apply mirror transform if waveform is currently in reverse mode
+  if (handle._reverse) {
+    const drawArea = handle._drawBbox || handle.bbox;
+    const mirrorTransform = `translate(${2 * drawArea.x + drawArea.width}, 0) scale(-1, 1)`;
+    upper.setAttribute("transform", mirrorTransform);
+    lower.setAttribute("transform", mirrorTransform);
+  }
+
   return layerId;
 }
 
@@ -488,17 +517,69 @@ export function removeAllPeakLayers(handle) {
 
 
 // =============================================================
+//  Waveform direction (forward / reverse visual)
+//
+//  Flips peak contours horizontally via SVG transform.
+//  Cursors are NOT flipped -- startCursor handles direction
+//  independently via the speed sign.
+// =============================================================
+
+/**
+ * Set waveform display direction.
+ * When reverse=true, peak contours are mirrored horizontally
+ * so the visual reads right-to-left (matching reverse audio).
+ *
+ * @param {object} handle - waveform handle from renderWaveform
+ * @param {boolean} reverse - true for right-to-left display
+ */
+export function setWaveformDirection(handle, reverse) {
+  if (!handle?.bbox) return;
+  if (handle._reverse === reverse) return; // no change
+  handle._reverse = reverse;
+
+  const drawArea = handle._drawBbox || handle.bbox;
+  const mirrorTransform = reverse
+    ? `translate(${2 * drawArea.x + drawArea.width}, 0) scale(-1, 1)`
+    : null;
+
+  // Flip base contours
+  const setTransform = (el) => {
+    if (!el) return;
+    if (mirrorTransform) {
+      el.setAttribute("transform", mirrorTransform);
+    } else {
+      el.removeAttribute("transform");
+    }
+  };
+
+  setTransform(handle.upperLine);
+  setTransform(handle.lowerLine);
+
+  // Flip all peak layers
+  if (handle._peakLayers) {
+    for (const [, layer] of handle._peakLayers) {
+      setTransform(layer.upper);
+      setTransform(layer.lower);
+    }
+  }
+}
+
+
+// =============================================================
 //  Cursor control
 // =============================================================
 
 /**
  * Start the playback cursor animation.
+ * Supports reverse playback (negative speed): cursor moves right-to-left.
  */
-export function startCursor(handle, audioCtx, startTime, duration, pitch = 1) {
+export function startCursor(handle, audioCtx, startTime, duration, speed = 1) {
   if (!handle?.cursor) return;
 
   handle._running = true;
-  const effectiveDuration = duration / (pitch || 1);
+  const absSpeed = Math.abs(speed) || 1;
+  const reverse = speed < 0;
+  const effectiveDuration = duration / absSpeed;
   const { bbox, cursor } = handle;
 
   function tick() {
@@ -506,7 +587,9 @@ export function startCursor(handle, audioCtx, startTime, duration, pitch = 1) {
 
     const elapsed  = audioCtx.currentTime - startTime;
     const progress = Math.min(elapsed / effectiveDuration, 1);
-    const cx       = bbox.x + progress * bbox.width;
+    const cx = reverse
+      ? bbox.x + bbox.width * (1 - progress)   // right-to-left
+      : bbox.x + progress * bbox.width;         // left-to-right
 
     cursor.setAttribute("x1", cx);
     cursor.setAttribute("x2", cx);

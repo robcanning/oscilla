@@ -122,6 +122,40 @@ export function generateToneBuffer(ctx, freq = 440, dur = 0.3, amp = 0.3) {
   return buf;
 }
 
+
+// =============================================================
+//  Buffer reversal for negative speed playback
+//  Shared by audioFile, audioPool, audioImpulse
+// =============================================================
+
+const reversedBufferCache = new Map();
+
+/**
+ * Get (or create + cache) a sample-reversed copy of an AudioBuffer.
+ * Used for reverse playback since Web Audio API does not support
+ * negative playbackRate.
+ *
+ * @param {AudioContext} ctx
+ * @param {AudioBuffer} buf - original buffer
+ * @param {string} cacheKey - typically `${filename}__rev`
+ * @returns {AudioBuffer} reversed copy
+ */
+export function getReversedBuffer(ctx, buf, cacheKey) {
+  if (reversedBufferCache.has(cacheKey)) return reversedBufferCache.get(cacheKey);
+
+  const reversed = ctx.createBuffer(buf.numberOfChannels, buf.length, buf.sampleRate);
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const src = buf.getChannelData(ch);
+    const dst = reversed.getChannelData(ch);
+    for (let i = 0, j = src.length - 1; i < src.length; i++, j--) {
+      dst[i] = src[j];
+    }
+  }
+
+  reversedBufferCache.set(cacheKey, reversed);
+  return reversed;
+}
+
 // =============================================================
 //  OSC audio trigger via WebSocket
 // =============================================================
@@ -209,7 +243,8 @@ export function formatAudioFileOverlay(params, level) {
   if (level >= 2) {
     if (params.amp !== undefined && params.amp !== 1) parts.push(`amp:${formatOverlayValue(params.amp)}`);
     if (params.loop !== undefined && params.loop !== 1) parts.push(`loop:${params.loop}`);
-    if (params.pitch !== undefined && params.pitch !== 1) parts.push(`pitch:${formatOverlayValue(params.pitch)}`);
+    const speedOv = params.speed ?? params.pitch;
+    if (speedOv !== undefined && speedOv !== 1) parts.push(`speed:${formatOverlayValue(speedOv)}`);
     if (params.pan !== undefined && params.pan !== 0) parts.push(`pan:${formatOverlayValue(params.pan)}`);
     if (params.fadein || params.fadeIn) parts.push(`fadeIn:${formatOverlayValue(params.fadein || params.fadeIn)}`);
     if (params.fadeout || params.fadeOut) parts.push(`fadeOut:${formatOverlayValue(params.fadeout || params.fadeOut)}`);
@@ -231,7 +266,7 @@ export function formatAudioPoolOverlay(params, level) {
     if (params.mode && params.mode !== "shuffle") parts.push(`mode:${params.mode}`);
     if (params.amp !== undefined) parts.push(`amp:${formatOverlayValue(params.amp)}`);
     if (params.pan !== undefined) parts.push(`pan:${formatOverlayValue(params.pan)}`);
-    if (params.pitch !== undefined) parts.push(`pitch:${formatOverlayValue(params.pitch)}`);
+    if ((params.speed ?? params.pitch) !== undefined) parts.push(`speed:${formatOverlayValue(params.speed ?? params.pitch)}`);
     if (params.poly !== undefined && params.poly !== 1) parts.push(`poly:${params.poly}`);
     if (params.fadeout || params.fadeOut) parts.push(`fadeOut:${formatOverlayValue(params.fadeout || params.fadeOut)}`);
   }
@@ -251,7 +286,7 @@ export function formatAudioImpulseOverlay(params, level) {
     if (params.jitter !== undefined && params.jitter !== 0) parts.push(`jitter:${formatOverlayValue(params.jitter)}`);
     if (params.amp !== undefined) parts.push(`amp:${formatOverlayValue(params.amp)}`);
     if (params.pan !== undefined) parts.push(`pan:${formatOverlayValue(params.pan)}`);
-    if (params.pitch !== undefined) parts.push(`pitch:${formatOverlayValue(params.pitch)}`);
+    if ((params.speed ?? params.pitch) !== undefined) parts.push(`speed:${formatOverlayValue(params.speed ?? params.pitch)}`);
     if (params.poly !== undefined && params.poly !== 6) parts.push(`poly:${params.poly}`);
     if (params.lifetime && params.lifetime !== "process") parts.push(`life:${params.lifetime}`);
     if (params.release !== undefined) parts.push(`rel:${formatOverlayValue(params.release)}`);

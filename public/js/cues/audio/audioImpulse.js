@@ -9,7 +9,8 @@ import {
   parseOverlayLevel,
   selectFromPool,
   audioBufferCache,
-  sharedAudioCtx
+  sharedAudioCtx,
+  getReversedBuffer
 } from "./audioShared.js";
 
 import { handleAudioCue } from "./audioFile.js";
@@ -24,7 +25,8 @@ import {
   removeAllCursors,
   addPeakLayer,
   removePeakLayer,
-  removeAllPeakLayers
+  removeAllPeakLayers,
+  setWaveformDirection
 } from "../../system/waveform.js";
 
 
@@ -130,10 +132,10 @@ async function playImpulseHit(state) {
   // Resolve base values (DSL-aware)
   const baseAmp = evalMaybeRandom(params.amp) ?? 1;
   const basePan = evalMaybeRandom(params.pan) ?? 0;
-  const basePitch = evalMaybeRandom(params.pitch) ?? 1;
+  const baseSpeed = evalMaybeRandom(params.speed ?? params.pitch) ?? 1;
 
   const panRandom = Number(params.panRandom ?? 0);
-  const pitchRandom = Number(params.pitchRandom ?? 0);
+  const speedRandom = Number(params.speedRandom ?? params.pitchRandom ?? 0);
 
   // Centered per-hit randomisation
   const randAround = (base, range, min = -Infinity, max = Infinity) => {
@@ -145,7 +147,7 @@ async function playImpulseHit(state) {
 
   const amp = Math.max(0, Math.min(1, baseAmp));
   const pan = randAround(basePan, panRandom, -1, 1);
-  const pitch = Math.max(0.01, randAround(basePitch, pitchRandom));
+  const speed = Math.max(0.01, randAround(baseSpeed, speedRandom));
 
   // Fade handling
   let fadeIn, fadeOut;
@@ -190,7 +192,7 @@ async function playImpulseHit(state) {
     uid: playUid,
     amp,
     pan,
-    pitch,
+    speed,
     fadeIn,
     fadeOut,
     loop: 1,
@@ -216,11 +218,25 @@ async function playImpulseHit(state) {
   });
 
   if (wfHandle && ctx && buf) {
+    // Update info text with resolved per-hit details
+    if (wfHandle._infoText) {
+      const parts = [`audioImpulse`, file];
+      parts.push(`amp:${amp.toFixed(2)}`);
+      parts.push(`speed:${speed.toFixed(2)}`);
+      parts.push(`pan:${pan.toFixed(2)}`);
+      parts.push(`rate:${state.rate}`);
+      if (state.jitter) parts.push(`jitter:${state.jitter}`);
+      wfHandle._infoText.textContent = parts.join(" | ");
+    }
+
     // On first live hit, clear the primed preview layers
     if (!state._primedCleared) {
       state._primedCleared = true;
       removeAllPeakLayers(wfHandle);
     }
+
+    // Mirror waveform contours for reverse playback
+    setWaveformDirection(wfHandle, speed < 0);
 
     // Add peak layer for this file (unique per voice)
     addPeakLayer(wfHandle, buf, audioFilename, { id: playUid });
@@ -238,7 +254,7 @@ async function playImpulseHit(state) {
     console.log("[impulse:cursor] addCursor result:", !!subCursor);
 
     if (subCursor) {
-      startCursor(subCursor, ctx, ctx.currentTime, buf.duration, pitch);
+      startCursor(subCursor, ctx, ctx.currentTime, buf.duration, speed);
 
       // Auto-remove cursor and peak layer when this voice ends
       const onStop = (e) => {
@@ -284,9 +300,45 @@ export async function handleAudioImpulseCue(ast, el, opts = {}) {
       return;
     }
 
-    // If already running, ignore
+    // If already running, hot-update params instead of ignoring
     if (audioImpulses.has(uid)) {
-      console.log(`[audioImpulse] Already running: ${uid}`);
+      const existing = audioImpulses.get(uid);
+      const oldPath = existing.params.path;
+      existing.rate = Number(rate);
+      existing.jitter = Number(jitter);
+      existing.params = { ...existing.params, ...params, poly };
+
+      // If path changed, invalidate pool cache and rebuild
+      if (path !== oldPath) {
+        const poolCache = window.audioPools;
+        if (poolCache) poolCache.delete(uid);
+
+        // Clear pool to suppress hits while rebuilding
+        existing.pool = { files: [], mode: existing.pool?.mode || "shuffle", cursor: 0 };
+
+        ensureImpulsePool(uid, { path, glob, format, mode }).then(pool => {
+          if (pool?.files?.length) {
+            existing.pool = pool;
+            console.log(`[audioImpulse] Pool rebuilt for ${uid}: ${pool.files.length} files`);
+          }
+        }).catch(err => {
+          console.warn(`[audioImpulse] Pool rebuild failed:`, err);
+        });
+      }
+
+      // Update waveform info text
+      if (existing._waveformHandle?._infoText) {
+        const parts = [`audioImpulse`];
+        if (path) parts.push(`path:${path}`);
+        if (rate) parts.push(`rate:${rate}`);
+        if (jitter) parts.push(`jitter:${jitter}`);
+        if (poly) parts.push(`poly:${poly}`);
+        if (pan != null && pan !== 0) parts.push(`pan:${pan}`);
+        existing._waveformHandle._infoText.textContent = parts.join(" | ");
+        existing._infoBase = parts.join(" | ");
+      }
+
+      console.log(`[audioImpulse] Hot-updated: ${uid}`, { rate, jitter, poly });
       return;
     }
 
@@ -297,9 +349,10 @@ export async function handleAudioImpulseCue(ast, el, opts = {}) {
       return;
     }
 
-    // Create overlay (persistent while running)
+    // Create overlay (persistent while running) -- skip if waveform provides info
+    const wfHandle = getWaveform(`wf-impulse-${uid}`);
     let overlay = null;
-    if (el) {
+    if (el && !wfHandle) {
       overlay = createAudioOverlay({
         anchorEl: el,
         label: `${path}`,
@@ -338,6 +391,15 @@ export async function handleAudioImpulseCue(ast, el, opts = {}) {
 
     // Look up primed waveform handle (from primeImpulseWaveform)
     state._waveformHandle = getWaveform(`wf-impulse-${uid}`) || null;
+
+    // Store base info string for dynamic file updates
+    const infoParts = [`audioImpulse`];
+    if (path) infoParts.push(`path:${path}`);
+    if (params.rate) infoParts.push(`rate:${params.rate}`);
+    if (params.jitter) infoParts.push(`jitter:${params.jitter}`);
+    if (params.poly) infoParts.push(`poly:${params.poly}`);
+    if (params.pan != null && params.pan !== 0) infoParts.push(`pan:${params.pan}`);
+    state._infoBase = infoParts.join(" | ");
 
     audioImpulses.set(uid, state);
 
@@ -508,6 +570,10 @@ export function primeAudioImpulseOverlay(ast, cueElement) {
   const overlayLevel = parseOverlayLevel(params.overlay ?? ast.overlay);
   if (overlayLevel <= 0) return;
 
+  // Skip HTML overlay if waveform display is active (it has its own info text)
+  const waveformParam = params.waveform ?? "self";
+  if (waveformParam !== "none" && waveformParam !== "0") return;
+
   if (cueElement._audioImpulseOverlayPrimed) return;
   cueElement._audioImpulseOverlayPrimed = true;
 
@@ -590,8 +656,17 @@ export async function primeImpulseWaveform(ast, cueElement) {
 
     // Render base waveform group with first file (black contours)
     const first = await loadFile(pool.files[0]);
+    // Build info label
+    const infoParts = [`audioImpulse`];
+    if (path) infoParts.push(`path:${path}`);
+    if (params.rate) infoParts.push(`rate:${params.rate}`);
+    if (params.jitter) infoParts.push(`jitter:${params.jitter}`);
+    if (params.poly) infoParts.push(`poly:${params.poly}`);
+    if (params.pan != null && params.pan !== 0) infoParts.push(`pan:${params.pan}`);
+
     const handle = renderWaveform(svg, waveformParam, first.buf, `wf-impulse-${uid}`, first.filename, {
-      element: cueElement
+      element: cueElement,
+      info: infoParts.join(" | ")
     });
 
     if (!handle) return;
