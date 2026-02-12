@@ -21,7 +21,10 @@ import {
   startCursor,
   resetCursor,
   removeCursor,
-  removeAllCursors
+  removeAllCursors,
+  addPeakLayer,
+  removePeakLayer,
+  removeAllPeakLayers
 } from "../../system/waveform.js";
 
 
@@ -196,7 +199,7 @@ async function playImpulseHit(state) {
 
   await handleAudioCue(cue);
 
-  // --- Per-hit waveform cursor ---
+  // --- Per-hit waveform cursor and peak layer ---
   const wfHandle = state._waveformHandle;
   const ctx = window.sharedAudioCtx;
   const audioFilename = cue.src.endsWith(".wav") ? cue.src : `${cue.src}.wav`;
@@ -213,11 +216,23 @@ async function playImpulseHit(state) {
   });
 
   if (wfHandle && ctx && buf) {
+    // On first live hit, clear the primed preview layers
+    if (!state._primedCleared) {
+      state._primedCleared = true;
+      removeAllPeakLayers(wfHandle);
+    }
+
+    // Add peak layer for this file (unique per voice)
+    addPeakLayer(wfHandle, buf, audioFilename, { id: playUid });
+
+    // Get the layer's color so cursor matches
+    const layerColor = wfHandle._peakLayers?.get(playUid)?.color || "#c00";
+
     // Remove any existing cursor with same id (mono mode: poly=1)
     removeCursor(wfHandle, playUid);
 
     const subCursor = addCursor(wfHandle, playUid, {
-      color: "#c00", width: "0.8", opacity: "0.45"
+      color: layerColor, width: "0.8", opacity: "0.6"
     });
 
     console.log("[impulse:cursor] addCursor result:", !!subCursor);
@@ -225,10 +240,11 @@ async function playImpulseHit(state) {
     if (subCursor) {
       startCursor(subCursor, ctx, ctx.currentTime, buf.duration, pitch);
 
-      // Auto-remove cursor when this voice ends
+      // Auto-remove cursor and peak layer when this voice ends
       const onStop = (e) => {
         if (e.detail?.uid === playUid && e.detail?.state === "stop") {
           removeCursor(wfHandle, playUid);
+          removePeakLayer(wfHandle, playUid);
           window.removeEventListener("oscilla:audio", onStop);
         }
       };
@@ -402,8 +418,8 @@ export function checkImpulseRegions() {
         stopAudioImpulse(state.uid, relTime);
       }
 
-      // Track if we've ever been inside
-      if (inside) {
+      // Track if we've ever been inside (only after tolerance stabilises)
+      if (inside && state._tickCount >= 10) {
         state._wasInsideOnce = true;
       }
     }
@@ -430,9 +446,10 @@ export function stopAudioImpulse(uid, releaseSec = 0) {
   // Get release time from params if not provided
   const fadeTime = releaseSec || st.params?.release || st.params?.rel || 0.3;
 
-  // Remove all per-hit waveform cursors
+  // Remove all per-hit waveform cursors and peak layers
   if (st._waveformHandle) {
     removeAllCursors(st._waveformHandle);
+    removeAllPeakLayers(st._waveformHandle);
   }
 
   // Fade out any currently playing audio from this impulse
@@ -545,34 +562,54 @@ export async function primeImpulseWaveform(ast, cueElement) {
     const pool = await ensureImpulsePool(uid, { path, glob, format, mode });
     if (!pool?.files?.length) return;
 
-    const firstFile = pool.files[0];
-    let filename = path ? `${path}/${firstFile}` : firstFile;
-    if (!filename.endsWith(`.${format}`)) filename = `${filename}.${format}`;
-
     const ctx = sharedAudioCtx;
 
-    let buf = audioBufferCache.get(filename);
-    if (!buf) {
-      const projectPath = resolveProjectPath("audio", filename);
-      const sharedPath = `${window.sharedDir}audio/${filename}`;
+    // Helper to fetch + decode + cache a pool file
+    const loadFile = async (file) => {
+      let filename = path ? `${path}/${file}` : file;
+      if (!filename.endsWith(`.${format}`)) filename = `${filename}.${format}`;
 
-      let resp;
-      try {
-        const head = await fetch(projectPath, { method: "HEAD" });
-        resp = await fetch(head.ok ? projectPath : sharedPath);
-      } catch {
-        resp = await fetch(sharedPath);
+      let buf = audioBufferCache.get(filename);
+      if (!buf) {
+        const projectPath = resolveProjectPath("audio", filename);
+        const sharedPath = `${window.sharedDir}audio/${filename}`;
+
+        let resp;
+        try {
+          const head = await fetch(projectPath, { method: "HEAD" });
+          resp = await fetch(head.ok ? projectPath : sharedPath);
+        } catch {
+          resp = await fetch(sharedPath);
+        }
+
+        buf = await ctx.decodeAudioData(await resp.arrayBuffer());
+        audioBufferCache.set(filename, buf);
       }
+      return { filename, buf };
+    };
 
-      buf = await ctx.decodeAudioData(await resp.arrayBuffer());
-      audioBufferCache.set(filename, buf);
-    }
-
-    renderWaveform(svg, waveformParam, buf, `wf-impulse-${uid}`, filename, {
+    // Render base waveform group with first file (black contours)
+    const first = await loadFile(pool.files[0]);
+    const handle = renderWaveform(svg, waveformParam, first.buf, `wf-impulse-${uid}`, first.filename, {
       element: cueElement
     });
 
-    console.log(`[audioImpulse] Primed waveform for ${uid}`);
+    if (!handle) return;
+
+    // Pick up to 3 random files as preview layers
+    const shuffled = [...pool.files].sort(() => Math.random() - 0.5);
+    const previewFiles = shuffled.slice(0, Math.min(3, shuffled.length));
+
+    for (const file of previewFiles) {
+      try {
+        const { filename, buf } = await loadFile(file);
+        addPeakLayer(handle, buf, filename, { opacity: "0.3" });
+      } catch (err) {
+        console.warn(`[audioImpulse] Preview layer failed for ${file}:`, err);
+      }
+    }
+
+    console.log(`[audioImpulse] Primed waveform for ${uid} with ${previewFiles.length} preview layers`);
   } catch (err) {
     console.warn(`[audioImpulse] Waveform prime failed:`, err);
   }

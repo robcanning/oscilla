@@ -388,6 +388,106 @@ export function updatePeaks(handle, buffer, filename) {
 
 
 // =============================================================
+//  Peak layers -- stacked waveform contours for multi-file display
+//
+//  Each layer is a pair of polylines (upper/lower peak envelope)
+//  rendered in a distinct color.  Used by audioImpulse to show
+//  which pool files are active.
+// =============================================================
+
+/** Color palette for peak layers */
+const LAYER_COLORS = [
+  "#c00", "#07a", "#e80", "#2a7", "#80c", "#c55",
+  "#089", "#a60", "#5a3", "#a3c", "#c80", "#369"
+];
+
+let layerColorIndex = 0;
+
+/**
+ * Add a peak layer (upper+lower contour) for a specific file.
+ *
+ * @param {object} handle    - parent waveform handle from renderWaveform
+ * @param {AudioBuffer} buffer - decoded audio buffer
+ * @param {string} filename  - for peak cache key and dedup
+ * @param {object} opts      - { color, opacity, id }
+ * @returns {string} layerId (the filename, or opts.id)
+ */
+export function addPeakLayer(handle, buffer, filename, opts = {}) {
+  if (!handle?.group || !handle?.bbox) return null;
+
+  if (!handle._peakLayers) handle._peakLayers = new Map();
+
+  const layerId = opts.id || filename;
+
+  // Avoid duplicate layers for same file
+  if (handle._peakLayers.has(layerId)) return layerId;
+
+  const { bbox } = handle;
+  const buckets = Math.min(Math.round(bbox.width), 2000);
+  const peaks = getPeaks(filename, buffer, buckets);
+
+  const color = opts.color || LAYER_COLORS[layerColorIndex++ % LAYER_COLORS.length];
+  const opacity = opts.opacity || "0.5";
+
+  const upper = document.createElementNS(SVG_NS, "polyline");
+  upper.setAttribute("points", peaksToPoints(peaks.maxPeaks, bbox.x, bbox.y, bbox.width, bbox.height));
+  upper.setAttribute("fill", "none");
+  upper.setAttribute("stroke", color);
+  upper.setAttribute("stroke-width", "0.6");
+  upper.setAttribute("stroke-linejoin", "round");
+  upper.setAttribute("opacity", opacity);
+
+  const lower = document.createElementNS(SVG_NS, "polyline");
+  lower.setAttribute("points", peaksToPoints(peaks.minPeaks, bbox.x, bbox.y, bbox.width, bbox.height));
+  lower.setAttribute("fill", "none");
+  lower.setAttribute("stroke", color);
+  lower.setAttribute("stroke-width", "0.6");
+  lower.setAttribute("stroke-linejoin", "round");
+  lower.setAttribute("opacity", opacity);
+
+  // Insert before cursors (cursors should stay on top)
+  const firstCursor = handle.group.querySelector("line");
+  if (firstCursor) {
+    handle.group.insertBefore(upper, firstCursor);
+    handle.group.insertBefore(lower, firstCursor);
+  } else {
+    handle.group.appendChild(upper);
+    handle.group.appendChild(lower);
+  }
+
+  handle._peakLayers.set(layerId, { upper, lower, color });
+  return layerId;
+}
+
+/**
+ * Remove a peak layer by id.
+ */
+export function removePeakLayer(handle, layerId) {
+  if (!handle?._peakLayers) return;
+
+  const layer = handle._peakLayers.get(layerId);
+  if (!layer) return;
+
+  try { layer.upper?.remove(); } catch {}
+  try { layer.lower?.remove(); } catch {}
+  handle._peakLayers.delete(layerId);
+}
+
+/**
+ * Remove all peak layers from a waveform handle.
+ */
+export function removeAllPeakLayers(handle) {
+  if (!handle?._peakLayers) return;
+
+  for (const [id, layer] of handle._peakLayers) {
+    try { layer.upper?.remove(); } catch {}
+    try { layer.lower?.remove(); } catch {}
+  }
+  handle._peakLayers.clear();
+}
+
+
+// =============================================================
 //  Cursor control
 // =============================================================
 
