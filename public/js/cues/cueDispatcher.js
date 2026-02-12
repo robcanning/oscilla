@@ -85,6 +85,15 @@ export function resetCueTrigger() {
   if (window.cuesTriggered?.clear) { window.cuesTriggered.clear(); cleared.push("cuesTriggered"); }
   if (window._cueInsideState?.clear) { window._cueInsideState.clear(); cleared.push("_cueInsideState"); }
   if (window._cueDebounce?.clear) { window._cueDebounce.clear(); cleared.push("_cueDebounce"); }
+
+  // Re-arm any re-entrant cues (osc, audio, audioPool, audioImpulse)
+  if (Array.isArray(window.cues)) {
+    for (const cue of window.cues) {
+      if (cue._armed !== undefined) cue._armed = true;
+    }
+    cleared.push("_armed");
+  }
+
   console.log(`[rewindReset] cleared: ${cleared.join(", ") || "nothing"}`);
 }
 
@@ -920,6 +929,57 @@ export async function checkCueTriggers() {
     }
 
 
+    // ======================================================
+    // 🔊 AUDIO RE-ENTRANT PLAYHEAD TRIGGER
+    // Same enter/exit/re-arm pattern as cueOsc above.
+    // Allows drag-in / drag-out / drag-in workflows with
+    // drag(1) elements, and normal transport triggering.
+    //
+    // For cueAudio (drone/loop), EXIT also stops the
+    // active voice so the element behaves like a physical
+    // instrument: drag in = play, drag out = stop.
+    //
+    // For cueAudioPool and cueAudioImpulse, EXIT only
+    // re-arms — voices play to natural completion.
+    // ======================================================
+    const _audioReentrantType = cue.ast?.type;
+    const _isAudioReentrant =
+      _audioReentrantType === "cueAudioPool" ||
+      _audioReentrantType === "cueAudioImpulse" ||
+      _audioReentrantType === "cueAudio";
+
+    if (_isAudioReentrant) {
+      if (cue._armed === undefined) cue._armed = true;
+
+      // ENTER -- fire the cue
+      if (!prevInside && isInside && cue._armed) {
+        handleCueTrigger(cue.ast, false, true, cue.element);
+        cue._armed = false;
+        // Mark in triggeredCues to prevent double-fire from
+        // the primary left-edge-crossing trigger below
+        window.triggeredCues.add(cue.id);
+      }
+
+      // EXIT -- re-arm so next entry fires again
+      if (prevInside && !isInside) {
+        cue._armed = true;
+        window.triggeredCues.delete(cue.id);
+
+        // For audioFile drones: stop the playing voice on exit
+        // so it behaves like a drag-to-play instrument
+        if (_audioReentrantType === "cueAudio") {
+          const uid = cue.ast?.uid ?? cue.ast?.params?.uid;
+          if (uid) {
+            const voice = window.activeAudioCues?.get(uid.trim());
+            if (voice?.stop) {
+              try { voice.stop(0.05); } catch {}
+            }
+          }
+        }
+      }
+    }
+
+
     // Initialise state on first encounter
     if (prevLeft === undefined) {
       window._prevCueLefts.set(cue.id, cueLeft);
@@ -1062,6 +1122,14 @@ window.resetCueEdgeTracking = function () {
   window._prevCueLefts = new Map();
   window._cueInsideState = new Map();
   window.triggeredCues = new Set();
+
+  // Re-arm any re-entrant cues (osc, audio, audioPool, audioImpulse)
+  // so they fire again after rewind / teleport / seek
+  if (Array.isArray(window.cues)) {
+    for (const cue of window.cues) {
+      if (cue._armed !== undefined) cue._armed = true;
+    }
+  }
 };
 
 

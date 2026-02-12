@@ -1,5 +1,18 @@
 // =============================================================
 //  audioPool.js -- randomised pool playback
+//
+//  Manages a cached pool of audio files selected by shuffle,
+//  random, or sequential modes.  Each trigger picks a file,
+//  evaluates randomisable params, and delegates to handleAudioCue.
+//
+//  Polyphony is unlimited by default -- overlapping voices are
+//  allowed and each gets its own waveform peak layer + cursor.
+//
+//  Waveform lifecycle:
+//    prime  -> base contour hidden, preview layers for up to 5 files
+//    trigger -> preview cleared, per-voice coloured layer + cursor
+//    voice end -> layer + cursor removed automatically
+//    last voice end -> info text hidden
 // =============================================================
 
 import { sendOSC } from "../../system/oscillaOSCClient.js";
@@ -18,9 +31,12 @@ import { handleAudioCue } from "./audioFile.js";
 import {
   renderWaveform,
   getWaveform,
-  updatePeaks,
   startCursor,
-  resetCursor,
+  addCursor,
+  removeCursor,
+  addPeakLayer,
+  removePeakLayer,
+  removeAllPeakLayers,
   setWaveformDirection
 } from "../../system/waveform.js";
 
@@ -34,6 +50,10 @@ const audioPools = window.audioPools || (window.audioPools = new Map());
 
 // =============================================================
 //  ensureAudioPool -- fetch file list from server, cache it
+//
+//  Returns a pool object { files, mode, cursor } that persists
+//  across triggers for the same uid.  The cursor tracks position
+//  for sequential and shuffle modes.
 // =============================================================
 
 export async function ensureAudioPool(uid, params) {
@@ -72,6 +92,15 @@ export async function ensureAudioPool(uid, params) {
 
 // =============================================================
 //  handleAudioPoolCue -- single hit from randomised pool
+//
+//  Each trigger:
+//    1. Selects a file from the cached pool (shuffle/rand/seq)
+//    2. Evaluates randomisable params (amp, pan, speed)
+//    3. Enforces poly limit (unlimited by default)
+//    4. Delegates to handleAudioCue with a unique playUid
+//       (always unique so it never hits the live-update path)
+//    5. Adds a per-voice peak layer + cursor to the waveform
+//       (both auto-removed when the voice ends)
 // =============================================================
 
 export async function handleAudioPoolCue(ast, el, opts = {}) {
@@ -101,6 +130,9 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       return;
     }
 
+    // ---------------------------------------------------------
+    //  Pool: fetch file list from server (cached after first call)
+    // ---------------------------------------------------------
     const pool = await ensureAudioPool(uid, { path, glob, format, mode });
 
     if (!pool?.files?.length) {
@@ -108,6 +140,9 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       return;
     }
 
+    // ---------------------------------------------------------
+    //  File selection: advance pool cursor based on mode
+    // ---------------------------------------------------------
     let file = selectFromPool(pool);
 
     if (!file) {
@@ -115,12 +150,14 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       return;
     }
 
-    // Evaluate randomisable params
+    // ---------------------------------------------------------
+    //  Evaluate randomisable params (may be rand/irand exprs)
+    // ---------------------------------------------------------
     const evaluatedAmp = evalMaybeRandom(amp) ?? 1;
     const panVal = evalMaybeRandom(params.pan) ?? 0;
-    const pitchVal = evalMaybeRandom(params.pitch) ?? 1;
+    const speedVal = evalMaybeRandom(params.speed ?? params.pitch) ?? 1;
 
-    // Handle fade values - pass through raw for resolveFade in handleAudioCue
+    // Resolve fade values -- shorthand `fade` sets both in and out
     let fadeInVal, fadeOutVal;
     if (fade !== undefined) {
       fadeInVal = fade;
@@ -133,14 +170,38 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
     let name = file.endsWith(`.${format}`) ? file : `${file}.${format}`;
     const filename = path ? `${path}/${name}` : name;
 
-    // Polyphony control
-    const poly = Number(params.poly ?? (params.overlap ? 99 : 1));
+    // ---------------------------------------------------------
+    //  Polyphony: unlimited by default, cap only if poly:N set.
+    //  When at capacity, oldest voice is stopped (not skipped).
+    // ---------------------------------------------------------
+    const poly = Number(params.poly ?? (params.overlap ? 99 : 0));
+    const polyLimit = poly > 0 ? poly : Infinity;
 
-    let playUid = uid;
-    if (poly > 1) {
-      playUid = `${uid}__${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+    // Always unique playUid -- audioPool plays a different file each
+    // trigger, so it must never hit handleAudioCue's live-update
+    // retrigger path (which is designed for audioFile drones).
+    const playUid = `${uid}__${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+
+    // Enforce poly limit: stop oldest voice when at capacity
+    const reg = window.activeAudioCues;
+    if (reg && polyLimit < Infinity) {
+      const activeKeys = [];
+      for (const key of reg.keys()) {
+        if (key === uid || key.startsWith(`${uid}__`)) {
+          activeKeys.push(key);
+        }
+      }
+      while (activeKeys.length >= polyLimit) {
+        const oldest = activeKeys.shift();
+        const voice = reg.get(oldest);
+        try { voice?.stop?.(0.03); } catch {}
+        reg.delete(oldest);
+      }
     }
 
+    // ---------------------------------------------------------
+    //  Build cue object for handleAudioCue
+    // ---------------------------------------------------------
     const cue = {
       type: "cueAudio",
       src: filename,
@@ -151,11 +212,13 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       loop: Number(loop) || 1,
       toggle: false,
       pan: panVal,
-      pitch: pitchVal
+      speed: speedVal
     };
 
-    // OVERLAY - show filename AND evaluated params
-    // Suppressed when waveform is active (waveform has its own info label)
+    // ---------------------------------------------------------
+    //  OVERLAY -- show filename + evaluated params
+    //  Suppressed when waveform is active (info shown as SVG text)
+    // ---------------------------------------------------------
     const wfParam = waveform ?? "self";
     const wfActive = wfParam !== "none" && wfParam !== "0" && el;
 
@@ -169,7 +232,7 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       const details = [
         `amp:${evaluatedAmp.toFixed(2)}`,
         `pan:${panVal.toFixed(2)}`,
-        `pitch:${pitchVal.toFixed(2)}`
+        `speed:${speedVal.toFixed(2)}`
       ].join(" ");
 
       overlay.update(`${file} | ${details}`);
@@ -180,7 +243,9 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       }, 1500);
     }
 
-    // Optional OSC announcement
+    // ---------------------------------------------------------
+    //  OSC -- optional network announcement
+    // ---------------------------------------------------------
     if (osc || oscaddr) {
       try {
         sendOSC({
@@ -191,7 +256,7 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
           fadeIn: cue.fadeIn,
           fadeOut: cue.fadeOut,
           pan: cue.pan,
-          pitch: cue.pitch,
+          speed: cue.speed,
           addr: oscaddr || "/audio/client/pool"
         });
       } catch (err) {
@@ -199,10 +264,20 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
       }
     }
 
-    // Fire audio playback
+    // ---------------------------------------------------------
+    //  Fire audio playback via the shared audio engine
+    // ---------------------------------------------------------
     await handleAudioCue(cue);
 
-    // Waveform: update peaks to selected file, start cursor
+    // ---------------------------------------------------------
+    //  WAVEFORM -- per-voice peak layer + cursor
+    //
+    //  On first trigger, preview layers (from prime) are cleared.
+    //  Each voice gets a coloured peak layer and cursor, both
+    //  auto-removed via oscilla:audio stop listener.
+    //  Info text shows the most recently triggered file/params.
+    //  When last voice ends, info text hides.
+    // ---------------------------------------------------------
     if (wfActive) {
       const wfUid = `wf-pool-${uid}`;
       const wfHandle = getWaveform(wfUid);
@@ -211,18 +286,57 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
         if (wfHandle._infoText) {
           const parts = [`audioPool`, file];
           parts.push(`amp:${evaluatedAmp.toFixed(2)}`);
-          parts.push(`pitch:${pitchVal.toFixed(2)}`);
+          parts.push(`speed:${speedVal.toFixed(2)}`);
           parts.push(`pan:${panVal.toFixed(2)}`);
           wfHandle._infoText.textContent = parts.join(" | ");
         }
 
         const buf = audioBufferCache.get(filename);
         if (buf) {
-          updatePeaks(wfHandle, buf, filename);
-          resetCursor(wfHandle);
+          setWaveformDirection(wfHandle, speedVal < 0);
+
+          // On first live trigger, clear the primed preview layers
+          // so only actual playing voices are shown
+          if (!wfHandle._previewCleared) {
+            wfHandle._previewCleared = true;
+            removeAllPeakLayers(wfHandle);
+          }
+
+          // Show info text for active voices
+          if (wfHandle._infoText) wfHandle._infoText.setAttribute("opacity", "1");
+
+          // Add coloured peak layer for this voice
+          addPeakLayer(wfHandle, buf, filename, { id: playUid });
+          const layerColor = wfHandle._peakLayers?.get(playUid)?.color || "#c00";
+
           if (sharedAudioCtx) {
-            setWaveformDirection(wfHandle, pitchVal < 0);
-            startCursor(wfHandle, sharedAudioCtx, sharedAudioCtx.currentTime, buf.duration, pitchVal);
+            const ctx = sharedAudioCtx;
+
+            // Per-voice sub-cursor, colour-matched to its peak layer
+            const subCursor = addCursor(wfHandle, playUid, {
+              color: layerColor, width: "0.8", opacity: "0.55"
+            });
+
+            if (subCursor) {
+              startCursor(subCursor, ctx, ctx.currentTime, buf.duration, speedVal);
+
+              // Auto-remove cursor and peak layer when this voice ends
+              const onStop = (e) => {
+                if (e.detail?.uid === playUid && e.detail?.state === "stop") {
+                  removeCursor(wfHandle, playUid);
+                  removePeakLayer(wfHandle, playUid);
+                  window.removeEventListener("oscilla:audio", onStop);
+
+                  // Hide info text when no voices remain
+                  const hasLayers = wfHandle._peakLayers && wfHandle._peakLayers.size > 0;
+                  const hasCursors = wfHandle._cursors && wfHandle._cursors.size > 0;
+                  if (!hasLayers && !hasCursors) {
+                    if (wfHandle._infoText) wfHandle._infoText.setAttribute("opacity", "0");
+                  }
+                }
+              };
+              window.addEventListener("oscilla:audio", onStop);
+            }
           }
         }
       }
@@ -236,6 +350,10 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
 
 // =============================================================
 //  Prime audioPool overlay (called during assignCues)
+//
+//  Creates an HTML overlay showing pool params on the score.
+//  Skipped when waveform display is active (the waveform's
+//  own info text serves the same purpose).
 // =============================================================
 
 export function primeAudioPoolOverlay(ast, cueElement) {
@@ -273,8 +391,19 @@ export function primeAudioPoolOverlay(ast, cueElement) {
 
 // =============================================================
 //  Prime pool waveform (called during assignCues)
-//  Fetches pool, decodes first file's buffer, renders waveform.
+//
+//  Creates the waveform handle and renders preview layers showing
+//  up to 5 files from the pool at reduced opacity.  This gives
+//  a visual preview of the pool's sonic content before any
+//  trigger fires.
+//
+//  The base contour (from renderWaveform) is hidden immediately --
+//  all visible contours come from peak layers, either:
+//    - preview layers (shown at prime, cleared on first trigger)
+//    - per-voice layers (shown during playback, removed on voice end)
 // =============================================================
+
+const MAX_PREVIEW_LAYERS = 5;
 
 export async function primePoolWaveform(ast, cueElement) {
   if (!ast || !cueElement) return;
@@ -282,7 +411,10 @@ export async function primePoolWaveform(ast, cueElement) {
   const params = ast.params || ast;
   const waveformParam = params.waveform ?? "self";
 
+  // Skip if waveform display is disabled
   if (waveformParam === "none" || waveformParam === "0") return;
+
+  // Prevent double-priming on the same element
   if (cueElement._poolWaveformPrimed) return;
   cueElement._poolWaveformPrimed = true;
 
@@ -303,40 +435,78 @@ export async function primePoolWaveform(ast, cueElement) {
     const pool = await ensureAudioPool(uid, { path, glob, format, mode });
     if (!pool?.files?.length) return;
 
-    const firstFile = pool.files[0];
-    let filename = path ? `${path}/${firstFile}` : firstFile;
-    if (!filename.endsWith(`.${format}`)) filename = `${filename}.${format}`;
-
     const ctx = sharedAudioCtx;
 
-    let buf = audioBufferCache.get(filename);
-    if (!buf) {
-      const projectPath = resolveProjectPath("audio", filename);
-      const sharedPath = `${window.sharedDir}audio/${filename}`;
+    // ---------------------------------------------------------
+    //  Helper: fetch, decode, and cache a single pool file
+    // ---------------------------------------------------------
+    const loadFile = async (file) => {
+      let filename = path ? `${path}/${file}` : file;
+      if (!filename.endsWith(`.${format}`)) filename = `${filename}.${format}`;
 
-      let resp;
-      try {
-        const head = await fetch(projectPath, { method: "HEAD" });
-        resp = await fetch(head.ok ? projectPath : sharedPath);
-      } catch {
-        resp = await fetch(sharedPath);
+      let buf = audioBufferCache.get(filename);
+      if (!buf) {
+        const projectPath = resolveProjectPath("audio", filename);
+        const sharedPath = `${window.sharedDir}audio/${filename}`;
+
+        let resp;
+        try {
+          const head = await fetch(projectPath, { method: "HEAD" });
+          resp = await fetch(head.ok ? projectPath : sharedPath);
+        } catch {
+          resp = await fetch(sharedPath);
+        }
+
+        buf = await ctx.decodeAudioData(await resp.arrayBuffer());
+        audioBufferCache.set(filename, buf);
       }
+      return { filename, buf };
+    };
 
-      buf = await ctx.decodeAudioData(await resp.arrayBuffer());
-      audioBufferCache.set(filename, buf);
-    }
+    // ---------------------------------------------------------
+    //  Render base waveform group using the first file.
+    //  This creates the SVG group, bbox, handle, and info text.
+    //  The base contour itself is hidden -- only peak layers
+    //  are visible (previews now, per-voice layers at runtime).
+    // ---------------------------------------------------------
+    const first = await loadFile(pool.files[0]);
 
-    // Build info label
     const infoParts = [`audioPool`, `path:${path}`];
     if (params.mode && params.mode !== "shuffle") infoParts.push(`mode:${params.mode}`);
     if (params.poly && params.poly !== 1) infoParts.push(`poly:${params.poly}`);
 
-    renderWaveform(svg, waveformParam, buf, `wf-pool-${uid}`, filename, {
+    const wfHandle = renderWaveform(svg, waveformParam, first.buf, `wf-pool-${uid}`, first.filename, {
       element: cueElement,
       info: infoParts.join(" | ")
     });
 
-    console.log(`[audioPool] Primed waveform for ${uid}`);
+    if (!wfHandle) return;
+
+    // Hide base contour -- audioPool uses peak layers exclusively
+    if (wfHandle.upperLine) wfHandle.upperLine.setAttribute("opacity", "0");
+    if (wfHandle.lowerLine) wfHandle.lowerLine.setAttribute("opacity", "0");
+
+    // ---------------------------------------------------------
+    //  Add preview layers for up to MAX_PREVIEW_LAYERS files.
+    //  These are rendered at reduced opacity to give a visual
+    //  preview of the pool contents.  Cleared on first trigger.
+    // ---------------------------------------------------------
+    const previewCount = Math.min(MAX_PREVIEW_LAYERS, pool.files.length);
+    const previewFiles = pool.files.slice(0, previewCount);
+
+    for (const file of previewFiles) {
+      try {
+        const { filename, buf } = await loadFile(file);
+        addPeakLayer(wfHandle, buf, filename, {
+          id: `preview-${filename}`,
+          opacity: "0.25"
+        });
+      } catch (err) {
+        console.warn(`[audioPool] Preview layer failed for ${file}:`, err);
+      }
+    }
+
+    console.log(`[audioPool] Primed waveform for ${uid} with ${previewFiles.length} preview layers`);
   } catch (err) {
     console.warn(`[audioPool] Waveform prime failed:`, err);
   }
