@@ -4,10 +4,27 @@
 //  handleAudioCue, handleAudioStopCue, stopAllAudio
 //  primeAudioOverlay, primeWaveform
 //  Global stop button handler
+//
+//  Polyphony:
+//    Default (no poly or poly:1) -> mono, retrigger = live-update
+//    poly:0  -> unlimited overlapping voices
+//    poly:N  -> up to N voices (oldest stopped when at limit)
+//
+//    Poly voices get unique registry keys, independent audio
+//    graphs, and per-voice waveform peak layers + cursors.
 // =============================================================
 
 import { sendOSC } from "../../system/oscillaOSCClient.js";
-import { renderWaveform, getWaveform, startCursor, resetCursor, setWaveformDirection } from "../../system/waveform.js";
+import {
+  renderWaveform,
+  getWaveform,
+  startCursor,
+  resetCursor,
+  addCursor,
+  removeCursor,
+  addPeakLayer,
+  removePeakLayer
+} from "../../system/waveform.js";
 import {
   sharedAudioCtx,
   audioBufferCache,
@@ -100,6 +117,47 @@ export async function handleAudioCue(ast, cueElement = null) {
     if (!key) { console.warn("[cueAudio] Missing uid:", ast); return; }
     if (!src) { console.warn("[cueAudio] Missing src:", ast); return; }
 
+    // ---------------------------------------------------------
+    // POLYPHONY
+    //
+    // Default (no poly or poly:1): mono -- retrigger updates the
+    // existing voice in place (live-update path).
+    //
+    // poly:0  -> unlimited overlapping voices
+    // poly:N  -> up to N overlapping voices (oldest stopped)
+    //
+    // When poly is active, each trigger gets a unique registry
+    // key so it never hits the toggle/live-update paths.
+    // ---------------------------------------------------------
+    const polyRaw = ast.poly ?? params.poly;
+    const polyNum = polyRaw != null ? Number(polyRaw) : 1;
+    const polyActive = polyNum !== 1;     // 0 = unlimited, >1 = capped
+    const polyLimit = polyNum === 0 ? Infinity : polyNum;
+    const baseUid = key;                  // original uid for voice counting
+
+    // In poly mode: unique key per trigger, skip toggle/retrigger
+    let voiceKey = key;
+    if (polyActive) {
+      voiceKey = `${key}__${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+
+      // Enforce poly limit: stop oldest voice when at capacity
+      const reg = (window.activeAudioCues ||= new Map());
+      if (polyLimit < Infinity) {
+        const activeKeys = [];
+        for (const k of reg.keys()) {
+          if (k === baseUid || k.startsWith(`${baseUid}__`)) {
+            activeKeys.push(k);
+          }
+        }
+        while (activeKeys.length >= polyLimit) {
+          const oldest = activeKeys.shift();
+          const voice = reg.get(oldest);
+          try { voice?.stop?.(0.03); } catch {}
+          reg.delete(oldest);
+        }
+      }
+    }
+
     const filename = src.endsWith(".wav") ? src : `${src}.wav`;
 
     // DON'T convert to Number yet - let resolveFade handle percentage strings
@@ -112,34 +170,40 @@ export async function handleAudioCue(ast, cueElement = null) {
 
     const reg = (window.activeAudioCues ||= new Map());
 
-    // toggle handling
-    if (toggle && reg.has(key)) {
-      const v = reg.get(key);
-      try { v?.stop?.(fadeOut); } catch { }
-      reg.delete(key);
-      window.dispatchEvent(new CustomEvent("oscilla:audio", {
-        detail: { uid: key, file: filename, state: "stop" }
-      }));
-      return;
-    }
-
-    // retrigger -- live-update if voice supports it
-    if (!toggle && reg.has(key)) {
-      const v = reg.get(key);
-      if (v?.update) {
-        v.update({ amp, speed, pan: panVal, fadeIn, fadeOut, loop, src, in: ast.in ?? params.in, out: ast.out ?? params.out });
-        console.log(`[audio] Hot-updated: ${key}`);
+    // ---------------------------------------------------------
+    // MONO MODE: toggle and live-update paths
+    // Skipped entirely in poly mode (voiceKey is always unique)
+    // ---------------------------------------------------------
+    if (!polyActive) {
+      // toggle handling
+      if (toggle && reg.has(voiceKey)) {
+        const v = reg.get(voiceKey);
+        try { v?.stop?.(fadeOut); } catch { }
+        reg.delete(voiceKey);
+        window.dispatchEvent(new CustomEvent("oscilla:audio", {
+          detail: { uid: voiceKey, file: filename, state: "stop" }
+        }));
         return;
       }
-      try { v?.stop?.(Math.min(fadeOut, 0.03)); } catch { }
-      reg.delete(key);
+
+      // retrigger -- live-update if voice supports it
+      if (!toggle && reg.has(voiceKey)) {
+        const v = reg.get(voiceKey);
+        if (v?.update) {
+          v.update({ amp, speed, pan: panVal, fadeIn, fadeOut, loop, src, in: ast.in ?? params.in, out: ast.out ?? params.out });
+          console.log(`[audio] Hot-updated: ${voiceKey}`);
+          return;
+        }
+        try { v?.stop?.(Math.min(fadeOut, 0.03)); } catch { }
+        reg.delete(voiceKey);
+      }
     }
 
     let replaceStop = () => { };
-    reg.set(key, { uid: key, filename, stop: (sec) => replaceStop(sec), _pending: true });
+    reg.set(voiceKey, { uid: voiceKey, filename, stop: (sec) => replaceStop(sec), _pending: true });
 
     window.dispatchEvent(new CustomEvent("oscilla:audio", {
-      detail: { uid: key, file: filename, state: "play" }
+      detail: { uid: voiceKey, file: filename, state: "play" }
     }));
 
     // fetch -- with buffer caching
@@ -228,6 +292,10 @@ export async function handleAudioCue(ast, cueElement = null) {
     // WAVEFORM DISPLAY
     // Default: "self" (render into the cue element itself).
     // Use waveform:none to suppress.
+    //
+    // Mono mode: single cursor on the waveform handle.
+    // Poly mode: per-voice coloured peak layer + sub-cursor,
+    //   auto-removed when the voice ends.
     // -------------------------------------------------------
     const waveformParam = ast.waveform ?? params.waveform ?? "self";
     let waveformHandle = null;
@@ -243,7 +311,9 @@ export async function handleAudioCue(ast, cueElement = null) {
         if (panVal !== null && panVal !== 0) infoParts.push(`pan:${panVal}`);
         if (fadeIn > 0) infoParts.push(`in:${fadeIn.toFixed(1)}s`);
         if (fadeOut > 0) infoParts.push(`out:${fadeOut.toFixed(1)}s`);
+        if (polyActive) infoParts.push(`poly:${polyNum === 0 ? "inf" : polyNum}`);
 
+        // Always use baseUid (key) for waveform handle — shared across voices
         waveformHandle = renderWaveform(svg, waveformParam, buf, key, filename, {
           element: cueElement,
           info: infoParts.join(" | ")
@@ -254,6 +324,23 @@ export async function handleAudioCue(ast, cueElement = null) {
     // If no cueElement (e.g. live console), reuse existing waveform by uid
     if (!waveformHandle && waveformParam !== "none" && waveformParam !== "0") {
       waveformHandle = getWaveform(key) || null;
+    }
+
+    // ---------------------------------------------------------
+    // POLY WAVEFORM: per-voice peak layer + sub-cursor
+    // ---------------------------------------------------------
+    let polyVoiceCursor = null;
+
+    if (polyActive && waveformHandle && buf) {
+      // Add coloured peak layer for this voice
+      addPeakLayer(waveformHandle, buf, filename, { id: voiceKey });
+      const layerColor = waveformHandle._peakLayers?.get(voiceKey)?.color || "#c00";
+
+      if (ctx) {
+        polyVoiceCursor = addCursor(waveformHandle, voiceKey, {
+          color: layerColor, width: "0.8", opacity: "0.55"
+        });
+      }
     }
     // -------------------------------------------------------
 
@@ -426,25 +513,32 @@ export async function handleAudioCue(ast, cueElement = null) {
     };
 
     replaceStop = stop;
-    reg.set(key, { uid: key, filename, stop, update, gainNode, panNode, srcNode, _live: live });
+    reg.set(voiceKey, { uid: voiceKey, filename, stop, update: polyActive ? null : update, gainNode, panNode, srcNode, _live: live });
 
     const cleanup = () => {
       // Deactivate overlay instead of destroying (it stays for re-triggers)
-      const regEntry = reg.get(key);
+      const regEntry = reg.get(voiceKey);
       if (regEntry?._overlay?.el) {
         regEntry._overlay.el.classList.remove("is-active");
       }
 
-      // Reset waveform cursor (waveform stays as score element)
-      if (waveformHandle) resetCursor(waveformHandle);
+      // Waveform cleanup: mono vs poly
+      if (polyActive && waveformHandle) {
+        // Poly: remove this voice's cursor and peak layer
+        removeCursor(waveformHandle, voiceKey);
+        removePeakLayer(waveformHandle, voiceKey);
+      } else if (waveformHandle) {
+        // Mono: reset the shared cursor
+        resetCursor(waveformHandle);
+      }
 
-      if (reg.get(key)?.stop === stop) reg.delete(key);
+      if (reg.get(voiceKey)?.stop === stop) reg.delete(voiceKey);
       try { gainNode.disconnect(); } catch { }
       try { panNode?.disconnect(); } catch { }
       srcNode = null;
 
       window.dispatchEvent(new CustomEvent("oscilla:audio", {
-        detail: { uid: key, file: live.filename, state: "stop" }
+        detail: { uid: voiceKey, file: live.filename, state: "stop" }
       }));
     };
 
@@ -511,12 +605,12 @@ export async function handleAudioCue(ast, cueElement = null) {
 
       srcNode.onended = () => {
         if (stopped) {
-          if (waveformHandle) resetCursor(waveformHandle);
+          if (!polyActive && waveformHandle) resetCursor(waveformHandle);
           return cleanup();
         }
         remaining--;
         if (remaining > 0) {
-          if (waveformHandle) resetCursor(waveformHandle);
+          if (!polyActive && waveformHandle) resetCursor(waveformHandle);
           return playOne(false);
         }
 
@@ -527,8 +621,12 @@ export async function handleAudioCue(ast, cueElement = null) {
       srcNode.start(0, startOffset, segmentDuration);
 
       // Start waveform cursor tracking
-      if (waveformHandle) {
-        setWaveformDirection(waveformHandle, reverse);
+      // Waveform contour is always displayed normally (not mirrored).
+      // Reverse playback is conveyed by the cursor moving right-to-left
+      // (startCursor handles this via negative speed).
+      if (polyActive && polyVoiceCursor) {
+        startCursor(polyVoiceCursor, ctx, ctx.currentTime, segmentDuration, live.speed);
+      } else if (waveformHandle) {
         startCursor(waveformHandle, ctx, ctx.currentTime, segmentDuration, live.speed);
       }
     };
@@ -541,11 +639,11 @@ export async function handleAudioCue(ast, cueElement = null) {
     if (cueElement && overlayFlag > 0 && !waveformHandle) {
       if (cueElement._audioOverlay) {
         overlay = cueElement._audioOverlay;
-        console.log(`[audio] Reusing primed overlay for ${key}`);
+        console.log(`[audio] Reusing primed overlay for ${voiceKey}`);
       } else {
         overlay = createAudioOverlay({
           anchorEl: cueElement,
-          label: key,
+          label: voiceKey,
           mode: "auto",
           track: true
         });
@@ -560,7 +658,7 @@ export async function handleAudioCue(ast, cueElement = null) {
     }
 
     // Store overlay and waveform references in registry for cleanup
-    const regEntry = reg.get(key);
+    const regEntry = reg.get(voiceKey);
     if (regEntry) {
       regEntry._overlay = overlay;
       regEntry._cueElement = cueElement;
@@ -573,13 +671,13 @@ export async function handleAudioCue(ast, cueElement = null) {
     console.error("[AUDIO] handleAudioCue error:", err);
 
     try {
-      const key = ast?.uid?.trim();
+      const errKey = ast?.uid?.trim();
       const src = ast?.src;
       const file = src ? (src.endsWith(".wav") ? src : `${src}.wav`) : undefined;
-      if (key && window.activeAudioCues?.has(key)) {
-        window.activeAudioCues.delete(key);
+      if (errKey && window.activeAudioCues?.has(errKey)) {
+        window.activeAudioCues.delete(errKey);
         window.dispatchEvent(new CustomEvent("oscilla:audio", {
-          detail: { uid: key, file, state: "stop" }
+          detail: { uid: errKey, file, state: "stop" }
         }));
       }
     } catch { }

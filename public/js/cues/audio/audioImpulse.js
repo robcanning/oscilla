@@ -25,8 +25,7 @@ import {
   removeAllCursors,
   addPeakLayer,
   removePeakLayer,
-  removeAllPeakLayers,
-  setWaveformDirection
+  removeAllPeakLayers
 } from "../../system/waveform.js";
 
 
@@ -234,9 +233,6 @@ async function playImpulseHit(state) {
       state._primedCleared = true;
       removeAllPeakLayers(wfHandle);
     }
-
-    // Mirror waveform contours for reverse playback
-    setWaveformDirection(wfHandle, speed < 0);
 
     // Add peak layer for this file (unique per voice)
     addPeakLayer(wfHandle, buf, audioFilename, { id: playUid });

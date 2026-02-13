@@ -22,12 +22,16 @@
 // - handleSynthStopCue(ast)
 // - stopSynth(uidOrAst, rel?)
 // - checkSynthRegions()   (call this from your main tick, like checkImpulseRegions)
+// - primeSynthOverlay(ast, cueElement)  (called during assignCues)
+// - primeSynthScope(ast, cueElement)    (oscilloscope priming, called from primeSynthOverlay)
 //
 // ------------------------------------------------------------
 
 import { createOscOverlay } from "./osc.js";
 import { sendOSC } from "../system/oscillaOSCClient.js";
 import { bindParam, isSignalRef } from '../control/paramBinding.js';
+import { renderScope, startScope, stopScope } from "../system/scope.js";
+import { getWaveform } from "../system/waveform.js";
 
 // ============================================================
 // 🌐 Shared AudioContext + registry
@@ -506,6 +510,14 @@ function connectGraph(ctx, sourceNode, params) {
   const sum = ctx.createGain();
   sum.gain.value = 1.0;
 
+  // Analyser: parallel tap for oscilloscope display.
+  // Taps post-filter, pre-FX so the scope shows the shaped tone
+  // without delay/reverb muddying the trace.
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = 0;
+  after.connect(analyser);
+
   // Delay + Reverb use dry/wet blocks
   const delay = buildDelay(ctx, params.delay);
   const reverb = buildReverbLite(ctx, params.reverb);
@@ -513,7 +525,7 @@ function connectGraph(ctx, sourceNode, params) {
   if (!delay && !reverb) {
     after.connect(sum);
     sum.connect(ctx.destination);
-    return { amp, gain, panner, filter, delay, reverb, sum };
+    return { amp, gain, panner, filter, delay, reverb, sum, analyser };
   }
 
   // Dry path always present
@@ -540,7 +552,7 @@ function connectGraph(ctx, sourceNode, params) {
   }
 
   sum.connect(ctx.destination);
-  return { amp, gain, panner, filter, delay, reverb, sum, dry };
+  return { amp, gain, panner, filter, delay, reverb, sum, dry, analyser };
 }
 
 // ============================================================
@@ -637,6 +649,11 @@ export function stopSynth(uidOrAst, rel = null) {
 
   const ctx = sharedAudioCtx;
   const now = nowSec(ctx);
+
+  // Stop oscilloscope display (reverts to static wave)
+  if (voice._scopeHandle) {
+    stopScope(voice._scopeHandle);
+  }
 
   const env = voice.env || { a: 0.02, d: 0, s: 1, r: 0.1 };
   const relSec = rel != null ? Number(rel) : (Number(voice.relOverride) || env.r);
@@ -866,6 +883,7 @@ function startSynthVoice(uid, ast, cueElement, opts) {
     _stopped: false,
     relOverride: params.rel ?? params.release ?? null,
     _overlay: null,  // set below if needed
+    _scopeHandle: null, // oscilloscope display handle
     
     // ========== CONTROL PLANE: Store unbinders ==========
     _unbinders: unbinders,
@@ -894,6 +912,69 @@ function startSynthVoice(uid, ast, cueElement, opts) {
     overlay.position();
   }
   activeSynthVoices.set(uid, voice);
+
+  // ---------------------------------------------------------
+  // OSCILLOSCOPE DISPLAY
+  //
+  // Default: "self" (render into the cue element).
+  // Use waveform:none to suppress.
+  // Taps the AnalyserNode in the signal chain for real-time
+  // time-domain display.
+  //
+  // When cueElement is present (playhead trigger): render scope
+  // into the cue element's bbox.
+  //
+  // When cueElement is null (live console restart): look for an
+  // existing scope handle from a previous trigger and reconnect
+  // it to the new voice's analyser.
+  // ---------------------------------------------------------
+  const waveformParam = params.waveform ?? "self";
+  if (waveformParam !== "none" && waveformParam !== "0" && graph.analyser) {
+    const scopeUid = `scope-${uid}`;
+
+    if (cueElement) {
+      // Normal path: render scope into cue element
+      const svg = cueElement.ownerSVGElement;
+      if (svg) {
+        const infoParts = [`synth`, wave];
+        if (!source.isChord && source.kind === "osc") {
+          const hz = source.node?.frequency?.value;
+          if (hz) infoParts.push(`${Math.round(hz)}Hz`);
+        }
+        if (Number(amp) !== 0.08) infoParts.push(`amp:${amp.toFixed(3)}`);
+        if (params.filter) infoParts.push(`filter:${params.filter.type || "lp"}`);
+
+        const scopeHandle = renderScope(svg, waveformParam, scopeUid, {
+          element: cueElement,
+          info: infoParts.join(" | "),
+          wave: wave
+        });
+
+        if (scopeHandle) {
+          voice._scopeHandle = scopeHandle;
+          scopeHandle._scopeWave = wave; // update in case wave changed
+          startScope(scopeHandle, graph.analyser);
+
+          if (scopeHandle._infoText) {
+            scopeHandle._infoText.setAttribute("opacity", "0.55");
+          }
+        }
+      }
+    } else {
+      // Live console path: reconnect existing scope handle
+      const existingScope = getWaveform(scopeUid);
+      if (existingScope?._scopeLine) {
+        voice._scopeHandle = existingScope;
+        existingScope._scopeWave = wave; // update static wave type
+        startScope(existingScope, graph.analyser);
+
+        if (existingScope._infoText) {
+          existingScope._infoText.setAttribute("opacity", "0.55");
+        }
+        console.log(`[synth] Reconnected existing scope for ${uid}`);
+      }
+    }
+  }
 
   // Prepare generators
   installGenerators(voice);
@@ -953,6 +1034,32 @@ function updateSynthVoice(uid, ast, cueElement, opts) {
 
   // update region anchor if provided
   if (cueElement) voice._regionEl = cueElement;
+
+  // update wave type (oscillators only -- noise is a different node type)
+  if (params.wave != null && voice.source.kind === "osc") {
+    const newWave = String(params.wave).toLowerCase();
+    const validTypes = ["sine", "square", "sawtooth", "saw", "triangle"];
+    if (validTypes.includes(newWave)) {
+      const mapped = newWave === "saw" ? "sawtooth" : newWave;
+      try {
+        voice.source.node.type = mapped;
+        voice.source.wave = newWave;
+        console.log(`[synth] Wave updated: ${uid} -> ${mapped}`);
+      } catch (e) {
+        console.warn(`[synth] Failed to update wave type:`, e);
+      }
+    }
+  }
+
+  // update wave type for chord oscillators
+  if (params.wave != null && voice.source.isChord && voice.source.oscillators) {
+    const newWave = String(params.wave).toLowerCase();
+    const mapped = newWave === "saw" ? "sawtooth" : newWave;
+    for (const osc of voice.source.oscillators) {
+      try { osc.type = mapped; } catch {}
+    }
+    voice.source.wave = newWave;
+  }
 
   // update lifetime if explicitly given
   if (params.lifetime != null || params.life != null) {
@@ -1078,6 +1185,11 @@ function updateSynthVoice(uid, ast, cueElement, opts) {
 
   if (isOscEnabled(ast, params)) {
     sendOSCSynth(ast, params, { state: "update", amp: voice.amp, lifetime: voice.lifetime });
+  }
+
+  // Update scope static wave type so stopScope restores correct shape
+  if (params.wave != null && voice._scopeHandle) {
+    voice._scopeHandle._scopeWave = String(params.wave).toLowerCase();
   }
 
   return voice;
@@ -1296,6 +1408,11 @@ function cleanupVoice(uid, voice) {
   try { voice.graph?.reverb?.delays?.forEach(d => d.disconnect()); } catch { /* ignore */ }
 
   try { voice.graph?.sum?.disconnect(); } catch { /* ignore */ }
+  try { voice.graph?.analyser?.disconnect(); } catch { /* ignore */ }
+
+  // Scope handle stays in SVG (shows static wave) -- only
+  // destroyed if element is removed from DOM (e.g. page change)
+  voice._scopeHandle = null;
 
   activeSynthVoices.delete(uid);
 }
@@ -1527,5 +1644,70 @@ export function primeSynthOverlay(ast, cueElement) {
     cueElement._synthOverlay = overlay;
   }
 
-  // console.log(`[synth] 📋 Primed overlay for ${pseudoVoice.uid}`);
+  // Also prime scope display
+  primeSynthScope(ast, cueElement, params);
+}
+
+
+// ============================================================
+// 🎯 Prime synth oscilloscope (called during assignCues)
+// Renders a static representative waveform into the score SVG.
+// Default: "self" (the cue element). Use waveform:none to suppress.
+// ============================================================
+export function primeSynthScope(ast, cueElement, params) {
+  if (!ast || !cueElement) return;
+
+  // Extract params if not already provided
+  if (!params) {
+    params = {};
+    for (const arg of (ast.args || [])) {
+      const key = arg.key || arg.type;
+      if (key && arg.value !== undefined) {
+        params[key] = arg.value;
+      }
+    }
+  }
+
+  const waveformParam = params.waveform ?? "self";
+  if (waveformParam === "none" || waveformParam === "0") return;
+
+  // Avoid double-priming
+  if (cueElement._synthScopePrimed) return;
+  cueElement._synthScopePrimed = true;
+
+  const wave = params.wave ?? "sine";
+  const uid = params.uid || cueElement.id || "synth";
+  const scopeUid = `scope-${uid}`;
+
+  const svg = cueElement.ownerSVGElement;
+  if (!svg) return;
+
+  // Build info label
+  const infoParts = [`synth`, wave];
+  if (params.freq != null) {
+    if (typeof params.freq === "object" && params.freq.type === "pattern") {
+      infoParts.push(`${params.freq.name}[...]`);
+    } else if (Array.isArray(params.freq)) {
+      infoParts.push(`chord[${params.freq.length}]`);
+    } else {
+      const hz = pitchToHz(params.freq);
+      infoParts.push(`${Math.round(hz)}Hz`);
+    }
+  }
+  if (params.amp != null) infoParts.push(`amp:${Number(params.amp).toFixed(3)}`);
+  if (params.filter) infoParts.push(`filter:${params.filter.type || params.filter.mode || "lp"}`);
+
+  const scopeHandle = renderScope(svg, waveformParam, scopeUid, {
+    element: cueElement,
+    info: infoParts.join(" | "),
+    wave: wave
+  });
+
+  if (scopeHandle) {
+    // Dim the static wave and info text for primed state
+    if (scopeHandle._scopeLine) scopeHandle._scopeLine.setAttribute("opacity", "0.35");
+    if (scopeHandle._infoText) scopeHandle._infoText.setAttribute("opacity", "0.4");
+  }
+
+  console.log(`[synth] Primed scope for ${uid} (${wave})`);
 }

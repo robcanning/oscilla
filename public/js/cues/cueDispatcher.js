@@ -766,6 +766,48 @@ export function assignCues(svgRoot, cuesArray = []) {
           primeImpulseWaveform(ast, child);
         }
 
+        // -----------------------------------
+        // Click-to-trigger for audio cues
+        //
+        // Enabled by default for all audio cue types.
+        // Disable with click:0 in the DSL.
+        //
+        // Uses pointerdown/pointerup with move threshold
+        // to distinguish click from drag(1) gestures.
+        // -----------------------------------
+        const _isClickableAudio =
+          ast.type === "cueAudio" ||
+          ast.type === "cueAudioPool" ||
+          ast.type === "cueAudioImpulse";
+
+        const clickParam = ast.params?.click ?? ast.click;
+        const clickDisabled = clickParam === 0 || clickParam === "0" || clickParam === false;
+
+        if (_isClickableAudio && !clickDisabled && !child._audioCueClickBound) {
+          child._audioCueClickBound = true;
+          child.style.cursor = "pointer";
+          child.style.pointerEvents = "all";
+
+          const MOVE_THRESHOLD = 6; // px -- ignore clicks that are really drags
+          let _downX = 0, _downY = 0;
+
+          child.addEventListener("pointerdown", (e) => {
+            _downX = e.clientX;
+            _downY = e.clientY;
+          });
+
+          child.addEventListener("pointerup", (e) => {
+            const dx = Math.abs(e.clientX - _downX);
+            const dy = Math.abs(e.clientY - _downY);
+
+            // Only fire if pointer didn't move (not a drag)
+            if (dx < MOVE_THRESHOLD && dy < MOVE_THRESHOLD) {
+              e.stopPropagation();
+              handleCueTrigger(ast, false, true, child);
+            }
+          });
+        }
+
         const box = child.getBBox();
         const screenX = child.getBoundingClientRect().left + box.width / 2;
 
@@ -965,14 +1007,20 @@ export async function checkCueTriggers() {
         cue._armed = true;
         window.triggeredCues.delete(cue.id);
 
-        // For audioFile drones: stop the playing voice on exit
-        // so it behaves like a drag-to-play instrument
+        // For audioFile: stop active voice(s) on exit
+        // so it behaves like a drag-to-play instrument.
+        // Handles both mono (exact uid match) and poly (prefix match).
         if (_audioReentrantType === "cueAudio") {
           const uid = cue.ast?.uid ?? cue.ast?.params?.uid;
           if (uid) {
-            const voice = window.activeAudioCues?.get(uid.trim());
-            if (voice?.stop) {
-              try { voice.stop(0.05); } catch {}
+            const baseUid = uid.trim();
+            const reg = window.activeAudioCues;
+            if (reg) {
+              for (const [k, voice] of reg.entries()) {
+                if (k === baseUid || k.startsWith(`${baseUid}__`)) {
+                  try { voice?.stop?.(0.05); } catch {}
+                }
+              }
             }
           }
         }

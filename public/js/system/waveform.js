@@ -643,3 +643,31 @@ export function destroyWaveform(uid) {
 export function getWaveform(uid) {
   return activeWaveforms.get(uid) || null;
 }
+
+
+// =============================================================
+//  Shared helpers for sibling modules (e.g. scope.js)
+// =============================================================
+
+export const SVG_NS_EXPORT = SVG_NS;
+
+/**
+ * Resolve the target element for rendering.
+ * Re-exported so scope.js can share the same resolution logic.
+ */
+export { resolveTarget };
+
+/**
+ * Register a handle in the shared waveform registry.
+ * Used by scope.js to store scope handles alongside waveform handles.
+ */
+export function registerHandle(uid, handle) {
+  activeWaveforms.set(uid, handle);
+}
+
+/**
+ * Unregister a handle from the shared registry.
+ */
+export function unregisterHandle(uid) {
+  activeWaveforms.delete(uid);
+}

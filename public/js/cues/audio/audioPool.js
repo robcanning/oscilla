@@ -10,9 +10,10 @@
 //
 //  Waveform lifecycle:
 //    prime  -> base contour hidden, preview layers for up to 5 files
-//    trigger -> preview cleared, per-voice coloured layer + cursor
+//    trigger -> previews cleared, per-voice coloured layer + cursor
 //    voice end -> layer + cursor removed automatically
-//    last voice end -> info text hidden
+//    last voice end -> preview layers restored, info text hidden
+//    next trigger -> previews cleared again, cycle repeats
 // =============================================================
 
 import { sendOSC } from "../../system/oscillaOSCClient.js";
@@ -36,8 +37,7 @@ import {
   removeCursor,
   addPeakLayer,
   removePeakLayer,
-  removeAllPeakLayers,
-  setWaveformDirection
+  removeAllPeakLayers
 } from "../../system/waveform.js";
 
 
@@ -272,11 +272,12 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
     // ---------------------------------------------------------
     //  WAVEFORM -- per-voice peak layer + cursor
     //
-    //  On first trigger, preview layers (from prime) are cleared.
-    //  Each voice gets a coloured peak layer and cursor, both
-    //  auto-removed via oscilla:audio stop listener.
-    //  Info text shows the most recently triggered file/params.
-    //  When last voice ends, info text hides.
+    //  Lifecycle:
+    //    prime  -> preview layers (up to 5 files, 0.25 opacity)
+    //    first trigger -> previews cleared, per-voice layer + cursor
+    //    voice end -> layer + cursor removed
+    //    last voice end -> previews restored, info text hidden
+    //    next trigger -> previews cleared again, cycle repeats
     // ---------------------------------------------------------
     if (wfActive) {
       const wfUid = `wf-pool-${uid}`;
@@ -293,8 +294,6 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
 
         const buf = audioBufferCache.get(filename);
         if (buf) {
-          setWaveformDirection(wfHandle, speedVal < 0);
-
           // On first live trigger, clear the primed preview layers
           // so only actual playing voices are shown
           if (!wfHandle._previewCleared) {
@@ -327,11 +326,25 @@ export async function handleAudioPoolCue(ast, el, opts = {}) {
                   removePeakLayer(wfHandle, playUid);
                   window.removeEventListener("oscilla:audio", onStop);
 
-                  // Hide info text when no voices remain
+                  // When all voices are done, restore primed preview state
                   const hasLayers = wfHandle._peakLayers && wfHandle._peakLayers.size > 0;
                   const hasCursors = wfHandle._cursors && wfHandle._cursors.size > 0;
                   if (!hasLayers && !hasCursors) {
+                    // Hide per-trigger info text
                     if (wfHandle._infoText) wfHandle._infoText.setAttribute("opacity", "0");
+
+                    // Re-add preview layers from stored data
+                    if (wfHandle._previewData?.length) {
+                      for (const { filename: pf, buf: pb } of wfHandle._previewData) {
+                        addPeakLayer(wfHandle, pb, pf, {
+                          id: `preview-${pf}`,
+                          opacity: "0.25"
+                        });
+                      }
+                    }
+
+                    // Allow next trigger to clear previews again
+                    wfHandle._previewCleared = false;
                   }
                 }
               };
@@ -489,10 +502,17 @@ export async function primePoolWaveform(ast, cueElement) {
     // ---------------------------------------------------------
     //  Add preview layers for up to MAX_PREVIEW_LAYERS files.
     //  These are rendered at reduced opacity to give a visual
-    //  preview of the pool contents.  Cleared on first trigger.
+    //  preview of the pool contents.  Cleared on first trigger,
+    //  restored when all voices complete.
+    //
+    //  Preview data is stored on the handle so the trigger
+    //  path can restore previews without re-fetching.
     // ---------------------------------------------------------
     const previewCount = Math.min(MAX_PREVIEW_LAYERS, pool.files.length);
     const previewFiles = pool.files.slice(0, previewCount);
+
+    // Store preview specs for restoration after all voices complete
+    wfHandle._previewData = [];
 
     for (const file of previewFiles) {
       try {
@@ -501,6 +521,7 @@ export async function primePoolWaveform(ast, cueElement) {
           id: `preview-${filename}`,
           opacity: "0.25"
         });
+        wfHandle._previewData.push({ filename, buf });
       } catch (err) {
         console.warn(`[audioPool] Preview layer failed for ${file}:`, err);
       }
