@@ -59,7 +59,7 @@
 
       <!-- Secondary Action -->
       <div class="splash-actions-secondary">
-        <button class="secondary-btn" id="import-project-btn">Import…</button>
+        <button class="secondary-btn" id="import-project-btn">Importâ€¦</button>
         <span class="version">v0.4.2</span>
       </div>
 
@@ -80,7 +80,7 @@
 
 
 
-  <!-- 🔹 Top Bar -->
+  <!-- ðŸ”¹ Top Bar -->
   <div id="top-bar" class="gui-bar gui-sticky-top">
 
     <!-- Clients -->
@@ -133,7 +133,7 @@
     <!--  mid side actions -->
     <div id="topbar-actions" class="gui-cluster">
 
-      <!-- 🔹 OSC CONTROLS GROUP -->
+      <!-- ðŸ”¹ OSC CONTROLS GROUP -->
       <div class="gui-cluster osc-tools">
 
         <!-- Mute OSC -->
@@ -158,26 +158,16 @@
         <!-- OSC preview -->
         <div id="cue-info" class="osc-monitor gui-cluster">
           <strong>OSC:</strong>
-          <div class="osc-line" id="osc-latest">waiting…</div>
+          <div class="osc-line" id="osc-latest">waitingâ€¦</div>
         </div>
 
         <button id="annotation-toggle" class="gui-button" title="Annotations">
-          ✎
-        </button>
-
-        <!-- Draw on score -->
-        <button id="draw-toggle" class="gui-button" title="Draw on Score">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
-            stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18.37 2.63a2.12 2.12 0 0 1 3 3L14 13l-4 1 1-4Z"/>
-            <path d="M20 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5"/>
-          </svg>
+          âœŽ
         </button>
 
       </div>
 
-      <!-- 🔹 MARKER TOOLS GROUP (separate from OSC tools) -->
+      <!-- ðŸ”¹ MARKER TOOLS GROUP (separate from OSC tools) -->
       <div class="gui-cluster marker-tools">
         
         <span class="marker-tools-label">Markers</span>
@@ -212,7 +202,7 @@
       </div>
 
 
-      <!-- 🔹 VIEW / NAV CONTROLS GROUP -->
+      <!-- ðŸ”¹ VIEW / NAV CONTROLS GROUP -->
       <div class="gui-cluster view-tools">
 
         <span id="mode-toggle">scroll</span>
@@ -242,8 +232,8 @@
               <sl-menu-item value="file">
                 File
                 <sl-menu slot="submenu">
-                  <sl-menu-item value="project-new">New Project…</sl-menu-item>
-                  <sl-menu-item value="project-save-as">Save Project As…</sl-menu-item>
+                  <sl-menu-item value="project-new">New Projectâ€¦</sl-menu-item>
+                  <sl-menu-item value="project-save-as">Save Project Asâ€¦</sl-menu-item>
                   <sl-menu-item value="project-export">Export Project (.oscilla)</sl-menu-item>
                   <sl-menu-item value="project-import">Import Project (.oscilla)</sl-menu-item>
                 </sl-menu>
@@ -263,11 +253,11 @@
               <sl-divider></sl-divider>
 
               <sl-menu-item value="annotations-export">
-                Export annotations…
+                Export annotationsâ€¦
               </sl-menu-item>
 
               <sl-menu-item value="annotations-import">
-                Import annotations…
+                Import annotationsâ€¦
               </sl-menu-item>
 
               <sl-divider></sl-divider>
@@ -315,27 +305,7 @@
     </div>
   </sl-dialog>
 
-
-  <!-- <sl-dialog id="project-dialog" label="Load Score">
-    <div id="project-list" class="project-list"></div>
-  </sl-dialog> -->
-
-  <!-- Preferences overlay + dialog (native HTML) -->
-  <div id="preferences-overlay"></div>
-  <div id="preferences-dialog">
-    <div id="preferences-header">
-      <h3>Preferences</h3>
-      <button id="preferences-close">&times;</button>
-    </div>
-    <div id="preferences-body">
-      <form id="preferences-form"></form>
-    </div>
-    <div id="preferences-footer">
-      <button id="preferences-save">Save</button>
-    </div>
-  </div>
-
-  <!-- 🔹 Controls -->
+  <!-- ðŸ”¹ Controls -->
   <div id="controls" class="gui-sticky-bottom gui-bar">
 
     <input id="seek-bar" type="range" min="0" max="100" value="0">
@@ -362,7 +332,7 @@
 
       <div id="seek-controls" class="gui-cluster">
 
-        <!-- ▶️ Transport controls -->
+        <!-- â–¶ï¸ Transport controls -->
         <div class="seek-main gui-cluster">
 
           <!-- Fast Rewind -->
@@ -419,7 +389,7 @@
 
         </div>
 
-        <!-- ⏩ Speed controls -->
+        <!-- â© Speed controls -->
         <div id="speedControls" class="gui-cluster speed-panel">
 
           <!-- slower -->
@@ -431,7 +401,7 @@
           </button>
 
           <!-- display -->
-          <span id="speedDisplay" class="speed-display">1.0×</span>
+          <span id="speedDisplay" class="speed-display">1.0Ã—</span>
 
           <!-- faster -->
           <button id="increaseSpeed" class="gui-button gui-button--square" title="Faster">
@@ -500,7 +470,7 @@
           </svg>
         </button>
 
-        <!-- Playhead/Playzone Toggle (cycles: both → playhead only → playzone only → none → both) -->
+        <!-- Playhead/Playzone Toggle (cycles: both â†’ playhead only â†’ playzone only â†’ none â†’ both) -->
         <button id="playhead-toggle-button" class="gui-button side-button" title="Toggle playhead/playzone visibility"
           data-state="both">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -564,7 +534,7 @@
 
   <div id="rehearsal-popup" class="hidden">
     <div id="rehearsal-header">
-      Select Rehearsal Mark…
+      Select Rehearsal Markâ€¦
     </div>
 
     <div id="rehearsal-grid">
@@ -594,8 +564,8 @@
 
   <script src="js/vendor/anime.min.js"></script>
   <script src="js/vendor/svg-path-commander.js"></script>
-  <script type="module" src="./js/system/oscillaPreferences.js"></script>
-  <script type="module" src="./js/system/projectScoreSetup.js"></script>
+  <script type="module" src="./js/oscillaPreferences.js"></script>
+  <script type="module" src="./js/projectScoreSetup.js"></script>
   <script type="module" src="js/app.js"></script>
 
 </body>

@@ -509,8 +509,7 @@ export function makeEditor({
 }) {
 
     const wrap = document.createElement("div");
-    wrap.className = "osc-anno-editor";
-    wrap.style.position = "fixed";
+    wrap.className = "osc-popup osc-anno-editor";
 
     const maxX = window.innerWidth - 380;
     const maxY = window.innerHeight - 240;
@@ -518,64 +517,31 @@ export function makeEditor({
     wrap.style.left = `${Math.max(20, Math.min(x, maxX))}px`;
     wrap.style.top = `${Math.max(20, Math.min(y, maxY))}px`;
 
-    wrap.style.zIndex = "999999";
-    wrap.style.maxWidth = "360px";
-    wrap.style.background = "rgba(20,20,20,0.92)";
-    wrap.style.color = "white";
-    wrap.style.border = "1px solid rgba(255,255,255,0.15)";
-    wrap.style.borderRadius = "10px";
-    wrap.style.padding = "10px";
-    wrap.style.boxShadow = "0 10px 30px rgba(0,0,0,0.35)";
-    wrap.style.backdropFilter = "blur(6px)";
-    wrap.style.pointerEvents = "auto";
-
     // -----------------------------
     // Header (drag handle)
     // -----------------------------
     const header = document.createElement("div");
+    header.className = "osc-anno-editor-header";
     header.textContent = "Annotation";
-    header.style.fontSize = "12px";
-    header.style.fontWeight = "600";
-    header.style.marginBottom = "6px";
-    header.style.padding = "4px 6px";
-    header.style.background = "rgba(255,255,255,0.06)";
-    header.style.borderRadius = "6px";
-    header.style.cursor = "move";
-    header.style.userSelect = "none";
 
     wrap.appendChild(header);
 
-    // Textarea
+    // Textarea — styled by .osc-popup textarea in oscillaDialog.css
     const ta = document.createElement("textarea");
     ta.value = initialText;
-    ta.placeholder = "Annotationâ€¦";
+    ta.placeholder = "Annotation\u2026";
     ta.rows = 3;
-    ta.style.width = "100%";
-    ta.style.resize = "vertical";
-    ta.style.boxSizing = "border-box";
-    ta.style.background = "rgba(0,0,0,0.25)";
-    ta.style.color = "white";
-    ta.style.border = "1px solid rgba(255,255,255,0.15)";
-    ta.style.borderRadius = "8px";
-    ta.style.padding = "8px";
-    ta.style.fontFamily = "inherit";
-    ta.style.fontSize = "13px";
-    ta.style.lineHeight = "1.3";
     wrap.appendChild(ta);
 
     // -----------------------------
     // Font size control
     // -----------------------------
     const fontRow = document.createElement("div");
-    fontRow.style.display = "flex";
-    fontRow.style.alignItems = "center";
-    fontRow.style.gap = "8px";
+    fontRow.className = "osc-dialog-row";
     fontRow.style.marginTop = "6px";
 
     const fontLabel = document.createElement("label");
     fontLabel.textContent = "Font size";
-    fontLabel.style.fontSize = "12px";
-    fontLabel.style.opacity = "0.9";
 
     const fontInput = document.createElement("input");
     fontInput.type = "number";
@@ -593,17 +559,12 @@ export function makeEditor({
     // TRIGGER CONTROLS
     // =============================================================
     const triggerSection = document.createElement("div");
+    triggerSection.className = "osc-dialog-section--info";
     triggerSection.style.marginTop = "10px";
-    triggerSection.style.padding = "8px";
-    triggerSection.style.background = "rgba(0,180,220,0.08)";
-    triggerSection.style.borderRadius = "8px";
-    triggerSection.style.border = "1px solid rgba(0,180,220,0.2)";
 
     // Executable checkbox row
     const execRow = document.createElement("div");
-    execRow.style.display = "flex";
-    execRow.style.alignItems = "center";
-    execRow.style.gap = "8px";
+    execRow.className = "osc-dialog-row";
 
     const execCheck = document.createElement("input");
     execCheck.type = "checkbox";
@@ -613,7 +574,6 @@ export function makeEditor({
     const execLabel = document.createElement("label");
     execLabel.htmlFor = "osc-exec-chk";
     execLabel.textContent = "ðŸ”Š Executable (Audio Trigger)";
-    execLabel.style.fontSize = "12px";
     execLabel.style.fontWeight = "500";
 
     execRow.appendChild(execCheck);
@@ -631,17 +591,11 @@ export function makeEditor({
 
     const visualLabel = document.createElement("label");
     visualLabel.textContent = "Visual Mode:";
-    visualLabel.style.fontSize = "11px";
     visualLabel.style.display = "block";
     visualLabel.style.marginBottom = "4px";
 
     const visualSelect = document.createElement("select");
     visualSelect.style.width = "100%";
-    visualSelect.style.padding = "4px";
-    visualSelect.style.borderRadius = "4px";
-    visualSelect.style.background = "#222";
-    visualSelect.style.color = "#eee";
-    visualSelect.style.border = "1px solid #444";
 
     const vmText = document.createElement("option");
     vmText.value = "text";
@@ -665,7 +619,6 @@ export function makeEditor({
 
     const guiLabelLabel = document.createElement("label");
     guiLabelLabel.textContent = "GUI Label (optional):";
-    guiLabelLabel.style.fontSize = "11px";
     guiLabelLabel.style.display = "block";
     guiLabelLabel.style.marginBottom = "4px";
 
@@ -674,11 +627,6 @@ export function makeEditor({
     guiLabelInput.placeholder = "Custom label for audio trigger";
     guiLabelInput.value = initialTrigger?.label || "";
     guiLabelInput.style.width = "100%";
-    guiLabelInput.style.padding = "4px";
-    guiLabelInput.style.borderRadius = "4px";
-    guiLabelInput.style.background = "#222";
-    guiLabelInput.style.color = "#eee";
-    guiLabelInput.style.border = "1px solid #444";
     guiLabelInput.style.boxSizing = "border-box";
 
     guiLabelRow.appendChild(guiLabelLabel);
@@ -691,17 +639,11 @@ export function makeEditor({
 
     const typeLabel = document.createElement("label");
     typeLabel.textContent = "Trigger Type:";
-    typeLabel.style.fontSize = "11px";
     typeLabel.style.display = "block";
     typeLabel.style.marginBottom = "4px";
 
     const typeSelect = document.createElement("select");
     typeSelect.style.width = "100%";
-    typeSelect.style.padding = "4px";
-    typeSelect.style.borderRadius = "4px";
-    typeSelect.style.background = "#222";
-    typeSelect.style.color = "#eee";
-    typeSelect.style.border = "1px solid #444";
 
     const optAudio = document.createElement("option");
     optAudio.value = "audio";
@@ -730,7 +672,6 @@ export function makeEditor({
 
     const sourceLabel = document.createElement("label");
     sourceLabel.textContent = "Source:";
-    sourceLabel.style.fontSize = "11px";
     sourceLabel.style.display = "block";
     sourceLabel.style.marginBottom = "4px";
 
@@ -744,22 +685,13 @@ export function makeEditor({
     sourceInput.placeholder = "audio/my-sound.wav";
     sourceInput.value = initialTrigger?.source?.path || "";
     sourceInput.style.flex = "1";
-    sourceInput.style.padding = "4px";
-    sourceInput.style.borderRadius = "4px";
-    sourceInput.style.background = "#222";
-    sourceInput.style.color = "#eee";
-    sourceInput.style.border = "1px solid #444";
 
     const browseBtn = document.createElement("button");
     browseBtn.type = "button";
     browseBtn.textContent = "ðŸ“‚";
     browseBtn.title = "Browse audio files";
+    browseBtn.className = "osc-dialog-btn";
     browseBtn.style.padding = "4px 8px";
-    browseBtn.style.borderRadius = "4px";
-    browseBtn.style.background = "#333";
-    browseBtn.style.color = "#eee";
-    browseBtn.style.border = "1px solid #555";
-    browseBtn.style.cursor = "pointer";
 
     sourceInputRow.appendChild(sourceInput);
     sourceInputRow.appendChild(browseBtn);
@@ -772,26 +704,16 @@ export function makeEditor({
     const uploadBtn = document.createElement("button");
     uploadBtn.type = "button";
     uploadBtn.textContent = "â¬†ï¸ Upload";
+    uploadBtn.className = "osc-dialog-btn osc-dialog-btn--success";
     uploadBtn.style.flex = "1";
     uploadBtn.style.padding = "4px 8px";
-    uploadBtn.style.borderRadius = "4px";
-    uploadBtn.style.background = "#2d5a2d";
-    uploadBtn.style.color = "#eee";
-    uploadBtn.style.border = "1px solid #3d7a3d";
-    uploadBtn.style.cursor = "pointer";
-    uploadBtn.style.fontSize = "11px";
 
     const recordBtn = document.createElement("button");
     recordBtn.type = "button";
     recordBtn.textContent = "ðŸŽ¤ Record";
+    recordBtn.className = "osc-dialog-btn osc-dialog-btn--danger";
     recordBtn.style.flex = "1";
     recordBtn.style.padding = "4px 8px";
-    recordBtn.style.borderRadius = "4px";
-    recordBtn.style.background = "#5a2d2d";
-    recordBtn.style.color = "#eee";
-    recordBtn.style.border = "1px solid #7a3d3d";
-    recordBtn.style.cursor = "pointer";
-    recordBtn.style.fontSize = "11px";
 
     if (!isRecordingSupported()) {
         recordBtn.disabled = true;
@@ -804,7 +726,6 @@ export function makeEditor({
 
     const statusMsg = document.createElement("div");
     statusMsg.style.fontSize = "10px";
-    statusMsg.style.color = "#888";
     statusMsg.style.marginTop = "4px";
     statusMsg.style.minHeight = "14px";
 
@@ -836,17 +757,13 @@ export function makeEditor({
     // PLAYBACK OPTIONS
     // =============================================================
     const playbackSection = document.createElement("div");
+    playbackSection.className = "osc-dialog-section--grouped";
     playbackSection.style.marginTop = "8px";
-    playbackSection.style.padding = "6px";
-    playbackSection.style.background = "rgba(255,255,255,0.03)";
-    playbackSection.style.borderRadius = "6px";
 
     const playbackTitle = document.createElement("div");
     playbackTitle.textContent = "Playback Options";
-    playbackTitle.style.fontSize = "11px";
     playbackTitle.style.fontWeight = "500";
     playbackTitle.style.marginBottom = "6px";
-    playbackTitle.style.opacity = "0.8";
     playbackSection.appendChild(playbackTitle);
 
     // Create playback option rows
@@ -912,11 +829,6 @@ export function makeEditor({
 
     const orderSelect = document.createElement("select");
     orderSelect.style.flex = "1";
-    orderSelect.style.padding = "2px";
-    orderSelect.style.borderRadius = "4px";
-    orderSelect.style.background = "#222";
-    orderSelect.style.color = "#eee";
-    orderSelect.style.border = "1px solid #444";
     orderSelect.style.fontSize = "10px";
 
     ["shuffle", "sequential", "random"].forEach(o => {
@@ -957,16 +869,12 @@ export function makeEditor({
     // IMPULSE OPTIONS (only for audioImpulse type)
     // =============================================================
     const impulseSection = document.createElement("div");
+    impulseSection.className = "osc-dialog-section--warning";
     impulseSection.style.marginTop = "8px";
-    impulseSection.style.padding = "6px";
-    impulseSection.style.background = "rgba(255,200,0,0.06)";
-    impulseSection.style.borderRadius = "6px";
-    impulseSection.style.border = "1px solid rgba(255,200,0,0.15)";
     impulseSection.style.display = typeSelect.value === "audioImpulse" ? "block" : "none";
 
     const impulseTitle = document.createElement("div");
     impulseTitle.textContent = "âš¡ Impulse Settings";
-    impulseTitle.style.fontSize = "11px";
     impulseTitle.style.fontWeight = "500";
     impulseTitle.style.marginBottom = "6px";
     impulseSection.appendChild(impulseTitle);
@@ -995,11 +903,6 @@ export function makeEditor({
 
     const lifespanSelect = document.createElement("select");
     lifespanSelect.style.width = "100%";
-    lifespanSelect.style.padding = "4px";
-    lifespanSelect.style.borderRadius = "4px";
-    lifespanSelect.style.background = "#222";
-    lifespanSelect.style.color = "#eee";
-    lifespanSelect.style.border = "1px solid #444";
     lifespanSelect.style.fontSize = "10px";
 
     [
@@ -1036,11 +939,6 @@ export function makeEditor({
     fixedDurInput.step = 0.1;
     fixedDurInput.value = initialTrigger?.impulse?.lifespan ?? 5;
     fixedDurInput.style.width = "60px";
-    fixedDurInput.style.padding = "4px";
-    fixedDurInput.style.borderRadius = "4px";
-    fixedDurInput.style.background = "#222";
-    fixedDurInput.style.color = "#eee";
-    fixedDurInput.style.border = "1px solid #444";
 
     fixedDurRow.appendChild(fixedDurLabel);
     fixedDurRow.appendChild(fixedDurInput);
@@ -1099,15 +997,9 @@ export function makeEditor({
 
     const scopeLabel = document.createElement("label");
     scopeLabel.textContent = "Scope:";
-    scopeLabel.style.fontSize = "12px";
-    scopeLabel.style.opacity = "0.9";
 
     const scopeSelect = document.createElement("select");
     scopeSelect.style.padding = "4px 8px";
-    scopeSelect.style.borderRadius = "6px";
-    scopeSelect.style.background = "#222";
-    scopeSelect.style.color = "#eee";
-    scopeSelect.style.border = "1px solid #444";
 
     const optLocal = document.createElement("option");
     optLocal.value = "local";
@@ -1129,39 +1021,23 @@ export function makeEditor({
     // ACTION BUTTONS
     // =============================================================
     const btns = document.createElement("div");
-    btns.style.display = "flex";
-    btns.style.gap = "8px";
+    btns.className = "osc-dialog-actions";
     btns.style.marginTop = "10px";
 
     const cancelBtn = document.createElement("button");
     cancelBtn.textContent = "Cancel";
+    cancelBtn.className = "osc-dialog-btn osc-dialog-btn--ghost";
     cancelBtn.style.flex = "1";
-    cancelBtn.style.padding = "8px";
-    cancelBtn.style.borderRadius = "6px";
-    cancelBtn.style.background = "#333";
-    cancelBtn.style.color = "#ccc";
-    cancelBtn.style.border = "none";
-    cancelBtn.style.cursor = "pointer";
 
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "Delete";
+    deleteBtn.className = "osc-dialog-btn osc-dialog-btn--danger";
     deleteBtn.style.flex = "1";
-    deleteBtn.style.padding = "8px";
-    deleteBtn.style.borderRadius = "6px";
-    deleteBtn.style.background = "#6a2222";
-    deleteBtn.style.color = "#fcc";
-    deleteBtn.style.border = "none";
-    deleteBtn.style.cursor = "pointer";
 
     const saveBtn = document.createElement("button");
     saveBtn.textContent = "Save";
+    saveBtn.className = "osc-dialog-btn osc-dialog-btn--primary";
     saveBtn.style.flex = "1";
-    saveBtn.style.padding = "8px";
-    saveBtn.style.borderRadius = "6px";
-    saveBtn.style.background = "#2a6a2a";
-    saveBtn.style.color = "#cfc";
-    saveBtn.style.border = "none";
-    saveBtn.style.cursor = "pointer";
 
     btns.appendChild(cancelBtn);
     btns.appendChild(deleteBtn);

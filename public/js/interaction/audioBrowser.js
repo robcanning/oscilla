@@ -74,90 +74,59 @@ function createAudioBrowserModal({
     onSelect
 }) {
     const overlay = document.createElement("div");
-    overlay.style.position = "fixed";
-    overlay.style.inset = "0";
-    overlay.style.background = "rgba(0,0,0,0.6)";
-    overlay.style.display = "flex";
-    overlay.style.alignItems = "center";
-    overlay.style.justifyContent = "center";
-    overlay.style.zIndex = "100000";
+    overlay.className = "osc-overlay visible";
 
     const modal = document.createElement("div");
-    modal.style.background = "#1e1e1e";
-    modal.style.borderRadius = "12px";
-    modal.style.padding = "16px";
-    modal.style.width = "420px";
+    modal.className = "osc-modal";
     modal.style.maxHeight = "70vh";
-    modal.style.display = "flex";
-    modal.style.flexDirection = "column";
-    modal.style.color = "#eee";
-    modal.style.fontFamily = "monospace";
-    modal.style.fontSize = "13px";
 
     // Header
     const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.justifyContent = "space-between";
-    header.style.alignItems = "center";
-    header.style.marginBottom = "12px";
+    header.className = "osc-dialog-header";
 
     const title = document.createElement("div");
-    title.textContent = currentPath ? `📁 /${currentPath}` : "📁 /audio";
-    title.style.fontWeight = "bold";
-    title.style.fontSize = "14px";
+    title.className = "osc-dialog-title";
+    title.textContent = currentPath ? `/${currentPath}` : "/audio";
 
     const closeBtn = document.createElement("button");
-    closeBtn.textContent = "✕";
-    closeBtn.style.background = "transparent";
-    closeBtn.style.border = "none";
-    closeBtn.style.color = "#888";
-    closeBtn.style.fontSize = "18px";
-    closeBtn.style.cursor = "pointer";
+    closeBtn.className = "osc-dialog-close";
+    closeBtn.textContent = "\u2715";
     closeBtn.onclick = () => overlay.remove();
 
     header.appendChild(title);
     header.appendChild(closeBtn);
     modal.appendChild(header);
 
+    // Body
+    const body = document.createElement("div");
+    body.className = "osc-dialog-body";
+
     // Breadcrumb / back
     if (currentPath) {
         const backBtn = document.createElement("button");
-        backBtn.textContent = "⬅ Back";
-        backBtn.style.background = "#333";
-        backBtn.style.border = "1px solid #555";
-        backBtn.style.color = "#ccc";
-        backBtn.style.padding = "6px 12px";
-        backBtn.style.borderRadius = "6px";
-        backBtn.style.cursor = "pointer";
+        backBtn.textContent = "\u2B05 Back";
+        backBtn.className = "osc-dialog-btn osc-dialog-btn--ghost";
         backBtn.style.marginBottom = "10px";
         backBtn.onclick = () => {
             overlay.remove();
             const parent = currentPath.split("/").slice(0, -1).join("/");
             onNavigate(parent);
         };
-        modal.appendChild(backBtn);
+        body.appendChild(backBtn);
     }
 
     // List container
     const list = document.createElement("div");
+    list.className = "osc-dialog-list";
+    list.style.maxHeight = "none";
     list.style.flex = "1";
     list.style.overflowY = "auto";
-    list.style.border = "1px solid #333";
-    list.style.borderRadius = "8px";
-    list.style.padding = "8px";
 
     // Directories
     for (const dir of directories) {
         const row = document.createElement("div");
-        row.style.padding = "8px";
-        row.style.cursor = "pointer";
-        row.style.borderRadius = "6px";
-        row.style.marginBottom = "4px";
-        row.style.background = "#2a2a2a";
-        row.textContent = `📁 ${dir}`;
-
-        row.onmouseenter = () => row.style.background = "#3a3a3a";
-        row.onmouseleave = () => row.style.background = "#2a2a2a";
+        row.className = "osc-dialog-list-item";
+        row.textContent = `\uD83D\uDCC1 ${dir}`;
 
         row.onclick = () => {
             overlay.remove();
@@ -171,27 +140,16 @@ function createAudioBrowserModal({
     // Files
     for (const file of files) {
         const row = document.createElement("div");
-        row.style.padding = "8px";
-        row.style.cursor = "pointer";
-        row.style.borderRadius = "6px";
-        row.style.marginBottom = "4px";
-        row.style.background = "#252525";
-        row.style.display = "flex";
-        row.style.justifyContent = "space-between";
-        row.style.alignItems = "center";
+        row.className = "osc-dialog-list-item";
 
         const nameSpan = document.createElement("span");
-        nameSpan.textContent = `🔊 ${file}`;
+        nameSpan.textContent = `\uD83D\uDD0A ${file}`;
         row.appendChild(nameSpan);
 
         const selectBtn = document.createElement("button");
         selectBtn.textContent = "Select";
-        selectBtn.style.background = "#007acc";
-        selectBtn.style.border = "none";
-        selectBtn.style.color = "white";
-        selectBtn.style.padding = "4px 10px";
-        selectBtn.style.borderRadius = "4px";
-        selectBtn.style.cursor = "pointer";
+        selectBtn.className = "osc-dialog-btn osc-dialog-btn--primary";
+        selectBtn.style.padding = "3px 10px";
         selectBtn.style.fontSize = "11px";
         selectBtn.onclick = (e) => {
             e.stopPropagation();
@@ -201,43 +159,36 @@ function createAudioBrowserModal({
         };
         row.appendChild(selectBtn);
 
-        row.onmouseenter = () => row.style.background = "#303030";
-        row.onmouseleave = () => row.style.background = "#252525";
-
         list.appendChild(row);
     }
 
     // Select folder (for directory triggers)
     if (currentPath) {
+        body.appendChild(list);
         const selectFolderBtn = document.createElement("button");
-        selectFolderBtn.textContent = `📂 Select This Folder`;
+        selectFolderBtn.textContent = `\uD83D\uDCC2 Select This Folder`;
+        selectFolderBtn.className = "osc-dialog-btn osc-dialog-btn--success";
         selectFolderBtn.style.marginTop = "12px";
         selectFolderBtn.style.width = "100%";
-        selectFolderBtn.style.padding = "10px";
-        selectFolderBtn.style.background = "#1d6f1d";
-        selectFolderBtn.style.border = "none";
-        selectFolderBtn.style.color = "white";
-        selectFolderBtn.style.borderRadius = "6px";
-        selectFolderBtn.style.cursor = "pointer";
         selectFolderBtn.style.fontWeight = "bold";
         selectFolderBtn.onclick = () => {
             onSelect(currentPath);
             overlay.remove();
         };
-        modal.appendChild(list);
-        modal.appendChild(selectFolderBtn);
+        body.appendChild(selectFolderBtn);
     } else {
-        modal.appendChild(list);
+        body.appendChild(list);
     }
 
     // Empty state
     if (!directories.length && !files.length) {
-        list.innerHTML = `<div style="text-align:center;color:#666;padding:20px;">
+        list.innerHTML = `<div class="osc-dialog-list-empty">
             No audio files found.<br>
             Upload .wav, .mp3, .ogg, or .aif files to get started.
         </div>`;
     }
 
+    modal.appendChild(body);
     overlay.appendChild(modal);
 
     // Close on overlay click
@@ -327,33 +278,23 @@ export async function handleAudioUpload(file, sourceInput, statusMsg, forceOverw
 export function showUploadConflictDialog(filename, path) {
     return new Promise((resolve) => {
         const overlay = document.createElement("div");
-        overlay.style.cssText = `
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.7);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 100001;
-        `;
+        overlay.className = "osc-overlay visible";
 
         const dialog = document.createElement("div");
-        dialog.style.cssText = `
-            background: #2a2a2a;
-            border-radius: 12px;
-            padding: 20px;
-            width: 360px;
-            color: #eee;
-            font-family: monospace;
-        `;
+        dialog.className = "osc-modal osc-modal--narrow";
 
         dialog.innerHTML = `
-            <div style="font-weight:bold;margin-bottom:12px;">⚠️ File Already Exists</div>
-            <div style="color:#aaa;margin-bottom:16px;font-size:12px;">
-                <code>${filename}</code> already exists at:<br>
-                <code style="color:#f90;">${path}</code>
-            </div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;">
-                <button id="conflict-cancel" style="padding:8px 16px;background:#444;border:none;color:#ccc;border-radius:6px;cursor:pointer;">Cancel</button>
-                <button id="conflict-rename" style="padding:8px 16px;background:#1d6f1d;border:none;color:white;border-radius:6px;cursor:pointer;">Rename</button>
-                <button id="conflict-overwrite" style="padding:8px 16px;background:#c44;border:none;color:white;border-radius:6px;cursor:pointer;">Overwrite</button>
+            <div class="osc-dialog-body">
+                <div class="osc-dialog-section-title" style="border:none;padding:0;">⚠️ File Already Exists</div>
+                <p class="osc-dialog-hint" style="margin:8px 0 14px;">
+                    <code>${filename}</code> already exists at:<br>
+                    <code>${path}</code>
+                </p>
+                <div class="osc-dialog-actions">
+                    <button id="conflict-cancel" class="osc-dialog-btn osc-dialog-btn--ghost">Cancel</button>
+                    <button id="conflict-rename" class="osc-dialog-btn osc-dialog-btn--success">Rename</button>
+                    <button id="conflict-overwrite" class="osc-dialog-btn osc-dialog-btn--danger">Overwrite</button>
+                </div>
             </div>
         `;
 
@@ -383,22 +324,10 @@ export function showUploadConflictDialog(filename, path) {
 export function showRenameDialog(originalName) {
     return new Promise((resolve) => {
         const overlay = document.createElement("div");
-        overlay.style.cssText = `
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.7);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 100001;
-        `;
+        overlay.className = "osc-overlay visible";
 
         const dialog = document.createElement("div");
-        dialog.style.cssText = `
-            background: #2a2a2a;
-            border-radius: 12px;
-            padding: 20px;
-            width: 360px;
-            color: #eee;
-            font-family: monospace;
-        `;
+        dialog.className = "osc-modal osc-modal--narrow";
 
         // Split name and extension
         const lastDot = originalName.lastIndexOf(".");
@@ -406,15 +335,17 @@ export function showRenameDialog(originalName) {
         const ext = lastDot > 0 ? originalName.slice(lastDot) : "";
 
         dialog.innerHTML = `
-            <div style="font-weight:bold;margin-bottom:12px;">📝 Rename File</div>
-            <div style="margin-bottom:12px;">
-                <input id="rename-input" type="text" value="${baseName}" 
-                    style="width:100%;box-sizing:border-box;padding:10px;background:#1a1a1a;border:1px solid #444;color:#eee;border-radius:6px;font-family:monospace;">
-                <span style="color:#888;font-size:11px;">${ext}</span>
-            </div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;">
-                <button id="rename-cancel" style="padding:8px 16px;background:#444;border:none;color:#ccc;border-radius:6px;cursor:pointer;">Cancel</button>
-                <button id="rename-ok" style="padding:8px 16px;background:#007acc;border:none;color:white;border-radius:6px;cursor:pointer;">Rename</button>
+            <div class="osc-dialog-body">
+                <div class="osc-dialog-section-title" style="border:none;padding:0;">Rename File</div>
+                <div style="margin-bottom:12px;">
+                    <input id="rename-input" type="text" value="${baseName}"
+                        class="osc-dialog-input" style="width:100%;box-sizing:border-box;">
+                    <span class="osc-dialog-hint">${ext}</span>
+                </div>
+                <div class="osc-dialog-actions">
+                    <button id="rename-cancel" class="osc-dialog-btn osc-dialog-btn--ghost">Cancel</button>
+                    <button id="rename-ok" class="osc-dialog-btn osc-dialog-btn--primary">Rename</button>
+                </div>
             </div>
         `;
 

@@ -13,10 +13,10 @@
   justify-content: center;
   align-items: center;
 
-  background: rgba(40, 40, 40, 0.95);
+  background: var(--osc-overlay-bg, rgba(40, 40, 40, 0.95));
   backdrop-filter: blur(6px);
 
-  z-index: 999999;
+  z-index: var(--osc-z-splash, 10300);
   pointer-events: all; /* Block all clicks to background */
 }
 
@@ -163,13 +163,13 @@
 #project-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--osc-overlay-bg, rgba(0, 0, 0, 0.85));
   
   display: flex;
   justify-content: center;
   align-items: center;
   
-  z-index: 10000000;  /* Must be above splash (999999) */
+  z-index: var(--osc-z-topmost, 10400);  /* Must be above splash */
   pointer-events: all; /* Block interaction with everything behind */
 }
 

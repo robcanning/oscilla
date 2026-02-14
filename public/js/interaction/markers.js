@@ -314,7 +314,7 @@ export function openMarkerEditor(marker) {
     const y = marker._lastScreenY ?? window.innerHeight / 2;
     
     const editor = document.createElement("div");
-    editor.className = "osc-marker-editor";
+    editor.className = "osc-popup osc-marker-editor";
     editor.id = "osc-marker-editor-active";
     
     // Set editor color from marker

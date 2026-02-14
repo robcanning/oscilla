@@ -80,22 +80,13 @@
 
 /* ============================================================================
  * ANNOTATION EDITOR
+ * Base surface/shape/font now inherited from .osc-popup (oscillaDialog.css).
+ * Only component-specific overrides remain here.
  * ============================================================================ */
 
 .osc-anno-editor {
-    position: fixed;
-    z-index: 999999;
     max-width: 360px;
-    background: rgba(20, 20, 20, 0.92);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
     padding: 10px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-    backdrop-filter: blur(6px);
-    pointer-events: auto;
-    font-family: system-ui, -apple-system, sans-serif;
-    font-size: 13px;
 }
 
 /* Editor header (drag handle) */
@@ -104,101 +95,48 @@
     font-weight: 600;
     margin-bottom: 6px;
     padding: 4px 6px;
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 6px;
+    background: var(--osc-surface-header, #eee);
+    border-radius: var(--osc-radius-sm, 4px);
     cursor: move;
     user-select: none;
 }
 
-/* Editor textarea */
-.osc-anno-editor textarea {
-    width: 100%;
-    resize: vertical;
-    box-sizing: border-box;
-    background: rgba(0, 0, 0, 0.25);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    padding: 8px;
-    font-family: inherit;
-    font-size: 13px;
-    line-height: 1.3;
-}
+/* Editor textarea — inherits from .osc-popup textarea in oscillaDialog.css */
 
 .osc-anno-editor textarea:focus {
     outline: none;
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: var(--osc-border-focus, #1565c0);
 }
 
-/* Editor inputs */
-.osc-anno-editor input[type="text"],
-.osc-anno-editor input[type="number"],
-.osc-anno-editor select {
-    background: #222;
-    color: #eee;
-    border: 1px solid #444;
-    border-radius: 4px;
-    padding: 4px;
-    font-family: inherit;
-}
+/* Editor inputs — inherits from .osc-popup input/select in oscillaDialog.css */
 
 .osc-anno-editor input[type="text"]:focus,
 .osc-anno-editor input[type="number"]:focus,
 .osc-anno-editor select:focus {
     outline: none;
-    border-color: #666;
+    border-color: var(--osc-border-focus, #1565c0);
 }
 
-/* Editor buttons */
-.osc-anno-editor button {
-    padding: 8px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    font-family: inherit;
-    transition: filter 0.1s ease;
-}
+/* Editor buttons — inherits from .osc-dialog-btn classes in oscillaDialog.css */
 
 .osc-anno-editor button:hover {
-    filter: brightness(1.1);
+    filter: brightness(1.05);
 }
 
 .osc-anno-editor button:active {
     filter: brightness(0.95);
 }
 
-/* Trigger section */
-.osc-anno-editor .trigger-section {
-    margin-top: 10px;
-    padding: 8px;
-    background: rgba(0, 180, 220, 0.08);
-    border-radius: 8px;
-    border: 1px solid rgba(0, 180, 220, 0.2);
-}
-
-/* Playback options section */
-.osc-anno-editor .playback-section {
-    margin-top: 8px;
-    padding: 6px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 6px;
-}
-
-/* Impulse section */
-.osc-anno-editor .impulse-section {
-    margin-top: 8px;
-    padding: 6px;
-    background: rgba(255, 200, 0, 0.06);
-    border-radius: 6px;
-    border: 1px solid rgba(255, 200, 0, 0.15);
-}
+/* Trigger section — now uses .osc-dialog-section--info class */
+/* Playback section — now uses .osc-dialog-section--grouped class */
+/* Impulse section — now uses .osc-dialog-section--warning class */
 
 /* Slider rows */
 .osc-anno-editor input[type="range"] {
     flex: 1;
     height: 4px;
     appearance: none;
-    background: #333;
+    background: var(--osc-border, #ccc);
     border-radius: 2px;
 }
 
@@ -206,13 +144,13 @@
     appearance: none;
     width: 12px;
     height: 12px;
-    background: #888;
+    background: var(--osc-accent, #1565c0);
     border-radius: 50%;
     cursor: pointer;
 }
 
 .osc-anno-editor input[type="range"]::-webkit-slider-thumb:hover {
-    background: #aaa;
+    background: var(--osc-accent-hover, #1976d2);
 }
 
 /* ============================================================================

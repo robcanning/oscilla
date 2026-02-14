@@ -1,0 +1,868 @@
+/* ============================================================================
+ * OSCILLA DIALOG SYSTEM — oscillaDialog.css
+ * Centralised styles for all dialogs, panels, modals, and popups.
+ *
+ * LIGHT THEME BASE — designed for dark-mode inversion via
+ *   html { filter: invert(1) hue-rotate(180deg); }
+ * All surfaces use light colours that invert cleanly to dark.
+ *
+ * Naming: .osc-dialog-*  (shared)
+ *         .osc-overlay    (backdrop)
+ *         .osc-modal      (centred card on overlay)
+ *         .osc-panel      (floating side panel)
+ * ============================================================================ */
+
+/* ============================================================================
+ * DESIGN TOKENS
+ * ============================================================================ */
+
+:root {
+  /* --- Surfaces --- */
+  --osc-surface:            #f8f8f8;
+  --osc-surface-elevated:   #ffffff;
+  --osc-surface-header:     #eeeeee;
+  --osc-surface-section:    #f2f2f2;
+  --osc-surface-input:      #ffffff;
+  --osc-surface-hover:      #e8e8e8;
+
+  /* --- Borders --- */
+  --osc-border:             #cccccc;
+  --osc-border-light:       #e0e0e0;
+  --osc-border-input:       #bbbbbb;
+  --osc-border-focus:       #1565c0;
+
+  /* --- Text --- */
+  --osc-text:               #222222;
+  --osc-text-muted:         #666666;
+  --osc-text-heading:       #333333;
+  --osc-text-placeholder:   #999999;
+
+  /* --- Accent --- */
+  --osc-accent:             #1565c0;
+  --osc-accent-bg:          #e3f2fd;
+  --osc-accent-hover:       #1976d2;
+
+  /* --- Semantic --- */
+  --osc-danger:             #c62828;
+  --osc-danger-bg:          #ffebee;
+  --osc-danger-border:      #ef9a9a;
+  --osc-success:            #2e7d32;
+  --osc-success-bg:         #e8f5e9;
+  --osc-success-border:     #a5d6a7;
+  --osc-warning:            #e65100;
+  --osc-warning-bg:         #fff3e0;
+  --osc-warning-border:     #ffcc80;
+
+  /* --- Shape --- */
+  --osc-radius:             8px;
+  --osc-radius-sm:          4px;
+  --osc-radius-lg:          12px;
+  --osc-shadow:             0 4px 20px rgba(0, 0, 0, 0.15);
+  --osc-shadow-lg:          0 8px 32px rgba(0, 0, 0, 0.2);
+
+  /* --- Overlay --- */
+  --osc-overlay-bg:         rgba(0, 0, 0, 0.5);
+
+  /* --- Typography --- */
+  --osc-font:               -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --osc-font-mono:          ui-monospace, 'Consolas', 'SF Mono', monospace;
+  --osc-font-size:          13px;
+  --osc-font-size-sm:       11px;
+  --osc-font-size-lg:       14px;
+  --osc-font-size-title:    16px;
+
+  /* --- z-index layers --- */
+  --osc-z-popup:            10000;    /* floating editors, tooltips */
+  --osc-z-panel:            10100;    /* side panels (controlXY, o2p, livecode) */
+  --osc-z-modal:            10200;    /* centred modal dialogs */
+  --osc-z-overlay:          10200;    /* overlay backdrop (same as modal) */
+  --osc-z-splash:           10300;    /* splash screen */
+  --osc-z-topmost:          10400;    /* absolute top (project browser on splash) */
+}
+
+
+/* ============================================================================
+ * OVERLAY BACKDROP
+ * Full-screen semi-transparent backdrop behind modals.
+ * ============================================================================ */
+
+.osc-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--osc-overlay-bg);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--osc-z-overlay);
+}
+
+.osc-overlay.visible {
+  display: flex;
+}
+
+
+/* ============================================================================
+ * MODAL — Centred dialog card on an overlay
+ * Usage: <div class="osc-overlay visible">
+ *          <div class="osc-modal"> ... </div>
+ *        </div>
+ * ============================================================================ */
+
+.osc-modal {
+  background: var(--osc-surface);
+  border: 1px solid var(--osc-border);
+  border-radius: var(--osc-radius);
+  box-shadow: var(--osc-shadow-lg);
+  color: var(--osc-text);
+  font-family: var(--osc-font);
+  font-size: var(--osc-font-size);
+  width: 380px;
+  max-width: 94vw;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Size variants */
+.osc-modal--narrow  { width: 300px; }
+.osc-modal--wide    { width: 460px; }
+
+
+/* ============================================================================
+ * PANEL — Floating side panel (presets, live console, etc.)
+ * Hidden by default; add .visible to show.
+ * ============================================================================ */
+
+.osc-panel {
+  position: fixed;
+  background: var(--osc-surface);
+  border: 1px solid var(--osc-border);
+  border-radius: var(--osc-radius);
+  box-shadow: var(--osc-shadow);
+  color: var(--osc-text);
+  font-family: var(--osc-font);
+  font-size: var(--osc-font-size);
+  z-index: var(--osc-z-panel);
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  /* Hidden by default */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.osc-panel.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Panel width variants */
+.osc-panel--narrow  { width: 280px; }
+.osc-panel--medium  { width: 340px; }
+.osc-panel--wide    { width: 420px; }
+
+
+/* ============================================================================
+ * POPUP — Small floating editor (marker editor, annotation editor)
+ * Positioned via JS (style.left/top). No overlay.
+ * ============================================================================ */
+
+.osc-popup {
+  position: fixed;
+  background: var(--osc-surface);
+  border: 1px solid var(--osc-border);
+  border-radius: var(--osc-radius);
+  box-shadow: var(--osc-shadow-lg);
+  color: var(--osc-text);
+  font-family: var(--osc-font);
+  font-size: var(--osc-font-size);
+  z-index: var(--osc-z-popup);
+  pointer-events: auto;
+  min-width: 220px;
+}
+
+
+/* ============================================================================
+ * DIALOG HEADER — Draggable title bar
+ * ============================================================================ */
+
+.osc-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--osc-surface-header);
+  border-bottom: 1px solid var(--osc-border);
+  cursor: grab;
+  user-select: none;
+}
+
+.osc-dialog-header:active {
+  cursor: grabbing;
+}
+
+.osc-dialog-title {
+  font-weight: 600;
+  font-size: var(--osc-font-size-lg);
+  color: var(--osc-text-heading);
+  letter-spacing: 0.3px;
+}
+
+
+/* ============================================================================
+ * CLOSE BUTTON
+ * ============================================================================ */
+
+.osc-dialog-close {
+  background: none;
+  border: none;
+  color: var(--osc-text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--osc-radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+
+.osc-dialog-close:hover {
+  background: var(--osc-surface-hover);
+  color: var(--osc-text);
+}
+
+
+/* ============================================================================
+ * DIALOG BODY — Scrollable content area
+ * ============================================================================ */
+
+.osc-dialog-body {
+  padding: 14px;
+  overflow-y: auto;
+  flex: 1;
+  background: var(--osc-surface-elevated);
+}
+
+
+/* ============================================================================
+ * DIALOG FOOTER — Bottom action row
+ * ============================================================================ */
+
+.osc-dialog-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 10px 14px;
+  border-top: 1px solid var(--osc-border-light);
+  background: var(--osc-surface-header);
+}
+
+
+/* ============================================================================
+ * TABS
+ * ============================================================================ */
+
+.osc-dialog-tabs {
+  display: flex;
+  background: var(--osc-surface-header);
+  border-bottom: 1px solid var(--osc-border);
+}
+
+.osc-dialog-tab {
+  flex: 1;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--osc-text-muted);
+  font-family: var(--osc-font);
+  font-size: var(--osc-font-size);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.osc-dialog-tab:hover {
+  background: var(--osc-surface-hover);
+  color: var(--osc-text);
+}
+
+.osc-dialog-tab.active {
+  color: var(--osc-accent);
+  border-bottom-color: var(--osc-accent);
+  background: var(--osc-accent-bg);
+}
+
+
+/* ============================================================================
+ * TAB CONTENT
+ * ============================================================================ */
+
+.osc-dialog-tab-content {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.osc-dialog-tab-content.active {
+  display: flex;
+}
+
+
+/* ============================================================================
+ * SECTIONS — Labeled content groups within body
+ * ============================================================================ */
+
+.osc-dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.osc-dialog-section-title {
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--osc-border-light);
+  font-size: var(--osc-font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--osc-text-muted);
+}
+
+
+/* ============================================================================
+ * FORM ROWS — Label + control layout
+ * ============================================================================ */
+
+.osc-dialog-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.osc-dialog-row > label {
+  font-size: var(--osc-font-size);
+  color: var(--osc-text-muted);
+  white-space: nowrap;
+  flex: 0 0 auto;
+  min-width: 80px;
+}
+
+
+/* ============================================================================
+ * INPUTS — Text, number, select, textarea
+ * ============================================================================ */
+
+.osc-dialog-input,
+.osc-popup input[type="text"],
+.osc-popup input[type="number"],
+.osc-popup select,
+.osc-modal input[type="text"],
+.osc-modal input[type="number"],
+.osc-modal select {
+  background: var(--osc-surface-input);
+  color: var(--osc-text);
+  border: 1px solid var(--osc-border-input);
+  border-radius: var(--osc-radius-sm);
+  padding: 6px 8px;
+  font-family: var(--osc-font);
+  font-size: var(--osc-font-size);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.osc-dialog-input:focus,
+.osc-popup input:focus,
+.osc-popup select:focus,
+.osc-modal input:focus,
+.osc-modal select:focus {
+  border-color: var(--osc-border-focus);
+}
+
+.osc-dialog-input::placeholder,
+.osc-popup input::placeholder,
+.osc-modal input::placeholder {
+  color: var(--osc-text-placeholder);
+}
+
+/* Textarea variant */
+.osc-dialog-textarea,
+.osc-popup textarea,
+.osc-modal textarea {
+  background: var(--osc-surface-input);
+  color: var(--osc-text);
+  border: 1px solid var(--osc-border-input);
+  border-radius: var(--osc-radius-sm);
+  padding: 8px;
+  font-family: var(--osc-font);
+  font-size: var(--osc-font-size);
+  line-height: 1.4;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.osc-dialog-textarea:focus,
+.osc-popup textarea:focus,
+.osc-modal textarea:focus {
+  border-color: var(--osc-border-focus);
+}
+
+
+/* ============================================================================
+ * CHECKBOX ROW
+ * ============================================================================ */
+
+.osc-dialog-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--osc-surface-section);
+  border-radius: var(--osc-radius-sm);
+}
+
+.osc-dialog-checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--osc-accent);
+  flex-shrink: 0;
+}
+
+.osc-dialog-checkbox-row label {
+  font-size: var(--osc-font-size);
+  color: var(--osc-text);
+  cursor: pointer;
+  user-select: none;
+  flex: 1;
+}
+
+
+/* ============================================================================
+ * RANGE SLIDER ROW
+ * ============================================================================ */
+
+.osc-dialog-range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--osc-surface-section);
+  border-radius: var(--osc-radius-sm);
+}
+
+.osc-dialog-range-row label {
+  font-size: var(--osc-font-size);
+  color: var(--osc-text);
+  min-width: 50px;
+}
+
+.osc-dialog-range-row input[type="range"] {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  background: var(--osc-border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.osc-dialog-range-row input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--osc-accent);
+  border: none;
+  cursor: pointer;
+}
+
+.osc-dialog-range-row input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--osc-accent);
+  border: none;
+  cursor: pointer;
+}
+
+.osc-dialog-range-value {
+  font-size: var(--osc-font-size-sm);
+  min-width: 32px;
+  text-align: right;
+  color: var(--osc-text-muted);
+  font-family: var(--osc-font-mono);
+  flex-shrink: 0;
+}
+
+
+/* ============================================================================
+ * BUTTONS
+ * ============================================================================ */
+
+.osc-dialog-btn {
+  padding: 6px 14px;
+  border-radius: var(--osc-radius-sm);
+  border: 1px solid var(--osc-border);
+  background: var(--osc-surface-elevated);
+  color: var(--osc-text);
+  font-family: var(--osc-font);
+  font-size: var(--osc-font-size);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.osc-dialog-btn:hover {
+  background: var(--osc-surface-hover);
+  border-color: var(--osc-text-muted);
+}
+
+/* Primary action (save, confirm, ok) */
+.osc-dialog-btn--primary {
+  background: var(--osc-accent);
+  border-color: var(--osc-accent);
+  color: #ffffff;
+}
+
+.osc-dialog-btn--primary:hover {
+  background: var(--osc-accent-hover);
+  border-color: var(--osc-accent-hover);
+}
+
+/* Danger action (delete, remove) */
+.osc-dialog-btn--danger {
+  background: transparent;
+  border-color: var(--osc-danger-border);
+  color: var(--osc-danger);
+}
+
+.osc-dialog-btn--danger:hover {
+  background: var(--osc-danger-bg);
+  border-color: var(--osc-danger);
+}
+
+/* Success action (record, use) */
+.osc-dialog-btn--success {
+  background: var(--osc-success-bg);
+  border-color: var(--osc-success-border);
+  color: var(--osc-success);
+}
+
+.osc-dialog-btn--success:hover {
+  background: var(--osc-success);
+  border-color: var(--osc-success);
+  color: #ffffff;
+}
+
+/* Warning / accent secondary */
+.osc-dialog-btn--warning {
+  background: var(--osc-warning-bg);
+  border-color: var(--osc-warning-border);
+  color: var(--osc-warning);
+}
+
+.osc-dialog-btn--warning:hover {
+  background: var(--osc-warning);
+  border-color: var(--osc-warning);
+  color: #ffffff;
+}
+
+/* Ghost button (cancel, dismiss) */
+.osc-dialog-btn--ghost {
+  background: transparent;
+  border-color: var(--osc-border-light);
+  color: var(--osc-text-muted);
+}
+
+.osc-dialog-btn--ghost:hover {
+  background: var(--osc-surface-section);
+  color: var(--osc-text);
+}
+
+/* Disabled state */
+.osc-dialog-btn:disabled,
+.osc-dialog-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+
+/* ============================================================================
+ * BUTTON ROW — Horizontal group of action buttons
+ * ============================================================================ */
+
+.osc-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.osc-dialog-actions--center {
+  justify-content: center;
+}
+
+
+/* ============================================================================
+ * DIALOG SECTION VARIANTS — Tinted content groups
+ * ============================================================================ */
+
+/* Informational section */
+.osc-dialog-section--info {
+  padding: 10px;
+  background: var(--osc-accent-bg);
+  border: 1px solid #bbdefb;
+  border-radius: var(--osc-radius-sm);
+}
+
+/* Warning / consent section */
+.osc-dialog-section--warning {
+  padding: 10px;
+  background: var(--osc-warning-bg);
+  border: 1px solid var(--osc-warning-border);
+  border-radius: var(--osc-radius-sm);
+}
+
+/* Success / preview section */
+.osc-dialog-section--success {
+  padding: 10px;
+  background: var(--osc-success-bg);
+  border: 1px solid var(--osc-success-border);
+  border-radius: var(--osc-radius-sm);
+}
+
+/* Neutral grouped section */
+.osc-dialog-section--grouped {
+  padding: 10px;
+  background: var(--osc-surface-section);
+  border: 1px solid var(--osc-border-light);
+  border-radius: var(--osc-radius-sm);
+}
+
+
+/* ============================================================================
+ * INLINE CODE — For filenames, paths, IDs
+ * ============================================================================ */
+
+.osc-modal code,
+.osc-popup code {
+  background: var(--osc-surface-section);
+  border: 1px solid var(--osc-border-light);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--osc-font-mono);
+  font-size: var(--osc-font-size-sm);
+  color: var(--osc-text);
+}
+
+
+/* ============================================================================
+ * SAVE ROW — Input + save button inline
+ * ============================================================================ */
+
+.osc-dialog-save-row {
+  display: flex;
+  gap: 8px;
+}
+
+.osc-dialog-save-row input {
+  flex: 1;
+}
+
+
+/* ============================================================================
+ * ITEM LIST — Scrollable list of presets, files, etc.
+ * ============================================================================ */
+
+.osc-dialog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.osc-dialog-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--osc-surface-section);
+  border: 1px solid var(--osc-border-light);
+  border-radius: var(--osc-radius-sm);
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.osc-dialog-list-item:hover {
+  background: var(--osc-surface-hover);
+  border-color: var(--osc-border);
+}
+
+.osc-dialog-list-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--osc-text-placeholder);
+  font-style: italic;
+  font-size: var(--osc-font-size-sm);
+}
+
+
+/* ============================================================================
+ * UTILITY — Font size hint, muted text, dividers
+ * ============================================================================ */
+
+.osc-dialog-hint {
+  font-size: var(--osc-font-size-sm);
+  color: var(--osc-text-muted);
+}
+
+.osc-dialog-divider {
+  border: none;
+  border-top: 1px solid var(--osc-border-light);
+  margin: 8px 0;
+}
+
+
+/* ============================================================================
+ * RECORDING-SPECIFIC COMPONENTS
+ * (Used by audioRecorder.js — keeping them here to eliminate inline styles)
+ * ============================================================================ */
+
+/* Record button — large circular button */
+.osc-record-btn {
+  display: block;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  border: 3px solid var(--osc-danger-border);
+  background: var(--osc-danger-bg);
+  cursor: not-allowed;
+  opacity: 0.45;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.osc-record-btn.enabled {
+  cursor: pointer;
+  opacity: 1;
+  border-color: var(--osc-danger);
+}
+
+.osc-record-btn.recording {
+  border-color: var(--osc-danger);
+  background: var(--osc-danger-bg);
+  animation: osc-record-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes osc-record-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+
+.osc-record-btn-inner {
+  width: 32px;
+  height: 32px;
+  background: var(--osc-danger);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.2s ease;
+}
+
+.osc-record-btn.recording .osc-record-btn-inner {
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+}
+
+/* VU meter */
+.osc-vu-container {
+  padding: 10px;
+  background: var(--osc-surface-section);
+  border-radius: var(--osc-radius-sm);
+}
+
+.osc-vu-label {
+  font-size: var(--osc-font-size-sm);
+  color: var(--osc-text-muted);
+  margin-bottom: 6px;
+}
+
+.osc-vu-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--osc-border);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.osc-vu-bar {
+  width: 0%;
+  height: 100%;
+  background: var(--osc-success);
+  border-radius: 4px;
+  transition: width 0.05s ease-out;
+}
+
+.osc-vu-peak {
+  font-size: var(--osc-font-size-sm);
+  text-align: center;
+  color: var(--osc-text-muted);
+  margin-top: 4px;
+  font-family: var(--osc-font-mono);
+}
+
+/* Timer display */
+.osc-timer-display {
+  font-family: var(--osc-font-mono);
+  font-size: 28px;
+  text-align: center;
+  color: var(--osc-text);
+  margin: 10px 0;
+  font-weight: 600;
+}
+
+/* Status text */
+.osc-status-text {
+  text-align: center;
+  font-size: var(--osc-font-size-sm);
+  color: var(--osc-text-muted);
+  margin-bottom: 14px;
+  min-height: 16px;
+}
+
+
+/* ============================================================================
+ * RESPONSIVE
+ * ============================================================================ */
+
+@media (max-width: 480px) {
+  .osc-modal {
+    width: calc(100vw - 32px);
+  }
+
+  .osc-popup {
+    max-width: calc(100vw - 40px);
+  }
+}

@@ -141,61 +141,32 @@ export function showRecordingModal(annotationId, options = {}) {
 
         // Create modal overlay
         const overlay = document.createElement("div");
-        overlay.style.cssText = `
-            position: fixed; inset: 0; z-index: 1000002;
-            background: rgba(0,0,0,0.85);
-            display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(4px);
-        `;
+        overlay.className = "osc-overlay visible";
 
         // Create modal dialog
         const modal = document.createElement("div");
-        modal.style.cssText = `
-            background: rgba(25,25,25,0.98);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 16px;
-            padding: 24px;
-            min-width: 360px;
-            max-width: 440px;
-            max-height: 90vh;
-            overflow-y: auto;
-            color: white;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        `;
+        modal.className = "osc-modal osc-modal--wide";
+        modal.style.padding = "24px";
 
         // Title
         const title = document.createElement("div");
         title.textContent = "Record Contribution";
-        title.style.cssText = `
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            text-align: center;
-        `;
+        title.className = "osc-dialog-title";
+        title.style.textAlign = "center";
+        title.style.marginBottom = "16px";
         modal.appendChild(title);
 
         // =============================================================
         // METADATA SECTION
         // =============================================================
         const metadataSection = document.createElement("div");
-        metadataSection.style.cssText = `
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
-        `;
+        metadataSection.className = "osc-dialog-section--grouped";
+        metadataSection.style.marginBottom = "12px";
 
         // Anonymous checkbox
         const anonRow = document.createElement("label");
-        anonRow.style.cssText = `
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-bottom: 10px;
-        `;
+        anonRow.className = "osc-dialog-checkbox-row";
+        anonRow.style.marginBottom = "10px";
 
         const anonCheckbox = document.createElement("input");
         anonCheckbox.type = "checkbox";
@@ -203,7 +174,7 @@ export function showRecordingModal(annotationId, options = {}) {
 
         const anonLabel = document.createElement("span");
         anonLabel.textContent = "Contribute anonymously";
-        anonLabel.style.opacity = "0.9";
+        // opacity handled by parent .osc-dialog-checkbox-row
 
         anonRow.appendChild(anonCheckbox);
         anonRow.appendChild(anonLabel);
@@ -211,30 +182,20 @@ export function showRecordingModal(annotationId, options = {}) {
 
         // Author name input
         const authorRow = document.createElement("div");
-        authorRow.style.cssText = `margin-bottom: 8px;`;
+        authorRow.style.marginBottom = "8px";
 
         const authorLabelEl = document.createElement("label");
         authorLabelEl.textContent = "Your name";
-        authorLabelEl.style.cssText = `
-            display: block;
-            font-size: 11px;
-            opacity: 0.7;
-            margin-bottom: 4px;
-        `;
+        authorLabelEl.className = "osc-dialog-hint";
+        authorLabelEl.style.display = "block";
+        authorLabelEl.style.marginBottom = "4px";
 
         const authorInput = document.createElement("input");
         authorInput.type = "text";
         authorInput.placeholder = "Name (optional)";
-        authorInput.style.cssText = `
-            width: 100%;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(0,0,0,0.3);
-            color: white;
-            font-size: 13px;
-            box-sizing: border-box;
-        `;
+        authorInput.className = "osc-dialog-input";
+        authorInput.style.width = "100%";
+        authorInput.style.boxSizing = "border-box";
 
         authorRow.appendChild(authorLabelEl);
         authorRow.appendChild(authorInput);
@@ -245,26 +206,16 @@ export function showRecordingModal(annotationId, options = {}) {
         
         const urlLabelEl = document.createElement("label");
         urlLabelEl.textContent = "Website / social link (optional)";
-        urlLabelEl.style.cssText = `
-            display: block;
-            font-size: 11px;
-            opacity: 0.7;
-            margin-bottom: 4px;
-        `;
+        urlLabelEl.className = "osc-dialog-hint";
+        urlLabelEl.style.display = "block";
+        urlLabelEl.style.marginBottom = "4px";
 
         const urlInput = document.createElement("input");
         urlInput.type = "url";
         urlInput.placeholder = "https://...";
-        urlInput.style.cssText = `
-            width: 100%;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(0,0,0,0.3);
-            color: white;
-            font-size: 13px;
-            box-sizing: border-box;
-        `;
+        urlInput.className = "osc-dialog-input";
+        urlInput.style.width = "100%";
+        urlInput.style.boxSizing = "border-box";
 
         urlRow.appendChild(urlLabelEl);
         urlRow.appendChild(urlInput);
@@ -284,35 +235,20 @@ export function showRecordingModal(annotationId, options = {}) {
         // DIRECTORY SELECTION
         // =============================================================
         const dirSection = document.createElement("div");
-        dirSection.style.cssText = `
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
-        `;
+        dirSection.className = "osc-dialog-section--grouped";
+        dirSection.style.marginBottom = "12px";
 
         const dirLabel = document.createElement("label");
         dirLabel.textContent = "Save to directory";
-        dirLabel.style.cssText = `
-            display: block;
-            font-size: 11px;
-            opacity: 0.7;
-            margin-bottom: 6px;
-        `;
+        dirLabel.className = "osc-dialog-hint";
+        dirLabel.style.display = "block";
+        dirLabel.style.marginBottom = "6px";
         dirSection.appendChild(dirLabel);
 
         const dirSelect = document.createElement("select");
-        dirSelect.style.cssText = `
-            width: 100%;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(0,0,0,0.3);
-            color: white;
-            font-size: 12px;
-            margin-bottom: 8px;
-        `;
+        dirSelect.className = "osc-dialog-input";
+        dirSelect.style.width = "100%";
+        dirSelect.style.marginBottom = "8px";
 
         // Add options
         const defaultOpt = document.createElement("option");
@@ -338,29 +274,19 @@ export function showRecordingModal(annotationId, options = {}) {
 
         // Custom directory input (hidden by default)
         const customDirRow = document.createElement("div");
-        customDirRow.style.cssText = `display: none;`;
+        customDirRow.style.display = "none";
 
         const customDirInput = document.createElement("input");
         customDirInput.type = "text";
         customDirInput.placeholder = "my-contribution-folder";
-        customDirInput.style.cssText = `
-            width: 100%;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(0,0,0,0.3);
-            color: white;
-            font-size: 12px;
-            box-sizing: border-box;
-        `;
+        customDirInput.className = "osc-dialog-input";
+        customDirInput.style.width = "100%";
+        customDirInput.style.boxSizing = "border-box";
 
         const customDirHint = document.createElement("div");
         customDirHint.textContent = "Letters, numbers, hyphens only";
-        customDirHint.style.cssText = `
-            font-size: 10px;
-            opacity: 0.5;
-            margin-top: 4px;
-        `;
+        customDirHint.className = "osc-dialog-hint";
+        customDirHint.style.marginTop = "4px";
 
         customDirRow.appendChild(customDirInput);
         customDirRow.appendChild(customDirHint);
@@ -381,34 +307,21 @@ export function showRecordingModal(annotationId, options = {}) {
         // CONSENT SECTION
         // =============================================================
         const consentSection = document.createElement("div");
-        consentSection.style.cssText = `
-            background: rgba(255,200,100,0.08);
-            border: 1px solid rgba(255,200,100,0.2);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 16px;
-        `;
+        consentSection.className = "osc-dialog-section--warning";
+        consentSection.style.marginBottom = "16px";
 
         const consentRow = document.createElement("label");
-        consentRow.style.cssText = `
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            cursor: pointer;
-            font-size: 12px;
-            line-height: 1.4;
-        `;
+        consentRow.className = "osc-dialog-checkbox-row";
+        consentRow.style.alignItems = "flex-start";
 
         const consentCheckbox = document.createElement("input");
         consentCheckbox.type = "checkbox";
-        consentCheckbox.style.cssText = `
-            margin-top: 2px;
-            flex-shrink: 0;
-        `;
+        consentCheckbox.style.marginTop = "2px";
+        consentCheckbox.style.flexShrink = "0";
 
         const consentText = document.createElement("span");
         consentText.innerHTML = `I consent to my contribution being used by the artist in performances, installations, documentation, and future works related to this project.`;
-        consentText.style.opacity = "0.9";
+        // opacity handled by parent .osc-dialog-checkbox-row
 
         consentRow.appendChild(consentCheckbox);
         consentRow.appendChild(consentText);
@@ -419,53 +332,28 @@ export function showRecordingModal(annotationId, options = {}) {
         // VU METER
         // =============================================================
         const vuContainer = document.createElement("div");
-        vuContainer.style.cssText = `
-            margin-bottom: 12px;
-            padding: 8px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 8px;
-        `;
+        vuContainer.className = "osc-vu-container";
+        vuContainer.style.marginBottom = "12px";
 
         const vuLabel = document.createElement("div");
         vuLabel.textContent = "Input Level";
-        vuLabel.style.cssText = `
-            font-size: 10px;
-            opacity: 0.6;
-            margin-bottom: 6px;
-            text-align: center;
-        `;
+        vuLabel.className = "osc-vu-label";
+        vuLabel.style.textAlign = "center";
         vuContainer.appendChild(vuLabel);
 
         const vuBarBg = document.createElement("div");
-        vuBarBg.style.cssText = `
-            width: 100%;
-            height: 12px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 6px;
-            overflow: hidden;
-            position: relative;
-        `;
+        vuBarBg.className = "osc-vu-bar-bg";
+        vuBarBg.style.height = "12px";
 
         const vuBar = document.createElement("div");
-        vuBar.style.cssText = `
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #00ff88 0%, #ffff00 70%, #ff4444 100%);
-            border-radius: 6px;
-            transition: width 0.05s ease-out;
-        `;
+        vuBar.className = "osc-vu-bar";
+        vuBar.style.background = "linear-gradient(90deg, #00ff88 0%, #ffff00 70%, #ff4444 100%)";
         vuBarBg.appendChild(vuBar);
         vuContainer.appendChild(vuBarBg);
 
         // Peak indicator
         const vuPeak = document.createElement("div");
-        vuPeak.style.cssText = `
-            font-size: 10px;
-            text-align: center;
-            margin-top: 4px;
-            opacity: 0.7;
-            font-family: monospace;
-        `;
+        vuPeak.className = "osc-vu-peak";
         vuPeak.textContent = "— dB";
         vuContainer.appendChild(vuPeak);
 
@@ -475,24 +363,16 @@ export function showRecordingModal(annotationId, options = {}) {
         // TIMER DISPLAY
         // =============================================================
         const timerDisplay = document.createElement("div");
-        timerDisplay.style.cssText = `
-            font-size: 42px;
-            font-family: monospace;
-            text-align: center;
-            margin: 16px 0;
-            color: rgba(255,255,255,0.9);
-        `;
+        timerDisplay.className = "osc-timer-display";
+        timerDisplay.style.fontSize = "42px";
         timerDisplay.textContent = "0:00";
         modal.appendChild(timerDisplay);
 
         // Max duration indicator
         const maxDurationText = document.createElement("div");
-        maxDurationText.style.cssText = `
-            font-size: 11px;
-            text-align: center;
-            opacity: 0.5;
-            margin-bottom: 16px;
-        `;
+        maxDurationText.className = "osc-dialog-hint";
+        maxDurationText.style.textAlign = "center";
+        maxDurationText.style.marginBottom = "16px";
         maxDurationText.textContent = `Maximum: ${formatRecordingTime(RECORDING_MAX_DURATION_MS)}`;
         modal.appendChild(maxDurationText);
 
@@ -500,44 +380,16 @@ export function showRecordingModal(annotationId, options = {}) {
         // RECORDING BUTTON
         // =============================================================
         const recordBtn = document.createElement("button");
-        recordBtn.style.cssText = `
-            display: block;
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 16px;
-            border-radius: 50%;
-            border: 3px solid rgba(255,100,100,0.6);
-            background: rgba(255,80,80,0.2);
-            cursor: not-allowed;
-            opacity: 0.5;
-            transition: all 0.2s ease;
-            position: relative;
-        `;
+        recordBtn.className = "osc-record-btn";
 
         const innerCircle = document.createElement("div");
-        innerCircle.style.cssText = `
-            width: 32px;
-            height: 32px;
-            background: #ff4444;
-            border-radius: 50%;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            transition: all 0.2s ease;
-        `;
+        innerCircle.className = "osc-record-btn-inner";
         recordBtn.appendChild(innerCircle);
         modal.appendChild(recordBtn);
 
         // Status text
         const statusText = document.createElement("div");
-        statusText.style.cssText = `
-            text-align: center;
-            font-size: 12px;
-            color: rgba(255,255,255,0.7);
-            margin-bottom: 16px;
-            min-height: 18px;
-        `;
+        statusText.className = "osc-status-text";
         statusText.textContent = "Check consent to enable recording";
         modal.appendChild(statusText);
 
@@ -545,55 +397,27 @@ export function showRecordingModal(annotationId, options = {}) {
         // PREVIEW SECTION (hidden until recording complete)
         // =============================================================
         const previewSection = document.createElement("div");
-        previewSection.style.cssText = `
-            display: none;
-            background: rgba(0,180,220,0.1);
-            border: 1px solid rgba(0,180,220,0.3);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 16px;
-        `;
+        previewSection.className = "osc-dialog-section--success";
+        previewSection.style.display = "none";
+        previewSection.style.marginBottom = "16px";
 
         const previewLabel = document.createElement("div");
         previewLabel.textContent = "Preview Recording";
-        previewLabel.style.cssText = `
-            font-size: 11px;
-            opacity: 0.7;
-            margin-bottom: 8px;
-            text-align: center;
-        `;
+        previewLabel.className = "osc-dialog-hint";
+        previewLabel.style.textAlign = "center";
+        previewLabel.style.marginBottom = "8px";
         previewSection.appendChild(previewLabel);
 
         const previewControls = document.createElement("div");
-        previewControls.style.cssText = `
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-        `;
+        previewControls.className = "osc-dialog-actions osc-dialog-actions--center";
 
         const playBtn = document.createElement("button");
         playBtn.textContent = "▶ Play";
-        playBtn.style.cssText = `
-            padding: 8px 20px;
-            border-radius: 6px;
-            border: 1px solid rgba(0,180,220,0.4);
-            background: rgba(0,180,220,0.2);
-            color: rgba(0,220,255,0.95);
-            cursor: pointer;
-            font-size: 12px;
-        `;
+        playBtn.className = "osc-dialog-btn osc-dialog-btn--primary";
 
         const reRecordBtn = document.createElement("button");
         reRecordBtn.textContent = "⏺ Record Again";
-        reRecordBtn.style.cssText = `
-            padding: 8px 20px;
-            border-radius: 6px;
-            border: 1px solid rgba(255,150,100,0.4);
-            background: rgba(255,150,100,0.15);
-            color: rgba(255,180,150,0.95);
-            cursor: pointer;
-            font-size: 12px;
-        `;
+        reRecordBtn.className = "osc-dialog-btn osc-dialog-btn--warning";
 
         previewControls.appendChild(playBtn);
         previewControls.appendChild(reRecordBtn);
@@ -604,36 +428,15 @@ export function showRecordingModal(annotationId, options = {}) {
         // ACTION BUTTONS
         // =============================================================
         const actionRow = document.createElement("div");
-        actionRow.style.cssText = `
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        `;
+        actionRow.className = "osc-dialog-actions osc-dialog-actions--center";
 
         const cancelBtn = document.createElement("button");
         cancelBtn.textContent = "Cancel";
-        cancelBtn.style.cssText = `
-            padding: 10px 24px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.2);
-            background: transparent;
-            color: white;
-            cursor: pointer;
-            font-size: 13px;
-        `;
+        cancelBtn.className = "osc-dialog-btn osc-dialog-btn--ghost";
 
         const useBtn = document.createElement("button");
         useBtn.textContent = "Use Recording";
-        useBtn.style.cssText = `
-            padding: 10px 24px;
-            border-radius: 8px;
-            border: 1px solid rgba(0,180,220,0.4);
-            background: rgba(0,180,220,0.2);
-            color: rgba(0,220,255,0.95);
-            cursor: not-allowed;
-            opacity: 0.5;
-            font-size: 13px;
-        `;
+        useBtn.className = "osc-dialog-btn osc-dialog-btn--primary";
         useBtn.disabled = true;
 
         actionRow.appendChild(cancelBtn);
@@ -699,8 +502,7 @@ export function showRecordingModal(annotationId, options = {}) {
         // =============================================================
         const updateRecordingAvailability = () => {
             const canRecord = consentCheckbox.checked;
-            recordBtn.style.cursor = canRecord ? "pointer" : "not-allowed";
-            recordBtn.style.opacity = canRecord ? "1" : "0.5";
+            recordBtn.classList.toggle("enabled", canRecord);
             statusText.textContent = canRecord 
                 ? "Click to start recording" 
                 : "Check consent to enable recording";
@@ -753,8 +555,6 @@ export function showRecordingModal(annotationId, options = {}) {
                     
                     // Enable use button
                     useBtn.disabled = false;
-                    useBtn.style.cursor = "pointer";
-                    useBtn.style.opacity = "1";
                     
                     statusText.textContent = "Recording complete. Preview or use your recording.";
                 };
@@ -767,13 +567,9 @@ export function showRecordingModal(annotationId, options = {}) {
                 previewSection.style.display = "none";
 
                 // Update UI
-                innerCircle.style.borderRadius = "4px";
-                innerCircle.style.width = "24px";
-                innerCircle.style.height = "24px";
-                recordBtn.style.borderColor = "rgba(255,100,100,1)";
-                recordBtn.style.animation = "pulse-recording 1s infinite";
+                recordBtn.classList.add("recording");
                 statusText.textContent = "Recording...";
-                timerDisplay.style.color = "#ff6666";
+                timerDisplay.style.color = "var(--osc-danger, #c62828)";
 
                 // Start timer
                 timerInterval = setInterval(() => {
@@ -823,12 +619,8 @@ export function showRecordingModal(annotationId, options = {}) {
             vuPeak.textContent = "— dB";
 
             // Reset UI
-            innerCircle.style.borderRadius = "50%";
-            innerCircle.style.width = "32px";
-            innerCircle.style.height = "32px";
-            recordBtn.style.borderColor = "rgba(255,100,100,0.6)";
-            recordBtn.style.animation = "none";
-            timerDisplay.style.color = "rgba(255,255,255,0.9)";
+            recordBtn.classList.remove("recording");
+            timerDisplay.style.color = "";
         };
 
         // =============================================================
@@ -869,8 +661,6 @@ export function showRecordingModal(annotationId, options = {}) {
             recordedBlob = null;
             previewSection.style.display = "none";
             useBtn.disabled = true;
-            useBtn.style.cursor = "not-allowed";
-            useBtn.style.opacity = "0.5";
             timerDisplay.textContent = "0:00";
             statusText.textContent = "Click to start recording";
 
