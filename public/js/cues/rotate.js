@@ -302,7 +302,8 @@ export function handleRotateSequence(el, cfg) {
         el._oscillaRotateAnim = null;
     }
 
-    applySvgPivot(el);
+    const wrapper = ensureAnimWrapper(el);
+    applySvgPivot(wrapper);
 
     // ----------------------------------------------
     // OVERLAY (anchors to rotating element, center)
@@ -312,8 +313,6 @@ export function handleRotateSequence(el, cfg) {
         cfg._overlay.destroy();
         cfg._overlay = null;
     }
-
-    const wrapper = ensureAnimWrapper(el);
 
     if (isOscEnabled(cfg, oscMode)) {
         cfg._overlay = createOscOverlay({
@@ -333,7 +332,7 @@ export function handleRotateSequence(el, cfg) {
     let direction = 1;
 
     // Driver angle
-    const startAngle = getCurrentAngle(el, values?.[0] ?? 0);
+    const startAngle = getCurrentAngle(wrapper, values?.[0] ?? 0);
     const norm = ((startAngle % 360) + 360) % 360;
     const driver = { a: norm };
 
@@ -384,7 +383,7 @@ export function handleRotateSequence(el, cfg) {
         const targetRaw = nextAngle();
         if (targetRaw == null || atEndOnce()) {
             if (!pauseOnExit && Array.isArray(values) && values.length > 0) {
-                el.style.transform = `rotate(${values[0]}deg)`;
+                wrapper.style.transform = `rotate(${values[0]}deg)`;
             }
 
             // cleanup overlay on finish
@@ -405,7 +404,7 @@ export function handleRotateSequence(el, cfg) {
 
         if (interp === "step") {
             driver.a = tgt;
-            el.style.transform = `rotate(${tgt}deg)`;
+            wrapper.style.transform = `rotate(${tgt}deg)`;
 
             if (cfg._overlay) {
                 cfg._overlay.update(`deg:${tgt.toFixed(1)}`);
@@ -424,7 +423,7 @@ export function handleRotateSequence(el, cfg) {
         }
 
         // SMOOTH MODE — drift-compensated
-        let current = getCurrentAngle(el, driver.a);
+        let current = getCurrentAngle(wrapper, driver.a);
         current = ((current % 360) + 360) % 360;
         driver.a = current;
 
@@ -450,7 +449,7 @@ export function handleRotateSequence(el, cfg) {
                 let a = ((driver.a % 360) + 360) % 360;
                             const angleDeg = Number(a) || 0;
 
-                el.style.transform = `rotate(${a}deg)`;
+                wrapper.style.transform = `rotate(${a}deg)`;
 
 
                 
@@ -724,8 +723,9 @@ export function handleRotateCue(el, astArgs, options = {}) {
 
         if (Array.isArray(v.values)) {
             try {
+                const initWrapper = ensureAnimWrapper(el);
                 const angle = v.values[0];
-                el.style.transform = `rotate(${angle}deg)`;
+                initWrapper.style.transform = `rotate(${angle}deg)`;
             } catch { }
         }
 
@@ -761,8 +761,9 @@ export function handleRotateCue(el, astArgs, options = {}) {
         applyPrestateBeforeStart(el, cfg);
 
         try {
+            const initWrapper = ensureAnimWrapper(el);
             const angle = cfg.values[0];
-            el.style.transform = `rotate(${angle}deg)`;
+            initWrapper.style.transform = `rotate(${angle}deg)`;
         } catch { }
 
         const rawStart = makeRawStart(cfg, handleRotateSequence);

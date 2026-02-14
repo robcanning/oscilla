@@ -334,7 +334,8 @@ export function handleScaleSequence(el, cfg) {
         el._oscillaScaleAnim = null;
     }
 
-    applySvgPivot(el);
+    const wrapper = ensureAnimWrapper(el);
+    applySvgPivot(wrapper);
 
     const NX = Array.isArray(ax) ? ax.length : Infinity;
     const NY = Array.isArray(ay) ? ay.length : Infinity;
@@ -422,7 +423,7 @@ export function handleScaleSequence(el, cfg) {
         driver.sx = tgtX;
         driver.sy = tgtY;
 
-        el.style.transform = `scale(${tgtX}, ${tgtY})`;
+        wrapper.style.transform = `scale(${tgtX}, ${tgtY})`;
 
         if (isOscEnabled(cfg, oscMode)) {
             sendOSC({
@@ -459,7 +460,7 @@ export function handleScaleSequence(el, cfg) {
         easing: ease,
 
         update: () => {
-            el.style.transform = `scale(${driver.sx}, ${driver.sy})`;
+            wrapper.style.transform = `scale(${driver.sx}, ${driver.sy})`;
 
             if (isOscEnabled(cfg, oscMode)) {
                 sendOSC({
@@ -712,10 +713,12 @@ export function handleScaleCue(ast, el, options = {}) {
     const xArg = astArgs.find(o => ["x", "valuesX"].includes(o.key || o.type));
     const yArg = astArgs.find(o => ["y", "valuesY"].includes(o.key || o.type));
 
+    const scaleWrapper = ensureAnimWrapper(el);
+
     function applyInitialScale(cfg) {
         const sx = cfg.xValues?.[0] ?? cfg.values?.[0] ?? 1;
         const sy = cfg.yValues?.[0] ?? cfg.values?.[0] ?? sx;
-        el.style.transform = `scale(${sx}, ${sy})`;
+        scaleWrapper.style.transform = `scale(${sx}, ${sy})`;
     }
 
     function wrapStart(cfg, rawStartFn) {

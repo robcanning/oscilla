@@ -276,19 +276,21 @@ function getSVGPoint(svg, clientX, clientY) {
 // ═══════════════════════════════════════════════════════════════════
 
 function applyTranslate(el, dx, dy) {
-  // Preserve any existing non-translate transforms
-  const current = el.getAttribute("transform") || "";
+  // Read the base transform captured at init time.
+  // This is the original Inkscape transform (translate, matrix, rotate, etc.)
+  // that must be preserved — drag composes additively on top of it.
+  const base = el._dragBaseTransform || "";
 
-  // Remove any existing translate(...) from the transform string
-  const withoutTranslate = current
-    .replace(/translate\([^)]*\)\s*/g, "")
-    .trim();
+  const hasDrag = (dx !== 0 || dy !== 0);
+  const drag = hasDrag ? `translate(${dx}, ${dy})` : "";
 
-  const newTransform = withoutTranslate
-    ? `translate(${dx}, ${dy}) ${withoutTranslate}`
-    : `translate(${dx}, ${dy})`;
+  const parts = [drag, base].filter(Boolean).join(" ");
 
-  el.setAttribute("transform", newTransform);
+  if (parts) {
+    el.setAttribute("transform", parts);
+  } else {
+    el.removeAttribute("transform");
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -342,6 +344,13 @@ function attachDrag(el, cfg, persistKey) {
   if (!svg) {
     console.warn(`${TAG} No parent SVG found for`, el);
     return;
+  }
+
+  // ── Capture Inkscape's original transform before drag modifies it ──
+  // This preserves translate(), matrix(), rotate(), etc. from authoring.
+  // Must happen before any applyTranslate() call.
+  if (el._dragBaseTransform === undefined) {
+    el._dragBaseTransform = el.getAttribute("transform") || "";
   }
 
   // ── State ──────────────────────────────────────────────────
@@ -590,6 +599,8 @@ export function preProcessDrag(svgRoot) {
 export function cleanupDrag() {
   for (const [key, entry] of window._dragRegistry.entries()) {
     entry._cleanup?.();
+    // Clear base transform cache so re-init captures fresh
+    if (entry.el) delete entry.el._dragBaseTransform;
   }
   window._dragRegistry.clear();
   console.log(`${TAG} 🧹 All drag handlers removed`);
