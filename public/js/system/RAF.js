@@ -10,6 +10,7 @@ import { checkImpulseRegions } from '../cues/audio/index.js';
 import { checkSynthRegions } from '../cues/synth.js';
 import { checkSpeedForPosition } from '../cues/speed.js';
 import { updatePins } from './cuePin.js';
+import { isDedicatedView } from '../system/oscillaView.js';
 
 // ===========================
 // Animation Loop
@@ -89,48 +90,54 @@ async function animate(currentTime) {
   // Update the seek bar to reflect current position
   updateSeekBar?.();
 
-  // Process cue triggers (with skip frame support)
-  if (window._skipTriggerFrame > 0) {
-    window._skipTriggerFrame--;
-  } else {
-    await checkCueTriggers?.(window.elapsedTime);
-  }
-
   // ===========================
   // Tick Pipelines
+  // In dedicated views (?view=live, signals, etc.) skip all cue
+  // triggering and audio so the second window stays silent.
+  // The WebSocket and playhead still run for transport sync.
   // ===========================
+  if (!isDedicatedView()) {
 
-  // Region-lifetime audioImpulse watcher
-  if (typeof checkImpulseRegions === "function") {
-    checkImpulseRegions();
-  }
+    // Process cue triggers (with skip frame support)
+    if (window._skipTriggerFrame > 0) {
+      window._skipTriggerFrame--;
+    } else {
+      await checkCueTriggers?.(window.elapsedTime);
+    }
 
-  // Synth region watcher
-  if (typeof checkSynthRegions === "function") {
-    checkSynthRegions();
-  }
+    // Region-lifetime audioImpulse watcher
+    if (typeof checkImpulseRegions === "function") {
+      checkImpulseRegions();
+    }
 
-  // Speed trigger watcher
-  if (typeof checkSpeedForPosition === "function") {
-    checkSpeedForPosition();
-  }
+    // Synth region watcher
+    if (typeof checkSynthRegions === "function") {
+      checkSynthRegions();
+    }
 
-  // Pin-to-playhead tracker
-  updatePins();
+    // Speed trigger watcher
+    if (typeof checkSpeedForPosition === "function") {
+      checkSpeedForPosition();
+    }
 
-  // Check annotation playhead triggers
-  if (typeof window.checkAnnotationPlayheadTriggers === "function") {
-    window.checkAnnotationPlayheadTriggers();
-  }
+    // Pin-to-playhead tracker
+    updatePins();
 
-  // Tick non-anime custom animations
-  if (window.runningAnimations) {
-    for (const anim of window.runningAnimations.values()) {
-      if (typeof anim.tick === "function") {
-        anim.tick();
+    // Check annotation playhead triggers
+    if (typeof window.checkAnnotationPlayheadTriggers === "function") {
+      window.checkAnnotationPlayheadTriggers();
+    }
+
+    // Tick non-anime custom animations
+    if (window.runningAnimations) {
+      for (const anim of window.runningAnimations.values()) {
+        if (typeof anim.tick === "function") {
+          anim.tick();
+        }
       }
     }
-  }
+
+  } // end !isDedicatedView()
 
   // Schedule next frame
   window.animationFrameId = requestAnimationFrame(animate);

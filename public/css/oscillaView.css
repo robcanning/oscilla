@@ -1,0 +1,87 @@
+/* ============================================================================
+ * OSCILLA VIEW MODES -- oscillaView.css
+ *
+ * Overrides for dedicated single-purpose views (?view=xxx).
+ * The data-oscilla-view attribute on <body> drives all rules.
+ *
+ * Dedicated views hide score chrome (topbar, transport, splash)
+ * but panels remain normal draggable/resizable floating windows.
+ * Cue triggering and audio are suppressed in RAF.js.
+ *
+ * Light-theme base; dark mode handled by global invert.
+ * ============================================================================ */
+
+
+/* --- Shared: dedicated views get a clean empty background ---------------- */
+
+body[data-oscilla-view="live"],
+body[data-oscilla-view="signals"],
+body[data-oscilla-view="controlxy"],
+body[data-oscilla-view="transport"] {
+  margin: 0;
+  padding: 0;
+  background: #fff;   /* inverts to black via filter on <html> */
+  color: #333;        /* inverts to light text */
+}
+
+
+/* =========================================================================
+ * LIVE VIEW -- clean background, live panel opens automatically
+ * Panel stays draggable/resizable at whatever size the user wants.
+ * ========================================================================= */
+
+/* (no panel overrides -- it's a normal floating window) */
+
+
+/* =========================================================================
+ * SIGNALS VIEW -- same as live, title annotated for clarity
+ * ========================================================================= */
+
+body[data-oscilla-view="signals"] .livecode-header-title::after {
+  content: " / signals";
+}
+
+
+/* =========================================================================
+ * CONTROLXY VIEW -- score container visible for SVG foreignObject pads
+ * ========================================================================= */
+
+body[data-oscilla-view="controlxy"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+
+/* =========================================================================
+ * TRANSPORT VIEW -- conductor's view with transport + time enlarged
+ * ========================================================================= */
+
+body[data-oscilla-view="transport"] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  gap: 2rem;
+}
+
+/* Remove sticky positioning so transport sits in the flex flow */
+body[data-oscilla-view="transport"] #top-bar {
+  position: static;
+  font-size: 1.2em;
+}
+
+body[data-oscilla-view="transport"] #controls {
+  position: static;
+}
+
+/* Large time displays readable from across the room */
+body[data-oscilla-view="transport"] .transport-time {
+  font-size: 4em;
+}
+
+body[data-oscilla-view="transport"] #stopwatch {
+  font-size: 2em;
+}

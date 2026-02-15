@@ -15,7 +15,7 @@
 // - shared AudioContext
 // - uid registry
 // - safe gain ramps
-// - optional OSC overlay
+// - optional scope info text (SVG-native, in renderScope)
 //
 // Exports:
 // - handleSynthCue(ast, cueElement?, opts?)
@@ -841,30 +841,7 @@ function startSynthVoice(uid, ast, cueElement, opts) {
     /* ignore */
   }
 
-  // Optional synth preview overlay
-  let overlay = null;
-  const overlayFlag = Number(params.overlay ?? 2);
-
-  if (cueElement && overlayFlag > 0) {
-    // Check if overlay was already primed during assignCues
-    if (cueElement._synthOverlay) {
-      overlay = cueElement._synthOverlay;
-      // console.log(`[synth] 🔄 Reusing primed overlay for ${uid}`);
-    } else {
-      overlay = createSynthOverlay({
-        anchorEl: cueElement,
-        voice: null, // temporarily, fixed below
-        mode: overlayFlag >= 2 ? "full" : "brief"
-      });
-    }
-  }
-
-  if (overlay?.el) {
-    overlay.el.classList.add("is-active");
-    setTimeout(() => {
-      overlay.el?.classList.remove("is-active");
-    }, 250);
-  }
+  // (Synth display is handled by the SVG scope in renderScope/primeSynthScope)
 
 
   const voice = {
@@ -882,7 +859,6 @@ function startSynthVoice(uid, ast, cueElement, opts) {
     _stopTimeout: null,
     _stopped: false,
     relOverride: params.rel ?? params.release ?? null,
-    _overlay: null,  // set below if needed
     _scopeHandle: null, // oscilloscope display handle
     
     // ========== CONTROL PLANE: Store unbinders ==========
@@ -904,13 +880,6 @@ function startSynthVoice(uid, ast, cueElement, opts) {
   voice._wasInsideOnce = false;
 
 
-  if (overlay) {
-    overlay.voice = voice;
-    voice._overlay = overlay;
-
-    overlay.update();
-    overlay.position();
-  }
   activeSynthVoices.set(uid, voice);
 
   // ---------------------------------------------------------
@@ -936,17 +905,16 @@ function startSynthVoice(uid, ast, cueElement, opts) {
       // Normal path: render scope into cue element
       const svg = cueElement.ownerSVGElement;
       if (svg) {
-        const infoParts = [`synth`, wave];
-        if (!source.isChord && source.kind === "osc") {
-          const hz = source.node?.frequency?.value;
-          if (hz) infoParts.push(`${Math.round(hz)}Hz`);
-        }
-        if (Number(amp) !== 0.08) infoParts.push(`amp:${amp.toFixed(3)}`);
-        if (params.filter) infoParts.push(`filter:${params.filter.type || "lp"}`);
+        // Detailed info label for the SVG scope text
+        const scopeInfo = formatScopeInfo(params, wave, {
+          freqHz: (!source.isChord && source.kind === "osc")
+            ? source.node?.frequency?.value : null,
+          amp: amp
+        });
 
         const scopeHandle = renderScope(svg, waveformParam, scopeUid, {
           element: cueElement,
-          info: infoParts.join(" | "),
+          info: scopeInfo,
           wave: wave
         });
 
@@ -965,10 +933,12 @@ function startSynthVoice(uid, ast, cueElement, opts) {
       const existingScope = getWaveform(scopeUid);
       if (existingScope?._scopeLine) {
         voice._scopeHandle = existingScope;
-        existingScope._scopeWave = wave; // update static wave type
+        existingScope._scopeWave = wave;
         startScope(existingScope, graph.analyser);
 
+        // Update info text with detailed params
         if (existingScope._infoText) {
+          existingScope._infoText.textContent = formatScopeInfo(params, wave, { amp });
           existingScope._infoText.setAttribute("opacity", "0.55");
         }
         console.log(`[synth] Reconnected existing scope for ${uid}`);
@@ -1011,12 +981,14 @@ function startSynthVoice(uid, ast, cueElement, opts) {
     });
   }
 
-  // refresh synth overlay if present
-  if (voice._overlay) {
+  // Refresh scope info text now that generators are installed
+  if (voice._scopeHandle?._infoText) {
     try {
-      voice._overlay.update();
-      voice._overlay.position();
-    } catch { }
+      voice._scopeHandle._infoText.textContent = formatScopeInfo(
+        voice.params, voice.params.wave ?? "sine",
+        { freqHz: voice.source?.node?.frequency?.value, amp: voice.amp }
+      );
+    } catch { /* ignore */ }
   }
 
 
@@ -1270,10 +1242,11 @@ function applyStepTargets(voice, dur) {
   const ctx = sharedAudioCtx;
   const t = nowSec(ctx);
 
-  if (voice._overlay?.el) {
-    voice._overlay.el.classList.add("is-active");
+  // Brief scope info flash on step change
+  if (voice._scopeHandle?._infoText) {
+    voice._scopeHandle._infoText.setAttribute("opacity", "0.8");
     setTimeout(() => {
-      voice._overlay?.el?.classList.remove("is-active");
+      voice._scopeHandle?._infoText?.setAttribute("opacity", "0.55");
     }, 120);
   }
 
@@ -1343,15 +1316,13 @@ function applyStepTargets(voice, dur) {
   }
 
 
-  // Overlay update - keep the formatted display, just add live values
-  if (voice._overlay) {
-    // Don't overwrite the nice format - the primed overlay already shows params
-    // Just add the is-active class to show it's playing
-    if (voice._overlay.el && !voice._overlay.el.classList.contains("is-active")) {
-      voice._overlay.el.classList.add("is-active");
-    }
+  // Update scope info text with current live values
+  if (voice._scopeHandle?._infoText) {
     try {
-      voice._overlay.position();
+      voice._scopeHandle._infoText.textContent = formatScopeInfo(
+        voice.params, voice.params.wave ?? "sine",
+        { freqHz: voice.source?.node?.frequency?.value, amp: voice.amp }
+      );
     } catch { /* ignore */ }
   }
 
@@ -1374,14 +1345,6 @@ function cleanupVoice(uid, voice) {
     voice._unbinders = [];
   }
   // ==============================================================
-
-  // Don't destroy overlay - just remove active state
-  if (voice._overlay?.el) {
-    voice._overlay.el.classList.remove("is-active");
-  }
-
-  // Don't null out the overlay - it stays for the next trigger
-  // voice._overlay = null;
 
   // Disconnect chord oscillators if present
   if (voice.source?.isChord && voice.source?.oscillators) {
@@ -1419,115 +1382,44 @@ function cleanupVoice(uid, voice) {
 
 
 // ============================================================
-// 🎛 Synth Overlay 
+// Scope info text formatter
+//
+// Builds a detailed pipe-delimited label string for the SVG
+// scope _infoText element. Used by both primeSynthScope (at
+// assign time with static params) and live voice updates
+// (with real-time freq/amp values).
+//
+// @param {object} params   - synth params from AST or voice.params
+// @param {string} wave     - waveform type ("sine", "square", etc.)
+// @param {object} live     - optional live values { freqHz, amp }
+// @returns {string}        - pipe-delimited info label
 // ============================================================
 
-function createSynthOverlay({
-  anchorEl,
-  voice,
-  mode = "brief",
-  track = true
-} = {}) {
-
-  if (!anchorEl) {
-    return {
-      el: null,
-      voice: null,
-      update() { },
-      position() { },
-      destroy() { }
-    };
-  }
-
-  const box = document.createElement("div");
-  box.className = "oscilla-synth-overlay";
-  box.style.position = "fixed";
-  box.style.pointerEvents = "none";
-  box.style.zIndex = 99990;
-
-  const r = anchorEl.getBoundingClientRect();
-  box.style.maxWidth = `${Math.max(150, r.width - 8)}px`;
-  box.style.whiteSpace = "normal";
-  box.style.wordWrap = "break-word";
-
-
-  box.textContent = "synth..."; // Initial placeholder text
-  document.body.appendChild(box);
-
-  function position() {
-    if (!anchorEl || !box.isConnected) return;
-    const r = anchorEl.getBoundingClientRect();
-    // Position overlaying the object, starting a few pixels in from left edge
-    // and a few pixels down from top
-    box.style.left = `${r.left + 4}px`;
-    box.style.top = `${r.top + 4}px`;
-  }
-
-  let tracking = false;
-  function loop() {
-    if (!tracking) return;
-    try { position(); } catch { }
-    requestAnimationFrame(loop);
-  }
-
-  if (track) {
-    tracking = true;
-    requestAnimationFrame(loop);
-  }
-
-  // Position immediately
-  position();
-
-  // Create the overlay object first so update() can reference it via `self`
-  const self = {
-    el: box,
-    voice: voice, // Will be updated externally after creation
-    mode: mode,
-    update(text) {
-      // If text provided directly, use it
-      if (text !== undefined) {
-        box.textContent = text;
-        return;
-      }
-      // Otherwise use self.voice to format
-      if (!self.voice) {
-        box.textContent = "synth (loading...)";
-        return;
-      }
-      box.textContent = formatSynthOverlay(self.voice, self.mode);
-    },
-    position,
-    destroy() {
-      tracking = false;
-      try { box.remove(); } catch { }
-    }
-  };
-
-  return self;
-}
-
-
-function formatSynthOverlay(voice, mode = "brief") {
-  const p = voice.params || {};
+function formatScopeInfo(params, wave, live = {}) {
+  const p = params || {};
   const parts = [];
 
-  // waveform (always show semantic default)
-  const wave = p.wave ?? "sine";
-  parts.push(String(wave));
+  // Waveform type (always show)
+  parts.push(String(wave || p.wave || "sine"));
 
-  // frequency / pitch
-  if (p.freq != null) {
+  // Frequency / pitch
+  if (live.freqHz != null) {
+    // Live resolved frequency from oscillator node
+    parts.push(`${Math.round(live.freqHz)}Hz`);
+  } else if (p.freq != null) {
+    // Static from params
     if (typeof p.freq === "object" && p.freq.type === "pattern") {
-      parts.push(`${p.freq.name}[${p.freq.values.join(",")}]`);
+      parts.push(`${p.freq.name}[${(p.freq.values || []).join(",")}]`);
     } else if (Array.isArray(p.freq)) {
       parts.push(`chord[${p.freq.join(",")}]`);
     } else {
-      parts.push(`${p.freq}Hz`);
+      const hz = pitchToHz(p.freq);
+      parts.push(`${Math.round(hz)}Hz`);
     }
   }
 
-  // filter (DSL-faithful, full mode only)
-  if (mode === "full" && p.filter && typeof p.filter === "object") {
+  // Filter (type, cutoff, Q)
+  if (p.filter && typeof p.filter === "object") {
     const type = p.filter.type || p.filter.mode || "lp";
     const items = [type];
 
@@ -1536,51 +1428,31 @@ function formatSynthOverlay(voice, mode = "brief") {
       if (typeof cf === "object" && cf.type === "pattern") {
         items.push(`${cf.name}`);
       } else {
-        items.push(`F:${stripLeadingZero(cf)}`);
+        items.push(`F:${stripZ(cf)}`);
       }
     }
-
     if (p.filter.q != null) {
-      items.push(`Q:${stripLeadingZero(p.filter.q)}`);
+      items.push(`Q:${stripZ(p.filter.q)}`);
     }
-
     parts.push(items.join(" "));
   }
 
-  function stripLeadingZero(v) {
-    if (typeof v !== "number") return String(v);
-    const s = String(v);
-    return s.startsWith("0.") ? s.slice(1) : s;
-  }
-
-  // envelope (compact, DSL-faithful)
+  // Envelope (compact A/D/S/R)
   if (p.env && typeof p.env === "object") {
     const labels = [];
-
-    if (p.env.a != null || p.env.attack != null) {
-      const v = p.env.a ?? p.env.attack;
-      labels.push(`A:${stripLeadingZero(v)}`);
-    }
-    if (p.env.d != null || p.env.decay != null) {
-      const v = p.env.d ?? p.env.decay;
-      labels.push(`D:${stripLeadingZero(v)}`);
-    }
-    if (p.env.s != null || p.env.sustain != null) {
-      const v = p.env.s ?? p.env.sustain;
-      labels.push(`S:${stripLeadingZero(v)}`);
-    }
-    if (p.env.r != null || p.env.release != null) {
-      const v = p.env.r ?? p.env.release;
-      labels.push(`R:${stripLeadingZero(v)}`);
-    }
-
-    if (labels.length > 0) {
-      parts.push(`env ${labels.join(" ")}`);
-    }
+    if (p.env.a != null || p.env.attack != null)
+      labels.push(`A:${stripZ(p.env.a ?? p.env.attack)}`);
+    if (p.env.d != null || p.env.decay != null)
+      labels.push(`D:${stripZ(p.env.d ?? p.env.decay)}`);
+    if (p.env.s != null || p.env.sustain != null)
+      labels.push(`S:${stripZ(p.env.s ?? p.env.sustain)}`);
+    if (p.env.r != null || p.env.release != null)
+      labels.push(`R:${stripZ(p.env.r ?? p.env.release)}`);
+    if (labels.length > 0) parts.push(`env ${labels.join(" ")}`);
   }
 
-  // duration / stepping (full mode)
-  if (mode === "full" && p.dur != null) {
+  // Duration
+  if (p.dur != null) {
     if (typeof p.dur === "object" && p.dur.type === "pattern") {
       parts.push(`dur ${p.dur.name}`);
     } else {
@@ -1588,23 +1460,34 @@ function formatSynthOverlay(voice, mode = "brief") {
     }
   }
 
-  // amp (always last)
-  if (p.amp != null) {
-    parts.push(`amp ${Number(p.amp).toFixed(3)}`);
+  // Amplitude
+  const ampVal = live.amp ?? p.amp;
+  if (ampVal != null) {
+    parts.push(`amp ${Number(ampVal).toFixed(3)}`);
   }
 
   return parts.join(" | ");
 }
 
+/** Strip leading zero from decimal numbers for compact display */
+function stripZ(v) {
+  if (typeof v !== "number") return String(v);
+  const s = String(v);
+  return s.startsWith("0.") ? s.slice(1) : s;
+}
+
 
 // ============================================================
-// 🎯 Prime synth overlay (called during assignCues)
-// Creates overlay before synth plays, showing synth params
+// Prime synth overlay (called during assignCues)
+//
+// Retained as an export because cueDispatcher imports it.
+// Delegates entirely to primeSynthScope which renders the
+// SVG-native scope display with detailed info text.
 // ============================================================
 export function primeSynthOverlay(ast, cueElement) {
   if (!ast || !cueElement) return;
 
-  // Extract params from AST
+  // Extract params from AST for the scope
   const params = {};
   for (const arg of (ast.args || [])) {
     const key = arg.key || arg.type;
@@ -1613,38 +1496,11 @@ export function primeSynthOverlay(ast, cueElement) {
     }
   }
 
-  // Check if overlay is requested
+  // Check if overlay/scope is requested (overlay param still controls visibility)
   const overlayFlag = Number(params.overlay ?? 2);
   if (overlayFlag <= 0) return;
 
-  // Check if already primed
-  if (cueElement._synthOverlayPrimed) return;
-  cueElement._synthOverlayPrimed = true;
-
-  const mode = overlayFlag >= 2 ? "full" : "brief";
-
-  // Create a temporary "voice-like" object for formatting
-  const pseudoVoice = {
-    params: params,
-    uid: params.uid || cueElement.id || "synth"
-  };
-
-  const overlay = createSynthOverlay({
-    anchorEl: cueElement,
-    voice: pseudoVoice,
-    mode: mode,
-    track: true
-  });
-
-  if (overlay?.el) {
-    overlay.update();
-    overlay.position();
-
-    // Store on element for later reference
-    cueElement._synthOverlay = overlay;
-  }
-
-  // Also prime scope display
+  // Prime the SVG scope display (handles its own double-prime guard)
   primeSynthScope(ast, cueElement, params);
 }
 
@@ -1682,24 +1538,12 @@ export function primeSynthScope(ast, cueElement, params) {
   const svg = cueElement.ownerSVGElement;
   if (!svg) return;
 
-  // Build info label
-  const infoParts = [`synth`, wave];
-  if (params.freq != null) {
-    if (typeof params.freq === "object" && params.freq.type === "pattern") {
-      infoParts.push(`${params.freq.name}[...]`);
-    } else if (Array.isArray(params.freq)) {
-      infoParts.push(`chord[${params.freq.length}]`);
-    } else {
-      const hz = pitchToHz(params.freq);
-      infoParts.push(`${Math.round(hz)}Hz`);
-    }
-  }
-  if (params.amp != null) infoParts.push(`amp:${Number(params.amp).toFixed(3)}`);
-  if (params.filter) infoParts.push(`filter:${params.filter.type || params.filter.mode || "lp"}`);
+  // Detailed info label using shared formatter
+  const scopeInfo = formatScopeInfo(params, wave);
 
   const scopeHandle = renderScope(svg, waveformParam, scopeUid, {
     element: cueElement,
-    info: infoParts.join(" | "),
+    info: scopeInfo,
     wave: wave
   });
 

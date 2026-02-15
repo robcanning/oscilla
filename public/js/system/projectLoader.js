@@ -769,6 +769,15 @@ function initProjectFromURL() {
   const projectFromURL = urlParams.get("project");
   const pageFromURL = urlParams.get("page");
 
+  // In dedicated views (?view=live, signals, etc.) skip project
+  // loading entirely -- no SVG, no cues, no audio.  The view
+  // window only needs WebSocket for control data.
+  const viewParam = (urlParams.get("view") || "").toLowerCase();
+  if (viewParam && viewParam !== "score") {
+    console.log(`[URL] Dedicated view "${viewParam}" -- skipping project load`);
+    return;
+  }
+
   console.log(`[URL] Init: project="${projectFromURL}", page="${pageFromURL}"`);
 
   if (projectFromURL) {

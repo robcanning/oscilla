@@ -230,9 +230,17 @@ function handleSocketMessage(event) {
       // ===========================
       case "countdown_cue_complete":
         if (data.onComplete) {
-          console.log(`[Countdown] Cue "${data.cueName}" completed → dispatching: ${data.onComplete}`);
+          console.log(`[Countdown] Cue "${data.cueName}" completed -> dispatching: ${data.onComplete}`);
           window.handleCueTrigger?.(data.onComplete, false, true);
         }
+        break;
+
+      // ===========================
+      // LIVE CONSOLE REMOTE EXEC
+      // Receives DSL commands from a dedicated ?view= window
+      // ===========================
+      case "livecode_exec":
+        handleLivecodeExec(data);
         break;
     }
   } catch (error) {
@@ -378,6 +386,36 @@ function handleJumpMessage(data) {
     window.elapsedTime = data.elapsedTime ?? 0;
     scrollToPlayheadVisual?.();
   }
+}
+
+// ===========================
+// Live Console Remote Execution
+// ===========================
+
+/**
+ * Handle livecode_exec message from a dedicated view window.
+ * Resolves the target element by ID and dispatches through
+ * the standard cue pipeline.
+ * @param {Object} data - { cueExpr, targetId }
+ */
+function handleLivecodeExec(data) {
+  const { cueExpr, targetId } = data;
+  if (!cueExpr) return;
+
+  let targetEl = null;
+  if (targetId) {
+    // Try animation registry first, then DOM
+    const reg = window.oscillaAnimRegistry?.[targetId];
+    targetEl = reg?.el || document.getElementById(targetId);
+
+    if (!targetEl) {
+      console.warn(`[livecode_exec] Target not found: ${targetId}`);
+      return;
+    }
+  }
+
+  console.log(`[livecode_exec] ${cueExpr}` + (targetId ? ` -> ${targetId}` : ""));
+  handleCueTrigger(cueExpr, false, true, targetEl);
 }
 
 // ===========================

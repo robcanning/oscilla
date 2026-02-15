@@ -76,7 +76,8 @@ import {
   openRehearsalPopup, closeRehearsalPopup, initRehearsalButton
 } from './system/rehearsalUI.js';
 
-import { initLiveConsole } from "./interaction/oscillaLive.js";
+import { initLiveConsole, showLiveConsole } from "./interaction/oscillaLive.js";
+import { initView, activateView, isScoreView } from "./system/oscillaView.js";
 import { initPlayheadOffset } from './system/playheadOffset.js';
 
 
@@ -166,8 +167,52 @@ function handleRepeatStateMapReceived(repeatStateMap) {
 // ===========================
 document.addEventListener('DOMContentLoaded', () => {
   // ===========================
-  // Initialize Controls & Handlers
+  // View Router (must be first -- hides elements before paint)
   // ===========================
+  initView();
+
+  // ===========================
+  // Dedicated view: lightweight boot
+  //
+  // Only initialise WebSocket (for control data) and the
+  // live console panel.  No project loading, no score, no
+  // animation loop, no audio, no transport UI.
+  // ===========================
+  if (!isScoreView()) {
+    // Dedicated views: invert filter for dark appearance
+    // (light-themed panel CSS inverts to dark, white bg inverts to black)
+    document.documentElement.style.filter = "invert(1) hue-rotate(180deg)";
+    document.body.style.background = "#fff";
+
+    // Socket for control data sync -- no animation callbacks
+    initSocketCallbacks({
+      startAnimation:  () => {},   // no-op: no RAF loop in this window
+      stopAnimation:   () => {},
+      updateClientList: updateClientList,
+      onRepeatStateUpdate: handleRepeatStateUpdate,
+      onRepeatStateMapReceived: handleRepeatStateMapReceived
+    });
+
+    initClientUI();
+    connectWebSocket();
+
+    // Live console (available in live + signals views)
+    initLiveConsole();
+
+    // Open the appropriate panel for this view
+    activateView({
+      openLiveConsole: showLiveConsole,
+    });
+
+    console.log("[app] Dedicated view boot complete (no score pipeline)");
+    return;
+  }
+
+  // ===========================
+  // Score view: full boot
+  // ===========================
+
+  // Initialize Controls & Handlers
   initializeSpeedControls();
   initSeekBarListeners();
   pauseDismissClickHandler();
@@ -178,10 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeControlsPin();
   initializeTopbarPin();
 
-  // ===========================
-  // Initialize System Modules
-  // ===========================
-  
   // Initialize socket with callbacks
   initSocketCallbacks({
     startAnimation: startAnimation,
@@ -210,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize live coding console
   initLiveConsole();
-  
 
   // Initialize project menu
   populateProjectMenu();

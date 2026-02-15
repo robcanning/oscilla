@@ -1940,6 +1940,20 @@ wss.on('connection', (ws, req) => {
 
 
       /**
+      * Live console remote execution from a dedicated ?view= window.
+      * Rebroadcasts to all other clients (score windows) for execution.
+      */
+      case "livecode_exec":
+        console.log(`[SERVER] livecode_exec: ${data.cueExpr}` + (data.targetId ? ` -> ${data.targetId}` : ""));
+        broadcastToOthers(ws, {
+          type: "livecode_exec",
+          cueExpr: data.cueExpr,
+          targetId: data.targetId || null
+        });
+        break;
+
+
+      /**
       * âœ… Handles cue-based pauses, updating the server state and notifying clients.
       */
       case "cue_pause":

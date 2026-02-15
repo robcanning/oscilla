@@ -1,12 +1,17 @@
 /* ============================================================================
- * OSCILLA LIVE CONSOLE — livecode.css
+ * OSCILLA LIVE CONSOLE -- livecode.css
  * Styles for the live coding console panel
+ *
+ * Light-theme base, uses shared tokens from oscillaDialog.css.
+ * Dark mode handled by global invert filter.
  * ============================================================================ */
 
-/* --- Topbar toggle button ------------------------------------------------ */
+/* --- Topbar toggle button ------------------------------------------------
+ * Lives inside the topbar (dark context), so keeps its own colours.
+ * --------------------------------------------------------------------- */
 
 #livecode-toggle {
-  font-family: ui-monospace, 'Iosevka Term Web', Consolas, monospace;
+  font-family: var(--osc-font-mono);
   font-size: 11px;
   letter-spacing: 0.5px;
   padding: 2px 7px;
@@ -14,7 +19,7 @@
   background: transparent;
   color: currentColor;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 3px;
+  border-radius: var(--osc-radius-sm, 4px);
   line-height: 1.4;
   opacity: 0.7;
   transition: opacity 0.15s, border-color 0.15s, background 0.15s;
@@ -36,22 +41,35 @@
 /* --- Main panel ---------------------------------------------------------- */
 
 #livecode-panel {
+  /* Local accent for live-coding identity */
+  --lc-accent:       #00838f;           /* teal 700 */
+  --lc-accent-light: #e0f7fa;           /* teal 50  */
+  --lc-accent-muted: #80cbc4;           /* teal 200 */
+  --lc-ok:           var(--osc-success, #2e7d32);
+  --lc-err:          var(--osc-danger,  #c62828);
+  --lc-info:         var(--osc-accent,  #1565c0);
+
   position: fixed;
-  top: 0;
-  right: 0;
-  width: 340px;
-  height: 100vh;
-  background: rgba(10, 10, 14, 0.94);
-  backdrop-filter: blur(12px);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  color: #ccc;
-  font-family: ui-monospace, 'Iosevka Term Web', SFMono-Regular, Consolas, monospace;
+  top: 40px;
+  right: 20px;
+  width: 380px;
+  height: 70vh;
+  min-width: 260px;
+  min-height: 200px;
+
+  background: var(--osc-surface-elevated, #ffffff);
+  border: 1px solid var(--osc-border, #cccccc);
+  border-radius: var(--osc-radius, 8px);
+  color: var(--osc-text, #222);
+  font-family: var(--osc-font-mono);
   font-size: 12px;
-  z-index: 38000;
+
+  z-index: var(--osc-z-panel, 10100);
+
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+  overflow: visible;
+  box-shadow: var(--osc-shadow-lg, 0 8px 32px rgba(0, 0, 0, 0.2));
 }
 
 
@@ -62,9 +80,16 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--osc-surface-header, #eee);
+  border-bottom: 1px solid var(--osc-border-light, #e0e0e0);
+  border-radius: var(--osc-radius, 8px) var(--osc-radius, 8px) 0 0;
   flex-shrink: 0;
+  cursor: grab;
+  user-select: none;
+}
+
+.livecode-header:active {
+  cursor: grabbing;
 }
 
 .livecode-header-title {
@@ -72,7 +97,7 @@
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: #0ff;
+  color: var(--lc-accent);
   flex-shrink: 0;
 }
 
@@ -80,7 +105,7 @@
   margin-left: auto;
   background: none;
   border: none;
-  color: #888;
+  color: var(--osc-text-muted, #666);
   cursor: pointer;
   font-size: 16px;
   padding: 0 4px;
@@ -88,7 +113,7 @@
 }
 
 .livecode-close:hover {
-  color: #fff;
+  color: var(--osc-text, #222);
 }
 
 
@@ -99,13 +124,13 @@
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--osc-border-light, #e0e0e0);
   flex-shrink: 0;
 }
 
 .livecode-target-label {
   font-size: 10px;
-  color: #777;
+  color: var(--osc-text-muted, #666);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   flex-shrink: 0;
@@ -113,10 +138,10 @@
 
 .livecode-target-input {
   flex: 1;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--osc-surface-input, #fff);
+  border: 1px solid var(--osc-border-input, #bbb);
   border-radius: 3px;
-  color: #eee;
+  color: var(--osc-text, #222);
   font-family: inherit;
   font-size: 11px;
   padding: 3px 6px;
@@ -124,18 +149,18 @@
 }
 
 .livecode-target-input:focus {
-  border-color: rgba(0, 255, 255, 0.4);
+  border-color: var(--lc-accent);
 }
 
 .livecode-target-input::placeholder {
-  color: #555;
+  color: var(--osc-text-placeholder, #999);
 }
 
 .livecode-pick-btn {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--osc-surface-section, #f2f2f2);
+  border: 1px solid var(--osc-border, #ccc);
   border-radius: 3px;
-  color: #aaa;
+  color: var(--osc-text-muted, #666);
   cursor: pointer;
   font-family: inherit;
   font-size: 10px;
@@ -144,14 +169,14 @@
 }
 
 .livecode-pick-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--osc-surface-hover, #e8e8e8);
+  color: var(--osc-text, #222);
 }
 
 .livecode-pick-btn.picking {
-  color: #0f0;
-  border-color: #0f0;
-  background: rgba(0, 255, 0, 0.08);
+  color: var(--osc-success, #2e7d32);
+  border-color: var(--osc-success, #2e7d32);
+  background: var(--osc-success-bg, #e8f5e9);
 }
 
 
@@ -160,7 +185,7 @@
 .livecode-target-info {
   padding: 0 10px 4px;
   font-size: 10px;
-  color: #666;
+  color: var(--osc-text-muted, #666);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -169,7 +194,7 @@
 }
 
 .livecode-target-info span {
-  color: #999;
+  color: var(--osc-text, #222);
 }
 
 
@@ -178,15 +203,17 @@
 .livecode-editor-wrap {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex: 1 1 0;
+  min-height: 40px;
+  border-bottom: none;
+  overflow: hidden;
 }
 
 .livecode-editor {
   flex: 1;
-  background: rgba(0, 0, 0, 0.3);
-  color: #e8e8e8;
+  min-height: 0;
+  background: var(--osc-surface-input, #fff);
+  color: var(--osc-text, #222);
   border: none;
   padding: 8px 10px;
   font-family: inherit;
@@ -200,22 +227,22 @@
 }
 
 .livecode-editor::placeholder {
-  color: #444;
+  color: var(--osc-text-placeholder, #999);
 }
 
 .livecode-actions {
   display: flex;
   gap: 6px;
   padding: 5px 10px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--osc-surface-section, #f2f2f2);
   flex-shrink: 0;
 }
 
 .livecode-run-btn {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--osc-surface-elevated, #fff);
+  border: 1px solid var(--osc-border, #ccc);
   border-radius: 3px;
-  color: #aaa;
+  color: var(--osc-text-muted, #666);
   cursor: pointer;
   font-family: inherit;
   font-size: 10px;
@@ -224,15 +251,15 @@
 }
 
 .livecode-run-btn:hover {
-  background: rgba(0, 255, 255, 0.1);
-  color: #0ff;
-  border-color: rgba(0, 255, 255, 0.3);
+  background: var(--lc-accent-light);
+  color: var(--lc-accent);
+  border-color: var(--lc-accent-muted);
 }
 
 .livecode-run-btn kbd {
   font-family: inherit;
   font-size: 9px;
-  color: #666;
+  color: var(--osc-text-placeholder, #999);
   margin-left: 4px;
 }
 
@@ -242,9 +269,9 @@
 .livecode-output-wrap {
   display: flex;
   flex-direction: column;
-  max-height: 160px;
-  flex-shrink: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex: 0 0 140px;
+  min-height: 40px;
+  overflow: hidden;
 }
 
 .livecode-output-header {
@@ -252,10 +279,10 @@
   align-items: center;
   padding: 4px 10px;
   font-size: 10px;
-  color: #666;
+  color: var(--osc-text-muted, #666);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--osc-surface-section, #f2f2f2);
   flex-shrink: 0;
 }
 
@@ -263,7 +290,7 @@
   margin-left: auto;
   background: none;
   border: none;
-  color: #555;
+  color: var(--osc-text-placeholder, #999);
   cursor: pointer;
   font-size: 10px;
   font-family: inherit;
@@ -271,7 +298,7 @@
 }
 
 .livecode-output-clear:hover {
-  color: #aaa;
+  color: var(--osc-text, #222);
 }
 
 .livecode-output {
@@ -279,6 +306,8 @@
   padding: 4px 10px;
   font-size: 11px;
   line-height: 1.5;
+  flex: 1;
+  min-height: 0;
 }
 
 .livecode-output-line {
@@ -288,15 +317,15 @@
 }
 
 .livecode-output-line.ok {
-  color: #6c6;
+  color: var(--lc-ok);
 }
 
 .livecode-output-line.err {
-  color: #f66;
+  color: var(--lc-err);
 }
 
 .livecode-output-line.info {
-  color: #69c;
+  color: var(--lc-info);
 }
 
 
@@ -305,8 +334,8 @@
 .livecode-signals-wrap {
   display: flex;
   flex-direction: column;
-  flex: 0 1 auto;
-  min-height: 0;
+  flex: 0 0 140px;
+  min-height: 40px;
   overflow: hidden;
 }
 
@@ -316,26 +345,26 @@
   gap: 6px;
   padding: 4px 10px;
   font-size: 10px;
-  color: #666;
+  color: var(--osc-text-muted, #666);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--osc-surface-section, #f2f2f2);
+  border-bottom: 1px solid var(--osc-border-light, #e0e0e0);
   cursor: pointer;
   user-select: none;
   flex-shrink: 0;
 }
 
 .livecode-signals-header:hover {
-  color: #999;
+  color: var(--osc-text, #222);
 }
 
 .livecode-signals-filter {
   flex: 1;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--osc-surface-input, #fff);
+  border: 1px solid var(--osc-border-input, #bbb);
   border-radius: 2px;
-  color: #ccc;
+  color: var(--osc-text, #222);
   font-family: inherit;
   font-size: 10px;
   padding: 1px 5px;
@@ -343,7 +372,7 @@
 }
 
 .livecode-signals-filter::placeholder {
-  color: #444;
+  color: var(--osc-text-placeholder, #999);
 }
 
 .livecode-signals {
@@ -359,29 +388,94 @@
   display: flex;
   gap: 6px;
   padding: 1px 0;
-  color: #888;
+  color: var(--osc-text-muted, #666);
 }
 
 .livecode-signal-path {
-  color: #9cf;
+  color: var(--lc-info);
   flex-shrink: 0;
 }
 
 .livecode-signal-val {
-  color: #cb8;
+  color: var(--osc-warning, #e65100);
   text-align: right;
   margin-left: auto;
 }
 
 
+/* --- Section resize bars ------------------------------------------------- */
+
+.livecode-resize-bar {
+  flex-shrink: 0;
+  height: 5px;
+  background: var(--osc-border-light, #e0e0e0);
+  cursor: row-resize;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.livecode-resize-bar:hover,
+.livecode-resize-bar.active {
+  background: var(--lc-accent-muted, #80cbc4);
+}
+
+/* Wider invisible hit area */
+.livecode-resize-bar::before {
+  content: "";
+  position: absolute;
+  inset: -3px 0;
+}
+
+
+/* --- Panel edge resize handles ------------------------------------------- */
+
+.livecode-edge {
+  position: absolute;
+  z-index: 2;
+}
+
+/* Side edges: 6px wide/tall invisible hit zones */
+.livecode-edge-n  { top: -3px;    left: 8px;    right: 8px;   height: 6px; }
+.livecode-edge-s  { bottom: -3px; left: 8px;    right: 8px;   height: 6px; }
+.livecode-edge-w  { left: -3px;   top: 8px;     bottom: 8px;  width: 6px;  }
+.livecode-edge-e  { right: -3px;  top: 8px;     bottom: 8px;  width: 6px;  }
+
+/* Corner handles: 12x12 squares at each corner */
+.livecode-edge-nw { top: -3px;    left: -3px;   width: 12px; height: 12px; }
+.livecode-edge-ne { top: -3px;    right: -3px;  width: 12px; height: 12px; }
+.livecode-edge-sw { bottom: -3px; left: -3px;   width: 12px; height: 12px; }
+.livecode-edge-se { bottom: -3px; right: -3px;  width: 12px; height: 12px; }
+
+
 /* --- Element highlight during pick mode ---------------------------------- */
 
 .livecode-highlight {
-  outline: 2px solid rgba(0, 255, 0, 0.7) !important;
+  outline: 2px solid var(--osc-success, #2e7d32) !important;
   outline-offset: 2px;
 }
 
 .livecode-selected {
-  outline: 2px solid rgba(0, 255, 255, 0.6) !important;
+  outline: 2px solid var(--lc-accent) !important;
   outline-offset: 2px;
+}
+
+/* --- Cue browser entries (Ctrl+J) -------------------------------- */
+
+.livecode-cue-entry {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-left: 2px solid transparent;
+  font-size: 0.82em;
+  opacity: 0.7;
+}
+
+.livecode-cue-entry:hover {
+  opacity: 1;
+  background: var(--lc-surface-alt, #e8e8e8);
+}
+
+.livecode-cue-entry.browsing {
+  opacity: 1;
+  border-left-color: var(--lc-accent, #07c);
+  background: var(--lc-surface-alt, #e8e8e8);
 }
