@@ -50,7 +50,12 @@ export function initO2PDragHandler(hitRecord, pathEl, cfg, updatePositionCallbac
         hitRecord
     };
 
-    // Convert screen coordinates to SVG coordinates
+    // Convert screen coordinates to the path's LOCAL coordinate space.
+    // getPointAtLength() returns points in the path's local space,
+    // so pointer coords must be converted to the same space.
+    // Using pathEl.getScreenCTM() (not svg.getScreenCTM()) accounts for
+    // any ancestor transforms (scale, translate, matrix, rotate) on
+    // parent groups like mixer1's matrix(1.77,0,0,1.77,521,-894).
     function screenToSVG(screenX, screenY) {
         const svg = pathEl.ownerSVGElement;
         if (!svg) return { x: screenX, y: screenY };
@@ -59,7 +64,7 @@ export function initO2PDragHandler(hitRecord, pathEl, cfg, updatePositionCallbac
         pt.x = screenX;
         pt.y = screenY;
 
-        const ctm = svg.getScreenCTM();
+        const ctm = pathEl.getScreenCTM();
         if (!ctm) return { x: screenX, y: screenY };
 
         const inverse = ctm.inverse();
@@ -214,6 +219,259 @@ export function destroyO2PDragHandler(uid) {
         ctx.active = false;
         window._oscillaDragSessions.delete(uid);
     }
+}
+
+
+// ============================================================
+// ROTATION RING: auto-generated HTML/SVG rotation indicator
+// ============================================================
+// Creates a ring overlay around the fader's hit label with a
+// draggable indicator dot. Returns { dot, hit, radius } matching
+// the shape expected by updateRotationIndicator() in o2p.js.
+//
+// Architecture:
+//   - HTML div container (position:fixed, follows fader via updateHitCircle)
+//   - Inline SVG inside container: ring outline + dot circle
+//   - Separate transparent HTML div as hit area for drag events
+//   - dot.cx/cy are set by updateRotationIndicator() in o2p.js
+// ============================================================
+
+export function createRotationRing(hitRecord, hmode, rotrange) {
+    if (!hitRecord || !hitRecord.groupEl) return null;
+
+    // Size ring relative to fader's actual screen size
+    const faderBox = hitRecord.groupEl.getBoundingClientRect();
+    const faderR = Math.max(faderBox.width, faderBox.height) / 2;
+
+    const RADIUS = faderR + 14;       // ring orbit: outside the fader + gap
+    const DOT_R  = 5;                 // indicator dot radius
+    const PAD    = DOT_R + 4;         // padding around ring for dot overflow
+    const SIZE   = (RADIUS + PAD) * 2;
+    const HALF   = SIZE / 2;
+    // Inner hole = fader area, so fader clicks pass through
+    const INNER_HOLE = Math.max(14, faderR + 4);
+    const svgNS  = "http://www.w3.org/2000/svg";
+
+    // ── Container div (holds the inline SVG) ──────────────────
+    const container = document.createElement("div");
+    container.className = "oscilla-rotation-ring";
+    container.dataset.uid = hitRecord.uid;
+    Object.assign(container.style, {
+        position: "fixed",
+        width:  `${SIZE}px`,
+        height: `${SIZE}px`,
+        pointerEvents: "none",
+        zIndex: "999998"
+    });
+
+    // ── Inline SVG ────────────────────────────────────────────
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("width", SIZE);
+    svg.setAttribute("height", SIZE);
+    svg.setAttribute("viewBox", `${-HALF} ${-HALF} ${SIZE} ${SIZE}`);
+    svg.style.overflow = "visible";
+
+    // Ring outline
+    const ring = document.createElementNS(svgNS, "circle");
+    ring.setAttribute("cx", 0);
+    ring.setAttribute("cy", 0);
+    ring.setAttribute("r", RADIUS);
+    ring.setAttribute("fill", "none");
+    ring.setAttribute("stroke", "#ff9933");
+    ring.setAttribute("stroke-width", "1.5");
+    ring.setAttribute("opacity", "0.6");
+    if (hmode === "limited") {
+        // Visual distinction for limited-range mode
+        ring.setAttribute("stroke-dasharray", "4 2");
+    }
+    svg.appendChild(ring);
+
+    // Arc range markers for limited mode
+    if (hmode === "limited" && rotrange) {
+        const range = rotrange || 270;
+        // Draw start and end tick marks
+        // Zero is at 7-o'clock (120deg standard), range goes clockwise
+        for (const angleDeg of [0, range]) {
+            const stdAngle = angleDeg + 120;
+            const rad = (stdAngle * Math.PI) / 180;
+            const inner = RADIUS - 5;
+            const outer = RADIUS + 5;
+            const tick = document.createElementNS(svgNS, "line");
+            tick.setAttribute("x1", Math.cos(rad) * inner);
+            tick.setAttribute("y1", Math.sin(rad) * inner);
+            tick.setAttribute("x2", Math.cos(rad) * outer);
+            tick.setAttribute("y2", Math.sin(rad) * outer);
+            tick.setAttribute("stroke", "#ff9933");
+            tick.setAttribute("stroke-width", "2");
+            tick.setAttribute("opacity", "0.8");
+            svg.appendChild(tick);
+        }
+    }
+
+    // Indicator dot — positioned by updateRotationIndicator() in o2p.js
+    // Initial position: 7-o'clock (0 in our system = 120deg standard)
+    const initRad = (120 * Math.PI) / 180;
+    const dot = document.createElementNS(svgNS, "circle");
+    dot.setAttribute("cx", Math.cos(initRad) * RADIUS);
+    dot.setAttribute("cy", Math.sin(initRad) * RADIUS);
+    dot.setAttribute("r", DOT_R);
+    dot.setAttribute("fill", "#ff9933");
+    dot.setAttribute("stroke", "#fff");
+    dot.setAttribute("stroke-width", "1");
+    svg.appendChild(dot);
+
+    container.appendChild(svg);
+
+    // ── Hit area (donut shape — catches pointer events on the ring zone only) ──
+    // z-index ABOVE the fader hit (999999) so rotation ring is reachable.
+    // clip-path cuts a circular hole in the center so clicks there fall
+    // through naturally to the fader hit beneath — no synthetic events needed.
+    const hit = document.createElement("div");
+    hit.className = "oscilla-rotation-ring-hit";
+    hit.dataset.uid = hitRecord.uid;
+
+    Object.assign(hit.style, {
+        position: "fixed",
+        width:  `${SIZE}px`,
+        height: `${SIZE}px`,
+        marginLeft: `-${HALF}px`,
+        marginTop:  `-${HALF}px`,
+        pointerEvents: "auto",
+        cursor: "grab",
+        zIndex: "1000000",
+        borderRadius: "50%",
+        background: "transparent",
+        // Donut clip: SVG path with outer rect + inner circle cutout (evenodd)
+        clipPath: `path(evenodd, 'M 0 0 L ${SIZE} 0 L ${SIZE} ${SIZE} L 0 ${SIZE} Z M ${HALF} ${HALF - INNER_HOLE} A ${INNER_HOLE} ${INNER_HOLE} 0 1 0 ${HALF} ${HALF + INNER_HOLE} A ${INNER_HOLE} ${INNER_HOLE} 0 1 0 ${HALF} ${HALF - INNER_HOLE} Z')`
+    });
+
+    document.body.appendChild(container);
+    document.body.appendChild(hit);
+
+    // ── Ring data object ──────────────────────────────────────
+    const ringData = {
+        container,
+        hit,
+        dot,
+        radius: RADIUS,
+        uid: hitRecord.uid
+    };
+
+    // Store on hit record for automatic repositioning in updateHitCircle
+    hitRecord._rotationRing = ringData;
+
+    // Initial position
+    repositionRotationRing(hitRecord, ringData);
+
+    return ringData;
+}
+
+// Internal: reposition ring overlay to follow fader's screen position
+function repositionRotationRing(hitRecord, ringData) {
+    if (!hitRecord?.groupEl || !ringData) return;
+
+    const pos = computeBBoxCenterScreen(hitRecord.groupEl);
+    if (!pos) return;
+
+    const half = parseFloat(ringData.container.style.width) / 2;
+
+    ringData.container.style.left = `${pos.x - half}px`;
+    ringData.container.style.top  = `${pos.y - half}px`;
+    ringData.hit.style.left = `${pos.x}px`;
+    ringData.hit.style.top  = `${pos.y}px`;
+}
+
+
+// ============================================================
+// ROTATION DRAG HANDLER: convert pointer drag into angle values
+// ============================================================
+// Works in screen coordinates — both the fader center (from
+// getBoundingClientRect) and pointer events use screen/client space,
+// so no SVG coordinate conversion needed. Angle convention matches
+// controlXY: 0 = 7 o'clock (120deg standard), increasing clockwise.
+// ============================================================
+
+export function initO2PRotationDragHandler(
+    rotDragTarget, hitRecord, pathEl, cfg, onRotateCallback
+) {
+    if (!rotDragTarget) {
+        console.warn("[hitLabel] initO2PRotationDragHandler: no drag target");
+        return null;
+    }
+
+    const dragContext = {
+        active: false,
+        uid: cfg?.uid || hitRecord?.uid
+    };
+
+    // Get fader's current screen center for angle computation
+    function getFaderScreenCenter() {
+        if (hitRecord?.groupEl) {
+            return computeBBoxCenterScreen(hitRecord.groupEl);
+        }
+        return null;
+    }
+
+    function onPointerMove(e) {
+        if (!dragContext.active) return;
+        e.preventDefault();
+
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const center = getFaderScreenCenter();
+        if (!center) return;
+
+        const dx = clientX - center.x;
+        const dy = clientY - center.y;
+
+        // atan2 → standard math angle, then convert to 7-o'clock-zero
+        // Same convention as controlXY lines 715-720
+        let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        angle = ((angle - 120) + 360) % 360;
+
+        if (onRotateCallback) {
+            onRotateCallback(angle);
+        }
+    }
+
+    function onPointerUp() {
+        if (!dragContext.active) return;
+        dragContext.active = false;
+        rotDragTarget.style.cursor = "grab";
+
+        document.removeEventListener("mousemove", onPointerMove);
+        document.removeEventListener("mouseup", onPointerUp);
+        document.removeEventListener("touchmove", onPointerMove);
+        document.removeEventListener("touchend", onPointerUp);
+    }
+
+    function onPointerDown(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        dragContext.active = true;
+        rotDragTarget.style.cursor = "grabbing";
+
+        document.addEventListener("mousemove", onPointerMove, { passive: false });
+        document.addEventListener("mouseup", onPointerUp);
+        document.addEventListener("touchmove", onPointerMove, { passive: false });
+        document.addEventListener("touchend", onPointerUp);
+
+        // Immediately compute angle at click position
+        onPointerMove(e);
+    }
+
+    rotDragTarget.style.cursor = "grab";
+    rotDragTarget.addEventListener("mousedown", onPointerDown);
+    rotDragTarget.addEventListener("touchstart", onPointerDown, { passive: false });
+
+    // Store for potential cleanup
+    window._oscillaDragSessions.set(
+        `rot:${dragContext.uid}`, dragContext
+    );
+
+    return dragContext;
 }
 
 
@@ -668,6 +926,11 @@ export function updateHitCircle(rec) {
         rec.valueLabel.style.left = `${pos.x}px`;
         rec.valueLabel.style.top = `${pos.y}px`;
     }
+
+    // Reposition rotation ring if attached
+    if (rec._rotationRing) {
+        repositionRotationRing(rec, rec._rotationRing);
+    }
 }
 
 // ------------------------------------------------------------
@@ -776,12 +1039,30 @@ export function destroyAllHitLabels(reason = "") {
             el.remove();
         });
 
+    // Remove rotation ring overlays
+    document
+        .querySelectorAll(".oscilla-rotation-ring, .oscilla-rotation-ring-hit")
+        .forEach(el => el.remove());
+
     if (window._oscillaHitLabels) {
         for (const rec of window._oscillaHitLabels) {
             rec.div?.remove();
             rec.hit?.remove();
+            // Clean up rotation ring if attached
+            if (rec._rotationRing) {
+                rec._rotationRing.container?.remove();
+                rec._rotationRing.hit?.remove();
+                delete rec._rotationRing;
+            }
         }
         window._oscillaHitLabels.length = 0;
+    }
+
+    // Clean up rotation drag sessions
+    for (const [key] of window._oscillaDragSessions) {
+        if (key.startsWith("rot:")) {
+            window._oscillaDragSessions.delete(key);
+        }
     }
 }
 

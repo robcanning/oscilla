@@ -276,6 +276,51 @@ The codebase includes several transform-related utilities that are used by the r
 These serve a different purpose from the animation wrapper system. They handle the reuse block pipeline where cloned SVG fragments need to be repositioned without carrying their source transforms. The two systems do not conflict.
 
 
+## Coordinate Space Mismatches: `getScreenCTM` on Root vs Element
+
+A second class of transform bug involves pointer-to-SVG coordinate conversion. When converting screen/client coordinates to SVG space for drag interactions, the choice of which element's CTM you use determines which coordinate space you land in.
+
+### The bug pattern
+
+```js
+// WRONG -- converts to root SVG space
+const ctm = svg.getScreenCTM();
+const inverse = ctm.inverse();
+const svgPt = pt.matrixTransform(inverse);  // root SVG coordinates
+
+// Then compared against path-local coordinates:
+const pathPt = pathEl.getPointAtLength(len);  // path-local coordinates
+Math.hypot(pathPt.x - svgPt.x, pathPt.y - svgPt.y);  // MISMATCHED SPACES
+```
+
+If the path is inside a group with `matrix(1.77, 0, 0, 1.77, 521, -894)`, the root SVG coordinates and path-local coordinates differ by scale and translation. The distance calculation produces wrong results -- the fader jumps erratically because the closest-point search is comparing apples to oranges.
+
+### The fix
+
+Use the **path element's** CTM, not the root SVG's:
+
+```js
+// CORRECT -- converts to path's local coordinate space
+const ctm = pathEl.getScreenCTM();
+const inverse = ctm.inverse();
+const svgPt = pt.matrixTransform(inverse);  // path-local coordinates
+```
+
+Now `svgPt` is in the same space as `pathEl.getPointAtLength()`. No scale/translate mismatch.
+
+### Where this applies
+
+Any code that converts pointer coordinates for comparison with SVG geometry must use the CTM of the element whose geometry it compares against:
+
+- `o2pTouchOverlays.js` `screenToSVG()` -- fixed, uses `pathEl.getScreenCTM()`
+- `initO2PRotationDragHandler` -- check for same pattern
+- `preProcessDrag.js` `getSVGPoint()` -- uses `svg.getScreenCTM()` for computing drag deltas. This is a related issue when draggable elements are inside scaled groups, but the symptom is different (drag sensitivity is scaled rather than erratic jumping).
+
+### General rule
+
+`el.getScreenCTM()` gives you the full transformation chain from `el`'s local coordinate space to screen pixels. Its inverse converts screen pixels back to `el`'s local space. Always match the CTM to the coordinate space you need.
+
+
 ## Debugging Checklist
 
 When an animated element jumps from its expected position:
@@ -291,6 +336,8 @@ When an animated element jumps from its expected position:
 5. **Check propagate expansion.** If the element is inside a `propagate()` group, the parent's transform may be inherited by children in unexpected ways. Inspect the DOM after propagate runs to see the actual structure.
 
 6. **Check nesting order.** If both rotate/scale and o2p are active on the same element, verify the wrapper hierarchy is correct: `oscilla-anim` should contain `oscilla-o2p-anim`, not the reverse.
+
+7. **Check coordinate space in drag handlers.** If a draggable/touchable element inside a transformed group behaves erratically, check whether `screenToSVG` or similar conversion uses `svg.getScreenCTM()` (root space) vs `targetEl.getScreenCTM()` (local space). They must match the space that `getPointAtLength()` or `getBBox()` returns.
 
 
 ## Inkscape `matrix()` vs `translate()` Transforms
