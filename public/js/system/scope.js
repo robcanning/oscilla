@@ -297,13 +297,23 @@ export function startScope(handle, analyser) {
 
     analyser.getByteTimeDomainData(dataArray);
 
+    // Find peak amplitude for normalization
+    let peak = 0;
+    for (let si = 0; si < fftSize; si += sampleStep) {
+      const a = Math.abs(dataArray[si] - 128);
+      if (a > peak) peak = a;
+    }
+
+    // Normalize so peak fills 80% of vertical space.
+    // Avoid division by zero; clamp floor to 1.
+    const scale = peak > 1 ? (halfH * 0.8) / peak : halfH * 0.8;
+
     // Build points string
     let points = "";
     for (let i = 0, si = 0; i < maxPoints && si < fftSize; i++, si += sampleStep) {
-      // dataArray[si] is 0-255 where 128 = silence
-      const v = (dataArray[si] - 128) / 128;
+      const v = dataArray[si] - 128;
       const px = draw.x + i * xStep;
-      const py = midY - v * halfH;
+      const py = midY - v * scale;
       points += `${px.toFixed(1)},${py.toFixed(1)} `;
     }
 

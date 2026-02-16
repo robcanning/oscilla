@@ -220,7 +220,7 @@ export function renderWaveform(svg, target, buffer, uid, filename, opts = {}) {
     infoText.setAttribute("font-family", "monospace");
     infoText.setAttribute("font-size", fontSize);
     infoText.setAttribute("fill", "#000");
-    infoText.setAttribute("opacity", "0.55");
+    infoText.setAttribute("opacity", "0.95");
     infoText.textContent = opts.info;
     g.appendChild(infoText);
   }
@@ -255,33 +255,29 @@ export function renderWaveform(svg, target, buffer, uid, filename, opts = {}) {
   g.appendChild(lowerLine);
   g.appendChild(cursor);
 
-  // Insert waveform group.
-  // If target is a <g>, append as child so it inherits transforms (drag, etc.)
-  // If target is a shape (<rect>, <circle>, etc.), insert as sibling after
-  // and mirror transforms via MutationObserver so drag/animations carry through.
-  const tagName = targetEl.tagName?.toLowerCase();
-  if (tagName === "g" || tagName === "svg") {
-    targetEl.appendChild(g);
+  // Insert waveform group as a SIBLING of the target element.
+  // Never as a child -- SVG opacity is multiplicative, so a target with
+  // opacity:0 (invisible rect used only for positioning) would hide
+  // the waveform too.  MutationObserver mirrors transforms so drag
+  // and animation keep them in sync.
+  const parent = targetEl.parentNode;
+  if (targetEl.nextSibling) {
+    parent.insertBefore(g, targetEl.nextSibling);
   } else {
-    const parent = targetEl.parentNode;
-    if (targetEl.nextSibling) {
-      parent.insertBefore(g, targetEl.nextSibling);
-    } else {
-      parent.appendChild(g);
-    }
-
-    // Mirror transform changes from the target onto the waveform group
-    // so drag translate (and any other transform) keeps them in sync.
-    const syncTransform = () => {
-      const t = targetEl.getAttribute("transform") || "";
-      g.setAttribute("transform", t);
-    };
-    syncTransform(); // initial sync
-
-    const observer = new MutationObserver(syncTransform);
-    observer.observe(targetEl, { attributes: true, attributeFilter: ["transform"] });
-    g._transformObserver = observer; // store for cleanup
+    parent.appendChild(g);
   }
+
+  // Mirror transform changes from the target onto the waveform group
+  // so drag translate (and any other transform) keeps them in sync.
+  const syncTransform = () => {
+    const t = targetEl.getAttribute("transform") || "";
+    g.setAttribute("transform", t);
+  };
+  syncTransform(); // initial sync
+
+  const observer = new MutationObserver(syncTransform);
+  observer.observe(targetEl, { attributes: true, attributeFilter: ["transform"] });
+  g._transformObserver = observer; // store for cleanup
 
   // Build handle
   const handle = {

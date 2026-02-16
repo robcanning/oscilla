@@ -924,7 +924,7 @@ function startSynthVoice(uid, ast, cueElement, opts) {
           startScope(scopeHandle, graph.analyser);
 
           if (scopeHandle._infoText) {
-            scopeHandle._infoText.setAttribute("opacity", "0.55");
+            scopeHandle._infoText.setAttribute("opacity", "1");
           }
         }
       }
@@ -939,7 +939,7 @@ function startSynthVoice(uid, ast, cueElement, opts) {
         // Update info text with detailed params
         if (existingScope._infoText) {
           existingScope._infoText.textContent = formatScopeInfo(params, wave, { amp });
-          existingScope._infoText.setAttribute("opacity", "0.55");
+          existingScope._infoText.setAttribute("opacity", "1");
         }
         console.log(`[synth] Reconnected existing scope for ${uid}`);
       }
@@ -1244,9 +1244,9 @@ function applyStepTargets(voice, dur) {
 
   // Brief scope info flash on step change
   if (voice._scopeHandle?._infoText) {
-    voice._scopeHandle._infoText.setAttribute("opacity", "0.8");
+    voice._scopeHandle._infoText.setAttribute("opacity", "1");
     setTimeout(() => {
-      voice._scopeHandle?._infoText?.setAttribute("opacity", "0.55");
+      voice._scopeHandle?._infoText?.setAttribute("opacity", "1");
     }, 120);
   }
 
@@ -1549,8 +1549,8 @@ export function primeSynthScope(ast, cueElement, params) {
 
   if (scopeHandle) {
     // Dim the static wave and info text for primed state
-    if (scopeHandle._scopeLine) scopeHandle._scopeLine.setAttribute("opacity", "0.35");
-    if (scopeHandle._infoText) scopeHandle._infoText.setAttribute("opacity", "0.4");
+    if (scopeHandle._scopeLine) scopeHandle._scopeLine.setAttribute("opacity", "0.55");
+    if (scopeHandle._infoText) scopeHandle._infoText.setAttribute("opacity", "0.75");
   }
 
   console.log(`[synth] Primed scope for ${uid} (${wave})`);

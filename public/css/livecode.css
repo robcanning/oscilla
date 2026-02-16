@@ -222,7 +222,8 @@
   resize: none;
   outline: none;
   tab-size: 2;
-  white-space: pre;
+  white-space: pre-wrap;
+  word-break: break-all;
   overflow-y: auto;
 }
 

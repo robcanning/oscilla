@@ -224,9 +224,10 @@ export function parseCueParams(cueId) {
   }
 
   // ----------------------------------------------------------
-  // 3️⃣ Legacy cue syntax fallback (cuePause_dur(N), cuePage(x), etc.)
+  // 3️⃣ No parser could handle this expression
   // ----------------------------------------------------------
-  return parseCueLegacy(cueId);
+  console.warn("[parseCueParams] No parser matched:", cueId);
+  return null;
 }
 
 

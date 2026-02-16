@@ -304,7 +304,8 @@ async function fetchScoreElements() {
     const cueIds = [];
 
     for (const el of allEls) {
-      const id = el.id.trim();
+      // Normalize: Inkscape's XML editor may embed newlines in long IDs
+      const id = el.id.replace(/\s+/g, " ").trim();
       if (!id || SKIP_RE.test(id)) continue;
 
       if (CUE_RE.test(id)) {
@@ -358,13 +359,87 @@ async function fetchScoreElements() {
 //  EDITOR HELPERS
 // =================================================================
 
+/**
+ * Split editor text into complete expressions by tracking
+ * parenthesis balance. Lines where parens are still open
+ * get joined to the next line, so multi-line expressions
+ * (e.g. long Pseq) are kept intact.
+ */
+function splitExpressions(text) {
+  const rawLines = text.split("\n");
+  const exprs = [];
+  let buf = "";
+  let depth = 0;
+
+  for (const raw of rawLines) {
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed.startsWith("//") || trimmed.startsWith("#")) {
+      // Flush any open buffer before a blank/comment line
+      if (buf) { exprs.push(buf); buf = ""; depth = 0; }
+      continue;
+    }
+
+    buf = buf ? buf + " " + trimmed : trimmed;
+
+    for (const ch of trimmed) {
+      if (ch === "(") depth++;
+      else if (ch === ")") depth--;
+    }
+
+    // Expression complete when parens are balanced (or over-closed)
+    if (depth <= 0) {
+      exprs.push(buf);
+      buf = "";
+      depth = 0;
+    }
+  }
+
+  // Flush remaining (unbalanced trailing expression)
+  if (buf) exprs.push(buf);
+  return exprs;
+}
+
 function getCurrentLine() {
   if (!editorEl) return "";
   const pos = editorEl.selectionStart;
   const text = editorEl.value;
-  const before = text.lastIndexOf("\n", pos - 1) + 1;
-  const after = text.indexOf("\n", pos);
-  return text.substring(before, after === -1 ? text.length : after);
+
+  // Which raw line is the cursor on?
+  const before = text.substring(0, pos);
+  const cursorLine = before.split("\n").length - 1;
+
+  // Split into expressions, track which raw lines each spans
+  const rawLines = text.split("\n");
+  let rawIdx = 0;
+  let buf = "";
+  let depth = 0;
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const trimmed = rawLines[i].trim();
+    if (!trimmed || trimmed.startsWith("//") || trimmed.startsWith("#")) {
+      if (buf && depth <= 0) {
+        if (cursorLine >= rawIdx && cursorLine <= i) return buf;
+        buf = ""; depth = 0; rawIdx = i + 1;
+      }
+      continue;
+    }
+
+    if (!buf) rawIdx = i;
+    buf = buf ? buf + " " + trimmed : trimmed;
+
+    for (const ch of trimmed) {
+      if (ch === "(") depth++;
+      else if (ch === ")") depth--;
+    }
+
+    if (depth <= 0) {
+      if (cursorLine >= rawIdx && cursorLine <= i) return buf;
+      buf = ""; depth = 0; rawIdx = i + 1;
+    }
+  }
+
+  // Cursor in trailing incomplete expression
+  return buf || "";
 }
 
 
@@ -380,7 +455,7 @@ const ELEMENT_CUES =
   /^(rotate|scale|scaleXY|o2p|color|colour|fade)\s*\(/i;
 
 function executeLine(line) {
-  const cleaned = line.trim();
+  const cleaned = line.replace(/\s+/g, " ").trim();
   if (!cleaned || cleaned.startsWith("//") || cleaned.startsWith("#")) return;
 
   const needsElement = ELEMENT_CUES.test(cleaned);
@@ -422,12 +497,10 @@ function executeLine(line) {
   }
 
   try {
-    const ast = window.parseCueToAST?.(cleaned);
-    if (!ast) {
-      logOutput("parse failed: " + cleaned, "err");
-      return;
-    }
-
+    // Dispatch through the standard pipeline.
+    // force=true bypasses dedupe so livecoded cues always fire.
+    // No pre-validation -- handleCueTrigger has its own parsing
+    // chain that handles Pseq, legacy syntax, etc.
     window.handleCueTrigger(cleaned, false, true, needsElement ? targetEl : null);
     logOutput(cleaned, "ok");
 
@@ -438,9 +511,9 @@ function executeLine(line) {
 
 function executeAll() {
   if (!editorEl) return;
-  const lines = editorEl.value.split("\n");
-  for (const line of lines) {
-    executeLine(line);
+  const exprs = splitExpressions(editorEl.value);
+  for (const expr of exprs) {
+    executeLine(expr);
   }
 }
 
@@ -557,12 +630,15 @@ function highlightBrowseEntry(idx) {
 function insertCueAtCursor(cueExpr) {
   if (!editorEl || !cueExpr) return;
 
+  // Collapse any embedded newlines (Inkscape long IDs) into spaces
+  const clean = cueExpr.replace(/\s+/g, " ").trim();
+
   const start = editorEl.selectionStart;
   const end = editorEl.selectionEnd;
   const text = editorEl.value;
 
-  editorEl.value = text.slice(0, start) + cueExpr + text.slice(end);
-  editorEl.selectionStart = editorEl.selectionEnd = start + cueExpr.length;
+  editorEl.value = text.slice(0, start) + clean + text.slice(end);
+  editorEl.selectionStart = editorEl.selectionEnd = start + clean.length;
   editorEl.focus();
 }
 
@@ -710,14 +786,15 @@ function pickerClickHandler(e) {
   if (!el) return;
 
   const uid = el.dataset?.animUid || "";
-  const label = uid || el.id || el.tagName;
+  const label = (uid || el.id || el.tagName).replace(/\s+/g, " ").trim();
   if (targetInputEl) targetInputEl.value = label;
   setTarget(el, label);
 
   // Pre-fill editor with the DSL expression from the element's ID
-  // so the user can tweak and re-execute
+  // so the user can tweak and re-execute.
+  // Normalize whitespace -- SVG IDs may contain newlines from Inkscape.
   if (editorEl && el.id && el.id.includes("(")) {
-    editorEl.value = el.id;
+    editorEl.value = el.id.replace(/\s+/g, " ").trim();
     editorEl.focus();
   }
 
