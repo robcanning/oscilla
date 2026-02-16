@@ -1,7 +1,7 @@
 /*!
- * oscillaParamBus.js — Global Control-Signal Store & Pub/Sub
+ * oscillaParamBus.js â€” Global Control-Signal Store & Pub/Sub
  * Part of oscillaScore control plane architecture
- * © 2025 Rob Canning — GPLv3
+ * Â© 2025 Rob Canning â€” GPLv3
  *
  * The ParamBus is the central nervous system for control signals in Oscilla.
  * It stores the latest value of each named signal and notifies subscribers
@@ -156,6 +156,25 @@ export function subscribe(path, callback) {
  */
 export function has(path) {
   return signals.has(path);
+}
+
+/**
+ * Check if any signals matching a prefix have active subscribers.
+ * Used by the visibility observer to avoid pausing animations that
+ * are feeding a modulation target (e.g. o2p driving a synth param).
+ * @param {string} prefix - Path prefix (e.g., "o2p:sliderA.")
+ * @returns {boolean} True if at least one matching path has subscribers
+ */
+export function hasSubscribers(prefix) {
+  // Check direct subscribers
+  for (const path of subscribers.keys()) {
+    if (path.startsWith(prefix)) return true;
+  }
+  // Check wildcard subscribers that would match this prefix
+  for (const wcPrefix of wildcardSubscribers.keys()) {
+    if (prefix.startsWith(wcPrefix) || wcPrefix.startsWith(prefix)) return true;
+  }
+  return false;
 }
 
 /**
@@ -315,6 +334,7 @@ window.oscillaParamBus = {
   get,
   subscribe,
   has,
+  hasSubscribers,
   remove,
   list,
   snapshot,
@@ -336,6 +356,7 @@ export default {
   get,
   subscribe,
   has,
+  hasSubscribers,
   remove,
   list,
   snapshot,

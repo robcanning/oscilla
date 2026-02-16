@@ -479,14 +479,16 @@ function startContinuousO2P(el, cfg, virtual, uid) {
     const cycles = loop === 0 ? true : loop;
     const durationMs = dur * 1000;
 
-    if (!window.runningAnimations) window.runningAnimations = {};
-    window.runningAnimations[uid] = {
+    if (!(window.runningAnimations instanceof Map)) {
+        window.runningAnimations = new Map();
+    }
+    window.runningAnimations.set(uid, {
         pause: () => el._o2pAnim?.pause(),
         play: () => el._o2pAnim?.play(),
         resume: () => el._o2pAnim?.play(),
         stop: () => el._o2pAnim?.pause(),
         wasPaused: false
-    };
+    });
 
     cfg._oscLastSent = 0;
 
@@ -607,14 +609,16 @@ function startAlternateO2P(el, cfg, virtual, uid) {
     let remaining = loop === 0 ? Infinity : loop;
     let stopped = false;
 
-    if (!window.runningAnimations) window.runningAnimations = {};
-    window.runningAnimations[uid] = {
+    if (!(window.runningAnimations instanceof Map)) {
+        window.runningAnimations = new Map();
+    }
+    window.runningAnimations.set(uid, {
         pause: () => el._o2pAnim?.pause(),
         resume: () => el._o2pAnim?.play(),
         play: () => el._o2pAnim?.play(),
         stop: () => { stopped = true; el._o2pAnim?.pause(); },
         wasPaused: false
-    };
+    });
 
     cfg._oscLastSent = 0;
 

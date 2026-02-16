@@ -10,3 +10,11 @@ The control layer allows performers to influence score behaviour in real time. W
 At the centre of this system is a source-agnostic parameter bus. Control signals can originate from the controlXY touchpad interface, from external OSC sources, or from other cues within the score. These signals are routed to cue parameters through a binding system that allows any control source to modulate any parameter -- animation speed, colour, audio volume, OSC output values -- without the cue needing to know where the signal comes from.
 
 This architecture supports a range of performance practices, from a single performer adjusting their own score to a conductor modulating parameters across the entire ensemble via a networked control surface.
+
+## Topics
+
+- [Control & Modulation](control-and-modulation.md) -- signal routing, bindings, and the parameter bus
+- [Control Plane Taxonomy](control-plane-taxonomy.md) -- canonical terminology and quick reference
+- [controlXY](controlXY.md) -- multitouch XY control surfaces
+- [Live Console](liveconsole.md) -- real-time DSL input during performance
+- [Markers](interaction-markers.md) -- interactive score markers

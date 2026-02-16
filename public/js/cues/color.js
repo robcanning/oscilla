@@ -441,7 +441,23 @@ function handleColorHueCycle(el, cfg) {
     }
     
     el._oscillaColorAnim = requestAnimationFrame(tick);
-    cfg._anim = { pause: () => cancelAnimationFrame(el._oscillaColorAnim) };
+
+    // Pause/resume support for visibility observer
+    let _pauseTime = null;
+    cfg._anim = {
+        pause() {
+            cancelAnimationFrame(el._oscillaColorAnim);
+            _pauseTime = performance.now();
+        },
+        play() {
+            if (_pauseTime !== null) {
+                const gap = performance.now() - _pauseTime;
+                if (startTime) startTime += gap;
+                _pauseTime = null;
+            }
+            el._oscillaColorAnim = requestAnimationFrame(tick);
+        }
+    };
 }
 
 // ============================================================
@@ -665,7 +681,24 @@ function handleColorSequence(el, cfg) {
     }
     
     el._oscillaColorAnim = requestAnimationFrame(tick);
-    cfg._anim = { pause: () => cancelAnimationFrame(el._oscillaColorAnim) };
+
+    // Pause/resume support for visibility observer
+    let _pauseTime = null;
+    cfg._anim = {
+        pause() {
+            cancelAnimationFrame(el._oscillaColorAnim);
+            _pauseTime = performance.now();
+        },
+        play() {
+            if (_pauseTime !== null) {
+                const gap = performance.now() - _pauseTime;
+                if (startTime) startTime += gap;
+                if (segmentStartTime) segmentStartTime += gap;
+                _pauseTime = null;
+            }
+            el._oscillaColorAnim = requestAnimationFrame(tick);
+        }
+    };
 }
 
 // ============================================================

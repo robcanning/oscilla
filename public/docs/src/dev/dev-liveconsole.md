@@ -15,6 +15,8 @@ The live console is deliberately thin. It creates a UI panel and routes
 user input through the **existing dispatch pipeline** -- it does not
 import or reimplement any cue handlers.
 
+### Score view (normal)
+
 ```
 User types DSL string
   |
@@ -31,30 +33,52 @@ handleCueTrigger(line,       -- dispatch through standard pipeline
 cueDispatcher switch(ast.type) --> handler
 ```
 
-Every cue type the system supports works automatically, including types
-added after this module was written.
+### Dedicated view (?view=live)
+
+```
+User types DSL string
+  |
+  v
+sendSocketMessage("livecode_exec", {   -- send via WebSocket
+  cueExpr: cleaned,
+  targetId: targetId | null
+})
+  |
+  v
+server.js rebroadcasts via broadcastToOthers()
+  |
+  v
+socket.js handleLivecodeExec(data)     -- score window receives
+  |
+  v
+handleCueTrigger(cueExpr, false, true, targetEl)
+```
+
+In the dedicated view there is no local SVG, no cue pipeline, and no
+audio context. All execution happens remotely in the score window.
 
 ---
 
 ## Dependencies
 
-The module depends entirely on `window` globals set up by existing
-modules. It has **zero cross-module imports**:
+### Window globals
 
 | Global | Source | Used for |
 |--------|--------|----------|
-| `window.handleCueTrigger` | cueDispatcher.js | Dispatch DSL strings |
-| `window.parseCueToAST` | parser.js | Validate before dispatch |
-| `window.oscillaAnimRegistry` | animation.js | Target lookup by uid |
+| `window.handleCueTrigger` | cueDispatcher.js | Dispatch DSL strings (score view only) |
+| `window.parseCueToAST` | parser.js | Validate before dispatch (score view only) |
+| `window.oscillaAnimRegistry` | animation.js | Target lookup by uid (score view only) |
 | `window.runningAnimations` | animation.js (Map) | Check running state |
 | `window.oscillaParamBus` | paramBus.js | Signal monitor |
 | `window.oscillaRouter` | controlRouter.js | (future) mod patching |
 
-This means:
+### Module imports
 
--   No changes to any handler when adding new cue types
--   No circular dependency risk
--   Module can be loaded or removed without affecting any other module
+| Import | From | Used for |
+|--------|------|----------|
+| `makeDraggable` | `../system/uiUtils.js` | Panel drag by header |
+| `isDedicatedView` | `../system/oscillaView.js` | Branch between local and remote execution |
+| `sendSocketMessage` | `../system/socket.js` | Send livecode_exec to server |
 
 ---
 
@@ -62,8 +86,8 @@ This means:
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `oscillaLive.js` | `js/system/` | Module: panel creation, execution, picker, signal monitor |
-| `livecode.css` | `css/` | All styling for the panel and picker highlights |
+| `oscillaLive.js` | `js/interaction/` | Module: panel, execution, picker, browser, signal monitor |
+| `livecode.css` | `css/` | All styling for the panel, picker, and cue browser |
 
 ---
 
@@ -82,17 +106,21 @@ Add to `styles.css` imports:
 In `app.js`:
 
 ```js
-import { initLiveConsole } from "./system/oscillaLive.js";
+import { initLiveConsole, showLiveConsole } from "./interaction/oscillaLive.js";
 ```
 
-Call inside `DOMContentLoaded`:
+Call inside `DOMContentLoaded` (both score and dedicated view paths):
 
 ```js
 initLiveConsole();
 ```
 
-This creates the `>_` toggle button inside `#topbar-actions`, before
-the `.view-tools` cluster. The panel is built lazily on first open.
+For dedicated views, pass `showLiveConsole` to `activateView` so the
+panel opens automatically:
+
+```js
+activateView({ openLiveConsole: showLiveConsole });
+```
 
 ### HTML
 
@@ -103,8 +131,9 @@ No changes required. The button and panel are created dynamically.
 ## Exports
 
 ```js
-export function initLiveConsole()     // Setup: creates topbar button
-export function destroyLiveConsole()  // Teardown: removes button + panel
+export function initLiveConsole()       // Setup: creates topbar ">_" button
+export function destroyLiveConsole()    // Teardown: removes button + panel
+export { openPanel as showLiveConsole } // Open the panel programmatically
 ```
 
 ---
@@ -125,6 +154,11 @@ const ELEMENT_CUES =
 If the user has not picked a target, execution is blocked with an
 error message.
 
+In the dedicated view, if the expression itself is a known element ID
+from the score (i.e. it was inserted via the cue browser), it is used
+as both the `cueExpr` and `targetId`, since the element's SVG `id`
+attribute contains the DSL expression.
+
 ### Elementless cues
 
 Everything else (`synth`, `audio`, `speed`, `nav`, `osc`, `stop`,
@@ -140,14 +174,22 @@ triggered before.
 ### Re-application on same element
 
 When a new animation cue is dispatched to an element that already has
-a running animation, the handler itself manages teardown. For example,
-`handleRotateContinuous` calls `el._oscillaRotateAnim.pause?.()` before
-starting a new anime instance. The console does not need to stop
-anything explicitly.
+a running animation, the handler itself manages teardown. The console
+does not need to stop anything explicitly.
+
+### Multi-line expressions
+
+The editor supports multi-line DSL expressions. `splitExpressions()`
+joins lines while parentheses are unbalanced, so expressions like long
+`Pseq` definitions can be split across lines for readability.
+`getCurrentLine()` identifies which expression the cursor is inside
+and returns the full joined expression for `Ctrl+Enter`.
 
 ---
 
 ## Target Resolution
+
+### Score view
 
 The picker and target input resolve elements through three paths, in
 order:
@@ -161,6 +203,79 @@ order:
 When an element is picked, its SVG `id` attribute (which contains the
 DSL expression) is pre-filled into the editor so the user can modify
 and re-execute.
+
+### Dedicated view
+
+No local DOM is available. Target resolution stores the ID string in
+`selectedTargetId` and sends it to the score window, where
+`handleLivecodeExec` in `socket.js` performs the same three-path
+resolution locally.
+
+The target input has a `<datalist>` populated by `fetchScoreElements()`
+so the user can autocomplete element IDs from the score.
+
+---
+
+## Remote Execution (Dedicated View)
+
+When `isDedicatedView()` is true, the module operates in remote mode:
+
+**On open:** `fetchScoreElements()` fetches the project SVG via HTTP
+(e.g. `/scores/demo-audio/score.svg`), parses it with `DOMParser`,
+and extracts:
+- All element IDs into a `<datalist>` for target autocomplete
+- DSL cue expression IDs into the output panel as browsable entries
+
+**On execute:** `executeLine()` sends a `livecode_exec` WebSocket
+message instead of calling `handleCueTrigger` directly.
+
+**Pick button:** Disabled (no local SVG to click on). Target selection
+is done via the datalist autocomplete or by typing.
+
+### WebSocket Protocol
+
+**Client -> Server:**
+```json
+{ "type": "livecode_exec", "cueExpr": "synth(wave:sin, freq:440)", "targetId": null }
+```
+
+**Server -> Other clients:**
+Same message, rebroadcast via `broadcastToOthers()`.
+
+**Score window handler** (`socket.js`):
+```js
+function handleLivecodeExec(data) {
+  const { cueExpr, targetId } = data;
+  let targetEl = null;
+  if (targetId) {
+    const reg = window.oscillaAnimRegistry?.[targetId];
+    targetEl = reg?.el || document.getElementById(targetId);
+  }
+  handleCueTrigger(cueExpr, false, true, targetEl);
+}
+```
+
+---
+
+## Cue Browser
+
+The cue browser allows keyboard navigation of DSL expressions found in
+the score. It is populated by `fetchScoreElements()` in dedicated view
+mode.
+
+**Entry:** `Ctrl+J` from the editor textarea.
+
+**Navigation:** Arrow keys or `j`/`k` (vi-style). The current entry is
+highlighted with a left border accent.
+
+**Insert:** `Enter` inserts the full cue expression at the cursor
+position in the editor and returns focus.
+
+**Exit:** `Escape` returns to the editor without inserting.
+
+The handler attaches at document level in capture phase so the textarea
+does not receive navigation keys while browsing. On exit, the handler
+is removed.
 
 ---
 
@@ -176,6 +291,8 @@ Pick mode attaches three listeners on the `document` in capture phase:
 the nearest ancestor with `data-anim-uid` or a non-livecode `id`.
 This avoids selecting leaf `<tspan>` or `<path>` nodes when the user
 means the parent group.
+
+Disabled in dedicated views (no local SVG).
 
 ---
 
@@ -196,18 +313,28 @@ match on the signal path.
 
 ---
 
+## Panel Layout
+
+The panel has three vertically stacked sections with draggable resize
+bars between them:
+
+| Section | Content |
+|---------|---------|
+| **Editor** | Textarea for DSL input, run line / run all buttons |
+| **Output** | Log entries and browsable cue list |
+| **Signals** | Live ParamBus signal monitor with filter |
+
+The panel itself is edge-resizable (all four edges and corners) and
+draggable by its header bar.
+
+---
+
 ## Keyboard Isolation
 
 The panel stops propagation of `keydown`, `keyup`, and `keypress`
 events at the panel boundary. This prevents transport keybindings
 (arrow keys, spacebar, etc.) from firing while the user types in the
 editor or input fields.
-
-```js
-panelEl.addEventListener("keydown",  (e) => e.stopPropagation());
-panelEl.addEventListener("keyup",    (e) => e.stopPropagation());
-panelEl.addEventListener("keypress", (e) => e.stopPropagation());
-```
 
 ---
 
@@ -219,43 +346,10 @@ transport but below modal controlXY surfaces.
 
 ---
 
-## Future Extensions
-
-### WebSocket/OSC input
-
-`handleCueTrigger` is already on `window`. A single line in the
-socket message handler could route incoming DSL strings:
-
-```js
-// in socket.js message handler:
-case "livecode":
-  window.handleCueTrigger(msg.dsl, true, true, null);
-  break;
-```
-
-This would allow live coding from an external editor over the network.
-
-### Modulation patching
-
-The console could accept `mod()` expressions to create live modulation
-routes via `oscillaRouter.mod()`. The signal monitor already shows the
-values that would be routed.
-
-### History / recall
-
-Editor content could persist to `localStorage` per-project, giving a
-recall buffer of recent expressions.
-
-### Autocompletion
-
-The animation registry and ParamBus key list provide all the data
-needed for uid and signal path autocompletion in the editor.
-
----
-
 ## Related
 
 -   [Live Console (user guide)](liveconsole.md)
 -   [Cue Dispatcher](cuehandler_architecture.md)
 -   [Control & Modulation](oscilla-control-input-and-modulation.md)
 -   [Adding a New Cue](oscilla-developer-guide-new-cue.md)
+-   [View System](dev-view-system.md)
