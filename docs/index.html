@@ -3,37 +3,58 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="refresh" content="12;url=https://oscilla.cc" />
+  <link rel="canonical" href="https://oscilla.cc" />
   <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap" rel="stylesheet">
 
-  <title>Oscilla</title>
+  <title>Oscilla — moved to oscilla.cc</title>
 
-  <!-- Pico CSS for layout -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />
 
 <style>
   header {
     margin: 0 !important;
     padding: 0 !important;
-
   }
-
-    h1, h2 ,h3 {
+  h1, h2, h3 {
     margin: 0 !important;
     padding: 0 !important;
-
   }
-
   main {
     margin: 0 !important;
-        padding-top: 0 !important;
-
+    padding-top: 0 !important;
   }
-
+  .moved-banner {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    padding: 1.5rem 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    text-align: center;
+    border: 1px solid #333;
+  }
+  .moved-banner a {
+    color: #7ec8e3;
+    font-weight: 700;
+    font-size: 1.4em;
+  }
+  .moved-banner p {
+    margin: 0.3em 0;
+  }
+  .moved-banner .redirect-note {
+    font-size: 0.85em;
+    opacity: 0.7;
+    margin-top: 0.8em;
+  }
+  .archive-note {
+    font-size: 0.9em;
+    color: #888;
+    font-style: italic;
+    border-left: 3px solid #ccc;
+    padding-left: 1em;
+    margin: 1.5em 0;
+  }
 </style>
-
-
-  <!-- PhotoSwipe styles -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css" />
 </head>
 
 <body class="container">
@@ -41,11 +62,9 @@
 <header>
 <nav>
   <ul>
-    <li><strong><a href="/oscilla/">Home</a></strong></li>
-    <li><strong><a href="/oscilla/docs">Docs</a></strong></li>
-
-    <li><a href="https://github.com/robcanning/oscilla" target="_blank">GitHub</a></li>
-
+    <li><strong><a href="https://oscilla.cc">oscilla.cc</a></strong></li>
+    <li><strong><a href="https://oscilla.cc/docs">Docs</a></strong></li>
+    <li><a href="https://git.kompot.si/rob/oscilla" target="_blank">Repository</a></li>
   </ul>
 </nav>
   <hgroup>
@@ -58,117 +77,105 @@
   OSCILLA
 </h1>
 <p style="font-style: italic; font-size: 1.8em; color: #555; margin-top: -0.5em;">
-  Animated graphic scores for performers and systems — bridging composition, improvisation, and interactive media
+  Animated graphic scores for performers and systems
 </p>  </hgroup>
 </header>
 
 
 <main>
+
+  <div class="moved-banner">
+    <p>Oscilla has a new home</p>
+    <p><a href="https://oscilla.cc">oscilla.cc</a></p>
+    <p>Documentation, downloads, and source code have moved to <a href="https://oscilla.cc/docs">oscilla.cc/docs</a></p>
+    <p class="redirect-note">You will be redirected automatically in a few seconds</p>
+  </div>
+
+  <div class="archive-note">
+    This page is retained as an archive for references from published papers. All active development and documentation now lives at <a href="https://oscilla.cc">oscilla.cc</a>.
+  </div>
+
+  <hr>
+
   <p>Oscilla is an open-source platform for creating and performing animated, cue-driven graphic scores in the browser. Scores are authored as SVG documents and executed as synchronized, networked performance environments.</p>
-<p>Oscilla integrates timing, animation, media control, and OSC output into a single browser-native score engine.</p>
-<hr>
-<h2>Documentation</h2>
-<p><strong>Start here:</strong></p>
-<p><strong><a href="https://robcanning.github.io/oscilla/docs/">https://robcanning.github.io/oscilla/docs/</a></strong></p>
-<p>The documentation includes:</p>
-<ul>
-<li>Complete cue reference</li>
-<li>Animation and transformation syntax</li>
-<li>Authoring workflow (Inkscape → browser)</li>
-<li>System architecture</li>
-<li>Cheatsheets and examples</li>
-</ul>
-<hr>
-<h2>Core Cue System</h2>
-<p>Oscilla uses a cue-driven execution model. Cues are embedded directly in SVG IDs and are evaluated in real time during score playback.</p>
-<h3>Available Cue Types</h3>
-<p><strong>Timing &amp; Navigation</strong></p>
-<ul>
-<li><code>pause()</code> — pause playback</li>
-<li><code>stop()</code> — halt playback</li>
-<li><code>nav()</code> — navigation and mode control</li>
-<li><code>page()</code> — page-based score navigation</li>
-<li><code>stopwatch()</code> — time display and control</li>
-<li><code>metronome()</code> — tempo reference</li>
-</ul>
-<p><strong>Media &amp; Sound</strong></p>
-<ul>
-<li><code>audio()</code> — audio file playback</li>
-<li><code>synth()</code> — browser-based synthesis</li>
-<li><code>video()</code> — video playback</li>
-</ul>
-<p><strong>OSC &amp; External Control</strong></p>
-<ul>
-<li><code>osc()</code> — OSC message output</li>
-<li><code>oscCtrl()</code> — OSC routing and control</li>
-</ul>
-<p><strong>Interaction &amp; Structure</strong></p>
-<ul>
-<li><code>button()</code> — interactive UI elements</li>
-<li><code>propagate()</code> — propagate cue state</li>
-<li><code>reuse()</code> — reuse cue definitions</li>
-<li><code>text()</code> — timed and sequenced text</li>
-<li><code>fade()</code> — fade visual or UI elements</li>
-</ul>
-<p>Full syntax and parameters for each cue are documented here:<br>
-<strong><a href="https://robcanning.github.io/oscilla/docs/">Cue Documentation</a></strong></p>
-<hr>
-<h2>Animation System</h2>
-<p>Oscilla supports continuous and discrete animation directly tied to score timing.</p>
-<h3>Animation Namespaces</h3>
-<ul>
-<li><code>scale()</code> — uniform or non-uniform scaling</li>
-<li><code>rotate()</code> — continuous or stepped rotation</li>
-<li><code>o2p()</code> — object-to-path traversal</li>
-</ul>
-<p>Animations can be:</p>
-<ul>
-<li>time-based or duration-based</li>
-<li>looped, alternating, or one-shot</li>
-<li>nested and combined</li>
-<li>synchronized across clients</li>
-</ul>
-<p>Animation syntax is documented here:<br>
-<strong><a href="https://robcanning.github.io/oscilla/docs/cheatsheet/">Animation Cheatsheet</a></strong></p>
-<hr>
-<h2>What Kind of System Is Oscilla?</h2>
-<p>Oscilla is a <strong>modular score execution platform</strong> combining:</p>
-<ul>
-<li>cue-based timing and control</li>
-<li>animated graphic notation</li>
-<li>networked synchronization (WebSockets / OSC)</li>
-<li>browser-native media playback</li>
-</ul>
-<p>It is designed for composers and performers working with animated, spatial, and networked scores.</p>
-<p>The system is described in:</p>
-<blockquote>
-<p>R. Canning, <em>OscillaScore: A Modular Platform for Graphic Notation in Networked Music Performance</em>,<br>
-Proceedings of the International Conference on Technologies for Music Notation and Representation (TENOR), Beijing, 2025.</p>
-</blockquote>
+  <p>Oscilla integrates timing, animation, media control, and OSC output into a single browser-native score engine.</p>
+
+  <hr>
+
+  <h2>Documentation</h2>
+  <p><strong><a href="https://oscilla.cc/docs">oscilla.cc/docs</a></strong></p>
+  <p>The documentation includes:</p>
+  <ul>
+    <li>Complete cue reference</li>
+    <li>Animation and transformation syntax</li>
+    <li>Authoring workflow (Inkscape to browser)</li>
+    <li>System architecture</li>
+    <li>Cheatsheets and examples</li>
+  </ul>
+
+  <hr>
+
+  <h2>Source Code</h2>
+  <p>Oscilla's source code is hosted at <a href="https://git.kompot.si/rob/oscilla">git.kompot.si/rob/oscilla</a>.</p>
+
+  <hr>
+
+  <h2>Core Cue System</h2>
+  <p>Oscilla uses a cue-driven execution model. Cues are embedded directly in SVG IDs and are evaluated in real time during score playback.</p>
+
+  <h3>Available Cue Types</h3>
+  <p><strong>Timing &amp; Navigation</strong></p>
+  <ul>
+    <li><code>pause()</code> &mdash; pause playback</li>
+    <li><code>stop()</code> &mdash; halt playback</li>
+    <li><code>nav()</code> &mdash; navigation and mode control</li>
+    <li><code>page()</code> &mdash; page-based score navigation</li>
+    <li><code>stopwatch()</code> &mdash; time display and control</li>
+    <li><code>metronome()</code> &mdash; tempo reference</li>
+  </ul>
+  <p><strong>Media &amp; Sound</strong></p>
+  <ul>
+    <li><code>audio()</code> &mdash; audio file playback</li>
+    <li><code>synth()</code> &mdash; browser-based synthesis</li>
+    <li><code>video()</code> &mdash; video playback</li>
+  </ul>
+  <p><strong>OSC &amp; External Control</strong></p>
+  <ul>
+    <li><code>osc()</code> &mdash; OSC message output</li>
+    <li><code>oscCtrl()</code> &mdash; OSC routing and control</li>
+  </ul>
+  <p><strong>Animation</strong></p>
+  <ul>
+    <li><code>scale()</code> &mdash; uniform or non-uniform scaling</li>
+    <li><code>rotate()</code> &mdash; continuous or stepped rotation</li>
+    <li><code>o2p()</code> &mdash; object-to-path traversal</li>
+    <li><code>color()</code> &mdash; color cycling and sequences</li>
+  </ul>
+  <p><strong>Interaction &amp; Structure</strong></p>
+  <ul>
+    <li><code>button()</code> &mdash; interactive UI elements</li>
+    <li><code>controlXY()</code> &mdash; multitouch XY control pads</li>
+    <li><code>propagate()</code> &mdash; propagate cue state</li>
+    <li><code>reuse()</code> &mdash; reuse cue definitions</li>
+    <li><code>text()</code> &mdash; timed and sequenced text</li>
+    <li><code>fade()</code> &mdash; fade visual or UI elements</li>
+  </ul>
+  <p>Full syntax and parameters: <strong><a href="https://oscilla.cc/docs">oscilla.cc/docs</a></strong></p>
+
+  <hr>
+
+  <h2>References</h2>
+  <blockquote>
+    <p>R. Canning, <em>OscillaScore: A Modular Platform for Graphic Notation in Networked Music Performance</em>,<br>
+    Proceedings of the International Conference on Technologies for Music Notation and Representation (TENOR), Beijing, 2025.</p>
+  </blockquote>
 
 </main>
 
 <footer>
   <hr />
-  <p>© 2025 Rob Canning </p>
+  <p>&copy; 2025 Rob Canning &mdash; <a href="https://oscilla.cc">oscilla.cc</a></p>
 </footer>
-
-<!-- PhotoSwipe scripts -->
-<script src="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/umd/photoswipe.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/umd/photoswipe-lightbox.umd.min.js"></script>
-
-<script>
-  if (typeof PhotoSwipeLightbox !== "undefined") {
-    const lightbox = new PhotoSwipeLightbox({
-      gallery: '#gallery',
-      children: 'a',
-      pswpModule: PhotoSwipe
-    });
-    lightbox.init();
-  } else {
-    console.warn("⚠️ PhotoSwipe script not loaded or failed.");
-  }
-</script>
 
 </body>
 </html>
